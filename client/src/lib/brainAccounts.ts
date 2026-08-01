@@ -23,6 +23,8 @@ export type AccountKind =
 
 export interface BrainAccountDTO {
   id: string;
+  /** Upstream raw/source records that produced this ledger account. */
+  source_ids?: string[];
   name: string;
   account_type: AccountKind;
   currency: string;

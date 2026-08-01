@@ -21,7 +21,7 @@ import { AlertCallout } from "@/components/Callout";
  *
  * Two rules it exists to keep:
  *
- * 1. NOTHING IS HIDDEN BY DEFAULT. The type filter starts on "All types". A
+ * 1. NOTHING IS HIDDEN BY DEFAULT. The type filter starts on "All Types". A
  *    default filter would make an empty list a fact about the filter rather
  *    than about the tenant, which is the failure `auditVisibility` was written
  *    to prevent. When the user DOES narrow the list and it comes back empty,
@@ -44,14 +44,14 @@ import { AlertCallout } from "@/components/Callout";
 type TypeFilter = "all" | "decisions" | "system";
 
 const FILTER_OPTIONS: { id: TypeFilter; label: string }[] = [
-  { id: "all", label: "All types" },
-  { id: "decisions", label: "Decisions only" },
-  { id: "system", label: "System activity only" },
+  { id: "all", label: "All Types" },
+  { id: "decisions", label: "Decisions Only" },
+  { id: "system", label: "System Activity Only" },
 ];
 
 /* Assistant activity is neither a decision nor pipeline traffic: it is a person
-   asking Brain a question. It gets its own badge so "Decisions only" can mean
-   decisions, and is reachable through "All types". */
+   asking Brain a question. It gets its own badge so "Decisions Only" can mean
+   decisions, and is reachable through "All Types". */
 type Category = "decision" | "assistant" | "system";
 
 const CATEGORY_BADGE: Record<Category, { label: string; bg: string; color: string; border: string }> = {
@@ -224,13 +224,13 @@ export function AuditLogSection() {
     if (withheldByFilter > 0) {
       return {
         title: filter === "system" ? "No system activity here." : "No decision records here.",
-        detail: `${plural(withheldByFilter, "record is", "records are")} hidden by the type filter — switch to "All types" to see everything.`,
+        detail: `${plural(withheldByFilter, "record is", "records are")} hidden by the type filter — switch to "All Types" to see everything.`,
       };
     }
     return { title: "No records match your search." };
   };
 
-  const activeLabel = FILTER_OPTIONS.find((o) => o.id === filter)?.label ?? "All types";
+  const activeLabel = FILTER_OPTIONS.find((o) => o.id === filter)?.label ?? "All Types";
 
   return (
     <div className="flex flex-col gap-[20px] w-full">
@@ -294,15 +294,15 @@ export function AuditLogSection() {
 
         {/* Controls */}
         <div className="flex items-center gap-[8px] w-full">
-          <div className="flex-1 min-w-0 flex items-center gap-[8px] p-[8px] rounded-[8px] bg-[#222737]">
-            <Search className="flex-shrink-0 size-[20px]" color="#6c779d" strokeWidth={1.8} />
+          <div className="flex-1 min-w-0 flex h-[40px] items-center gap-[8px] p-[8px] rounded-[8px] bg-[#222737]">
+            <Search className="flex-shrink-0 size-[24px]" color="#6c779d" strokeWidth={1.8} />
             <input
               data-testid="input-audit-search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search"
+              placeholder="Search audit log…"
               aria-label="Search audit records"
-              className="flex-1 min-w-0 bg-transparent outline-none [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] placeholder:text-[#6c779d] text-[16px] leading-[20px]"
+              className="flex-1 min-w-0 h-[24px] bg-transparent outline-none [font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] placeholder:text-[#6c779d] text-[14px] leading-[20px]"
             />
           </div>
 
@@ -326,9 +326,9 @@ export function AuditLogSection() {
                   openMenu(true);
                 }
               }}
-              className="bg-[#222737] flex gap-[8px] items-center justify-between p-[8px] rounded-[8px] w-full text-left hover:bg-[#2a3045] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631ee]"
+              className="bg-[#222737] flex h-[40px] gap-[8px] items-center justify-between p-[8px] rounded-[8px] w-full text-left hover:bg-[#2a3045] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631ee]"
             >
-              <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] truncate">
+              <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[14px] leading-[20px] truncate">
                 {activeLabel}
               </span>
               <ChevronDown className="flex-shrink-0 size-[18px]" color="#6c779d" strokeWidth={1.8} />
@@ -339,7 +339,7 @@ export function AuditLogSection() {
                 aria-label="Record type"
                 aria-activedescendant={`audit-type-option-${FILTER_OPTIONS[activeIndex]?.id ?? filter}`}
                 onKeyDown={onMenuKeyDown}
-                className="absolute right-0 top-[calc(100%+4px)] w-full z-[60] bg-[#0a0c10] border border-solid border-[#1d2132] rounded-[12px] p-[6px] flex flex-col gap-[2px] shadow-[0px_17px_8.5px_rgba(0,0,0,0.34),0px_4px_4.5px_rgba(0,0,0,0.39)]"
+                className="absolute right-0 top-[calc(100%+4px)] w-[208px] z-[60] bg-[#0a0c10] border border-solid border-[#1d2132] rounded-[12px] p-[8px] flex flex-col items-start shadow-[0px_68px_13.5px_rgba(0,0,0,0.06),0px_38px_11.5px_rgba(0,0,0,0.2),0px_17px_8.5px_rgba(0,0,0,0.34),0px_4px_4.5px_rgba(0,0,0,0.39)]"
               >
                 {FILTER_OPTIONS.map((o, i) => (
                   <button
@@ -353,7 +353,7 @@ export function AuditLogSection() {
                     data-testid={`option-audit-type-${o.id}`}
                     onFocus={() => setActiveIndex(i)}
                     onClick={() => commit(o.id)}
-                    className="w-full text-left px-[8px] py-[6px] rounded-[8px] transition-colors hover:bg-[#11141b] focus:bg-[#11141b] focus:outline-none [font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px]"
+                    className="flex items-center p-[8px] rounded-[8px] shrink-0 w-full text-left transition-colors hover:bg-[#222737] focus:bg-[#222737] focus:outline-none [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px]"
                     style={{ color: filter === o.id ? "#ffffff" : "#a8b9f4" }}
                   >
                     {o.label}

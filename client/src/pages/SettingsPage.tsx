@@ -32,6 +32,7 @@ import NotificationsFigma from "@/components/settings/figma/NotificationsSection
 import TeamFigma from "@/components/settings/figma/TeamSection";
 import LegalFigma from "@/components/settings/figma/LegalSection";
 import AccountFigma from "@/components/settings/figma/AccountSection";
+import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
 
 /* ─── Section type ───────────────────────────────────────── */
 type Section =
@@ -626,41 +627,15 @@ function ProfileSection() {
             sublabel="Used for balance display"
             right={
               <div ref={currencyRef} className="relative shrink-0 w-[120px]">
-                <button
-                  type="button"
-                  onClick={() => setCurrencyOpen((v) => !v)}
-                  className="bg-[#222737] content-stretch flex gap-[8px] items-center p-[8px] rounded-[8px] w-full text-left hover:bg-[#2a3045] transition-colors"
-                  data-testid="button-default-currency"
-                >
-                  <div className="content-stretch flex flex-[1_0_0] items-center min-w-px relative">
-                    <p className="font-['Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[16px] text-white whitespace-nowrap">
-                      {currency}
-                    </p>
-                  </div>
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="relative shrink-0 size-[24px]">
-                    <path d="M7 10l5 5 5-5" stroke="#6c779d" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </button>
-                {currencyOpen && (
-                  <div className="absolute right-0 top-[calc(100%+4px)] z-50 bg-[#222737] border border-[#414965] rounded-[8px] overflow-hidden w-full shadow-lg">
-                    {CURRENCY_OPTIONS.map((opt) => (
-                      <button
-                        key={opt}
-                        type="button"
-                        onClick={() => {
-                          setCurrency(opt);
-                          setCurrencyOpen(false);
-                        }}
-                        className={`w-full text-left px-[12px] py-[8px] font-['Gilroy',sans-serif] font-medium text-[16px] leading-[20px] hover:bg-[#2a3045] transition-colors ${
-                          currency === opt ? "text-white" : "text-[#a8b9f4]"
-                        }`}
-                        data-testid={`option-default-currency-${opt}`}
-                      >
-                        {opt}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                <SettingsDropdown
+                  value={currency}
+                  options={CURRENCY_OPTIONS.map((opt) => ({ value: opt, label: opt }))}
+                  onChange={setCurrency}
+                  testId="button-default-currency"
+                  ariaLabel="Default currency"
+                  open={currencyOpen}
+                  onOpenChange={setCurrencyOpen}
+                />
               </div>
             }
             useCircleIcon

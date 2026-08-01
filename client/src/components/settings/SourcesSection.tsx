@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { BankConnectionInfo, SourceDocument, ToolConnection } from "@/lib/sourceTypes";
+import type { BrainAccountsResponse } from "@/lib/brainAccounts";
 import type { CategoryId } from "@/lib/sourceCategories";
 import { useBrainSources } from "@/lib/useBrainSources";
 import {
@@ -20,6 +21,9 @@ import {
 } from "@/lib/sourceRows";
 import { ExtractStatusBadge } from "@/components/sources/ExtractStatusBadge";
 import { AlertCallout } from "@/components/Callout";
+import { AccountDetailPopup } from "@/components/AccountDetailPopup";
+import { TransactionDetailPopup } from "@/components/TransactionDetailPopup";
+import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
 import {
   BankConnect,
   ProviderPicker,
@@ -68,13 +72,13 @@ const CATEGORY_KIND_LABEL: Record<CategoryId, string> = {
 
 /** The categories offered in the add form, in the order the mock lists them. */
 const ADD_CATEGORIES: { id: CategoryId; label: string }[] = [
-  { id: "bank", label: "Bank account" },
-  { id: "crypto", label: "Crypto wallet" },
+  { id: "bank", label: "Bank Account" },
+  { id: "crypto", label: "Crypto Wallet" },
   { id: "accounting", label: "Accounting" },
   { id: "payroll", label: "Payroll" },
   { id: "payments", label: "Payments" },
-  { id: "tax", label: "Tax documents" },
-  { id: "documents", label: "Document upload" },
+  { id: "tax", label: "Tax Documents" },
+  { id: "documents", label: "Document Upload" },
 ];
 
 /** Which connect mechanism a category hands off to. Mirrors the onboarding
@@ -90,6 +94,8 @@ function mechanismFor(cat: CategoryId): "bank" | "providers" | "documents" {
 interface RowProps {
   title: ReactNode;
   subtitle: string;
+  accountId?: string;
+  onOpenAccount?: () => void;
   onRemove?: () => void;
   removing?: boolean;
   testId: string;
@@ -100,13 +106,33 @@ interface RowProps {
 /** One source. The remove control asks first: disconnecting is instant, silent
     and not obviously reversible, and the confirmation is also the only natural
     place to say what removal does NOT do. */
-function SourceRow({ title, subtitle, onRemove, removing, testId, removeTestId, last }: RowProps) {
+function SourceRow({
+  title,
+  subtitle,
+  accountId,
+  onOpenAccount,
+  onRemove,
+  removing,
+  testId,
+  removeTestId,
+  last,
+}: RowProps) {
   const [confirming, setConfirming] = useState(false);
+  const clickable = Boolean(onOpenAccount && accountId);
 
   return (
     <div
       data-testid={testId}
-      className={`flex flex-col gap-[8px] px-[16px] py-[12px] ${last ? "" : "border-b border-[#1d2132]"}`}
+      role={clickable ? "button" : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      onClick={clickable ? onOpenAccount : undefined}
+      onKeyDown={clickable ? (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onOpenAccount?.();
+        }
+      } : undefined}
+      className={`flex flex-col gap-[8px] px-[16px] py-[12px] ${last ? "" : "border-b border-[#1d2132]"} ${clickable ? "cursor-pointer transition-colors hover:bg-[#11141b] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631ee] focus-visible:ring-inset" : ""}`}
     >
       <div className="flex items-center gap-[12px]">
         <div className="flex-1 min-w-0 flex flex-col gap-[2px]">
@@ -120,7 +146,10 @@ function SourceRow({ title, subtitle, onRemove, removing, testId, removeTestId, 
         {onRemove && !confirming && (
           <button
             type="button"
-            onClick={() => setConfirming(true)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setConfirming(true);
+            }}
             data-testid={removeTestId}
             className="shrink-0 rounded-full px-[14px] py-[6px] bg-[#222737] hover:bg-[#2c3247] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[16px]"
           >
@@ -138,7 +167,11 @@ function SourceRow({ title, subtitle, onRemove, removing, testId, removeTestId, 
             <button
               type="button"
               disabled={removing}
-              onClick={() => { onRemove?.(); setConfirming(false); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onRemove?.();
+                setConfirming(false);
+              }}
               data-testid={removeTestId ? `${removeTestId}-confirm` : undefined}
               className="rounded-full px-[14px] py-[6px] bg-[#d20344] hover:opacity-90 transition-opacity disabled:opacity-40 [font-family:'Gilroy',sans-serif] font-semibold text-white text-[12px] leading-[16px]"
             >
@@ -146,7 +179,10 @@ function SourceRow({ title, subtitle, onRemove, removing, testId, removeTestId, 
             </button>
             <button
               type="button"
-              onClick={() => setConfirming(false)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setConfirming(false);
+              }}
               className="rounded-full px-[14px] py-[6px] bg-[#222737] hover:bg-[#2c3247] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[16px]"
             >
               Cancel
@@ -191,11 +227,18 @@ export function SourcesSection() {
   const banksQuery = useQuery<BankConnectionInfo[]>({ queryKey: ["/api/integrations/plaid/connections"] });
   const toolsQuery = useQuery<ToolConnection[]>({ queryKey: ["/api/integrations/connections"] });
   const docsQuery = useQuery<SourceDocument[]>({ queryKey: ["/api/integrations/documents"] });
+  const accountsQuery = useQuery<BrainAccountsResponse>({
+    queryKey: ["/api/brain/ledger/accounts"],
+    retry: false,
+  });
   const brain = useBrainSources(true);
 
   const [formOpen, setFormOpen] = useState(false);
   const [category, setCategory] = useState<CategoryId>("bank");
+  const [categoryOpen, setCategoryOpen] = useState(false);
   const [removeError, setRemoveError] = useState<string | null>(null);
+  const [openAccountId, setOpenAccountId] = useState<string | null>(null);
+  const [openTransactionId, setOpenTransactionId] = useState<string | null>(null);
 
   const onRemoveError = (err: Error) => setRemoveError(err.message.replace(/^\d+:\s*/, ""));
   const invalidate = (key: string) => queryClient.invalidateQueries({ queryKey: [key] });
@@ -240,6 +283,33 @@ export function SourcesSection() {
   const tools = toolsQuery.data ?? [];
   const docs = docsQuery.data ?? [];
   const brainSources = brain.sources;
+  const ledgerAccounts = accountsQuery.data?.accounts ?? [];
+
+  /* A source row may identify its ledger account directly, or through the
+     account's source_ids. Keep this defensive because the BFF intentionally
+     relays upstream source metadata without normalising it. */
+  const accountIdFor = (sourceId: string, title: string, metadata?: Record<string, unknown>) => {
+    const explicit = metadata?.ledger_account_id ?? metadata?.account_id;
+    if (typeof explicit === "string" && ledgerAccounts.some((a) => a.id === explicit)) return explicit;
+    const overlaps = metadata?.overlaps_with;
+    if (overlaps && typeof overlaps === "object" && !Array.isArray(overlaps)) {
+      const linkedIds = (overlaps as { ledger_account_ids?: unknown }).ledger_account_ids;
+      if (Array.isArray(linkedIds)) {
+        const linked = linkedIds.find(
+          (id): id is string => typeof id === "string" && ledgerAccounts.some((a) => a.id === id),
+        );
+        if (linked) return linked;
+      }
+    }
+    const bySource = ledgerAccounts.find((a) => a.source_ids?.includes(sourceId));
+    if (bySource) return bySource.id;
+    const byName = ledgerAccounts.find((a) => a.name.toLowerCase() === title.toLowerCase());
+    if (byName) return byName.id;
+    const byExternalId = ledgerAccounts.find((a) =>
+      typeof a.external_account_id === "string" && a.external_account_id.includes(sourceId),
+    );
+    return byExternalId?.id;
+  };
 
   const bankState = readState(banksQuery);
   const toolState = readState(toolsQuery);
@@ -272,6 +342,9 @@ export function SourcesSection() {
       testId: `source-bank-${b.itemId}`,
       removeTestId: `button-remove-bank-${b.itemId}`,
       title: b.institutionName,
+      accountId: b.accounts.length === 1
+        ? accountIdFor(b.accounts[0].accountId, b.institutionName, { account_id: b.accounts[0].accountId })
+        : undefined,
       subtitle: syncCaption(
         {
           kind: `${CATEGORY_KIND_LABEL.bank}${b.accounts.length > 1 ? ` · ${b.accounts.length} accounts` : ""}`,
@@ -287,6 +360,7 @@ export function SourcesSection() {
       testId: `source-brain-${s.id}`,
       removeTestId: `button-remove-source-${s.id}`,
       title: brainSourceLabel(s),
+      accountId: accountIdFor(s.id, brainSourceLabel(s), s.metadata),
       subtitle: syncCaption(
         {
           kind: brainKind(s),
@@ -306,6 +380,7 @@ export function SourcesSection() {
       testId: `source-tool-${t.toolId}`,
       removeTestId: `button-remove-tool-${t.toolId}`,
       title: TOOL_LABELS[t.toolId] ?? t.toolId,
+      accountId: accountIdFor(t.toolId, TOOL_LABELS[t.toolId] ?? t.toolId),
       subtitle: syncCaption(
         { kind: t.accountLabel ? `${toolKind(t.toolId)} · ${t.accountLabel}` : toolKind(t.toolId), connectedAt: t.connectedAt },
         nowMs,
@@ -319,6 +394,14 @@ export function SourcesSection() {
 
   return (
     <div className="flex flex-col gap-[16px]">
+      <div className="flex min-h-[36px] items-center">
+        <p
+          className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]"
+          data-testid="text-sources-subhead"
+        >
+          Sources
+        </p>
+      </div>
       {/* Toolbar: the count is a claim about completeness, so it carries its own
           qualifier whenever a feed failed or has not answered yet. */}
       <div className="flex items-center justify-between gap-[12px] min-h-[36px]">
@@ -349,17 +432,15 @@ export function SourcesSection() {
               >
                 Category
               </label>
-              <select
-                id="add-source-category"
+              <SettingsDropdown
                 value={category}
-                onChange={(e) => setCategory(e.target.value as CategoryId)}
-                data-testid="select-source-category"
-                className="w-full rounded-[10px] bg-[#12151f] border border-[#1d2132] px-[12px] py-[9px] [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[14px] leading-[20px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-              >
-                {ADD_CATEGORIES.map((c) => (
-                  <option key={c.id} value={c.id}>{c.label}</option>
-                ))}
-              </select>
+                options={ADD_CATEGORIES.map((c) => ({ value: c.id, label: c.label }))}
+                onChange={(value) => setCategory(value as CategoryId)}
+                testId="select-source-category"
+                ariaLabel="Source category"
+                open={categoryOpen}
+                onOpenChange={setCategoryOpen}
+              />
             </div>
 
             {/* The connect step itself. There is no generic "Connect" button
@@ -400,7 +481,7 @@ export function SourcesSection() {
       )}
 
       <div className="flex flex-col gap-[4px]">
-        <SectionLabel testId="label-connected-accounts">Connected accounts</SectionLabel>
+        <SectionLabel testId="label-connected-accounts">Connected Accounts</SectionLabel>
         <Card testId="list-connected-accounts">
           {accountRows.length === 0 ? (
             <EmptyRow
@@ -416,6 +497,8 @@ export function SourcesSection() {
                 removeTestId={r.removeTestId}
                 title={r.title}
                 subtitle={r.subtitle}
+                accountId={r.accountId}
+                onOpenAccount={r.accountId ? () => setOpenAccountId(r.accountId!) : undefined}
                 onRemove={r.onRemove}
                 removing={r.removing}
                 last={i === accountRows.length - 1}
@@ -424,6 +507,22 @@ export function SourcesSection() {
           )}
         </Card>
       </div>
+
+      <AccountDetailPopup
+        accountId={openAccountId}
+        onClose={() => setOpenAccountId(null)}
+        onOpenTransaction={(id) => {
+          setOpenAccountId(null);
+          setOpenTransactionId(id);
+        }}
+        onSelectAccount={setOpenAccountId}
+        hidePager
+      />
+      <TransactionDetailPopup
+        txId={openTransactionId}
+        onClose={() => setOpenTransactionId(null)}
+        onSelectTransaction={setOpenTransactionId}
+      />
 
       <div className="flex flex-col gap-[4px]">
         <SectionLabel testId="label-documents">Documents</SectionLabel>
