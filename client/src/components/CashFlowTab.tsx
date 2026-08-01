@@ -133,18 +133,28 @@ const Metric = ({
   testId: string;
   format: Format;
 }) => (
-  <div className="bg-[#0a0c10] border border-solid border-[#1d2132] rounded-[12px] p-[14px] flex flex-col gap-[6px]" data-testid={testId}>
-    <p className="[font-family:'Gilroy',sans-serif] font-semibold uppercase leading-[14px] text-[#414965] text-[11px] tracking-[0.4px]">
+  (() => {
+    const formatted = value == null ? "—" : format(value);
+    const parts = formatted.match(/^(.+)\.(\d{2})$/);
+    const whole = parts ? parts[1] : formatted;
+    const cents = parts ? `.${parts[2]}` : "";
+    const amountColor = value == null ? "#414965" : (colour ?? "#a8b9f4");
+
+    return (
+  <div className="bg-[#0a0c10] border border-transparent rounded-[16px] p-[16px] flex flex-col gap-[8px]" data-testid={testId}>
+    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#414965] text-[13px] uppercase">
       {label}
     </p>
     <p
-      className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[26px] text-[22px]"
-      style={{ color: value == null ? "#414965" : (colour ?? "#a8b9f4") }}
+      className="[font-family:'Gilroy',sans-serif] leading-[0] relative shrink-0 text-[0px] w-full whitespace-nowrap"
     >
-      {value == null ? "—" : format(value)}
+      <span className="font-medium leading-[36px] text-[28px]" style={{ color: amountColor }}>{whole}</span>
+      {cents && <span className="font-medium leading-[36px] text-[18px]" style={{ color: amountColor }}>{cents}</span>}
     </p>
-    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[12px]">{caption}</p>
+    <p className="[font-family:'Gilroy',sans-serif] font-normal leading-[18px] text-[#414965] text-[13px] w-full">{caption}</p>
   </div>
+    );
+  })()
 );
 
 /* ── overdue receivables banner (moved from FinancesPage) ────────────────── */
