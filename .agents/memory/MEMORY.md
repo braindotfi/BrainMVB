@@ -22,6 +22,7 @@
 - [Replit git branch tracking](replit-git-branch-tracking.md) — auto-checkpoints push local main (and upstream-tracking branches) straight to origin/main, past required reviews; PR stays open while its content lands.
 - [Stacked PR rebases](stacked-pr-rebase.md) — squash merges hide the parent's commits: always `rebase --onto origin/main <parent's old tip>`, never plain rebase, and re-test after.
 - [CI red + armed auto-merge](ci-red-and-auto-merge.md) — npm ci fails on lock drift so every PR is red before tests run; fixing it squash-merges open PRs unreviewed (main unprotected).
+- [Admin-merge rule](merge-bypass-rule.md) — docs/memory and presentation of reviewed logic may be admin-merged; tiering, the bulk-approve gate and any threshold reading need a real reviewer.
 - [Partial GitHub write access](github-connector-write-limit.md) — push, create-PR and merge-PR are separately grantable and have each been denied; check before promising a merge, verify trees after.
 - [Verifying the demo seed](demo-seed-verification.md) — seed docs are generated at seed time, dates roll with "now" (never re-pin); Brightline fixture authoritative vs brain-core's __fixtures__.
 - [Refresh after upload](brain-refresh-after-upload.md) — query defaults never refetch, so ingest paths must invalidate; extract done ≠ projected, and modal-scoped settle windows die on close.
