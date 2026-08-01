@@ -124,7 +124,7 @@ export const TierRow = ({ row }: { row: TierRowModel }) => {
       ) : (
         <div aria-hidden="true" className="size-[16px] shrink-0" />
       )}
-      <div className="flex flex-col gap-[3px] items-start min-w-px flex-1">
+      <div className="flex flex-col gap-[4px] items-start min-w-px flex-1">
         {/* Wraps rather than truncates. These titles carry the amount and the
             counterparty; an ellipsis in a ~420px column hides exactly the part
             the reader needs to decide. */}
@@ -134,7 +134,7 @@ export const TierRow = ({ row }: { row: TierRowModel }) => {
           </p>
           {row.badge && (
             <span
-              className={`${row.badge.className} border border-solid rounded-[22px] px-[8px] py-[3px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-center whitespace-nowrap shrink-0`}
+              className={`${row.badge.className} border border-solid rounded-[22px] px-[8px] py-[2px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-center whitespace-nowrap shrink-0`}
               data-testid={`${row.testIdPrefix}-${row.id}-badge`}
             >
               {row.badge.label}
@@ -142,12 +142,12 @@ export const TierRow = ({ row }: { row: TierRowModel }) => {
           )}
         </div>
         {row.subtitle && (
-          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[14px] w-full">
+          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] w-full">
             {row.subtitle}
           </p>
         )}
         {row.note && (
-          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[14px] w-full">
+          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] w-full">
             {row.note}
           </p>
         )}

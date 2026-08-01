@@ -455,7 +455,7 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
                       )}
                     </div>
                     {(row.sublabel || row.date) && (
-                      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px]">
+                      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px]">
                         {[row.sublabel, row.date].filter(Boolean).join(" · ")}
                       </p>
                     )}

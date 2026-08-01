@@ -9,8 +9,14 @@
  */
 
 import { createQaSession } from "./qa-harness.mjs";
+import { stubProposals } from "./qa-fixtures.mjs";
 
 const { page, base, finish } = await createQaSession({ viewport: { width: 1440, height: 1200 } });
+
+/* The demo tenant has no proposals upstream, so Overview and Inbox render their
+   empty states and the decision rows — the whole point of those two shots —
+   never appear. Stub the read so the rows exist. A GET is not a write. */
+await stubProposals(page);
 
 const SHOTS = [
   { path: "/", name: "overview", wait: '[data-testid^="row-"]' },

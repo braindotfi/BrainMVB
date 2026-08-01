@@ -53,5 +53,5 @@
 - [Onboarding walkthrough copy](onboarding-walkthrough-copy.md) — explainer reads the live policy; pending/failed/404/known are four different sentences; copy freezes per step.
 - [Nested scroll layout](inbox-scroll-layout.md) — bounded route surfaces need grid chrome/list rows and overflow on the actual records panel.
 - [In-place settled detail](decisions-timeline-in-place-detail.md) — old Audit Log page is deleted; /audit-log is a query-preserving redirect to /inbox; render the popup locally + set returnToBase.
-- [Row-record type ramp](row-record-type-ramp.md) — Security settings table is the reference (16px/medium/#a8b9f4 + 14px/#6c779d); copy size/weight/colour but never its leading.
+- [Row-record type ramp & height](row-record-type-ramp.md) — Security table is the reference; 20+4+16 = a 40px stack, so leading is load-bearing; pin only the shortest row.
 - [Audit Log full history](audit-log-full-history.md) — full trail lives in Settings (Inbox stays decisions-only); measure a read cap pre-merge, and isError needs a path independent of length===0.
