@@ -11,7 +11,7 @@
     "test": "vitest run",
     "db:push": "drizzle-kit push",
     "db:backfill:plaid-tokens": "tsx scripts/backfill-plaid-token-encryption.ts",
-    "qa:degraded": "node scripts/qa-ledger-degraded-states.mjs && node scripts/qa-search-degraded-states.mjs && node scripts/qa-settings-degraded-states.mjs && node scripts/qa-developers-nested-degraded-states.mjs && node scripts/qa-sources-page-degraded-states.mjs",
+    "qa:degraded": "node scripts/qa-harness-selftest.mjs && node scripts/qa-ledger-degraded-states.mjs && node scripts/qa-search-degraded-states.mjs && node scripts/qa-settings-degraded-states.mjs && node scripts/qa-developers-nested-degraded-states.mjs && node scripts/qa-sources-page-degraded-states.mjs",
     "brain:smoke": "tsx script/brain-smoke.ts"
   },
   "dependencies": {

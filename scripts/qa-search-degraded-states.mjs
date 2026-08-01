@@ -29,6 +29,8 @@
  * commit one.
  */
 
+import { createQaSession } from "./qa-harness.mjs";
+
 const BASE = process.env.QA_BASE ?? "http://127.0.0.1:5000";
 const USER = process.env.QA_USER_ID;
 const COOKIE = process.env.QA_COOKIE;
@@ -40,26 +42,10 @@ if (!USER || !COOKIE) {
   process.exit(2);
 }
 
-const { chromium } = await import(PLAYWRIGHT);
-
-const browser = await chromium.launch({
-  ...(CHROMIUM ? { executablePath: CHROMIUM } : {}),
-  args: ["--no-sandbox"],
-});
-const ctx = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
-await ctx.addCookies([
-  { name: "brain.sid", value: COOKIE, domain: new URL(BASE).hostname, path: "/" },
-]);
-await ctx.addInitScript((u) => {
-  localStorage.setItem(`brain_onboarding_complete_${u}`, "true");
-}, USER);
-
-const page = await ctx.newPage();
-const failures = [];
-const check = (label, pass, detail = "") => {
-  console.log(`${pass ? "PASS" : "FAIL"}  ${label}${detail ? ` — ${detail}` : ""}`);
-  if (!pass) failures.push(label);
-};
+/* One shared session for every QA script: signed in as the target tenant, with
+   writes denied by default — an interception a script forgets to install turns
+   into a failed check, not a live write. See scripts/qa-harness.mjs. */
+const { ctx, page, api, check, permitWrite, stubWrite, finish } = await createQaSession();
 
 const INPUT = '[data-testid="input-global-search"]';
 const RESULT = '[data-testid^="search-result-"]';
@@ -126,7 +112,6 @@ if (!REAL) {
     "Could not derive a search term from this tenant's accounts. Without a term\n" +
       "that genuinely matches, 'no matches' and 'nothing seeded' are indistinguishable.",
   );
-  await browser.close();
   process.exit(2);
 }
 console.log(`Using "${REAL}" as the known-good term.\n`);
@@ -235,11 +220,5 @@ check(
 );
 
 await healAll();
-await browser.close();
 
-console.log(
-  failures.length === 0
-    ? "\nAll global-search degraded-state checks passed."
-    : `\n${failures.length} FAILED:\n  - ${failures.join("\n  - ")}`,
-);
-process.exit(failures.length === 0 ? 0 : 1);
+await finish();
