@@ -737,7 +737,7 @@ function ProfileSection() {
                   clearOnboarding(user?.id);
                   navigate("/");
                 }}
-                className="shrink-0 rounded-[8px] px-[12px] py-[8px] bg-[#222737] hover:bg-[#2c3247] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-[#a8b9f4] whitespace-nowrap"
+                className="self-start rounded-[100px] bg-[#240757] px-[14px] py-[8px] [font-family:'Gilroy',sans-serif] font-semibold text-[#7631ee] text-[14px] leading-[20px] hover:bg-[#2e0a6e] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] flex items-center justify-center"
               >
                 Replay
               </button>
