@@ -19,7 +19,6 @@ import { HomePage } from "@/pages/HomePage";
 import { FinancesPage } from "@/pages/FinancesPage";
 import { InboxPage } from "@/pages/InboxPage";
 import { RuleDetail } from "@/pages/RuleDetail";
-import { AuditLogPage } from "@/pages/AuditLogPage";
 import { NavigationMenuSection } from "@/pages/sections/NavigationMenuSection";
 import { BrainAssistant } from "@/pages/sections/BrainAssistant";
 import { NavContext } from "@/lib/navContext";
@@ -73,6 +72,20 @@ const DevelopersRedirect = () => {
   return null;
 };
 
+/* The old six-tab Audit Log page is retired — settled history now lives in the
+   unified Inbox timeline. The route survives ONLY as a redirect: bookmarks,
+   assistant citations and record deep links (`/audit-log?record=<id>`) still
+   point here, and wouter answers an unregistered path with the NotFound
+   catch-all silently. The query string is carried across verbatim, so
+   `?record=` deep links reopen the same record popup on the Inbox timeline. */
+const AuditLogRedirect = () => {
+  const search = useSearch();
+  const [, navigate] = useLocation();
+  useEffect(() => {
+    navigate(search ? `/inbox?${search}` : "/inbox", { replace: true });
+  }, [search, navigate]);
+  return null;
+};
 function AppLayout() {
   const { isLoggedIn, isLoading, logout } = useAuth();
   const { timeoutMin } = useSessionTimeout();
@@ -227,7 +240,7 @@ function MainShell({ onLogout }: { onLogout: () => void }) {
               <Route path="/rules" component={RulesRedirect} />
               <Route path="/vendors" component={VendorsRedirect} />
               <Route path="/activity" component={InboxPage} />
-              <Route path="/audit-log" component={AuditLogPage} />
+              <Route path="/audit-log" component={AuditLogRedirect} />
               <Route path="/developers" component={DevelopersRedirect} />
               <Route path="/settings" component={SettingsPage} />
               <Route component={NotFound} />
@@ -253,6 +266,7 @@ function MainShell({ onLogout }: { onLogout: () => void }) {
     </NavContext.Provider>
   );
 }
+
 
 function App() {
   return (

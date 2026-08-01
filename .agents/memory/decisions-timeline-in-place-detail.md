@@ -9,11 +9,13 @@ the tempting one-liner is to `navigate("/audit-log?record=…")` because that pa
 to render one. Doing so swaps the entire page for the old six-tab Audit Log, so the user taps a row
 in one product and lands in another.
 
-**Why:** the timeline rebuild folded the old Inbox/Activity/Audit split into one list, but it did
-**not** delete `AuditLogPage` — it is still a registered route, still reachable from Settings →
-Developers and from assistant citations. So the old UI is always one `navigate()` away, and a
-surface can regress to it without anything being deleted or erroring. The detail *popup*
-(`AuditRecordPopup`) is the reusable part; the *page* is not.
+**Why:** the timeline rebuild folded the old Inbox/Activity/Audit split into one list, but for a
+while `AuditLogPage` remained a live route, so the old UI was one `navigate()` away. The page has
+since been **deleted**; `/audit-log` is now only a redirect to `/inbox` that carries the query
+string across (so `?record=` deep links still open the right popup). The detail *popup*
+(`AuditRecordPopup`, default `returnToBase` `/inbox`) is the reusable part. Keep the redirect —
+wouter answers unregistered paths with NotFound silently, and bookmarks/assistant citations still
+point at `/audit-log`.
 
 **How to apply:**
 - Render the shared popup locally with its own state instead of routing to the page that owns it.

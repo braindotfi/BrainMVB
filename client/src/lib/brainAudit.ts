@@ -7,7 +7,7 @@ import { explorerTxUrl, normalizeTxHash } from "./explorer";
 import type { AssistantQuestion } from "@shared/schema";
 
 /* ── Live brain-core audit events → AuditRecord ───────────────────────────────
-   Replaces MOCK_AUDIT_RECORDS as the AuditLogPage data source with
+   Replaces MOCK_AUDIT_RECORDS as the audit-record data source (Inbox timeline) with
    `GET /audit/events` + `GET /audit/anchor/latest` (both proxied verbatim by
    the BFF's generic GET passthrough - no new route needed; see
    server/brain/proxy.ts). `audit:read` is on the session/member token.
@@ -526,7 +526,7 @@ export function mapAuditEventToRecord(
     actor: displayActor,
     occurredAtLabel: label(createdMs),
     occurredAtMs: createdMs,
-    // rowSubtitle left unset - AuditLogPage's own fallback formats amount
+    // rowSubtitle left unset - the consuming page's own fallback formats amount
     // through useCurrency(), which this module has no access to.
     lifecycle: [step],
     // Real linked-evidence for proposal.decided only (documents/vendors/rules

@@ -38,9 +38,9 @@ export function AuditRecordPopup({
   onNext?: () => void;
   pagerDisabled?: boolean;
   /* Route this popup should come BACK to when the user follows a linked entity
-     (vendor / proposal) and then returns. Defaults to the Audit Log because that
-     is where this popup first lived; Inbox passes its own route so a settled
-     record opened from the timeline never returns the user to the old page. */
+     (vendor / proposal) and then returns. Defaults to the unified Inbox
+     timeline — the old Audit Log page is retired and /audit-log is now only a
+     redirect. Callers on other routes pass their own base. */
   returnToBase?: string;
 }) {
   const { format, formatText } = useCurrency();
@@ -83,7 +83,7 @@ export function AuditRecordPopup({
   const handleNavigate = (link: LinkedEntity) => {
     /* Built with URLSearchParams so a base that already carries a query (or a
        record id needing escaping) cannot produce a malformed return URL. */
-    const base = returnToBase ?? "/audit-log";
+    const base = returnToBase ?? "/inbox";
     const [basePath, baseQuery = ""] = base.split("?");
     const params = new URLSearchParams(baseQuery);
     params.set("record", record.id);

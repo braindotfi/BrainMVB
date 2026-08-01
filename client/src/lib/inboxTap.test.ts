@@ -14,8 +14,8 @@
  *     navigation: the target type has no route/href/navigate variant at all.
  *  2. A source-level tripwire: InboxPage must keep routing taps through
  *     inboxTapTarget and must not reinstate a `navigate(...audit-log...)`
- *     call. AuditLogPage is still a live route, so the compiler alone would
- *     not catch someone wiring it back in.
+ *     call. /audit-log still exists as a redirect route, so the compiler
+ *     alone would not catch someone wiring it back in.
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";

@@ -49,4 +49,4 @@
 - [Default-on filters](audit-default-filter.md) — a default filter makes "empty" a fact about the filter, so name what's withheld; no client-side user role exists, so role-gated defaults are blocked.
 - [Onboarding walkthrough copy](onboarding-walkthrough-copy.md) — explainer reads the live policy; pending/failed/404/known are four different sentences; copy freezes per step.
 - [Nested scroll layout](inbox-scroll-layout.md) — bounded route surfaces need grid chrome/list rows and overflow on the actual records panel.
-- [In-place settled detail](decisions-timeline-in-place-detail.md) — AuditLogPage is still a live route, so navigating to it regresses the unified timeline; render the popup locally + set returnToBase.
+- [In-place settled detail](decisions-timeline-in-place-detail.md) — old Audit Log page is deleted; /audit-log is a query-preserving redirect to /inbox; render the popup locally + set returnToBase.

@@ -803,16 +803,23 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
               </div>
             </div>
 
-            {/* ── Footer row 1: View in Audit Log ── */}
+            {/* ── Footer row 1: View this event on the Inbox timeline ── */}
             <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-t border-[#1d2132] border-solid flex flex-col items-start p-[24px] relative shrink-0 w-full">
               <div className="flex items-center relative shrink-0 w-full">
                 <button
                   type="button"
                   data-testid="button-open-audit-log"
-                  onClick={() => { setSelectedEvent(null); navigate("/audit-log"); }}
+                  onClick={() => {
+                    /* The old /audit-log page is retired — settled history lives on the
+                       unified Inbox timeline. Deep-link straight to this event's record
+                       popup there (InboxPage matches r.id or anchor.auditId). */
+                    const eventId = selectedEvent.id;
+                    setSelectedEvent(null);
+                    navigate(`/inbox?record=${encodeURIComponent(eventId)}`);
+                  }}
                   className="bg-[#4a2300] flex flex-[1_0_0] items-center justify-center min-w-px px-[20px] py-[10px] relative rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#ff9500] text-[16px] whitespace-nowrap hover:opacity-90 transition-colors"
                 >
-                  View in Audit Log
+                  View in Inbox
                 </button>
               </div>
             </div>
