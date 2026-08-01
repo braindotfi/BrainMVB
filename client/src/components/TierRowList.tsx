@@ -108,7 +108,7 @@ export const TierRow = ({ row }: { row: TierRowModel }) => {
           }
         : {})}
     >
-      {row.select && (
+      {row.select ? (
         <input
           type="checkbox"
           checked={row.select.checked}
@@ -119,8 +119,10 @@ export const TierRow = ({ row }: { row: TierRowModel }) => {
           title={row.select.title}
           aria-label={row.select.label}
           data-testid={`${row.testIdPrefix}-${row.id}-select`}
-           className="decision-checkbox mt-[3px] sm:mt-0 size-[16px] shrink-0 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+          className="decision-checkbox mt-[3px] sm:mt-0 size-[16px] shrink-0 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
         />
+      ) : (
+        <div aria-hidden="true" className="size-[16px] shrink-0" />
       )}
       <div className="flex flex-col gap-[3px] items-start min-w-px flex-1">
         {/* Wraps rather than truncates. These titles carry the amount and the
