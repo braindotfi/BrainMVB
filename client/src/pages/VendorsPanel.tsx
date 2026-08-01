@@ -465,12 +465,23 @@ export function VendorsPanel() {
               {!addOpen ? (
                 /* Idle: dashed-border card with prompt + Add Vendor button */
                 <div
-                  className="flex items-center justify-between gap-[16px] p-[16px] rounded-[16px] w-full"
-                  style={{ background: "#11141b", border: "1px dashed #414965" }}
+                  className="flex items-center justify-between gap-[16px] p-[16px] rounded-[16px] w-full relative"
                   data-testid="panel-add-vendor-idle"
                 >
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[#6c779d] text-[20px] flex-1 min-w-px">
-                    Create a new vendor in plain English
+                  {/* SVG dashed border — matches rules builder exactly */}
+                  <svg className="absolute inset-0 w-full h-full pointer-events-none" aria-hidden focusable="false">
+                    <rect
+                      x="0.5" y="0.5"
+                      style={{ width: "calc(100% - 1px)", height: "calc(100% - 1px)" }}
+                      rx="15.5" ry="15.5"
+                      fill="none"
+                      stroke="#414965"
+                      strokeWidth="1"
+                      strokeDasharray="6 8"
+                    />
+                  </svg>
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[#6c779d] text-[20px] flex-1 min-w-px relative">
+                    Add a new vendor in plain English
                   </p>
                   <button
                     type="button"

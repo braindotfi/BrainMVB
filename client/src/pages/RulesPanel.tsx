@@ -748,13 +748,13 @@ export function RulesPanel() {
               </svg>
               <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
                 <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[#6c779d] text-[20px]">
-                  Write a new rule in plain English
+                  Add a new rule in plain English
                 </p>
               </div>
               <div className="bg-[#4a2300] flex gap-[4px] items-center justify-center px-[12px] py-[8px] relative rounded-[100px] shrink-0">
                 <Plus size={16} className="text-[#ff9400]" />
                 <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#ff9400] text-[12px]">
-                  New Rule
+                  Add Rule
                 </span>
               </div>
             </button>
@@ -886,7 +886,7 @@ export function RulesPanel() {
                     placeholder="$0"
                     onChange={(e) => setBuilder((b) => ({ ...b, amount: e.target.value }))}
                     data-testid="input-builder-amount"
-                    className="w-[160px] rounded-[8px] border border-solid border-[#414965] bg-[#222737] px-[8px] py-[10px] [font-family:'JetBrains_Mono',monospace] text-[16px] leading-[20px] text-white placeholder:text-[#6c779d] focus:outline-none focus-visible:border-[rgba(118,49,238,0.5)]"
+                    className="w-[160px] rounded-[8px] bg-[#222737] px-[8px] py-[10px] [font-family:'JetBrains_Mono',monospace] text-[16px] leading-[20px] text-white placeholder:text-[#6c779d] focus:outline-none"
                   />
                 </div>
 
@@ -955,7 +955,7 @@ export function RulesPanel() {
                   data-testid="button-builder-create"
                   className="flex-1 px-[12px] py-[10px] rounded-[100px] bg-[#4a2300] hover:bg-[#5a2d00] disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#ff9500]"
                 >
-                  Create Rule
+                  Add Rule
                 </button>
               </div>
             </div>
@@ -963,6 +963,7 @@ export function RulesPanel() {
 
         </div>{/* end filter row + builder block */}
 
+      <div className="flex flex-col gap-[10px] w-full">
       <div className="flex items-center gap-[8px] min-h-[16px] w-full">
         <div className="size-[6px] rounded-full shrink-0 bg-[#6c779d]" />
         <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[12px] uppercase tracking-[0.4px] whitespace-nowrap">Rules</p>
@@ -1064,6 +1065,7 @@ export function RulesPanel() {
         )}
 
       </div>{/* end table area */}
+      </div>{/* end label + table wrapper */}
     </div>
   );
 }
