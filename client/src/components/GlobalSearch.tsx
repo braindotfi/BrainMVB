@@ -40,7 +40,7 @@ import {
 } from "@/lib/globalSearch";
 
 const INPUT =
-  "w-full min-w-0 bg-[#06070a] border border-solid border-[#1d2132] rounded-[10px] px-[12px] py-[9px] [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[18px] text-[#a8b9f4] outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] placeholder:text-[#414965]";
+  "w-full h-[40px] min-w-0 bg-[#06070a] border-0 rounded-[10px] px-[12px] py-0 [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[18px] text-[#a8b9f4] outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] placeholder:text-[#414965]";
 
 export function GlobalSearch() {
   const [, navigate] = useLocation();
@@ -175,7 +175,7 @@ export function GlobalSearch() {
   };
 
   return (
-    <div className="relative w-full shrink-0 mb-[12px]" ref={wrapRef} data-testid="global-search">
+    <div className="relative mx-[7px] w-auto shrink-0 mt-[12px] mb-[7px]" ref={wrapRef} data-testid="global-search">
       <input
         type="text"
         role="combobox"
@@ -185,9 +185,9 @@ export function GlobalSearch() {
           showPanel && results[activeIndex] ? `gs-${results[activeIndex].key}` : undefined
         }
         aria-autocomplete="list"
-        aria-label="Search decisions, vendors and accounts"
+        aria-label="Search decisions, vendors, accounts, and descriptions from your financial brain"
         className={INPUT}
-        placeholder="Search decisions, vendors, accounts…"
+        placeholder="Search any decisions, vendors, accounts, and descriptions from your financial brain..."
         value={query}
         onChange={(e) => {
           setQuery(e.target.value);
@@ -205,7 +205,7 @@ export function GlobalSearch() {
           /* Anchored to the input, not the viewport: the centre column of the
              three-panel shell is narrow, and a viewport-width dropdown would
              overhang the assistant panel. */
-          className="absolute left-0 right-0 top-[calc(100%+4px)] z-50 overflow-hidden rounded-[10px] border border-solid border-[#1d2132] bg-[#11141b] shadow-[0_18px_40px_rgba(0,0,0,0.55)]"
+          className="absolute bottom-[calc(100%+4px)] left-0 right-0 z-50 overflow-hidden rounded-[10px] border border-solid border-[#1d2132] bg-[#11141b] shadow-[0_18px_40px_rgba(0,0,0,0.55)]"
         >
           {allDown ? (
             <p

@@ -46,6 +46,18 @@ import { ProposalDetail, type ProposalAction } from "@/components/ProposalDetail
 import { ReviewModal, type ReviewItemType } from "@/components/ReviewItems";
 import type { Proposal } from "@/lib/proposalTypes";
 import { openRuleDetail } from "@/lib/openRuleDetail";
+import { decisionTypeLabel } from "@/lib/decisionFilters";
+import { useBrainPolicy } from "@/lib/brainPolicy";
+import {
+  bulkCandidateFrom,
+  bulkLimitFor,
+  elevatedThresholdsFromPolicy,
+  isBlockedByType,
+  isBulkEligible,
+  resolveBulkSelection,
+  runBulkApprove,
+  type BulkCandidate,
+} from "@/lib/bulkApprove";
 import {
   useRules,
   hydrateUserRules,
@@ -576,6 +588,51 @@ export function HomePage() {
   }, [needsReviewProposals, tierThresholds]);
   const [selectedProposal, setSelectedProposal] = useState<BrainProposal | null>(null);
 
+  /* Bulk-selection state for Overview rows. Mirrors InboxPage's pattern so rows
+     carry a working checkbox; the approve-all bar is a follow-on feature. */
+  const [selectedOverviewIds, setSelectedOverviewIds] = useState<Set<string>>(new Set());
+  const toggleOverviewSelect = (id: string) =>
+    setSelectedOverviewIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  const policy = useBrainPolicy();
+  const policyElevation = useMemo(() => elevatedThresholdsFromPolicy(policy.facts), [policy.facts]);
+  const overviewBulkCandidates = useMemo<BulkCandidate[]>(
+    () =>
+      tieredProposals.map((proposal) => {
+        const decisions = buildDecisionButtons(
+          proposal.available_decisions,
+          proposal.presentation?.actions ?? null,
+        );
+        return bulkCandidateFrom(
+          `proposal-${proposal.id}`,
+          proposal,
+          decisions.some((decision) => decision.id === "approve" && decision.writable),
+        );
+      }),
+    [tieredProposals],
+  );
+  const overviewLimitOf = useMemo(
+    () => (candidate: BulkCandidate) => bulkLimitFor(candidate.type, candidate.category, policyElevation, tierThresholds),
+    [policyElevation, tierThresholds],
+  );
+  const overviewEligible = useMemo(
+    () => overviewBulkCandidates.filter((candidate) => isBulkEligible(candidate, overviewLimitOf(candidate))),
+    [overviewBulkCandidates, overviewLimitOf],
+  );
+  const overviewCandidateById = useMemo(
+    () => new Map(overviewEligible.map((candidate) => [candidate.id, candidate])),
+    [overviewEligible],
+  );
+  const overviewSelection = useMemo(
+    () => resolveBulkSelection(overviewEligible, selectedOverviewIds, overviewLimitOf),
+    [overviewEligible, selectedOverviewIds, overviewLimitOf],
+  );
+  const overviewBatchIds = useMemo(() => new Set(overviewSelection.ids), [overviewSelection.ids]);
+  const [overviewBulkRunning, setOverviewBulkRunning] = useState(false);
+
   const cycleRecord = <T extends { id: string | number }>(
     records: T[],
     selected: T | null,
@@ -624,6 +681,12 @@ export function HomePage() {
     disputeError ||
     cashFlowError;
 
+  /* Status tag pill classes — mirrors InboxPage's TAG_* constants so Overview
+     rows carry the same visual language as the Inbox timeline. */
+  const TAG_NEEDS_YOU = "bg-[#4a2300] text-[#ff9500] border-[rgba(255,149,0,0.2)]";
+  const TAG_DETECTED  = "bg-[#222737] text-[#6c779d] border-[rgba(108,119,157,0.2)]";
+  const TAG_REJECTED  = "bg-[#350011] text-[#d20344] border-[rgba(210,3,68,0.2)]";
+
   const overviewRows: TierRowModel[] = useMemo(() => {
     const testIdPrefix = "row-overview";
 
@@ -637,7 +700,12 @@ export function HomePage() {
         id: `session-${String(r.intentId ?? r.id)}`,
         tier: tierForPaymentIntent(),
         title: formatText(r.title),
-        subtitle: r.description ? formatText(r.description) : undefined,
+        badge: { label: "Needs approval", className: TAG_NEEDS_YOU },
+        /* Match InboxPage toRow: amount · vendor · due */
+        subtitle: [r.amount, r.vendor ? `${r.vendor} · ${r.due}` : r.due].filter(Boolean).join(" · ") || undefined,
+        /* Session payment intents do not carry the policy category and threshold
+           fields required by the shared bulk-approval guard, matching Inbox. */
+        select: undefined,
         testIdPrefix,
         onOpenDetail: () => setSelectedLiveIntent(r),
         /* No intent id means there is nothing to POST to. The row still opens its
@@ -671,12 +739,21 @@ export function HomePage() {
       id: `queue-${p.id}`,
       tier: tierForPaymentIntent(),
       title: formatText(p.title),
-      subtitle: p.rationale ? formatText(p.rationale) : undefined,
+      /* Match InboxPage badge logic — severity drives the label and colour */
+      badge: {
+        label: p.severity === "danger" ? "High risk" : p.severity === "warning" ? "Elevated" : "Needs review",
+        className: p.severity === "danger" ? TAG_REJECTED : TAG_NEEDS_YOU,
+      },
+      /* Match InboxPage toRow: amount · rowSubtitle */
+      subtitle: [typeof p.amount === "number" ? format(p.amount) : undefined, p.rowSubtitle].filter(Boolean).join(" · ") || undefined,
+      /* Durable payment-intent rows do not carry a policy category in this
+         surface, so they are not bulk-selectable, matching Inbox. */
+      select: undefined,
       testIdPrefix,
       onOpenDetail: () => setSelectedReview(p),
       actions: [
-        { id: "approve", label: "Approve", tone: "approve" as const, disabled: queueBusy, onClick: () => approveLive.mutate(p.id) },
         { id: "reject", label: "Reject", tone: "reject" as const, disabled: queueBusy, onClick: () => rejectLive.mutate(p.id) },
+        { id: "approve", label: "Approve", tone: "approve" as const, disabled: queueBusy, onClick: () => approveLive.mutate(p.id) },
       ],
     }));
 
@@ -686,6 +763,7 @@ export function HomePage() {
       id: `insight-${i.id}`,
       tier: tierForReadOnlyInsight(),
       title: formatText(i.title),
+      badge: { label: i.badge, className: TAG_DETECTED },
       subtitle: i.subtitle ? formatText(i.subtitle) : undefined,
       testIdPrefix,
       onOpenDetail: () => setSelectedInsight(i),
@@ -719,11 +797,32 @@ export function HomePage() {
         title: d.writable ? d.meaning ?? undefined : "Brain core can't accept this decision yet.",
         onClick: () => decideProposal.mutate({ id: p.id, decision: d.id as ProposalDecision }),
       }));
+      /* Badge = agent name pill (same as InboxPage pillName logic) */
+      const agentKey = agentKeyForProposalType(p.type);
+      const isPaymentAgent = agentKey === "payment" || /^(?:demo\s+)?payment agent$/i.test(agentName.trim());
+      const pillName = isPaymentAgent ? "Payment" : agentName;
+      const rowId = `proposal-${p.id}`;
+      const candidate = overviewCandidateById.get(rowId);
+      const blocked = candidate ? isBlockedByType(candidate, overviewSelection.type) : false;
       return [{
-        id: `proposal-${p.id}`,
+        id: rowId,
         tier,
         title: headerCopy.title,
-        subtitle: `${agentName} Agent`,
+        badge: { label: pillName, className: TAG_NEEDS_YOU },
+        /* Match InboxPage toRow: narrative text as subtitle */
+        subtitle: headerCopy.text || undefined,
+        /* Vendor risk doesn't require a human approval decision — no checkbox */
+        select: candidate && p.type !== "vendor_risk"
+          ? {
+              checked: overviewBatchIds.has(rowId),
+              disabled: overviewBulkRunning || blocked,
+              title: blocked
+                ? `Bulk approval covers one type at a time. Clear the selection to choose ${decisionTypeLabel(candidate.type ?? "").toLowerCase()} items instead.`
+                : undefined,
+              label: `Select for bulk approval: ${headerCopy.title}`,
+              onChange: () => toggleOverviewSelect(rowId),
+            }
+          : undefined,
         testIdPrefix,
         onOpenDetail: () => setSelectedProposal(p),
         actions,
@@ -743,7 +842,57 @@ export function HomePage() {
     rejectLive.isPending,
     rejectIntent.isPending,
     decideProposal.isPending,
+    selectedOverviewIds,
+    overviewCandidateById,
+    overviewSelection.type,
+    overviewBatchIds,
+    overviewBulkRunning,
   ]);
+
+  const overviewProposalByRowId = useMemo<Map<string, BrainProposal>>(
+    () => new Map(tieredProposals.map((proposal) => [`proposal-${proposal.id}`, proposal])),
+    [tieredProposals],
+  );
+
+  const approveSelectedOverview = async () => {
+    if (overviewSelection.count < 2 || overviewBulkRunning) return;
+    setOverviewBulkRunning(true);
+    const attempted = [...overviewSelection.ids];
+    const outcome = await runBulkApprove(attempted, async (rowId) => {
+      const proposal = overviewProposalByRowId.get(rowId);
+      if (!proposal) throw new Error("This item is no longer on screen.");
+      await decideProposal.mutateAsync({ id: proposal.id, decision: "approve" });
+    });
+
+    setSelectedOverviewIds((current) => {
+      const next = new Set(current);
+      for (const id of outcome.approved) next.delete(id);
+      return next;
+    });
+    setOverviewBulkRunning(false);
+
+    const selectionLabel = overviewSelection.type
+      ? decisionTypeLabel(overviewSelection.type).toLowerCase()
+      : "";
+    if (outcome.failed.length === 0) {
+      toast({
+        title: `Approved ${outcome.approved.length} ${selectionLabel} items`,
+        description: "Each one was approved individually and recorded in the audit log.",
+      });
+    } else if (outcome.approved.length === 0) {
+      toast({
+        title: "Nothing was approved",
+        description: outcome.failed[0].message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: `Approved ${outcome.approved.length} of ${attempted.length}`,
+        description: `${outcome.failed.length} couldn’t be approved and ${outcome.failed.length === 1 ? "is" : "are"} still selected. ${outcome.failed[0].message}`,
+        variant: "destructive",
+      });
+    }
+  };
 
   // "Money in all accounts" total from brain-core's Ledger (via the BFF proxy).
   // Falls back to the static figure when brain-core is unreachable/unconfigured.
@@ -846,7 +995,7 @@ export function HomePage() {
   };
 
   return (
-    <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] size-full flex flex-col">
+    <div className="bg-[#11141b] overflow-hidden relative size-full flex flex-col">
       <ScrollArea className="flex-1">
         <div className="flex flex-col gap-[40px] items-start pb-[16px] pt-[40px] px-[16px] w-full">
 
@@ -938,6 +1087,43 @@ export function HomePage() {
                   <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#d20344] text-[14px]">
                     Some items couldn’t be loaded, so this list may be incomplete.
                   </p>
+                </div>
+              )}
+              {overviewSelection.count >= 2 && overviewSelection.limit && (
+                <div
+                  className="flex flex-col sm:flex-row gap-[10px] sm:items-center justify-between p-[12px] mb-[12px] rounded-[12px] w-full"
+                  style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.35)" }}
+                  data-testid="bulk-bar"
+                >
+                  <p
+                    className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#a88afa] text-[13px]"
+                    data-testid="bulk-bar-summary"
+                  >
+                    <b className="font-semibold text-[#a8b9f4]">{overviewSelection.count} selected</b>
+                    {` · all ${overviewSelection.type ? decisionTypeLabel(overviewSelection.type).toLowerCase() : ""}, each under ${format(overviewSelection.limit.value)} `}
+                    {overviewSelection.limit.source === "rule"
+                      ? "limit from your own rule."
+                      : "limit above which Brain needs a second approver."}
+                  </p>
+                  <div className="flex gap-[8px] items-center shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedOverviewIds(new Set())}
+                      data-testid="button-bulk-clear"
+                      className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-[#6c779d] hover:text-[#a8b9f4] outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-[4px] px-[8px] py-[6px]"
+                    >
+                      Clear
+                    </button>
+                    <button
+                      type="button"
+                      onClick={approveSelectedOverview}
+                      disabled={overviewBulkRunning}
+                      data-testid="button-bulk-approve"
+                      className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-white bg-[#7631ee] hover:bg-[#8a4bf5] disabled:opacity-50 rounded-[8px] px-[12px] py-[7px] outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                    >
+                      {overviewBulkRunning ? "Approving…" : "Approve Selected"}
+                    </button>
+                  </div>
                 </div>
               )}
               <TierSections

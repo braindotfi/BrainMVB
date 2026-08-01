@@ -803,16 +803,23 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
               </div>
             </div>
 
-            {/* ── Footer row 1: View in Audit Log ── */}
+            {/* ── Footer row 1: View this event on the Inbox timeline ── */}
             <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-t border-[#1d2132] border-solid flex flex-col items-start p-[24px] relative shrink-0 w-full">
               <div className="flex items-center relative shrink-0 w-full">
                 <button
                   type="button"
                   data-testid="button-open-audit-log"
-                  onClick={() => { setSelectedEvent(null); navigate("/audit-log"); }}
+                  onClick={() => {
+                    /* The old /audit-log page is retired — settled history lives on the
+                       unified Inbox timeline. Deep-link straight to this event's record
+                       popup there (InboxPage matches r.id or anchor.auditId). */
+                    const eventId = selectedEvent.id;
+                    setSelectedEvent(null);
+                    navigate(`/inbox?record=${encodeURIComponent(eventId)}`);
+                  }}
                   className="bg-[#4a2300] flex flex-[1_0_0] items-center justify-center min-w-px px-[20px] py-[10px] relative rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#ff9500] text-[16px] whitespace-nowrap hover:opacity-90 transition-colors"
                 >
-                  View in Audit Log
+                  View in Inbox
                 </button>
               </div>
             </div>
@@ -2061,28 +2068,6 @@ export function DevelopersSection() {
 
   return (
     <div className="flex flex-col gap-[16px]">
-      <div className="flex items-start justify-between gap-[12px]">
-        <p
-          className="text-[14px] leading-[18px] text-[#6c779d] min-w-0"
-          style={{ fontFamily: "'Gilroy', sans-serif", fontWeight: 500 }}
-          data-testid="text-developers-subhead"
-        >
-          Build on your Brain ledger — create keys, manage tenants, and track usage.
-        </p>
-        {/* Docs sits on the subhead row, not in the tab row: four tabs already
-            fill the column at 1280 and a fifth item pushed one off-screen. */}
-        <a
-          href="https://docs.brain.fi/introduction/quickstart"
-          target="_blank"
-          rel="noopener noreferrer"
-          data-testid="developers-tab-docs"
-          className="shrink-0 text-[14px] leading-[18px] transition-colors hover:text-[#a8b9f4]"
-          style={{ fontFamily: "'Gilroy', sans-serif", fontWeight: 500, color: "#6c779d" }}
-        >
-          Docs ↗
-        </a>
-      </div>
-
       <div role="tablist" aria-label="Developers" className="flex items-center gap-[2px] overflow-x-auto border-b border-[#1d2132]">
         {DEV_TABS.map(({ id, label }) => {
           const active = tab === id;

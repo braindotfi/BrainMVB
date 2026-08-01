@@ -17,6 +17,7 @@ import { useMemo } from "react";
 import { ActionButton, type ActionTone } from "@/components/ProposalCardParts";
 import { TIER_META, TIER_ORDER, type ProposalTier } from "@/lib/proposalTiers";
 import type { RowTier } from "@/lib/decisionFilters";
+import { Divider } from "@/components/LedgerWidgets";
 
 /* Tier accents. Red = Urgent, amber = Waiting on you, periwinkle = Insights —
    the palette already used for Inbox status tags, not the prototype's colours. */
@@ -90,12 +91,22 @@ export const TierRow = ({ row }: { row: TierRowModel }) => {
   const accent = ROW_ACCENT[row.tier];
   return (
     <div
-      className={`flex flex-col sm:flex-row gap-[12px] items-start sm:items-center justify-between px-[16px] py-[14px] w-full bg-[#0a0c10] transition-colors hover:bg-[#11141b] ${
+      className={`flex flex-col sm:flex-row gap-[12px] items-start sm:items-center justify-between px-[8px] py-[8px] w-full bg-[#0a0c10] rounded-[8px] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] ${
         accent ? "border-l-[3px] border-solid" : ""
-      }`}
+      } ${row.onOpenDetail ? "cursor-pointer" : ""}`}
       style={accent ? { borderLeftColor: accent } : undefined}
       data-testid={`${row.testIdPrefix}-${row.id}`}
       data-tier={row.tier}
+      {...(row.onOpenDetail
+        ? {
+            role: "button" as const,
+            tabIndex: 0,
+            onClick: row.onOpenDetail,
+            onKeyDown: (e: React.KeyboardEvent) => {
+              if (e.key === "Enter" || e.key === " ") { e.preventDefault(); row.onOpenDetail?.(); }
+            },
+          }
+        : {})}
     >
       {row.select && (
         <input
@@ -103,6 +114,8 @@ export const TierRow = ({ row }: { row: TierRowModel }) => {
           checked={row.select.checked}
           disabled={row.select.disabled}
           onChange={row.select.onChange}
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.stopPropagation()}
           title={row.select.title}
           aria-label={row.select.label}
           data-testid={`${row.testIdPrefix}-${row.id}-select`}
@@ -135,16 +148,6 @@ export const TierRow = ({ row }: { row: TierRowModel }) => {
           <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#414965] text-[12px] w-full">
             {row.note}
           </p>
-        )}
-        {row.onOpenDetail && (
-          <button
-            type="button"
-            onClick={row.onOpenDetail}
-            data-testid={`${row.testIdPrefix}-${row.id}-detail`}
-            className="mt-[4px] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#7631ee] text-[12px] hover:underline outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-[4px]"
-          >
-            View full detail
-          </button>
         )}
       </div>
       {row.actions.length > 0 && (
@@ -190,10 +193,15 @@ export const TierSection = ({ tier, rows }: { tier: ProposalTier; rows: TierRowM
           {rows.length}
         </p>
       </div>
-      <div className="flex flex-col w-full rounded-[12px] border border-solid border-[#1d2132] overflow-hidden divide-y divide-[#1d2132]">
-        {rows.map((row) => (
-          <TierRow key={row.id} row={row} />
-        ))}
+      <div className="flex flex-col w-full rounded-[12px] border border-solid border-[#1d2132] bg-[#0a0c10] overflow-hidden">
+        <div className="flex flex-col gap-[8px] p-[8px] w-full">
+          {rows.map((row, idx) => (
+            <div key={row.id} className="flex flex-col gap-[8px] w-full">
+              <TierRow row={row} />
+              {idx < rows.length - 1 && <Divider />}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

@@ -90,7 +90,7 @@ export function resolveLedgerTab(param: string | null | undefined): LedgerTab | 
 const TAB_SCOPED_PARAMS = ["vendor", "from", "rules", "create"];
 
 const TAB_COPY: Record<LedgerTab, { heading: string; sub: string | null }> = {
-  Accounts: { heading: "Here's your financial snapshot right now.", sub: null },
+  Accounts: { heading: "Every account. One source of financial truth.", sub: "See balances, cash flow, vendors, and financial rules across your business in one place." },
   "Cash Flow": {
     heading: "Everywhere your money moved.",
     sub: "Income, expenses and the bills you still owe, in one list.",
@@ -226,12 +226,12 @@ export function FinancesPage() {
   const copy = TAB_COPY[activeTab];
 
   return (
-    <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] size-full flex flex-col">
+    <div className="bg-[#11141b] overflow-hidden relative size-full flex flex-col">
 
       {/* Static chrome: header + tab bar — never scrolls */}
       <div className="shrink-0 flex flex-col gap-[40px] items-start pt-[40px] px-[16px] pb-[16px] w-full">
         <div className="flex flex-col items-start gap-[4px] relative shrink-0 w-full">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px]">Your Finances</p>
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px]">Your Financial Ledger</p>
           <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">{copy.heading}</p>
           <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px]">
             {copy.sub ?? `Updated ${updatedLabel}`}

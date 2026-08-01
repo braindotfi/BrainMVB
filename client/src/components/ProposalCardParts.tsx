@@ -370,7 +370,11 @@ export const ActionButton = ({
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={(event) => {
+        event.stopPropagation();
+        onClick?.();
+      }}
+      onKeyDown={(event) => event.stopPropagation()}
       disabled={disabled}
       title={title}
       data-testid={testId}

@@ -20,6 +20,7 @@
 - [Agent proposal pipeline](agent-proposal-pipeline.md) — empty Needs Review is upstream: no tenant policy blocks propose/execute agents, and apar rebuild drops obligations; /v1/agents/proposals is a 404.
 - [brain-core API surface wiring](brain-api-surface-wiring.md) — api-surface artifact is sole truth; writes via WRITE_ROUTES allowlist; proxied READS reach the UI unnormalized, so client types lie.
 - [Replit git branch tracking](replit-git-branch-tracking.md) — auto-checkpoints push local main (and upstream-tracking branches) straight to origin/main, past required reviews; PR stays open while its content lands.
+- [Git sync stale locks](git-sync-stale-locks.md) — generic Sync fatal errors can come from abandoned .git/*.lock files; remove only confirmed stale locks, never reset refs.
 - [Stacked PR rebases](stacked-pr-rebase.md) — squash merges hide the parent's commits: always `rebase --onto origin/main <parent's old tip>`, never plain rebase, and re-test after.
 - [CI red + armed auto-merge](ci-red-and-auto-merge.md) — npm ci fails on lock drift so every PR is red before tests run; fixing it squash-merges open PRs unreviewed (main unprotected).
 - [Admin-merge rule](merge-bypass-rule.md) — docs/memory and presentation of reviewed logic may be admin-merged; tiering, the bulk-approve gate and any threshold reading need a real reviewer.
@@ -48,3 +49,5 @@
 - [First-run copy freeze](first-run-copy-freeze.md) — freeze quoted copy only after the read resolves; "text never changes" is the wrong invariant and hides the tenant's own rule.
 - [Default-on filters](audit-default-filter.md) — a default filter makes "empty" a fact about the filter, so name what's withheld; no client-side user role exists, so role-gated defaults are blocked.
 - [Onboarding walkthrough copy](onboarding-walkthrough-copy.md) — explainer reads the live policy; pending/failed/404/known are four different sentences; copy freezes per step.
+- [Nested scroll layout](inbox-scroll-layout.md) — bounded route surfaces need grid chrome/list rows and overflow on the actual records panel.
+- [In-place settled detail](decisions-timeline-in-place-detail.md) — old Audit Log page is deleted; /audit-log is a query-preserving redirect to /inbox; render the popup locally + set returnToBase.

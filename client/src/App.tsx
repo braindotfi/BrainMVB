@@ -19,7 +19,6 @@ import { HomePage } from "@/pages/HomePage";
 import { FinancesPage } from "@/pages/FinancesPage";
 import { InboxPage } from "@/pages/InboxPage";
 import { RuleDetail } from "@/pages/RuleDetail";
-import { AuditLogPage } from "@/pages/AuditLogPage";
 import { NavigationMenuSection } from "@/pages/sections/NavigationMenuSection";
 import { BrainAssistant } from "@/pages/sections/BrainAssistant";
 import { NavContext } from "@/lib/navContext";
@@ -73,6 +72,20 @@ const DevelopersRedirect = () => {
   return null;
 };
 
+/* The old six-tab Audit Log page is retired — settled history now lives in the
+   unified Inbox timeline. The route survives ONLY as a redirect: bookmarks,
+   assistant citations and record deep links (`/audit-log?record=<id>`) still
+   point here, and wouter answers an unregistered path with the NotFound
+   catch-all silently. The query string is carried across verbatim, so
+   `?record=` deep links reopen the same record popup on the Inbox timeline. */
+const AuditLogRedirect = () => {
+  const search = useSearch();
+  const [, navigate] = useLocation();
+  useEffect(() => {
+    navigate(search ? `/inbox?${search}` : "/inbox", { replace: true });
+  }, [search, navigate]);
+  return null;
+};
 function AppLayout() {
   const { isLoggedIn, isLoading, logout } = useAuth();
   const { timeoutMin } = useSessionTimeout();
@@ -210,30 +223,30 @@ function MainShell({ onLogout }: { onLogout: () => void }) {
           onLogout={handleLogout}
         />
 
-        <div className="flex-1 min-w-0 min-h-0 overflow-hidden flex flex-col">
-          {SEARCH_ROUTES.has(location) && <GlobalSearch />}
-          {/* The pages own their own scroll containers, so the bar is a fixed-height
-              sibling above them rather than something they have to make room for. */}
-          <div className="flex-1 min-w-0 min-h-0 overflow-hidden">
-          <Switch>
-            <Route path="/" component={HomePage} />
-            {/* Canonical IA paths: Overview (/), Decisions, Ledger, Settings */}
-            <Route path="/decisions" component={InboxPage} />
-            <Route path="/ledger" component={FinancesPage} />
-            {/* Legacy deep-link aliases - still routed so existing links keep working */}
-            <Route path="/finances" component={FinancesPage} />
-            <Route path="/inbox" component={InboxPage} />
-            <Route path="/review" component={InboxPage} />
-            <Route path="/rules/:id" component={RuleDetail} />
-            <Route path="/rules" component={RulesRedirect} />
-            <Route path="/vendors" component={VendorsRedirect} />
-            <Route path="/activity" component={InboxPage} />
-            <Route path="/audit-log" component={AuditLogPage} />
-            <Route path="/developers" component={DevelopersRedirect} />
-            <Route path="/settings" component={SettingsPage} />
-            <Route component={NotFound} />
-          </Switch>
+        <div className="flex-1 min-w-0 min-h-0 h-full overflow-hidden flex flex-col rounded-[16px] border border-solid border-[#1d2132] bg-[#11141b]">
+          {/* The page owns the flexible space. Keeping search after it pins the
+              control to the bottom of the middle column, like Logout in the nav. */}
+          <div className="flex-1 min-w-0 min-h-0 overflow-hidden flex flex-col relative">
+            <Switch>
+              <Route path="/" component={HomePage} />
+              {/* Canonical IA paths: Overview (/), Decisions, Ledger, Settings */}
+              <Route path="/decisions" component={InboxPage} />
+              <Route path="/ledger" component={FinancesPage} />
+              {/* Legacy deep-link aliases - still routed so existing links keep working */}
+              <Route path="/finances" component={FinancesPage} />
+              <Route path="/inbox" component={InboxPage} />
+              <Route path="/review" component={InboxPage} />
+              <Route path="/rules/:id" component={RuleDetail} />
+              <Route path="/rules" component={RulesRedirect} />
+              <Route path="/vendors" component={VendorsRedirect} />
+              <Route path="/activity" component={InboxPage} />
+              <Route path="/audit-log" component={AuditLogRedirect} />
+              <Route path="/developers" component={DevelopersRedirect} />
+              <Route path="/settings" component={SettingsPage} />
+              <Route component={NotFound} />
+            </Switch>
           </div>
+          {SEARCH_ROUTES.has(location) && <GlobalSearch />}
         </div>
 
         <BrainAssistant
@@ -253,6 +266,7 @@ function MainShell({ onLogout }: { onLogout: () => void }) {
     </NavContext.Provider>
   );
 }
+
 
 function App() {
   return (

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import chevronDownIcon from "@/assets/chevron_down_dropdown.png";
 import { useLocation, useSearch } from "wouter";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ReviewModal, type ReviewItemType } from "@/components/ReviewItems";
@@ -28,6 +29,8 @@ import {
 } from "@/lib/proposalCards";
 import { LiveProposalModal, AGENT_DISPLAY_NAME } from "@/components/AgentProposalModal";
 import { useBrainAuditRecords } from "@/lib/brainAudit";
+import { inboxTapTarget } from "@/lib/inboxTap";
+import { AuditRecordPopup } from "@/components/AuditRecordPopup";
 import type { AuditRecord, AuditEventType } from "@/lib/auditTypes";
 import { auditEventLabel, auditEventChipClass, isAssistantActivity, isSystemActivity, humanReadableActor } from "@/lib/auditTypes";
 import { apiRequest } from "@/lib/queryClient";
@@ -43,6 +46,7 @@ import {
 import { useReviewStatuses, setReviewStatus } from "@/lib/reviewStatusStore";
 import { acknowledgeInsight, useAcknowledgedRecords } from "@/lib/acknowledgedStore";
 import { TierRow, type TierRowModel, type TierRowAction } from "@/components/TierRowList";
+import { Divider } from "@/components/LedgerWidgets";
 import {
   applyDecisionFilters,
   buildSearchText,
@@ -211,10 +215,8 @@ const TAG_APPROVED_BY_YOU = "bg-[#240757] text-[#a88afa] border-[rgba(168,138,25
 const TAG_REJECTED = "bg-[#350011] text-[#d20344] border-[rgba(210,3,68,0.2)]";
 const TAG_DETECTED = "bg-[#222737] text-[#6c779d] border-[rgba(108,119,157,0.2)]";
 
-/* Toolbar control. One class for selects and the search box so the four sit on a
-   single visual line regardless of which wraps. */
-const CONTROL =
-  "w-full min-w-0 bg-[#06070a] border border-solid border-[#1d2132] rounded-[10px] px-[12px] py-[9px] [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[18px] text-[#a8b9f4] outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] placeholder:text-[#414965]";
+/* No longer a shared CONTROL string — dropdowns are custom-overlay components
+   (transparent native <select> over a styled visual layer) to match Figma exactly. */
 
 /* ── Page ─────────────────────────────────────────────────────────────────── */
 export function InboxPage() {
@@ -236,6 +238,11 @@ export function InboxPage() {
   const [activeLive, setActiveLive] = useState<ReviewItemType | null>(null);
   const [liveRejection, setLiveRejection] = useState<ApprovalRejection | null>(null);
   const [selectedInsight, setSelectedInsight] = useState<LiveInsight | null>(null);
+  /* Settled history (approved / rejected / acknowledged) opens its record popup
+     HERE, in the same timeline the row was tapped in. It used to navigate to
+     /audit-log?record=…, which swapped the whole page for the old six-tab Audit
+     Log — a settled row and a pending row must be the same experience. */
+  const [activeRecord, setActiveRecord] = useState<AuditRecord | null>(null);
   const [pendingAcknowledgedIds, setPendingAcknowledgedIds] = useState<Set<string>>(() => new Set());
 
   const statusOf = (p: Proposal): ProposalStatus => statuses[p.id] ?? p.status;
@@ -445,6 +452,25 @@ export function InboxPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search]);
+
+  /* Deep-link: /inbox?record=<id>. This is the route a linked entity returns to
+     after being opened FROM a settled record here, so it must reopen the popup
+     rather than silently dropping the user on a bare timeline. Audit records
+     arrive asynchronously, so this re-runs as they land instead of only on mount. */
+  useEffect(() => {
+    const params = new URLSearchParams(search);
+    const recordId = params.get("record");
+    if (!recordId) return;
+    /* A proposal deep-link wins: both effects react to the same `search`, and
+       without an explicit precedence a URL carrying both params would have two
+       handlers racing to open a different surface and rewrite the route. */
+    if (params.get("proposal") || params.get("receipt")) return;
+    const found = auditRecords.find((r) => r.id === recordId || r.anchor.auditId === recordId);
+    if (!found) return;
+    setActiveRecord(found);
+    navigate("/inbox", { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, auditRecords]);
 
   const dismissDetail = () => {
     setActive(null);
@@ -791,29 +817,50 @@ export function InboxPage() {
     if (next) setSelectedProposal(next);
   };
 
+  /* Same pager contract for settled history: walk exactly the audit records the
+     current filters left on screen, so Previous/Next never steps onto a row the
+     user cannot see. */
+  const pagedRecords = visibleItems
+    .map((it) => it.record)
+    .filter((r): r is AuditRecord => r != null);
+  const recordIndex = activeRecord
+    ? pagedRecords.findIndex((r) => r.id === activeRecord.id)
+    : -1;
+  const recordPagerDisabled = recordIndex < 0 || pagedRecords.length <= 1;
+  const stepRecord = (delta: 1 | -1) => {
+    if (recordPagerDisabled) return;
+    setActiveRecord(pagedRecords[(recordIndex + delta + pagedRecords.length) % pagedRecords.length]);
+  };
+
   /* ── Tap / button handlers ─────────────────────────────────────────────── */
+  /* Row taps route through inboxTapTarget — a pure helper whose return type has
+     NO navigation variant, so a settled row can never navigate away from /inbox
+     again (it used to swap the page for the old Audit Log). The helper's
+     behavior is pinned by client/src/lib/inboxTap.test.ts. */
   const openItem = (item: InboxItem) => {
-    if (item.liveAgentProposal) {
-      setSelectedProposal(item.liveAgentProposal);
-      return;
-    }
-    if (item.intent) {
-      setLiveRejection(null);
-      setActiveLive(item.intent);
-      return;
-    }
-    if (item.insight) {
-      setSelectedInsight(item.insight);
-      return;
-    }
-    if (item.proposal) {
-      setReturnTo(null);
-      setActiveIsLive(Boolean(item.proposalIsLive));
-      setActive(item.proposal);
-      return;
-    }
-    if (item.record) {
-      navigate(`/audit-log?record=${item.record.id}`);
+    const target = inboxTapTarget(item);
+    switch (target.surface) {
+      case "agent-proposal-modal":
+        setSelectedProposal(target.proposal);
+        return;
+      case "intent-modal":
+        setLiveRejection(null);
+        setActiveLive(target.intent);
+        return;
+      case "insight-modal":
+        setSelectedInsight(target.insight);
+        return;
+      case "proposal-sheet":
+        setReturnTo(null);
+        setActiveIsLive(target.isLive);
+        setActive(target.proposal);
+        return;
+      case "audit-popup":
+        /* Settled history opens its popup IN PLACE — never a route change. */
+        setActiveRecord(target.record);
+        return;
+      case "none":
+        return;
     }
   };
 
@@ -890,8 +937,9 @@ export function InboxPage() {
     const busy = itemBusy(item);
     const actions: TierRowAction[] = [];
     if (item.actionable) {
-      actions.push({ id: "approve", label: "Approve", tone: "approve", disabled: busy, onClick: () => approveItem(item) });
-      actions.push({ id: "reject", label: "Decline", tone: "reject", disabled: busy, onClick: () => rejectItem(item) });
+      const isVendorRisk = item.liveAgentProposal?.type === "vendor_risk";
+      actions.push({ id: "reject", label: isVendorRisk ? "Hold Vendor" : "Reject", tone: "reject", disabled: busy, onClick: () => rejectItem(item) });
+      actions.push({ id: "approve", label: isVendorRisk ? "Clear Vendor" : "Approve", tone: "approve", disabled: busy, onClick: () => approveItem(item) });
     } else if (item.kind === "detection" || item.acknowledgeOnly) {
       const done = pendingAcknowledgedIds.has(item.id);
       actions.push({
@@ -956,81 +1004,82 @@ export function InboxPage() {
       ? "Checking for anything that needs your attention\u2026"
       : "Nothing needs your attention right now. Brain is keeping things moving.";
 
+/** Dropdown labels are presentation text; keep their filter values unchanged. */
+function titleCaseDropdownLabel(label: string): string {
+  return label.replace(/\b[a-z]/g, (letter) => letter.toUpperCase());
+}
+
   return (
-    <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] size-full flex flex-col">
+    <div className="bg-[#11141b] overflow-hidden absolute inset-0 grid grid-rows-[auto_minmax(0,1fr)]">
 
       {/* Static chrome: header + filter toolbar — never scrolls */}
-      <div className="shrink-0 flex flex-col gap-[24px] items-start pt-[40px] px-[16px] pb-[16px] w-full min-w-0">
+      <div className="shrink-0 flex flex-col gap-[40px] items-start pt-[40px] px-[16px] pb-[16px] w-full min-w-0">
         <div className="flex flex-col items-start gap-[4px] relative shrink-0 w-full">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px] whitespace-nowrap">Decisions</p>
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">Every decision, one timeline.</p>
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px] whitespace-nowrap">Your AI Inbox</p>
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">Know what needs your attention.</p>
           <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px]">
-            Every agent in one place. Open any item to see why Brain suggested it before you decide.
+            Review recommended actions, important updates, and insights from Brain's AI agents in one place.
           </p>
         </div>
 
-        {/* Filter toolbar. Auto-fit rather than fixed columns: this column is
-            ~420px between the nav and the chat panel, and fixed columns clip.
-            Search sits on its own full-width row below the three selects \u2014 left in
-            the same grid it wrapped to a ragged fourth cell. */}
-        <div className="flex flex-col gap-[8px] w-full">
-        <div
-          className="grid gap-[8px] w-full"
-          style={{ gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))" }}
-        >
-          <select
-            className={CONTROL}
-            value={filters.priority}
-            onChange={(e) => setFilter("priority", e.target.value as DecisionFilterState["priority"])}
-            aria-label="Filter by priority"
-            data-testid="filter-priority"
-          >
-            <option value="all">All priority</option>
-            {PRIORITY_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
-          <select
-            className={CONTROL}
-            value={filters.status}
-            onChange={(e) => setFilter("status", e.target.value as DecisionFilterState["status"])}
-            aria-label="Filter by status"
-            data-testid="filter-status"
-          >
-            <option value="all">All statuses</option>
-            {STATUS_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
-          {/* Types come from the rows actually present — an option that can only
-              return "no results" teaches the user the filter is broken. */}
-          <select
-            className={CONTROL}
-            value={filters.type}
-            onChange={(e) => setFilter("type", e.target.value)}
-            aria-label="Filter by type"
-            data-testid="filter-type"
-          >
-            <option value="all">All types</option>
-            {availableTypes.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
-        </div>
-        <input
-          type="text"
-          className={CONTROL}
-          value={filters.query}
-          onChange={(e) => setFilter("query", e.target.value)}
-          placeholder="Search vendor, amount or description"
-          aria-label="Search decisions"
-          data-testid="filter-search"
-        />
+        {/* Filter toolbar — pixel-perfect Figma dropdowns.
+            Each pill: w-120 bg-#222737 no-border p-8 rounded-8 gap-8 text+icon.
+            Transparent native <select> overlays the visual div so the browser
+            opens the native picker on click while the visual matches Figma. */}
+        <div className="flex flex-row gap-[24px]">
+          {([
+            {
+              value: filters.priority,
+              onChange: (v: string) => setFilter("priority", v as DecisionFilterState["priority"]),
+              label: "Filter by priority",
+              testId: "filter-priority",
+              options: [{ value: "all", label: "All Priorities" }, ...PRIORITY_OPTIONS],
+            },
+            {
+              value: filters.status,
+              onChange: (v: string) => setFilter("status", v as DecisionFilterState["status"]),
+              label: "Filter by status",
+              testId: "filter-status",
+              options: [{ value: "all", label: "All Status" }, ...STATUS_OPTIONS],
+            },
+            {
+              value: filters.type,
+              onChange: (v: string) => setFilter("type", v),
+              label: "Filter by type",
+              testId: "filter-type",
+              /* Types from rows present so the filter is never vacuously empty. */
+              options: [{ value: "all", label: "All Types" }, ...availableTypes],
+            },
+          ] as const).map(({ value, onChange, label, testId, options }) => (
+            <div key={testId} className="relative w-[120px] shrink-0">
+              {/* Native select — invisible, covers full area, handles clicks */}
+              <select
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                aria-label={label}
+                data-testid={testId}
+              >
+                {options.map((o) => (
+                  <option key={o.value} value={o.value}>{titleCaseDropdownLabel(o.label)}</option>
+                ))}
+              </select>
+              {/* Visual layer — pointer-events-none so clicks reach the select */}
+              <div className="bg-[#222737] rounded-[8px] p-[8px] flex items-center gap-[8px] pointer-events-none w-full">
+                <span className="flex-1 min-w-0 [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[14px] leading-[20px] whitespace-nowrap">
+                  {titleCaseDropdownLabel(
+                    (options as ReadonlyArray<{ value: string; label: string }>).find((o) => o.value === value)?.label ?? options[0].label,
+                  )}
+                </span>
+                <img src={chevronDownIcon} alt="" aria-hidden="true" className="shrink-0 h-[7px] w-auto" />
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
       {/* The timeline itself — one list, scrolls. */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-[16px] pb-[16px] flex flex-col gap-[12px]">
+      <div className="min-h-0 min-w-0 overflow-y-auto overflow-x-hidden px-[16px] pb-[16px] flex flex-col gap-[12px]">
         <div className="flex items-center gap-[8px] w-full min-h-[20px]">
           <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[13px]" data-testid="text-decision-count">
             {visibleItems.length === items.length
@@ -1116,10 +1165,15 @@ export function InboxPage() {
             </p>
           </div>
         ) : (
-          <div className="flex flex-col w-full rounded-[12px] border border-solid border-[#1d2132] overflow-hidden divide-y divide-[#1d2132]">
-            {visibleItems.map((item) => (
-              <TierRow key={item.id} row={toRow(item)} />
-            ))}
+          <div className="shrink-0 flex flex-col w-full rounded-[12px] border border-solid border-[#1d2132] bg-[#0a0c10] overflow-hidden">
+            <div className="flex flex-col gap-[8px] p-[8px] w-full">
+              {visibleItems.map((item, idx) => (
+                <div key={item.id} className="flex flex-col gap-[8px] w-full">
+                  <TierRow row={toRow(item)} />
+                  {idx < visibleItems.length - 1 && <Divider />}
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
@@ -1206,6 +1260,19 @@ export function InboxPage() {
         insight={selectedInsight}
         open={selectedInsight !== null}
         onOpenChange={(o) => { if (!o) setSelectedInsight(null); }}
+      />
+
+      {/* Settled history, opened in place. Same popup the Audit Log uses, so the
+          record's evidence and anchor state are identical — only the surrounding
+          page no longer changes out from under the user. */}
+      <AuditRecordPopup
+        record={activeRecord}
+        open={activeRecord !== null}
+        onOpenChange={(o) => { if (!o) setActiveRecord(null); }}
+        onPrev={() => stepRecord(-1)}
+        onNext={() => stepRecord(1)}
+        pagerDisabled={recordPagerDisabled}
+        returnToBase="/inbox"
       />
 
       {/* Live brain-core agent proposal (vendor risk, collections, treasury, etc.) */}
