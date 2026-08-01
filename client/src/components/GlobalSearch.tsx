@@ -40,7 +40,7 @@ import {
 } from "@/lib/globalSearch";
 
 const INPUT =
-  "w-full h-[40px] min-w-0 bg-[#06070a] border border-solid border-[#1d2132] rounded-[10px] px-[12px] py-0 [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[18px] text-[#a8b9f4] outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] placeholder:text-[#414965]";
+  "w-full h-[40px] min-w-0 bg-[#06070a] border-0 rounded-[10px] px-[12px] py-0 [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[18px] text-[#a8b9f4] outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] placeholder:text-[#414965]";
 
 export function GlobalSearch() {
   const [, navigate] = useLocation();
@@ -185,9 +185,9 @@ export function GlobalSearch() {
           showPanel && results[activeIndex] ? `gs-${results[activeIndex].key}` : undefined
         }
         aria-autocomplete="list"
-        aria-label="Search decisions, vendors and accounts"
+        aria-label="Search decisions, vendors, accounts, and descriptions from your financial brain"
         className={INPUT}
-        placeholder="Search decisions, vendors, accounts…"
+        placeholder="Search any decisions, vendors, accounts, and descriptions from your financial brain..."
         value={query}
         onChange={(e) => {
           setQuery(e.target.value);

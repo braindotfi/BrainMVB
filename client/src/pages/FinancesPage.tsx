@@ -226,7 +226,7 @@ export function FinancesPage() {
   const copy = TAB_COPY[activeTab];
 
   return (
-    <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] size-full flex flex-col">
+    <div className="bg-[#11141b] overflow-hidden relative size-full flex flex-col">
 
       {/* Static chrome: header + tab bar — never scrolls */}
       <div className="shrink-0 flex flex-col gap-[40px] items-start pt-[40px] px-[16px] pb-[16px] w-full">

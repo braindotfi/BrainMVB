@@ -1013,7 +1013,7 @@ function titleCaseDropdownLabel(label: string): string {
     <div className="bg-[#11141b] overflow-hidden absolute inset-0 grid grid-rows-[auto_minmax(0,1fr)]">
 
       {/* Static chrome: header + filter toolbar — never scrolls */}
-      <div className="shrink-0 flex flex-col gap-[24px] items-start pt-[40px] px-[16px] pb-[16px] w-full min-w-0">
+      <div className="shrink-0 flex flex-col gap-[40px] items-start pt-[40px] px-[16px] pb-[16px] w-full min-w-0">
         <div className="flex flex-col items-start gap-[4px] relative shrink-0 w-full">
           <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px] whitespace-nowrap">Your AI Inbox</p>
           <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">Know what needs your attention.</p>

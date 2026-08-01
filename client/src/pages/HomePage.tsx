@@ -995,7 +995,7 @@ export function HomePage() {
   };
 
   return (
-    <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] size-full flex flex-col">
+    <div className="bg-[#11141b] overflow-hidden relative size-full flex flex-col">
       <ScrollArea className="flex-1">
         <div className="flex flex-col gap-[40px] items-start pb-[16px] pt-[40px] px-[16px] w-full">
 
