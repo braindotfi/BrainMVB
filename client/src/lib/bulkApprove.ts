@@ -252,6 +252,22 @@ export interface BulkSelection {
  * elsewhere, filtered out, or no longer eligible) drops out of the selection here
  * rather than lingering as a stale id that a later "approve selected" would fire
  * at. The bar always reflects what is actually on screen.
+ *
+ * The batch is also single-type BY CONSTRUCTION here, not merely by the `disabled`
+ * attribute the page puts on other-type checkboxes. That attribute is presentation:
+ * it is one devtools edit away from gone, and it protects nothing against a future
+ * caller that seeds `selectedIds` some other way (a "select all", a restored
+ * selection, a keyboard path). Without this filter a mixed set still resolved, and
+ * the bar — which reads `type` — would announce "all collections" over a batch that
+ * also contained a vendor risk row, then approve exactly what it had just
+ * misdescribed. Every row in a mixed set is individually approvable, so nothing
+ * escalates; what breaks is the bar telling the truth, and this component's whole
+ * justification is that it states precisely what it is about to do.
+ *
+ * The first selected row's type wins and the rest are dropped from the batch,
+ * rather than resolving to an empty selection: dropping keeps the bar honest about
+ * a subset the user can actually approve, where refusing outright would turn a
+ * tampered checkbox into a dead surface with nothing explaining why.
  */
 export function resolveBulkSelection(
   eligible: readonly BulkCandidate[],
@@ -261,13 +277,27 @@ export function resolveBulkSelection(
   const chosen = eligible.filter((c) => selectedIds.has(c.id));
   if (chosen.length === 0) return { ids: [], count: 0, type: null, limit: null };
 
-  const limits = chosen.map(limitOf).filter((l): l is BulkLimit => l != null);
+  /* The governing type is the EARLIEST SELECTED row's, taken from `selectedIds`
+     insertion order, not the topmost row on screen. Those differ exactly when a row
+     above the user's first pick joins the set later — the tampered case — and
+     letting screen position decide would hand the batch to the intruder and quietly
+     drop what the user had actually chosen. `ids` still follows screen order, which
+     is the order the approvals fire and therefore the order the audit log records. */
+  const byId = new Map(eligible.map((c) => [c.id, c]));
+  let type: string | null = chosen[0].type;
+  for (const id of selectedIds) {
+    const first = byId.get(id);
+    if (first) { type = first.type; break; }
+  }
+  const batch = chosen.filter((c) => c.type === type);
+
+  const limits = batch.map(limitOf).filter((l): l is BulkLimit => l != null);
   const limit = limits.length > 0 ? limits.reduce((low, l) => (l.value < low.value ? l : low)) : null;
 
   return {
-    ids: chosen.map((c) => c.id),
-    count: chosen.length,
-    type: chosen[0].type,
+    ids: batch.map((c) => c.id),
+    count: batch.length,
+    type,
     limit,
   };
 }

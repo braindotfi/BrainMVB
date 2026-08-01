@@ -308,6 +308,39 @@ describe("resolveBulkSelection", () => {
     );
     expect(mixed.limit).toEqual({ value: 25_000, source: "rule" });
   });
+
+  /* The page disables other-type checkboxes, but that attribute is presentation and
+     survives exactly until someone opens devtools. The batch itself has to be
+     single-type, because the bar reads `type` and announces it over every id in
+     `ids` — and then approves them. */
+  it("keeps a mixed selection to the first selected type", () => {
+    const sel = resolveBulkSelection(rows, new Set(["a", "c"]), limitOf);
+    expect(sel.ids).toEqual(["a"]);
+    expect(sel.count).toBe(1);
+    expect(sel.type).toBe("collections");
+  });
+
+  it("lets the earliest selected row set the type, not the topmost row on screen", () => {
+    /* "c" sits last in `rows` but was selected first, so it governs and the
+       higher-placed collections rows drop out — the user's first pick keeps the
+       batch it started. */
+    const sel = resolveBulkSelection(rows, new Set(["c", "a"]), limitOf);
+    expect(sel.type).toBe("treasury");
+    expect(sel.ids).toEqual(["c"]);
+  });
+
+  it("never quotes a limit belonging to a dropped foreign-type row", () => {
+    /* Otherwise the bar could announce a treasury row's tighter limit over a batch
+       of collections rows that were never held to it. */
+    const sel = resolveBulkSelection(
+      rows,
+      new Set(["a", "b", "c"]),
+      (c) => (c.type === "treasury" ? { value: 1_000, source: "rule" } : { value: 500_000, source: "policy" }),
+    );
+    expect(sel.ids).toEqual(["a", "b"]);
+    expect(sel.type).toBe("collections");
+    expect(sel.limit).toEqual({ value: 500_000, source: "policy" });
+  });
 });
 
 describe("isBlockedByType", () => {

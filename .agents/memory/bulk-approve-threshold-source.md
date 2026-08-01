@@ -48,6 +48,29 @@ Two related rules that fall out of the same reasoning:
   shortcut on the strength of a limit you could not load is the failure mode
   this whole area keeps producing.
 
+**A batch's single-type rule must live in the model, not in the `disabled`
+attribute.** Rendering other-type checkboxes disabled is presentation; it is one
+devtools edit away from gone, and it constrains nothing about a future caller
+that seeds the selection some other way (select-all, a restored selection, a
+keyboard path). The resolver itself has to drop foreign types.
+
+**Why:** the bulk bar reads the selection's `type` and announces it — "all
+collections, each under $X" — over every id it is about to approve. A resolver
+that accepts a mixed set and reports `chosen[0].type` makes that sentence false
+and then approves exactly what it misdescribed. Nothing escalates (each row was
+individually eligible under its own category line, and the loop approves them
+one at a time), so this is an honesty failure rather than an authorization one —
+which is precisely the failure this surface exists to avoid.
+
+**How to apply:** take the governing type from the *earliest selected* row
+(`selectedIds` insertion order), not the topmost row on screen. They diverge only
+when a row above the user's first pick joins the set later, and screen order
+would then hand the batch to the intruder while silently dropping what the user
+actually chose. Keep the resulting ids in screen order — that is the order the
+approvals fire and therefore the order the audit log records. Derive the row's
+checked state from the resolved batch too, so a row can never show a tick while
+sitting outside the batch the bar counts.
+
 There is no bulk endpoint in the BFF or in brain-core, so a batch is a
 sequential loop over the single-item decide call. Run it sequentially (these are
 money-path writes that land in the audit log in order) and report partial
