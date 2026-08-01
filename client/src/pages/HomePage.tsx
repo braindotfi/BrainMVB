@@ -46,6 +46,18 @@ import { ProposalDetail, type ProposalAction } from "@/components/ProposalDetail
 import { ReviewModal, type ReviewItemType } from "@/components/ReviewItems";
 import type { Proposal } from "@/lib/proposalTypes";
 import { openRuleDetail } from "@/lib/openRuleDetail";
+import { decisionTypeLabel } from "@/lib/decisionFilters";
+import { useBrainPolicy } from "@/lib/brainPolicy";
+import {
+  bulkCandidateFrom,
+  bulkLimitFor,
+  elevatedThresholdsFromPolicy,
+  isBlockedByType,
+  isBulkEligible,
+  resolveBulkSelection,
+  runBulkApprove,
+  type BulkCandidate,
+} from "@/lib/bulkApprove";
 import {
   useRules,
   hydrateUserRules,
@@ -585,6 +597,41 @@ export function HomePage() {
       if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
+  const policy = useBrainPolicy();
+  const policyElevation = useMemo(() => elevatedThresholdsFromPolicy(policy.facts), [policy.facts]);
+  const overviewBulkCandidates = useMemo<BulkCandidate[]>(
+    () =>
+      tieredProposals.map((proposal) => {
+        const decisions = buildDecisionButtons(
+          proposal.available_decisions,
+          proposal.presentation?.actions ?? null,
+        );
+        return bulkCandidateFrom(
+          `proposal-${proposal.id}`,
+          proposal,
+          decisions.some((decision) => decision.id === "approve" && decision.writable),
+        );
+      }),
+    [tieredProposals],
+  );
+  const overviewLimitOf = useMemo(
+    () => (candidate: BulkCandidate) => bulkLimitFor(candidate.type, candidate.category, policyElevation, tierThresholds),
+    [policyElevation, tierThresholds],
+  );
+  const overviewEligible = useMemo(
+    () => overviewBulkCandidates.filter((candidate) => isBulkEligible(candidate, overviewLimitOf(candidate))),
+    [overviewBulkCandidates, overviewLimitOf],
+  );
+  const overviewCandidateById = useMemo(
+    () => new Map(overviewEligible.map((candidate) => [candidate.id, candidate])),
+    [overviewEligible],
+  );
+  const overviewSelection = useMemo(
+    () => resolveBulkSelection(overviewEligible, selectedOverviewIds, overviewLimitOf),
+    [overviewEligible, selectedOverviewIds, overviewLimitOf],
+  );
+  const overviewBatchIds = useMemo(() => new Set(overviewSelection.ids), [overviewSelection.ids]);
+  const [overviewBulkRunning, setOverviewBulkRunning] = useState(false);
 
   const cycleRecord = <T extends { id: string | number }>(
     records: T[],
@@ -656,13 +703,9 @@ export function HomePage() {
         badge: { label: "Needs approval", className: TAG_NEEDS_YOU },
         /* Match InboxPage toRow: amount · vendor · due */
         subtitle: [r.amount, r.vendor ? `${r.vendor} · ${r.due}` : r.due].filter(Boolean).join(" · ") || undefined,
-        select: intentId
-          ? {
-              checked: selectedOverviewIds.has(`session-${String(r.intentId ?? r.id)}`),
-              label: `Select for bulk approval: ${r.title}`,
-              onChange: () => toggleOverviewSelect(`session-${String(r.intentId ?? r.id)}`),
-            }
-          : undefined,
+        /* Session payment intents do not carry the policy category and threshold
+           fields required by the shared bulk-approval guard, matching Inbox. */
+        select: undefined,
         testIdPrefix,
         onOpenDetail: () => setSelectedLiveIntent(r),
         /* No intent id means there is nothing to POST to. The row still opens its
@@ -703,11 +746,9 @@ export function HomePage() {
       },
       /* Match InboxPage toRow: amount · rowSubtitle */
       subtitle: [typeof p.amount === "number" ? format(p.amount) : undefined, p.rowSubtitle].filter(Boolean).join(" · ") || undefined,
-      select: {
-        checked: selectedOverviewIds.has(`queue-${p.id}`),
-        label: `Select for bulk approval: ${p.title}`,
-        onChange: () => toggleOverviewSelect(`queue-${p.id}`),
-      },
+      /* Durable payment-intent rows do not carry a policy category in this
+         surface, so they are not bulk-selectable, matching Inbox. */
+      select: undefined,
       testIdPrefix,
       onOpenDetail: () => setSelectedReview(p),
       actions: [
@@ -761,6 +802,8 @@ export function HomePage() {
       const isPaymentAgent = agentKey === "payment" || /^(?:demo\s+)?payment agent$/i.test(agentName.trim());
       const pillName = isPaymentAgent ? "Payment" : agentName;
       const rowId = `proposal-${p.id}`;
+      const candidate = overviewCandidateById.get(rowId);
+      const blocked = candidate ? isBlockedByType(candidate, overviewSelection.type) : false;
       return [{
         id: rowId,
         tier,
@@ -769,9 +812,13 @@ export function HomePage() {
         /* Match InboxPage toRow: narrative text as subtitle */
         subtitle: headerCopy.text || undefined,
         /* Vendor risk doesn't require a human approval decision — no checkbox */
-        select: actions.some((a) => a.id === "approve") && p.type !== "vendor_risk"
+        select: candidate && p.type !== "vendor_risk"
           ? {
-              checked: selectedOverviewIds.has(rowId),
+              checked: overviewBatchIds.has(rowId),
+              disabled: overviewBulkRunning || blocked,
+              title: blocked
+                ? `Bulk approval covers one type at a time. Clear the selection to choose ${decisionTypeLabel(candidate.type ?? "").toLowerCase()} items instead.`
+                : undefined,
               label: `Select for bulk approval: ${headerCopy.title}`,
               onChange: () => toggleOverviewSelect(rowId),
             }
@@ -796,33 +843,55 @@ export function HomePage() {
     rejectIntent.isPending,
     decideProposal.isPending,
     selectedOverviewIds,
+    overviewCandidateById,
+    overviewSelection.type,
+    overviewBatchIds,
+    overviewBulkRunning,
   ]);
 
-  const selectedOverviewRows = useMemo(
-    () => overviewRows.filter((row) => selectedOverviewIds.has(row.id)),
-    [overviewRows, selectedOverviewIds],
+  const overviewProposalByRowId = useMemo<Map<string, BrainProposal>>(
+    () => new Map(tieredProposals.map((proposal) => [`proposal-${proposal.id}`, proposal])),
+    [tieredProposals],
   );
 
-  const approveSelectedOverview = () => {
-    if (selectedOverviewRows.length < 2) return;
-
-    const approvableRows = selectedOverviewRows.filter((row) => {
-      const approveAction = row.actions.find((action) => action.id === "approve");
-      return approveAction && !approveAction.disabled;
+  const approveSelectedOverview = async () => {
+    if (overviewSelection.count < 2 || overviewBulkRunning) return;
+    setOverviewBulkRunning(true);
+    const attempted = [...overviewSelection.ids];
+    const outcome = await runBulkApprove(attempted, async (rowId) => {
+      const proposal = overviewProposalByRowId.get(rowId);
+      if (!proposal) throw new Error("This item is no longer on screen.");
+      await decideProposal.mutateAsync({ id: proposal.id, decision: "approve" });
     });
 
-    for (const row of approvableRows) {
-      row.actions.find((action) => action.id === "approve")?.onClick();
+    setSelectedOverviewIds((current) => {
+      const next = new Set(current);
+      for (const id of outcome.approved) next.delete(id);
+      return next;
+    });
+    setOverviewBulkRunning(false);
+
+    const selectionLabel = overviewSelection.type
+      ? decisionTypeLabel(overviewSelection.type).toLowerCase()
+      : "";
+    if (outcome.failed.length === 0) {
+      toast({
+        title: `Approved ${outcome.approved.length} ${selectionLabel} items`,
+        description: "Each one was approved individually and recorded in the audit log.",
+      });
+    } else if (outcome.approved.length === 0) {
+      toast({
+        title: "Nothing was approved",
+        description: outcome.failed[0].message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: `Approved ${outcome.approved.length} of ${attempted.length}`,
+        description: `${outcome.failed.length} couldn’t be approved and ${outcome.failed.length === 1 ? "is" : "are"} still selected. ${outcome.failed[0].message}`,
+        variant: "destructive",
+      });
     }
-
-    setSelectedOverviewIds(new Set());
-    toast({
-      title: approvableRows.length > 0 ? `Approving ${approvableRows.length} selected items` : "Nothing was approved",
-      description: approvableRows.length > 0
-        ? "Each selected item is being approved individually."
-        : "The selected items are not currently available for approval.",
-      variant: approvableRows.length > 0 ? "default" : "destructive",
-    });
   };
 
   // "Money in all accounts" total from brain-core's Ledger (via the BFF proxy).
@@ -1020,7 +1089,7 @@ export function HomePage() {
                   </p>
                 </div>
               )}
-              {selectedOverviewRows.length >= 2 && (
+              {overviewSelection.count >= 2 && overviewSelection.limit && (
                 <div
                   className="flex flex-col sm:flex-row gap-[10px] sm:items-center justify-between p-[12px] mb-[12px] rounded-[12px] w-full"
                   style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.35)" }}
@@ -1030,8 +1099,11 @@ export function HomePage() {
                     className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#a88afa] text-[13px]"
                     data-testid="bulk-bar-summary"
                   >
-                    <b className="font-semibold text-[#a8b9f4]">{selectedOverviewRows.length} selected</b>
-                    {" · ready to approve together"}
+                    <b className="font-semibold text-[#a8b9f4]">{overviewSelection.count} selected</b>
+                    {` · all ${overviewSelection.type ? decisionTypeLabel(overviewSelection.type).toLowerCase() : ""}, each under ${format(overviewSelection.limit.value)} `}
+                    {overviewSelection.limit.source === "rule"
+                      ? "limit from your own rule."
+                      : "limit above which Brain needs a second approver."}
                   </p>
                   <div className="flex gap-[8px] items-center shrink-0">
                     <button
@@ -1045,10 +1117,11 @@ export function HomePage() {
                     <button
                       type="button"
                       onClick={approveSelectedOverview}
+                      disabled={overviewBulkRunning}
                       data-testid="button-bulk-approve"
-                      className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-white bg-[#7631ee] hover:bg-[#8a4bf5] rounded-[8px] px-[12px] py-[7px] outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                      className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-white bg-[#7631ee] hover:bg-[#8a4bf5] disabled:opacity-50 rounded-[8px] px-[12px] py-[7px] outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
                     >
-                      Approve selected
+                      {overviewBulkRunning ? "Approving…" : "Approve Selected"}
                     </button>
                   </div>
                 </div>
