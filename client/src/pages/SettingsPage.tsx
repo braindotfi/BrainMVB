@@ -544,7 +544,7 @@ function ProfileSection() {
                 </div>
               </div>
             </div>
-            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#ff9500] text-[16px] leading-[20px] whitespace-nowrap">
+            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#ff9500] text-[14px] leading-[20px] whitespace-nowrap">
               {editing ? "Save" : "Edit"}
             </span>
           </button>
@@ -561,7 +561,7 @@ function ProfileSection() {
             sublabel={email}
             right={
               <ChevronActionButton
-                label="Edit email"
+                label="Edit Email"
                 testId="button-edit-email"
                 onClick={() => setContactModal("email")}
               />
@@ -575,7 +575,7 @@ function ProfileSection() {
             sublabel={phone}
             right={
               <ChevronActionButton
-                label="Edit phone"
+                label="Edit Phone"
                 testId="button-edit-phone"
                 onClick={() => setContactModal("phone")}
               />
@@ -737,7 +737,7 @@ function ProfileSection() {
                   clearOnboarding(user?.id);
                   navigate("/");
                 }}
-                className="shrink-0 rounded-[8px] px-[12px] py-[8px] bg-[#222737] hover:bg-[#2c3247] transition-colors [font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#a8b9f4] whitespace-nowrap"
+                className="shrink-0 rounded-[8px] px-[12px] py-[8px] bg-[#222737] hover:bg-[#2c3247] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-[#a8b9f4] whitespace-nowrap"
               >
                 Replay
               </button>
@@ -803,12 +803,14 @@ function BillingSection() {
                   </span>
                 )}
               </div>
-              <p
-                data-testid="text-plan-name"
-                style={{ color: "#a8b9f4", fontFamily: "'Gilroy', sans-serif", fontWeight: 500, fontSize: "24px", lineHeight: "32px" }}
-              >
-                {plan ? plan.label : "Not Configured"}
-              </p>
+              {plan && (
+                <p
+                  data-testid="text-plan-name"
+                  style={{ color: "#a8b9f4", fontFamily: "'Gilroy', sans-serif", fontWeight: 500, fontSize: "24px", lineHeight: "32px" }}
+                >
+                  {plan.label}
+                </p>
+              )}
               {plan && (
                 <p
                   data-testid="text-plan-price"
@@ -824,9 +826,9 @@ function BillingSection() {
                 data-testid="button-upgrade-plan"
                 onClick={() => setChangePlanOpen(true)}
                 className="rounded-full px-[20px] py-[10px] hover-elevate"
-                style={{ background: "#240757", color: "#7631ee", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "16px", lineHeight: "20px", whiteSpace: "nowrap" }}
+                style={{ background: "#240757", color: "#7631ee", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "14px", lineHeight: "20px", whiteSpace: "nowrap" }}
               >
-                {plan ? "Change Plan" : "Choose a Plan"}
+                  {plan ? "Change Plan" : "Choose A Plan"}
               </button>
               {plan && !cancelled && (
                 <button
@@ -836,7 +838,7 @@ function BillingSection() {
                   className="rounded-full px-[20px] py-[10px] hover-elevate"
                   style={{ background: "transparent", color: "#6c779d", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "14px", lineHeight: "20px", border: "1px solid #1d2132", whiteSpace: "nowrap" }}
                 >
-                  Cancel subscription
+                  Cancel Subscription
                 </button>
               )}
             </div>
@@ -891,7 +893,7 @@ function BillingSection() {
               data-testid="button-update-card"
               onClick={() => setUpdateCardOpen(true)}
               className="rounded-full px-[20px] py-[10px] hover-elevate flex-shrink-0"
-              style={{ background: "#240757", color: "#7631ee", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "16px", lineHeight: "20px", whiteSpace: "nowrap" }}
+              style={{ background: "#240757", color: "#7631ee", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "14px", lineHeight: "20px", whiteSpace: "nowrap" }}
             >
               {cardLast4 ? "Update Card" : "Add Card"}
             </button>
@@ -1031,10 +1033,10 @@ export function SettingsPage() {
                   <Icon active={active} />
                 </div>
                 <span
-                  className="flex-1 text-[16px] leading-5 whitespace-nowrap"
+                  className="flex-1 text-[14px] leading-[20px] whitespace-nowrap"
                   style={{
                     fontFamily: "'Gilroy', 'Plus Jakarta Sans', system-ui, sans-serif",
-                    fontWeight: 500,
+                    fontWeight: 600,
                     color: active ? "#ffffff" : "#6c779d",
                   }}
                 >

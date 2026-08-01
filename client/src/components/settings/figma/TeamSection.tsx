@@ -162,19 +162,19 @@ function MemberRow({ member, inviteActions }: { member: BrainMember; inviteActio
               disabled={busy !== null}
               onClick={() => inviteCall("resend")}
               data-testid={`button-resend-invite-${member.id}`}
-              className="rounded-[100px] bg-[#240757] px-[12px] py-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[#7631ee] text-[13px] hover:bg-[#2e0a6e] transition-colors disabled:opacity-40 flex items-center justify-center"
+              className="rounded-[100px] bg-[#240757] px-[12px] py-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[#7631ee] text-[12px] leading-[16px] hover:bg-[#2e0a6e] transition-colors disabled:opacity-40 flex items-center justify-center"
             >
-              {busy === "resend" ? "Resending…" : "Resend invite"}
+              {busy === "resend" ? "Resending…" : "Resend Invite"}
             </button>
             <button
               type="button"
               disabled={busy !== null}
               onClick={() => inviteCall("revoke")}
               data-testid={`button-revoke-invite-${member.id}`}
-              className="rounded-[100px] px-[12px] py-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[13px] transition-colors disabled:opacity-40 flex items-center justify-center"
+              className="rounded-[100px] px-[12px] py-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] transition-colors disabled:opacity-40 flex items-center justify-center"
               style={{ background: "rgba(210,3,68,0.08)", color: "#d20344", border: "1px solid rgba(210,3,68,0.3)" }}
             >
-              {busy === "revoke" ? "Revoking…" : "Revoke invite"}
+              {busy === "revoke" ? "Revoking…" : "Revoke Invite"}
             </button>
           </>
         )}
@@ -185,14 +185,14 @@ function MemberRow({ member, inviteActions }: { member: BrainMember; inviteActio
           data-testid={`button-backup-${member.id}`}
           aria-pressed={isBackup}
           title={BACKUP_APPROVER_NOTE}
-          className="rounded-[100px] px-[12px] py-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[13px] transition-colors flex items-center justify-center"
+          className="rounded-[100px] px-[12px] py-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] transition-colors flex items-center justify-center"
           style={
             isBackup
               ? { background: "rgba(255,149,0,0.1)", color: "#ff9500", border: "1px solid rgba(255,149,0,0.3)" }
               : { background: "#0c0f14", color: "#414965", border: "1px solid #1d2132" }
           }
         >
-          {isBackup ? "Remove backup mark" : "Mark as backup approver"}
+          {isBackup ? "Remove Backup Mark" : "Mark As Backup Approver"}
         </button>
       </div>
     </div>
@@ -339,7 +339,7 @@ function AddMemberDialog({ open, onClose, production }: { open: boolean; onClose
                         type="button"
                         onClick={() => setRole(r)}
                         data-testid={`select-role-${r}`}
-                        className="content-stretch flex flex-[1_0_0] items-center justify-center min-w-px px-[16px] py-[8px] relative rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap transition-colors"
+              className="content-stretch flex flex-[1_0_0] items-center justify-center min-w-px px-[16px] py-[8px] relative rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[14px] whitespace-nowrap transition-colors"
                         style={{
                           background: role === r ? "#240757" : "#0c0f14",
                           color: role === r ? "#7631ee" : "#414965",
@@ -360,7 +360,7 @@ function AddMemberDialog({ open, onClose, production }: { open: boolean; onClose
                         type="button"
                         onClick={() => toggleDomain(d)}
                         data-testid={`toggle-domain-${d}`}
-                        className="content-stretch flex items-center justify-center px-[16px] py-[8px] relative rounded-[100px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap transition-colors"
+                        className="content-stretch flex items-center justify-center px-[16px] py-[8px] relative rounded-[100px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[14px] whitespace-nowrap transition-colors"
                         style={{
                           background: domains.includes(d) ? "#240757" : "#0c0f14",
                           color: domains.includes(d) ? "#7631ee" : "#414965",
@@ -397,7 +397,7 @@ function AddMemberDialog({ open, onClose, production }: { open: boolean; onClose
                         type="button"
                         onClick={() => setBackup(v)}
                         data-testid={`select-backup-${label.toLowerCase()}`}
-                        className="content-stretch flex flex-[1_0_0] items-center justify-center min-w-px px-[16px] py-[8px] relative rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap transition-colors"
+                        className="content-stretch flex flex-[1_0_0] items-center justify-center min-w-px px-[16px] py-[8px] relative rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[14px] whitespace-nowrap transition-colors"
                         style={{
                           background: backup === v ? "#240757" : "#0c0f14",
                           color: backup === v ? "#7631ee" : "#414965",
@@ -426,7 +426,7 @@ function AddMemberDialog({ open, onClose, production }: { open: boolean; onClose
               onClick={submit}
               disabled={busy}
               data-testid="button-submit-member"
-              className="w-full bg-[#4a2300] hover:bg-[#5a2b00] transition-colors flex items-center justify-center px-[20px] py-[10px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[#ff9400] text-[16px] leading-[20px] disabled:opacity-40 disabled:cursor-not-allowed"
+              className="w-full bg-[#4a2300] hover:bg-[#5a2b00] transition-colors flex items-center justify-center px-[20px] py-[10px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[#ff9400] text-[14px] leading-[20px] disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {busy ? "Adding…" : "Add Member"}
             </button>
@@ -496,9 +496,9 @@ export default function TeamSection() {
         type="button"
         onClick={() => setAddOpen(true)}
         data-testid="button-add-member"
-        className="self-start rounded-[100px] bg-[#240757] px-[14px] py-[8px] [font-family:'Gilroy',sans-serif] font-semibold text-[#7631ee] text-[14px] hover:bg-[#2e0a6e] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] flex items-center justify-center"
+        className="self-start rounded-[100px] bg-[#240757] px-[14px] py-[8px] [font-family:'Gilroy',sans-serif] font-semibold text-[#7631ee] text-[14px] leading-[20px] hover:bg-[#2e0a6e] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] flex items-center justify-center"
       >
-        {production ? "+ Invite member" : "+ Add member"}
+        {production ? "+ Invite Member" : "+ Add Member"}
       </button>
 
       {/* Escalation — shown for shape, inert in substance.

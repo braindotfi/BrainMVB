@@ -63,7 +63,7 @@ export function SettingsDropdown({
         onClick={() => onOpenChange(!open)}
         className="bg-[#222737] rounded-[8px] p-[8px] flex items-center gap-[8px] w-full text-left outline-none hover:bg-[#2a3045] transition-colors focus-visible:ring-2 focus-visible:ring-[#7631EE]"
       >
-        <span className="flex-1 min-w-0 [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[14px] leading-[20px] whitespace-nowrap truncate">
+        <span className="flex-1 min-w-0 [font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[14px] leading-[20px] whitespace-nowrap truncate">
           {titleCase(selected?.label ?? "")}
         </span>
         <img src={chevronDownIcon} alt="" aria-hidden="true" className="shrink-0 h-[7px] w-auto" />
@@ -84,7 +84,7 @@ export function SettingsDropdown({
                 onChange(option.value);
                 onOpenChange(false);
               }}
-              className="flex items-center p-[8px] rounded-[8px] shrink-0 w-full text-left [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[14px] whitespace-nowrap outline-none hover:bg-[#222737] focus-visible:bg-[#222737]"
+              className="flex items-center p-[8px] rounded-[8px] shrink-0 w-full text-left [font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[14px] whitespace-nowrap outline-none hover:bg-[#222737] focus-visible:bg-[#222737]"
               data-testid={`${testId}-option-${option.value}`}
             >
               {titleCase(option.label)}

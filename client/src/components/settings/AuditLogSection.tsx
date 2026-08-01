@@ -308,9 +308,9 @@ export function AuditLogSection() {
                   openMenu(true);
                 }
               }}
-              className="bg-[#222737] flex h-[40px] gap-[8px] items-center justify-between p-[8px] rounded-[8px] w-full text-left hover:bg-[#2a3045] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631ee]"
+              className="bg-[#222737] flex h-[40px] gap-[8px] items-center justify-between p-[8px] rounded-[8px] w-full text-left hover:bg-[#2a3045] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631ee] [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px]"
             >
-              <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[14px] leading-[20px] truncate">
+              <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[14px] leading-[20px] truncate">
                 {activeLabel}
               </span>
               <ChevronDown className="flex-shrink-0 size-[18px]" color="#6c779d" strokeWidth={1.8} />
@@ -335,7 +335,7 @@ export function AuditLogSection() {
                     data-testid={`option-audit-type-${o.id}`}
                     onFocus={() => setActiveIndex(i)}
                     onClick={() => commit(o.id)}
-                    className="flex items-center p-[8px] rounded-[8px] shrink-0 w-full text-left transition-colors hover:bg-[#222737] focus:bg-[#222737] focus:outline-none [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px]"
+                    className="flex items-center p-[8px] rounded-[8px] shrink-0 w-full text-left transition-colors hover:bg-[#222737] focus:bg-[#222737] focus:outline-none [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px]"
                     style={{ color: filter === o.id ? "#ffffff" : "#a8b9f4" }}
                   >
                     {o.label}
@@ -375,7 +375,7 @@ export function AuditLogSection() {
                   type="button"
                   data-testid={`row-audit-${record.id}`}
                   onClick={() => setActiveRecord(record)}
-                  className="w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-[#0d1018] transition-colors"
+                  className="w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-[#0d1018] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px]"
                 >
                   <div className="flex-1 min-w-0 flex flex-col gap-[4px]">
                     <div className="flex items-center gap-2 flex-wrap">
