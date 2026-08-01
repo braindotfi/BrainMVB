@@ -41,7 +41,7 @@ import {
 } from "@/lib/globalSearch";
 
 const INPUT =
-  "flex-1 min-w-0 h-[24px] bg-transparent border-0 px-0 py-0 [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-[#6c779d] caret-[#6c779d] outline-none placeholder:text-[#6c779d]";
+  "flex-1 min-w-0 h-[24px] bg-transparent border-0 px-0 py-0 [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-[#6c779d] caret-[#7631ee] outline-none placeholder:text-[#6c779d]";
 
 export function GlobalSearch() {
   const [, navigate] = useLocation();
@@ -195,7 +195,7 @@ export function GlobalSearch() {
           aria-autocomplete="list"
           aria-label="Search"
           className={INPUT}
-          placeholder="Search"
+          placeholder="Search any text including title, description, amount, vendor..."
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
