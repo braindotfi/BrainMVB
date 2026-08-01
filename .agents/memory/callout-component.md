@@ -35,17 +35,27 @@ scripted regex replacement is safer than a dozen hand edits — but it must also
 merge the new import into any import line the file already has, or the second
 pass overwrites the first.
 
-## Unresolved tension: amber meant two different things
+## Amber meant two different things; the split is now explicit
 
 Amber was doing double duty:
 
 1. "this failed / this data is incomplete" — a genuine warning, and
 2. "this feature is not connected yet" — an honest-unsupported-UI notice.
 
-Collapsing both into the crimson alert frame makes category 2 read as a
-failure. See `honest-unsupported-ui.md`. If a future change reintroduces a
-distinction, put it behind an explicit tone/variant prop rather than letting
-call sites hand-roll a second frame — that is exactly how the drift started.
+Collapsing both into one crimson frame makes category 2 read as a failure, so
+the two are now separate exports: `AlertCallout` (crimson) for real failures
+and things needing attention, `MutedCallout` (grey) for not-yet-available.
+
+**Why:** user's explicit call — "not available yet should be in grey". It also
+matches `honest-unsupported-ui.md`: a limitation should be plainly stated, not
+dressed as an error.
+
+**How to apply:** ask whether the thing described is *broken* or merely *not
+built*. Loading failures, incomplete lists, paused rules, anomalies, form
+errors and security cautions are alerts. "Not connected yet", "not active",
+"propose-only" are muted. Add new tones to the `TONES` map inside the
+component — never hand-roll a second frame at a call site, which is exactly how
+the original drift started.
 
 Related: the frame's Figma node is single-line text only. The optional `title`
 prop exists because several real banners carry a heading over an explanation,

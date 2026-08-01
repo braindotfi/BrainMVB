@@ -65,44 +65,73 @@ export function InfoIcon({
   );
 }
 
-/**
- * The alert frame from Figma.
- *
- * `title` is optional: the Figma node is a single line of text, but two of the
- * existing banners carry a heading over an explanation. Rather than flatten
- * those into one sentence — which would lose the reason the rule paused — the
- * frame stretches to hold both, keeping the node's colours, radius, padding
- * and gap exactly.
- */
-export function AlertCallout({
-  title,
-  children,
-  testId,
-  className = "",
-}: {
+type CalloutProps = {
+  /**
+   * Optional heading. The Figma node is a single line of text, but several real
+   * banners carry a heading over an explanation. Flattening those into one
+   * sentence would lose information — the reason a rule paused, which feed
+   * failed — so the frame stretches to hold both.
+   */
   title?: string;
   children: React.ReactNode;
   testId?: string;
   className?: string;
-}) {
+};
+
+const TONES = {
+  alert: {
+    box: "bg-[#350011] border-[rgba(210,3,68,0.2)]",
+    text: "text-[#d20344]",
+    Icon: () => <AlertIcon />,
+  },
+  muted: {
+    box: "bg-[#0a0c10] border-[#1d2132]",
+    text: "text-[#6c779d]",
+    Icon: () => <InfoIcon color="#6c779d" />,
+  },
+} as const;
+
+function CalloutFrame({
+  tone,
+  title,
+  children,
+  testId,
+  className = "",
+}: CalloutProps & { tone: keyof typeof TONES }) {
+  const { box, text, Icon } = TONES[tone];
   return (
     <div
-      className={`bg-[#350011] border border-[rgba(210,3,68,0.2)] border-solid rounded-[12px] flex items-center p-[8px] w-full ${className}`}
+      className={`${box} border border-solid rounded-[12px] flex items-center p-[8px] w-full ${className}`}
       data-testid={testId}
     >
       <div className="flex flex-1 gap-[8px] items-start min-w-px">
-        <AlertIcon />
+        <Icon />
         <div className="flex flex-1 flex-col justify-center min-w-px gap-[4px]">
           {title && (
-            <p className={`${FONT} font-semibold leading-[16px] text-[#d20344] text-[14px]`}>
-              {title}
-            </p>
+            <p className={`${FONT} font-semibold leading-[16px] ${text} text-[14px]`}>{title}</p>
           )}
-          <div className={`${FONT} font-medium leading-[16px] text-[#d20344] text-[14px] [word-break:break-word]`}>
+          <div className={`${FONT} font-medium leading-[16px] ${text} text-[14px] [word-break:break-word]`}>
             {children}
           </div>
         </div>
       </div>
     </div>
   );
+}
+
+/** Something failed, is incomplete, or needs the user's attention. */
+export function AlertCallout(props: CalloutProps) {
+  return <CalloutFrame tone="alert" {...props} />;
+}
+
+/**
+ * A feature that is not built yet.
+ *
+ * Amber used to cover both this and real warnings, which meant "we haven't
+ * shipped this" and "this broke" looked identical. Crimson would now read as a
+ * failure, so honest not-yet-available notices get the neutral frame instead:
+ * still a callout, but plainly not an error.
+ */
+export function MutedCallout(props: CalloutProps) {
+  return <CalloutFrame tone="muted" {...props} />;
 }

@@ -13,7 +13,7 @@ import { mapApprovalRejection, parseCoreError } from "@/lib/approvalRejections";
 import closeIcon from "@assets/Close_1783293571882.png";
 import memberIcon from "@assets/member_1783635675512.png";
 import arrowButton from "@assets/Button_1783635877872.png";
-import { AlertCallout } from "@/components/Callout";
+import { AlertCallout, MutedCallout } from "@/components/Callout";
 import {
   ROLE_LABELS,
   envelopeLine,
@@ -515,14 +515,14 @@ export default function TeamSection() {
         </div>
 
         <div className="bg-[#0a0c10] rounded-[16px] p-[16px] flex flex-col gap-[16px] w-full">
-          <AlertCallout
+          <MutedCallout
             title="Escalation timers are not active."
             testId="text-escalation-unavailable"
           >
             Brain is propose-only: if the primary approver does not act, nothing ships
             and nothing is escalated. Backup-approver marks are recorded in this
             browser only, so no reminder is sent to anyone today.
-          </AlertCallout>
+          </MutedCallout>
 
           {[
             {
