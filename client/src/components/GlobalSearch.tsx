@@ -41,7 +41,7 @@ import {
 } from "@/lib/globalSearch";
 
 const INPUT =
-  "flex-1 min-w-0 h-[40px] bg-transparent border-0 px-[4px] py-0 [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[18px] text-[#a8b9f4] outline-none placeholder:text-[#414965]";
+  "flex-1 min-w-0 h-[24px] bg-transparent border-0 px-0 py-0 [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-[#6c779d] caret-[#6c779d] outline-none placeholder:text-[#6c779d]";
 
 export function GlobalSearch() {
   const [, navigate] = useLocation();
@@ -177,12 +177,12 @@ export function GlobalSearch() {
 
   return (
     <div className="relative mx-[7px] w-auto shrink-0 mt-[12px] mb-[7px]" ref={wrapRef} data-testid="global-search">
-      <div className="flex h-[40px] w-full items-center rounded-[10px] bg-[#06070a]">
+      <div className="flex h-[40px] w-full items-center gap-[8px] rounded-[8px] bg-[#222737] px-[8px]">
         <img
           src={searchIcon}
           alt=""
           aria-hidden="true"
-          className="ml-[8px] size-[32px] shrink-0"
+          className="size-[24px] shrink-0"
         />
         <input
           type="text"
@@ -193,9 +193,9 @@ export function GlobalSearch() {
             showPanel && results[activeIndex] ? `gs-${results[activeIndex].key}` : undefined
           }
           aria-autocomplete="list"
-          aria-label="Search decisions, vendors, accounts, and descriptions from your financial brain"
+          aria-label="Search"
           className={INPUT}
-          placeholder="Search any decisions, vendors, accounts, and descriptions from your financial brain..."
+          placeholder="Search"
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
