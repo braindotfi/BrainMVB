@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation, useSearch } from "wouter";
 import {
   ChevronRight,
@@ -8,6 +8,7 @@ import {
   Pencil,
   Flag,
 } from "lucide-react";
+import { FilterChipRow } from "@/components/FilterChipRow";
 import alertIcon from "@assets/Icons_1783274957589.png";
 import closeIcon from "@assets/Close_1783293571882.png";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
@@ -496,13 +497,23 @@ const TAB_PARAM_MAP: Record<string, RuleTab> = {
   suggested: "Suggested",
 };
 
-export function RulesPage() {
+/**
+ * Rules — a Ledger tab, no longer a top-level page.
+ *
+ * The full builder, the policy sections and the suggestion flow are unchanged.
+ * Its four sub-tabs became a filter row so the Ledger's pill bar stays the only
+ * control that changes page, and its filter moved from `?tab=` to `?rules=`
+ * because `?tab=` now names the Ledger tab. `/rules/:id` is untouched — it is a
+ * real route of its own, and wouter sends unregistered targets to NotFound in
+ * silence.
+ */
+export function RulesPanel() {
   const { format } = useCurrency();
   const [, navigate] = useLocation();
   const search = useSearch();
   const rules = useRules();
   const suggestions = useRuleSuggestions();
-  const { vendors } = useBrainVendors();
+  const { vendors, isError: vendorsFailed } = useBrainVendors();
   // Live counterparties carry no allowlist/trust-tier concept of their own —
   // "trusted" is the one real trustStatus brain-core-derived vendors can hit
   // (see brainVendors.ts's deriveTrustStatus). There's no live "untrusted"
@@ -514,15 +525,21 @@ export function RulesPage() {
   const trustedVendors = vendors.filter((v) => v.trustStatus === "trusted").map((v) => v.name);
   const untrustedVendors: string[] = [];
 
-  const [activeTab, setActiveTabState] = useState<RuleTab>(() => {
-    const sp = new URLSearchParams(search);
-    const t = sp.get("tab");
+  /* Derived from the URL every render rather than copied into state at mount.
+     A mirrored copy only agrees with the URL until something else changes it —
+     a link from another panel, the back button, the `?create=1` handoff below —
+     and then the pills and the address bar disagree with no way to tell which
+     one is right. The URL is the single source of truth; `setActiveTab` only
+     navigates. */
+  const activeTab: RuleTab = (() => {
+    const t = new URLSearchParams(search).get("rules");
     return t ? (TAB_PARAM_MAP[t] ?? "Default") : "Default";
-  });
+  })();
   const setActiveTab = (tab: RuleTab) => {
-    setActiveTabState(tab);
-    const slug = tab.toLowerCase().replace(/\s+/g, "-");
-    navigate(`/rules?tab=${slug}`, { replace: true });
+    const sp = new URLSearchParams(search);
+    sp.set("tab", "rules");
+    sp.set("rules", tab.toLowerCase().replace(/\s+/g, "-"));
+    navigate(`/ledger?${sp.toString()}`, { replace: true });
   };
   const [builderOpen, setBuilderOpen] = useState(false);
   const [builder, setBuilder] = useState<BuilderState>(EMPTY_BUILDER);
@@ -556,17 +573,36 @@ export function RulesPage() {
     void hydrateSuggestions();
   }, []);
 
-  /* "Always handle this" handoff: consume the draft + open the builder pre-filled. */
+  /* "Always handle this" handoff: consume the draft + open the builder pre-filled.
+     Keyed on `search` rather than mount, so arriving at `?create=1` from a link
+     while this panel is already mounted still opens the builder. `consumeRuleDraft`
+     is destructive, so a ref makes it strictly one-shot. */
+  const createHandled = useRef(false);
   useEffect(() => {
     const params = new URLSearchParams(search);
-    if (params.get("create") === "1") {
-      const draft = consumeRuleDraft();
-      if (draft) openBuilderPrefilled(draft);
-      else setBuilderOpen(true);
-      navigate("/rules", { replace: true });
-    }
+    if (params.get("create") !== "1" || createHandled.current) return;
+    createHandled.current = true;
+
+    const draft = consumeRuleDraft();
+    if (draft) openBuilderPrefilled(draft);
+    else setBuilderOpen(true);
+
+    /* Land on a filter that actually draws the builder. It only renders under
+       Automations and Guardrails, but `?create=1` carries no filter of its own,
+       so the handoff used to sit on Default — builder state set, builder never
+       mounted, and the "Always handle this" button on Overview and Decisions
+       appeared to do nothing at all. */
+    const requested = params.get("rules");
+    const target: RuleTab =
+      requested && TAB_PARAM_MAP[requested] === "Guardrails" ? "Guardrails" : "Automations";
+
+    const next = new URLSearchParams(search);
+    next.delete("create");
+    next.set("tab", "rules");
+    next.set("rules", target.toLowerCase());
+    navigate(`/ledger?${next.toString()}`, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [search]);
 
   const amountNum = Number(builder.amount.replace(/[^0-9.]/g, ""));
   const isAuto = builder.action === "auto" || builder.action === "queue";
@@ -650,41 +686,16 @@ export function RulesPage() {
   // tab counts removed. Shown in table header instead
 
   return (
-    <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] size-full flex flex-col">
-
-      {/* Static chrome: header + tab bar + builder / confirm panel — never scrolls */}
-      <div className="shrink-0 flex flex-col gap-[40px] items-start pt-[40px] px-[16px] pb-[16px] w-full">
-        <div className="flex flex-col items-start gap-[4px] w-full">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px]">Rules</p>
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">Your boundaries that Brain follows.</p>
-          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px]">
-            Manage the rules that guide Brain's reviews, recommendations, and actions.
-          </p>
-        </div>
+    <div className="flex flex-col gap-[16px] items-start w-full pb-[8px]">
 
         <div className="flex flex-col gap-[16px] items-start w-full">
-          {/* Tab bar: active tab is ORANGE */}
-          <div className="bg-[#06070a] flex gap-[2px] items-center overflow-clip p-[2px] relative rounded-[400px] shrink-0 flex-wrap">
-            {RULE_TABS.map((tab) => {
-              const isActive = activeTab === tab;
-              return (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className="flex items-center justify-center gap-[6px] px-[14px] py-[8px] relative rounded-[100px] shrink-0 transition-colors"
-                  style={{ background: isActive ? "#4a2300" : "transparent" }}
-                  data-testid={`tab-rule-${tab.toLowerCase().replace(/\s+/g, "-")}`}
-                >
-                  <p
-                    className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap"
-                    style={{ color: isActive ? "#ff9500" : "#414965" }}
-                  >
-                    {tab}
-                  </p>
-                </button>
-              );
-            })}
-          </div>
+          <FilterChipRow
+            chips={RULE_TABS.map((tab) => ({ value: tab, label: tab }))}
+            value={activeTab}
+            onChange={(v) => setActiveTab(v as RuleTab)}
+            label="Filter rules"
+            testIdPrefix="tab-rule"
+          />
 
           {/* Create-rule confirmation: on Automations and Guardrails tabs */}
           {(activeTab === "Automations" || activeTab === "Guardrails") && pendingCreate && (
@@ -818,9 +829,18 @@ export function RulesPage() {
                         <p className="px-[10px] pt-[4px] pb-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] uppercase text-[#6c779d]">
                           Trusted vendors
                         </p>
+                        {/* An unreachable vendor list is not an empty vendor list.
+                            Saying "none yet" here would invite someone to build a
+                            rule around a vendor set that simply failed to load. */}
                         {trustedVendors.length === 0 && (
-                          <p className="px-[10px] pb-[6px] [font-family:'Gilroy',sans-serif] font-medium text-[13px] text-[#6c779d]">
-                            No trusted vendors yet.
+                          <p
+                            className="px-[10px] pb-[6px] [font-family:'Gilroy',sans-serif] font-medium text-[13px]"
+                            style={{ color: vendorsFailed ? "#ff9400" : "#6c779d" }}
+                            data-testid={vendorsFailed ? "text-vendors-unavailable" : "text-vendors-empty"}
+                          >
+                            {vendorsFailed
+                              ? "Vendors couldn't be loaded, so this list is empty for the wrong reason."
+                              : "No trusted vendors yet."}
                           </p>
                         )}
                         {trustedVendors.map((v) => {
@@ -950,11 +970,9 @@ export function RulesPage() {
             </div>
           ))}
 
-        </div>{/* end chrome inner flex-col */}
-      </div>{/* end static chrome */}
+        </div>{/* end filter row + builder block */}
 
-      {/* Table area: only the row body scrolls */}
-      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-[16px] pb-[16px] flex flex-col gap-[16px]">
+      <div className="w-full flex flex-col gap-[16px]">
 
         {activeTab === "Default" && (
           <>

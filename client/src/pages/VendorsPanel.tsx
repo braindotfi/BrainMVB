@@ -7,11 +7,11 @@ import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import type { Vendor } from "@/lib/vendorTypes";
 import { VendorDetailPopup } from "@/components/VendorDetailPopup";
+import { FilterChipRow } from "@/components/FilterChipRow";
 import closeIcon from "@assets/Close_1783293571882.png";
 import { Plus } from "lucide-react";
 
 type VendorTab = "Needs Review" | "New" | "Trusted" | "Suggested";
-const VENDOR_TABS: VendorTab[] = ["Needs Review", "New", "Trusted", "Suggested"];
 
 
 const Divider = () => <div className="h-px shrink-0 w-full" style={{ background: "#1d2132" }} />;
@@ -232,7 +232,16 @@ function AddVendorDialog({ open, onClose }: { open: boolean; onClose: () => void
 }
 
 /* ── Main page ─────────────────────────────────────────────────────────────────── */
-export function VendorsPage() {
+/**
+ * Vendors — a Ledger tab, no longer a top-level page.
+ *
+ * Everything it had is intact: the detail popup, the wrap-around pager, `?vendor=`
+ * deep links and `?from=` return targets. What changed is the chrome. Its own
+ * header is gone (the Ledger supplies one) and its four sub-tabs render as a
+ * filter row, because two stacked pill bars would make "which page am I on" and
+ * "which slice of one list am I looking at" look like the same control.
+ */
+export function VendorsPanel() {
   const { format } = useCurrency();
   const [, navigate] = useLocation();
   const search = useSearch();
@@ -265,12 +274,21 @@ export function VendorsPage() {
     // just drop the ?vendor= param.
     const params = new URLSearchParams(search);
     const from = params.get("from");
-    navigate(from ?? "/vendors", { replace: true });
+    if (from) {
+      navigate(from, { replace: true });
+      return;
+    }
+    params.delete("vendor");
+    params.set("tab", "vendors");
+    navigate(`/ledger?${params.toString()}`, { replace: true });
   };
 
   const handleOpenVendor = (vendor: Vendor) => {
     setActiveVendor(vendor);
-    navigate(`/vendors?vendor=${vendor.id}`, { replace: true });
+    const params = new URLSearchParams(search);
+    params.set("tab", "vendors");
+    params.set("vendor", vendor.id);
+    navigate(`/ledger?${params.toString()}`, { replace: true });
   };
 
   /* Group vendors by trust status */
@@ -301,51 +319,35 @@ export function VendorsPage() {
     // Preserve any existing params (e.g. `from` return-to-audit target). Only
     // swap the vendor, so closing after paging still returns to the origin.
     const params = new URLSearchParams(search);
+    params.set("tab", "vendors");
     params.set("vendor", next.id);
-    navigate(`/vendors?${params.toString()}`, { replace: true });
+    navigate(`/ledger?${params.toString()}`, { replace: true });
   };
 
   // tab counts removed. Shown in table header instead
 
+  /* Counts are omitted, not zeroed, while the list is loading or unreachable:
+     "Needs Review 0" is a statement that nothing needs review. */
+  const countsKnown = !isLoading && !isError;
+  const vendorFilters = [
+    { value: "Needs Review", label: "Needs Review", count: countsKnown ? grouped.underReview.length : undefined },
+    { value: "New", label: "New", count: countsKnown ? grouped.newVendors.length : undefined },
+    { value: "Trusted", label: "Trusted", count: countsKnown ? grouped.trusted.length : undefined },
+    { value: "Suggested", label: "Suggested", count: countsKnown ? grouped.known.length : undefined },
+  ];
+
   return (
-    <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] size-full flex flex-col">
+    <div className="flex flex-col gap-[16px] items-start w-full pb-[8px]">
 
-      {/* Static chrome: header + tab bar — never scrolls */}
-      <div className="shrink-0 flex flex-col gap-[40px] items-start pt-[40px] px-[16px] pb-[16px] w-full">
-        <div className="flex flex-col items-start gap-[4px] relative shrink-0">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px] whitespace-nowrap">Your Vendors</p>
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">
-            The people and businesses you pay.
-          </p>
-          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px]">
-            See vendor activity, payment history, risks, and recommendations.
-          </p>
-        </div>
-        <div className="bg-[#06070a] flex gap-[2px] items-center overflow-clip p-[2px] relative rounded-[400px] shrink-0 flex-wrap">
-          {VENDOR_TABS.map((tab) => {
-            const isActive = activeTab === tab;
-            return (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className="content-stretch flex items-center justify-center px-[16px] py-[8px] relative rounded-[100px] shrink-0 transition-colors"
-                style={{ background: isActive ? "#4a2300" : "#06070a" }}
-                data-testid={`tab-vendor-${tab.toLowerCase().replace(/\s+/g, "-")}`}
-              >
-                <p
-                  className="[word-break:break-word] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] not-italic relative shrink-0 text-[14px] whitespace-nowrap"
-                  style={{ color: isActive ? "#ff9400" : "#414965" }}
-                >
-                  {tab}
-                </p>
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      <FilterChipRow
+        chips={vendorFilters}
+        value={activeTab}
+        onChange={(v) => setActiveTab(v as VendorTab)}
+        label="Filter vendors"
+        testIdPrefix="tab-vendor"
+      />
 
-      {/* Table area: scrolls as a whole; panel header is sticky */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-[16px] pb-[16px]">
+      <div className="w-full">
         {isLoading ? (
           <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
             <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">

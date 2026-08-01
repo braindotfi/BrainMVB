@@ -1,14 +1,36 @@
+/**
+ * Ledger — four tabs: Accounts, Cash Flow, Vendors, Rules.
+ *
+ * Was six (Accounts, Recent, Bills, Income, Expenses, Liabilities) plus two
+ * separate top-level pages (/vendors, /rules). The five money tabs collapsed into
+ * Cash Flow because they were all filtered reads of the same two feeds; Vendors
+ * and Rules moved in because they are part of the ledger, not neighbours of it.
+ *
+ * Vendors and Rules keep everything they had — the detail pager, `?vendor=` deep
+ * links, the full rule builder. Only their tab bars changed: sub-tabs became a
+ * filter row, so there is exactly one pill bar on screen and it always means
+ * "which page am I on".
+ *
+ * The active tab lives in the URL rather than in state. The old page parsed
+ * `?tab=` on mount, applied it, then deleted the param — which meant a refresh
+ * silently dropped you back to Accounts, and a sub-panel could not put its own
+ * state in the URL without a second effect racing the first. Reading the tab
+ * straight off `search` removes both problems and the effect that caused them.
+ */
+
 import { useState, useEffect, useMemo } from "react";
 import { useLocation, useSearch } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCurrency } from "@/lib/useCurrency";
-import { useAuth } from "@/lib/authContext";
-import { unpaidApInvoices } from "@/lib/liabilities";
-import { BrainBillsInbox } from "@/components/BrainBillsInbox";
+import { CashFlowTab } from "@/components/CashFlowTab";
+import { VendorsPanel } from "@/pages/VendorsPanel";
+import { RulesPanel } from "@/pages/RulesPanel";
+import { Divider, WidgetCard } from "@/components/LedgerWidgets";
 import { TransactionDetailPopup } from "@/components/TransactionDetailPopup";
 import { AccountDetailPopup } from "@/components/AccountDetailPopup";
-import { ChevronRight } from "lucide-react";
+import { ICONS } from "@/assets/figma-icons";
+
+const IMG_DOT = ICONS.activity_dot;
 
 function timeAgo(ts: number): string {
   const diffMs = Date.now() - ts;
@@ -23,8 +45,60 @@ function timeAgo(ts: number): string {
   return `${diffD}d ago`;
 }
 
-import { ICONS } from "@/assets/figma-icons";
-const IMG_DOT = ICONS.activity_dot;
+// ─── tabs ────────────────────────────────────────────────────────────────────
+
+export type LedgerTab = "Accounts" | "Cash Flow" | "Vendors" | "Rules";
+export const LEDGER_TABS: LedgerTab[] = ["Accounts", "Cash Flow", "Vendors", "Rules"];
+
+export const ledgerTabSlug = (tab: LedgerTab): string => tab.toLowerCase().replace(/\s+/g, "-");
+
+/**
+ * Every `?tab=` value the app has ever produced, mapped to a tab that still
+ * exists.
+ *
+ * The five retired names are kept deliberately. Wouter has no 404 for an unknown
+ * query value — an unrecognised tab would silently fall back to Accounts, so a
+ * live link like the assistant's obligation citation ("show me this bill") would
+ * quietly land on a list of bank balances. Every retired name was a view of cash
+ * flow, so that is where each of them goes.
+ */
+const TAB_BY_SLUG: Record<string, LedgerTab> = {
+  accounts: "Accounts",
+  "cash-flow": "Cash Flow",
+  cashflow: "Cash Flow",
+  vendors: "Vendors",
+  rules: "Rules",
+  recent: "Cash Flow",
+  bills: "Cash Flow",
+  income: "Cash Flow",
+  expenses: "Cash Flow",
+  liabilities: "Cash Flow",
+};
+
+export function resolveLedgerTab(param: string | null | undefined): LedgerTab | null {
+  if (!param) return null;
+  return TAB_BY_SLUG[param.trim().toLowerCase().replace(/\s+/g, "-")] ?? null;
+}
+
+/** Params owned by an individual tab, cleared when leaving it so a stale
+ *  `?vendor=` cannot re-open a popup on a tab that has no vendors. */
+const TAB_SCOPED_PARAMS = ["vendor", "from", "rules", "create"];
+
+const TAB_COPY: Record<LedgerTab, { heading: string; sub: string | null }> = {
+  Accounts: { heading: "Here's your financial snapshot right now.", sub: null },
+  "Cash Flow": {
+    heading: "Everywhere your money moved.",
+    sub: "Income, expenses and the bills you still owe, in one list.",
+  },
+  Vendors: {
+    heading: "The people and businesses you pay.",
+    sub: "See vendor activity, payment history, risks, and recommendations.",
+  },
+  Rules: {
+    heading: "Your boundaries that Brain follows.",
+    sub: "Manage the rules that guide Brain's reviews, recommendations, and actions.",
+  },
+};
 
 // ─── brain-core Ledger accounts (via the BFF proxy) ──────────────────────────
 // Shape mirrors brain-core's Account schema (subset we render).
@@ -87,432 +161,45 @@ function mapBrainAccounts(list: BrainAccountDTO[]): AccountRow[] {
   return rows;
 }
 
-// ─── brain-core Ledger transactions (via the BFF proxy) ─────────────────────
-interface BrainTransactionDTO {
-  id: string;
-  amount: string;
-  currency: string;
-  direction: "inflow" | "outflow" | "transfer" | "adjustment";
-  transaction_date: string;
-  counterparty_id?: string | null;
-  description_normalized?: string | null;
-  description_raw?: string | null;
-}
-interface BrainTransactionsResponse {
-  transactions: BrainTransactionDTO[];
-  next_cursor?: string | null;
-}
-
-type TxRow = { id: string; label: string; date: string; amount: number; positive: boolean };
-
-function formatTxDate(iso: string): string {
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? "" : d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
-
-function mapBrainTransactions(list: BrainTransactionDTO[]): TxRow[] {
-  return list.map((t) => {
-    const positive = t.direction === "inflow";
-    const value = Number(t.amount);
-    return {
-      id: t.id,
-      label: t.description_normalized ?? t.description_raw ?? (positive ? "Incoming payment" : "Outgoing payment"),
-      date: formatTxDate(t.transaction_date),
-      amount: Number.isFinite(value) ? Math.abs(value) : 0,
-      positive,
-    };
-  });
-}
-
-const Divider = () => (
-  <div className="h-px shrink-0 w-full" style={{ background: "#1d2132" }} />
-);
-
-const WidgetHeader = ({ title, count }: { title: string; count?: number }) => (
-  <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative sticky top-0 z-10 w-full">
-    <div className="flex flex-1 gap-[8px] items-center min-w-px relative">
-      <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[20px] whitespace-nowrap">{title}</p>
-      {typeof count === "number" && (
-        <div className="bg-[#414965] flex flex-col items-center justify-center min-w-[16px] p-[2px] relative rounded-[4px] shrink-0">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[12px] text-[#a8b9f4] text-[12px] text-center whitespace-nowrap">{count}</p>
-        </div>
-      )}
-    </div>
-  </div>
-);
-
-const WidgetCard = ({ title, count, children }: { title: string; count?: number; children: React.ReactNode }) => (
-  <div className="bg-[#0a0c10] flex flex-col overflow-hidden relative rounded-[16px] w-full">
-    <WidgetHeader title={title} count={count} />
-    <div className="flex flex-col items-start p-[8px] relative w-full overflow-x-hidden">
-      <div className="flex flex-col gap-[8px] items-start w-full">
-        {children}
-      </div>
-    </div>
-  </div>
-);
-
-// ─── Overdue receivables (live) - replaces the static "2 Invoices are late" banner ──
-// Money owed TO the business that is past due. Excludes AP payables (those are the
-// "Bills, let Brain decide" inbox). Renders nothing when nothing is overdue.
-interface InvoiceLite {
-  id: string;
-  counterparty_id: string;
-  amount_due: string;
-  due_date?: string | null;
-  status: string;
-  metadata?: { scenario?: string } | null;
-}
-interface InvoicesLiteResponse { invoices: InvoiceLite[] }
-interface CounterpartyLite { id: string; name?: string | null }
-interface CounterpartiesLiteResponse { counterparties: CounterpartyLite[] }
-
-function daysLate(due?: string | null): number {
-  if (!due) return 0;
-  const t = new Date(due).getTime();
-  if (Number.isNaN(t)) return 0;
-  return Math.max(0, Math.floor((Date.now() - t) / 86_400_000));
-}
-
-const OverdueInvoicesBanner = ({ format }: { format: (a: string | number) => string }) => {
-  const { data: invData } = useQuery<InvoicesLiteResponse>({
-    queryKey: ["/api/brain/ledger/invoices"],
-    retry: false,
-  });
-  const { data: cpData } = useQuery<CounterpartiesLiteResponse>({
-    queryKey: ["/api/brain/ledger/counterparties"],
-    retry: false,
-  });
-
-  const overdue = (invData?.invoices ?? []).filter(
-    (i) => i.status === "overdue" && i.metadata?.scenario !== "ap",
-  );
-  if (overdue.length === 0) return null;
-
-  const nameOf = (id: string) => cpData?.counterparties.find((c) => c.id === id)?.name ?? "a customer";
-  const detail = overdue
-    .slice(0, 3)
-    .map((i) => `${format(Number(i.amount_due))} from ${nameOf(i.counterparty_id)} (${daysLate(i.due_date)} days late)`)
-    .join(" and ");
-
-  return (
-    <div className="bg-[#4a2300] border border-[rgba(255,148,0,0.2)] border-solid content-stretch flex items-center p-[8px] relative rounded-[12px] shrink-0 w-full">
-      <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-start min-w-px relative">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[2px]">
-        <circle cx="8" cy="8" r="7" stroke="#ff9400" strokeWidth="1.3" />
-        <path d="M8 7.3v4.2" stroke="#ff9400" strokeWidth="1.3" strokeLinecap="round" />
-        <circle cx="8" cy="4.7" r="0.9" fill="#ff9400" />
-      </svg>
-        <div className="[word-break:break-word] content-stretch flex flex-[1_0_0] flex-col gap-[4px] items-start justify-center leading-[16px] min-w-px not-italic relative text-[#ff9400] text-[14px]">
-          <p className="[font-family:'Gilroy',sans-serif] font-bold relative shrink-0 uppercase w-full">
-            {overdue.length} invoice{overdue.length === 1 ? "" : "s"} overdue!
-          </p>
-          <p className="[font-family:'Gilroy',sans-serif] font-medium relative shrink-0 w-full">
-            {detail}.
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// ─── Income summary (live) - monthly inflow + top customers from the Ledger ──
-// Derived from brain-core ledger inflow transactions + counterparties for names.
-// Falls back to static copy only when no transaction data is reachable at all.
-function summarizeIncome(
-  txs: BrainTransactionDTO[],
-): { monthly: number; count: number; topCpIds: string[]; share: number } | null {
-  const inflows = txs.filter((t) => t.direction === "inflow");
-  if (inflows.length === 0) return null;
-  const months = new Set<string>();
-  const byCp = new Map<string, number>();
-  let total = 0;
-  for (const t of inflows) {
-    const amt = Number(t.amount);
-    if (!Number.isFinite(amt)) continue;
-    total += amt;
-    months.add(t.transaction_date.slice(0, 7)); // YYYY-MM
-    const cp = t.counterparty_id ?? "-";
-    byCp.set(cp, (byCp.get(cp) ?? 0) + amt);
-  }
-  const ranked = Array.from(byCp.entries()).sort((a, b) => b[1] - a[1]);
-  const top = ranked.slice(0, 3);
-  const share = total > 0 ? Math.round((top.reduce((s, [, v]) => s + v, 0) / total) * 100) : 0;
-  return { monthly: total / Math.max(1, months.size), count: byCp.size, topCpIds: top.map(([id]) => id), share };
-}
-
-const INCOME_FALLBACK =
-  "No income recorded yet. This populates from your ledger as money comes in.";
-
-const IncomeSummary = ({ format, onCount }: { format: (a: string | number) => string; onCount?: (n: number) => void }) => {
-  const { data: txData } = useQuery<BrainTransactionsResponse>({
-    queryKey: ["/api/brain/ledger/transactions"],
-    retry: false,
-  });
-  const { data: cpData } = useQuery<CounterpartiesLiteResponse>({
-    queryKey: ["/api/brain/ledger/counterparties"],
-    retry: false,
-  });
-
-  const s = txData?.transactions ? summarizeIncome(txData.transactions) : null;
-  const count = s ? s.count : 0;
-  const text = (() => {
-    if (!s) return INCOME_FALLBACK;
-    const nameOf = (id: string) => cpData?.counterparties.find((c) => c.id === id)?.name ?? "a customer";
-    const names = s.topCpIds.map(nameOf);
-    const joined =
-      names.length <= 1
-        ? names[0] ?? "one customer"
-        : names.slice(0, -1).join(", ") + " and " + names[names.length - 1];
-    const verb = names.length > 1 ? "are" : "is";
-    const tail = s.share >= 99 ? ", essentially all your revenue" : `, together about ${s.share}% of your revenue`;
-    return `About ${format(Math.round(s.monthly))} a month from ${s.count} customer${s.count === 1 ? "" : "s"}. Your biggest ${verb} ${joined}${tail}.`;
-  })();
-
-  useEffect(() => {
-    onCount?.(count);
-  }, [count, onCount]);
-
-  return (
-    <div className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full" style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}>
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[2px]">
-        <circle cx="8" cy="8" r="7" stroke="#7631ee" strokeWidth="1.3" />
-        <path d="M8 7.3v4.2" stroke="#7631ee" strokeWidth="1.3" strokeLinecap="round" />
-        <circle cx="8" cy="4.7" r="0.9" fill="#7631ee" />
-      </svg>
-      <p className="[word-break:break-word] flex-[1_0_0] [font-family:'Gilroy',sans-serif] font-medium leading-[18px] min-w-px not-italic relative text-[#7631ee] text-[14px]">
-        {text}
-      </p>
-    </div>
-  );
-};
-
-// ─── Income drill-down (live) - the actual inflow transactions ───────────────
-// The "filtered transaction list" behind the Income summary: real inflow rows
-// from the Ledger, each opening the shared transaction detail. No popup, an
-// inline list, honest to what's recorded.
-const IncomeTxList = ({
-  format,
-  onOpen,
-}: {
-  format: (a: string | number) => string;
-  onOpen: (txId: string) => void;
-}) => {
-  const { data: txData } = useQuery<BrainTransactionsResponse>({
-    queryKey: ["/api/brain/ledger/transactions"],
-    retry: false,
-  });
-  const { data: cpData } = useQuery<CounterpartiesLiteResponse>({
-    queryKey: ["/api/brain/ledger/counterparties"],
-    retry: false,
-  });
-  const inflows = (txData?.transactions ?? [])
-    .filter((t) => t.direction === "inflow")
-    .sort((a, b) => new Date(b.transaction_date).getTime() - new Date(a.transaction_date).getTime());
-  if (inflows.length === 0) {
-    return (
-      <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
-        <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
-          No income recorded yet. This populates from your ledger as money comes in.
-        </p>
-      </div>
-    );
-  }
-  const nameOf = (id?: string | null) =>
-    (id && cpData?.counterparties.find((c) => c.id === id)?.name) || null;
-  const shortDate = (iso: string) => {
-    const d = new Date(iso);
-    return Number.isNaN(d.getTime()) ? "" : d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  };
-
-  return (
-    <>
-      {inflows.map((t, idx) => {
-        const label = nameOf(t.counterparty_id) ?? t.description_normalized ?? "Incoming payment";
-        const amt = Number(t.amount);
-        return (
-          <div key={t.id} className="flex flex-col gap-[8px] w-full">
-            <div
-              role="button"
-              tabIndex={0}
-              data-testid={`income-tx-${t.id}`}
-              onClick={() => onOpen(t.id)}
-              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(t.id); } }}
-              className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer"
-            >
-              <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">{label}</p>
-                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">{shortDate(t.transaction_date)}</p>
-              </div>
-              <div className="flex flex-col items-end justify-center relative shrink-0">
-                <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#42bf23] text-[18px] text-right whitespace-nowrap">
-                  +{format(Math.abs(Number.isFinite(amt) ? amt : 0))}
-                </p>
-              </div>
-            </div>
-            {idx < inflows.length - 1 && <Divider />}
-          </div>
-        );
-      })}
-    </>
-  );
-};
-
-// ─── Expenses (live) - outflow transactions grouped from the Ledger ──────────
-// Derived from brain-core ledger outflow transactions. The demo seed currently
-// carries only inflows, so this renders an honest empty state today and will
-// populate automatically when real money-out data lands. Never faked.
-// See deliverables/DATA-LIMITATIONS.md.
-type ExpenseRow = { category: string; amount: number; date: string };
-
-function summarizeExpenses(
-  txs: BrainTransactionDTO[],
-  nameOf: (id: string) => string,
-): ExpenseRow[] {
-  const byKey = new Map<string, { amount: number; date: string }>();
-  for (const t of txs) {
-    if (t.direction !== "outflow") continue;
-    const amt = Number(t.amount);
-    if (!Number.isFinite(amt)) continue;
-    const key = t.description_normalized || (t.counterparty_id ? nameOf(t.counterparty_id) : "Other");
-    const current = byKey.get(key);
-    byKey.set(key, {
-      amount: (current?.amount ?? 0) + amt,
-      // Keep the most recent transaction date when multiple outflows share a category.
-      date: !current || new Date(t.transaction_date).getTime() > new Date(current.date).getTime()
-        ? t.transaction_date
-        : current.date,
-    });
-  }
-  return Array.from(byKey.entries())
-    .map(([category, value]) => ({ category, ...value }))
-    .sort((a, b) => b.amount - a.amount);
-}
-
-const ExpensesWidget = ({ format }: { format: (a: string | number) => string }) => {
-  const { data: txData } = useQuery<BrainTransactionsResponse>({
-    queryKey: ["/api/brain/ledger/transactions"],
-    retry: false,
-  });
-  const { data: cpData } = useQuery<CounterpartiesLiteResponse>({
-    queryKey: ["/api/brain/ledger/counterparties"],
-    retry: false,
-  });
-
-  const nameOf = (id: string) => cpData?.counterparties.find((c) => c.id === id)?.name ?? "a vendor";
-  const rows = txData?.transactions ? summarizeExpenses(txData.transactions, nameOf) : [];
-  const shortDate = (iso: string) => {
-    const d = new Date(iso);
-    return Number.isNaN(d.getTime()) ? "" : d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  };
-
-  return (
-    <WidgetCard title="Expenses" count={rows.length}>
-      {rows.length === 0 ? (
-        <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
-          <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">No expenses recorded yet. This populates from your ledger as money goes out.</p>
-        </div>
-      ) : (
-        <>
-          {rows.map((item, idx) => (
-            <div key={item.category} className="flex flex-col gap-[8px] w-full">
-              <div
-                data-testid={`row-expense-${idx}`}
-                className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer"
-              >
-                <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
-                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">{item.category}</p>
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">{shortDate(item.date)}</p>
-                </div>
-                <div className="flex flex-col items-end justify-center relative shrink-0">
-                  <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#d20344] text-[18px] text-right whitespace-nowrap">-{format(item.amount)}</p>
-                </div>
-              </div>
-              {idx < rows.length - 1 && <Divider />}
-            </div>
-          ))}
-        </>
-      )}
-    </WidgetCard>
-  );
-};
-
-// ─── Liabilities (live) - outstanding accounts-payable from the Ledger ───────
-// "What we owe": sum of unpaid AP invoices (metadata.scenario === "ap"). The demo
-// tenant has no loan/line_of_credit accounts, so AP is the real liabilities figure.
-// Falls back to static copy only when no AP data is reachable at all.
-function shortDate(iso?: string | null): string {
-  if (!iso) return "soon";
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? "soon" : d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
-
-const LIABILITIES_FALLBACK =
-  "No outstanding liabilities. You're all caught up.";
-
-/* Not the same statement as LIABILITIES_FALLBACK. "All caught up" is a claim
-   that nothing is owed; if the invoice read never landed we cannot make that
-   claim, and a false all-clear here is the worst possible failure mode. */
-const LIABILITIES_UNAVAILABLE =
-  "Liabilities are unavailable right now. Reconnect or refresh to see what you owe.";
-
-const LiabilitiesSummary = ({ format, onCount }: { format: (a: string | number) => string; onCount?: (n: number) => void }) => {
-  const { data: invData } = useQuery<InvoicesLiteResponse>({
-    queryKey: ["/api/brain/ledger/invoices"],
-    retry: false,
-  });
-  const { data: cpData } = useQuery<CounterpartiesLiteResponse>({
-    queryKey: ["/api/brain/ledger/counterparties"],
-    retry: false,
-  });
-
-  /* Same helper the Overview "Liabilities" metric card uses, so the headline
-     figure and this list can never disagree about what counts as owed. */
-  const invoicesReachable = invData?.invoices != null;
-  const ap = unpaidApInvoices(invData?.invoices);
-  const count = ap.length;
-  const text = (() => {
-    if (!invoicesReachable) return LIABILITIES_UNAVAILABLE;
-    if (ap.length === 0) return LIABILITIES_FALLBACK;
-    const nameOf = (id: string) => cpData?.counterparties.find((c) => c.id === id)?.name ?? "a vendor";
-    const total = ap.reduce((s, i) => s + (Number(i.amount_due) || 0), 0);
-    const overdue = ap.filter((i) => i.status === "overdue");
-    const next = [...ap]
-      .sort((a, b) => new Date(a.due_date ?? 0).getTime() - new Date(b.due_date ?? 0).getTime())
-      .find((i) => i.status !== "overdue");
-    const owe = `You owe ${format(Math.round(total))} across ${ap.length} bill${ap.length === 1 ? "" : "s"}.`;
-    const od =
-      overdue.length > 0
-        ? ` ${nameOf(overdue[0].counterparty_id)} for ${format(Number(overdue[0].amount_due))} is overdue.`
-        : "";
-    const nx = next
-      ? ` Your next is ${nameOf(next.counterparty_id)} for ${format(Number(next.amount_due))}, due ${shortDate(next.due_date)}.`
-      : "";
-    return `${owe}${od}${nx} Brain can pay these from the Bills inbox above.`;
-  })();
-
-  useEffect(() => {
-    onCount?.(count);
-  }, [count, onCount]);
-
-  return (
-    <div className="flex flex-col gap-[8px] items-start justify-center p-[8px] relative shrink-0 w-full">
-      <p className="[word-break:break-word] [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-full not-italic relative shrink-0 text-[#6c779d] text-[16px]">
-        {text}
-      </p>
-    </div>
-  );
-};
+// ─── page ────────────────────────────────────────────────────────────────────
 
 export function FinancesPage() {
   const { format } = useCurrency();
-  const { user } = useAuth();
-  const [incomeCount, setIncomeCount] = useState<number>(0);
-  const [liabilitiesCount, setLiabilitiesCount] = useState<number>(0);
+  const search = useSearch();
+  const [location, navigate] = useLocation();
+
+  const tabParam = new URLSearchParams(search).get("tab");
+  const activeTab: LedgerTab = resolveLedgerTab(tabParam) ?? "Accounts";
+
+  /* Canonicalise: `/finances?tab=Bills` becomes `/ledger?tab=cash-flow` so the
+     address bar agrees with what is on screen and a retired name never persists
+     into a bookmark. Only fires when something is actually stale, so it cannot
+     loop. */
+  useEffect(() => {
+    const canonicalSlug = ledgerTabSlug(activeTab);
+    const pathStale = location !== "/ledger";
+    const paramStale = tabParam !== null && tabParam !== canonicalSlug;
+    if (!pathStale && !paramStale) return;
+    const sp = new URLSearchParams(search);
+    if (tabParam !== null) sp.set("tab", canonicalSlug);
+    const qs = sp.toString();
+    navigate(`/ledger${qs ? `?${qs}` : ""}`, { replace: true });
+  }, [location, search, tabParam, activeTab, navigate]);
+
+  const selectTab = (tab: LedgerTab) => {
+    const sp = new URLSearchParams(search);
+    for (const p of TAB_SCOPED_PARAMS) sp.delete(p);
+    sp.set("tab", ledgerTabSlug(tab));
+    navigate(`/ledger?${sp.toString()}`);
+  };
 
   // Real accounts from brain-core's Ledger (via the BFF proxy at /api/brain/*).
   // The browser never sees a brain-core JWT. The BFF mints it server-side.
-  const { data: brainData, isLoading: accountsLoading } = useQuery<BrainAccountsResponse>({
+  const {
+    data: brainData,
+    isLoading: accountsLoading,
+    isError: accountsFailed,
+  } = useQuery<BrainAccountsResponse>({
     queryKey: ["/api/brain/ledger/accounts"],
     retry: false,
   });
@@ -521,49 +208,11 @@ export function FinancesPage() {
   // fabricated accounts (the old $86,993 Chase list) contradicted the real ledger,
   // so an empty/unreachable ledger honestly renders an empty state instead.
   const accounts: AccountRow[] =
-    brainData?.accounts && brainData.accounts.length > 0
-      ? mapBrainAccounts(brainData.accounts)
-      : [];
+    brainData?.accounts && brainData.accounts.length > 0 ? mapBrainAccounts(brainData.accounts) : [];
 
-  // Recent transactions from brain-core's Ledger (empty until provisioning seeds them).
-  const { data: brainTx } = useQuery<BrainTransactionsResponse>({
-    queryKey: ["/api/brain/ledger/transactions"],
-    retry: false,
-  });
-  const transactions: TxRow[] = brainTx?.transactions ? mapBrainTransactions(brainTx.transactions.slice(0, 6)) : [];
-
-  // Which transaction the detail popup is showing (null = closed).
+  // Which transaction / account the detail popup is showing (null = closed).
   const [openTxId, setOpenTxId] = useState<string | null>(null);
-  // Which account the detail popup is showing (null = closed).
   const [openAccountId, setOpenAccountId] = useState<string | null>(null);
-
-  type FinanceTab = "Accounts" | "Recent" | "Bills" | "Income" | "Expenses" | "Liabilities";
-  const FINANCE_TABS: FinanceTab[] = ["Accounts", "Recent", "Bills", "Income", "Expenses", "Liabilities"];
-  const search = useSearch();
-  const [activeTab, setActiveTab] = useState<FinanceTab>(() => {
-    const sp = new URLSearchParams(search);
-    const t = sp.get("tab");
-    return (t && FINANCE_TABS.includes(t as FinanceTab)) ? (t as FinanceTab) : "Accounts";
-  });
-  const [, navigate] = useLocation();
-
-  /* Deep-link: ?tab=<name> selects that tab, then the param is CONSUMED (dropped via
-     replace). The initializer above only runs on mount, so a link arriving while this
-     page is already mounted — the Brain Assistant panel is open across routes and
-     obligation citations open /finances?tab=Bills — would otherwise do nothing.
-     Clearing the param also means re-clicking the same citation is a real URL change,
-     so it still re-selects the tab after the user has manually switched away. */
-  useEffect(() => {
-    const sp = new URLSearchParams(search);
-    const t = sp.get("tab");
-    if (t === null) return;
-    if (FINANCE_TABS.includes(t as FinanceTab)) setActiveTab(t as FinanceTab);
-    sp.delete("tab");
-    const qs = sp.toString();
-    navigate(`/finances${qs ? `?${qs}` : ""}`, { replace: true });
-    // FINANCE_TABS is a stable literal; re-running on `search` is the whole point.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search]);
 
   // Dynamic "last updated" timestamp. Refreshes every 10s
   const [lastUpdated, setLastUpdated] = useState(Date.now());
@@ -573,6 +222,8 @@ export function FinancesPage() {
   }, []);
   const updatedLabel = useMemo(() => timeAgo(lastUpdated), [lastUpdated]);
 
+  const copy = TAB_COPY[activeTab];
+
   return (
     <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] size-full flex flex-col">
 
@@ -580,19 +231,21 @@ export function FinancesPage() {
       <div className="shrink-0 flex flex-col gap-[40px] items-start pt-[40px] px-[16px] pb-[16px] w-full">
         <div className="flex flex-col items-start gap-[4px] relative shrink-0 w-full">
           <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px]">Your Finances</p>
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">Here's your financial snapshot right now.</p>
-          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px]">Updated {updatedLabel}</p>
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">{copy.heading}</p>
+          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px]">
+            {copy.sub ?? `Updated ${updatedLabel}`}
+          </p>
         </div>
         <div className="bg-[#06070a] flex gap-[2px] items-center overflow-clip p-[2px] relative rounded-[400px] shrink-0 flex-wrap max-w-full">
-          {FINANCE_TABS.map((tab) => {
+          {LEDGER_TABS.map((tab) => {
             const isActive = activeTab === tab;
             return (
               <button
                 key={tab}
-                onClick={() => setActiveTab(tab)}
+                onClick={() => selectTab(tab)}
                 className="flex items-center justify-center px-[14px] py-[8px] relative rounded-[100px] shrink-0 transition-colors"
                 style={{ background: isActive ? "#4a2300" : "transparent" }}
-                data-testid={`tab-finance-${tab.toLowerCase().replace(/\s+/g, "-")}`}
+                data-testid={`tab-finance-${ledgerTabSlug(tab)}`}
               >
                 <p
                   className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap"
@@ -606,10 +259,9 @@ export function FinancesPage() {
         </div>
       </div>
 
-      {/* Table area: scrolls as a whole; panel header is sticky */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-[16px] pb-[16px]">
+      {/* Table area: scrolls as a whole; panel headers are sticky */}
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-[16px] pb-[16px]">
 
-        {/* ACCOUNTS */}
         {activeTab === "Accounts" && (
           <WidgetCard title="Accounts" count={accounts.length}>
             {accounts.map((acc, idx) => {
@@ -652,79 +304,36 @@ export function FinancesPage() {
             })}
             {accounts.length === 0 && (
               <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
-                <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
+                {/* Three states, not two. An unreachable ledger used to render the
+                    same "No connected accounts yet" as a genuinely empty one, which
+                    tells someone with accounts that they have none. */}
+                <p
+                  className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[16px]"
+                  style={{ color: accountsFailed ? "#ff9400" : "#6c779d" }}
+                  data-testid={
+                    accountsLoading
+                      ? "text-accounts-loading"
+                      : accountsFailed
+                        ? "text-accounts-unavailable"
+                        : "text-accounts-empty"
+                  }
+                >
                   {accountsLoading
                     ? "Loading your accounts from the ledger…"
-                    : "No connected accounts yet. Link an account to see your balances here."}
+                    : accountsFailed
+                      ? "Your accounts couldn't be loaded just now, so this list is empty for the wrong reason. It isn't a sign that you have no accounts."
+                      : "No connected accounts yet. Link an account to see your balances here."}
                 </p>
               </div>
             )}
           </WidgetCard>
         )}
 
-        {/* RECENT */}
-        {activeTab === "Recent" && (
-          <WidgetCard title="Recent Transactions" count={transactions.length}>
-            {transactions.length > 0 ? (
-              transactions.map((t, idx) => (
-                <div key={t.id} className="flex flex-col gap-[8px] w-full">
-                  <div
-                    data-testid={`row-tx-${idx}`}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => setOpenTxId(t.id)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        setOpenTxId(t.id);
-                      }
-                    }}
-                    className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer"
-                  >
-                    <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
-                      <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">{t.label}</p>
-                      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">{t.date}</p>
-                    </div>
-                    <div className="flex flex-col items-end justify-center relative shrink-0">
-                      <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap">{t.positive ? "+" : "-"}{format(t.amount)}</p>
-                    </div>
-                  </div>
-                  {idx < transactions.length - 1 && <Divider />}
-                </div>
-              ))
-            ) : (
-              <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
-                <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">No transactions yet. Activity will appear here once money starts moving.</p>
-              </div>
-            )}
-          </WidgetCard>
-        )}
+        {activeTab === "Cash Flow" && <CashFlowTab format={format} onOpenTx={setOpenTxId} />}
 
-        {/* BILLS */}
-        {activeTab === "Bills" && (
-          <BrainBillsInbox />
-        )}
+        {activeTab === "Vendors" && <VendorsPanel />}
 
-        {/* INCOME — multiple stacked components */}
-        {activeTab === "Income" && (
-          <div className="flex flex-col gap-[16px] items-start w-full pb-[8px]">
-            <OverdueInvoicesBanner format={format} />
-            <WidgetCard title="Income" count={incomeCount}>
-              <IncomeTxList format={format} onOpen={setOpenTxId} />
-            </WidgetCard>
-            <IncomeSummary format={format} onCount={setIncomeCount} />
-          </div>
-        )}
-
-        {/* EXPENSES */}
-        {activeTab === "Expenses" && <ExpensesWidget format={format} />}
-
-        {/* LIABILITIES */}
-        {activeTab === "Liabilities" && (
-          <WidgetCard title="Liabilities" count={liabilitiesCount}>
-            <LiabilitiesSummary format={format} onCount={setLiabilitiesCount} />
-          </WidgetCard>
-        )}
+        {activeTab === "Rules" && <RulesPanel />}
 
       </div>
 

@@ -69,7 +69,7 @@ export function RuleDetail() {
         </p>
         <button
           type="button"
-          onClick={() => navigate("/rules?tab=default")}
+          onClick={() => navigate("/ledger?tab=rules&rules=default")}
           data-testid="button-back-to-rules"
           className="flex items-center justify-center gap-[8px] px-[16px] py-[10px] rounded-[100px] bg-[#240757] border border-[rgba(118,49,238,0.35)] hover:bg-[#2e0a6b] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#7631ee]"
         >
@@ -94,7 +94,7 @@ export function RuleDetail() {
         </p>
         <button
           type="button"
-          onClick={() => navigate(isPolicy ? "/rules?tab=default" : "/rules")}
+          onClick={() => navigate(isPolicy ? "/ledger?tab=rules&rules=default" : "/ledger?tab=rules")}
           data-testid="button-back-to-rules"
           className="flex items-center justify-center gap-[8px] px-[16px] py-[10px] rounded-[100px] bg-[#240757] border border-[rgba(118,49,238,0.35)] hover:bg-[#2e0a6b] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#7631ee]"
         >
@@ -120,7 +120,7 @@ export function RuleDetail() {
   const onDelete = () => {
     if (!rule) return;
     deleteRule(rule.id);
-    navigate("/rules");
+    navigate("/ledger?tab=rules");
   };
   const onLowerCap = () => {
     if (!rule) return;
@@ -158,7 +158,7 @@ export function RuleDetail() {
                       ? "guardrails"
                       : "automations";
                 }
-                navigate(`/rules?tab=${tab}`);
+                navigate(`/ledger?tab=rules&rules=${tab}`);
               }}
               data-testid="button-back-to-rules"
               className="flex items-center justify-center gap-[4px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#6c779d] hover:text-[#a8b9f4] bg-[#222737] hover:bg-[#2a3040] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965] rounded-[100px] px-[12px] py-[8px]"
@@ -751,7 +751,7 @@ function PolicyDetailHeader({ rule }: { rule: PolicyContentRule }) {
       {/* Back button, same pill style as automations/guardrails/suggested tabs */}
       <button
         type="button"
-        onClick={() => navigate("/rules?tab=default")}
+        onClick={() => navigate("/ledger?tab=rules&rules=default")}
         data-testid="button-back-to-rules"
         className="flex items-center justify-center gap-[4px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#6c779d] hover:text-[#a8b9f4] bg-[#222737] hover:bg-[#2a3040] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965] rounded-[100px] px-[12px] py-[8px]"
       >

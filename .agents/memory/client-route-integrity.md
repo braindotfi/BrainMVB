@@ -29,3 +29,26 @@ description: Why navigate() targets silently 404 in this app and how to guard th
   the effect won't fire again after the user manually switches away. Pages that keep the
   param instead navigate on every internal change to stay in sync — either discipline works,
   but mixing them is what produces "the link works only the first time".
+
+- **Prefer deriving tab/filter state from the URL each render over mirroring it into state.**
+  A `useState` seeded from the query string is a *copy*, and it only agrees with the address
+  bar until something else moves the URL — a link from another panel, the back button, a
+  redirect. Then the pills and the URL disagree and neither is obviously wrong. Deriving it
+  (`const tab = parse(search)`) makes the URL the single source of truth and deletes the
+  whole class of desync; the setter then only navigates.
+  **How to apply:** if a one-shot side effect must also run off a param (consuming a draft,
+  opening a builder), key its effect on `search` — not `[]` — and guard it with a `useRef`
+  so it stays one-shot. Mount-only effects miss the case where the panel is already mounted.
+
+- **An unrecognised query value is as silent as an unregistered path.** wouter 404s unknown
+  *paths*, but an unknown `?tab=` value just falls through to whatever default the resolver
+  picks, so a stale link lands on the wrong panel looking perfectly normal. When renaming or
+  retiring a tab, keep the old slugs resolving to their new home, and pin the links: the
+  guard in `assistant-citation-routes.test.ts` walks every `?tab=` literal in `client/src`
+  and fails if one names a tab the resolver does not know.
+
+- **Convention: primary navigation pushes, secondary filters replace.** Ledger tab changes
+  use a normal navigate so back works between tabs; the sub-filter rows inside Vendors and
+  Rules use `replace: true` so clicking through filters does not fill history with entries
+  the user has to walk back out of. Don't "fix" a filter that fails a back-button test
+  without checking which of the two it is.
