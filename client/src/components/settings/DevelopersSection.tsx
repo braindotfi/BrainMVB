@@ -144,6 +144,8 @@ const API_ENDPOINTS: Array<{ path: string; scope: string | null; description: st
   { path: "/api/v1/audit/events", scope: "audit:read", description: "Audit events (supports ?limit= and ?after=)" },
 ];
 
+const GET_STARTED_STEP_ICONS = [stepOneIcon, stepTwoIcon, stepThreeIcon] as const;
+
 /* ─── Shared primitives (Settings/Home card + label patterns) ─── */
 const Card = ({ children, testId }: { children: ReactNode; testId?: string }) => (
   <div data-testid={testId} className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10" }}>
@@ -622,7 +624,6 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
 
   const activeKeys = (keysQ.data?.keys ?? []).filter((k) => k.status === "active" && k.environment === env);
   const hasTenant = (tenantsQ.data?.tenants.length ?? 0) > 0;
-  const noTenantCreated = tenantsQ.isSuccess && !hasTenant;
   const hasKey = activeKeys.length > 0;
   // "Make a key-authenticated call" completes ONLY once an issued key has
   // actually been used — from brain-core's own signals (a key's last_used_at
@@ -867,7 +868,11 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
       <div className="flex flex-col gap-[24px] w-full">
 
       <div className="flex flex-col gap-[4px]">
-        <SectionLabel>Get Started</SectionLabel>
+        <div className="flex h-[24px] items-center">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#414965] text-[16px]">
+            Get Started
+          </p>
+        </div>
         <div data-testid="card-get-started" className="bg-[#0a0c10] flex flex-col gap-[16px] items-start p-[16px] rounded-[16px] w-full">
           {steps.map((s, i) => (
             <div key={s.label} className="contents">
@@ -879,13 +884,20 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
               >
                 <div
                   className="size-[32px] rounded-full flex items-center justify-center flex-shrink-0"
-                  style={s.state === "done" ? { background: "#4a2300" } : { background: "#222737" }}
+                  style={s.state === "done"
+                    ? { background: "#4a2300" }
+                    : s.state === "todo"
+                      ? undefined
+                      : { background: "#222737" }}
                 >
-                  {noTenantCreated || s.state === "todo" ? (
+                  {s.state === "todo" ? (
                     <img
-                      src={[stepOneIcon, stepTwoIcon, stepThreeIcon][i]}
+                      src={GET_STARTED_STEP_ICONS[i]}
                       alt=""
-                      className="size-[32px] object-contain"
+                      width={32}
+                      height={32}
+                      data-testid={`img-step-get-started-${i}`}
+                      className="block size-[32px] object-contain"
                     />
                   ) : s.state === "done" ? (
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -1211,7 +1223,7 @@ function KeysSection({ env }: { env: DevEnv }) {
         );
       })()}
 
-      <div className="flex flex-col gap-[12px] shrink-0">
+      <div className="flex flex-col gap-[4px] shrink-0">
         <div className="flex min-h-[36px] items-center justify-between gap-4">
           <SectionLabel testId="text-page-title">{env === "live" ? "Live Keys" : "Sandbox Keys"}</SectionLabel>
           <button
