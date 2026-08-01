@@ -330,8 +330,8 @@ export function VendorsPanel() {
      "Needs Review 0" is a statement that nothing needs review. */
   const countsKnown = !isLoading && !isError;
   const vendorFilters = [
-    { value: "Needs Review", label: "Needs Review", count: countsKnown ? grouped.underReview.length : undefined },
-    { value: "New", label: "New", count: countsKnown ? grouped.newVendors.length : undefined },
+    { value: "Needs Review", label: "Needs Review", count: countsKnown ? grouped.underReview.length : undefined, variant: "amber" as const },
+    { value: "New", label: "New", count: countsKnown ? grouped.newVendors.length : undefined, variant: "amber" as const },
     { value: "Trusted", label: "Trusted", count: countsKnown ? grouped.trusted.length : undefined },
     { value: "Suggested", label: "Suggested", count: countsKnown ? grouped.known.length : undefined },
   ];
@@ -346,6 +346,25 @@ export function VendorsPanel() {
         label="Filter vendors"
         testIdPrefix="tab-vendor"
       />
+
+      {/* Backlog notice: shown on every sub-tab except "New" so the count is
+          never invisible. Presentation-only — no new data source needed. */}
+      {countsKnown && grouped.newVendors.length > 0 && activeTab !== "New" && (
+        <div
+          className="flex items-center gap-[10px] px-[12px] py-[10px] rounded-[12px] w-full"
+          style={{ background: "#4a2300", border: "1px solid rgba(255,148,0,0.2)" }}
+          data-testid="notice-new-vendors"
+        >
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0">
+            <circle cx="8" cy="8" r="7" stroke="#ff9500" strokeWidth="1.3" />
+            <path d="M8 7.3v4.2" stroke="#ff9500" strokeWidth="1.3" strokeLinecap="round" />
+            <circle cx="8" cy="4.7" r="0.9" fill="#ff9500" />
+          </svg>
+          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#ff9500] text-[13px] flex-1 min-w-px">
+            {grouped.newVendors.length} new {grouped.newVendors.length === 1 ? "vendor hasn't" : "vendors haven't"} been reviewed yet.
+          </p>
+        </div>
+      )}
 
       <div className="w-full">
         {isLoading ? (

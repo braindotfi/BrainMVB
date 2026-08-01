@@ -7,6 +7,7 @@ import {
   Check,
   Pencil,
   Flag,
+  Lock,
 } from "lucide-react";
 import { FilterChipRow } from "@/components/FilterChipRow";
 import alertIcon from "@assets/Icons_1783274957589.png";
@@ -178,7 +179,7 @@ function AutomationRow({ rule }: { rule: AutoRule }) {
   );
 }
 
-/* ── Guardrail row - pulls you back in above a threshold ─────────────────────── */
+/* ── Guardrail row - fixed safety boundary, not user-configurable ─────────────── */
 function GuardrailRow({ rule }: { rule: AutoRule }) {
   const [, navigate] = useLocation();
   const openReports = (rule.problemReports ?? []).filter((p) => !p.resolved);
@@ -212,9 +213,12 @@ function GuardrailRow({ rule }: { rule: AutoRule }) {
           </div>
         )}
       </button>
-      <div className="content-stretch flex items-center justify-center px-[10px] py-[4px] relative rounded-[22px] shrink-0 border border-solid bg-[#123509] border-[rgba(66,191,35,0.2)]">
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap text-[#42bf23]">
-          Anchored
+      {/* Guardrail badge: lock icon + amber/orange — visually distinct from
+          automations' "Anchored" badge to reinforce these are fixed boundaries. */}
+      <div className="content-stretch flex items-center gap-[5px] justify-center px-[10px] py-[4px] relative rounded-[22px] shrink-0 border border-solid bg-[#4a2300] border-[rgba(255,148,0,0.2)]">
+        <Lock size={11} className="text-[#ff9500] shrink-0" aria-hidden />
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap text-[#ff9500]">
+          Guardrail
         </p>
       </div>
     </div>
@@ -526,6 +530,9 @@ export function RulesPanel() {
   const [pendingCreate, setPendingCreate] = useState<AutoRule | null>(null);
   const [pendingSuggestionId, setPendingSuggestionId] = useState<string | null>(null);
 
+  // Lift policy rules to this level so the Default badge tracks the same count
+  // PolicySection renders (brain-core policy rules), not the user-created rules.
+  const { rules: policyRules } = useBrainPolicy();
   const automations = rules.filter((r) => (r.kind ?? "automation") === "automation");
   const guardrails = rules.filter((r) => r.kind === "guardrail");
 
@@ -662,8 +669,10 @@ export function RulesPanel() {
     setPendingCreate(finalizeDraft(s.proposedRule));
   };
 
+  // Default count tracks policyRules (brain-core policy) — what the tab renders —
+  // not user-created rules, which are shown on the Automations/Guardrails tabs.
   const activeCount = activeTab === "Default"
-    ? rules.length
+    ? policyRules.length
     : activeTab === "Automations"
       ? automations.length
       : activeTab === "Guardrails"
@@ -675,7 +684,12 @@ export function RulesPanel() {
 
         <div className="flex flex-col gap-[16px] items-start w-full">
           <FilterChipRow
-            chips={RULE_TABS.map((tab) => ({ value: tab, label: tab }))}
+            chips={RULE_TABS.map((tab) => ({
+              value: tab,
+              label: tab,
+              variant: tab === "Guardrails" ? ("amber" as const) : undefined,
+              icon: tab === "Guardrails" ? <Lock size={11} aria-hidden /> : undefined,
+            }))}
             value={activeTab}
             onChange={(v) => setActiveTab(v as RuleTab)}
             label="Filter rules"

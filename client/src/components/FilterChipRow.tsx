@@ -22,6 +22,13 @@ export interface FilterChip {
   label: string;
   /** Omitted when a count would be misleading — e.g. a list that has not loaded. */
   count?: number;
+  /**
+   * "amber"  → warning/attention treatment (orange tones when active).
+   * Omit for neutral (default blue-grey treatment).
+   */
+  variant?: "amber";
+  /** Optional icon rendered before the label. */
+  icon?: React.ReactNode;
 }
 
 interface Props {
@@ -38,6 +45,21 @@ export function FilterChipRow({ chips, value, onChange, label, testIdPrefix }: P
     <div role="group" aria-label={label} className="flex gap-[6px] items-center flex-wrap shrink-0">
       {chips.map((chip) => {
         const active = chip.value === value;
+        const amber = chip.variant === "amber";
+
+        // Active colours depend on semantic variant.
+        const activeBg    = amber ? "#4a2300"              : "#11141b";
+        const activeBorder = amber ? "rgba(255,148,0,0.25)" : "#1d2132";
+        const activeText  = amber ? "#ff9500"              : "#a8b9f4";
+        const activeBadgeBg   = amber ? "rgba(255,148,0,0.15)" : "#414965";
+        const activeBadgeText = amber ? "#ff9500"              : "#a8b9f4";
+
+        // Inactive colours: amber pills get a subtle orange hint so they're
+        // semantically distinguishable even when not selected.
+        const inactiveText  = amber ? "#ff9500" : "#414965";
+        const inactiveBadgeBg   = "#0a0c10";
+        const inactiveBadgeText = amber ? "#ff9500" : "#414965";
+
         return (
           <button
             key={chip.value}
@@ -50,14 +72,18 @@ export function FilterChipRow({ chips, value, onChange, label, testIdPrefix }: P
             className={[
               "flex items-center gap-[6px] px-[10px] py-[5px] rounded-[8px] border border-solid transition-colors",
               "outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]",
-              active
-                ? "bg-[#11141b] border-[#1d2132]"
-                : "bg-transparent border-transparent hover:bg-[#0a0c10]",
+              active ? "" : "bg-transparent border-transparent hover:bg-[#0a0c10]",
             ].join(" ")}
+            style={active ? { background: activeBg, borderColor: activeBorder } : undefined}
           >
+            {chip.icon && (
+              <span className="shrink-0 flex items-center" style={{ color: active ? activeText : inactiveText }}>
+                {chip.icon}
+              </span>
+            )}
             <span
               className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[13px] whitespace-nowrap transition-colors"
-              style={{ color: active ? "#a8b9f4" : "#414965" }}
+              style={{ color: active ? activeText : inactiveText }}
             >
               {chip.label}
             </span>
@@ -65,8 +91,8 @@ export function FilterChipRow({ chips, value, onChange, label, testIdPrefix }: P
               <span
                 className="[font-family:'Gilroy',sans-serif] font-semibold leading-[12px] text-[11px] px-[5px] py-[2px] rounded-[4px]"
                 style={{
-                  background: active ? "#414965" : "#0a0c10",
-                  color: active ? "#a8b9f4" : "#414965",
+                  background: active ? activeBadgeBg : inactiveBadgeBg,
+                  color: active ? activeBadgeText : inactiveBadgeText,
                 }}
               >
                 {chip.count}
