@@ -884,13 +884,13 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
               >
                 <div
                   className="size-[32px] rounded-full flex items-center justify-center flex-shrink-0"
-                  style={s.state === "done"
-                    ? { background: "#4a2300" }
-                    : s.state === "todo"
-                      ? undefined
-                      : { background: "#222737" }}
+                  style={s.state === "done" ? { background: "#4a2300" } : undefined}
                 >
-                  {s.state === "todo" ? (
+                  {s.state === "done" ? (
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <path d="M3 8.5L6.2 11.5L13 4.5" stroke="#ff9400" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  ) : (
                     <img
                       src={GET_STARTED_STEP_ICONS[i]}
                       alt=""
@@ -899,16 +899,6 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
                       data-testid={`img-step-get-started-${i}`}
                       className="block size-[32px] object-contain"
                     />
-                  ) : s.state === "done" ? (
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <path d="M3 8.5L6.2 11.5L13 4.5" stroke="#ff9400" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  ) : s.state === "unknown" ? (
-                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[16px] leading-[20px]">?</span>
-                  ) : s.state === "checking" ? (
-                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[16px] leading-[20px]">…</span>
-                  ) : (
-                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px]">{i + 1}</span>
                   )}
                 </div>
                 <div className="flex-1 min-w-0 flex flex-col gap-[2px]">
@@ -1344,9 +1334,7 @@ function KeysSection({ env }: { env: DevEnv }) {
           </div>
         </PopupShell>
       )}
-      </div>
 
-      <div>
         {keysUnavailable ? (
           <KeysUnavailableCard testId="card-keys-unavailable-keys" />
         ) : (
