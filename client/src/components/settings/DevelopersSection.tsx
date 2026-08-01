@@ -27,6 +27,9 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAppAlert } from "@/components/AppAlert";
 import { usePlanId, PLAN_RATE_LIMITS } from "@/lib/planStore";
 import { AlertCallout, InfoIcon } from "@/components/Callout";
+import stepOneIcon from "@assets/1_1785602525964.png";
+import stepTwoIcon from "@assets/2_1785602525965.png";
+import stepThreeIcon from "@assets/3_1785602525965.png";
 
 /* ─── Types (wire shapes from server/routes.ts developers block) ─── */
 type DevEnv = "sandbox" | "live";
@@ -619,6 +622,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
 
   const activeKeys = (keysQ.data?.keys ?? []).filter((k) => k.status === "active" && k.environment === env);
   const hasTenant = (tenantsQ.data?.tenants.length ?? 0) > 0;
+  const noTenantCreated = tenantsQ.isSuccess && !hasTenant;
   const hasKey = activeKeys.length > 0;
   // "Make a key-authenticated call" completes ONLY once an issued key has
   // actually been used — from brain-core's own signals (a key's last_used_at
@@ -877,7 +881,13 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
                   className="size-[32px] rounded-full flex items-center justify-center flex-shrink-0"
                   style={s.state === "done" ? { background: "#4a2300" } : { background: "#222737" }}
                 >
-                  {s.state === "done" ? (
+                  {noTenantCreated ? (
+                    <img
+                      src={[stepOneIcon, stepTwoIcon, stepThreeIcon][i]}
+                      alt=""
+                      className="size-[32px] object-contain"
+                    />
+                  ) : s.state === "done" ? (
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                       <path d="M3 8.5L6.2 11.5L13 4.5" stroke="#ff9400" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
