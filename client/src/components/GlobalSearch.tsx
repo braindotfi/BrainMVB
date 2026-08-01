@@ -175,7 +175,7 @@ export function GlobalSearch() {
   };
 
   return (
-    <div className="relative w-full shrink-0 mt-[12px] mb-[7px]" ref={wrapRef} data-testid="global-search">
+    <div className="relative mx-[7px] w-auto shrink-0 mt-[12px] mb-[7px]" ref={wrapRef} data-testid="global-search">
       <input
         type="text"
         role="combobox"

@@ -223,7 +223,7 @@ function MainShell({ onLogout }: { onLogout: () => void }) {
           onLogout={handleLogout}
         />
 
-        <div className="flex-1 min-w-0 min-h-0 overflow-hidden flex flex-col">
+        <div className="flex-1 min-w-0 min-h-0 h-full overflow-hidden flex flex-col rounded-[16px] border border-solid border-[#1d2132] bg-[#11141b]">
           {/* The page owns the flexible space. Keeping search after it pins the
               control to the bottom of the middle column, like Logout in the nav. */}
           <div className="flex-1 min-w-0 min-h-0 overflow-hidden flex flex-col relative">
