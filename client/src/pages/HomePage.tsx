@@ -290,7 +290,7 @@ const MetricCard = ({
       : {})}
   >
     <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#414965] text-[13px] uppercase">{label}</p>
-    <p className="[font-family:'Gilroy',sans-serif] leading-[0] relative shrink-0 text-[#a8b9f4] text-[0px] w-full whitespace-nowrap">
+    <p className="[font-family:'JetBrains_Mono',monospace] leading-[0] relative shrink-0 text-[#a8b9f4] text-[0px] w-full whitespace-nowrap">
       <span className="font-medium leading-[36px] text-[28px]">{whole}</span>
       {cents && <span className="font-medium leading-[36px] text-[#6c779d] text-[18px]">{cents}</span>}
       {suffix && <span className="font-medium leading-[36px] text-[#6c779d] text-[18px]">{suffix}</span>}

@@ -146,7 +146,7 @@ const Metric = ({
       {label}
     </p>
     <p
-      className="[font-family:'Gilroy',sans-serif] leading-[0] relative shrink-0 text-[0px] w-full whitespace-nowrap"
+      className="[font-family:'JetBrains_Mono',monospace] leading-[0] relative shrink-0 text-[0px] w-full whitespace-nowrap"
     >
       <span className="font-medium leading-[36px] text-[28px]" style={{ color: amountColor }}>{whole}</span>
       {cents && <span className="font-medium leading-[36px] text-[18px]" style={{ color: amountColor }}>{cents}</span>}
@@ -382,11 +382,14 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
       )}
       {liabilityInsight && (
         <p
-          className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[15px] w-full"
+          className="[font-family:'Gilroy',sans-serif] font-normal leading-[20px] text-[#d20344] text-[16px] w-full"
           data-testid="text-cashflow-liability-insight"
         >
           {liabilityInsight}
         </p>
+      )}
+      {liabilityInsight && (
+        <div className="h-px relative shrink-0 w-full mb-[26px]" style={{ background: "#1d2132" }} />
       )}
 
       <WidgetCard title="Cash Flow" count={settling && rows.length === 0 ? undefined : rows.length}>
