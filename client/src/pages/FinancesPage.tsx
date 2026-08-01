@@ -25,7 +25,7 @@ import { useCurrency } from "@/lib/useCurrency";
 import { CashFlowTab } from "@/components/CashFlowTab";
 import { VendorsPanel } from "@/pages/VendorsPanel";
 import { RulesPanel } from "@/pages/RulesPanel";
-import { Divider, WidgetCard } from "@/components/LedgerWidgets";
+import { WidgetCard } from "@/components/LedgerWidgets";
 import { TransactionDetailPopup } from "@/components/TransactionDetailPopup";
 import { AccountDetailPopup } from "@/components/AccountDetailPopup";
 import {
@@ -263,7 +263,7 @@ export function FinancesPage() {
       </div>
 
       {/* Table area: scrolls as a whole; panel headers are sticky */}
-      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-[16px] pb-[16px]">
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-[16px] pb-[16px] pt-[26px]">
 
         {activeTab === "Accounts" && (
           <WidgetCard title="Accounts" count={accounts.length}>

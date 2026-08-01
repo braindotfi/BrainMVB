@@ -121,15 +121,6 @@ function Section({
 }) {
   return (
     <div className="bg-[#0a0c10] flex flex-col overflow-hidden relative rounded-[16px] w-full">
-      <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[12px] relative sticky top-0 z-10 w-full">
-        <div className="flex flex-1 gap-[8px] items-center min-w-px relative">
-          <div className="size-[6px] rounded-full shrink-0 bg-[#6c779d]" />
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[12px] uppercase tracking-[0.4px] whitespace-nowrap">{title}</p>
-          <div className="bg-[#1d2132] flex items-center justify-center min-w-[18px] px-[5px] py-[1px] rounded-[4px] shrink-0">
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#6c779d] text-[11px] text-center whitespace-nowrap">{count}</p>
-          </div>
-        </div>
-      </div>
       <div className="flex flex-col items-start relative w-full">
         {count === 0 && empty ? (
           <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
@@ -272,23 +263,12 @@ function PolicySection() {
 
   return (
     <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
-      <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[12px] relative shrink-0 w-full">
-        <div className="flex flex-1 gap-[8px] items-center min-w-px relative">
-          <div className="size-[6px] rounded-full shrink-0 bg-[#6c779d]" />
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[12px] uppercase tracking-[0.4px] whitespace-nowrap">
-            Default Brain Rules
-          </p>
-          <div className="bg-[#1d2132] flex items-center justify-center min-w-[18px] px-[5px] py-[1px] rounded-[4px] shrink-0">
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#6c779d] text-[11px] text-center whitespace-nowrap">{rules.length}</p>
-          </div>
-        </div>
+      <div className="flex flex-col items-start relative shrink-0 w-full">
         {!isLoading && !isError && version !== undefined && (
-          <p className="[font-family:'JetBrains_Mono',monospace] text-[12px] text-[#6c779d] whitespace-nowrap">
+          <p className="px-[16px] pt-[12px] [font-family:'JetBrains_Mono',monospace] text-[12px] text-[#6c779d] whitespace-nowrap">
             v{version} · quorum {quorum}
           </p>
         )}
-      </div>
-      <div className="flex flex-col items-start relative shrink-0 w-full">
         {isLoading && (
           <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
             <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
@@ -682,10 +662,16 @@ export function RulesPanel() {
     setPendingCreate(finalizeDraft(s.proposedRule));
   };
 
-  // tab counts removed. Shown in table header instead
+  const activeCount = activeTab === "Default"
+    ? rules.length
+    : activeTab === "Automations"
+      ? automations.length
+      : activeTab === "Guardrails"
+        ? guardrails.length
+        : suggestions.length;
 
   return (
-    <div className="flex flex-col gap-[16px] items-start w-full pb-[8px]">
+    <div className="flex flex-col gap-[26px] items-start w-full pb-[8px]">
 
         <div className="flex flex-col gap-[16px] items-start w-full">
           <FilterChipRow
@@ -970,6 +956,14 @@ export function RulesPanel() {
           ))}
 
         </div>{/* end filter row + builder block */}
+
+      <div className="flex items-center gap-[8px] min-h-[16px] w-full">
+        <div className="size-[6px] rounded-full shrink-0 bg-[#6c779d]" />
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[12px] uppercase tracking-[0.4px] whitespace-nowrap">Rules</p>
+        <div className="bg-[#6c779d] flex items-center justify-center min-w-[18px] px-[5px] py-[1px] rounded-[4px] shrink-0">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#0a0c10] text-[11px] text-center whitespace-nowrap">{activeCount}</p>
+        </div>
+      </div>
 
       <div className="w-full flex flex-col gap-[16px]">
 

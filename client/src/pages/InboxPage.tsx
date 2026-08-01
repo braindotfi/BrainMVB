@@ -46,7 +46,6 @@ import {
 import { useReviewStatuses, setReviewStatus } from "@/lib/reviewStatusStore";
 import { acknowledgeInsight, useAcknowledgedRecords } from "@/lib/acknowledgedStore";
 import { TierRow, type TierRowModel, type TierRowAction } from "@/components/TierRowList";
-import { Divider } from "@/components/LedgerWidgets";
 import {
   applyDecisionFilters,
   buildSearchText,
@@ -1079,14 +1078,14 @@ function titleCaseDropdownLabel(label: string): string {
       </div>
 
       {/* The timeline itself — one list, scrolls. */}
-      <div className="min-h-0 min-w-0 overflow-y-auto overflow-x-hidden px-[16px] pb-[16px] flex flex-col gap-[12px]">
+      <div className="min-h-0 min-w-0 overflow-y-auto overflow-x-hidden px-[16px] pb-[16px] pt-[26px] flex flex-col gap-[10px]">
         <div className="flex items-center gap-[8px] w-full min-h-[20px]">
           <div className="size-[6px] rounded-full shrink-0 bg-[#6c779d]" />
           <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[12px] uppercase tracking-[0.4px] whitespace-nowrap">
             Decisions
           </p>
-          <div className="bg-[#1d2132] flex items-center justify-center min-w-[18px] px-[5px] py-[1px] rounded-[4px] shrink-0" data-testid="text-decision-count">
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#6c779d] text-[11px] text-center whitespace-nowrap">
+          <div className="bg-[#6c779d] flex items-center justify-center min-w-[18px] px-[5px] py-[1px] rounded-[4px] shrink-0" data-testid="text-decision-count">
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#0a0c10] text-[11px] text-center whitespace-nowrap">
               {visibleItems.length}
             </p>
           </div>

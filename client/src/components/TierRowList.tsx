@@ -119,7 +119,7 @@ export const TierRow = ({ row }: { row: TierRowModel }) => {
           title={row.select.title}
           aria-label={row.select.label}
           data-testid={`${row.testIdPrefix}-${row.id}-select`}
-          className="mt-[3px] sm:mt-0 size-[16px] shrink-0 accent-[#7631ee] cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-[3px]"
+           className="decision-checkbox mt-[3px] sm:mt-0 size-[16px] shrink-0 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
         />
       )}
       <div className="flex flex-col gap-[3px] items-start min-w-px flex-1">
@@ -184,8 +184,8 @@ export const TierSection = ({ tier, rows }: { tier: ProposalTier; rows: TierRowM
         >
           {meta.title}
         </p>
-        <div className="bg-[#1d2132] flex items-center justify-center min-w-[18px] px-[5px] py-[1px] rounded-[4px] shrink-0">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#6c779d] text-[11px] text-center whitespace-nowrap">{rows.length}</p>
+        <div className="flex items-center justify-center min-w-[18px] px-[5px] py-[1px] rounded-[4px] shrink-0" style={{ background: accent }}>
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#0a0c10] text-[11px] text-center whitespace-nowrap">{rows.length}</p>
         </div>
         {meta.note && (
           <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[12px] truncate">

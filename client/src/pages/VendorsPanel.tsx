@@ -337,7 +337,7 @@ export function VendorsPanel() {
   ];
 
   return (
-    <div className="flex flex-col gap-[16px] items-start w-full pb-[8px]">
+    <div className="flex flex-col gap-[26px] items-start w-full pb-[8px]">
 
       <FilterChipRow
         chips={vendorFilters}
@@ -361,14 +361,13 @@ export function VendorsPanel() {
             </p>
           </div>
         ) : (
-          <div className="bg-[#0a0c10] flex flex-col overflow-hidden relative rounded-[16px]">
-            {/* Panel header — sticky */}
-            <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid content-stretch flex items-center justify-between px-[16px] py-[12px] relative sticky top-0 z-10 w-full">
-              <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
+          <div className="flex flex-col gap-[10px] w-full">
+            <div className="flex items-center justify-between min-h-[16px] w-full">
+              <div className="flex items-center gap-[8px]">
                 <div className="size-[6px] rounded-full shrink-0 bg-[#6c779d]" />
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[12px] uppercase tracking-[0.4px] whitespace-nowrap">{activeTab}</p>
-                <div className="bg-[#1d2132] flex items-center justify-center min-w-[18px] px-[5px] py-[1px] rounded-[4px] shrink-0">
-                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#6c779d] text-[11px] text-center whitespace-nowrap">{tabVendors.length}</p>
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[12px] uppercase tracking-[0.4px] whitespace-nowrap">Vendors</p>
+                <div className="bg-[#6c779d] flex items-center justify-center min-w-[18px] px-[5px] py-[1px] rounded-[4px] shrink-0">
+                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#0a0c10] text-[11px] text-center whitespace-nowrap">{tabVendors.length}</p>
                 </div>
               </div>
               <button
@@ -381,6 +380,7 @@ export function VendorsPanel() {
                 Add Vendor
               </button>
             </div>
+            <div className="bg-[#0a0c10] flex flex-col overflow-hidden relative rounded-[16px]">
             {/* Rows */}
             <div>
               {tabVendors.length === 0 ? (
@@ -405,6 +405,7 @@ export function VendorsPanel() {
                 </div>
               )}
             </div>
+          </div>
           </div>
         )}
       </div>

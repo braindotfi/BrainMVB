@@ -11,16 +11,14 @@ export const Divider = (): JSX.Element => (
 );
 
 export const WidgetHeader = ({ title, count }: { title: string; count?: number }): JSX.Element => (
-  <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[12px] relative sticky top-0 z-10 w-full">
-    <div className="flex flex-1 gap-[8px] items-center min-w-px relative">
-      <div className="size-[6px] rounded-full shrink-0 bg-[#6c779d]" />
-      <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[12px] uppercase tracking-[0.4px] whitespace-nowrap">{title}</p>
-      {typeof count === "number" && (
-        <div className="bg-[#1d2132] flex items-center justify-center min-w-[18px] px-[5px] py-[1px] rounded-[4px] shrink-0">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#6c779d] text-[11px] text-center whitespace-nowrap">{count}</p>
-        </div>
-      )}
-    </div>
+  <div className="flex items-center gap-[8px] min-h-[16px] w-full">
+    <div className="size-[6px] rounded-full shrink-0 bg-[#6c779d]" />
+    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[12px] uppercase tracking-[0.4px] whitespace-nowrap">{title}</p>
+    {typeof count === "number" && (
+      <div className="bg-[#6c779d] flex items-center justify-center min-w-[18px] px-[5px] py-[1px] rounded-[4px] shrink-0">
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#0a0c10] text-[11px] text-center whitespace-nowrap">{count}</p>
+      </div>
+    )}
   </div>
 );
 
@@ -33,10 +31,12 @@ export const WidgetCard = ({
   count?: number;
   children: React.ReactNode;
 }): JSX.Element => (
-  <div className="bg-[#0a0c10] flex flex-col overflow-hidden relative rounded-[16px] w-full">
+  <div className="flex flex-col gap-[10px] w-full">
     <WidgetHeader title={title} count={count} />
-    <div className="flex flex-col items-start relative w-full overflow-x-hidden">
-      <div className="flex flex-col items-start w-full">{children}</div>
+    <div className="bg-[#0a0c10] flex flex-col overflow-hidden relative rounded-[16px] w-full">
+      <div className="flex flex-col items-start relative w-full overflow-x-hidden">
+        <div className="flex flex-col items-start w-full">{children}</div>
+      </div>
     </div>
   </div>
 );

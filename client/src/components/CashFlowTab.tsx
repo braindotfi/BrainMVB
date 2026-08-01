@@ -379,7 +379,7 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
         </p>
       )}
 
-      <WidgetCard title="Cash flow" count={settling && rows.length === 0 ? undefined : rows.length}>
+      <WidgetCard title="Cash Flow" count={settling && rows.length === 0 ? undefined : rows.length}>
         {settling && rows.length === 0 ? (
           <div className="flex gap-[16px] items-center p-[8px] rounded-[8px] w-full bg-[#0a0c10]">
             <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">

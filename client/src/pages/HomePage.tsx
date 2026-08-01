@@ -1072,7 +1072,7 @@ export function HomePage() {
             </p>
 
             {/* Divider */}
-            <div className="h-px relative shrink-0 w-full" style={{ background: "#1d2132" }} />
+            <div className="h-px relative shrink-0 w-full mb-[26px]" style={{ background: "#1d2132" }} />
 
             {/* The decision queue: ONE single-column list split into Urgent /
                 Waiting on you / Insights, with each row's own actions inline.
