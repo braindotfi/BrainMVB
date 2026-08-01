@@ -962,10 +962,10 @@ export function InboxPage() {
       {/* Static chrome: header + filter toolbar — never scrolls */}
       <div className="shrink-0 flex flex-col gap-[24px] items-start pt-[40px] px-[16px] pb-[16px] w-full min-w-0">
         <div className="flex flex-col items-start gap-[4px] relative shrink-0 w-full">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px] whitespace-nowrap">Decisions</p>
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">Every decision, one timeline.</p>
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px] whitespace-nowrap">Your AI Inbox</p>
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">Know what needs your attention.</p>
           <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px]">
-            Every agent in one place. Open any item to see why Brain suggested it before you decide.
+            Review recommended actions, important updates, and insights from Brain's AI agents in one place.
           </p>
         </div>
 
@@ -985,7 +985,7 @@ export function InboxPage() {
             aria-label="Filter by priority"
             data-testid="filter-priority"
           >
-            <option value="all">All priority</option>
+            <option value="all">All Priority</option>
             {PRIORITY_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>{o.label}</option>
             ))}
@@ -997,7 +997,7 @@ export function InboxPage() {
             aria-label="Filter by status"
             data-testid="filter-status"
           >
-            <option value="all">All statuses</option>
+            <option value="all">All Status</option>
             {STATUS_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>{o.label}</option>
             ))}
@@ -1011,7 +1011,7 @@ export function InboxPage() {
             aria-label="Filter by type"
             data-testid="filter-type"
           >
-            <option value="all">All types</option>
+            <option value="all">All Types</option>
             {availableTypes.map((o) => (
               <option key={o.value} value={o.value}>{o.label}</option>
             ))}
@@ -1022,7 +1022,7 @@ export function InboxPage() {
           className={CONTROL}
           value={filters.query}
           onChange={(e) => setFilter("query", e.target.value)}
-          placeholder="Search vendor, amount or description"
+          placeholder="Search by any text including title, description, amount, vendor..."
           aria-label="Search decisions"
           data-testid="filter-search"
         />

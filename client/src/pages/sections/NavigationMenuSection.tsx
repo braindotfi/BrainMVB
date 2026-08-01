@@ -204,15 +204,15 @@ type NavItem = {
   match?: string[];
 };
 
-/* Primary IA: Overview, Decisions, Ledger (Settings sits apart, below).
+/* Primary IA: Overview, Inbox, Ledger (Settings sits apart, below).
    Pages still reachable by URL but no longer in the sidebar - Vendors and Rules
-   become Ledger tabs, Audit Log folds into Decisions, Developers nests under
+   become Ledger tabs, Audit Log folds into Inbox, Developers nests under
    Settings. Those moves are separate phases; only the nav collapses here. */
 const MAIN_NAV: NavItem[] = [
   { path: "/", label: "Overview", ActiveIcon: HomeIconActive, InactiveIcon: HomeIconInactive },
   {
     path: "/decisions",
-    label: "Decisions",
+    label: "Inbox",
     ActiveIcon: ReviewIconActive,
     InactiveIcon: ReviewIconInactive,
     match: ["/inbox", "/review", "/activity", "/audit-log"],

@@ -2061,28 +2061,6 @@ export function DevelopersSection() {
 
   return (
     <div className="flex flex-col gap-[16px]">
-      <div className="flex items-start justify-between gap-[12px]">
-        <p
-          className="text-[14px] leading-[18px] text-[#6c779d] min-w-0"
-          style={{ fontFamily: "'Gilroy', sans-serif", fontWeight: 500 }}
-          data-testid="text-developers-subhead"
-        >
-          Build on your Brain ledger — create keys, manage tenants, and track usage.
-        </p>
-        {/* Docs sits on the subhead row, not in the tab row: four tabs already
-            fill the column at 1280 and a fifth item pushed one off-screen. */}
-        <a
-          href="https://docs.brain.fi/introduction/quickstart"
-          target="_blank"
-          rel="noopener noreferrer"
-          data-testid="developers-tab-docs"
-          className="shrink-0 text-[14px] leading-[18px] transition-colors hover:text-[#a8b9f4]"
-          style={{ fontFamily: "'Gilroy', sans-serif", fontWeight: 500, color: "#6c779d" }}
-        >
-          Docs ↗
-        </a>
-      </div>
-
       <div role="tablist" aria-label="Developers" className="flex items-center gap-[2px] overflow-x-auto border-b border-[#1d2132]">
         {DEV_TABS.map(({ id, label }) => {
           const active = tab === id;

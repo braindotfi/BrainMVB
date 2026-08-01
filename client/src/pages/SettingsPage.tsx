@@ -14,6 +14,10 @@ import acmeAvatar from "@assets/images_1777396125844.png";
 import { NAV_ACTIVE } from "@/assets/nav-active-icons";
 import legalActiveIcon from "@assets/LegalActive_1782953679878.png";
 import legalInactiveIcon from "@assets/LegalInactive_1782953679879.png";
+import sourcesActiveIcon from "@assets/Sources_Active_1785554383441.png";
+import sourcesInactiveIcon from "@assets/Sources_Inactive_1785554383442.png";
+import developersActiveIcon from "@assets/developers_active_1785554383446.png";
+import developersInactiveIcon from "@assets/developers_inactive_1785554383446.png";
 import billingActiveIcon from "@assets/BillingActive_1782953915934.png";
 import teamActiveIcon from "@assets/Active_1783634473571.png";
 import teamInactiveIcon from "@assets/Normal_1783634473571.png";
@@ -138,35 +142,21 @@ const TeamNavIcon = ({ active }: { active: boolean }) => (
    same 24px box and stroke weight as the exported icons rather than borrowing an
    unrelated asset. */
 const SourcesNavIcon = ({ active }: { active: boolean }) => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="shrink-0" aria-hidden="true">
-    <ellipse cx="12" cy="6.5" rx="7" ry="3" stroke={active ? "#ffffff" : "#6c779d"} strokeWidth="1.5" />
-    <path
-      d="M5 6.5v11c0 1.66 3.13 3 7 3s7-1.34 7-3v-11"
-      stroke={active ? "#ffffff" : "#6c779d"}
-      strokeWidth="1.5"
-      strokeLinecap="round"
-    />
-    <path
-      d="M5 12c0 1.66 3.13 3 7 3s7-1.34 7-3"
-      stroke={active ? "#ffffff" : "#6c779d"}
-      strokeWidth="1.5"
-      strokeLinecap="round"
-    />
-  </svg>
+  <img
+    src={active ? sourcesActiveIcon : sourcesInactiveIcon}
+    alt=""
+    className="shrink-0 size-[24px]"
+    aria-hidden="true"
+  />
 );
 
-/* No Figma export exists for a Developers nav item either, so this is drawn
-   inline at the same 24px box and stroke weight as the exported icons. */
 const DevelopersNavIcon = ({ active }: { active: boolean }) => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="shrink-0" aria-hidden="true">
-    <path
-      d="M9 8L5 12l4 4M15 8l4 4-4 4"
-      stroke={active ? "#ffffff" : "#6c779d"}
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
+  <img
+    src={active ? developersActiveIcon : developersInactiveIcon}
+    alt=""
+    className="shrink-0 size-[24px]"
+    aria-hidden="true"
+  />
 );
 
 /* Order follows the design's tab sequence. The tabs themselves are the design's;
