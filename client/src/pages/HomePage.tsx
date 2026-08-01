@@ -67,6 +67,7 @@ import {
   setRuleDraft,
 } from "@/lib/rulesStore";
 import { useReviewStatuses } from "@/lib/reviewStatusStore";
+import { AlertCallout } from "@/components/Callout";
 
 /* Your Goals (Figma 3882:43037), progress bars per goal */
 type GoalRow = {
@@ -1079,15 +1080,9 @@ export function HomePage() {
                 Replaces the "Brain Detected" / "Brain Did" two-panel split. */}
             <>
               {overviewUnreachable && overviewRows.length > 0 && (
-                <div
-                  className="flex items-start gap-[10px] p-[12px] mb-[12px] rounded-[12px] w-full"
-                  style={{ background: "rgba(210,3,68,0.08)", border: "1px solid rgba(210,3,68,0.28)" }}
-                  data-testid="banner-overview-incomplete"
-                >
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#d20344] text-[14px]">
-                    Some items couldn’t be loaded, so this list may be incomplete.
-                  </p>
-                </div>
+                <AlertCallout testId="banner-overview-incomplete" className="mb-[12px]">
+                  Some items couldn’t be loaded, so this list may be incomplete.
+                </AlertCallout>
               )}
               {overviewSelection.count >= 2 && overviewSelection.limit && (
                 <div

@@ -10,7 +10,6 @@ import {
   Lock,
 } from "lucide-react";
 import { FilterChipRow } from "@/components/FilterChipRow";
-import alertIcon from "@assets/Icons_1783274957589.png";
 import closeIcon from "@assets/Close_1783293571882.png";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import shieldKeyIcon from "@assets/Normal_1783346551915.png";
@@ -30,6 +29,7 @@ import { useBrainPolicy } from "@/lib/brainPolicy";
 import { useBrainVendors } from "@/lib/brainVendors";
 import { useCurrency } from "@/lib/useCurrency";
 import type { AutoRule, RuleSuggestion } from "@/lib/proposalTypes";
+import { AlertCallout, InfoIcon } from "@/components/Callout";
 
 const ACTIVE = "#42bf23";
 
@@ -160,14 +160,7 @@ function AutomationRow({ rule }: { rule: AutoRule }) {
           {titleCase(rule.scopeSummary ?? rule.summary)}
         </p>
         {pausedFromReport && (
-          <div className="bg-[#350011] border border-[rgba(210,3,68,0.2)] border-solid flex items-center p-[8px] relative rounded-[12px] w-full mt-[4px]">
-            <div className="flex gap-[8px] items-start relative">
-              <img src={alertIcon} alt="" className="size-[16px] rounded-full shrink-0 mt-[1px]" />
-              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#d20344] text-[14px]">
-                Paused after you reported a problem.
-              </p>
-            </div>
-          </div>
+          <AlertCallout className="mt-[4px]">Paused after you reported a problem.</AlertCallout>
         )}
       </button>
       <div className="content-stretch flex items-center justify-center px-[10px] py-[4px] relative rounded-[22px] shrink-0 border border-solid bg-[#123509] border-[rgba(66,191,35,0.2)]">
@@ -203,14 +196,7 @@ function GuardrailRow({ rule }: { rule: AutoRule }) {
           {titleCase(rule.summary)}
         </p>
         {pausedFromReport && (
-          <div className="bg-[#350011] border border-[rgba(210,3,68,0.2)] border-solid flex items-center p-[8px] relative rounded-[12px] w-full mt-[4px]">
-            <div className="flex gap-[8px] items-start relative">
-              <img src={alertIcon} alt="" className="size-[16px] rounded-full shrink-0 mt-[1px]" />
-              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#d20344] text-[14px]">
-                Paused after you reported a problem.
-              </p>
-            </div>
-          </div>
+          <AlertCallout className="mt-[4px]">Paused after you reported a problem.</AlertCallout>
         )}
       </button>
       {/* Guardrail badge: neutral lock treatment distinguishes a fixed safety
@@ -988,11 +974,7 @@ export function RulesPanel() {
               className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
               style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
             >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[2px]">
-                <circle cx="8" cy="8" r="7" stroke="#7631ee" strokeWidth="1.3" />
-                <path d="M8 7.3v4.2" stroke="#7631ee" strokeWidth="1.3" strokeLinecap="round" />
-                <circle cx="8" cy="4.7" r="0.9" fill="#7631ee" />
-              </svg>
+              <InfoIcon className="mt-[2px]" />
               <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#7631ee] text-[14px]">
                 These rules are created automatically by Brain as a default policy layer to protect every tenant. They establish essential safeguards from the start, ensuring consistent security, governance, and oversight before any custom rules are added.
               </p>
@@ -1018,11 +1000,7 @@ export function RulesPanel() {
               className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
               style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
             >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[2px]">
-                <circle cx="8" cy="8" r="7" stroke="#7631ee" strokeWidth="1.3" />
-                <path d="M8 7.3v4.2" stroke="#7631ee" strokeWidth="1.3" strokeLinecap="round" />
-                <circle cx="8" cy="4.7" r="0.9" fill="#7631ee" />
-              </svg>
+              <InfoIcon className="mt-[2px]" />
               <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#7631ee] text-[14px]">
                 Rules are written in plain English, not code. Brain turns each one into an enforceable
                 policy for every agent you use, then keeps learning and suggesting new ones, backed by
@@ -1050,11 +1028,7 @@ export function RulesPanel() {
               className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
               style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
             >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[2px]">
-                <circle cx="8" cy="8" r="7" stroke="#7631ee" strokeWidth="1.3" />
-                <path d="M8 7.3v4.2" stroke="#7631ee" strokeWidth="1.3" strokeLinecap="round" />
-                <circle cx="8" cy="4.7" r="0.9" fill="#7631ee" />
-              </svg>
+              <InfoIcon className="mt-[2px]" />
               <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#7631ee] text-[14px]">
                 Rules are written in plain English, not code. Brain turns each one into an enforceable
                 policy for every agent you use, then keeps learning and suggesting new ones, backed by

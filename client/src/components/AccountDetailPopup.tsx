@@ -4,6 +4,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useCurrency } from "@/lib/useCurrency";
 import arrowIcon from "@assets/arrow_1783201262245.png";
 import closeIcon from "@assets/Close_1783293571882.png";
+import { InfoIcon } from "@/components/Callout";
 
 /* ── Read-only Account detail popup ───────────────────────────────────────────────────────────
    Centered modal (DialogPrimitive) pixel-matched to Figma "Account Details"
@@ -264,11 +265,7 @@ export function AccountDetailPopup({
                 {/* Info banner */}
                 <div className="border border-[#1d2132] border-solid rounded-[12px] w-full">
                   <div className="flex items-start gap-[8px] p-[8px] w-full">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[2px]">
-        <circle cx="8" cy="8" r="7" stroke="#6c779d" strokeWidth="1.3" />
-        <path d="M8 7.3v4.2" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" />
-        <circle cx="8" cy="4.7" r="0.9" fill="#6c779d" />
-      </svg>
+                    <InfoIcon color="#6c779d" className="mt-[2px]" />
                     <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] flex-1 min-w-px">
                       A read only view. Brain reads this balance from your ledger; your bank owns the account.
                     </p>

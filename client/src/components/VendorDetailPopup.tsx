@@ -22,8 +22,8 @@ import { useLocation } from "wouter";
 import { useCurrency } from "@/lib/useCurrency";
 import type { Vendor, TrustStatus } from "@/lib/vendorTypes";
 import { openRuleDetail, resolveRule } from "@/lib/openRuleDetail";
-import alertFlagIcon from "@assets/Icons_1783209453304.png";
 import closeIcon from "@assets/Close_1783293571882.png";
+import { AlertCallout, InfoIcon } from "@/components/Callout";
 
 const ALERT = "#d20344";
 const ACTIVE = "#42bf23";
@@ -209,11 +209,7 @@ export function VendorDetailPopup({
               <div className="border border-[#1d2132] border-solid rounded-[12px] w-full">
                 <div className="flex items-center p-[8px] w-full">
                   <div className="flex flex-1 gap-[8px] items-start min-w-px">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[2px]">
-        <circle cx="8" cy="8" r="7" stroke="#6c779d" strokeWidth="1.3" />
-        <path d="M8 7.3v4.2" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" />
-        <circle cx="8" cy="4.7" r="0.9" fill="#6c779d" />
-      </svg>
+                    <InfoIcon color="#6c779d" className="mt-[2px]" />
                     <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] flex-1 min-w-px">
                       {vendor.wasTrustedLabel}
                     </p>
@@ -225,11 +221,7 @@ export function VendorDetailPopup({
               <div className="border border-[#1d2132] border-solid rounded-[12px] w-full">
                 <div className="flex items-center p-[8px] w-full">
                   <div className="flex flex-1 gap-[8px] items-start min-w-px">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[2px]">
-        <circle cx="8" cy="8" r="7" stroke="#6c779d" strokeWidth="1.3" />
-        <path d="M8 7.3v4.2" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" />
-        <circle cx="8" cy="4.7" r="0.9" fill="#6c779d" />
-      </svg>
+                    <InfoIcon color="#6c779d" className="mt-[2px]" />
                     <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] flex-1 min-w-px">
                       {vendor.trustGrantedLabel}
                     </p>
@@ -241,11 +233,7 @@ export function VendorDetailPopup({
               <div className="border border-[#1d2132] border-solid rounded-[12px] w-full">
                 <div className="flex items-center p-[8px] w-full">
                   <div className="flex flex-1 gap-[8px] items-start min-w-px">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[2px]">
-        <circle cx="8" cy="8" r="7" stroke="#6c779d" strokeWidth="1.3" />
-        <path d="M8 7.3v4.2" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" />
-        <circle cx="8" cy="4.7" r="0.9" fill="#6c779d" />
-      </svg>
+                    <InfoIcon color="#6c779d" className="mt-[2px]" />
                     <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] flex-1 min-w-px">
                       Only {vendor.history.paymentCount} payment{vendor.history.paymentCount === 1 ? "" : "s"} on record. Brain needs more history before suggesting trust.
                     </p>
@@ -257,11 +245,7 @@ export function VendorDetailPopup({
               <div className="border border-[#1d2132] border-solid rounded-[12px] w-full">
                 <div className="flex items-center p-[8px] w-full">
                   <div className="flex flex-1 gap-[8px] items-start min-w-px">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[2px]">
-        <circle cx="8" cy="8" r="7" stroke="#a8b9f4" strokeWidth="1.3" />
-        <path d="M8 7.3v4.2" stroke="#a8b9f4" strokeWidth="1.3" strokeLinecap="round" />
-        <circle cx="8" cy="4.7" r="0.9" fill="#a8b9f4" />
-      </svg>
+                    <InfoIcon color="#a8b9f4" className="mt-[2px]" />
                     <div className="flex flex-col gap-[8px] flex-1 min-w-px">
                       <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#a8b9f4] text-[14px]">
                         Brain suggests trusting this vendor.
@@ -297,30 +281,21 @@ export function VendorDetailPopup({
                   {vendor.flags.length === 1 ? "Active Flag" : "Active Flags"}
                 </SectionLabel>
                 {vendor.flags.map((flag, idx) => (
-                  <div
-                    key={idx}
-                    className="bg-[#350011] border border-[rgba(210,3,68,0.2)] border-solid flex items-start p-[8px] rounded-[12px] w-full"
-                  >
-                    <div className="flex flex-1 gap-[8px] items-start min-w-px">
-                      <img src={alertFlagIcon} alt="" className="size-[16px] shrink-0 mt-[1px]" />
-                      <div className="flex flex-1 flex-col gap-[8px] items-start justify-center min-w-px">
-                        <p className="[font-family:'Gilroy',sans-serif] font-bold text-[14px] leading-[16px] text-[#d20344] uppercase w-full">
-                          {flag.label}
+                  <AlertCallout key={idx} title={flag.label}>
+                    <div className="flex flex-col gap-[8px] items-start w-full">
+                      {flag.kind === "bank_detail_change" && flag.priorAccountLast4 && flag.newAccountLast4 && (
+                        <p className="[font-family:'JetBrains_Mono',monospace] text-[12px] w-full">
+                          Account changed from ···{flag.priorAccountLast4} to ···{flag.newAccountLast4}
                         </p>
-                        {flag.kind === "bank_detail_change" && flag.priorAccountLast4 && flag.newAccountLast4 && (
-                          <p className="[font-family:'JetBrains_Mono',monospace] text-[12px] text-[#d20344] w-full">
-                            Account changed from ···{flag.priorAccountLast4} to ···{flag.newAccountLast4}
-                          </p>
-                        )}
-                        <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[16px] text-[#d20344] w-full">
-                          A trusted vendor with changed bank details is automatically placed under review. Verify the new account with the vendor before restoring trust.
-                        </p>
-                        <p className="[font-family:'JetBrains_Mono',monospace] text-[11px] text-[#d20344] w-full">
-                          Raised {flag.raisedAtLabel}
-                        </p>
-                      </div>
+                      )}
+                      <p className="w-full">
+                        A trusted vendor with changed bank details is automatically placed under review. Verify the new account with the vendor before restoring trust.
+                      </p>
+                      <p className="[font-family:'JetBrains_Mono',monospace] text-[11px] w-full">
+                        Raised {flag.raisedAtLabel}
+                      </p>
                     </div>
-                  </div>
+                  </AlertCallout>
                 ))}
               </div>
             )}

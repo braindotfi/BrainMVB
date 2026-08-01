@@ -19,6 +19,7 @@ import {
   type ReadState,
 } from "@/lib/sourceRows";
 import { ExtractStatusBadge } from "@/components/sources/ExtractStatusBadge";
+import { AlertCallout } from "@/components/Callout";
 import {
   BankConnect,
   ProviderPicker,
@@ -383,34 +384,19 @@ export function SourcesSection() {
       )}
 
       {failedFeeds.length > 0 && (
-        <div
-          className="rounded-[16px] p-[16px]"
-          style={{ background: "rgba(255,149,0,0.08)", border: "1px solid rgba(255,149,0,0.2)" }}
-          data-testid="notice-sources-unavailable"
-        >
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#ff9500] text-[14px] leading-[20px]">
-            This page is incomplete
-          </p>
-          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] leading-[18px] mt-[4px]">
-            Brain could not load {failedFeeds.length === 1
-              ? failedFeeds[0]
-              : `${failedFeeds.slice(0, -1).join(", ")} and ${failedFeeds[failedFeeds.length - 1]}`}
-            . Anything connected there is missing from this page — it has not been disconnected.
-            Try again in a moment.
-          </p>
-        </div>
+        <AlertCallout title="This page is incomplete" testId="notice-sources-unavailable">
+          Brain could not load {failedFeeds.length === 1
+            ? failedFeeds[0]
+            : `${failedFeeds.slice(0, -1).join(", ")} and ${failedFeeds[failedFeeds.length - 1]}`}
+          . Anything connected there is missing from this page — it has not been disconnected.
+          Try again in a moment.
+        </AlertCallout>
       )}
 
       {removeError && (
-        <div
-          className="rounded-[12px] px-[14px] py-[10px]"
-          style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)" }}
-          data-testid="alert-source-remove-error"
-        >
-          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#fca5a5] text-[13px] leading-[18px]">
-            That source could not be removed: {removeError}
-          </p>
-        </div>
+        <AlertCallout testId="alert-source-remove-error">
+          That source could not be removed: {removeError}
+        </AlertCallout>
       )}
 
       <div className="flex flex-col gap-[4px]">

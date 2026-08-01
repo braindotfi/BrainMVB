@@ -67,6 +67,7 @@ import {
   tierForReadOnlyInsight,
 } from "@/lib/proposalTiers";
 import { useBrainPolicy } from "@/lib/brainPolicy";
+import { AlertCallout, InfoIcon } from "@/components/Callout";
 import {
   bulkCandidateFrom,
   bulkLimitFor,
@@ -1177,15 +1178,9 @@ export function InboxPage() {
         {/* A partial list is as misleading as a wrongly-empty one — say so above
             the rows rather than letting the count imply completeness. */}
         {decisionsUnreachable && visibleItems.length > 0 && (
-          <div
-            className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
-            style={{ background: "rgba(210,3,68,0.08)", border: "1px solid rgba(210,3,68,0.28)" }}
-            data-testid="banner-decisions-incomplete"
-          >
-            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#d20344] text-[14px]">
-              Some decisions couldn’t be loaded, so this list may be incomplete.
-            </p>
-          </div>
+          <AlertCallout testId="banner-decisions-incomplete">
+            Some decisions couldn’t be loaded, so this list may be incomplete.
+          </AlertCallout>
         )}
 
         {/* Bulk bar. Appears at two, matching the prototype — one selected item is
@@ -1256,11 +1251,7 @@ export function InboxPage() {
             className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
             style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
           >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[2px]">
-              <circle cx="8" cy="8" r="7" stroke="#7631ee" strokeWidth="1.3" />
-              <path d="M8 7.3v4.2" stroke="#7631ee" strokeWidth="1.3" strokeLinecap="round" />
-              <circle cx="8" cy="4.7" r="0.9" fill="#7631ee" />
-            </svg>
+            <InfoIcon className="mt-[2px]" />
             <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#7631ee] text-[14px]">
               Tap any item to see why Brain suggested it, what happens next, and what the risk is before you approve anything. Brain proposes. You decide. A separate execution service settles.
             </p>

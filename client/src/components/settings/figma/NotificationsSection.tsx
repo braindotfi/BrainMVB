@@ -1,5 +1,6 @@
 import { useUserContact } from "@/lib/userContact";
 import { Switch } from "./FigmaPrimitives";
+import { AlertCallout } from "@/components/Callout";
 
 /* Settings → Notifications.
  *
@@ -52,19 +53,13 @@ export default function NotificationsSection() {
 
         <div className="bg-[#0a0c10] rounded-[16px] p-[16px] flex flex-col gap-[16px] w-full">
           {/* Said once, at the top, rather than repeated on every row. */}
-          <div
-            className="rounded-[10px] px-[12px] py-[10px]"
-            style={{ background: "rgba(255,149,0,0.08)", border: "1px solid rgba(255,149,0,0.2)" }}
-            data-testid="text-notifications-unavailable"
+          <AlertCallout
+            title="Notification delivery is not connected yet."
+            testId="text-notifications-unavailable"
           >
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[18px] text-[#ff9500] text-[13px]">
-              Notification delivery is not connected yet.
-            </p>
-            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[13px] mt-[2px]">
-              These channels are shown so you can see what Brain will support. None of
-              them can be switched on today, and nothing here is being sent.
-            </p>
-          </div>
+            These channels are shown so you can see what Brain will support. None of
+            them can be switched on today, and nothing here is being sent.
+          </AlertCallout>
 
           {CHANNELS.map((c, i) => (
             <div key={c.id} className="flex flex-col gap-[16px]">

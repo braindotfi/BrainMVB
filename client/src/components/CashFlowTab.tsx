@@ -31,6 +31,7 @@ import {
 } from "@/components/LedgerWidgets";
 import { BillDetailPopup, type BrainInvoiceDTO as BillDTO } from "@/components/BillDetailPopup";
 import alertIcon from "@assets/Icons_1783274957589.png";
+import { AlertCallout, InfoIcon } from "@/components/Callout";
 
 interface TxDTO {
   id: string;
@@ -90,25 +91,23 @@ const Notice = ({
   children: React.ReactNode;
   testId?: string;
 }) => {
-  const c =
-    tone === "amber"
-      ? { bg: "#4a2300", border: "rgba(255,148,0,0.2)", fg: "#ff9400" }
-      : { bg: "#0a0c10", border: "#1d2132", fg: "#6c779d" };
+  // "amber" was this file's warning tone; warnings now share the app-wide alert
+  // frame, so only the muted/neutral note stays local.
+  if (tone === "amber") {
+    return (
+      <AlertCallout testId={testId} className="shrink-0">
+        {children}
+      </AlertCallout>
+    );
+  }
   return (
     <div
       className="flex items-start gap-[8px] p-[12px] rounded-[12px] w-full border border-solid shrink-0"
-      style={{ background: c.bg, borderColor: c.border }}
+      style={{ background: "#0a0c10", borderColor: "#1d2132" }}
       data-testid={testId}
     >
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[2px]">
-        <circle cx="8" cy="8" r="7" stroke={c.fg} strokeWidth="1.3" />
-        <path d="M8 7.3v4.2" stroke={c.fg} strokeWidth="1.3" strokeLinecap="round" />
-        <circle cx="8" cy="4.7" r="0.9" fill={c.fg} />
-      </svg>
-      <p
-        className="[word-break:break-word] flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[18px] min-w-px text-[14px]"
-        style={{ color: c.fg }}
-      >
+      <InfoIcon color="#6c779d" className="mt-[2px]" />
+      <p className="[word-break:break-word] flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[18px] min-w-px text-[14px] text-[#6c779d]">
         {children}
       </p>
     </div>
@@ -213,22 +212,9 @@ const OverdueInvoicesBanner = ({
   }
 
   return (
-    <div className="bg-[#4a2300] border border-[rgba(255,148,0,0.2)] border-solid flex items-center p-[8px] relative rounded-[12px] shrink-0 w-full">
-      <div className="flex flex-[1_0_0] gap-[8px] items-start min-w-px relative">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[2px]">
-          <circle cx="8" cy="8" r="7" stroke="#ff9400" strokeWidth="1.3" />
-          <path d="M8 7.3v4.2" stroke="#ff9400" strokeWidth="1.3" strokeLinecap="round" />
-          <circle cx="8" cy="4.7" r="0.9" fill="#ff9400" />
-        </svg>
-        <div
-          className="[word-break:break-word] flex flex-[1_0_0] flex-col gap-[4px] items-start justify-center leading-[16px] min-w-px text-[#ff9400] text-[14px]"
-          data-testid={failed ? "banner-overdue-unavailable" : "banner-overdue"}
-        >
-          <p className="[font-family:'Gilroy',sans-serif] font-bold shrink-0 uppercase w-full">{headline}</p>
-          <p className="[font-family:'Gilroy',sans-serif] font-medium shrink-0 w-full">{detail}</p>
-        </div>
-      </div>
-    </div>
+    <AlertCallout title={headline} testId={failed ? "banner-overdue-unavailable" : "banner-overdue"}>
+      {detail}
+    </AlertCallout>
   );
 };
 

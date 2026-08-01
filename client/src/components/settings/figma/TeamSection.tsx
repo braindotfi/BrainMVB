@@ -13,6 +13,7 @@ import { mapApprovalRejection, parseCoreError } from "@/lib/approvalRejections";
 import closeIcon from "@assets/Close_1783293571882.png";
 import memberIcon from "@assets/member_1783635675512.png";
 import arrowButton from "@assets/Button_1783635877872.png";
+import { AlertCallout } from "@/components/Callout";
 import {
   ROLE_LABELS,
   envelopeLine,
@@ -417,9 +418,7 @@ function AddMemberDialog({ open, onClose, production }: { open: boolean; onClose
             </div>
 
             {error && (
-              <div className="rounded-[10px] border border-[rgba(210,3,68,0.3)] bg-[rgba(210,3,68,0.08)] p-[12px]" data-testid="text-add-member-error">
-                <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#d20344] text-[13px] leading-[18px]">{error}</p>
-              </div>
+              <AlertCallout testId="text-add-member-error">{error}</AlertCallout>
             )}
 
             <button
@@ -516,20 +515,14 @@ export default function TeamSection() {
         </div>
 
         <div className="bg-[#0a0c10] rounded-[16px] p-[16px] flex flex-col gap-[16px] w-full">
-          <div
-            className="rounded-[10px] px-[12px] py-[10px]"
-            style={{ background: "rgba(255,149,0,0.08)", border: "1px solid rgba(255,149,0,0.2)" }}
-            data-testid="text-escalation-unavailable"
+          <AlertCallout
+            title="Escalation timers are not active."
+            testId="text-escalation-unavailable"
           >
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[18px] text-[#ff9500] text-[13px]">
-              Escalation timers are not active.
-            </p>
-            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[13px] mt-[2px]">
-              Brain is propose-only: if the primary approver does not act, nothing ships
-              and nothing is escalated. Backup-approver marks are recorded in this
-              browser only, so no reminder is sent to anyone today.
-            </p>
-          </div>
+            Brain is propose-only: if the primary approver does not act, nothing ships
+            and nothing is escalated. Backup-approver marks are recorded in this
+            browser only, so no reminder is sent to anyone today.
+          </AlertCallout>
 
           {[
             {

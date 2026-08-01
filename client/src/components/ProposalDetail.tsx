@@ -32,6 +32,7 @@ import { openDocumentDetail, resolveDocument } from "@/lib/openDocumentDetail";
 import { DocumentViewerPopup } from "./DocumentViewerPopup";
 import { type DocumentRecord, docKindLabel } from "@/lib/documentTypes";
 import { useBrainInvoiceDocument } from "@/lib/brainInvoiceDocument";
+import { AlertCallout } from "@/components/Callout";
 import type {
   Proposal,
   ProposalStatus,
@@ -460,12 +461,7 @@ export function ProposalDetail({
             {proposal.risk && (
               <div className="flex flex-col gap-[16px] items-start w-full">
                 <SectionLabel>If This Is Wrong</SectionLabel>
-                <div className="bg-[#350011] border border-[rgba(210,3,68,0.2)] rounded-[12px] w-full p-[8px] flex items-start gap-[8px]">
-                  <ShieldAlert size={16} className="shrink-0" style={{ color: ALERT }} />
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[14px] w-full" style={{ color: ALERT }}>
-                    {proposal.risk}
-                  </p>
-                </div>
+                <AlertCallout>{proposal.risk}</AlertCallout>
                 <div className="w-full flex flex-col gap-[16px]">
                   <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
                     Flagged by{" "}

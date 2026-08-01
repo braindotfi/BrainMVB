@@ -9,6 +9,7 @@ import {
 } from "@/lib/auditTypes";
 import type { AuditRecord } from "@/lib/auditTypes";
 import { AuditRecordPopup } from "@/components/AuditRecordPopup";
+import { AlertCallout } from "@/components/Callout";
 
 /* Settings → Audit Log.
  *
@@ -281,19 +282,14 @@ export function AuditLogSection() {
             banner those few rows would sit under a heading that implies they are
             the whole trail. */}
         {feedUnavailable && visible.length > 0 && (
-          <div
-            className="rounded-[10px] px-[12px] py-[10px] mb-[8px]"
-            style={{ background: "rgba(255,149,0,0.08)", border: "1px solid rgba(255,149,0,0.2)" }}
-            data-testid="notice-audit-unavailable"
+          <AlertCallout
+            title="This list is incomplete."
+            testId="notice-audit-unavailable"
+            className="mb-[8px]"
           >
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[18px] text-[#ff9500] text-[13px]">
-              This list is incomplete.
-            </p>
-            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[13px] mt-[2px]">
-              Brain could not read your audit history. What is shown below was recorded in this
-              browser — the events from Brain are missing, not absent. Try again in a moment.
-            </p>
-          </div>
+            Brain could not read your audit history. What is shown below was recorded in this
+            browser — the events from Brain are missing, not absent. Try again in a moment.
+          </AlertCallout>
         )}
 
         {/* Controls */}

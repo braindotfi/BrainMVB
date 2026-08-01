@@ -26,6 +26,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAppAlert } from "@/components/AppAlert";
 import { usePlanId, PLAN_RATE_LIMITS } from "@/lib/planStore";
+import { AlertCallout, InfoIcon } from "@/components/Callout";
 
 /* ─── Types (wire shapes from server/routes.ts developers block) ─── */
 type DevEnv = "sandbox" | "live";
@@ -393,18 +394,7 @@ const PlaintextKeyModal = ({ plaintext, onClose }: { plaintext: string; onClose:
         {/* ── Body ── */}
         <div className="flex flex-col gap-[32px] items-start p-[24px] relative shrink-0 w-full overflow-y-auto">
           {/* Warning info box */}
-          <div className="bg-[#4a2300] border border-[rgba(255,148,0,0.2)] border-solid rounded-[12px] flex items-center p-[8px] w-full">
-            <div className="flex flex-1 min-w-px gap-[8px] items-start">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[1px]">
-                <circle cx="8" cy="8" r="7" stroke="#ff9400" strokeWidth="1.3" />
-                <path d="M8 7.3v4.2" stroke="#ff9400" strokeWidth="1.3" strokeLinecap="round" />
-                <circle cx="8" cy="4.7" r="0.9" fill="#ff9400" />
-              </svg>
-              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#ff9400] text-[14px] leading-[16px] flex-1 min-w-px">
-                Store it safely. For your security, it will never be shown again.
-              </p>
-            </div>
-          </div>
+          <AlertCallout>Store it safely. For your security, it will never be shown again.</AlertCallout>
           {/* API Key section */}
           <PopupSection label="API Key">
             <PopupCodeBox testId="text-plaintext-key">{plaintext}</PopupCodeBox>
@@ -1324,11 +1314,7 @@ function KeysSection({ env }: { env: DevEnv }) {
             className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
             style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
           >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[2px]">
-        <circle cx="8" cy="8" r="7" stroke="#7631ee" strokeWidth="1.3" />
-        <path d="M8 7.3v4.2" stroke="#7631ee" strokeWidth="1.3" strokeLinecap="round" />
-        <circle cx="8" cy="4.7" r="0.9" fill="#7631ee" />
-      </svg>
+            <InfoIcon className="mt-[2px]" />
             <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#7631ee] text-[14px] leading-[18px] flex-1 min-w-px">
               Keys are issued by brain-core and stored hashed. Enforcement inside brain-core's API gateway is rolling
               out. Until then, keys authenticate against platform endpoints only.
@@ -1408,11 +1394,7 @@ function KeysSection({ env }: { env: DevEnv }) {
         className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full shrink-0"
         style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
       >
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[2px]">
-        <circle cx="8" cy="8" r="7" stroke="#7631ee" strokeWidth="1.3" />
-        <path d="M8 7.3v4.2" stroke="#7631ee" strokeWidth="1.3" strokeLinecap="round" />
-        <circle cx="8" cy="4.7" r="0.9" fill="#7631ee" />
-      </svg>
+        <InfoIcon className="mt-[2px]" />
         <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#7631ee] text-[14px] leading-[18px] flex-1 min-w-px">
           Keys are issued and stored hashed by brain-core, and enforced on every key-authenticated call.
           Rate limit: 600 requests per 60 seconds per key.
@@ -1977,11 +1959,7 @@ function UsageSection({ env }: { env: DevEnv }) {
         className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
         style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
       >
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[2px]">
-        <circle cx="8" cy="8" r="7" stroke="#7631ee" strokeWidth="1.3" />
-        <path d="M8 7.3v4.2" stroke="#7631ee" strokeWidth="1.3" strokeLinecap="round" />
-        <circle cx="8" cy="4.7" r="0.9" fill="#7631ee" />
-      </svg>
+        <InfoIcon className="mt-[2px]" />
         <div className="[font-family:'Gilroy',sans-serif] font-medium text-[#7631ee] text-[14px] flex-1 min-w-px">
           <p className="leading-[18px] mb-[12px]">
             Key counts come from brain-core's per-key usage attribution ({keyUsageQ.data?.window ?? "30d"} window).

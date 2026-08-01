@@ -121,6 +121,7 @@ import {
 export type AgentModalAction = "approve" | "reject" | "acknowledge" | "undo";
 
 import type { AgentModalEditPayload } from "@/lib/agentProposals";
+import { InfoIcon } from "@/components/Callout";
 export type { AgentModalEditPayload };
 
 const AGENT_ICONS: Record<AgentKey, LucideIcon> = {
@@ -1182,11 +1183,7 @@ export function AgentProposalModal({
                 className="border border-[#1d2132] rounded-[12px] p-[8px] flex items-start gap-[8px] w-full"
                 data-testid="box-risk-info"
               >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[2px]">
-        <circle cx="8" cy="8" r="7" stroke="#6c779d" strokeWidth="1.3" />
-        <path d="M8 7.3v4.2" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" />
-        <circle cx="8" cy="4.7" r="0.9" fill="#6c779d" />
-      </svg>
+                <InfoIcon color="#6c779d" className="mt-[2px]" />
                 <p
                   className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] flex-1 min-w-0"
                   data-testid="text-risk-note"

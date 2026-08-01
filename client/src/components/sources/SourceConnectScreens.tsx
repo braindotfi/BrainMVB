@@ -20,6 +20,7 @@ import payrollIcon from "@assets/payroll_1783619257499.png";
 import taxIcon from "@assets/tax_1783619257500.png";
 import paymentsIcon from "@assets/payments_1783619257499.png";
 import docsIcon from "@assets/docs_1783621224017.png";
+import { AlertCallout, InfoIcon } from "@/components/Callout";
 
 /* ──────────────────────────────────────────────────────────────────────────
  *  Source connect screens - the mechanisms for attaching a data source to Brain.
@@ -157,13 +158,7 @@ export function BankConnect({ onDone }: { onDone: () => void }) {
           form: repeating them here would show the same account twice. */}
 
       {error && (
-        <div
-          data-testid="alert-bank-error"
-          className="rounded-[12px] px-[12px] py-[10px] [font-family:'Gilroy',sans-serif] text-[13px] leading-[18px]"
-          style={{ background: "rgba(239,68,68,0.08)", color: "#fca5a5", border: "1px solid rgba(239,68,68,0.25)" }}
-        >
-          {error}
-        </div>
+        <AlertCallout testId="alert-bank-error">{error}</AlertCallout>
       )}
 
       {!isConfigured ? (
@@ -317,13 +312,7 @@ export function ProviderPicker({ category }: { category: CategoryId }) {
     <div className="flex flex-col gap-[16px]">
 
       {error && (
-        <div
-          data-testid="alert-provider-error"
-          className="rounded-[12px] px-[12px] py-[10px] [font-family:'Gilroy',sans-serif] text-[13px] leading-[18px]"
-          style={{ background: "rgba(239,68,68,0.08)", color: "#fca5a5", border: "1px solid rgba(239,68,68,0.25)" }}
-        >
-          {error}
-        </div>
+        <AlertCallout testId="alert-provider-error">{error}</AlertCallout>
       )}
 
       <div className="flex flex-col gap-[12px]">
@@ -473,13 +462,7 @@ export function DocumentUpload({ category, onDone }: { category: string; onDone:
       </div>
 
       {error && (
-        <div
-          data-testid="alert-doc-error"
-          className="rounded-[12px] px-[12px] py-[10px] [font-family:'Gilroy',sans-serif] text-[13px] leading-[18px]"
-          style={{ background: "rgba(239,68,68,0.08)", color: "#fca5a5", border: "1px solid rgba(239,68,68,0.25)" }}
-        >
-          {error}
-        </div>
+        <AlertCallout testId="alert-doc-error">{error}</AlertCallout>
       )}
 
       {uploadMut.isPending && (
@@ -501,16 +484,6 @@ export function DocumentUpload({ category, onDone }: { category: string; onDone:
 /* ───────────────────────────── Shared bits ───────────────────────────── */
 function InfoNotice({ title, body, uppercase = true }: { title: string; body: React.ReactNode; uppercase?: boolean }) {
   return (
-    <div className="flex items-start gap-[8px] rounded-[12px] border border-[rgba(255,148,0,0.2)] bg-[#4a2300] p-[8px]">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[1px]">
-        <circle cx="8" cy="8" r="7" stroke="#ff9400" strokeWidth="1.3" />
-        <path d="M8 7.3v4.2" stroke="#ff9400" strokeWidth="1.3" strokeLinecap="round" />
-        <circle cx="8" cy="4.7" r="0.9" fill="#ff9400" />
-      </svg>
-      <div className="flex-1 min-w-0">
-        <p className={`[font-family:'Gilroy',sans-serif] font-bold text-[#ff9400] text-[13px] leading-[18px] ${uppercase ? "uppercase" : ""}`}>{title}</p>
-        <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#ff9400] text-[13px] leading-[18px] mt-[2px]">{body}</p>
-      </div>
-    </div>
+    <AlertCallout title={title}>{body}</AlertCallout>
   );
 }

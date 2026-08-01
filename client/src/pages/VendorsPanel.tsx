@@ -10,6 +10,7 @@ import { VendorDetailPopup } from "@/components/VendorDetailPopup";
 import { FilterChipRow } from "@/components/FilterChipRow";
 import closeIcon from "@assets/Close_1783293571882.png";
 import { Plus } from "lucide-react";
+import { AlertCallout, InfoIcon } from "@/components/Callout";
 
 type VendorTab = "Needs Review" | "New" | "Trusted" | "Suggested";
 
@@ -195,9 +196,7 @@ function AddVendorDialog({ open, onClose }: { open: boolean; onClose: () => void
             </div>
 
             {error && (
-              <div className="rounded-[10px] border border-[rgba(210,3,68,0.3)] bg-[rgba(210,3,68,0.08)] p-[12px]" data-testid="text-add-vendor-error">
-                <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#d20344] text-[13px] leading-[18px]">{error}</p>
-              </div>
+              <AlertCallout testId="text-add-vendor-error">{error}</AlertCallout>
             )}
 
             {/* Info banner — matches the Inbox helper banner style */}
@@ -205,11 +204,7 @@ function AddVendorDialog({ open, onClose }: { open: boolean; onClose: () => void
               className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
               style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
             >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[2px]">
-        <circle cx="8" cy="8" r="7" stroke="#7631ee" strokeWidth="1.3" />
-        <path d="M8 7.3v4.2" stroke="#7631ee" strokeWidth="1.3" strokeLinecap="round" />
-        <circle cx="8" cy="4.7" r="0.9" fill="#7631ee" />
-      </svg>
+              <InfoIcon className="mt-[2px]" />
               <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#7631ee] text-[14px] flex-1 min-w-px">
                 Added to your current Brain session. This demo tenant is temporary.
               </p>
@@ -350,20 +345,9 @@ export function VendorsPanel() {
       {/* Backlog notice: shown on every sub-tab except "New" so the count is
           never invisible. Presentation-only — no new data source needed. */}
       {countsKnown && grouped.newVendors.length > 0 && activeTab !== "New" && (
-        <div
-          className="flex items-center gap-[10px] px-[12px] py-[10px] rounded-[12px] w-full"
-          style={{ background: "#4a2300", border: "1px solid rgba(255,148,0,0.2)" }}
-          data-testid="notice-new-vendors"
-        >
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0">
-            <circle cx="8" cy="8" r="7" stroke="#ff9500" strokeWidth="1.3" />
-            <path d="M8 7.3v4.2" stroke="#ff9500" strokeWidth="1.3" strokeLinecap="round" />
-            <circle cx="8" cy="4.7" r="0.9" fill="#ff9500" />
-          </svg>
-          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#ff9500] text-[13px] flex-1 min-w-px">
-            {grouped.newVendors.length} new {grouped.newVendors.length === 1 ? "vendor hasn't" : "vendors haven't"} been reviewed yet.
-          </p>
-        </div>
+        <AlertCallout testId="notice-new-vendors">
+          {grouped.newVendors.length} new {grouped.newVendors.length === 1 ? "vendor hasn't" : "vendors haven't"} been reviewed yet.
+        </AlertCallout>
       )}
 
       <div className="w-full">

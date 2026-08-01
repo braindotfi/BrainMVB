@@ -23,7 +23,6 @@ function titleCase(str: string) {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   ArrowLeft,
-  Flag,
   ChevronDown,
   ChevronUp,
   Shield,
@@ -38,6 +37,7 @@ import closeIcon from "@assets/Close_1783293571882.png";
 import playIcon from "@assets/play_1783376650313.png";
 import deleteIcon from "@assets/delete_1783376650313.png";
 import pauseIcon from "@assets/pause_1783376736546.png";
+import { AlertCallout, InfoIcon } from "@/components/Callout";
 
 const ALERT = "#d20344";
 
@@ -193,23 +193,9 @@ export function RuleDetail() {
 
           {/* Paused-from-report banner: #D20344 accent, with the linked payment. */}
           {pausedFromReport && (
-            <div
-              className="w-full rounded-[12px] p-[16px] flex flex-col gap-[12px]"
-              style={{ backgroundColor: "rgba(210,3,68,0.08)", border: `1px solid rgba(210,3,68,0.3)` }}
-              data-testid="banner-paused-from-report"
-            >
-              <div className="flex items-start gap-[10px]">
-                <Flag size={18} className="shrink-0 mt-[1px]" style={{ color: ALERT }} />
-                <div className="flex flex-col gap-[4px]">
-                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[15px]" style={{ color: ALERT }}>
-                    Paused after you reported a problem
-                  </p>
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#a8b9f4] text-[13px]">
-                    You flagged “{latestOpen?.reason}” on a payment this rule cleared. It won’t auto-clear anything new until you resume it.
-                  </p>
-                </div>
-              </div>
-            </div>
+            <AlertCallout title="Paused after you reported a problem" testId="banner-paused-from-report">
+              You flagged “{latestOpen?.reason}” on a payment this rule cleared. It won’t auto-clear anything new until you resume it.
+            </AlertCallout>
           )}
 
           {/* Policy rule detail body: read-only, shows all DSL fields */}
@@ -224,11 +210,7 @@ export function RuleDetail() {
             className="w-full rounded-[12px] border border-[#1d2132] p-[8px] flex items-center gap-[8px]"
             data-testid="text-what-changed"
           >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[2px]">
-        <circle cx="8" cy="8" r="7" stroke="#6c779d" strokeWidth="1.3" />
-        <path d="M8 7.3v4.2" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" />
-        <circle cx="8" cy="4.7" r="0.9" fill="#6c779d" />
-      </svg>
+            <InfoIcon color="#6c779d" className="mt-[2px]" />
             <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[14px] text-[#6c779d]">
               {rule.active ? (
                 <>
@@ -279,21 +261,9 @@ export function RuleDetail() {
 
           {/* Paused-from-report banner: orange accent. Matches Figma's flagged banner under Rule Status. */}
           {pausedFromReport && (
-            <div
-              className="w-full rounded-[12px] p-[16px] flex items-start gap-[10px]"
-              style={{ backgroundColor: "#4a2300", border: "1px solid rgba(255,148,0,0.2)" }}
-              data-testid="banner-paused-from-report"
-            >
-              <Flag size={18} className="shrink-0 mt-[1px] text-[#ff9400]" />
-              <div className="flex flex-col gap-[4px]">
-                <p className="[font-family:'Gilroy',sans-serif] font-bold uppercase leading-[20px] text-[15px] text-[#ff9400]">
-                  Paused After You Reported a Problem
-                </p>
-                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#ff9400] text-[13px]">
-                  You flagged “{latestOpen?.reason}” on a payment this rule cleared. It won’t auto-clear anything new until you resume it.
-                </p>
-              </div>
-            </div>
+            <AlertCallout title="Paused after you reported a problem" testId="banner-paused-from-report">
+              You flagged “{latestOpen?.reason}” on a payment this rule cleared. It won’t auto-clear anything new until you resume it.
+            </AlertCallout>
           )}
 
           {/* Resume-rule confirmation: dim/blur backdrop modal, matches other popups. */}
@@ -899,11 +869,7 @@ function PolicyDetailBody({ rule }: { rule: PolicyContentRule }) {
         style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
         data-testid="text-policy-info"
       >
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[2px]">
-        <circle cx="8" cy="8" r="7" stroke="#7631ee" strokeWidth="1.3" />
-        <path d="M8 7.3v4.2" stroke="#7631ee" strokeWidth="1.3" strokeLinecap="round" />
-        <circle cx="8" cy="4.7" r="0.9" fill="#7631ee" />
-      </svg>
+        <InfoIcon className="mt-[2px]" />
         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#7631ee] text-[14px]">
           This rule is part of your Brain core default policy. It is enforced by Brain for every action and cannot be edited or paused from this app. Changes must be made through Brain core’s admin layer.
         </p>

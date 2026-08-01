@@ -20,6 +20,7 @@ import { docKindLabel, docKindCaption, docStatusLabel, openDocumentOriginal } fr
 import { resolveDocument } from "@/lib/openDocumentDetail";
 import { resolveProposal } from "@/lib/openProposalDetail";
 import { useCurrency } from "@/lib/useCurrency";
+import { InfoIcon } from "@/components/Callout";
 
 /* ── Document / Record EVIDENCE Viewer ────────────────────────────────────────
    ONE read only viewer for every kind of evidence Brain surfaces behind a
@@ -255,11 +256,7 @@ function InvoicePane({ doc }: { doc: DocumentRecord }) {
       {/* Info box, Figma 5573:97923. Between provenance and Open Original */}
       <div className="border border-[#1d2132] border-solid content-stretch flex items-center p-[8px] relative rounded-[12px] w-full">
         <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-start min-w-px">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[2px]">
-        <circle cx="8" cy="8" r="7" stroke="#6c779d" strokeWidth="1.3" />
-        <path d="M8 7.3v4.2" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" />
-        <circle cx="8" cy="4.7" r="0.9" fill="#6c779d" />
-      </svg>
+          <InfoIcon color="#6c779d" className="mt-[2px]" />
           <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] flex-1 min-w-px">
             A viewer, not an AP system. Brain reads this invoice; your accounting system owns it.
           </p>
