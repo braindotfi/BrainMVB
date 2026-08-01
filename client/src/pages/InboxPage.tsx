@@ -1189,39 +1189,62 @@ export function InboxPage() {
             "eligible" meant. */}
         {selection.count >= 2 && selection.limit && (
           <div
-            className="flex flex-col sm:flex-row gap-[10px] sm:items-center justify-between p-[12px] rounded-[12px] w-full"
-            style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.35)" }}
+            className="bg-[#0a0c10] flex flex-col overflow-hidden rounded-[16px] shrink-0 w-full"
             data-testid="bulk-bar"
           >
-            <p
-              className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#a88afa] text-[13px]"
-              data-testid="bulk-bar-summary"
-            >
-              <b className="font-semibold text-[#a8b9f4]">{selection.count} selected</b>
-              {` \u00b7 all ${selectionLabel}, each under the ${format(selection.limit.value)} `}
-              {selection.limit.source === "rule"
-                ? "limit from your own rule."
-                : "limit above which Brain needs a second approver."}
-            </p>
-            <div className="flex gap-[8px] items-center shrink-0">
-              <button
-                type="button"
-                onClick={() => setSelectedIds(new Set())}
-                disabled={bulkRunning}
-                data-testid="button-bulk-clear"
-                className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-[#6c779d] hover:text-[#a8b9f4] disabled:opacity-40 outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-[4px] px-[8px] py-[6px]"
-              >
-                Clear
-              </button>
-              <button
-                type="button"
-                onClick={() => void approveSelected()}
-                disabled={bulkRunning}
-                data-testid="button-bulk-approve"
-                className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-white bg-[#7631ee] hover:bg-[#8a4bf5] disabled:opacity-50 rounded-[8px] px-[12px] py-[7px] outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-              >
-                {bulkRunning ? "Approving\u2026" : "Approve selected"}
-              </button>
+            {/* Body — count metric + Brain Observed sentence */}
+            <div className="flex flex-col items-start p-[16px] w-full">
+              <div className="bg-[#0a0c10] flex gap-[26px] items-start overflow-hidden p-[16px] rounded-[16px] w-full">
+                {/* Left: Number Selected */}
+                <div className="flex flex-col gap-[4px] items-start justify-center shrink-0 w-[128px]">
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px]">
+                    Number Selected
+                  </p>
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[48px] text-[40px] text-white" data-testid="bulk-bar-count">
+                    {selection.count}
+                  </p>
+                </div>
+                {/* Hairline vertical divider */}
+                <div className="w-px self-stretch shrink-0 bg-[#1d2132]" />
+                {/* Right: Brain Observed */}
+                <div className="flex flex-1 flex-col gap-[4px] items-start justify-center min-w-px">
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px]">
+                    Brain Observed
+                  </p>
+                  <p
+                    className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[16px] text-white"
+                    data-testid="bulk-bar-summary"
+                  >
+                    {`All ${selectionLabel}, each under ${format(selection.limit.value)} `}
+                    {selection.limit.source === "rule"
+                      ? "limit from your own rule."
+                      : "limit above which Brain needs a second approver."}
+                  </p>
+                </div>
+              </div>
+            </div>
+            {/* Footer — Cancel / Approve Selected */}
+            <div className="border-t border-[#1d2132] bg-[#0a0c10] flex flex-col items-start p-[16px] w-full">
+              <div className="flex gap-[16px] items-center w-full">
+                <button
+                  type="button"
+                  onClick={() => setSelectedIds(new Set())}
+                  disabled={bulkRunning}
+                  data-testid="button-bulk-clear"
+                  className="bg-[#222737] flex flex-1 items-center justify-center min-w-px px-[12px] py-[8px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[12px] whitespace-nowrap hover:bg-[#2a3046] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] disabled:opacity-40"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void approveSelected()}
+                  disabled={bulkRunning}
+                  data-testid="button-bulk-approve"
+                  className="bg-[#4a2300] flex flex-1 items-center justify-center min-w-px px-[12px] py-[8px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#ff9400] text-[12px] whitespace-nowrap hover:bg-[#5a2d00] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] disabled:opacity-50"
+                >
+                  {bulkRunning ? "Approving\u2026" : "Approve Selected"}
+                </button>
+              </div>
             </div>
           </div>
         )}
