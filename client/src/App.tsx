@@ -214,7 +214,7 @@ function MainShell({ onLogout }: { onLogout: () => void }) {
           {SEARCH_ROUTES.has(location) && <GlobalSearch />}
           {/* The pages own their own scroll containers, so the bar is a fixed-height
               sibling above them rather than something they have to make room for. */}
-          <div className="flex-1 min-w-0 min-h-0 overflow-hidden flex flex-col">
+          <div className="flex-1 min-w-0 min-h-0 overflow-hidden flex flex-col relative">
           <Switch>
             <Route path="/" component={HomePage} />
             {/* Canonical IA paths: Overview (/), Decisions, Ledger, Settings */}

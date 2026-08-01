@@ -958,7 +958,7 @@ export function InboxPage() {
       : "Nothing needs your attention right now. Brain is keeping things moving.";
 
   return (
-    <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] flex-1 min-h-0 w-full flex flex-col">
+    <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden rounded-[16px] absolute inset-0 flex flex-col">
 
       {/* Static chrome: header + filter toolbar — never scrolls */}
       <div className="shrink-0 flex flex-col gap-[24px] items-start pt-[40px] px-[16px] pb-[16px] w-full min-w-0">
