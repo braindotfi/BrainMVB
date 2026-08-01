@@ -35,4 +35,5 @@
 - [Auto-approved cross-surface records](auto-approved-cross-surface.md) — Inbox and Audit Log project the same live PaymentIntent source and preserve Brain's original creation time.
 - [Overview priority tiers](overview-priority-tiers.md) — tier derives from available_decisions not proposal_type; high = Urgent, elevated only if over a configured rule threshold; a missing band never escalates.
 - [Lockfile proxy URLs](lockfile-replit-proxy-urls.md) — regenerating a lock in Replit bakes in package-firewall.replit.local, which no GitHub runner resolves; rewrite to registry.npmjs.org.
+- [Unreachable data ≠ all clear](unreachable-data-all-clear.md) — `data?.x ?? []` + `retry:false` hooks expose no isError, so a failed read renders a reassuring empty state; fix at the hook.
 - [Narrow centre column](narrow-centre-column-layout.md) — the 3-panel shell leaves ~420px for content; use auto-fit/minmax grids, never viewport breakpoints, or figures clip.

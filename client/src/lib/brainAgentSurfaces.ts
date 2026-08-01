@@ -109,7 +109,7 @@ export function useBrainReconciliationInsights() {
         { label: "Right record", value: `${m.right_entity_type} ${m.right_entity_id}` },
       ],
     }));
-  return { isLoading: q.isLoading, insights };
+  return { isLoading: q.isLoading, isError: q.isError, insights };
 }
 
 /* ── Obligations: GET /ledger/obligations (subscriptions + disputed) ─────── */
@@ -178,7 +178,7 @@ export function useBrainSubscriptionInsights() {
         ],
       } satisfies LiveInsight;
     });
-  return { isLoading: q.isLoading, insights };
+  return { isLoading: q.isLoading, isError: q.isError, insights };
 }
 
 export function useBrainDisputeInsights() {
@@ -208,7 +208,7 @@ export function useBrainDisputeInsights() {
         ],
       } satisfies LiveInsight;
     });
-  return { isLoading: q.isLoading, insights };
+  return { isLoading: q.isLoading, isError: q.isError, insights };
 }
 
 /* ── Cash flow: GET /ledger/cash_flows (trailing actuals, no projection) ─── */
@@ -243,7 +243,7 @@ export function useBrainCashFlowInsight() {
   // multi-currency tenant would need one card per currency, out of scope here.
   const currency = q.data?.currencies?.[0];
   if (!currency || currency.by_day.length === 0) {
-    return { isLoading: q.isLoading, insight: null as LiveInsight | null };
+    return { isLoading: q.isLoading, isError: q.isError, insight: null as LiveInsight | null };
   }
   const points: LiveInsightChartPoint[] = currency.by_day.map((d) => ({
     label: new Date(d.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
@@ -288,5 +288,5 @@ export function useBrainCashFlowInsight() {
       note: "Trailing actuals only - brain-core has no forward cash-flow projection yet.",
     },
   };
-  return { isLoading: q.isLoading, insight };
+  return { isLoading: q.isLoading, isError: q.isError, insight };
 }

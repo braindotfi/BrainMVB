@@ -548,11 +548,11 @@ export function HomePage() {
      see brainAgentSurfaces.ts) that have no proposal lifecycle of their own
      yet. Tapping a payment-intent row opens the actionable review sheet;
      tapping an insight row opens the read-only LiveInsightModal. */
-  const { proposals: liveNeedsReview } = useBrainReviewQueue();
-  const { insights: reconInsights } = useBrainReconciliationInsights();
-  const { insights: subscriptionInsights } = useBrainSubscriptionInsights();
-  const { insights: disputeInsights } = useBrainDisputeInsights();
-  const { insight: cashFlowInsight } = useBrainCashFlowInsight();
+  const { proposals: liveNeedsReview, isError: liveNeedsReviewError } = useBrainReviewQueue();
+  const { insights: reconInsights, isError: reconError } = useBrainReconciliationInsights();
+  const { insights: subscriptionInsights, isError: subscriptionError } = useBrainSubscriptionInsights();
+  const { insights: disputeInsights, isError: disputeError } = useBrainDisputeInsights();
+  const { insight: cashFlowInsight, isError: cashFlowError } = useBrainCashFlowInsight();
   const [selectedInsight, setSelectedInsight] = useState<LiveInsight | null>(null);
   const liveInsights: LiveInsight[] = useMemo(
     () => [...reconInsights, ...subscriptionInsights, ...disputeInsights, ...(cashFlowInsight ? [cashFlowInsight] : [])],
@@ -562,7 +562,7 @@ export function HomePage() {
   /* Live brain-core agent proposals (GET /v1/proposals) needing a decision -
      merged into the same "Brain Detected" widget as the live payment queue
      and read-only insights above. */
-  const { proposals: liveProposals } = useBrainProposals();
+  const { proposals: liveProposals, isError: liveProposalsError } = useBrainProposals();
   const needsReviewProposals = useMemo(() => liveProposals.filter(isNeedsReview), [liveProposals]);
   /* The proposals Overview actually shows, in the order the tiers render them, so
      the detail modal's Previous/Next walks exactly what's on screen — a pager that
@@ -612,6 +612,18 @@ export function HomePage() {
      carry their actions INLINE so an item can be cleared without opening anything —
      that is the whole point of the screen. `View full detail` still opens the same
      sheet as before for anyone who wants the evidence first. */
+  /* Same contract as the Decisions timeline: every feed that contributes a row
+     must be able to say it failed, or "Nothing needs your review right now"
+     becomes a lie told in exactly the conditions where it is most costly. Adding
+     a source to overviewRows means adding its error flag here. */
+  const overviewUnreachable =
+    liveNeedsReviewError ||
+    liveProposalsError ||
+    reconError ||
+    subscriptionError ||
+    disputeError ||
+    cashFlowError;
+
   const overviewRows: TierRowModel[] = useMemo(() => {
     const testIdPrefix = "row-overview";
 
@@ -916,7 +928,27 @@ export function HomePage() {
             {/* The decision queue: ONE single-column list split into Urgent /
                 Waiting on you / Insights, with each row's own actions inline.
                 Replaces the "Brain Detected" / "Brain Did" two-panel split. */}
-            <TierSections rows={overviewRows} emptyMessage="Nothing needs your review right now." />
+            <>
+              {overviewUnreachable && overviewRows.length > 0 && (
+                <div
+                  className="flex items-start gap-[10px] p-[12px] mb-[12px] rounded-[12px] w-full"
+                  style={{ background: "rgba(210,3,68,0.08)", border: "1px solid rgba(210,3,68,0.28)" }}
+                  data-testid="banner-overview-incomplete"
+                >
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#d20344] text-[14px]">
+                    Some items couldn’t be loaded, so this list may be incomplete.
+                  </p>
+                </div>
+              )}
+              <TierSections
+                rows={overviewRows}
+                emptyMessage={
+                  overviewUnreachable
+                    ? "Brain couldn’t load what needs your review. This is a connection problem, not an empty queue."
+                    : "Nothing needs your review right now."
+                }
+              />
+            </>
 
             {/* Your Goals - hidden for now */}
             {/* <GoalsSection /> */}

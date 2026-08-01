@@ -16,6 +16,7 @@
 import { useMemo } from "react";
 import { ActionButton, type ActionTone } from "@/components/ProposalCardParts";
 import { TIER_META, TIER_ORDER, type ProposalTier } from "@/lib/proposalTiers";
+import type { RowTier } from "@/lib/decisionFilters";
 
 /* Tier accents. Red = Urgent, amber = Waiting on you, periwinkle = Insights —
    the palette already used for Inbox status tags, not the prototype's colours. */
@@ -24,6 +25,11 @@ const TIER_ACCENT: Record<ProposalTier, string> = {
   waiting: "#ff9500",
   insight: "#a8b9f4",
 };
+
+/* Rows can also be `decided` history, which carries NO accent — the colour bar
+   means "this is waiting on you", and a settled record is not. Sections never
+   render this tier (TIER_ORDER has three), only Decisions' flat timeline does. */
+const ROW_ACCENT: Record<RowTier, string | null> = { ...TIER_ACCENT, decided: null };
 
 export interface TierRowAction {
   id: string;
@@ -35,10 +41,20 @@ export interface TierRowAction {
   title?: string;
 }
 
+/** Small pill beside the title. `className` must carry its own border COLOUR only
+ *  — the element adds `border border-solid`, matching the chip convention used by
+ *  the Inbox status tags. */
+export interface TierRowBadge {
+  label: string;
+  className: string;
+}
+
 export interface TierRowModel {
   id: string;
-  tier: ProposalTier;
+  tier: RowTier;
   title: string;
+  /** Type / status pill, as the prototype puts at the end of a row title. */
+  badge?: TierRowBadge;
   subtitle?: string;
   /** Small muted line under the subtitle (escalation timers and similar). */
   note?: string;
@@ -51,18 +67,33 @@ export interface TierRowModel {
 }
 
 export const TierRow = ({ row }: { row: TierRowModel }) => {
-  const accent = TIER_ACCENT[row.tier];
+  const accent = ROW_ACCENT[row.tier];
   return (
     <div
-      className="flex flex-col sm:flex-row gap-[12px] items-start sm:items-center justify-between px-[16px] py-[14px] w-full bg-[#0a0c10] transition-colors hover:bg-[#11141b] border-l-[3px] border-solid"
-      style={{ borderLeftColor: accent }}
+      className={`flex flex-col sm:flex-row gap-[12px] items-start sm:items-center justify-between px-[16px] py-[14px] w-full bg-[#0a0c10] transition-colors hover:bg-[#11141b] ${
+        accent ? "border-l-[3px] border-solid" : ""
+      }`}
+      style={accent ? { borderLeftColor: accent } : undefined}
       data-testid={`${row.testIdPrefix}-${row.id}`}
       data-tier={row.tier}
     >
       <div className="flex flex-col gap-[3px] items-start min-w-px flex-1">
-        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px] w-full">
-          {row.title}
-        </p>
+        {/* Wraps rather than truncates. These titles carry the amount and the
+            counterparty; an ellipsis in a ~420px column hides exactly the part
+            the reader needs to decide. */}
+        <div className="flex flex-wrap items-center gap-x-[8px] gap-y-[4px] w-full min-w-0">
+          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px] min-w-0">
+            {row.title}
+          </p>
+          {row.badge && (
+            <span
+              className={`${row.badge.className} border border-solid rounded-[22px] px-[8px] py-[3px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-center whitespace-nowrap shrink-0`}
+              data-testid={`${row.testIdPrefix}-${row.id}-badge`}
+            >
+              {row.badge.label}
+            </span>
+          )}
+        </div>
         {row.subtitle && (
           <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[13px] w-full">
             {row.subtitle}
