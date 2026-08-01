@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useLocation, useSearch } from "wouter";
 import { useBrainVendors, useBrainVendorDetail } from "@/lib/brainVendors";
@@ -136,7 +137,11 @@ function SubmitConfirmDialog({
   );
 }
 
-/* ── Category dropdown ───────────────────────────────────────────────────── */
+/* ── Category dropdown ───────────────────────────────────────────────────────
+   The menu renders through a portal at fixed coordinates. The Ledger's centre
+   column and the form card both clip their content, so a menu positioned inside
+   the card gets cut off at the card edge — the portal escapes every ancestor
+   clip, which is why the card can keep its own rounded overflow intact.       */
 function CategoryDropdown({
   value,
   onChange,
@@ -145,49 +150,118 @@ function CategoryDropdown({
   onChange: (v: string) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<
+    { top: number; left: number; maxHeight: number; measured: boolean } | null
+  >(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  /* Fixed positioning means nothing keeps the menu inside the viewport for us,
+     so clamp it horizontally and flip it above the trigger when the space below
+     cannot hold it. The first call runs before the menu exists, so it cannot
+     measure; it reports measured:false, the menu renders hidden for one frame,
+     and the layout effect below re-places it with real dimensions. */
+  const place = useCallback(() => {
+    const el = btnRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const menu = menuRef.current;
+    const mw = menu?.offsetWidth ?? 0;
+    const mh = menu?.scrollHeight ?? 0;
+    const measured = mh > 0;
+
+    const MARGIN = 8;
+    const GAP = 4;
+    const spaceBelow = window.innerHeight - r.bottom - GAP - MARGIN;
+    const spaceAbove = r.top - GAP - MARGIN;
+    const flip = measured && mh > spaceBelow && spaceAbove > spaceBelow;
+
+    const maxHeight = Math.max(120, flip ? spaceAbove : spaceBelow);
+    const left = Math.max(MARGIN, Math.min(r.left, window.innerWidth - (mw || 180) - MARGIN));
+    const top = flip
+      ? Math.max(MARGIN, r.top - GAP - Math.min(mh, maxHeight))
+      : r.bottom + GAP;
+
+    setPos({ top, left, maxHeight, measured });
+  }, []);
+
+  /* Terminates: place() only reports measured:false while menuRef is empty. */
+  useLayoutEffect(() => {
+    if (open && pos && !pos.measured) place();
+  }, [open, pos, place]);
 
   useEffect(() => {
     if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    place();
+    const onDown = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (btnRef.current?.contains(t) || menuRef.current?.contains(t)) return;
+      setOpen(false);
     };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    window.addEventListener("resize", place);
+    // capture phase: catch scrolls on any ancestor, not just the window
+    window.addEventListener("scroll", place, true);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+    };
+  }, [open, place]);
+
+  const selected = !!value;
 
   return (
-    <div ref={ref} className="relative shrink-0">
+    <>
       <button
+        ref={btnRef}
         type="button"
         onClick={() => setOpen((p) => !p)}
         data-testid="button-vendor-category-dropdown"
-        className="flex gap-[8px] items-center p-[8px] rounded-[8px] hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-        style={{ background: "#222737" }}
+        aria-expanded={open}
+        className="flex gap-[8px] items-center p-[8px] rounded-[8px] shrink-0 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+        style={{ background: selected ? "#240757" : "#222737" }}
       >
-        <span className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[16px] whitespace-nowrap" style={{ color: value ? "#a8b9f4" : "#6c779d" }}>
+        <span
+          className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[16px] whitespace-nowrap"
+          style={{ color: selected ? "#ffffff" : "#6c779d" }}
+        >
           {value || "category"}
         </span>
         <ChevronDown
-          className="size-[16px] shrink-0 transition-transform"
-          style={{ color: "#6c779d", transform: open ? "rotate(180deg)" : "none" }}
+          size={20}
+          className="shrink-0 transition-transform"
+          style={{ color: selected ? "#ffffff" : "#6c779d", transform: open ? "rotate(180deg)" : "none" }}
         />
       </button>
 
-      {open && (
+      {open && pos && createPortal(
         <div
-          className="absolute top-full left-0 mt-[4px] z-50 flex flex-col items-start p-[8px] rounded-[12px] min-w-[160px]"
+          ref={menuRef}
+          /* Deliberately NOT role="listbox". This is a disclosure of ordinary
+             buttons reached with Tab; claiming listbox would promise arrow-key
+             roving focus that the markup does not implement. */
+          className="fixed z-[80] flex flex-col items-start p-[8px] rounded-[12px] min-w-[180px] overflow-y-auto"
           style={{
+            top: pos.top,
+            left: pos.left,
+            maxHeight: pos.maxHeight,
+            visibility: pos.measured ? "visible" : "hidden",
             background: "#0a0c10",
             border: "1px solid #1d2132",
-            boxShadow: "0px 68px 13.5px rgba(0,0,0,0.06), 0px 38px 11.5px rgba(0,0,0,0.2), 0px 17px 8.5px rgba(0,0,0,0.34), 0px 4px 4.5px rgba(0,0,0,0.39)",
+            boxShadow: "0px 38px 11.5px rgba(0,0,0,0.2), 0px 17px 8.5px rgba(0,0,0,0.34), 0px 4px 4.5px rgba(0,0,0,0.39)",
           }}
         >
           {VENDOR_CATEGORIES.map((cat) => (
             <button
               key={cat}
               type="button"
+              aria-current={cat === value || undefined}
               onClick={() => { onChange(cat); setOpen(false); }}
+              data-testid={`option-vendor-category-${cat.toLowerCase().replace(/\s+/g, "-")}`}
               className="flex items-start p-[8px] rounded-[8px] w-full text-left hover:bg-[#222737] transition-colors focus:outline-none focus-visible:bg-[#222737]"
             >
               <span
@@ -198,9 +272,10 @@ function CategoryDropdown({
               </span>
             </button>
           ))}
-        </div>
+        </div>,
+        document.body,
       )}
-    </div>
+    </>
   );
 }
 
@@ -346,10 +421,10 @@ export function VendorsPanel() {
 
   const countsKnown = !isLoading && !isError;
   const vendorFilters = [
-    { value: "Needs Review", label: "Needs Review", count: countsKnown ? grouped.underReview.length : undefined, variant: "amber" as const },
-    { value: "New", label: "New", count: countsKnown ? grouped.newVendors.length : undefined, variant: "amber" as const },
-    { value: "Trusted", label: "Trusted", count: countsKnown ? grouped.trusted.length : undefined },
-    { value: "Suggested", label: "Suggested", count: countsKnown ? grouped.known.length : undefined },
+    { value: "Needs Review", label: "Needs Review", variant: "amber" as const },
+    { value: "New", label: "New", variant: "amber" as const },
+    { value: "Trusted", label: "Trusted" },
+    { value: "Suggested", label: "Suggested" },
   ];
 
   return (
@@ -369,7 +444,7 @@ export function VendorsPanel() {
         </AlertCallout>
       )}
 
-      <div className="w-full">
+      <div className="flex flex-col gap-[26px] w-full">
         {isLoading ? (
           <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
             <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
@@ -411,12 +486,10 @@ export function VendorsPanel() {
               ) : (
                 /* Expanded: sentence-style form — matches Figma 6199:70745 exactly */
                 <div
-                  className="rounded-[16px] w-full"
+                  className="w-full rounded-[16px] p-[16px] flex flex-col gap-[12px]"
                   style={{ background: "#0a0c10" }}
                   data-testid="panel-add-vendor"
                 >
-                  {/* Top section: sentence row + optional error */}
-                  <div className="flex flex-col gap-[12px] p-[16px]">
                     {/* Three groups in a wrapping row, gap-[16px] between groups */}
                     <div className="flex flex-wrap gap-[16px] items-center w-full">
                       {/* Group 1: "Add vendor" + name input */}
@@ -462,19 +535,16 @@ export function VendorsPanel() {
                     {error && (
                       <AlertCallout testId="text-add-vendor-error">{error}</AlertCallout>
                     )}
-                  </div>
 
-                  {/* Bottom section: full-width equal buttons separated by border-t */}
-                  <div
-                    className="flex gap-[16px] items-center p-[16px] border-t border-solid w-full"
-                    style={{ borderColor: "#1d2132", backdropFilter: "blur(10px)" }}
-                  >
+                  {/* Inset separator + buttons — same shape as the rules builder box */}
+                  <div className="h-px w-full bg-[#1d2132]" />
+
+                  <div className="flex gap-[10px] items-stretch w-full">
                     <button
                       type="button"
                       onClick={resetAddVendor}
                       data-testid="button-add-vendor-cancel"
-                      className="flex flex-1 items-center justify-center min-w-px px-[12px] py-[8px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[12px] whitespace-nowrap hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-                      style={{ background: "#222737" }}
+                      className="flex-1 px-[12px] py-[10px] rounded-[100px] bg-[#222737] hover:bg-[#2b3145] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#6c779d]"
                     >
                       Cancel
                     </button>
@@ -487,8 +557,7 @@ export function VendorsPanel() {
                       }}
                       disabled={!vendorName.trim()}
                       data-testid="button-submit-vendor"
-                      className="flex flex-1 items-center justify-center min-w-px px-[12px] py-[8px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#ff9400] text-[12px] whitespace-nowrap hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-                      style={{ background: "#4a2300" }}
+                      className="flex-1 px-[12px] py-[10px] rounded-[100px] bg-[#4a2300] hover:bg-[#5a2d00] disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#ff9500]"
                     >
                       Submit for Verification
                     </button>

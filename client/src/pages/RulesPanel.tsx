@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useSearch } from "wouter";
 import {
-  ChevronRight,
+  ChevronDown,
   Plus,
   Sparkles,
   Check,
@@ -411,14 +411,12 @@ function Chip({
   open,
   onClick,
   testId,
-  compact,
 }: {
   value?: string;
   placeholder: string;
   open: boolean;
   onClick: () => void;
   testId: string;
-  compact?: boolean;
 }) {
   const hasValue = !!value;
   return (
@@ -426,16 +424,18 @@ function Chip({
       type="button"
       onClick={onClick}
       data-testid={testId}
-      className={`inline-flex items-center gap-[4px] rounded-[8px] transition-colors [font-family:'Gilroy',sans-serif] text-[14px] ${
-        compact ? "py-[2px] px-[8px]" : "py-[3px] px-[10px]"
-      } ${
-        hasValue
-          ? "bg-[#240757] text-[#a8b9f4] font-semibold"
-          : "bg-[#11141b] text-[#6c779d] font-medium"
-      }`}
+      className="inline-flex items-center gap-[8px] p-[8px] rounded-[8px] transition-colors [font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+      style={{
+        background: hasValue ? "#240757" : "#222737",
+        color: hasValue ? "#ffffff" : "#6c779d",
+      }}
     >
-      {value ?? placeholder}
-      <ChevronRight size={12} className={`transition-transform ${open ? "rotate-90" : ""}`} />
+      <span className="whitespace-nowrap">{value ?? placeholder}</span>
+      <ChevronDown
+        size={20}
+        className={`shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
+        style={{ color: hasValue ? "#ffffff" : "#6c779d" }}
+      />
     </button>
   );
 }
@@ -673,7 +673,6 @@ export function RulesPanel() {
             chips={RULE_TABS.map((tab) => ({
               value: tab,
               label: tab,
-              icon: tab === "Guardrails" ? <Lock size={11} aria-hidden /> : undefined,
             }))}
             value={activeTab}
             onChange={(v) => setActiveTab(v as RuleTab)}
@@ -761,11 +760,11 @@ export function RulesPanel() {
             </button>
           ) : (
             <div className="w-full rounded-[16px] bg-[#0a0c10] p-[16px] flex flex-col gap-[12px]" data-testid="panel-builder">
-              {/* Two-line sentence builder, matches Figma */}
-              <div className="flex flex-col gap-[6px] [font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[15px] leading-[28px]">
-                {/* Line 1: "When a [kind] from [vendor] is under [amount]" */}
-                <div className="flex flex-wrap items-center gap-[6px]">
-                  <span>When a</span>
+              {/* One continuous wrapping sentence, matches Figma 5734:70625 */}
+              <div className="flex flex-wrap gap-[16px] items-center w-full [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[24px]">
+                {/* "When a [kind]" */}
+                <div className="flex gap-[16px] items-center shrink-0">
+                  <span className="whitespace-nowrap">When a</span>
                   <div className="relative">
                     <Chip
                       value={builder.category || undefined}
@@ -799,7 +798,11 @@ export function RulesPanel() {
                       </div>
                     )}
                   </div>
-                  <span>from</span>
+                </div>
+
+                {/* "from [vendor]" */}
+                <div className="flex gap-[16px] items-center shrink-0">
+                  <span className="whitespace-nowrap">from</span>
                   <div className="relative">
                     <Chip
                       value={builder.vendor || undefined}
@@ -872,20 +875,24 @@ export function RulesPanel() {
                       </div>
                     )}
                   </div>
-                  <span>is {isAuto ? "under" : "over"}</span>
+                </div>
+
+                {/* "is under [amount]" */}
+                <div className="flex gap-[16px] items-center shrink-0">
+                  <span className="whitespace-nowrap">is {isAuto ? "under" : "over"}</span>
                   <input
                     value={builder.amount}
                     inputMode="numeric"
                     placeholder="$0"
                     onChange={(e) => setBuilder((b) => ({ ...b, amount: e.target.value }))}
                     data-testid="input-builder-amount"
-                    className="w-[80px] rounded-[8px] border border-[#1d2132] bg-[#06070a] px-[10px] py-[3px] [font-family:'JetBrains_Mono',monospace] text-[14px] text-[#a8b9f4] placeholder:text-[#414965] focus:outline-none focus-visible:border-[rgba(118,49,238,0.5)]"
+                    className="w-[160px] rounded-[8px] border border-solid border-[#414965] bg-[#222737] px-[8px] py-[10px] [font-family:'JetBrains_Mono',monospace] text-[16px] leading-[20px] text-white placeholder:text-[#6c779d] focus:outline-none focus-visible:border-[rgba(118,49,238,0.5)]"
                   />
                 </div>
 
-                {/* Line 2: "then [action]" */}
-                <div className="flex flex-wrap items-center gap-[6px]">
-                  <span>then</span>
+                {/* "then [action]" */}
+                <div className="flex gap-[16px] items-center shrink-0">
+                  <span className="whitespace-nowrap">then</span>
                   <div className="relative">
                     <Chip
                       value={builder.action ? ACTION_LABELS[builder.action] : undefined}
@@ -937,7 +944,7 @@ export function RulesPanel() {
                   type="button"
                   onClick={resetBuilder}
                   data-testid="button-builder-cancel"
-                  className="flex-1 px-[12px] py-[10px] rounded-[100px] bg-[#1d2132] hover:bg-[#252a3d] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#a8b9f4]"
+                  className="flex-1 px-[12px] py-[10px] rounded-[100px] bg-[#222737] hover:bg-[#2b3145] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#6c779d]"
                 >
                   Cancel
                 </button>
