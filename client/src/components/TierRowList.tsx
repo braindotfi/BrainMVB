@@ -91,8 +91,8 @@ export const TierRow = ({ row }: { row: TierRowModel }) => {
   const accent = ROW_ACCENT[row.tier];
   return (
     <div
-      className={`flex flex-col sm:flex-row gap-[12px] items-start sm:items-center justify-between px-[8px] py-[8px] w-full bg-[#0a0c10] rounded-[8px] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] ${
-        accent ? "border-l-[3px] border-solid" : ""
+      className={`flex flex-col sm:flex-row gap-[12px] items-start sm:items-center justify-between px-[8px] py-[8px] w-full bg-[#0a0c10] transition-colors hover:bg-[#11141b] border-b border-solid border-[#1d2132] last:border-b-0 ${
+        accent ? "border-l-[3px]" : ""
       } ${row.onOpenDetail ? "cursor-pointer" : ""}`}
       style={accent ? { borderLeftColor: accent } : undefined}
       data-testid={`${row.testIdPrefix}-${row.id}`}
@@ -194,12 +194,9 @@ export const TierSection = ({ tier, rows }: { tier: ProposalTier; rows: TierRowM
         </p>
       </div>
       <div className="flex flex-col w-full rounded-[12px] border border-solid border-[#1d2132] bg-[#0a0c10] overflow-hidden">
-        <div className="flex flex-col gap-[8px] p-[8px] w-full">
-          {rows.map((row, idx) => (
-            <div key={row.id} className="flex flex-col gap-[8px] w-full">
-              <TierRow row={row} />
-              {idx < rows.length - 1 && <Divider />}
-            </div>
+        <div className="flex flex-col w-full">
+          {rows.map((row) => (
+            <TierRow key={row.id} row={row} />
           ))}
         </div>
       </div>

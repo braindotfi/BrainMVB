@@ -129,7 +129,7 @@ function Section({
           </div>
         </div>
       </div>
-      <div className="flex flex-col gap-[8px] items-start p-[8px] relative w-full">
+      <div className="flex flex-col items-start relative w-full">
         {count === 0 && empty ? (
           <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
             {empty}
@@ -152,7 +152,7 @@ function AutomationRow({ rule }: { rule: AutoRule }) {
   return (
     <div
       data-testid={`row-automation-${rule.id}`}
-      className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer"
+      className="flex gap-[16px] items-center p-[8px] relative shrink-0 w-full bg-[#0a0c10] transition-colors border-b border-solid border-[#1d2132] last:border-b-0 hover:bg-[#11141b] cursor-pointer"
     >
       <button
         type="button"
@@ -195,7 +195,7 @@ function GuardrailRow({ rule }: { rule: AutoRule }) {
   return (
     <div
       data-testid={`row-guardrail-${rule.id}`}
-      className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer"
+      className="flex gap-[16px] items-center p-[8px] relative shrink-0 w-full bg-[#0a0c10] transition-colors border-b border-solid border-[#1d2132] last:border-b-0 hover:bg-[#11141b] cursor-pointer"
     >
       <button
         type="button"
@@ -236,7 +236,7 @@ function AlwaysOnRow({ rule }: { rule: AutoRule }) {
   return (
     <div
       data-testid={`row-alwayson-${rule.id}`}
-      className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer"
+      className="flex gap-[16px] items-center p-[8px] relative shrink-0 w-full bg-[#0a0c10] transition-colors border-b border-solid border-[#1d2132] last:border-b-0 hover:bg-[#11141b] cursor-pointer"
     >
       <img src={shieldKeyIcon} alt="shield" className="shrink-0 w-[20px] h-[20px]" />
       <button
@@ -286,7 +286,7 @@ function PolicySection() {
           </p>
         )}
       </div>
-      <div className="flex flex-col items-start p-[8px] gap-[8px] relative shrink-0 w-full">
+      <div className="flex flex-col items-start relative shrink-0 w-full">
         {isLoading && (
           <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
             <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
@@ -308,11 +308,8 @@ function PolicySection() {
             </p>
           </div>
         )}
-        {!isLoading && !isError && rules.map((r, idx) => (
-          <div key={r.id} className="flex flex-col gap-[8px] w-full">
-            <AlwaysOnRow rule={r} />
-            {idx < rules.length - 1 && <Divider />}
-          </div>
+        {!isLoading && !isError && rules.map((r) => (
+          <AlwaysOnRow key={r.id} rule={r} />
         ))}
       </div>
     </div>

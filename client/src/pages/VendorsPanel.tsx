@@ -31,7 +31,7 @@ function VendorRow({
       type="button"
       onClick={onClick}
       data-testid={`row-vendor-${vendor.id}`}
-      className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+      className="flex gap-[16px] items-center p-[8px] relative shrink-0 w-full bg-[#0a0c10] transition-colors border-b border-solid border-[#1d2132] last:border-b-0 hover:bg-[#11141b] cursor-pointer text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
     >
       <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
         <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">
@@ -381,9 +381,9 @@ export function VendorsPanel() {
               </button>
             </div>
             {/* Rows */}
-            <div className="p-[8px]">
+            <div>
               {tabVendors.length === 0 ? (
-                <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
+                <div className="flex gap-[16px] items-center p-[8px] relative shrink-0 w-full">
                   <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
                     {activeTab === "Needs Review" && "No vendors under review. Brain flags new or unusual counterparties here."}
                     {activeTab === "New" && "No new vendors detected yet."}
@@ -392,16 +392,14 @@ export function VendorsPanel() {
                   </p>
                 </div>
               ) : (
-                <div className="flex flex-col gap-[8px] items-start w-full">
-                  {tabVendors.map((vendor, idx) => (
-                    <div key={vendor.id} className="flex flex-col gap-[8px] w-full">
-                      <VendorRow
-                        vendor={vendor}
-                        format={format}
-                        onClick={() => handleOpenVendor(vendor)}
-                      />
-                      {idx < tabVendors.length - 1 && <Divider />}
-                    </div>
+                <div className="flex flex-col items-start w-full">
+                  {tabVendors.map((vendor) => (
+                    <VendorRow
+                      key={vendor.id}
+                      vendor={vendor}
+                      format={format}
+                      onClick={() => handleOpenVendor(vendor)}
+                    />
                   ))}
                 </div>
               )}

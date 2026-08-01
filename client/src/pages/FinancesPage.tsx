@@ -268,8 +268,8 @@ export function FinancesPage() {
             {accounts.map((acc, idx) => {
               const clickable = !!acc.id;
               return (
-              <div key={acc.name} className="flex flex-col gap-[8px] w-full">
-                <div
+              <div
+                  key={acc.name}
                   data-testid={`row-account-${idx}`}
                   {...(clickable
                     ? {
@@ -281,7 +281,7 @@ export function FinancesPage() {
                         },
                       }
                     : {})}
-                  className={`flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors ${clickable ? "hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer" : ""}`}
+                  className={`flex gap-[16px] items-center p-[8px] relative shrink-0 w-full bg-[#0a0c10] transition-colors border-b border-solid border-[#1d2132] last:border-b-0 ${clickable ? "hover:bg-[#11141b] cursor-pointer" : ""}`}
                 >
                   <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
                     <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">{acc.name}</p>
@@ -299,8 +299,7 @@ export function FinancesPage() {
                     <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap">{rowBalanceLabel(acc, format)}</p>
                   </div>
                 </div>
-                {idx < accounts.length - 1 && <Divider />}
-              </div>
+              
               );
             })}
             {accounts.length === 0 && (

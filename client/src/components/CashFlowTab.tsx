@@ -403,8 +403,8 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
                 ? () => setOpenBill(bill as unknown as BillDTO)
                 : undefined;
             return (
-              <div key={row.key} className="flex flex-col gap-[8px] w-full">
-                <div
+              <div
+                  key={row.key}
                   role={open ? "button" : undefined}
                   tabIndex={open ? 0 : undefined}
                   data-testid={`row-cashflow-${row.key}`}
@@ -420,9 +420,10 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
                       : undefined
                   }
                   className={[
-                    "flex gap-[16px] items-center p-[8px] rounded-[8px] w-full bg-[#0a0c10] border border-solid border-transparent transition-colors",
+                    "flex gap-[16px] items-center p-[8px] w-full bg-[#0a0c10] transition-colors",
                     "outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]",
-                    open ? "hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer" : "",
+                    "border-b border-solid border-[#1d2132] last:border-b-0",
+                    open ? "hover:bg-[#11141b] cursor-pointer" : "",
                   ].join(" ")}
                 >
                   <div className="flex flex-1 flex-col items-start justify-center min-w-px gap-[4px]">
@@ -454,8 +455,7 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
                     {format(row.amount)}
                   </p>
                 </div>
-                {idx < rows.length - 1 && <Divider />}
-              </div>
+              
             );
           })
         )}
