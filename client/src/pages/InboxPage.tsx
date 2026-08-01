@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import chevronDownIcon from "@/assets/chevron_down_dropdown.png";
 import { useLocation, useSearch } from "wouter";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ReviewModal, type ReviewItemType } from "@/components/ReviewItems";
@@ -212,9 +213,8 @@ const TAG_APPROVED_BY_YOU = "bg-[#240757] text-[#a88afa] border-[rgba(168,138,25
 const TAG_REJECTED = "bg-[#350011] text-[#d20344] border-[rgba(210,3,68,0.2)]";
 const TAG_DETECTED = "bg-[#222737] text-[#6c779d] border-[rgba(108,119,157,0.2)]";
 
-/* Compact pill-style filter selects — fit content, not full-width. */
-const CONTROL =
-  "bg-[#1d2132] border border-solid border-[#2a3050] rounded-[8px] px-[12px] py-[8px] [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[18px] text-[#a8b9f4] outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] cursor-pointer appearance-none pr-[30px]";
+/* No longer a shared CONTROL string — dropdowns are custom-overlay components
+   (transparent native <select> over a styled visual layer) to match Figma exactly. */
 
 /* ── Page ─────────────────────────────────────────────────────────────────── */
 export function InboxPage() {
@@ -958,7 +958,7 @@ export function InboxPage() {
       : "Nothing needs your attention right now. Brain is keeping things moving.";
 
   return (
-    <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] size-full flex flex-col">
+    <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden relative rounded-[16px] flex-1 min-h-0 w-full flex flex-col">
 
       {/* Static chrome: header + filter toolbar — never scrolls */}
       <div className="shrink-0 flex flex-col gap-[24px] items-start pt-[40px] px-[16px] pb-[16px] w-full min-w-0">
@@ -970,9 +970,12 @@ export function InboxPage() {
           </p>
         </div>
 
-        {/* Filter toolbar — compact content-width pills, no search bar. */}
-        <div className="flex flex-row flex-wrap gap-[8px]">
-          {[
+        {/* Filter toolbar — pixel-perfect Figma dropdowns.
+            Each pill: w-120 bg-#222737 no-border p-8 rounded-8 gap-8 text+icon.
+            Transparent native <select> overlays the visual div so the browser
+            opens the native picker on click while the visual matches Figma. */}
+        <div className="flex flex-row gap-[24px]">
+          {([
             {
               value: filters.priority,
               onChange: (v: string) => setFilter("priority", v as DecisionFilterState["priority"]),
@@ -992,14 +995,14 @@ export function InboxPage() {
               onChange: (v: string) => setFilter("type", v),
               label: "Filter by type",
               testId: "filter-type",
-              /* Types come from rows actually present — an option that can only
-                 return "no results" teaches the user the filter is broken. */
+              /* Types from rows present so the filter is never vacuously empty. */
               options: [{ value: "all", label: "All Types" }, ...availableTypes],
             },
-          ].map(({ value, onChange, label, testId, options }) => (
-            <div key={testId} className="relative inline-flex items-center">
+          ] as const).map(({ value, onChange, label, testId, options }) => (
+            <div key={testId} className="relative w-[120px] shrink-0">
+              {/* Native select — invisible, covers full area, handles clicks */}
               <select
-                className={CONTROL}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 aria-label={label}
@@ -1009,7 +1012,13 @@ export function InboxPage() {
                   <option key={o.value} value={o.value}>{o.label}</option>
                 ))}
               </select>
-              <span className="pointer-events-none absolute right-[12px] text-[#6c779d] text-[11px] leading-none select-none">&#9662;</span>
+              {/* Visual layer — pointer-events-none so clicks reach the select */}
+              <div className="bg-[#222737] rounded-[8px] p-[8px] flex items-center gap-[8px] pointer-events-none w-full">
+                <span className="flex-1 min-w-0 [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap">
+                  {(options as ReadonlyArray<{ value: string; label: string }>).find((o) => o.value === value)?.label ?? options[0].label}
+                </span>
+                <img src={chevronDownIcon} alt="" aria-hidden="true" className="shrink-0 h-[7px] w-auto" />
+              </div>
             </div>
           ))}
         </div>
