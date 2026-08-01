@@ -286,7 +286,7 @@ export function FinancesPage() {
                   className={`flex gap-[16px] items-center p-[8px] relative shrink-0 w-full bg-[#0a0c10] transition-colors border-b border-solid border-[#1d2132] last:border-b-0 ${clickable ? "hover:bg-[#11141b] cursor-pointer" : ""}`}
                 >
                   <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
-                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">{acc.name}</p>
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">{acc.name}</p>
                     <div className="flex gap-[4px] items-center relative shrink-0">
                       <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">{acc.sub}</p>
                       {acc.sub2 && (

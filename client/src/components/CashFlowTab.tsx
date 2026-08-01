@@ -441,7 +441,7 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
                 >
                   <div className="flex flex-1 flex-col items-start justify-center min-w-px gap-[4px]">
                     <div className="flex gap-[8px] items-center flex-wrap">
-                      <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px]">
+                      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px]">
                         {row.label}
                       </p>
                       <KindBadge kind={row.kind} />

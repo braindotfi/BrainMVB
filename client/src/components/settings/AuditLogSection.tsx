@@ -401,6 +401,9 @@ export function AuditLogSection() {
                 >
                   <div className="flex-1 min-w-0 flex flex-col gap-[4px]">
                     <div className="flex items-center gap-2 flex-wrap">
+                      <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] min-w-0 break-words">
+                        {record.summary}
+                      </span>
                       <span
                         data-testid={`badge-audit-category-${record.id}`}
                         className="px-2 py-[2px] rounded-[22px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[14px] uppercase tracking-[0.04em] shrink-0"
@@ -408,19 +411,13 @@ export function AuditLogSection() {
                       >
                         {badge.label}
                       </span>
-                      <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#c8d4f0] text-[15px] leading-[20px] min-w-0 break-words">
-                        {record.summary}
-                      </span>
                     </div>
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] leading-[18px]">
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[18px]">
                       {[auditRecordLabel(record), actor, record.occurredAtLabel]
                         .filter(Boolean)
                         .join(" · ")}
                     </p>
                   </div>
-                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="flex-shrink-0 mt-[6px]" aria-hidden="true">
-                    <path d="M5 3L9 7L5 11" stroke="#414965" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
                 </button>
               </div>
             );

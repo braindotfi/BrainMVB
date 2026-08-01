@@ -142,12 +142,12 @@ export const TierRow = ({ row }: { row: TierRowModel }) => {
           )}
         </div>
         {row.subtitle && (
-          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[13px] w-full">
+          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[14px] w-full">
             {row.subtitle}
           </p>
         )}
         {row.note && (
-          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#414965] text-[12px] w-full">
+          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[14px] w-full">
             {row.note}
           </p>
         )}

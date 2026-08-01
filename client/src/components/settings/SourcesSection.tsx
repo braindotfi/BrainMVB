@@ -109,10 +109,10 @@ function SourceRow({ title, subtitle, onRemove, removing, testId, removeTestId, 
     >
       <div className="flex items-center gap-[12px]">
         <div className="flex-1 min-w-0 flex flex-col gap-[2px]">
-          <div className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[14px] leading-[18px] truncate">
+          <div className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] truncate">
             {title}
           </div>
-          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[12px] leading-[16px] truncate">
+          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[16px] truncate">
             {subtitle}
           </p>
         </div>
