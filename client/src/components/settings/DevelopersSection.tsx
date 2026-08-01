@@ -918,7 +918,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
                     type="button"
                     data-testid="button-overview-add-tenant"
                     onClick={() => onNavigate("tenants")}
-                    className="shrink-0 rounded-full px-[14px] py-[6px] bg-[#222737] hover:bg-[#2c3247] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[16px] flex items-center justify-center"
+                    className="bg-[#240757] flex gap-[2px] items-center justify-center px-[10px] py-[4px] rounded-[100px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#7631ee] text-[12px] whitespace-nowrap hover:bg-[#2e0a6e] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
                   >
                     <Plus className="relative shrink-0 size-[16px] text-[#7631ee]" />
                     Add Tenant
@@ -930,7 +930,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
                     data-testid="button-overview-create-key"
                     onClick={() => onNavigate("keys")}
                     disabled={!hasTenant}
-                    className="shrink-0 rounded-full px-[14px] py-[6px] bg-[#222737] hover:bg-[#2c3247] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[16px] flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="bg-[#240757] flex gap-[2px] items-center justify-center px-[10px] py-[4px] rounded-[100px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#7631ee] text-[12px] whitespace-nowrap hover:bg-[#2e0a6e] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <Plus className="relative shrink-0 size-[16px] text-[#7631ee]" />
                     Create Key
@@ -1214,7 +1214,7 @@ function KeysSection({ env }: { env: DevEnv }) {
                 }
                 setShowCreate(true);
               }}
-              className="shrink-0 rounded-full px-[14px] py-[6px] bg-[#222737] hover:bg-[#2c3247] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[16px] flex items-center justify-center"
+              className="bg-[#240757] flex gap-[2px] items-center justify-center px-[10px] py-[4px] rounded-[100px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#7631ee] text-[12px] whitespace-nowrap hover:bg-[#2e0a6e] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
             >
               <Plus className="relative shrink-0 size-[16px] text-[#7631ee]" />
               Create Key
@@ -1642,7 +1642,7 @@ function TenantsSection({ env, onNavigate }: { env: DevEnv; onNavigate: (s: DevS
                 );
               }
             }}
-            className="shrink-0 rounded-full px-[14px] py-[6px] bg-[#222737] hover:bg-[#2c3247] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[16px] flex items-center justify-center"
+            className="bg-[#240757] flex gap-[2px] items-center justify-center px-[10px] py-[4px] rounded-[100px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#7631ee] text-[12px] whitespace-nowrap hover:bg-[#2e0a6e] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
           >
             {!showCreate && <Plus className="relative shrink-0 size-[16px] text-[#7631ee]" />}
             {showCreate ? "Cancel" : "Create Tenant"}
