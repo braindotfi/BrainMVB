@@ -157,6 +157,103 @@ describe("elevatedThresholdsFromPolicy", () => {
   });
 });
 
+describe("elevatedThresholdsFromPolicy: clauses that name no category", () => {
+  /* No live tenant policy reaches any of these: every rule in the reference
+     document names exactly one category. They are synthetic deliberately. The DSL
+     permits the shape, `coversPayments` in brainPolicy.ts already reads it as
+     "covers everything", and this file used to drop it — a blanket two-approver
+     line would vanish while a laxer named clause still set a limit, so a batch was
+     offered under a ceiling the policy never granted. With no production rule of
+     this shape, these cases are the only thing keeping that caught. */
+  const twoSigners = { execute: "confirm", require: "owner_and_cfo" } as const;
+  const over = (v: number) => ({ "amount.gt": { value: `${v}.00`, currency: "USD" } });
+  /* The live agent_action line, kept alongside to show which one wins. */
+  const AGENT_500K = LIVE_POLICY.rules.find((r) => r.id === "ar-confirm-above-500k")!;
+  const wide = (applies_to?: string[]) =>
+    policyOf({ id: "wide", ...twoSigners, when: over(10_000), ...(applies_to ? { applies_to } : {}) });
+
+  const everyCategoryShapes: Array<[string, string[] | undefined]> = [
+    ["absent applies_to", undefined],
+    ["empty applies_to", []],
+    ["the explicit \"any\" wildcard", ["any"]],
+    ["a scope it cannot read", ["", "   "]],
+  ];
+  for (const [label, applies_to] of everyCategoryShapes) {
+    it(`binds a category it never names: ${label}`, () => {
+      const e = elevatedThresholdsFromPolicy(wide(applies_to));
+      expect(e.universal).toBe(10_000);
+      /* never filed under a literal key, which no record's details.kind can match */
+      expect(e.limits).toEqual({});
+      expect(bulkLimitFor("collections", "agent_action", e, {}))
+        .toEqual({ value: 10_000, source: "policy" });
+    });
+  }
+
+  it("takes the wildcard line when it is lower than the named one", () => {
+    /* The gap, end to end: before this, the $10k line was dropped and a $42,000
+       record was offered for bulk approval under the $500,000 agent_action line. */
+    const e = elevatedThresholdsFromPolicy(policyOf(
+      AGENT_500K,
+      { id: "wide", ...twoSigners, when: over(10_000), applies_to: ["any"] },
+    ));
+    expect(e.limits).toEqual({ agent_action: 500_000 });
+    expect(e.universal).toBe(10_000);
+    const limit = bulkLimitFor("collections", "agent_action", e, {});
+    expect(limit).toEqual({ value: 10_000, source: "policy" });
+    expect(isBulkEligible(candidate({ amount: 42_000 }), limit)).toBe(false);
+    expect(isBulkEligible(candidate({ amount: 4_300 }), limit)).toBe(true);
+  });
+
+  it("keeps the named line when it is the lower of the two", () => {
+    const e = elevatedThresholdsFromPolicy(policyOf(
+      { id: "narrow", ...twoSigners, when: over(20_000), applies_to: ["agent_action"] },
+      { id: "wide", ...twoSigners, when: over(900_000), applies_to: ["any"] },
+    ));
+    expect(bulkLimitFor("collections", "agent_action", e, {}))
+      .toEqual({ value: 20_000, source: "policy" });
+  });
+
+  it("suppresses every category when a category-less clause has no evaluable amount", () => {
+    const e = elevatedThresholdsFromPolicy(policyOf(AGENT_500K, { id: "wide", ...twoSigners }));
+    expect(e.universalUnconditional).toBe(true);
+    expect(e.limits).toEqual({ agent_action: 500_000 });
+    expect(bulkLimitFor("collections", "agent_action", e, {})).toBeNull();
+    expect(bulkLimitFor("collections", "outbound_payment", e, {})).toBeNull();
+  });
+
+  it("covers a category the policy never names at all", () => {
+    /* brain-core adding a new details.kind must not walk out from under the
+       tenant's blanket line. */
+    const e = elevatedThresholdsFromPolicy(wide(["any"]));
+    expect(bulkLimitFor("collections", "future_kind", e, {}))
+      .toEqual({ value: 10_000, source: "policy" });
+  });
+
+  it("ignores a category-less clause that only needs a single signer", () => {
+    const e = elevatedThresholdsFromPolicy(policyOf(
+      AGENT_500K,
+      { id: "wide", execute: "confirm", require: "single_signer", when: over(10_000), applies_to: ["any"] },
+    ));
+    expect(e.universal).toBeNull();
+    expect(e.universalUnconditional).toBe(false);
+    expect(bulkLimitFor("collections", "agent_action", e, {}))
+      .toEqual({ value: 500_000, source: "policy" });
+  });
+
+  it("still lets a user rule tighten below a wildcard line", () => {
+    const e = elevatedThresholdsFromPolicy(wide(["any"]));
+    expect(bulkLimitFor("collections", "agent_action", e, { collections: 5_000 }))
+      .toEqual({ value: 5_000, source: "rule" });
+  });
+
+  it("changes nothing for the live policy, whose clauses all name a category", () => {
+    const e = elevatedThresholdsFromPolicy(LIVE_POLICY);
+    expect(e.universal).toBeNull();
+    expect(e.universalUnconditional).toBe(false);
+    expect(e.limits).toEqual({ outbound_payment: 50_000, onchain_tx: 250_000, agent_action: 500_000 });
+  });
+});
+
 describe("policyCategoryOf", () => {
   it("reads details.kind", () => {
     expect(policyCategoryOf({ details: { kind: "agent_action" } })).toBe("agent_action");

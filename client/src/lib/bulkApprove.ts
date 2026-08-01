@@ -99,7 +99,21 @@ export interface PolicyElevation {
    * not unconditional-safe, it is unknown, and unknown fails closed.
    */
   unconditional: ReadonlySet<string>;
+  /**
+   * The amount above which more than one approver is required for EVERY category,
+   * from a clause whose scope is not one named category — see
+   * {@link elevatedThresholdsFromPolicy}. Null when the policy has no such clause.
+   */
+  universal: number | null;
+  /** A category-less clause escalates with no amount this code can evaluate, so
+   *  nothing at all is bulk-eligible. The `unconditional` set, applied to every
+   *  category at once. */
+  universalUnconditional: boolean;
 }
+
+/** The DSL's explicit "every kind of action" scope. `APPLIES_TO_LABEL` renders it
+ *  "any action"; it is a wildcard, never a category a record can be filed under. */
+const ANY_SCOPE = "any";
 
 /**
  * Read the tenant's elevated-approval structure out of the signed policy.
@@ -110,19 +124,54 @@ export interface PolicyElevation {
  *
  * Where several clauses cover one category the LOWEST wins: it is the first line an
  * amount crosses, so it is the one that governs.
+ *
+ * SCOPE. A clause's `applies_to` is a list of categories, but three shapes mean
+ * "every category" rather than a named one, and all three are collected as
+ * `universal` instead of as map keys:
+ *
+ *   - absent or empty — the same reading `mapPolicyRuleToCard` and
+ *     `coversPayments` use: an unscoped rule constrains any action.
+ *   - containing `"any"` — the DSL's explicit wildcard. Storing it under the
+ *     literal key `"any"` would file it where no record can ever match, because a
+ *     record's category comes from `details.kind` ("agent_action", …) and is never
+ *     the string "any".
+ *   - present but with no usable entry — scope this code cannot read. Unparsed is
+ *     unknown, and unknown fails closed, exactly as for an unrecognised `require`.
+ *
+ * Dropping any of these would not merely lose a limit: a two-approver line covering
+ * everything would go missing while a laxer per-category clause still set a limit,
+ * so a batch would be offered under a ceiling the policy does not actually grant.
+ * That is the one direction this file must never fail in.
  */
 export function elevatedThresholdsFromPolicy(
   facts: ApprovalPolicyFacts | null | undefined,
 ): PolicyElevation {
   const limits: Record<string, number> = {};
   const unconditional = new Set<string>();
+  let universal: number | null = null;
+  let universalUnconditional = false;
 
   for (const rule of facts?.rules ?? []) {
     if (!rule || !isElevatedConfirm(rule)) continue;
     const limit = policyAmount(rule.when?.["amount.gt"]);
-    for (const category of rule.applies_to ?? []) {
-      if (typeof category !== "string" || !category.trim()) continue;
-      const key = category.trim();
+
+    const declared = Array.isArray(rule.applies_to) ? rule.applies_to : [];
+    const named = declared
+      .filter((c): c is string => typeof c === "string" && !!c.trim())
+      .map((c) => c.trim());
+    /* Unscoped, wildcard, or unreadable — all three bind every category. */
+    const coversEverything = named.length === 0 || named.includes(ANY_SCOPE);
+
+    if (coversEverything) {
+      if (limit == null || limit <= 0) {
+        universalUnconditional = true;
+        continue;
+      }
+      universal = universal == null ? limit : Math.min(universal, limit);
+      continue;
+    }
+
+    for (const key of named) {
       if (limit == null || limit <= 0) {
         unconditional.add(key);
         continue;
@@ -130,12 +179,17 @@ export function elevatedThresholdsFromPolicy(
       limits[key] = limits[key] == null ? limit : Math.min(limits[key], limit);
     }
   }
-  return { limits, unconditional };
+  return { limits, unconditional, universal, universalUnconditional };
 }
 
 /** Nothing known. What an unreachable or absent policy resolves to — and, because
  *  a policy line is mandatory below, what suppresses every checkbox. */
-export const NO_POLICY_ELEVATION: PolicyElevation = { limits: {}, unconditional: new Set() };
+export const NO_POLICY_ELEVATION: PolicyElevation = {
+  limits: {},
+  unconditional: new Set(),
+  universal: null,
+  universalUnconditional: false,
+};
 
 /** Which policy category a record falls under. brain-core puts it on
  *  `details.kind` ("agent_action", "outbound_payment", …). */
@@ -164,6 +218,10 @@ export interface BulkLimit {
  *
  * Null whenever the answer is not positively known: no category, a category the
  * policy escalates unconditionally, or no evaluable policy threshold.
+ *
+ * A category-less clause (`universal`) is a policy line for EVERY category, so it
+ * both satisfies the requirement above on its own and competes with a named
+ * clause — lowest wins, for the same reason it does within one category.
  */
 export function bulkLimitFor(
   type: string | null | undefined,
@@ -172,10 +230,14 @@ export function bulkLimitFor(
   userThresholds: MaterialityThresholds | undefined,
 ): BulkLimit | null {
   if (!category) return null;
+  if (elevation.universalUnconditional) return null;
   if (elevation.unconditional.has(category)) return null;
 
-  const policy = elevation.limits[category];
-  if (typeof policy !== "number" || !Number.isFinite(policy) || policy <= 0) return null;
+  const evaluable = (v: unknown): v is number =>
+    typeof v === "number" && Number.isFinite(v) && v > 0;
+  const lines = [elevation.limits[category], elevation.universal].filter(evaluable);
+  if (lines.length === 0) return null;
+  const policy = Math.min(...lines);
 
   const cleanType = typeof type === "string" ? type.trim() : "";
   const rule = cleanType ? userThresholds?.[ruleAgentForProposalType(cleanType)] : undefined;
