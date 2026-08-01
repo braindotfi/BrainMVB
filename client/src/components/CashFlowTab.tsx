@@ -72,7 +72,7 @@ const KindBadge = ({ kind }: { kind: CashFlowKind }) => {
   const c = KIND_BADGE[kind];
   return (
     <span
-      className="[font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[12px] px-[6px] py-[3px] rounded-[4px] border border-solid shrink-0"
+      className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] px-[10px] py-[4px] rounded-[22px] border border-solid shrink-0"
       style={{ background: c.bg, borderColor: c.border, color: c.fg }}
     >
       {KIND_LABEL[kind]}
@@ -353,6 +353,10 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
           format={format}
         />
       </div>
+
+      {/* Separator — same pattern as Overview: h-px hairline + mb-[26px] gives the
+          same breathing room between the metric block and the section label below. */}
+      <div className="h-px relative shrink-0 w-full mb-[26px]" style={{ background: "#1d2132" }} />
 
       <WidgetCard title="Cash Flow" count={settling && rows.length === 0 ? undefined : rows.length}>
         {settling && rows.length === 0 ? (
