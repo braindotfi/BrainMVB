@@ -711,6 +711,13 @@ export function InboxPage() {
     [eligible, selectedIds, limitOf],
   );
 
+  /* Checked state comes from the RESOLVED batch rather than the raw id set. The
+     two differ only when something has put an out-of-scope id in the set, and in
+     that case the row must not render as checked: a tick mark on a row the bulk bar
+     is not counting and "approve selected" will not touch is a promise the surface
+     cannot keep. */
+  const batchIds = useMemo(() => new Set(selection.ids), [selection.ids]);
+
   /* Row id → the proposal id the approve endpoint takes. They are not always the
      same string, and sending the row id would 404 against core. */
   const proposalIdOf = useMemo(() => {
@@ -924,7 +931,7 @@ export function InboxPage() {
       actions,
       select: candidate
         ? {
-            checked: selectedIds.has(item.id),
+            checked: batchIds.has(item.id),
             disabled: bulkRunning || blocked,
             title: blocked
               ? `Bulk approval covers one type at a time. Clear the selection to choose ${decisionTypeLabel(candidate.type ?? "").toLowerCase()} items instead.`
