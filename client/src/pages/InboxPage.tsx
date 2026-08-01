@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import chevronDownIcon from "@/assets/chevron_down_dropdown.png";
 import { useLocation, useSearch } from "wouter";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -214,8 +214,100 @@ const TAG_APPROVED_BY_YOU = "bg-[#240757] text-[#a88afa] border-[rgba(168,138,25
 const TAG_REJECTED = "bg-[#350011] text-[#d20344] border-[rgba(210,3,68,0.2)]";
 const TAG_DETECTED = "bg-[#222737] text-[#6c779d] border-[rgba(108,119,157,0.2)]";
 
-/* No longer a shared CONTROL string — dropdowns are custom-overlay components
-   (transparent native <select> over a styled visual layer) to match Figma exactly. */
+interface InboxDropdownOption {
+  value: string;
+  label: string;
+}
+
+/** Dropdown labels are presentation text; keep their filter values unchanged. */
+function titleCaseDropdownLabel(label: string): string {
+  return label.replace(/\b[a-z]/g, (letter) => letter.toUpperCase());
+}
+
+function InboxDropdown({
+  value,
+  options,
+  onChange,
+  label,
+  testId,
+  open,
+  onOpenChange,
+}: {
+  value: string;
+  options: readonly InboxDropdownOption[];
+  onChange: (value: string) => void;
+  label: string;
+  testId: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const selected = options.find((option) => option.value === value) ?? options[0];
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) onOpenChange(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onOpenChange(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open, onOpenChange]);
+
+  return (
+    <div ref={rootRef} className="relative w-[120px] shrink-0">
+      <button
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={label}
+        data-testid={testId}
+        onClick={() => onOpenChange(!open)}
+        className="bg-[#222737] rounded-[8px] p-[8px] flex items-center gap-[8px] w-full text-left outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+      >
+        <span className="flex-1 min-w-0 [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[14px] leading-[20px] whitespace-nowrap truncate">
+          {titleCaseDropdownLabel(selected?.label ?? "")}
+        </span>
+        <img src={chevronDownIcon} alt="" aria-hidden="true" className="shrink-0 h-[7px] w-auto" />
+      </button>
+
+      {open && (
+        <div
+          role="listbox"
+          aria-label={label}
+          className="absolute left-0 top-[calc(100%+4px)] z-50 bg-[#0a0c10] border border-[#1d2132] border-solid flex flex-col items-start p-[8px] rounded-[12px] w-[208px] shadow-[0px_68px_13.5px_rgba(0,0,0,0.06),0px_38px_11.5px_rgba(0,0,0,0.2),0px_17px_8.5px_rgba(0,0,0,0.34),0px_4px_4.5px_rgba(0,0,0,0.39)]"
+          data-testid={`${testId}-menu`}
+        >
+          {options.map((option) => {
+            const selectedOption = option.value === value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                role="option"
+                aria-selected={selectedOption}
+                onClick={() => {
+                  onChange(option.value);
+                  onOpenChange(false);
+                }}
+                className="flex items-center p-[8px] rounded-[8px] shrink-0 w-full text-left [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap outline-none hover:bg-[#222737] focus-visible:bg-[#222737]"
+                data-testid={`${testId}-option-${option.value}`}
+              >
+                {titleCaseDropdownLabel(option.label)}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 /* ── Page ─────────────────────────────────────────────────────────────────── */
 export function InboxPage() {
@@ -227,6 +319,7 @@ export function InboxPage() {
 
   const statuses = useReviewStatuses();
   const [filters, setFilters] = useState<DecisionFilterState>(EMPTY_FILTERS);
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const setFilter = <K extends keyof DecisionFilterState>(key: K, value: DecisionFilterState[K]) =>
     setFilters((f) => ({ ...f, [key]: value }));
 
@@ -1003,11 +1096,6 @@ export function InboxPage() {
       ? "Checking for anything that needs your attention\u2026"
       : "Nothing needs your attention right now. Brain is keeping things moving.";
 
-/** Dropdown labels are presentation text; keep their filter values unchanged. */
-function titleCaseDropdownLabel(label: string): string {
-  return label.replace(/\b[a-z]/g, (letter) => letter.toUpperCase());
-}
-
   return (
     <div className="bg-[#11141b] overflow-hidden absolute inset-0 grid grid-rows-[auto_minmax(0,1fr)]">
 
@@ -1021,10 +1109,8 @@ function titleCaseDropdownLabel(label: string): string {
           </p>
         </div>
 
-        {/* Filter toolbar — pixel-perfect Figma dropdowns.
-            Each pill: w-120 bg-#222737 no-border p-8 rounded-8 gap-8 text+icon.
-            Transparent native <select> overlays the visual div so the browser
-            opens the native picker on click while the visual matches Figma. */}
+         {/* Filter toolbar — closed controls stay compact; the open menu follows
+             Figma node 6191:69205 exactly. */}
         <div className="flex flex-row gap-[24px]">
           {([
             {
@@ -1050,29 +1136,16 @@ function titleCaseDropdownLabel(label: string): string {
               options: [{ value: "all", label: "All Types" }, ...availableTypes],
             },
           ] as const).map(({ value, onChange, label, testId, options }) => (
-            <div key={testId} className="relative w-[120px] shrink-0">
-              {/* Native select — invisible, covers full area, handles clicks */}
-              <select
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                value={value}
-                onChange={(e) => onChange(e.target.value)}
-                aria-label={label}
-                data-testid={testId}
-              >
-                {options.map((o) => (
-                  <option key={o.value} value={o.value}>{titleCaseDropdownLabel(o.label)}</option>
-                ))}
-              </select>
-              {/* Visual layer — pointer-events-none so clicks reach the select */}
-              <div className="bg-[#222737] rounded-[8px] p-[8px] flex items-center gap-[8px] pointer-events-none w-full">
-                <span className="flex-1 min-w-0 [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[14px] leading-[20px] whitespace-nowrap">
-                  {titleCaseDropdownLabel(
-                    (options as ReadonlyArray<{ value: string; label: string }>).find((o) => o.value === value)?.label ?? options[0].label,
-                  )}
-                </span>
-                <img src={chevronDownIcon} alt="" aria-hidden="true" className="shrink-0 h-[7px] w-auto" />
-              </div>
-            </div>
+            <InboxDropdown
+              key={testId}
+              value={value}
+              onChange={onChange}
+              label={label}
+              testId={testId}
+              options={options}
+              open={openDropdown === testId}
+              onOpenChange={(nextOpen) => setOpenDropdown(nextOpen ? testId : null)}
+            />
           ))}
         </div>
       </div>
