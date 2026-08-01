@@ -43,6 +43,7 @@ import {
 import { useReviewStatuses, setReviewStatus } from "@/lib/reviewStatusStore";
 import { acknowledgeInsight, useAcknowledgedRecords } from "@/lib/acknowledgedStore";
 import { TierRow, type TierRowModel, type TierRowAction } from "@/components/TierRowList";
+import { Divider } from "@/components/LedgerWidgets";
 import {
   applyDecisionFilters,
   buildSearchText,
@@ -1116,10 +1117,15 @@ export function InboxPage() {
             </p>
           </div>
         ) : (
-          <div className="flex flex-col w-full rounded-[12px] border border-solid border-[#1d2132] overflow-hidden divide-y divide-[#1d2132]">
-            {visibleItems.map((item) => (
-              <TierRow key={item.id} row={toRow(item)} />
-            ))}
+          <div className="flex flex-col w-full rounded-[12px] border border-solid border-[#1d2132] bg-[#0a0c10] overflow-hidden">
+            <div className="flex flex-col gap-[8px] p-[8px] w-full">
+              {visibleItems.map((item, idx) => (
+                <div key={item.id} className="flex flex-col gap-[8px] w-full">
+                  <TierRow row={toRow(item)} />
+                  {idx < visibleItems.length - 1 && <Divider />}
+                </div>
+              ))}
+            </div>
           </div>
         )}
 

@@ -624,6 +624,12 @@ export function HomePage() {
     disputeError ||
     cashFlowError;
 
+  /* Status tag pill classes — mirrors InboxPage's TAG_* constants so Overview
+     rows carry the same visual language as the Inbox timeline. */
+  const TAG_NEEDS_YOU = "bg-[#4a2300] text-[#ff9500] border-[rgba(255,149,0,0.2)]";
+  const TAG_DETECTED  = "bg-[#222737] text-[#6c779d] border-[rgba(108,119,157,0.2)]";
+  const TAG_REJECTED  = "bg-[#350011] text-[#d20344] border-[rgba(210,3,68,0.2)]";
+
   const overviewRows: TierRowModel[] = useMemo(() => {
     const testIdPrefix = "row-overview";
 
@@ -637,6 +643,7 @@ export function HomePage() {
         id: `session-${String(r.intentId ?? r.id)}`,
         tier: tierForPaymentIntent(),
         title: formatText(r.title),
+        badge: { label: "Needs approval", className: TAG_NEEDS_YOU },
         subtitle: r.description ? formatText(r.description) : undefined,
         testIdPrefix,
         onOpenDetail: () => setSelectedLiveIntent(r),
@@ -653,7 +660,7 @@ export function HomePage() {
               },
               {
                 id: "reject",
-                label: "Reject",
+                label: "Decline",
                 tone: "reject" as const,
                 disabled: approvingIntentId !== null || rejectIntent.isPending,
                 onClick: () => rejectIntent.mutate(intentId),
@@ -671,12 +678,13 @@ export function HomePage() {
       id: `queue-${p.id}`,
       tier: tierForPaymentIntent(),
       title: formatText(p.title),
+      badge: { label: "Needs approval", className: TAG_NEEDS_YOU },
       subtitle: p.rationale ? formatText(p.rationale) : undefined,
       testIdPrefix,
       onOpenDetail: () => setSelectedReview(p),
       actions: [
         { id: "approve", label: "Approve", tone: "approve" as const, disabled: queueBusy, onClick: () => approveLive.mutate(p.id) },
-        { id: "reject", label: "Reject", tone: "reject" as const, disabled: queueBusy, onClick: () => rejectLive.mutate(p.id) },
+        { id: "reject", label: "Decline", tone: "reject" as const, disabled: queueBusy, onClick: () => rejectLive.mutate(p.id) },
       ],
     }));
 
@@ -686,6 +694,7 @@ export function HomePage() {
       id: `insight-${i.id}`,
       tier: tierForReadOnlyInsight(),
       title: formatText(i.title),
+      badge: { label: i.badge, className: TAG_DETECTED },
       subtitle: i.subtitle ? formatText(i.subtitle) : undefined,
       testIdPrefix,
       onOpenDetail: () => setSelectedInsight(i),
@@ -719,10 +728,15 @@ export function HomePage() {
         title: d.writable ? d.meaning ?? undefined : "Brain core can't accept this decision yet.",
         onClick: () => decideProposal.mutate({ id: p.id, decision: d.id as ProposalDecision }),
       }));
+      const proposalBadge =
+        tier === "urgent"  ? { label: "High risk",    className: TAG_REJECTED   } :
+        tier === "waiting" ? { label: "Needs review", className: TAG_NEEDS_YOU  } :
+                             { label: "Insight",      className: TAG_DETECTED   };
       return [{
         id: `proposal-${p.id}`,
         tier,
         title: headerCopy.title,
+        badge: proposalBadge,
         subtitle: `${agentName} Agent`,
         testIdPrefix,
         onOpenDetail: () => setSelectedProposal(p),

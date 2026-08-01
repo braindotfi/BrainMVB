@@ -17,6 +17,7 @@ import { useMemo } from "react";
 import { ActionButton, type ActionTone } from "@/components/ProposalCardParts";
 import { TIER_META, TIER_ORDER, type ProposalTier } from "@/lib/proposalTiers";
 import type { RowTier } from "@/lib/decisionFilters";
+import { Divider } from "@/components/LedgerWidgets";
 
 /* Tier accents. Red = Urgent, amber = Waiting on you, periwinkle = Insights —
    the palette already used for Inbox status tags, not the prototype's colours. */
@@ -190,10 +191,15 @@ export const TierSection = ({ tier, rows }: { tier: ProposalTier; rows: TierRowM
           {rows.length}
         </p>
       </div>
-      <div className="flex flex-col w-full rounded-[12px] border border-solid border-[#1d2132] overflow-hidden divide-y divide-[#1d2132]">
-        {rows.map((row) => (
-          <TierRow key={row.id} row={row} />
-        ))}
+      <div className="flex flex-col w-full rounded-[12px] border border-solid border-[#1d2132] bg-[#0a0c10] overflow-hidden">
+        <div className="flex flex-col gap-[8px] p-[8px] w-full">
+          {rows.map((row, idx) => (
+            <div key={row.id} className="flex flex-col gap-[8px] w-full">
+              <TierRow row={row} />
+              {idx < rows.length - 1 && <Divider />}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
