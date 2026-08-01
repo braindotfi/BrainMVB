@@ -29,6 +29,7 @@ import {
 } from "@/lib/proposalCards";
 import { LiveProposalModal, AGENT_DISPLAY_NAME } from "@/components/AgentProposalModal";
 import { useBrainAuditRecords } from "@/lib/brainAudit";
+import { AuditRecordPopup } from "@/components/AuditRecordPopup";
 import type { AuditRecord, AuditEventType } from "@/lib/auditTypes";
 import { auditEventLabel, auditEventChipClass, isAssistantActivity, isSystemActivity, humanReadableActor } from "@/lib/auditTypes";
 import { apiRequest } from "@/lib/queryClient";
@@ -236,6 +237,11 @@ export function InboxPage() {
   const [activeLive, setActiveLive] = useState<ReviewItemType | null>(null);
   const [liveRejection, setLiveRejection] = useState<ApprovalRejection | null>(null);
   const [selectedInsight, setSelectedInsight] = useState<LiveInsight | null>(null);
+  /* Settled history (approved / rejected / acknowledged) opens its record popup
+     HERE, in the same timeline the row was tapped in. It used to navigate to
+     /audit-log?record=…, which swapped the whole page for the old six-tab Audit
+     Log — a settled row and a pending row must be the same experience. */
+  const [activeRecord, setActiveRecord] = useState<AuditRecord | null>(null);
   const [pendingAcknowledgedIds, setPendingAcknowledgedIds] = useState<Set<string>>(() => new Set());
 
   const statusOf = (p: Proposal): ProposalStatus => statuses[p.id] ?? p.status;
@@ -445,6 +451,25 @@ export function InboxPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search]);
+
+  /* Deep-link: /inbox?record=<id>. This is the route a linked entity returns to
+     after being opened FROM a settled record here, so it must reopen the popup
+     rather than silently dropping the user on a bare timeline. Audit records
+     arrive asynchronously, so this re-runs as they land instead of only on mount. */
+  useEffect(() => {
+    const params = new URLSearchParams(search);
+    const recordId = params.get("record");
+    if (!recordId) return;
+    /* A proposal deep-link wins: both effects react to the same `search`, and
+       without an explicit precedence a URL carrying both params would have two
+       handlers racing to open a different surface and rewrite the route. */
+    if (params.get("proposal") || params.get("receipt")) return;
+    const found = auditRecords.find((r) => r.id === recordId || r.anchor.auditId === recordId);
+    if (!found) return;
+    setActiveRecord(found);
+    navigate("/inbox", { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, auditRecords]);
 
   const dismissDetail = () => {
     setActive(null);
@@ -791,6 +816,21 @@ export function InboxPage() {
     if (next) setSelectedProposal(next);
   };
 
+  /* Same pager contract for settled history: walk exactly the audit records the
+     current filters left on screen, so Previous/Next never steps onto a row the
+     user cannot see. */
+  const pagedRecords = visibleItems
+    .map((it) => it.record)
+    .filter((r): r is AuditRecord => r != null);
+  const recordIndex = activeRecord
+    ? pagedRecords.findIndex((r) => r.id === activeRecord.id)
+    : -1;
+  const recordPagerDisabled = recordIndex < 0 || pagedRecords.length <= 1;
+  const stepRecord = (delta: 1 | -1) => {
+    if (recordPagerDisabled) return;
+    setActiveRecord(pagedRecords[(recordIndex + delta + pagedRecords.length) % pagedRecords.length]);
+  };
+
   /* ── Tap / button handlers ─────────────────────────────────────────────── */
   const openItem = (item: InboxItem) => {
     if (item.liveAgentProposal) {
@@ -813,7 +853,7 @@ export function InboxPage() {
       return;
     }
     if (item.record) {
-      navigate(`/audit-log?record=${item.record.id}`);
+      setActiveRecord(item.record);
     }
   };
 
@@ -1213,6 +1253,19 @@ function titleCaseDropdownLabel(label: string): string {
         insight={selectedInsight}
         open={selectedInsight !== null}
         onOpenChange={(o) => { if (!o) setSelectedInsight(null); }}
+      />
+
+      {/* Settled history, opened in place. Same popup the Audit Log uses, so the
+          record's evidence and anchor state are identical — only the surrounding
+          page no longer changes out from under the user. */}
+      <AuditRecordPopup
+        record={activeRecord}
+        open={activeRecord !== null}
+        onOpenChange={(o) => { if (!o) setActiveRecord(null); }}
+        onPrev={() => stepRecord(-1)}
+        onNext={() => stepRecord(1)}
+        pagerDisabled={recordPagerDisabled}
+        returnToBase="/inbox"
       />
 
       {/* Live brain-core agent proposal (vendor risk, collections, treasury, etc.) */}

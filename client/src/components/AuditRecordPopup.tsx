@@ -29,6 +29,7 @@ export function AuditRecordPopup({
   onPrev,
   onNext,
   pagerDisabled,
+  returnToBase,
 }: {
   record: AuditRecord | null;
   open: boolean;
@@ -36,6 +37,11 @@ export function AuditRecordPopup({
   onPrev?: () => void;
   onNext?: () => void;
   pagerDisabled?: boolean;
+  /* Route this popup should come BACK to when the user follows a linked entity
+     (vendor / proposal) and then returns. Defaults to the Audit Log because that
+     is where this popup first lived; Inbox passes its own route so a settled
+     record opened from the timeline never returns the user to the old page. */
+  returnToBase?: string;
 }) {
   const { format, formatText } = useCurrency();
   const [, navigate] = useLocation();
@@ -75,7 +81,13 @@ export function AuditRecordPopup({
   const isFlagged = record.eventType === "flagged" && !isAssistantActivity(record);
 
   const handleNavigate = (link: LinkedEntity) => {
-    const returnTo = `/audit-log?record=${record.id}`;
+    /* Built with URLSearchParams so a base that already carries a query (or a
+       record id needing escaping) cannot produce a malformed return URL. */
+    const base = returnToBase ?? "/audit-log";
+    const [basePath, baseQuery = ""] = base.split("?");
+    const params = new URLSearchParams(baseQuery);
+    params.set("record", record.id);
+    const returnTo = `${basePath}?${params.toString()}`;
     if (link.kind === "rule") {
       openRuleDetail(link.refId, navigate);
     } else if (link.kind === "proposal") {
