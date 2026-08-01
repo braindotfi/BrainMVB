@@ -22,6 +22,7 @@ export function SettingsDropdown({
   ariaLabel,
   open,
   onOpenChange,
+  matchMenuWidth = false,
 }: {
   value: string;
   options: readonly SettingsDropdownOption[];
@@ -30,6 +31,7 @@ export function SettingsDropdown({
   ariaLabel: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  matchMenuWidth?: boolean;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const selected = options.find((option) => option.value === value) ?? options[0];
@@ -70,7 +72,7 @@ export function SettingsDropdown({
         <div
           role="listbox"
           aria-label={ariaLabel}
-          className="absolute right-0 top-[calc(100%+4px)] z-50 bg-[#0a0c10] border border-[#1d2132] border-solid flex flex-col items-start p-[8px] rounded-[12px] w-[208px] shadow-[0px_68px_13.5px_rgba(0,0,0,0.06),0px_38px_11.5px_rgba(0,0,0,0.2),0px_17px_8.5px_rgba(0,0,0,0.34),0px_4px_4.5px_rgba(0,0,0,0.39)]"
+          className={`absolute right-0 top-[calc(100%+4px)] z-50 bg-[#0a0c10] border border-[#1d2132] border-solid flex flex-col items-start p-[8px] rounded-[12px] ${matchMenuWidth ? "w-full" : "w-[208px]"} shadow-[0px_68px_13.5px_rgba(0,0,0,0.06),0px_38px_11.5px_rgba(0,0,0,0.2),0px_17px_8.5px_rgba(0,0,0,0.34),0px_4px_4.5px_rgba(0,0,0,0.39)]`}
         >
           {options.map((option) => (
             <button

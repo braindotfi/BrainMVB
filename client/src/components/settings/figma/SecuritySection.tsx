@@ -116,7 +116,7 @@ import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
                 </div>
               </div>
             </div>
-            <div ref={dropdownRef} className="relative shrink-0 w-[120px]">
+            <div ref={dropdownRef} className="relative shrink-0 w-[80px]">
               <SettingsDropdown
                 value={String(timeoutMin)}
                 options={SESSION_TIMEOUT_OPTIONS_MIN.map((opt) => ({
@@ -128,6 +128,7 @@ import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
                 ariaLabel="Session timeout"
                 open={open}
                 onOpenChange={setOpen}
+                matchMenuWidth
               />
             </div>
           </div>

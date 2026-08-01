@@ -625,7 +625,7 @@ function ProfileSection() {
             label="Default Currency"
             sublabel="Used for balance display"
             right={
-              <div ref={currencyRef} className="relative shrink-0 w-[120px]">
+              <div ref={currencyRef} className="relative shrink-0 w-[80px]">
                 <SettingsDropdown
                   value={currency}
                   options={CURRENCY_OPTIONS.map((opt) => ({ value: opt, label: opt }))}
@@ -634,6 +634,7 @@ function ProfileSection() {
                   ariaLabel="Default currency"
                   open={currencyOpen}
                   onOpenChange={setCurrencyOpen}
+                  matchMenuWidth
                 />
               </div>
             }
