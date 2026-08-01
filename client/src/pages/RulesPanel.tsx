@@ -213,11 +213,11 @@ function GuardrailRow({ rule }: { rule: AutoRule }) {
           </div>
         )}
       </button>
-      {/* Guardrail badge: lock icon + amber/orange — visually distinct from
-          automations' "Anchored" badge to reinforce these are fixed boundaries. */}
-      <div className="content-stretch flex items-center gap-[5px] justify-center px-[10px] py-[4px] relative rounded-[22px] shrink-0 border border-solid bg-[#4a2300] border-[rgba(255,148,0,0.2)]">
-        <Lock size={11} className="text-[#ff9500] shrink-0" aria-hidden />
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap text-[#ff9500]">
+      {/* Guardrail badge: neutral lock treatment distinguishes a fixed safety
+          boundary without reusing amber's needs-attention meaning. */}
+      <div className="content-stretch flex items-center gap-[5px] justify-center px-[10px] py-[4px] relative rounded-[22px] shrink-0 border border-solid bg-[#222737] border-[rgba(108,119,157,0.2)]">
+        <Lock size={11} className="text-[#6c779d] shrink-0" aria-hidden />
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap text-[#6c779d]">
           Guardrail
         </p>
       </div>
@@ -687,7 +687,6 @@ export function RulesPanel() {
             chips={RULE_TABS.map((tab) => ({
               value: tab,
               label: tab,
-              variant: tab === "Guardrails" ? ("amber" as const) : undefined,
               icon: tab === "Guardrails" ? <Lock size={11} aria-hidden /> : undefined,
             }))}
             value={activeTab}
