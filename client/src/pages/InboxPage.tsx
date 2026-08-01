@@ -29,6 +29,7 @@ import {
 } from "@/lib/proposalCards";
 import { LiveProposalModal, AGENT_DISPLAY_NAME } from "@/components/AgentProposalModal";
 import { useBrainAuditRecords } from "@/lib/brainAudit";
+import { inboxTapTarget } from "@/lib/inboxTap";
 import { AuditRecordPopup } from "@/components/AuditRecordPopup";
 import type { AuditRecord, AuditEventType } from "@/lib/auditTypes";
 import { auditEventLabel, auditEventChipClass, isAssistantActivity, isSystemActivity, humanReadableActor } from "@/lib/auditTypes";
@@ -832,28 +833,34 @@ export function InboxPage() {
   };
 
   /* ── Tap / button handlers ─────────────────────────────────────────────── */
+  /* Row taps route through inboxTapTarget — a pure helper whose return type has
+     NO navigation variant, so a settled row can never navigate away from /inbox
+     again (it used to swap the page for the old Audit Log). The helper's
+     behavior is pinned by client/src/lib/inboxTap.test.ts. */
   const openItem = (item: InboxItem) => {
-    if (item.liveAgentProposal) {
-      setSelectedProposal(item.liveAgentProposal);
-      return;
-    }
-    if (item.intent) {
-      setLiveRejection(null);
-      setActiveLive(item.intent);
-      return;
-    }
-    if (item.insight) {
-      setSelectedInsight(item.insight);
-      return;
-    }
-    if (item.proposal) {
-      setReturnTo(null);
-      setActiveIsLive(Boolean(item.proposalIsLive));
-      setActive(item.proposal);
-      return;
-    }
-    if (item.record) {
-      setActiveRecord(item.record);
+    const target = inboxTapTarget(item);
+    switch (target.surface) {
+      case "agent-proposal-modal":
+        setSelectedProposal(target.proposal);
+        return;
+      case "intent-modal":
+        setLiveRejection(null);
+        setActiveLive(target.intent);
+        return;
+      case "insight-modal":
+        setSelectedInsight(target.insight);
+        return;
+      case "proposal-sheet":
+        setReturnTo(null);
+        setActiveIsLive(target.isLive);
+        setActive(target.proposal);
+        return;
+      case "audit-popup":
+        /* Settled history opens its popup IN PLACE — never a route change. */
+        setActiveRecord(target.record);
+        return;
+      case "none":
+        return;
     }
   };
 
