@@ -296,7 +296,7 @@ function InboxDropdown({
                   onChange(option.value);
                   onOpenChange(false);
                 }}
-                className="flex items-center p-[8px] rounded-[8px] shrink-0 w-full text-left [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap outline-none hover:bg-[#222737] focus-visible:bg-[#222737]"
+                className="flex items-center p-[8px] rounded-[8px] shrink-0 w-full text-left [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[14px] whitespace-nowrap outline-none hover:bg-[#222737] focus-visible:bg-[#222737]"
                 data-testid={`${testId}-option-${option.value}`}
               >
                 {titleCaseDropdownLabel(option.label)}
