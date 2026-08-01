@@ -35,6 +35,7 @@ import TeamFigma from "@/components/settings/figma/TeamSection";
 import LegalFigma from "@/components/settings/figma/LegalSection";
 import AccountFigma from "@/components/settings/figma/AccountSection";
 import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
+import { Plus } from "lucide-react";
 
 /* ─── Section type ───────────────────────────────────────── */
 type Section =
@@ -892,9 +893,10 @@ function BillingSection() {
               type="button"
               data-testid="button-update-card"
               onClick={() => setUpdateCardOpen(true)}
-              className="rounded-[100px] px-[14px] py-[8px] hover-elevate flex-shrink-0"
+              className="rounded-[100px] px-[14px] py-[8px] hover-elevate flex-shrink-0 flex items-center justify-center gap-[2px]"
               style={{ background: "#240757", color: "#7631ee", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "14px", lineHeight: "20px", whiteSpace: "nowrap" }}
             >
+              {!cardLast4 && <Plus className="relative shrink-0 size-[16px] text-[#7631ee]" />}
               {cardLast4 ? "Update Card" : "Add Card"}
             </button>
           </div>

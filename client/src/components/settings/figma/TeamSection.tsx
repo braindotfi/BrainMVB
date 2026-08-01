@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Plus } from "lucide-react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
@@ -496,9 +497,10 @@ export default function TeamSection() {
         type="button"
         onClick={() => setAddOpen(true)}
         data-testid="button-add-member"
-        className="self-start rounded-[100px] bg-[#240757] px-[14px] py-[8px] [font-family:'Gilroy',sans-serif] font-semibold text-[#7631ee] text-[14px] leading-[20px] hover:bg-[#2e0a6e] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] flex items-center justify-center"
+        className="self-start rounded-[100px] bg-[#240757] px-[14px] py-[8px] [font-family:'Gilroy',sans-serif] font-semibold text-[#7631ee] text-[14px] leading-[20px] hover:bg-[#2e0a6e] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] flex items-center justify-center gap-[2px]"
       >
-        {production ? "+ Invite Member" : "+ Add Member"}
+        <Plus className="relative shrink-0 size-[16px] text-[#7631ee]" />
+        {production ? "Invite Member" : "Add Member"}
       </button>
 
       {/* Escalation — shown for shape, inert in substance.

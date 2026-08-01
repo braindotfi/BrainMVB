@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { Plus } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { BankConnectionInfo, SourceDocument, ToolConnection } from "@/lib/sourceTypes";
 import type { BrainAccountsResponse } from "@/lib/brainAccounts";
@@ -408,9 +409,10 @@ export function SourcesSection() {
           onClick={() => setFormOpen((v) => !v)}
           data-testid="button-add-source"
           aria-expanded={formOpen}
-          className="shrink-0 rounded-full px-[16px] py-[8px] bg-[#4a2300] hover:opacity-90 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[#ff9500] text-[14px] leading-[20px] whitespace-nowrap"
+          className="shrink-0 rounded-full px-[16px] py-[8px] bg-[#4a2300] hover:opacity-90 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[#ff9500] text-[14px] leading-[20px] whitespace-nowrap flex items-center justify-center gap-[2px]"
         >
-          {formOpen ? "Cancel" : "+ Add Source"}
+          {!formOpen && <Plus className="relative shrink-0 size-[16px] text-[#ff9500]" />}
+          {formOpen ? "Cancel" : "Add Source"}
         </button>
       </div>
 
