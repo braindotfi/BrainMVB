@@ -530,9 +530,9 @@ function ProfileSection() {
               }
               setEditing(v => !v);
             }}
-            className="bg-[#4a2300] flex gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] hover:opacity-90 transition-opacity flex-shrink-0"
+            className="self-start rounded-[100px] bg-[#240757] px-[14px] py-[8px] [font-family:'Gilroy',sans-serif] font-semibold text-[#7631ee] text-[14px] leading-[20px] hover:bg-[#2e0a6e] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] flex items-center justify-center"
           >
-            <div className="overflow-clip relative shrink-0 size-[24px]">
+            <div className="overflow-clip relative shrink-0 size-[16px]">
               <div className="absolute inset-[13.87%_13.87%_12.5%_12.5%]">
                 <div className="absolute inset-[-5.66%]">
                   <img alt="" className="block max-w-none size-full" src={ICONS.settings_edit_pencil1} />
@@ -825,8 +825,7 @@ function BillingSection() {
                 type="button"
                 data-testid="button-upgrade-plan"
                 onClick={() => setChangePlanOpen(true)}
-                className="rounded-full px-[20px] py-[10px] hover-elevate"
-                style={{ background: "#240757", color: "#7631ee", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "14px", lineHeight: "20px", whiteSpace: "nowrap" }}
+                className="self-start rounded-[100px] bg-[#240757] px-[14px] py-[8px] [font-family:'Gilroy',sans-serif] font-semibold text-[#7631ee] text-[14px] leading-[20px] hover:bg-[#2e0a6e] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] flex items-center justify-center"
               >
                   {plan ? "Change Plan" : "Choose A Plan"}
               </button>
@@ -892,8 +891,7 @@ function BillingSection() {
               type="button"
               data-testid="button-update-card"
               onClick={() => setUpdateCardOpen(true)}
-              className="rounded-full px-[20px] py-[10px] hover-elevate flex-shrink-0"
-              style={{ background: "#240757", color: "#7631ee", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "14px", lineHeight: "20px", whiteSpace: "nowrap" }}
+              className="self-start rounded-[100px] bg-[#240757] px-[14px] py-[8px] [font-family:'Gilroy',sans-serif] font-semibold text-[#7631ee] text-[14px] leading-[20px] hover:bg-[#2e0a6e] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] flex items-center justify-center flex-shrink-0"
             >
               {cardLast4 ? "Update Card" : "Add Card"}
             </button>
