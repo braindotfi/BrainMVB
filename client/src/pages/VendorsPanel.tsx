@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
 import { useLocation, useSearch } from "wouter";
-import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useBrainVendors, useBrainVendorDetail } from "@/lib/brainVendors";
 import { useCurrency } from "@/lib/useCurrency";
 import { useToast } from "@/hooks/use-toast";
@@ -8,12 +7,10 @@ import { queryClient } from "@/lib/queryClient";
 import type { Vendor } from "@/lib/vendorTypes";
 import { VendorDetailPopup } from "@/components/VendorDetailPopup";
 import { FilterChipRow } from "@/components/FilterChipRow";
-import closeIcon from "@assets/Close_1783293571882.png";
 import { Plus } from "lucide-react";
 import { AlertCallout, InfoIcon } from "@/components/Callout";
 
 type VendorTab = "Needs Review" | "New" | "Trusted" | "Suggested";
-
 
 const Divider = () => <div className="h-px shrink-0 w-full" style={{ background: "#1d2132" }} />;
 
@@ -53,179 +50,6 @@ function VendorRow({
   );
 }
 
-
-/* ── Add vendor dialog ────────────────────────────────────────────────────────
-   Manually creates a counterparty in live brain-core (POST /api/brain/ledger/counterparties,
-   MEMBER token, identity fields only. Mirrors AddMemberDialog in TeamSection.tsx).
-   Honesty: this runs on the app's ephemeral per-session demo tenant, so we don't
-   imply permanence. Copy stays neutral ("Add vendor"), no persistence claims. */
-function AddVendorDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { toast } = useToast();
-  const [name, setName] = useState("");
-  const [displayName, setDisplayName] = useState("");
-  const [category, setCategory] = useState("");
-  const [contactEmail, setContactEmail] = useState("");
-  const [country, setCountry] = useState("");
-  const [taxId, setTaxId] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!open) {
-      setName(""); setDisplayName(""); setCategory("");
-      setContactEmail(""); setCountry(""); setTaxId("");
-      setBusy(false); setError(null);
-    }
-  }, [open]);
-
-  const submit = async () => {
-    if (!name.trim()) {
-      setError("Name is required.");
-      return;
-    }
-    setBusy(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/brain/ledger/counterparties", {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: name.trim(),
-          display_name: displayName.trim() || undefined,
-          category: category.trim() || undefined,
-          contact_email: contactEmail.trim() || undefined,
-          country: country.trim() || undefined,
-          tax_id: taxId.trim() || undefined,
-        }),
-      });
-      const body = await res.json().catch(() => undefined);
-      if (!res.ok) {
-        const message =
-          (body?.body?.error?.message as string | undefined) ??
-          (body?.message as string | undefined) ??
-          "Brain core rejected this vendor.";
-        setError(message);
-        return;
-      }
-      await queryClient.invalidateQueries({ queryKey: ["/api/brain/ledger/counterparties"] });
-      toast({ title: "Vendor added", description: `${name.trim()} is now in your vendor list.` });
-      onClose();
-    } catch {
-      setError("Couldn't reach Brain core. Nothing was changed.");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const inputCls =
-    "w-full bg-[#222737] rounded-[8px] px-[8px] py-[10px] [font-family:'Gilroy',sans-serif] text-[16px] text-white placeholder:text-[#6c779d] outline-none focus:ring-1 focus:ring-[#7631ee]";
-
-  return (
-    <DialogPrimitive.Root open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px]" data-testid="add-vendor-backdrop" />
-        <DialogPrimitive.Content
-          aria-labelledby="add-vendor-title"
-          className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] rounded-[24px] w-[440px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none flex flex-col overflow-hidden"
-          data-testid="add-vendor-dialog"
-        >
-          <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-[#1d2132] border-solid h-[56px] relative shrink-0 w-full">
-            <p id="add-vendor-title" className="-translate-x-1/2 [font-family:'Gilroy',sans-serif] font-semibold leading-[24px] absolute left-[calc(50%+0.5px)] not-italic text-[#a8b9f4] text-[20px] text-center top-[calc(50%-12px)] whitespace-nowrap">
-              Add Vendor
-            </p>
-            <DialogPrimitive.Close aria-label="Close" data-testid="button-add-vendor-close" className="absolute right-[11px] top-[11px] size-[32px] p-0 hover:opacity-90 transition-opacity">
-              <img src={closeIcon} alt="" className="size-[32px]" />
-            </DialogPrimitive.Close>
-          </div>
-
-          <div className="content-stretch flex flex-col gap-[16px] items-start p-[24px] relative shrink-0 w-full overflow-y-auto">
-            <div className="relative shrink-0 w-full">
-              <div className="bg-clip-padding border-0 border-[transparent] border-solid content-stretch flex flex-col gap-[24px] items-start relative size-full">
-                {/* Name */}
-                <div className="content-stretch flex flex-col gap-[8px] items-start relative shrink-0 w-full">
-                  <div className="content-stretch flex flex-col items-start relative shrink-0 w-full">
-                    <div className="content-stretch flex gap-[8px] items-center relative shrink-0 w-full">
-                      <p className="[word-break:break-word] [font-family:'Gilroy',sans-serif] font-semibold leading-[14px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">Name</p>
-                      <div className="flex-[1_0_0] h-px min-w-px bg-[#1d2132] relative" />
-                    </div>
-                  </div>
-                  <input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Acme Supplies Inc." data-testid="input-vendor-name" />
-                </div>
-                {/* Display Name */}
-                <div className="content-stretch flex flex-col gap-[8px] items-start relative shrink-0 w-full">
-                  <div className="content-stretch flex flex-col items-start relative shrink-0 w-full">
-                    <div className="content-stretch flex gap-[8px] items-center relative shrink-0 w-full">
-                      <p className="[word-break:break-word] [font-family:'Gilroy',sans-serif] font-semibold leading-[14px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">Display Name (Optional)</p>
-                      <div className="flex-[1_0_0] h-px min-w-px bg-[#1d2132] relative" />
-                    </div>
-                  </div>
-                  <input className={inputCls} value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="e.g. Acme" data-testid="input-vendor-display-name" />
-                </div>
-                {/* Category */}
-                <div className="content-stretch flex flex-col gap-[8px] items-start relative shrink-0 w-full">
-                  <div className="content-stretch flex flex-col items-start relative shrink-0 w-full">
-                    <div className="content-stretch flex gap-[8px] items-center relative shrink-0 w-full">
-                      <p className="[word-break:break-word] [font-family:'Gilroy',sans-serif] font-semibold leading-[14px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">Category (Optional)</p>
-                      <div className="flex-[1_0_0] h-px min-w-px bg-[#1d2132] relative" />
-                    </div>
-                  </div>
-                  <input className={inputCls} value={category} onChange={(e) => setCategory(e.target.value)} placeholder="e.g. billing@acme.com" data-testid="input-vendor-category" />
-                </div>
-                {/* Country */}
-                <div className="content-stretch flex flex-col gap-[8px] items-start relative shrink-0 w-full">
-                  <div className="content-stretch flex flex-col items-start relative shrink-0 w-full">
-                    <div className="content-stretch flex gap-[8px] items-center relative shrink-0 w-full">
-                      <p className="[word-break:break-word] [font-family:'Gilroy',sans-serif] font-semibold leading-[14px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">Country (Optional)</p>
-                      <div className="flex-[1_0_0] h-px min-w-px bg-[#1d2132] relative" />
-                    </div>
-                  </div>
-                  <input className={inputCls} value={country} onChange={(e) => setCountry(e.target.value)} placeholder="US" data-testid="input-vendor-country" />
-                </div>
-                {/* Tax ID */}
-                <div className="content-stretch flex flex-col gap-[8px] items-start relative shrink-0 w-full">
-                  <div className="content-stretch flex flex-col items-start relative shrink-0 w-full">
-                    <div className="content-stretch flex gap-[8px] items-center relative shrink-0 w-full">
-                      <p className="[word-break:break-word] [font-family:'Gilroy',sans-serif] font-semibold leading-[14px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">Tax ID (Optional)</p>
-                      <div className="flex-[1_0_0] h-px min-w-px bg-[#1d2132] relative" />
-                    </div>
-                  </div>
-                  <input className={inputCls} value={taxId} onChange={(e) => setTaxId(e.target.value)} placeholder="e.g. 12-34567890" data-testid="input-vendor-tax-id" />
-                </div>
-              </div>
-            </div>
-
-            {error && (
-              <AlertCallout testId="text-add-vendor-error">{error}</AlertCallout>
-            )}
-
-            {/* Info banner — matches the Inbox helper banner style */}
-            <div
-              className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
-              style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
-            >
-              <InfoIcon className="mt-[2px]" />
-              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#7631ee] text-[14px] flex-1 min-w-px">
-                Added to your current Brain session. This demo tenant is temporary.
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={submit}
-              disabled={busy}
-              data-testid="button-submit-vendor"
-              className="w-full bg-[#4a2300] hover:bg-[#5a2b00] transition-colors flex items-center justify-center px-[20px] py-[10px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[#ff9400] text-[16px] leading-[20px] disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              {busy ? "Adding…" : "Add Vendor"}
-            </button>
-          </div>
-        </DialogPrimitive.Content>
-      </DialogPrimitive.Portal>
-    </DialogPrimitive.Root>
-  );
-}
-
 /* ── Main page ─────────────────────────────────────────────────────────────────── */
 /**
  * Vendors — a Ledger tab, no longer a top-level page.
@@ -241,13 +65,70 @@ export function VendorsPanel() {
   const [, navigate] = useLocation();
   const search = useSearch();
   const { vendors, isLoading, isError } = useBrainVendors();
+  const { toast } = useToast();
   const [activeVendor, setActiveVendor] = useState<Vendor | null>(null);
   // Enrich the OPEN vendor with live payment history + refined trust (the list
   // carries neither). Identity/pager logic stays on `activeVendor`; only the
   // popup renders the enriched copy.
   const detailVendor = useBrainVendorDetail(activeVendor);
   const [activeTab, setActiveTab] = useState<VendorTab>("Needs Review");
+
+  /* ── Inline add-vendor form state ── */
   const [addOpen, setAddOpen] = useState(false);
+  const [vendorName, setVendorName] = useState("");
+  const [category, setCategory] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
+  const [notes, setNotes] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const resetAddVendor = () => {
+    setAddOpen(false);
+    setVendorName("");
+    setCategory("");
+    setContactEmail("");
+    setNotes("");
+    setBusy(false);
+    setError(null);
+  };
+
+  const submitVendor = async () => {
+    if (!vendorName.trim()) {
+      setError("Vendor name is required.");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/brain/ledger/counterparties", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: vendorName.trim(),
+          category: category.trim() || undefined,
+          contact_email: contactEmail.trim() || undefined,
+          ...(notes.trim() ? { description: notes.trim() } : {}),
+        }),
+      });
+      const body = await res.json().catch(() => undefined);
+      if (!res.ok) {
+        const message =
+          (body?.body?.error?.message as string | undefined) ??
+          (body?.message as string | undefined) ??
+          "Brain core rejected this vendor.";
+        setError(message);
+        return;
+      }
+      await queryClient.invalidateQueries({ queryKey: ["/api/brain/ledger/counterparties"] });
+      toast({ title: "Vendor added", description: `${vendorName.trim()} is now in your vendor list.` });
+      resetAddVendor();
+    } catch {
+      setError("Couldn't reach Brain core. Nothing was changed.");
+    } finally {
+      setBusy(false);
+    }
+  };
 
   /* Deep-link: ?vendor=<id> opens that vendor automatically */
   useEffect(() => {
@@ -319,8 +200,6 @@ export function VendorsPanel() {
     navigate(`/ledger?${params.toString()}`, { replace: true });
   };
 
-  // tab counts removed. Shown in table header instead
-
   /* Counts are omitted, not zeroed, while the list is loading or unreachable:
      "Needs Review 0" is a statement that nothing needs review. */
   const countsKnown = !isLoading && !isError;
@@ -330,6 +209,10 @@ export function VendorsPanel() {
     { value: "Trusted", label: "Trusted", count: countsKnown ? grouped.trusted.length : undefined },
     { value: "Suggested", label: "Suggested", count: countsKnown ? grouped.known.length : undefined },
   ];
+
+  /* Shared input class — matches the rules builder's form field style */
+  const inputCls =
+    "w-full rounded-[8px] border border-[#1d2132] bg-[#06070a] px-[10px] py-[8px] [font-family:'Gilroy',sans-serif] font-medium text-[16px] text-white placeholder:text-[#414965] outline-none focus-visible:border-[rgba(118,49,238,0.5)] transition-colors";
 
   return (
     <div className="flex flex-col gap-[26px] items-start w-full pb-[8px]">
@@ -365,6 +248,8 @@ export function VendorsPanel() {
           </div>
         ) : (
           <div className="flex flex-col gap-[10px] w-full">
+
+            {/* ── Table header row ── */}
             <div className="flex items-center justify-between min-h-[16px] w-full">
               <div className="flex items-center gap-[8px]">
                 <div className="size-[6px] rounded-full shrink-0 bg-[#6c779d]" />
@@ -375,40 +260,169 @@ export function VendorsPanel() {
               </div>
               <button
                 type="button"
-                onClick={() => setAddOpen(true)}
+                onClick={() => addOpen ? resetAddVendor() : setAddOpen(true)}
                 data-testid="button-add-vendor"
                 className="bg-[#240757] content-stretch flex gap-[2px] items-center justify-center px-[10px] py-[4px] relative rounded-[100px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#7631ee] text-[12px] whitespace-nowrap hover:bg-[#2e0a6e] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
               >
-                <Plus className="relative shrink-0 size-[16px] text-[#7631ee]" />
-                Add Vendor
+                {!addOpen && <Plus className="relative shrink-0 size-[16px] text-[#7631ee]" />}
+                {addOpen ? "Cancel" : "Add Vendor"}
               </button>
             </div>
-            <div className="bg-[#0a0c10] flex flex-col overflow-hidden relative rounded-[16px]">
-            {/* Rows */}
-            <div>
-              {tabVendors.length === 0 ? (
-                <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative shrink-0 w-full">
-                  <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
-                    {activeTab === "Needs Review" && "No vendors under review. Brain flags new or unusual counterparties here."}
-                    {activeTab === "New" && "No new vendors detected yet."}
-                    {activeTab === "Trusted" && "No trusted vendors yet. Brain promotes vendors here after consistent, safe payments."}
-                    {activeTab === "Suggested" && "No known vendors yet. Regular payees show up here."}
+
+            {/* ── Inline add-vendor form — same shell as the Rules builder panel ── */}
+            {addOpen && (
+              <div
+                className="w-full rounded-[16px] bg-[#0a0c10] p-[16px] flex flex-col gap-[12px]"
+                data-testid="panel-add-vendor"
+              >
+                <div className="flex flex-col gap-[10px]">
+
+                  {/* Vendor name — required */}
+                  <div className="flex flex-col gap-[6px]">
+                    <label
+                      htmlFor="vendor-name-inline"
+                      className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] uppercase tracking-[0.4px]"
+                    >
+                      Vendor name
+                    </label>
+                    <input
+                      id="vendor-name-inline"
+                      data-testid="input-vendor-name"
+                      value={vendorName}
+                      onChange={(e) => setVendorName(e.target.value)}
+                      placeholder="e.g. Acme Supplies Inc."
+                      autoFocus
+                      className={inputCls}
+                    />
+                  </div>
+
+                  {/* Category — optional */}
+                  <div className="flex flex-col gap-[6px]">
+                    <label
+                      htmlFor="vendor-category-inline"
+                      className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] uppercase tracking-[0.4px]"
+                    >
+                      Category
+                      <span className="ml-[6px] normal-case tracking-normal font-medium text-[#414965]">optional</span>
+                    </label>
+                    <input
+                      id="vendor-category-inline"
+                      data-testid="input-vendor-category"
+                      value={category}
+                      onChange={(e) => setCategory(e.target.value)}
+                      placeholder="e.g. Software, Facilities, Professional services"
+                      className={inputCls}
+                    />
+                  </div>
+
+                  {/* Contact email — optional, for verification correspondence */}
+                  <div className="flex flex-col gap-[6px]">
+                    <label
+                      htmlFor="vendor-email-inline"
+                      className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] uppercase tracking-[0.4px]"
+                    >
+                      Contact email
+                      <span className="ml-[6px] normal-case tracking-normal font-medium text-[#414965]">optional — for correspondence during verification, not for payments</span>
+                    </label>
+                    <input
+                      id="vendor-email-inline"
+                      data-testid="input-vendor-contact-email"
+                      type="email"
+                      value={contactEmail}
+                      onChange={(e) => setContactEmail(e.target.value)}
+                      placeholder="e.g. billing@acme.com"
+                      className={inputCls}
+                    />
+                  </div>
+
+                  {/* Why are you adding this vendor? — optional context for the verification queue */}
+                  <div className="flex flex-col gap-[6px]">
+                    <label
+                      htmlFor="vendor-notes-inline"
+                      className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] uppercase tracking-[0.4px]"
+                    >
+                      Why are you adding this vendor?
+                      <span className="ml-[6px] normal-case tracking-normal font-medium text-[#414965]">optional</span>
+                    </label>
+                    <textarea
+                      id="vendor-notes-inline"
+                      data-testid="input-vendor-notes"
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      placeholder="Give the verification queue some context — what this vendor does, how you found them, why they're being added now."
+                      rows={3}
+                      className={`${inputCls} resize-none`}
+                    />
+                  </div>
+                </div>
+
+                {/* Info banner — same style used throughout the design system */}
+                <div
+                  className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
+                  style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
+                >
+                  <InfoIcon className="mt-[2px]" />
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#7631ee] text-[14px] flex-1 min-w-px">
+                    New vendors are added as unverified. Brain will queue a verification check before the first payment is payable.
                   </p>
                 </div>
-              ) : (
-                <div className="flex flex-col items-start w-full">
-                  {tabVendors.map((vendor) => (
-                    <VendorRow
-                      key={vendor.id}
-                      vendor={vendor}
-                      format={format}
-                      onClick={() => handleOpenVendor(vendor)}
-                    />
-                  ))}
+
+                {error && (
+                  <AlertCallout testId="text-add-vendor-error">{error}</AlertCallout>
+                )}
+
+                <div className="h-px w-full bg-[#1d2132]" />
+
+                {/* Button pair — Cancel / Add Vendor, matches the Rules builder exactly */}
+                <div className="flex gap-[10px] items-stretch w-full">
+                  <button
+                    type="button"
+                    onClick={resetAddVendor}
+                    data-testid="button-add-vendor-cancel"
+                    className="flex-1 px-[12px] py-[10px] rounded-[100px] bg-[#1d2132] hover:bg-[#252a3d] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#a8b9f4] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={submitVendor}
+                    disabled={!vendorName.trim() || busy}
+                    data-testid="button-submit-vendor"
+                    className="flex-1 px-[12px] py-[10px] rounded-[100px] bg-[#4a2300] hover:bg-[#5a2d00] disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#ff9500] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                  >
+                    {busy ? "Adding…" : "Add Vendor"}
+                  </button>
                 </div>
-              )}
+              </div>
+            )}
+
+            {/* ── Vendor list card ── */}
+            <div className="bg-[#0a0c10] flex flex-col overflow-hidden relative rounded-[16px]">
+              <div>
+                {tabVendors.length === 0 ? (
+                  <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative shrink-0 w-full">
+                    <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
+                      {activeTab === "Needs Review" && "No vendors under review. Brain flags new or unusual counterparties here."}
+                      {activeTab === "New" && "No new vendors detected yet."}
+                      {activeTab === "Trusted" && "No trusted vendors yet. Brain promotes vendors here after consistent, safe payments."}
+                      {activeTab === "Suggested" && "No known vendors yet. Regular payees show up here."}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-start w-full">
+                    {tabVendors.map((vendor) => (
+                      <VendorRow
+                        key={vendor.id}
+                        vendor={vendor}
+                        format={format}
+                        onClick={() => handleOpenVendor(vendor)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+
           </div>
         )}
       </div>
@@ -422,7 +436,6 @@ export function VendorsPanel() {
         pagerDisabled={vendorPagerDisabled}
       />
 
-      <AddVendorDialog open={addOpen} onClose={() => setAddOpen(false)} />
     </div>
   );
 }
