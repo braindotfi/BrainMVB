@@ -39,6 +39,12 @@ export interface DeleteAccountResult {
   brainIdentitiesDeleted: number;
   brainAgentTokensDeleted: number;
   assistantQuestionsDeleted: number;
+  /** Plaid tokens successfully handed back to Plaid before the rows were dropped. */
+  bankTokensRevoked: number;
+  /** Plaid tokens that could NOT be revoked. The bank rows are gone regardless,
+   *  so a non-zero value means live credentials were orphaned at Plaid — surfaced
+   *  rather than swallowed so a caller or an operator can act on it. */
+  bankTokenRevocationsFailed: number;
 }
 
 export interface IStorage {
@@ -141,23 +147,53 @@ export type BankConnection = {
   connectedAt: string;     // ISO
 };
 
-async function revokePlaidTokens(accessTokens: string[]): Promise<void> {
-  if (accessTokens.length === 0) return;
+/** What actually happened when we tried to hand a user's bank tokens back to
+ *  Plaid. Deletion does NOT abort on failure — a person's right to delete their
+ *  account cannot depend on Plaid being up — but a failure here is the one case
+ *  where the row goes away while the credential stays live at Plaid, so it must
+ *  never be invisible. */
+export interface PlaidRevocationOutcome {
+  attempted: number;
+  revoked: number;
+  /** Tokens still live at Plaid after this call. Non-zero is a real incident:
+   *  the local row is about to be deleted, so nothing is left to retry with. */
+  failed: number;
+}
+
+async function revokePlaidTokens(accessTokens: string[]): Promise<PlaidRevocationOutcome> {
+  const attempted = accessTokens.length;
+  if (attempted === 0) return { attempted: 0, revoked: 0, failed: 0 };
+
   let getPlaidClient: (() => { itemRemove: (arg: { access_token: string }) => Promise<unknown> }) | undefined;
   try {
     ({ getPlaidClient } = await import("./plaid"));
   } catch (err) {
-    console.warn("[plaid] item revoke skipped:", (err as Error).message);
-    return;
+    /* The module failing to load means NOTHING was revoked. Reporting that as a
+       skip rather than a failure would let the caller record a clean deletion. */
+    console.error(
+      `[plaid] item revoke UNAVAILABLE - ${attempted} token(s) remain live at Plaid:`,
+      (err as Error).message,
+    );
+    return { attempted, revoked: 0, failed: attempted };
   }
 
+  let revoked = 0;
+  let failed = 0;
   for (const token of accessTokens) {
     try {
       await getPlaidClient().itemRemove({ access_token: token });
+      revoked++;
     } catch (err) {
-      console.warn("[plaid] item revoke failed:", (err as Error).message);
+      failed++;
+      console.error("[plaid] item revoke FAILED - token remains live at Plaid:", (err as Error).message);
     }
   }
+  if (failed > 0) {
+    console.error(
+      `[plaid] ${failed}/${attempted} token(s) could not be revoked; their local rows are being deleted anyway, so they cannot be retried from here.`,
+    );
+  }
+  return { attempted, revoked, failed };
 }
 
 /** Where the uploaded file is in Brain's extraction pipeline (metadata mirror). */
@@ -335,7 +371,7 @@ export class MemStorage implements IStorage {
     const bankAccessTokens = Array.from(this.bankConns.values())
       .filter(c => ownerKeys.has(c.userId))
       .map(c => readPlaidAccessToken(c.accessToken));
-    await revokePlaidTokens(bankAccessTokens);
+    const revocation = await revokePlaidTokens(bankAccessTokens);
 
     let toolConnectionsDeleted = 0;
     for (const [key, c] of Array.from(this.toolConns.entries())) {
@@ -414,6 +450,8 @@ export class MemStorage implements IStorage {
       brainIdentitiesDeleted,
       brainAgentTokensDeleted,
       assistantQuestionsDeleted,
+      bankTokensRevoked: revocation.revoked,
+      bankTokenRevocationsFailed: revocation.failed,
     };
   }
 
@@ -443,7 +481,7 @@ export class MemStorage implements IStorage {
     const bankAccessTokens = Array.from(this.bankConns.values())
       .filter(c => ownerKeys.has(c.userId))
       .map(c => readPlaidAccessToken(c.accessToken));
-    await revokePlaidTokens(bankAccessTokens);
+    const revocation = await revokePlaidTokens(bankAccessTokens);
 
     let toolConnectionsDeleted = 0;
     for (const [key, c] of Array.from(this.toolConns.entries())) {
@@ -522,6 +560,8 @@ export class MemStorage implements IStorage {
       brainIdentitiesDeleted,
       brainAgentTokensDeleted,
       assistantQuestionsDeleted,
+      bankTokensRevoked: revocation.revoked,
+      bankTokenRevocationsFailed: revocation.failed,
     };
   }
 
@@ -871,7 +911,7 @@ export class DatabaseStorage implements IStorage {
       : [];
     const bankAccessTokens = bankRows
       .map((row) => readPlaidAccessToken(row.accessToken));
-    await revokePlaidTokens(bankAccessTokens);
+    const revocation = await revokePlaidTokens(bankAccessTokens);
 
     await db.transaction(async (tx) => {
       if (ownerKeyList.length > 0) {
@@ -961,6 +1001,8 @@ export class DatabaseStorage implements IStorage {
       brainIdentitiesDeleted,
       brainAgentTokensDeleted,
       assistantQuestionsDeleted,
+      bankTokensRevoked: revocation.revoked,
+      bankTokenRevocationsFailed: revocation.failed,
     };
   }
 
@@ -1001,7 +1043,7 @@ export class DatabaseStorage implements IStorage {
       : [];
     const bankAccessTokens = bankRows
       .map((row) => readPlaidAccessToken(row.accessToken));
-    await revokePlaidTokens(bankAccessTokens);
+    const revocation = await revokePlaidTokens(bankAccessTokens);
 
     await db.transaction(async (tx) => {
       if (ownerKeyList.length > 0) {
@@ -1087,6 +1129,8 @@ export class DatabaseStorage implements IStorage {
       brainIdentitiesDeleted,
       brainAgentTokensDeleted,
       assistantQuestionsDeleted,
+      bankTokensRevoked: revocation.revoked,
+      bankTokenRevocationsFailed: revocation.failed,
     };
   }
 
