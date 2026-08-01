@@ -184,14 +184,14 @@ export const TierSection = ({ tier, rows }: { tier: ProposalTier; rows: TierRowM
         >
           {meta.title}
         </p>
+        <div className="bg-[#1d2132] flex items-center justify-center min-w-[18px] px-[5px] py-[1px] rounded-[4px] shrink-0">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#6c779d] text-[11px] text-center whitespace-nowrap">{rows.length}</p>
+        </div>
         {meta.note && (
           <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[12px] truncate">
             — {meta.note}
           </p>
         )}
-        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[12px] ml-auto shrink-0">
-          {rows.length}
-        </p>
       </div>
       <div className="flex flex-col w-full rounded-[12px] border border-solid border-[#1d2132] bg-[#0a0c10] overflow-hidden">
         <div className="flex flex-col w-full">
