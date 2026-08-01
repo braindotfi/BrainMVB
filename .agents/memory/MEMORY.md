@@ -45,6 +45,7 @@
 - [Source freshness captions](source-freshness-captions.md) — only brain-core sources publish last_synced_at; a connection time is never a sync time, and sync_disabled is never "overdue".
 - [QA write guard](qa-write-guard.md) — QA scripts drive a live tenant, so writes are denied unless declared; route order + page.request bypass are the traps.
 - [Honest unsupported UI](honest-unsupported-ui.md) — visibly-disabled + honest label beats a placeholder; never invent specifics (channels, thresholds, recipients) in a dead control.
+- [Policy read states](policy-read-states.md) — a policy read has 4 answers not 2; an unknown must never render as a permissive known; client flattens status, so refused vs broken is unrecoverable.
 - [Policy clause scope](policy-scope-divergence.md) — only explicit "any" is a wildcard (mirror the VM, it may expand); absent/empty scope is invalid → fail closed, never granting.
 - [First-run copy freeze](first-run-copy-freeze.md) — freeze quoted copy only after the read resolves; "text never changes" is the wrong invariant and hides the tenant's own rule.
 - [Default-on filters](audit-default-filter.md) — a default filter makes "empty" a fact about the filter, so name what's withheld; no client-side user role exists, so role-gated defaults are blocked.
