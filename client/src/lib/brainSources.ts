@@ -41,6 +41,15 @@ export interface BrainSource {
   type: string;
   /** Lowercased upstream status; "" when upstream omitted it. */
   status: string;
+  /** ISO timestamp of the connector's last successful sync, or null when upstream
+      omitted it. Only brain-core sources carry this; BrainMVB's own bank and tool
+      connections know when they were CONNECTED and nothing more, so a row without
+      this field must never be captioned as recently synced. */
+  lastSyncedAt: string | null;
+  /** Upstream's own verdict on that timestamp ("fresh" | "stale" | …), lowercased.
+      Kept verbatim rather than recomputed from lastSyncedAt: only brain-core knows
+      the expected sync cadence for a given connector. */
+  freshness: string | null;
   metadata: BrainSourceMetadata;
 }
 
@@ -125,6 +134,8 @@ export function parseBrainSources(raw: unknown): BrainSource[] {
       id,
       type: type.toLowerCase(),
       status: (readString(row, "status") ?? "").toLowerCase(),
+      lastSyncedAt: readString(row, "last_synced_at", "lastSyncedAt"),
+      freshness: (readString(row, "freshness") ?? "").toLowerCase() || null,
       // Arrays are objects too - an array metadata would make every `.foo` read
       // undefined and silently defeat the disconnect checks below.
       metadata: isPlainObject(row.metadata) ? (row.metadata as BrainSourceMetadata) : {},
@@ -147,6 +158,16 @@ export function isConnectedBrainSource(s: BrainSource): boolean {
  */
 export function isDisconnectHidden(s: BrainSource): boolean {
   return s.metadata.disconnect_hidden === true || s.metadata.disconnectable === false;
+}
+
+/**
+ * True when upstream says this connection never syncs (seeded demo fixtures carry
+ * `sync_disabled: true`). Such a row is permanently "stale" by arithmetic, so its
+ * staleness is an artefact of the fixture rather than a problem with the feed, and
+ * must not be reported to the user as one.
+ */
+export function isSyncDisabled(s: BrainSource): boolean {
+  return s.metadata.sync_disabled === true;
 }
 
 /**

@@ -40,4 +40,5 @@
 - [Bulk-approve threshold source](bulk-approve-threshold-source.md) — gate on the second-approver line, never the auto-approve line; unknown amount or unreachable policy = no checkbox.
 - [Narrow centre column](narrow-centre-column-layout.md) — the 3-panel shell leaves ~420px for content; use auto-fit/minmax grids, never viewport breakpoints, or figures clip.
 - [Policy rule order](policy-rule-order.md) — the VM short-circuits on first match; a UI "runs automatically up to X" claim must respect rule ORDER and applies_to, not just execute:"auto".
+- [Source freshness captions](source-freshness-captions.md) — only brain-core sources publish last_synced_at; a connection time is never a sync time, and sync_disabled is never "overdue".
 - [Honest unsupported UI](honest-unsupported-ui.md) — visibly-disabled + honest label beats a placeholder; never invent specifics (channels, thresholds, recipients) in a dead control.

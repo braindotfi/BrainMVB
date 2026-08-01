@@ -22,7 +22,6 @@ import { RuleDetail } from "@/pages/RuleDetail";
 import { AuditLogPage } from "@/pages/AuditLogPage";
 import { NavigationMenuSection } from "@/pages/sections/NavigationMenuSection";
 import { BrainAssistant } from "@/pages/sections/BrainAssistant";
-import { AddSourceModal } from "@/components/AddSourceModal";
 import { NavContext } from "@/lib/navContext";
 import { TransactionProvider } from "@/lib/transactionContext";
 import { IntentsProvider } from "@/lib/intentsStore";
@@ -182,7 +181,6 @@ function MainShell({ onLogout }: { onLogout: () => void }) {
   const [location] = useLocation();
   const [navCollapsed, setNavCollapsed] = useState(() => window.innerWidth < 768);
   const [accountCollapsed, setAccountCollapsed] = useState(() => window.innerWidth < 768);
-  const [addSourceOpen, setAddSourceOpen] = useState(false);
 
   const handleLogout = onLogout;
 
@@ -201,7 +199,6 @@ function MainShell({ onLogout }: { onLogout: () => void }) {
     <NavContext.Provider value={{
       navCollapsed,
       toggleNav: () => setNavCollapsed((v) => !v),
-      openAddSource: () => setAddSourceOpen(true),
     }}>
     <div className="bg-shared-colorsheaderfooterbg w-full h-screen flex flex-col overflow-hidden">
 
@@ -211,7 +208,6 @@ function MainShell({ onLogout }: { onLogout: () => void }) {
           collapsed={navCollapsed}
           onToggle={() => setNavCollapsed((v) => !v)}
           onLogout={handleLogout}
-          onAddSource={() => setAddSourceOpen(true)}
         />
 
         <div className="flex-1 min-w-0 min-h-0 overflow-hidden flex flex-col">
@@ -253,11 +249,6 @@ function MainShell({ onLogout }: { onLogout: () => void }) {
         </span>
         <img className="flex-[0_0_auto]" alt="Socials" src="/figmaAssets/socials.svg" />
       </footer>
-
-      <AddSourceModal
-        open={addSourceOpen}
-        onClose={() => setAddSourceOpen(false)}
-      />
     </div>
     </NavContext.Provider>
   );

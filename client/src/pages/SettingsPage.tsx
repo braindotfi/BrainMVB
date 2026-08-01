@@ -17,7 +17,7 @@ import billingActiveIcon from "@assets/BillingActive_1782953915934.png";
 import teamActiveIcon from "@assets/Active_1783634473571.png";
 import teamInactiveIcon from "@assets/Normal_1783634473571.png";
 import { ContactUpdateModal } from "@/components/ContactUpdateModal";
-import { ConnectedSources } from "@/components/AddSourceModal";
+import { SourcesSection } from "@/components/settings/SourcesSection";
 import { DevelopersSection } from "@/components/settings/DevelopersSection";
 import { useNav } from "@/lib/navContext";
 import { useBrainPolicy, autoApproveLimitFromPolicy, groupPolicyAmount } from "@/lib/brainPolicy";
@@ -921,14 +921,6 @@ function BillingSection() {
 
 /* ─── Main SettingsPage ──────────────────────────────────── */
 const VALID_SECTIONS: Section[] = ["profile", "billing", "security", "notifications", "team", "sources", "developers", "legal", "account"];
-
-/* Settings → Sources. The wizard itself stays mounted on the shell; this tab
-   shows the same connected-sources list the modal opens with, so there is one
-   implementation of "what Brain reads from" rather than two that can drift. */
-function SourcesSection() {
-  const { openAddSource } = useNav();
-  return <ConnectedSources open onAddNew={openAddSource} />;
-}
 
 export function SettingsPage() {
   // Deep-link support: /settings?section=billing opens that section directly.

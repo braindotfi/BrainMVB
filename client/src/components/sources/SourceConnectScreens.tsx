@@ -1,22 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { categoryCounts, CATEGORY_ORDER, type CategoryId } from "@/lib/sourceCategories";
 import {
-  parseBrainSources,
-  isConnectedBrainSource,
   isDisconnectHidden,
   isProviderRemoveHidden,
   categoryForBrainSource,
-  brainSourceLabel,
-  brainSourceSubtitle,
-  type BrainSource,
 } from "@/lib/brainSources";
+import type { BankConnectionInfo, ExtractStatus, SourceDocument, ToolConnection } from "@/lib/sourceTypes";
+import { useBrainSources } from "@/lib/useBrainSources";
+import { formatSize } from "@/lib/sourceRows";
+import { ExtractStatusBadge, extractStatusMeta } from "@/components/sources/ExtractStatusBadge";
 import { fetchObligations, isReceivable, type Obligation } from "@/lib/brainObligations";
 import { usePlaidLink, type PlaidLinkOnSuccessMetadata, type PlaidLinkError } from "react-plaid-link";
-import closeIcon from "@assets/close_1783619312132.png";
-import backIcon from "@assets/Back_1783893317104.png";
 import bankIcon from "@assets/bank_1783619257499.png";
 import cryptoIcon from "@assets/crypto_1783619257499.png";
 import accountingIcon from "@assets/accounting_1783619257498.png";
@@ -26,104 +22,31 @@ import paymentsIcon from "@assets/payments_1783619257499.png";
 import docsIcon from "@assets/docs_1783621224017.png";
 
 /* ──────────────────────────────────────────────────────────────────────────
- *  Add Source - paginated wizard for connecting data sources to Brain.
+ *  Source connect screens - the mechanisms for attaching a data source to Brain.
  *
  *  Aligned with the Brain data-ingestion architecture: source-agnostic
  *  connectors organised by capability (bank / accounting / payroll / tax /
  *  payments / documents). Plaid is one connector, not the centre.
  *
- *  Screen stack:
- *    home       → connected sources (remove any) + "Connect a new source"
- *    categories → choose a source category
- *    bank       → connect a bank via Plaid
- *    providers  → pick a provider within a category (Stripe live, rest soon)
- *    documents  → upload documents (registered as a document source)
- *    reading    → Brain reads the connected sources + initial reading
- *    found      → "Here's everything Brain found" insight summary
+ *  Each screen owns one connect mechanism and nothing else - no shell, no step
+ *  machinery, no list of what is already connected. Two surfaces compose them:
+ *  Settings → Sources renders them inline (variant="inline", which drops the
+ *  headings and notices that surface supplies itself), and the first-run
+ *  walkthrough renders them full-size. The list of connected sources lives in
+ *  components/settings/SourcesSection.tsx, which is its permanent home.
  *
- *  Header shows onboarding-style pagination dots (no titles). The four primary
- *  steps are home → categories → reading → found; the leaf connect screens
- *  (bank / providers / documents) are sub-flows of the categories step.
  * ────────────────────────────────────────────────────────────────────────── */
-
-type Screen = "home" | "categories" | "bank" | "providers" | "documents" | "reading" | "found";
-
-/** Primary step index per screen (leaf connect screens stay on the categories step). */
-const STEP_INDEX: Record<Screen, number> = {
-  home: 0,
-  categories: 1,
-  bank: 1,
-  providers: 1,
-  documents: 1,
-  reading: 2,
-  found: 3,
-};
-const TOTAL_STEPS = 4;
 
 export type { CategoryId };
 
-interface AddSourceModalProps {
-  open: boolean;
-  onClose: () => void;
-}
-
-/* ─── Server types ─── */
-type BankAccountInfo = {
-  accountId: string;
-  name: string;
-  mask: string | null;
-  subtype: string | null;
-  type: string | null;
-};
-type BankConnectionInfo = {
-  itemId: string;
-  institutionId: string | null;
-  institutionName: string;
-  accounts: BankAccountInfo[];
-  connectedAt: string;
-};
-type ToolConnection = {
-  userId: string;
-  toolId: string;
-  status: "connected" | "error";
-  accountLabel?: string;
-  connectedAt: string;
-};
-type ExtractStatus =
-  | "pending" | "ingested" | "extracting" | "extracted"
-  | "unsupported" | "unavailable" | "failed";
-
-type SourceDocument = {
-  id: string;
-  userId: string;
-  name: string;
-  size: number;
-  mimeType: string | null;
-  category: string | null;
-  rawId: string | null;
-  sha256: string | null;
-  sourceType: string | null;
-  extractStatus: ExtractStatus | null;
-  parsedId: string | null;
-  confidence: string | null;
-  uploadedAt: string;
-};
-
-/**
- * brain-core's connector registry (GET /v1/sources), relayed verbatim by the BFF's
- * generic GET passthrough - hence the `unknown` and the defensive parse. This is a
- * different population from the three local surfaces above; see lib/brainSources.ts.
+/** How a connect screen is being presented.
  *
- * An upstream failure (unconfigured token source, no tenant) must never blank the
- * Sources screen, so an errored query simply yields an empty list.
- */
-/** Returns the read's state alongside its rows: a failed sources read must not be
-    indistinguishable from a tenant that has connected nothing. */
-function useBrainSources(enabled: boolean): { sources: BrainSource[]; isLoading: boolean; isError: boolean } {
-  const query = useQuery<unknown>({ queryKey: ["/api/brain/sources"], enabled });
-  const sources = useMemo(() => parseBrainSources(query.data).filter(isConnectedBrainSource), [query.data]);
-  return { sources, isLoading: query.isLoading, isError: query.isError };
-}
+ *  "modal"  - full-size, inside the first-run walkthrough: own heading, own
+ *             reassurance notice, own "Done".
+ *  "inline" - inside Settings → Sources, which already supplies the heading, the
+ *             reassurance copy and the list of what is connected. Repeating them
+ *             here would show the same documents twice on one screen. */
+export type SourceScreenVariant = "modal" | "inline";
 
 type CounterpartyLite = { id: string; display_name?: string; name?: string };
 type CounterpartiesResponse = { counterparties: CounterpartyLite[] };
@@ -136,46 +59,6 @@ function sourceTypeForFile(file: File): "pdf_upload" | "csv_upload" {
   return "pdf_upload";
 }
 
-/** Human label + tone for an extraction status. */
-function extractStatusMeta(s: ExtractStatus | null): { label: string; tone: "ok" | "progress" | "warn" | "muted" } {
-  switch (s) {
-    case "extracted":   return { label: "Read", tone: "ok" };
-    case "extracting":  return { label: "Extracting…", tone: "progress" };
-    case "ingested":    return { label: "Stored · awaiting extraction", tone: "progress" };
-    case "pending":     return { label: "Uploading…", tone: "progress" };
-    case "unsupported": return { label: "Can't read this file type yet", tone: "warn" };
-    case "unavailable": return { label: "Stored · extraction coming soon", tone: "muted" };
-    case "failed":      return { label: "Couldn't process", tone: "warn" };
-    default:            return { label: "Stored", tone: "muted" };
-  }
-}
-
-const TONE_STYLE: Record<"ok" | "progress" | "warn" | "muted", { color: string; dot: string }> = {
-  ok:       { color: "#42bf23", dot: "#42bf23" },
-  progress: { color: "#a8b9f4", dot: "#7631ee" },
-  warn:     { color: "#ff9500", dot: "#ff9500" },
-  muted:    { color: "#6c779d", dot: "#414965" },
-};
-
-function ExtractStatusBadge({ status, testId }: { status: ExtractStatus | null; testId?: string }) {
-  const meta = extractStatusMeta(status);
-  const s = TONE_STYLE[meta.tone];
-  const spinning = meta.tone === "progress";
-  return (
-    <span className="flex items-center gap-[6px]" data-testid={testId}>
-      {spinning ? (
-        <span className="size-[10px] rounded-full border-2 border-t-transparent animate-spin shrink-0" style={{ borderColor: s.dot, borderTopColor: "transparent" }} aria-hidden />
-      ) : (
-        <span className="size-[6px] rounded-full shrink-0" style={{ background: s.dot }} aria-hidden />
-      )}
-      <span className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px]" style={{ color: s.color }}>
-        {meta.label}
-      </span>
-    </span>
-  );
-}
-
-/** Pill-style extraction status tag (matches the Figma "reading" row treatment). */
 function ExtractStatusPill({ status, testId }: { status: ExtractStatus | null; testId?: string }) {
   const meta = extractStatusMeta(status);
   const spinning = meta.tone === "progress";
@@ -220,14 +103,14 @@ function counterpartyName(id: string | null, map: Map<string, string>): string {
 /* ─── Catalog ─── */
 type Provider = { id: string; name: string; logo: string; bg: string; light?: boolean; live?: boolean };
 
-const CATEGORY_META: Record<CategoryId, { label: string; sub: string; target: Screen; accent: string }> = {
-  bank:       { label: "Bank Accounts",  sub: "Checking, savings and credit via Plaid", target: "bank",      accent: "#22c55e" },
-  crypto:     { label: "Crypto Wallets", sub: "MetaMask, Coinbase Wallet, WalletConnect", target: "providers", accent: "#ff9500" },
-  accounting: { label: "Accounting",     sub: "QuickBooks, Xero, Wave",                target: "providers", accent: "#7631EE" },
-  payroll:    { label: "Payroll",        sub: "Gusto, Rippling, ADP",                  target: "providers", accent: "#a8b9f4" },
-  tax:        { label: "Tax",            sub: "Returns, filings and tax documents",      target: "documents", accent: "#ff9500" },
-  payments:   { label: "Payments",       sub: "Stripe, PayPal, Square",                target: "providers", accent: "#635BFF" },
-  documents:  { label: "Documents",      sub: "Statements, contracts, spreadsheets",   target: "documents", accent: "#ff9500" },
+const CATEGORY_META: Record<CategoryId, { label: string; sub: string; accent: string }> = {
+  bank:       { label: "Bank Accounts",  sub: "Checking, savings and credit via Plaid",      accent: "#22c55e" },
+  crypto:     { label: "Crypto Wallets", sub: "MetaMask, Coinbase Wallet, WalletConnect", accent: "#ff9500" },
+  accounting: { label: "Accounting",     sub: "QuickBooks, Xero, Wave",                accent: "#7631EE" },
+  payroll:    { label: "Payroll",        sub: "Gusto, Rippling, ADP",                  accent: "#a8b9f4" },
+  tax:        { label: "Tax",            sub: "Returns, filings and tax documents",      accent: "#ff9500" },
+  payments:   { label: "Payments",       sub: "Stripe, PayPal, Square",                accent: "#635BFF" },
+  documents:  { label: "Documents",      sub: "Statements, contracts, spreadsheets",   accent: "#ff9500" },
 };
 
 
@@ -255,388 +138,19 @@ const PROVIDERS: Partial<Record<CategoryId, Provider[]>> = {
   ],
 };
 
-const TOOL_LABELS: Record<string, string> = {
+export const TOOL_LABELS: Record<string, string> = {
   stripe: "Stripe", quickbooks: "QuickBooks", xero: "Xero", wave: "Wave",
   gusto: "Gusto", rippling: "Rippling", adp: "ADP", paypal: "PayPal", square: "Square",
 };
 
 // Reverse map: provider/tool id → its category (for counter tags).
-const TOOL_CATEGORY: Record<string, CategoryId> = Object.entries(PROVIDERS).reduce(
+export const TOOL_CATEGORY: Record<string, CategoryId> = Object.entries(PROVIDERS).reduce(
   (acc, [cat, list]) => {
     (list ?? []).forEach((p) => { acc[p.id] = cat as CategoryId; });
     return acc;
   },
   {} as Record<string, CategoryId>,
 );
-
-export function AddSourceModal({ open, onClose }: AddSourceModalProps) {
-  const [stack, setStack] = useState<Screen[]>(["home"]);
-  const [activeCategory, setActiveCategory] = useState<CategoryId>("accounting");
-  const screen = stack[stack.length - 1];
-
-  const push = useCallback((s: Screen) => setStack((st) => [...st, s]), []);
-  const back = useCallback(() => setStack((st) => (st.length > 1 ? st.slice(0, -1) : st)), []);
-
-  // Reset to home each time the modal re-opens.
-  useEffect(() => {
-    if (open) {
-      setStack(["home"]);
-      setActiveCategory("accounting");
-    }
-  }, [open]);
-
-  const headerTitle =
-    screen === "home" ? "Your Sources" :
-    screen === "categories" ? "Add a Source" :
-    screen === "bank" ? "Connect a Bank" :
-    screen === "providers" ? CATEGORY_META[activeCategory].label :
-    screen === "reading" ? "Reading Your Sources" :
-    screen === "found" ? "Everything Brain Found" :
-    activeCategory === "tax" ? "Tax Documents" : "Upload Documents";
-
-  const openCategory = useCallback((cat: CategoryId) => {
-    setActiveCategory(cat);
-    push(CATEGORY_META[cat].target);
-  }, [push]);
-
-  return (
-    <DialogPrimitive.Root open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
-          data-testid="add-source-backdrop"
-        />
-        <DialogPrimitive.Content
-          aria-describedby="add-source-description"
-          className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[24px] w-[480px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
-          data-testid="add-source-modal"
-        >
-          {/* Header: back, title, close */}
-          <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-[#1d2132] border-solid h-[56px] relative shrink-0 w-full flex items-center justify-center">
-            {stack.length > 1 && (
-              <button
-                type="button"
-                onClick={back}
-                aria-label="Back"
-                data-testid="button-add-source-back"
-                className="absolute left-[11px] top-[11px] size-[32px] p-0 hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-full"
-              >
-                <img src={backIcon} alt="" className="size-[32px] rounded-full" />
-              </button>
-            )}
-
-            <DialogPrimitive.Title className="sr-only">{headerTitle}</DialogPrimitive.Title>
-            <StepDots total={TOTAL_STEPS} current={STEP_INDEX[screen]} />
-            <DialogPrimitive.Description id="add-source-description" className="sr-only">
-              Connect and manage the data sources Brain reads from.
-            </DialogPrimitive.Description>
-
-            <DialogPrimitive.Close
-              data-testid="button-add-source-close"
-              aria-label="Close"
-              className="absolute right-[11px] top-[11px] size-[32px] p-0 hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-            >
-              <img src={closeIcon} alt="" className="size-[32px] rounded-full" />
-            </DialogPrimitive.Close>
-          </div>
-
-          {/* Body */}
-          <div className="w-full flex-1 min-h-0 overflow-y-auto overflow-x-hidden" data-testid="add-source-scroll">
-            <div className="flex flex-col gap-[24px] p-[24px] w-full">
-              {screen === "home" && <ConnectedSources open={open} onAddNew={() => push("categories")} />}
-              {screen === "categories" && <CategoryPicker onPick={openCategory} onContinue={() => push("reading")} />}
-              {screen === "bank" && <BankConnect onDone={back} />}
-              {screen === "providers" && <ProviderPicker category={activeCategory} />}
-              {screen === "documents" && (
-                <DocumentUpload category={activeCategory === "tax" ? "tax" : "general"} onDone={back} />
-              )}
-              {screen === "reading" && (
-                <ReadingScreen onViewWiki={onClose} onContinue={() => push("found")} onAddMore={() => push("categories")} />
-              )}
-              {screen === "found" && <FoundScreen onFinish={onClose} />}
-            </div>
-          </div>
-        </DialogPrimitive.Content>
-      </DialogPrimitive.Portal>
-    </DialogPrimitive.Root>
-  );
-}
-
-/* ───────────────────────────── Screen: Connected sources ───────────────────────────── */
-export function ConnectedSources({ open, onAddNew }: { open: boolean; onAddNew: () => void }) {
-  const banksQuery = useQuery<BankConnectionInfo[]>({
-    queryKey: ["/api/integrations/plaid/connections"],
-    enabled: open,
-  });
-  const toolsQuery = useQuery<ToolConnection[]>({
-    queryKey: ["/api/integrations/connections"],
-    enabled: open,
-  });
-  const docsQuery = useQuery<SourceDocument[]>({
-    queryKey: ["/api/integrations/documents"],
-    enabled: open,
-  });
-
-  const brain = useBrainSources(open);
-  const brainSources = brain.sources;
-
-  const banks = banksQuery.data ?? [];
-  const tools = toolsQuery.data ?? [];
-  const docs = docsQuery.data ?? [];
-
-  /* Four independent reads back this list. `?? []` turns any one of them failing
-     into an absence, and an absence here reads as "that source is not connected"
-     - which on this screen is an invitation to reconnect something that is
-     already connected, or to assume Brain is reading a bank it cannot see. Name
-     the feeds that did not answer instead. */
-  const unavailable = [
-    banksQuery.isError ? "bank connections" : null,
-    toolsQuery.isError ? "tool connections" : null,
-    docsQuery.isError ? "uploaded documents" : null,
-    brain.isError ? "Brain's own source list" : null,
-  ].filter((v): v is string => v !== null);
-
-  const disconnectSource = useMutation({
-    mutationFn: async (sourceId: string) => {
-      const res = await apiRequest("DELETE", `/api/brain/sources/${encodeURIComponent(sourceId)}`);
-      return res.json();
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/brain/sources"] }),
-  });
-  const disconnectBank = useMutation({
-    mutationFn: async (itemId: string) => {
-      const res = await apiRequest("POST", "/api/integrations/plaid/disconnect", { itemId });
-      return res.json();
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/integrations/plaid/connections"] }),
-  });
-  const disconnectTool = useMutation({
-    mutationFn: async (toolId: string) => {
-      const res = await apiRequest("POST", `/api/integrations/${toolId}/disconnect`);
-      return res.json();
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/integrations/connections"] }),
-  });
-  const removeDoc = useMutation({
-    mutationFn: async (id: string) => {
-      const res = await apiRequest("POST", `/api/integrations/documents/${id}/delete`);
-      return res.json();
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/integrations/documents"] }),
-  });
-
-  const isLoading = banksQuery.isLoading || toolsQuery.isLoading || docsQuery.isLoading || brain.isLoading;
-  const total = banks.length + tools.length + docs.length + brainSources.length;
-
-  return (
-    <div className="flex flex-col gap-[20px]">
-      <div className="flex flex-col gap-[8px]">
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-[#a8b9f4] text-[20px]">
-          Sources Brain Reads From
-        </p>
-        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
-          Everything connected to your financial memory. Remove any source any time. Brain only reads, and never writes without your approval.
-        </p>
-      </div>
-
-      {isLoading ? (
-        <div className="flex items-center justify-center py-[32px]">
-          <span className="size-[20px] rounded-full border-2 border-[#7631EE] border-t-transparent animate-spin" aria-hidden />
-        </div>
-      ) : (
-        <div className="flex flex-col gap-[16px]">
-          {unavailable.length > 0 && (
-            <div
-              className="rounded-[16px] p-[16px]"
-              style={{ background: "rgba(255,149,0,0.08)", border: "1px solid rgba(255,149,0,0.2)" }}
-              data-testid="notice-sources-unavailable"
-            >
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#ff9500] text-[15px]">
-                This list is incomplete
-              </p>
-              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] mt-[4px]">
-                Brain could not load {unavailable.length === 1
-                  ? unavailable[0]
-                  : `${unavailable.slice(0, -1).join(", ")} and ${unavailable[unavailable.length - 1]}`}
-                . Anything connected there is missing from this list — it has not been
-                disconnected. Try again in a moment.
-              </p>
-            </div>
-          )}
-          {total === 0 && unavailable.length === 0 && (
-            <div className="bg-[#0a0c10] rounded-[16px] p-[20px]" data-testid="empty-connected-sources">
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[15px]">No sources yet</p>
-              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] mt-[4px]">
-                Connect a bank, your tools, or upload documents to give Brain its first look at your business.
-              </p>
-            </div>
-          )}
-          {banks.length > 0 && (
-            <SourceGroup label="Banks">
-              {banks.map((b) => (
-                <SourceRow
-                  key={b.itemId}
-                  testId={`source-bank-${b.itemId}`}
-                  badge={b.institutionName.slice(0, 2).toUpperCase()}
-                  badgeBg="#22c55e"
-                  badgeColor="#062b13"
-                  title={b.institutionName}
-                  subtitle={`${b.accounts.length} account${b.accounts.length === 1 ? "" : "s"}${b.accounts[0]?.mask ? ` · ····${b.accounts[0].mask}` : ""}`}
-                  removing={disconnectBank.isPending}
-                  onRemove={() => disconnectBank.mutate(b.itemId)}
-                  removeTestId={`button-remove-bank-${b.itemId}`}
-                />
-              ))}
-            </SourceGroup>
-          )}
-
-          {brainSources.length > 0 && (
-            <SourceGroup label="Connected Accounts">
-              {brainSources.map((s) => {
-                // Seeded demo connections carry disconnect_hidden/disconnectable metadata:
-                // omit onRemove entirely so SourceRow renders no button at all. A real
-                // source carries neither key and keeps its normal control.
-                const hidden = isDisconnectHidden(s);
-                return (
-                  <SourceRow
-                    key={s.id}
-                    testId={`source-brain-${s.id}`}
-                    icon={CATEGORY_ICON_SRC[categoryForBrainSource(s)]}
-                    title={brainSourceLabel(s)}
-                    subtitle={brainSourceSubtitle(s)}
-                    removing={disconnectSource.isPending}
-                    onRemove={hidden ? undefined : () => disconnectSource.mutate(s.id)}
-                    removeTestId={`button-remove-source-${s.id}`}
-                  />
-                );
-              })}
-            </SourceGroup>
-          )}
-
-          {tools.length > 0 && (
-            <SourceGroup label="Tools">
-              {tools.map((t) => (
-                <SourceRow
-                  key={t.toolId}
-                  testId={`source-tool-${t.toolId}`}
-                  badge={(TOOL_LABELS[t.toolId] ?? t.toolId).slice(0, 2).toUpperCase()}
-                  badgeBg="#240757"
-                  badgeColor="#a78bfa"
-                  title={TOOL_LABELS[t.toolId] ?? t.toolId}
-                  subtitle={t.accountLabel ? `Connected · ${t.accountLabel}` : "Connected"}
-                  removing={disconnectTool.isPending}
-                  onRemove={() => disconnectTool.mutate(t.toolId)}
-                  removeTestId={`button-remove-tool-${t.toolId}`}
-                />
-              ))}
-            </SourceGroup>
-          )}
-
-          {docs.length > 0 && (
-            <SourceGroup label="Documents">
-              {docs.map((d) => (
-                <SourceRow
-                  key={d.id}
-                  testId={`source-doc-${d.id}`}
-                  icon={docsIcon}
-                  title={d.name}
-                  subtitle={`${d.category ? `${capitalize(d.category)} · ` : ""}${formatSize(d.size)}`}
-                  removing={removeDoc.isPending}
-                  onRemove={() => removeDoc.mutate(d.id)}
-                  removeTestId={`button-remove-doc-${d.id}`}
-                />
-              ))}
-            </SourceGroup>
-          )}
-        </div>
-      )}
-
-      <button
-        type="button"
-        onClick={onAddNew}
-        data-testid="button-connect-new-source"
-        className="flex w-full items-center justify-center gap-[10px] px-[20px] h-[44px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[15px] transition-colors bg-[#4a2300] hover:bg-[#5a2c00] text-[#ff9500]"
-      >
-        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
-          <path d="M9 3.75V14.25M3.75 9H14.25" stroke="#ff9500" strokeWidth="2" strokeLinecap="round" />
-        </svg>
-        Add New Source
-      </button>
-    </div>
-  );
-}
-
-function SourceGroup({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-[8px]">
-      <div className="flex items-center gap-[8px]">
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[14px] uppercase whitespace-nowrap">
-          {label}
-        </p>
-        <div className="flex-1 h-px bg-[#1d2132]" />
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function SourceRow({
-  testId, badge, badgeBg, badgeColor, icon, title, subtitle, onRemove, removing, removeTestId,
-}: {
-  testId: string;
-  badge?: string;
-  badgeBg?: string;
-  badgeColor?: string;
-  icon?: string;
-  title: string;
-  subtitle: string;
-  /** Omit to render NO disconnect control at all (not a disabled one) - see brainSources.ts. */
-  onRemove?: () => void;
-  removing?: boolean;
-  removeTestId: string;
-}) {
-  return (
-    <div
-      data-testid={testId}
-      className="flex items-center gap-[12px] bg-[#0a0c10] rounded-[12px] p-[12px]"
-    >
-      {icon ? (
-        <div className="size-[32px] rounded-full shrink-0 overflow-hidden">
-          <img src={icon} alt="" className="size-[32px]" />
-        </div>
-      ) : (
-        <div
-          className="size-[32px] rounded-full flex items-center justify-center shrink-0 font-bold text-[11px] [font-family:'Gilroy',sans-serif]"
-          style={{ background: badgeBg, color: badgeColor }}
-        >
-          {badge}
-        </div>
-      )}
-      <div className="flex-1 min-w-0 flex flex-col">
-        <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[14px] leading-[18px] truncate">
-          {title}
-        </span>
-        <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[11px] leading-[14px] truncate">
-          {subtitle}
-        </span>
-      </div>
-      {onRemove && (
-        <button
-          type="button"
-          onClick={onRemove}
-          disabled={removing}
-          data-testid={removeTestId}
-          aria-label="Remove"
-          className="shrink-0 size-[36px] rounded-full bg-[#350011] hover:bg-[#4a0018] flex items-center justify-center transition-colors disabled:opacity-50"
-        >
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
-            <path d="M3 4.5h12M7 4.5V3.3c0-.44.36-.8.8-.8h2.4c.44 0 .8.36.8.8v1.2M14 4.5l-.56 9.13c-.04.6-.54 1.07-1.14 1.07H5.7c-.6 0-1.1-.47-1.14-1.07L4 4.5M7.3 7.6v4.1M10.7 7.6v4.1" stroke="#D20344" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
-      )}
-    </div>
-  );
-}
 
 /* ─── Category icon assets (used on both the category picker and the connected-sources home screen) ─── */
 const CATEGORY_ICON_SRC: Record<CategoryId, string> = {
@@ -742,7 +256,8 @@ export function CategoryPicker({ onPick, onContinue }: { onPick: (cat: CategoryI
 
 
 /* ───────────────────────────── Screen: Bank (Plaid) ───────────────────────────── */
-export function BankConnect({ onDone }: { onDone: () => void }) {
+export function BankConnect({ onDone, variant = "modal" }: { onDone: () => void; variant?: SourceScreenVariant }) {
+  const inline = variant === "inline";
   const [error, setError] = useState<string | null>(null);
 
   const statusQuery = useQuery<{ configured: boolean; env: string }>({
@@ -780,16 +295,20 @@ export function BankConnect({ onDone }: { onDone: () => void }) {
 
   return (
     <div className="flex flex-col gap-[16px]">
-      <div className="flex flex-col gap-[8px]">
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-[#a8b9f4] text-[20px]">
-          Connect Your Bank
-        </p>
-        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
-          Brain reads your account activity to understand what&apos;s coming in and going out. Add checking, savings, and credit cards in a minute.
-        </p>
-      </div>
+      {!inline && (
+        <div className="flex flex-col gap-[8px]">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-[#a8b9f4] text-[20px]">
+            Connect Your Bank
+          </p>
+          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
+            Brain reads your account activity to understand what&apos;s coming in and going out. Add checking, savings, and credit cards in a minute.
+          </p>
+        </div>
+      )}
 
-      {connections.length > 0 && (
+      {/* Settings → Sources lists the connected banks itself, directly below this
+          form: repeating them here would show the same account twice. */}
+      {!inline && connections.length > 0 && (
         <div className="flex flex-col gap-[8px]">
           {connections.map((c) => (
             <div
@@ -859,12 +378,14 @@ export function BankConnect({ onDone }: { onDone: () => void }) {
         />
       )}
 
-      <InfoNotice
-        title="Secure by Default"
-        body="Brain never sees or stores your bank password. We connect through Plaid, trusted by Venmo, Robinhood, and American Express. Brain only reads with your permission."
-      />
+      {!inline && (
+        <InfoNotice
+          title="Secure by Default"
+          body="Brain never sees or stores your bank password. We connect through Plaid, trusted by Venmo, Robinhood, and American Express. Brain only reads with your permission."
+        />
+      )}
 
-      {connections.length > 0 && (
+      {!inline && connections.length > 0 && (
         <button
           type="button"
           onClick={onDone}
@@ -936,7 +457,8 @@ function PlaidConnectButton({
 }
 
 /* ───────────────────────────── Screen: Provider picker ───────────────────────────── */
-export function ProviderPicker({ category }: { category: CategoryId }) {
+export function ProviderPicker({ category, variant = "modal" }: { category: CategoryId; variant?: SourceScreenVariant }) {
+  const inline = variant === "inline";
   const providers = PROVIDERS[category] ?? [];
   const [connecting, setConnecting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -993,14 +515,16 @@ export function ProviderPicker({ category }: { category: CategoryId }) {
 
   return (
     <div className="flex flex-col gap-[16px]">
-      <div className="flex flex-col gap-[8px]">
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-[#a8b9f4] text-[20px]">
-          Connect {CATEGORY_META[category].label}
-        </p>
-        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
-          Brain reads from each tool you connect, and never writes back without your explicit approval.
-        </p>
-      </div>
+      {!inline && (
+        <div className="flex flex-col gap-[8px]">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-[#a8b9f4] text-[20px]">
+            Connect {CATEGORY_META[category].label}
+          </p>
+          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
+            Brain reads from each tool you connect, and never writes back without your explicit approval.
+          </p>
+        </div>
+      )}
 
       {error && (
         <div
@@ -1069,16 +593,19 @@ export function ProviderPicker({ category }: { category: CategoryId }) {
         })}
       </div>
 
-      <InfoNotice
-        title="Read-only by Default"
-        body="Connecting a tool lets Brain mirror its data into your ledger. Disconnect any source any time from here or Settings."
-      />
+      {!inline && (
+        <InfoNotice
+          title="Read-only by Default"
+          body="Connecting a tool lets Brain mirror its data into your ledger. Disconnect any source any time from here or Settings."
+        />
+      )}
     </div>
   );
 }
 
 /* ───────────────────────────── Screen: Document upload ───────────────────────────── */
-export function DocumentUpload({ category, onDone }: { category: string; onDone: () => void }) {
+export function DocumentUpload({ category, onDone, variant = "modal" }: { category: string; onDone: () => void; variant?: SourceScreenVariant }) {
+  const inline = variant === "inline";
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -1131,16 +658,18 @@ export function DocumentUpload({ category, onDone }: { category: string; onDone:
 
   return (
     <div className="flex flex-col gap-[16px]">
-      <div className="flex flex-col gap-[8px]">
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-[#a8b9f4] text-[20px]">
-          {category === "tax" ? "Upload Tax Documents" : "Upload Documents"}
-        </p>
-        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
-          {category === "tax"
-            ? "Returns, filings, and notices. Brain reads them to keep your tax picture current."
-            : "Statements, contracts, or anything that explains how your business works. The more Brain knows, the better it can help."}
-        </p>
-      </div>
+      {!inline && (
+        <div className="flex flex-col gap-[8px]">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-[#a8b9f4] text-[20px]">
+            {category === "tax" ? "Upload Tax Documents" : "Upload Documents"}
+          </p>
+          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
+            {category === "tax"
+              ? "Returns, filings, and notices. Brain reads them to keep your tax picture current."
+              : "Statements, contracts, or anything that explains how your business works. The more Brain knows, the better it can help."}
+          </p>
+        </div>
+      )}
 
       <div
         onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
@@ -1182,7 +711,7 @@ export function DocumentUpload({ category, onDone }: { category: string; onDone:
         </div>
       )}
 
-      {(uploadMut.isPending || docs.length > 0) && (
+      {(uploadMut.isPending || (!inline && docs.length > 0)) && (
         <div className="flex flex-col gap-[6px]">
           {uploadMut.isPending && (
             <div className="flex items-center gap-[10px] bg-[#0a0c10] rounded-[10px] px-[12px] py-[8px]">
@@ -1190,7 +719,7 @@ export function DocumentUpload({ category, onDone }: { category: string; onDone:
               <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px]">Uploading…</span>
             </div>
           )}
-          {docs.map((d) => (
+          {!inline && docs.map((d) => (
             <div key={d.id} className="flex items-center justify-between gap-[10px] bg-[#0a0c10] rounded-[10px] px-[12px] py-[8px]" data-testid={`doc-row-${d.id}`}>
               <div className="flex flex-col gap-[2px] flex-1 min-w-0">
                 <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[13px] truncate">{d.name}</span>
@@ -1213,12 +742,14 @@ export function DocumentUpload({ category, onDone }: { category: string; onDone:
         </div>
       )}
 
-      <InfoNotice
-        title="Brain Reads but Doesn't Share"
-        body="Files are used only to understand your business and never shown to anyone else. You can delete any file at any time."
-      />
+      {!inline && (
+        <InfoNotice
+          title="Brain Reads but Doesn't Share"
+          body="Files are used only to understand your business and never shown to anyone else. You can delete any file at any time."
+        />
+      )}
 
-      {docs.length > 0 && (
+      {!inline && docs.length > 0 && (
         <button
           type="button"
           onClick={onDone}
@@ -1248,44 +779,6 @@ function InfoNotice({ title, body, uppercase = true }: { title: string; body: Re
     </div>
   );
 }
-
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
-/* ───────────────────────────── Header pagination dots ───────────────────────────── */
-function StepDots({ total, current }: { total: number; current: number }) {
-  return (
-    <div
-      className="flex items-center gap-[8px] px-[12px] py-[6px] rounded-full bg-[#1a0d33]"
-      data-testid="add-source-step-dots"
-      aria-hidden
-    >
-      {Array.from({ length: total }).map((_, i) => (
-        <span
-          key={i}
-          className={`block rounded-full transition-colors ${
-            i === current ? "bg-[#7631EE] size-[8px]" : "bg-[rgba(118,49,238,0.3)] size-[6px]"
-          }`}
-        />
-      ))}
-    </div>
-  );
-}
-
-/* ───────────────────────────── Screen 3: Reading the sources ─────────────────────────────
- * Real document extraction status from GET /api/integrations/documents (polled while any
- * document is still being read by brain-core). No fabricated stats. */
-/* Polling this list, and refreshing /api/brain/* once reading finishes, both live in
- * lib/brainRefresh.ts and are mounted once at the shell. They deliberately do not live here:
- * the user can close this modal mid-extraction, and the refresh still has to fire. The
- * status pills below stay live because they observe the same query key the shell polls. */
 
 export function ReadingScreen({
   onViewWiki, onContinue, onAddMore,

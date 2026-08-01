@@ -5,7 +5,7 @@
    registry (GET /v1/sources, via brainSources.ts). Nothing in this module invents a
    count - a category with no live source reads 0 and renders no badge.
 
-   Kept out of AddSourceModal.tsx so the grouping rules are unit-testable without
+   Kept out of the connect screens so the grouping rules are unit-testable without
    pulling in React and the modal's icon assets. */
 
 export type CategoryId = "bank" | "crypto" | "accounting" | "payroll" | "tax" | "payments" | "documents";

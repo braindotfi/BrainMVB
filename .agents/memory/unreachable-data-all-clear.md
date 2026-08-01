@@ -100,7 +100,7 @@ When a surface aggregates several feeds, the empty message should enumerate the
 ones it actually searched, so a partial outage cannot masquerade as a complete
 answer.
 
-## A *pending* read is not an answer either
+## The rule is three states: done / failed / pending
 
 Splitting "failed" from "empty" is only half the fix. A feed that retries for
 several seconds leaves the UI in a third state, and code that asks only
@@ -115,3 +115,9 @@ for as long as the retry took.
 or money*, derive four states — answered-true, answered-false, failed, pending
 — and let only an answered read produce the negative claim. Positive evidence
 should win over pending, so check `done` first.
+
+This is the canonical form of the rule, not a special case of it. Collapsing
+pending into EITHER neighbour is the same family of bug: fold it into "failed"
+and a slow feed cries wolf; fold it into "succeeded" and a slow feed renders the
+negative claim. Any surface with a slow-but-not-broken feed will read as the
+negative case unless all three states are handled explicitly.
