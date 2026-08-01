@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ComponentType } from "react";
-import { useSearch } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useAppAlert, AppAlertLink } from "@/components/AppAlert";
@@ -18,6 +18,7 @@ import teamActiveIcon from "@assets/Active_1783634473571.png";
 import teamInactiveIcon from "@assets/Normal_1783634473571.png";
 import { ContactUpdateModal } from "@/components/ContactUpdateModal";
 import { ConnectedSources } from "@/components/AddSourceModal";
+import { DevelopersSection } from "@/components/settings/DevelopersSection";
 import { useNav } from "@/lib/navContext";
 import { useBrainPolicy, autoApproveLimitFromPolicy, groupPolicyAmount } from "@/lib/brainPolicy";
 import SecurityFigma from "@/components/settings/figma/SecuritySection";
@@ -34,6 +35,7 @@ type Section =
   | "notifications"
   | "team"
   | "sources"
+  | "developers"
   | "legal"
   | "account";
 
@@ -152,6 +154,20 @@ const SourcesNavIcon = ({ active }: { active: boolean }) => (
   </svg>
 );
 
+/* No Figma export exists for a Developers nav item either, so this is drawn
+   inline at the same 24px box and stroke weight as the exported icons. */
+const DevelopersNavIcon = ({ active }: { active: boolean }) => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="shrink-0" aria-hidden="true">
+    <path
+      d="M9 8L5 12l4 4M15 8l4 4-4 4"
+      stroke={active ? "#ffffff" : "#6c779d"}
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
 /* Order follows the design's tab sequence. The tabs themselves are the design's;
    the vertical layout is not — nine horizontal tabs do not fit the centre column
    at the widths this shell actually renders (see the item-7 notes). */
@@ -161,6 +177,7 @@ const NAV_ITEMS: { id: Section; label: string; Icon: ComponentType<{ active: boo
   { id: "team",          label: "Team",              Icon: TeamNavIcon     },
   { id: "billing",       label: "Billing",           Icon: BillingNavIcon  },
   { id: "sources",       label: "Sources",           Icon: SourcesNavIcon  },
+  { id: "developers",    label: "Developers",        Icon: DevelopersNavIcon },
   { id: "security",      label: "Security",          Icon: SecurityNavIcon },
   { id: "legal",         label: "Legal",             Icon: LegalNavIcon    },
   { id: "account",       label: "Account",           Icon: AccountNavIcon  },
@@ -903,7 +920,7 @@ function BillingSection() {
 }
 
 /* ─── Main SettingsPage ──────────────────────────────────── */
-const VALID_SECTIONS: Section[] = ["profile", "billing", "security", "notifications", "team", "sources", "legal", "account"];
+const VALID_SECTIONS: Section[] = ["profile", "billing", "security", "notifications", "team", "sources", "developers", "legal", "account"];
 
 /* Settings → Sources. The wizard itself stays mounted on the shell; this tab
    shows the same connected-sources list the modal opens with, so there is one
@@ -920,6 +937,21 @@ export function SettingsPage() {
     return VALID_SECTIONS.includes(s as Section) ? (s as Section) : "profile";
   });
   const search = useSearch();
+  const navigate = useLocation()[1];
+
+  /* Clicking a tab moves the URL, not just local state. Settings → Developers
+     owns a second parameter (`?tab=`), and writing that parameter re-runs the
+     effect below: if the URL still carried an older `?section=`, a sub-tab click
+     would bounce the user back to that section. Keeping the URL authoritative
+     removes the conflict rather than special-casing it. `tab` is dropped when
+     leaving Developers so it cannot resurface on an unrelated section. */
+  const selectSection = (id: Section) => {
+    setSection(id);
+    const url = new URL(window.location.href);
+    url.searchParams.set("section", id);
+    if (id !== "developers") url.searchParams.delete("tab");
+    navigate(url.pathname + url.search, { replace: true });
+  };
 
   /* Re-read on every change to the query string, not just on mount. Settings is
      already mounted when an in-app link points at another tab, and a mount-only
@@ -939,6 +971,7 @@ export function SettingsPage() {
     notifications: <NotificationsFigma />,
     team:          <TeamFigma />,
     sources:       <SourcesSection />,
+    developers:    <DevelopersSection />,
     legal:         <LegalFigma />,
     account:       <AccountFigma />,
   }[section];
@@ -960,7 +993,7 @@ export function SettingsPage() {
               <button
                 key={id}
                 data-testid={`settings-nav-${id}`}
-                onClick={() => setSection(id)}
+                onClick={() => selectSection(id)}
                 className="flex items-center gap-2 p-2 w-full rounded-[12px] transition-colors text-left"
                 style={{ background: active ? "#0a0c10" : "transparent" }}
                 onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.background = "rgba(168,185,244,0.05)"; }}

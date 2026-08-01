@@ -20,7 +20,6 @@ import { FinancesPage } from "@/pages/FinancesPage";
 import { InboxPage } from "@/pages/InboxPage";
 import { RuleDetail } from "@/pages/RuleDetail";
 import { AuditLogPage } from "@/pages/AuditLogPage";
-import { DevelopersPage } from "@/pages/DevelopersPage";
 import { NavigationMenuSection } from "@/pages/sections/NavigationMenuSection";
 import { BrainAssistant } from "@/pages/sections/BrainAssistant";
 import { AddSourceModal } from "@/components/AddSourceModal";
@@ -62,6 +61,18 @@ function LegacyLedgerRedirect({ tab }: { tab: "vendors" | "rules" }) {
 
 const VendorsRedirect = () => <LegacyLedgerRedirect tab="vendors" />;
 const RulesRedirect = () => <LegacyLedgerRedirect tab="rules" />;
+
+/* /developers is retired — Developers now lives at Settings → Developers. The
+   route survives ONLY to forward existing links and bookmarks: wouter renders
+   NotFound for an unregistered path without any error, so deleting it outright
+   would turn every old link into a silent dead end. */
+const DevelopersRedirect = () => {
+  const navigate = useLocation()[1];
+  useEffect(() => {
+    navigate("/settings?section=developers", { replace: true });
+  }, [navigate]);
+  return null;
+};
 
 function AppLayout() {
   const { isLoggedIn, isLoading, logout } = useAuth();
@@ -222,7 +233,7 @@ function MainShell({ onLogout }: { onLogout: () => void }) {
             <Route path="/vendors" component={VendorsRedirect} />
             <Route path="/activity" component={InboxPage} />
             <Route path="/audit-log" component={AuditLogPage} />
-            <Route path="/developers" component={DevelopersPage} />
+            <Route path="/developers" component={DevelopersRedirect} />
             <Route path="/settings" component={SettingsPage} />
             <Route component={NotFound} />
           </Switch>

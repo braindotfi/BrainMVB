@@ -233,7 +233,6 @@ const OTHER_NAV: NavItem[] = [
     label: "Settings",
     ActiveIcon: SettingsIconActive,
     InactiveIcon: SettingsIconInactive,
-    match: ["/developers"],
   },
 ];
 

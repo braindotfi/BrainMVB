@@ -52,3 +52,19 @@ description: Why navigate() targets silently 404 in this app and how to guard th
   Rules use `replace: true` so clicking through filters does not fill history with entries
   the user has to walk back out of. Don't "fix" a filter that fails a back-button test
   without checking which of the two it is.
+
+## Nested tabs: one owner per URL, and the URL wins
+
+When a page's section lives in `?section=` and a nested tab lives in `?tab=`,
+any click that writes one parameter re-triggers the effect reading the other.
+If the outer section is held only in local state, clicking an inner tab rewrites
+the query string, the outer effect re-reads a stale `?section=`, and the user is
+thrown back to a section they left minutes ago.
+
+**Why:** both effects observe the same `useSearch()` string; a partial write is
+indistinguishable from a deliberate navigation.
+
+**How to apply:** make the URL authoritative for BOTH parameters — outer nav
+clicks must write `?section=` (with `replace: true`), not just call `setState` —
+and drop the inner parameter when leaving the section that owns it. Retiring a
+top-level route: keep the path as a redirect, don't just delete it.

@@ -99,3 +99,19 @@ shows AND that the honest conclusion returns once the feed lands.
 When a surface aggregates several feeds, the empty message should enumerate the
 ones it actually searched, so a partial outage cannot masquerade as a complete
 answer.
+
+## A *pending* read is not an answer either
+
+Splitting "failed" from "empty" is only half the fix. A feed that retries for
+several seconds leaves the UI in a third state, and code that asks only
+`isError` will render the not-done/empty branch for that whole window — a
+checklist told a developer with a working key that they had not issued one,
+for as long as the retry took.
+
+**Why:** `?? []` collapses pending and failed into the same falsy shape, and
+`isError` is false while retries are still in flight.
+
+**How to apply:** for any read whose answer is a *claim about the user's setup
+or money*, derive four states — answered-true, answered-false, failed, pending
+— and let only an answered read produce the negative claim. Positive evidence
+should win over pending, so check `done` first.

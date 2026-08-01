@@ -80,3 +80,16 @@ Treasury Wallet" — three checks failed for a component that was fine. Derive t
 known-good term from the API at run time and abort loudly if none can be found:
 without a term that genuinely matches, "found nothing" and "nothing seeded" are
 indistinguishable and the run proves nothing.
+
+## Don't identify a screen by data-dependent markers
+
+A routing check that detects "which panel is open" by looking for a control
+inside each panel breaks as soon as a feed is degraded: with the keys API down,
+the API Keys panel renders an unavailable card instead of its usual button, and
+the *routing* assertion fails for a reason that has nothing to do with routing.
+
+**How to apply:** have the container report its own identity
+(`data-<thing>-tab={tab}` on the tabpanel) and assert on that, then assert the
+panel is non-empty separately. Also poll past provisional states ("Loading…",
+a "checking" attribute) before judging a degraded-state assertion, or the check
+races the query's retry.

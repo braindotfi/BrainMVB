@@ -1,7 +1,14 @@
 /**
- * Developers section — Overview, API Keys, Tenants, Usage and Limits (+ Docs link).
+ * Settings → Developers — Overview, API Keys, Tenants, Usage and Limits (+ Docs).
  *
- * Assembled ONLY from existing design patterns (Settings two-column shell,
+ * Lives INSIDE Settings as a section; there is no top-level /developers page.
+ * The four subsections below are unchanged from that page — only the shell
+ * around them differs. Settings already supplies the 240px nav and the card
+ * border, so this renders a horizontal sub-tab row rather than a second
+ * sidebar, which leaves the content column at exactly the width it had before
+ * (512px at a 1440 viewport, 352px at 1280).
+ *
+ * Assembled ONLY from existing design patterns (Settings list rows,
  * Home metric cards / list rows, existing pill buttons and badges). No mock
  * data: keys are issued and stored by brain-core (proxied via
  * /api/developers/keys; plaintext relayed exactly once), usage aggregates
@@ -13,20 +20,8 @@
  * Webhooks are deliberately excluded from this section (v2).
  */
 import { useEffect, useState, type ReactNode } from "react";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { Plus } from "lucide-react";
-import overviewActiveIcon from "@assets/Icon=Overview,_State=Active_1784755235082.png";
-import overviewInactiveIcon from "@assets/Icon=Overview,_State=Normal_1784755235083.png";
-// NOTE: the attached filenames for Keys are swapped relative to their actual
-// visual content. The file named "Active" is gray/inactive; "Inactive" is
-// purple/active. We import them into correctly-named variables here.
-import keysActiveIcon from "@assets/Icon=Keys_State=Inactive_1784673358523.png";
-import keysInactiveIcon from "@assets/Icon=Keys_State=Active_1784673358524.png";
-import tenantsActiveIcon from "@assets/Icon=Tenants,_State=Active_1784755235083.png";
-import tenantsInactiveIcon from "@assets/Icon=Tenants,_State=Normal_1784755235083.png";
-import usageActiveIcon from "@assets/Icon=Usage,_State=Active_1784673358525.png";
-import usageInactiveIcon from "@assets/Icon=Usage,_State=Inactive_1784673358525.png";
-import docsInactiveIcon from "@assets/Icon=Docs,_State=Normal_1784755235083.png";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAppAlert } from "@/components/AppAlert";
@@ -233,8 +228,8 @@ const KeysUnavailableCard = ({ testId }: { testId?: string }) => (
   </Card>
 );
 
-const EmptyRow = ({ children }: { children: ReactNode }) => (
-  <div className="p-4">
+const EmptyRow = ({ children, testId }: { children: ReactNode; testId?: string }) => (
+  <div className="p-4" data-testid={testId}>
     <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[20px]">{children}</p>
   </div>
 );
@@ -646,10 +641,34 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
   );
   const today = usageQ.data?.daily.length ? usageQ.data.daily[usageQ.data.daily.length - 1].count : null;
 
-  const steps = [
-    { label: "Create a Tenant", done: hasTenant },
-    { label: "Issue an API Key", done: hasKey },
-    { label: "Make a Key-Authenticated Call", done: hasKeyAuthedCall },
+  /* A failed read is NOT an incomplete step. `?? []` alone would render
+     "1 Create a Tenant" to someone who already has one and merely lost the
+     connection — an invented setup problem, and the checklist is the first
+     thing a new developer reads. Unreachable reads report as unknown. */
+  /* A step is only "todo" once a read has actually answered. A pending read is
+     not evidence of an incomplete setup either — the keys feed retries for
+     several seconds, and for that whole window the old code told a developer
+     with a working key that they had not issued one. */
+  type StepState = "done" | "todo" | "unknown" | "checking";
+  const stepState = (pending: boolean, failed: boolean, done: boolean): StepState =>
+    done ? "done" : failed ? "unknown" : pending ? "checking" : "todo";
+  const steps: { label: string; state: StepState }[] = [
+    {
+      label: "Create a Tenant",
+      state: stepState(tenantsQ.isPending, tenantsQ.isError, hasTenant),
+    },
+    {
+      label: "Issue an API Key",
+      state: stepState(keysQ.isPending, keysQ.isError, hasKey),
+    },
+    {
+      label: "Make a Key-Authenticated Call",
+      state: stepState(
+        keysQ.isPending || keyUsageQ.isPending,
+        keysQ.isError || keyUsageQ.isError,
+        hasKeyAuthedCall,
+      ),
+    },
   ];
 
   const orgName = tenancy?.companyName;
@@ -852,22 +871,51 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
           {steps.map((s, i) => (
             <div key={s.label} className="contents">
               {i > 0 && <div className="h-px w-full bg-[#1d2132]" />}
-              <div className="flex gap-[8px] items-center w-full" data-testid={`step-get-started-${i}`}>
+              <div
+                className="flex gap-[8px] items-center w-full"
+                data-testid={`step-get-started-${i}`}
+                data-step-state={s.state}
+              >
                 <div
                   className="size-[32px] rounded-full flex items-center justify-center flex-shrink-0"
-                  style={s.done ? { background: "#4a2300" } : { background: "#222737" }}
+                  style={s.state === "done" ? { background: "#4a2300" } : { background: "#222737" }}
                 >
-                  {s.done ? (
+                  {s.state === "done" ? (
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                       <path d="M3 8.5L6.2 11.5L13 4.5" stroke="#ff9400" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
+                  ) : s.state === "unknown" ? (
+                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[16px] leading-[20px]">?</span>
+                  ) : s.state === "checking" ? (
+                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[16px] leading-[20px]">…</span>
                   ) : (
                     <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px]">{i + 1}</span>
                   )}
                 </div>
-                <p className="flex-1 min-w-0 [font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px]" style={{ color: s.done ? "#ff9400" : "#a8b9f4" }}>
-                  {s.label}
-                </p>
+                <div className="flex-1 min-w-0 flex flex-col gap-[2px]">
+                  <p
+                    className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px]"
+                    style={{ color: s.state === "done" ? "#ff9400" : s.state === "todo" ? "#a8b9f4" : "#6c779d" }}
+                  >
+                    {s.label}
+                  </p>
+                  {s.state === "unknown" && (
+                    <p
+                      className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] leading-[16px]"
+                      data-testid={`step-get-started-${i}-unknown`}
+                    >
+                      Couldn't check this — brain-core is unreachable. It may already be done.
+                    </p>
+                  )}
+                  {s.state === "checking" && (
+                    <p
+                      className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] leading-[16px]"
+                      data-testid={`step-get-started-${i}-checking`}
+                    >
+                      Checking…
+                    </p>
+                  )}
+                </div>
                 {i === 0 && (
                   <button
                     type="button"
@@ -955,7 +1003,13 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
         <Card testId="card-recent-activity">
           {activityQ.isLoading ? (
             <EmptyRow>Loading activity…</EmptyRow>
-          ) : activityQ.isError || !activityQ.data?.events?.length ? (
+          ) : activityQ.isError ? (
+            /* "We could not read the log" is not "nothing happened". The second
+               claim is the one a developer acts on when a call seems to vanish. */
+            <EmptyRow testId="row-activity-unavailable">
+              Couldn't load activity. brain-core may be unavailable — this is not the same as no activity.
+            </EmptyRow>
+          ) : !activityQ.data?.events?.length ? (
             <EmptyRow>No recorded activity yet. Calls appear here as brain-core audit events.</EmptyRow>
           ) : (
             <div className="flex flex-col gap-[16px] p-[16px]">
@@ -1475,7 +1529,13 @@ function TenantsSection({ env, onNavigate }: { env: DevEnv; onNavigate: (s: DevS
                     <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[12px] whitespace-nowrap">Active Keys</p>
                   </div>
                   <div className="flex flex-[1_0_0] flex-col items-start justify-center min-w-px px-[12px] py-[8px]" data-testid="detail-tenant-key-count">
-                    <p className="[font-family:'JetBrains_Mono',monospace] leading-[20px] text-[#a8b9f4] text-[13px] w-full">{keysQ.isLoading ? "…" : String(tenantKeyCount)}</p>
+                    {/* A failed keys read must not render as "this tenant has 0 keys". */}
+                    <p
+                      className="[font-family:'JetBrains_Mono',monospace] leading-[20px] text-[#a8b9f4] text-[13px] w-full"
+                      data-testid="text-tenant-key-count"
+                    >
+                      {keysQ.isLoading ? "…" : keysQ.isError ? "Unavailable" : String(tenantKeyCount)}
+                    </p>
                   </div>
                 </div>
                 {/* Created */}
@@ -1931,32 +1991,45 @@ function UsageSection({ env }: { env: DevEnv }) {
   );
 }
 
-/* ─── Section nav (Settings two-column pattern) ─── */
+/* ─── Sub-tab nav ─── */
 type DevSection = "overview" | "keys" | "tenants" | "usage";
 
-function useDevSection(): [DevSection, (s: DevSection) => void] {
-  const valid: DevSection[] = ["overview", "keys", "tenants", "usage"];
-  const initial = (() => {
-    const s = new URLSearchParams(window.location.search).get("section");
-    return valid.includes(s as DevSection) ? (s as DevSection) : "overview";
-  })();
-  const [section, setSection] = useState<DevSection>(initial);
+const DEV_TABS: { id: DevSection; label: string }[] = [
+  { id: "overview", label: "Overview" },
+  { id: "keys", label: "API Keys" },
+  { id: "tenants", label: "Tenants" },
+  { id: "usage", label: "Usage" },
+];
+const DEV_TAB_IDS: DevSection[] = DEV_TABS.map((t) => t.id);
+
+/* Settings owns `?section=`, so the sub-tab needs its own key — sharing one
+ * parameter would mean the page and its sub-tab overwrite each other.
+ *
+ * Synced by effect rather than read once at mount: this component is already
+ * rendered when an in-app link points at another sub-tab, and a mount-only
+ * initializer swallows that navigation silently — the URL moves and the view
+ * does not.
+ */
+function useDevTab(): [DevSection, (s: DevSection) => void] {
+  const search = useSearch();
   const navigate = useLocation()[1];
+  const readTab = (s: string): DevSection | null => {
+    const v = new URLSearchParams(s).get("tab");
+    return DEV_TAB_IDS.includes(v as DevSection) ? (v as DevSection) : null;
+  };
+  const [tab, setTab] = useState<DevSection>(() => readTab(window.location.search) ?? "overview");
+  useEffect(() => {
+    const t = readTab(search);
+    if (t) setTab(t);
+  }, [search]);
   const set = (s: DevSection) => {
-    setSection(s);
+    setTab(s);
     const url = new URL(window.location.href);
-    url.searchParams.set("section", s);
+    url.searchParams.set("tab", s);
     navigate(url.pathname + url.search, { replace: true });
   };
-  return [section, set];
+  return [tab, set];
 }
-
-const DEV_NAV: { id: DevSection; label: string; activeIcon: string; inactiveIcon: string }[] = [
-  { id: "overview", label: "Overview", activeIcon: overviewActiveIcon, inactiveIcon: overviewInactiveIcon },
-  { id: "keys", label: "API Keys", activeIcon: keysActiveIcon, inactiveIcon: keysInactiveIcon },
-  { id: "tenants", label: "Tenants", activeIcon: tenantsActiveIcon, inactiveIcon: tenantsInactiveIcon },
-  { id: "usage", label: "Usage and Limits", activeIcon: usageActiveIcon, inactiveIcon: usageInactiveIcon },
-];
 
 const ChevronRight = ({ color = "#414965" }: { color?: string }) => (
   <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -1964,8 +2037,8 @@ const ChevronRight = ({ color = "#414965" }: { color?: string }) => (
   </svg>
 );
 
-export function DevelopersPage() {
-  const [section, setSection] = useDevSection();
+export function DevelopersSection() {
+  const [tab, setTab] = useDevTab();
   const [env, setEnv] = useState<DevEnv>(() => {
     const stored = localStorage.getItem(ENV_STORAGE_KEY);
     return stored === "live" ? "live" : "sandbox";
@@ -1980,64 +2053,70 @@ export function DevelopersPage() {
   const envControl = <EnvToggle env={env} onChange={setEnv} />;
 
   const SectionContent = {
-    overview: <OverviewSection env={env} envControl={envControl} onNavigate={setSection} />,
+    overview: <OverviewSection env={env} envControl={envControl} onNavigate={setTab} />,
     keys: <KeysSection env={env} />,
-    tenants: <TenantsSection env={env} onNavigate={setSection} />,
+    tenants: <TenantsSection env={env} onNavigate={setTab} />,
     usage: <UsageSection env={env} />,
-  }[section];
+  }[tab];
 
   return (
-    <div className="flex h-full rounded-[16px] border border-[#1d2132] overflow-hidden" style={{ background: "#11141b" }}>
-      {/* ── Developers sidebar ── */}
-      <nav className="flex-shrink-0 flex flex-col overflow-y-auto" style={{ width: 240, borderRight: "1px solid #1d2132", background: "#11141b" }}>
-        <div className="flex flex-col gap-1 p-2 pt-2">
-          {DEV_NAV.map(({ id, label, activeIcon, inactiveIcon }) => {
-            const active = section === id;
-            return (
-              <button
-                key={id}
-                data-testid={`developers-nav-${id}`}
-                onClick={() => setSection(id)}
-                className="flex items-center gap-2 p-2 w-full rounded-[12px] transition-colors text-left"
-                style={{ background: active ? "#0a0c10" : "transparent" }}
-                onMouseEnter={e => { if (!active) e.currentTarget.style.background = "rgba(168,185,244,0.05)"; }}
-                onMouseLeave={e => { if (!active) e.currentTarget.style.background = "transparent"; }}
-              >
-                <div className="size-[24px] flex-shrink-0 flex items-center justify-center">
-                  <img src={active ? activeIcon : inactiveIcon} alt="" aria-hidden="true" width={20} height={20} className="select-none" draggable={false} />
-                </div>
-                <span
-                  className="flex-1 text-[16px] leading-5 whitespace-nowrap"
-                  style={{ fontFamily: "'Gilroy', sans-serif", fontWeight: 500, color: active ? "#ffffff" : "#6c779d" }}
-                >
-                  {label}
-                </span>
-                {active && <ChevronRight />}
-              </button>
-            );
-          })}
-          <a
-            href="https://docs.brain.fi/introduction/quickstart"
-            target="_blank"
-            rel="noopener noreferrer"
-            data-testid="developers-nav-docs"
-            className="flex items-center gap-2 p-2 w-full rounded-[12px] transition-colors text-left hover:bg-[rgba(168,185,244,0.05)]"
-          >
-            <div className="size-[24px] flex-shrink-0 flex items-center justify-center">
-              <img src={docsInactiveIcon} alt="" aria-hidden="true" width={20} height={20} className="select-none" draggable={false} />
-            </div>
-            <span className="flex-1 text-[16px] leading-5 whitespace-nowrap" style={{ fontFamily: "'Gilroy', sans-serif", fontWeight: 500, color: "#6c779d" }}>
-              Docs
-            </span>
-          </a>
-        </div>
-      </nav>
+    <div className="flex flex-col gap-[16px]">
+      <div className="flex items-start justify-between gap-[12px]">
+        <p
+          className="text-[14px] leading-[18px] text-[#6c779d] min-w-0"
+          style={{ fontFamily: "'Gilroy', sans-serif", fontWeight: 500 }}
+          data-testid="text-developers-subhead"
+        >
+          Build on your Brain ledger — create keys, manage tenants, and track usage.
+        </p>
+        {/* Docs sits on the subhead row, not in the tab row: four tabs already
+            fill the column at 1280 and a fifth item pushed one off-screen. */}
+        <a
+          href="https://docs.brain.fi/introduction/quickstart"
+          target="_blank"
+          rel="noopener noreferrer"
+          data-testid="developers-tab-docs"
+          className="shrink-0 text-[14px] leading-[18px] transition-colors hover:text-[#a8b9f4]"
+          style={{ fontFamily: "'Gilroy', sans-serif", fontWeight: 500, color: "#6c779d" }}
+        >
+          Docs ↗
+        </a>
+      </div>
 
-      {/* ── Content area ── */}
-      <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
-        <div className={`${section === "usage" ? "flex-1 min-h-0 flex flex-col overflow-hidden" : "flex-1 overflow-y-auto"} px-[16px] py-5`}>
-          {SectionContent}
-        </div>
+      <div role="tablist" aria-label="Developers" className="flex items-center gap-[2px] overflow-x-auto border-b border-[#1d2132]">
+        {DEV_TABS.map(({ id, label }) => {
+          const active = tab === id;
+          return (
+            <button
+              key={id}
+              role="tab"
+              id={`developers-tab-${id}`}
+              aria-selected={active}
+              aria-controls="developers-panel"
+              data-testid={`developers-tab-${id}`}
+              onClick={() => setTab(id)}
+              className="px-[8px] py-[8px] whitespace-nowrap text-[14px] leading-[18px] transition-colors"
+              style={{
+                fontFamily: "'Gilroy', sans-serif",
+                fontWeight: 500,
+                color: active ? "#ffffff" : "#6c779d",
+                borderBottom: active ? "2px solid #7631ee" : "2px solid transparent",
+              }}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
+      <div
+        role="tabpanel"
+        id="developers-panel"
+        aria-labelledby={`developers-tab-${tab}`}
+        data-testid="developers-panel"
+        data-dev-tab={tab}
+      >
+        {SectionContent}
       </div>
     </div>
   );

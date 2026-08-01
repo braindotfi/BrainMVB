@@ -62,3 +62,21 @@ covers the mechanism.
 `membersStore.clearMembers()` is still called from `logout()` only, so the members
 cache has the same leak shape on account→account switches. Left alone
 deliberately (out of scope at the time), not because it's correct.
+
+## Persisted stores: key by user, do NOT clear in the funnel
+
+The funnel also runs on **session bootstrap** — restoring the existing session on
+every page load calls it with the same user. So a persisted (localStorage) store
+that *clears* itself in the funnel is wiped on every refresh: the UI accepts the
+write, shows it, and loses it on reload, with no error to explain why. This looks
+exactly like a broken save and is easy to misdiagnose as a storage bug.
+
+**Rule:** in-memory user-scoped stores clear in the funnel; persisted ones
+**re-point a per-user key** (`<prefix>_{userId}`) from the funnel instead. Both
+keep data from crossing accounts, but only the second survives a reload.
+
+Two details for a `useSyncExternalStore` store built this way:
+- Cache the parsed snapshot. Parsing storage inside `getSnapshot` returns a new
+  object identity every render and spins forever.
+- Reads before the scope is set (no user yet) must return a **stable** empty
+  value, and writes must no-op rather than write to an unscoped key.
