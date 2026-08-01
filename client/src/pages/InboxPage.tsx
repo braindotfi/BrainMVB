@@ -1010,7 +1010,7 @@ function titleCaseDropdownLabel(label: string): string {
 }
 
   return (
-    <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden rounded-[16px] absolute inset-0 grid grid-rows-[auto_minmax(0,1fr)]">
+    <div className="bg-[#11141b] overflow-hidden absolute inset-0 grid grid-rows-[auto_minmax(0,1fr)]">
 
       {/* Static chrome: header + filter toolbar — never scrolls */}
       <div className="shrink-0 flex flex-col gap-[24px] items-start pt-[40px] px-[16px] pb-[16px] w-full min-w-0">
