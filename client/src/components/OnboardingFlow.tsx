@@ -1,25 +1,15 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import closeIcon from "@assets/Close_1783293571882.png";
+import { useBrainPolicy, autoApproveLimitFromPolicy } from "@/lib/brainPolicy";
 import {
-  CategoryPicker,
-  ReadingScreen,
-  FoundScreen,
-  BankConnect,
-  ProviderPicker,
-  DocumentUpload,
-  type CategoryId,
-} from "./sources/SourceConnectScreens";
-
-const TOTAL_STEPS = 4;
-
-type SubScreen = "categories" | "bank" | "providers" | "documents";
-
-function categoryTarget(cat: CategoryId): SubScreen {
-  if (cat === "bank") return "bank";
-  if (cat === "tax" || cat === "documents") return "documents";
-  return "providers";
-}
+  buildWalkthrough,
+  readPolicyState,
+  WALKTHROUGH_STEPS,
+  type WalkthroughRule,
+  type WalkthroughStep,
+} from "@/lib/onboardingWalkthrough";
+import { WalkthroughStepView } from "./onboarding/WalkthroughStep";
 
 interface OnboardingFlowProps {
   open: boolean;
@@ -27,14 +17,40 @@ interface OnboardingFlowProps {
   onComplete: () => void;
 }
 
+/**
+ * First-run walkthrough: a rule, what it auto-approves, what always comes to
+ * you. Every specific it states is read from the tenant's live approval policy;
+ * see lib/onboardingWalkthrough.ts for why the three read states are kept
+ * apart rather than collapsed into one generic screen.
+ */
 export function OnboardingFlow({ open, onClose, onComplete }: OnboardingFlowProps) {
   const [step, setStep] = useState(0);
-  const [subScreen, setSubScreen] = useState<SubScreen>("categories");
-  const [activeCategory, setActiveCategory] = useState<CategoryId>("accounting");
+  const policy = useBrainPolicy();
+  const limit = autoApproveLimitFromPolicy(policy.facts);
+
+  const read = readPolicyState({ isLoading: policy.isLoading, isError: policy.isError, limit });
+
+  /* The tenant's own rule for step 1: the first card in policy order, which is
+     the one brain-core's VM would evaluate first. */
+  const rule: WalkthroughRule | null = useMemo(() => {
+    const first = policy.rules[0];
+    return first ? { name: first.name, detail: first.scopeSummary ?? first.summary } : null;
+  }, [policy.rules]);
+
+  const live = useMemo(() => buildWalkthrough(read, rule), [read.state, (read as { limit?: unknown }).limit, rule]);
+
+  /* Freeze each step's copy the first time it is shown. A policy read that
+     lands mid-step would otherwise rewrite the sentence someone is reading —
+     and on this screen the sentence is the product. */
+  const [frozen, setFrozen] = useState<Record<number, WalkthroughStep>>({});
+  useEffect(() => {
+    setFrozen((prev) => (prev[step] ? prev : { ...prev, [step]: live[step] }));
+  }, [step, live]);
+  const shown = frozen[step] ?? live[step];
 
   const goNext = useCallback(() => {
     setStep((s) => {
-      if (s >= TOTAL_STEPS - 1) {
+      if (s >= WALKTHROUGH_STEPS - 1) {
         onComplete();
         return s;
       }
@@ -42,27 +58,16 @@ export function OnboardingFlow({ open, onClose, onComplete }: OnboardingFlowProp
     });
   }, [onComplete]);
 
-  const goBack = useCallback(() => {
-    if (step === 1 && subScreen !== "categories") {
-      setSubScreen("categories");
-      return;
-    }
-    setStep((s) => Math.max(0, s - 1));
-  }, [step, subScreen]);
-
-  const openCategory = useCallback((cat: CategoryId) => {
-    setActiveCategory(cat);
-    setSubScreen(categoryTarget(cat));
-  }, []);
-
-  const backToCategories = useCallback(() => setSubScreen("categories"), []);
+  const goBack = useCallback(() => setStep((s) => Math.max(0, s - 1)), []);
 
   useEffect(() => {
     if (open) {
       setStep(0);
-      setSubScreen("categories");
+      setFrozen({});
     }
   }, [open]);
+
+  const isLast = step === WALKTHROUGH_STEPS - 1;
 
   return (
     <DialogPrimitive.Root open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
@@ -78,7 +83,7 @@ export function OnboardingFlow({ open, onClose, onComplete }: OnboardingFlowProp
         >
           {/* Header */}
           <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-[#1d2132] border-solid h-[56px] relative shrink-0 w-full">
-            {(step > 0) && (
+            {step > 0 && (
               <button
                 type="button"
                 onClick={goBack}
@@ -92,7 +97,7 @@ export function OnboardingFlow({ open, onClose, onComplete }: OnboardingFlowProp
               </button>
             )}
 
-            <StepDots total={TOTAL_STEPS} current={step} />
+            <StepDots total={WALKTHROUGH_STEPS} current={step} />
 
             <DialogPrimitive.Close
               data-testid="button-onboarding-close"
@@ -102,82 +107,39 @@ export function OnboardingFlow({ open, onClose, onComplete }: OnboardingFlowProp
               <img src={closeIcon} alt="" className="size-[32px] rounded-full" />
             </DialogPrimitive.Close>
 
-            <DialogPrimitive.Title className="sr-only">Brain onboarding</DialogPrimitive.Title>
+            <DialogPrimitive.Title className="sr-only">How Brain's rules work</DialogPrimitive.Title>
             <DialogPrimitive.Description id="onboarding-description" className="sr-only">
-              Step {step + 1} of {TOTAL_STEPS}
+              Step {step + 1} of {WALKTHROUGH_STEPS}
             </DialogPrimitive.Description>
           </div>
 
           {/* Body */}
-          <div
-            className="w-full flex-1 min-h-0 overflow-y-auto overflow-x-hidden"
-            data-testid="onboarding-scroll"
-          >
+          <div className="w-full flex-1 min-h-0 overflow-y-auto overflow-x-hidden" data-testid="onboarding-scroll">
             <div className="flex flex-col gap-[24px] p-[24px] w-full">
+              <WalkthroughStepView step={shown} index={step} />
 
-              {/* Step 1: Welcome */}
-              {step === 0 && (
-                <>
-                  <StepWelcome />
-                  <div className="flex gap-[16px] items-stretch w-full">
-                    <button
-                      type="button"
-                      onClick={goNext}
-                      data-testid="button-onboarding-skip"
-                      className="flex flex-1 items-center justify-center px-[20px] py-[10px] rounded-[100px] bg-[#222737] hover:bg-[#2c3247] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-                    >
-                      <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">
-                        Skip for Now
-                      </span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={goNext}
-                      data-testid="button-onboarding-continue"
-                      className="flex flex-1 items-center justify-center px-[20px] py-[10px] rounded-[100px] bg-[#4a2300] hover:bg-[#5a2c00] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ff9500]"
-                    >
-                      <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#ff9500] text-[16px] whitespace-nowrap">
-                        Continue
-                      </span>
-                    </button>
-                  </div>
-                </>
-              )}
-
-              {/* Step 2: Connect a source */}
-              {step === 1 && subScreen === "categories" && (
-                <CategoryPicker
-                  onPick={openCategory}
-                  onContinue={goNext}
-                />
-              )}
-              {step === 1 && subScreen === "bank" && (
-                <BankConnect onDone={backToCategories} />
-              )}
-              {step === 1 && subScreen === "providers" && (
-                <ProviderPicker category={activeCategory} />
-              )}
-              {step === 1 && subScreen === "documents" && (
-                <DocumentUpload
-                  category={activeCategory === "tax" ? "tax" : "general"}
-                  onDone={backToCategories}
-                />
-              )}
-
-              {/* Step 3: Reading */}
-              {step === 2 && (
-                <ReadingScreen
-                  onViewWiki={goBack}
-                  onContinue={goNext}
-                  onAddMore={() => { setStep(1); setSubScreen("categories"); }}
-                />
-              )}
-
-              {/* Step 4: Everything Brain Found */}
-              {step === 3 && (
-                <FoundScreen onFinish={onComplete} />
-              )}
-
+              <div className="flex gap-[16px] items-stretch w-full">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  data-testid="button-onboarding-skip"
+                  className="flex flex-1 items-center justify-center px-[20px] py-[10px] rounded-[100px] bg-[#222737] hover:bg-[#2c3247] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                >
+                  <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">
+                    Skip
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={goNext}
+                  data-testid="button-onboarding-continue"
+                  className="flex flex-1 items-center justify-center px-[20px] py-[10px] rounded-[100px] bg-[#4a2300] hover:bg-[#5a2c00] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ff9500]"
+                >
+                  <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#ff9500] text-[16px] whitespace-nowrap">
+                    {isLast ? "Got it — take me to Brain" : "Next"}
+                  </span>
+                </button>
+              </div>
             </div>
           </div>
         </DialogPrimitive.Content>
@@ -198,23 +160,6 @@ function StepDots({ total, current }: { total: number; current: number }) {
           }`}
         />
       ))}
-    </div>
-  );
-}
-
-/* Step 1: Welcome */
-function StepWelcome() {
-  return (
-    <div className="flex flex-col gap-[8px]">
-      <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-[#a8b9f4] text-[20px]">
-        Welcome to Brain
-      </p>
-      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
-        Let's start by connecting your business systems.
-      </p>
-      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px] mt-[8px]">
-        Brain reads your authorized financial activity, structures it into a verified ledger, and gives your company a financial memory that agents can use safely within your rules.
-      </p>
     </div>
   );
 }

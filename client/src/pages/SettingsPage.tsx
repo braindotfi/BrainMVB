@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ComponentType } from "react";
 import { useLocation, useSearch } from "wouter";
+import { clearOnboarding } from "@/lib/onboarding";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useAppAlert, AppAlertLink } from "@/components/AppAlert";
@@ -363,6 +364,7 @@ const ChevronActionButton = ({ label, testId, onClick }: { label: string; testId
 function ProfileSection() {
   const alert = useAppAlert();
   const { user } = useAuth();
+  const navigate = useLocation()[1];
   const { email, phone } = useUserContact();
   // Real company name from the tenancy link, falling back to the user's own display name.
   // A locally-saved override (from the "Edit" button below) always wins once set.
@@ -709,6 +711,41 @@ function ProfileSection() {
           Shown as your Brain policy has it. Editing an approval limit requires a signed
           policy change, which cannot be made from this screen yet.
         </p>
+      </div>
+
+      {/* Replay the first-run walkthrough. Clearing the flag and returning Home
+          reuses first-visit detection rather than adding a second way to open
+          the flow, so the two paths can never drift apart. */}
+      <div className="flex flex-col gap-[4px]">
+        <SectionLabel>Getting Started</SectionLabel>
+        <Card noBorder>
+          <SettingRow
+            icon={
+              <RowIcon>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M4 12a8 8 0 1 1 2.6 5.9" stroke="#a8b9f4" strokeWidth="1.5" strokeLinecap="round" />
+                  <path d="M4 8.5V13h4.5" stroke="#a8b9f4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </RowIcon>
+            }
+            label="Welcome Walkthrough"
+            sublabel="How your rules decide what runs automatically, and what always waits for you."
+            testId="setting-row-replay-onboarding"
+            right={
+              <button
+                type="button"
+                data-testid="button-replay-onboarding"
+                onClick={() => {
+                  clearOnboarding(user?.id);
+                  navigate("/");
+                }}
+                className="shrink-0 rounded-[8px] px-[12px] py-[8px] bg-[#222737] hover:bg-[#2c3247] transition-colors [font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#a8b9f4] whitespace-nowrap"
+              >
+                Replay
+              </button>
+            }
+          />
+        </Card>
       </div>
 
     </div>

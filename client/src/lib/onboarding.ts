@@ -26,6 +26,19 @@ export function isOnboardingComplete(userId: string | null | undefined): boolean
   }
 }
 
+/** Forget that this user has seen onboarding, so the walkthrough opens again on
+ *  Home. Backs Settings' "Replay welcome walkthrough": the replay path reuses
+ *  first-visit detection rather than adding a second way to open the flow. */
+export function clearOnboarding(userId: string | null | undefined): void {
+  const key = onboardingKey(userId);
+  if (!key) return;
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    /* ignore storage errors */
+  }
+}
+
 /** Mark onboarding done for this user. No-ops when storage is unavailable. */
 export function markOnboardingComplete(userId: string | null | undefined): void {
   const key = onboardingKey(userId);

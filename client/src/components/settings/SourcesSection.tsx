@@ -371,10 +371,10 @@ export function SourcesSection() {
                 own login, a tool through that provider's authorisation, and a
                 document through an upload. Each mechanism owns its own action. */}
             <div data-testid={`add-source-mechanism-${mechanism}`}>
-              {mechanism === "bank" && <BankConnect variant="inline" onDone={() => setFormOpen(false)} />}
-              {mechanism === "providers" && <ProviderPicker category={category} variant="inline" />}
+              {mechanism === "bank" && <BankConnect onDone={() => setFormOpen(false)} />}
+              {mechanism === "providers" && <ProviderPicker category={category} />}
               {mechanism === "documents" && (
-                <DocumentUpload category={category} variant="inline" onDone={() => setFormOpen(false)} />
+                <DocumentUpload category={category} onDone={() => setFormOpen(false)} />
               )}
             </div>
 

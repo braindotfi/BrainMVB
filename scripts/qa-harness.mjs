@@ -56,6 +56,10 @@ export async function createQaSession({
   base = process.env.QA_BASE ?? "http://127.0.0.1:5000",
   user = process.env.QA_USER_ID,
   cookie = process.env.QA_COOKIE,
+  /* "complete" pre-marks first-run onboarding so a script lands on the app
+     itself. "firstVisit" leaves the flag unset, which is the only way to
+     exercise the walkthrough. */
+  onboarding = "complete",
 } = {}) {
   if (!user || !cookie) {
     console.error("QA_USER_ID and QA_COOKIE are required. See the header of the calling script.");
@@ -69,9 +73,11 @@ export async function createQaSession({
   });
   const ctx = await browser.newContext({ viewport });
   await ctx.addCookies([{ name: "brain.sid", value: cookie, domain: new URL(base).hostname, path: "/" }]);
-  await ctx.addInitScript((u) => {
-    localStorage.setItem(`brain_onboarding_complete_${u}`, "true");
-  }, user);
+  if (onboarding === "complete") {
+    await ctx.addInitScript((u) => {
+      localStorage.setItem(`brain_onboarding_complete_${u}`, "true");
+    }, user);
+  }
 
   const failures = [];
   const check = (label, pass, detail = "") => {
