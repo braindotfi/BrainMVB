@@ -114,6 +114,8 @@ export const TierRow = ({ row }: { row: TierRowModel }) => {
           checked={row.select.checked}
           disabled={row.select.disabled}
           onChange={row.select.onChange}
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.stopPropagation()}
           title={row.select.title}
           aria-label={row.select.label}
           data-testid={`${row.testIdPrefix}-${row.id}-select`}

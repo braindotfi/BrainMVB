@@ -986,7 +986,7 @@ function titleCaseDropdownLabel(label: string): string {
               onChange: (v: string) => setFilter("priority", v as DecisionFilterState["priority"]),
               label: "Filter by priority",
               testId: "filter-priority",
-              options: [{ value: "all", label: "All Priority" }, ...PRIORITY_OPTIONS],
+              options: [{ value: "all", label: "All Priorities" }, ...PRIORITY_OPTIONS],
             },
             {
               value: filters.status,
