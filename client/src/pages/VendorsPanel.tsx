@@ -383,146 +383,148 @@ export function VendorsPanel() {
             </p>
           </div>
         ) : (
-          <div className="flex flex-col gap-[10px] w-full">
-
-            {/* ── Table header ── */}
-            <div className="flex items-center gap-[8px] min-h-[16px] w-full">
-              <div className="size-[6px] rounded-full shrink-0 bg-[#6c779d]" />
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[12px] uppercase tracking-[0.4px] whitespace-nowrap">
-                Vendors
-              </p>
-              <div className="bg-[#6c779d] flex items-center justify-center min-w-[18px] px-[5px] py-[1px] rounded-[4px] shrink-0">
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#0a0c10] text-[11px] text-center whitespace-nowrap">
-                  {tabVendors.length}
-                </p>
-              </div>
-            </div>
-
-            {/* ── Idle frame / Expanded form ── */}
-            {!addOpen ? (
-              /* Idle: dashed-border card with prompt + Add Vendor button */
-              <div
-                className="flex items-center justify-between gap-[16px] p-[16px] rounded-[16px] w-full"
-                style={{ background: "#11141b", border: "1px dashed #414965" }}
-                data-testid="panel-add-vendor-idle"
-              >
-                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[#6c779d] text-[20px] flex-1 min-w-px">
-                  Create a new vendor in plain English
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setAddOpen(true)}
-                  data-testid="button-add-vendor"
-                  className="flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#ff9400] text-[12px] whitespace-nowrap hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-                  style={{ background: "#4a2300" }}
+          <>
+            {/* ── Idle frame / Expanded form — above the label, same gap-[16px]
+                sub-container as the Rules tab builder ── */}
+            <div className="flex flex-col gap-[16px] w-full">
+              {!addOpen ? (
+                /* Idle: dashed-border card with prompt + Add Vendor button */
+                <div
+                  className="flex items-center justify-between gap-[16px] p-[16px] rounded-[16px] w-full"
+                  style={{ background: "#11141b", border: "1px dashed #414965" }}
+                  data-testid="panel-add-vendor-idle"
                 >
-                  <Plus className="size-[16px] shrink-0" />
-                  Add Vendor
-                </button>
-              </div>
-            ) : (
-              /* Expanded: sentence-style form */
-              <div
-                className="rounded-[16px] overflow-hidden w-full"
-                style={{ background: "#0a0c10" }}
-                data-testid="panel-add-vendor"
-              >
-                <div className="flex flex-col gap-[12px] p-[16px]">
-                  {/* Sentence row */}
-                  <div className="flex flex-wrap gap-[12px] items-center">
-                    <span className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[#a8b9f4] text-[16px] whitespace-nowrap">
-                      Add vendor
-                    </span>
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[#6c779d] text-[20px] flex-1 min-w-px">
+                    Create a new vendor in plain English
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setAddOpen(true)}
+                    data-testid="button-add-vendor"
+                    className="flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#ff9400] text-[12px] whitespace-nowrap hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                    style={{ background: "#4a2300" }}
+                  >
+                    <Plus className="size-[16px] shrink-0" />
+                    Add Vendor
+                  </button>
+                </div>
+              ) : (
+                /* Expanded: sentence-style form */
+                <div
+                  className="rounded-[16px] overflow-hidden w-full"
+                  style={{ background: "#0a0c10" }}
+                  data-testid="panel-add-vendor"
+                >
+                  <div className="flex flex-col gap-[12px] p-[16px]">
+                    {/* Sentence row */}
+                    <div className="flex flex-wrap gap-[12px] items-center">
+                      <span className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                        Add vendor
+                      </span>
 
-                    {/* Vendor name input */}
-                    <div
-                      className="flex items-center px-[8px] py-[10px] rounded-[8px] shrink-0"
-                      style={{ background: "#222737" }}
-                    >
-                      <input
-                        type="text"
-                        id="vendor-name-inline"
-                        data-testid="input-vendor-name"
-                        placeholder="vendor name"
-                        value={vendorName}
-                        onChange={(e) => setVendorName(e.target.value)}
-                        autoFocus
-                        className="bg-transparent [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] placeholder:text-[#6c779d] outline-none"
-                        style={{ minWidth: "140px" }}
-                        onKeyDown={(e) => { if (e.key === "Enter" && vendorName.trim()) setConfirmSubmit(true); }}
-                      />
+                      {/* Vendor name input */}
+                      <div
+                        className="flex items-center px-[8px] py-[10px] rounded-[8px] shrink-0"
+                        style={{ background: "#222737" }}
+                      >
+                        <input
+                          type="text"
+                          id="vendor-name-inline"
+                          data-testid="input-vendor-name"
+                          placeholder="vendor name"
+                          value={vendorName}
+                          onChange={(e) => setVendorName(e.target.value)}
+                          autoFocus
+                          className="bg-transparent [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] placeholder:text-[#6c779d] outline-none"
+                          style={{ minWidth: "140px" }}
+                          onKeyDown={(e) => { if (e.key === "Enter" && vendorName.trim()) setConfirmSubmit(true); }}
+                        />
+                      </div>
+
+                      <span className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                        as a
+                      </span>
+
+                      {/* Category dropdown */}
+                      <CategoryDropdown value={category} onChange={setCategory} />
                     </div>
 
-                    <span className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[#a8b9f4] text-[16px] whitespace-nowrap">
-                      as a
-                    </span>
+                    {error && (
+                      <AlertCallout testId="text-add-vendor-error">{error}</AlertCallout>
+                    )}
 
-                    {/* Category dropdown */}
-                    <CategoryDropdown value={category} onChange={setCategory} />
-                  </div>
-
-                  {error && (
-                    <AlertCallout testId="text-add-vendor-error">{error}</AlertCallout>
-                  )}
-
-                  {/* Action buttons */}
-                  <div className="flex gap-[8px] items-center">
-                    <button
-                      type="button"
-                      onClick={resetAddVendor}
-                      data-testid="button-add-vendor-cancel"
-                      className="flex items-center justify-center px-[12px] py-[8px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[12px] whitespace-nowrap hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-                      style={{ background: "#222737" }}
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!vendorName.trim()) { setError("Vendor name is required."); return; }
-                        setError(null);
-                        setConfirmSubmit(true);
-                      }}
-                      disabled={!vendorName.trim()}
-                      data-testid="button-submit-vendor"
-                      className="flex items-center justify-center px-[12px] py-[8px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#ff9400] text-[12px] whitespace-nowrap hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-                      style={{ background: "#4a2300" }}
-                    >
-                      Submit for Verification
-                    </button>
+                    {/* Action buttons */}
+                    <div className="flex gap-[8px] items-center">
+                      <button
+                        type="button"
+                        onClick={resetAddVendor}
+                        data-testid="button-add-vendor-cancel"
+                        className="flex items-center justify-center px-[12px] py-[8px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[12px] whitespace-nowrap hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                        style={{ background: "#222737" }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!vendorName.trim()) { setError("Vendor name is required."); return; }
+                          setError(null);
+                          setConfirmSubmit(true);
+                        }}
+                        disabled={!vendorName.trim()}
+                        data-testid="button-submit-vendor"
+                        className="flex items-center justify-center px-[12px] py-[8px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#ff9400] text-[12px] whitespace-nowrap hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                        style={{ background: "#4a2300" }}
+                      >
+                        Submit for Verification
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
-
-            {/* ── Vendor list card ── */}
-            <div className="bg-[#0a0c10] flex flex-col overflow-hidden relative rounded-[16px]">
-              <div>
-                {tabVendors.length === 0 ? (
-                  <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative shrink-0 w-full">
-                    <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
-                      {activeTab === "Needs Review" && "No vendors under review. Brain flags new or unusual counterparties here."}
-                      {activeTab === "New" && "No new vendors detected yet."}
-                      {activeTab === "Trusted" && "No trusted vendors yet. Brain promotes vendors here after consistent, safe payments."}
-                      {activeTab === "Suggested" && "No known vendors yet. Regular payees show up here."}
-                    </p>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-start w-full">
-                    {tabVendors.map((vendor) => (
-                      <VendorRow
-                        key={vendor.id}
-                        vendor={vendor}
-                        format={format}
-                        onClick={() => handleOpenVendor(vendor)}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
+              )}
             </div>
 
-          </div>
+            {/* ── VENDORS label + list — below the frame ── */}
+            <div className="flex flex-col gap-[10px] w-full">
+              <div className="flex items-center gap-[8px] min-h-[16px] w-full">
+                <div className="size-[6px] rounded-full shrink-0 bg-[#6c779d]" />
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[12px] uppercase tracking-[0.4px] whitespace-nowrap">
+                  Vendors
+                </p>
+                <div className="bg-[#6c779d] flex items-center justify-center min-w-[18px] px-[5px] py-[1px] rounded-[4px] shrink-0">
+                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#0a0c10] text-[11px] text-center whitespace-nowrap">
+                    {tabVendors.length}
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-[#0a0c10] flex flex-col overflow-hidden relative rounded-[16px]">
+                <div>
+                  {tabVendors.length === 0 ? (
+                    <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative shrink-0 w-full">
+                      <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
+                        {activeTab === "Needs Review" && "No vendors under review. Brain flags new or unusual counterparties here."}
+                        {activeTab === "New" && "No new vendors detected yet."}
+                        {activeTab === "Trusted" && "No trusted vendors yet. Brain promotes vendors here after consistent, safe payments."}
+                        {activeTab === "Suggested" && "No known vendors yet. Regular payees show up here."}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-start w-full">
+                      {tabVendors.map((vendor) => (
+                        <VendorRow
+                          key={vendor.id}
+                          vendor={vendor}
+                          format={format}
+                          onClick={() => handleOpenVendor(vendor)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </>
         )}
       </div>
 
