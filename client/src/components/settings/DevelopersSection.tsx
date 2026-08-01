@@ -881,7 +881,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
                   className="size-[32px] rounded-full flex items-center justify-center flex-shrink-0"
                   style={s.state === "done" ? { background: "#4a2300" } : { background: "#222737" }}
                 >
-                  {noTenantCreated ? (
+                  {noTenantCreated || s.state === "todo" ? (
                     <img
                       src={[stepOneIcon, stepTwoIcon, stepThreeIcon][i]}
                       alt=""

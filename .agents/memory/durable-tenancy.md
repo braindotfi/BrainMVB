@@ -66,6 +66,11 @@ description: Constraints learned building BRAIN_TENANCY_MODE=durable (auto-creat
   and demo seeding) is a SEPARATE axis. **How to apply:** a report that "signups are being
   misclassified as demo" is not a classification bug — every user in the deployment gets the
   same mode. Check the env var before hunting for per-session logic.
+- Setup visuals must follow the checklist step state, not only whether the tenant list is
+  empty: demo and durable sessions can already have an auto-provisioned tenant while later
+  setup steps remain unresolved. **Why:** tenant presence and checklist completion are
+  intentionally different signals. **How to apply:** use the step's `todo`/`done` state
+  for numbered artwork and completion indicators.
 - Durable now reports its own mode string `"durable"` (was `"demo"`), and /tenancy returns
   the real tenantId/companyName. **Why:** durable tenants are genuine brain-core PRODUCTION
   tenants (kind=production, sandbox=false) that persist forever; labeling them "demo" told
