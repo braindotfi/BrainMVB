@@ -214,7 +214,7 @@ const TAG_DETECTED = "bg-[#222737] text-[#6c779d] border-[rgba(108,119,157,0.2)]
 
 /* Compact pill-style filter selects — fit content, not full-width. */
 const CONTROL =
-  "bg-[#1d2132] border border-solid border-[#2a3050] rounded-[20px] px-[14px] py-[8px] [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[18px] text-[#a8b9f4] outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] cursor-pointer appearance-none pr-[32px]";
+  "bg-[#1d2132] border border-solid border-[#2a3050] rounded-[8px] px-[12px] py-[8px] [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[18px] text-[#a8b9f4] outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] cursor-pointer appearance-none pr-[30px]";
 
 /* ── Page ─────────────────────────────────────────────────────────────────── */
 export function InboxPage() {

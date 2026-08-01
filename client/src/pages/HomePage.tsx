@@ -654,7 +654,8 @@ export function HomePage() {
         tier: tierForPaymentIntent(),
         title: formatText(r.title),
         badge: { label: "Needs approval", className: TAG_NEEDS_YOU },
-        subtitle: r.description ? formatText(r.description) : undefined,
+        /* Match InboxPage toRow: amount · vendor · due */
+        subtitle: [r.amount, r.vendor ? `${r.vendor} · ${r.due}` : r.due].filter(Boolean).join(" · ") || undefined,
         select: intentId
           ? {
               checked: selectedOverviewIds.has(`session-${String(r.intentId ?? r.id)}`),
@@ -695,8 +696,13 @@ export function HomePage() {
       id: `queue-${p.id}`,
       tier: tierForPaymentIntent(),
       title: formatText(p.title),
-      badge: { label: "Needs approval", className: TAG_NEEDS_YOU },
-      subtitle: p.rationale ? formatText(p.rationale) : undefined,
+      /* Match InboxPage badge logic — severity drives the label and colour */
+      badge: {
+        label: p.severity === "danger" ? "High risk" : p.severity === "warning" ? "Elevated" : "Needs review",
+        className: p.severity === "danger" ? TAG_REJECTED : TAG_NEEDS_YOU,
+      },
+      /* Match InboxPage toRow: amount · rowSubtitle */
+      subtitle: [typeof p.amount === "number" ? format(p.amount) : undefined, p.rowSubtitle].filter(Boolean).join(" · ") || undefined,
       select: {
         checked: selectedOverviewIds.has(`queue-${p.id}`),
         label: `Select for bulk approval: ${p.title}`,
@@ -750,18 +756,20 @@ export function HomePage() {
         title: d.writable ? d.meaning ?? undefined : "Brain core can't accept this decision yet.",
         onClick: () => decideProposal.mutate({ id: p.id, decision: d.id as ProposalDecision }),
       }));
-      const proposalBadge =
-        tier === "urgent"  ? { label: "High risk",    className: TAG_REJECTED   } :
-        tier === "waiting" ? { label: "Needs review", className: TAG_NEEDS_YOU  } :
-                             { label: "Insight",      className: TAG_DETECTED   };
+      /* Badge = agent name pill (same as InboxPage pillName logic) */
+      const agentKey = agentKeyForProposalType(p.type);
+      const isPaymentAgent = agentKey === "payment" || /^(?:demo\s+)?payment agent$/i.test(agentName.trim());
+      const pillName = isPaymentAgent ? "Payment" : agentName;
       const rowId = `proposal-${p.id}`;
       return [{
         id: rowId,
         tier,
         title: headerCopy.title,
-        badge: proposalBadge,
-        subtitle: `${agentName} Agent`,
-        select: actions.some((a) => a.id === "approve")
+        badge: { label: pillName, className: TAG_NEEDS_YOU },
+        /* Match InboxPage toRow: narrative text as subtitle */
+        subtitle: headerCopy.text || undefined,
+        /* Vendor risk doesn't require a human approval decision — no checkbox */
+        select: actions.some((a) => a.id === "approve") && p.type !== "vendor_risk"
           ? {
               checked: selectedOverviewIds.has(rowId),
               label: `Select for bulk approval: ${headerCopy.title}`,
