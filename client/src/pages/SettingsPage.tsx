@@ -254,24 +254,32 @@ const SettingRow = ({
   >
     {useCircleIcon ? icon : <RowIcon danger={danger}>{icon}</RowIcon>}
     <div className="flex-1 min-w-0">
+      {/* One type ramp for every row, regardless of which icon treatment it
+          uses. `useCircleIcon` used to fork the typography too, which left
+          Auto-Approve Limit and Welcome Walkthrough on an older 15px/12px pair
+          with a 2px gap while the Identity rows — and every row record on
+          Overview, Inbox and Ledger — were 16px/14px with a 4px gap. The icon
+          treatment is a visual choice; the text ramp is not. */}
       <p
-        className={useCircleIcon ? "leading-5" : "text-[15px] leading-5"}
-        style={
-          useCircleIcon
-            ? { color: "#a8b9f4", fontFamily: "'Gilroy', 'Plus Jakarta Sans', system-ui, sans-serif", fontWeight: 500, fontSize: "16px" }
-            : { color: danger ? "#d20344" : "#c8d4f0", fontFamily: "'Gilroy', 'Plus Jakarta Sans', system-ui, sans-serif", fontWeight: 500 }
-        }
+        className="leading-5"
+        style={{
+          color: danger ? "#d20344" : "#a8b9f4",
+          fontFamily: "'Gilroy', 'Plus Jakarta Sans', system-ui, sans-serif",
+          fontWeight: 500,
+          fontSize: "16px",
+        }}
       >
         {label}
       </p>
       {sublabel && (
         <p
-          className={useCircleIcon ? "mt-1 leading-[16px]" : "text-[12px] mt-0.5 leading-[16px]"}
-          style={
-            useCircleIcon
-              ? { color: "#6c779d", fontFamily: "'Gilroy', 'Plus Jakarta Sans', system-ui, sans-serif", fontWeight: 500, fontSize: "14px" }
-              : { color: "#6c779d", fontFamily: "'Gilroy', 'Plus Jakarta Sans', system-ui, sans-serif", fontWeight: 400 }
-          }
+          className="mt-1 leading-[16px]"
+          style={{
+            color: "#6c779d",
+            fontFamily: "'Gilroy', 'Plus Jakarta Sans', system-ui, sans-serif",
+            fontWeight: 500,
+            fontSize: "14px",
+          }}
         >
           {sublabel}
         </p>

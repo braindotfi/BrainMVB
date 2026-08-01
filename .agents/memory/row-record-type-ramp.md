@@ -27,6 +27,17 @@ answer.
 The single most common way the ramp breaks: a surface drifts to `font-semibold`
 on the title. Every row title is medium.
 
+## Never fork typography on an icon/variant flag
+
+A shared row component that switches its *icon treatment* on a boolean must not
+switch its *text ramp* on the same boolean.
+
+**Why:** the settings row component did exactly that, and it hid a second,
+older ramp (15px/12px with a 2px gap) inside the same component for a long time.
+Nothing looked broken in isolation — the mismatch only showed up when someone
+compared two rows on the same page. The icon treatment is a visual choice; the
+text ramp is not.
+
 ## Line-height is load-bearing, not cosmetic
 
 Do not relax the subtext leading to 18–20px because wrapped text looks tight.
