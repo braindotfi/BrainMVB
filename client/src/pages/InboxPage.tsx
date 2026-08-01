@@ -1079,7 +1079,7 @@ function titleCaseDropdownLabel(label: string): string {
       </div>
 
       {/* The timeline itself — one list, scrolls. */}
-      <div className="min-h-0 min-w-0 overflow-hidden px-[16px] pb-[16px] flex flex-col gap-[12px]">
+      <div className="min-h-0 min-w-0 overflow-y-auto overflow-x-hidden px-[16px] pb-[16px] flex flex-col gap-[12px]">
         <div className="flex items-center gap-[8px] w-full min-h-[20px]">
           <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[13px]" data-testid="text-decision-count">
             {visibleItems.length === items.length
@@ -1165,7 +1165,7 @@ function titleCaseDropdownLabel(label: string): string {
             </p>
           </div>
         ) : (
-          <div className="flex-1 min-h-0 flex flex-col w-full rounded-[12px] border border-solid border-[#1d2132] bg-[#0a0c10] overflow-y-auto overflow-x-hidden">
+          <div className="shrink-0 flex flex-col w-full rounded-[12px] border border-solid border-[#1d2132] bg-[#0a0c10] overflow-hidden">
             <div className="flex flex-col gap-[8px] p-[8px] w-full">
               {visibleItems.map((item, idx) => (
                 <div key={item.id} className="flex flex-col gap-[8px] w-full">
