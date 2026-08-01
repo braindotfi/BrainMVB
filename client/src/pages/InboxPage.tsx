@@ -957,8 +957,13 @@ export function InboxPage() {
       ? "Checking for anything that needs your attention\u2026"
       : "Nothing needs your attention right now. Brain is keeping things moving.";
 
+/** Dropdown labels are presentation text; keep their filter values unchanged. */
+function titleCaseDropdownLabel(label: string): string {
+  return label.replace(/\b[a-z]/g, (letter) => letter.toUpperCase());
+}
+
   return (
-    <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden rounded-[16px] absolute inset-0 flex flex-col">
+    <div className="bg-[#11141b] border border-[#1d2132] border-solid overflow-hidden rounded-[16px] absolute inset-0 grid grid-rows-[auto_minmax(0,1fr)]">
 
       {/* Static chrome: header + filter toolbar — never scrolls */}
       <div className="shrink-0 flex flex-col gap-[24px] items-start pt-[40px] px-[16px] pb-[16px] w-full min-w-0">
@@ -1009,13 +1014,15 @@ export function InboxPage() {
                 data-testid={testId}
               >
                 {options.map((o) => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
+                  <option key={o.value} value={o.value}>{titleCaseDropdownLabel(o.label)}</option>
                 ))}
               </select>
               {/* Visual layer — pointer-events-none so clicks reach the select */}
               <div className="bg-[#222737] rounded-[8px] p-[8px] flex items-center gap-[8px] pointer-events-none w-full">
-                <span className="flex-1 min-w-0 [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] whitespace-nowrap">
-                  {(options as ReadonlyArray<{ value: string; label: string }>).find((o) => o.value === value)?.label ?? options[0].label}
+                <span className="flex-1 min-w-0 [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[14px] leading-[20px] whitespace-nowrap">
+                  {titleCaseDropdownLabel(
+                    (options as ReadonlyArray<{ value: string; label: string }>).find((o) => o.value === value)?.label ?? options[0].label,
+                  )}
                 </span>
                 <img src={chevronDownIcon} alt="" aria-hidden="true" className="shrink-0 h-[7px] w-auto" />
               </div>
@@ -1025,7 +1032,7 @@ export function InboxPage() {
       </div>
 
       {/* The timeline itself — one list, scrolls. */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-[16px] pb-[16px] flex flex-col gap-[12px]">
+      <div className="min-h-0 min-w-0 overflow-hidden px-[16px] pb-[16px] flex flex-col gap-[12px]">
         <div className="flex items-center gap-[8px] w-full min-h-[20px]">
           <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[13px]" data-testid="text-decision-count">
             {visibleItems.length === items.length
@@ -1111,7 +1118,7 @@ export function InboxPage() {
             </p>
           </div>
         ) : (
-          <div className="flex flex-col w-full rounded-[12px] border border-solid border-[#1d2132] bg-[#0a0c10] overflow-hidden">
+          <div className="flex-1 min-h-0 flex flex-col w-full rounded-[12px] border border-solid border-[#1d2132] bg-[#0a0c10] overflow-y-auto overflow-x-hidden">
             <div className="flex flex-col gap-[8px] p-[8px] w-full">
               {visibleItems.map((item, idx) => (
                 <div key={item.id} className="flex flex-col gap-[8px] w-full">
