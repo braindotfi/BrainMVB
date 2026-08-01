@@ -394,14 +394,6 @@ export function SourcesSection() {
 
   return (
     <div className="flex flex-col gap-[16px]">
-      <div className="flex min-h-[36px] items-center">
-        <p
-          className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]"
-          data-testid="text-sources-subhead"
-        >
-          Sources
-        </p>
-      </div>
       {/* Toolbar: the count is a claim about completeness, so it carries its own
           qualifier whenever a feed failed or has not answered yet. */}
       <div className="flex items-center justify-between gap-[12px] min-h-[36px]">

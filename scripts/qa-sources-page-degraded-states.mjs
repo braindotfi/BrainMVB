@@ -99,7 +99,9 @@ console.log(
 );
 
 /* ── the section exists and is the whole story ────────────────────────────── */
-check("Settings → Sources renders its subhead", (await count('[data-testid="text-sources-subhead"]')) === 1);
+/* The tab now opens on the count itself — the heading that used to sit above it
+   was removed, so its absence is the assertion, not its presence. */
+check("Settings → Sources leads with the source count, not a heading", (await count(COUNT)) === 1 && (await count('[data-testid="text-sources-subhead"]')) === 0);
 check("the connected-accounts list is present", (await count(ACCOUNTS)) === 1);
 check("the documents list is present", (await count(DOCUMENTS)) === 1);
 check("both lists are labelled", (await count('[data-testid="label-connected-accounts"]')) === 1 && (await count('[data-testid="label-documents"]')) === 1);
@@ -135,8 +137,14 @@ const MECHANISMS = [
   ["tax", "documents"],
   ["accounting", "providers"],
 ];
+/* The category control is Settings' shared dropdown, not a native <select>:
+   open it and click the option, or the run dies on "Element is not a <select>". */
+const chooseCategory = async (value) => {
+  await page.locator('[data-testid="select-source-category"]').click();
+  await page.locator(`[data-testid="select-source-category-option-${value}"]`).click();
+};
 const bankScreenCopes = async () => {
-  await page.selectOption('[data-testid="select-source-category"]', "bank");
+  await chooseCategory("bank");
   await page.waitForTimeout(2500);
   const body = await text('[data-testid="add-source-mechanism-bank"]');
   const connect = page.locator('[data-testid="button-plaid-connect"]');
@@ -151,7 +159,7 @@ check(
 );
 
 for (const [category, mechanism] of MECHANISMS) {
-  await page.selectOption('[data-testid="select-source-category"]', category);
+  await chooseCategory(category);
   await page.waitForTimeout(900);
   check(
     `category "${category}" offers the ${mechanism} mechanism`,
@@ -160,7 +168,7 @@ for (const [category, mechanism] of MECHANISMS) {
 }
 /* The screens carry their own reassurance copy for the modal path. Inline, the
    page says it once below the form; twice reads as a warning. */
-await page.selectOption('[data-testid="select-source-category"]', "payments");
+await chooseCategory("payments");
 await page.waitForTimeout(900);
 const formCopy = await text('[data-testid="form-add-source"]');
 check(
@@ -169,7 +177,7 @@ check(
   formCopy.replace(/\s+/g, " ").slice(0, 100),
 );
 
-await page.selectOption('[data-testid="select-source-category"]', "documents");
+await chooseCategory("documents");
 await page.waitForTimeout(900);
 check("the document mechanism is a real file picker", (await count('[data-testid="input-add-source-file"]')) === 1);
 check("the inline form does not repeat the document list above the page's own", (await count(`[data-testid="form-add-source"] [data-testid^="doc-row-"]`)) === 0);

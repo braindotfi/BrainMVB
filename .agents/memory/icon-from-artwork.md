@@ -26,6 +26,23 @@ Then convert: a run of N pixels at 32px artwork is N/2 units in a 16-viewBox.
 Remember round line caps extend a path by half the stroke weight at each end,
 so the path's `d` must be shorter than the span you measured.
 
+## A supplied active/inactive pair may not share a canvas
+
+An export that carries a drop shadow comes out on a larger canvas than its plain
+counterpart even though the glyph itself occupies identical pixels. Sizing both
+states to the same square icon box then squashes the shadowed one, and centring
+them makes the glyph jump on selection.
+
+**Why:** the shadow is canvas padding, not artwork, so only the glyph's origin
+is comparable between the two files.
+
+**How to apply:** measure both bounding boxes first. If the glyph bboxes match,
+pin each state to its OWN natural size at a common scale (half of a 2x export)
+and position both from the same top-left origin inside a relatively-positioned
+box, letting the shadow spill. Verify by reading back each state's rendered
+bounding box — the x/y must be identical and only the shadowed state's
+width/height should differ.
+
 **Environment trap:** a headless-Chromium canvas cannot decode a `file://`
 image — it fails with "The source image cannot be decoded." Read the file in
 Node and pass it into `page.evaluate` as a base64 data URI instead.

@@ -18,6 +18,8 @@ import sourcesActiveIcon from "@assets/Sources_Active_1785554383441.png";
 import sourcesInactiveIcon from "@assets/Sources_Inactive_1785554383442.png";
 import developersActiveIcon from "@assets/developers_active_1785554383446.png";
 import developersInactiveIcon from "@assets/developers_inactive_1785554383446.png";
+import auditActiveIcon from "@assets/0_auditactive_1785598481541.png";
+import auditInactiveIcon from "@assets/1_auditinactive_1785598481543.png";
 import billingActiveIcon from "@assets/BillingActive_1782953915934.png";
 import teamActiveIcon from "@assets/Active_1783634473571.png";
 import teamInactiveIcon from "@assets/Normal_1783634473571.png";
@@ -162,26 +164,23 @@ const DevelopersNavIcon = ({ active }: { active: boolean }) => (
   />
 );
 
-/* No Figma export exists for an Audit Log nav item either — drawn inline at the
-   same 24px box and 1.5 stroke weight as the exported icons. */
+/* The two supplied Audit Log exports do not share a canvas: the active one is
+   49×55 because it carries a soft drop shadow, the inactive one is a plain
+   48×48 like every other nav export. The glyph itself occupies identical pixels
+   in both, so each state is pinned to half its own natural size from the same
+   top-left origin — sizing both to a 24px square would squash the active state,
+   and centring them would make the glyph jump on selection. The shadow spills
+   past the 24px box on purpose; that is what the artwork draws. */
 const AuditNavIcon = ({ active }: { active: boolean }) => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="shrink-0" aria-hidden="true">
-    <path
-      d="M6.5 3.5h7L18 8v12.5H6.5V3.5z"
-      stroke={active ? "#ffffff" : "#6c779d"}
-      strokeWidth="1.5"
-      strokeLinejoin="round"
+  <span className="relative block size-[24px] shrink-0">
+    <img
+      src={active ? auditActiveIcon : auditInactiveIcon}
+      alt=""
+      aria-hidden="true"
+      className="absolute left-0 top-0 max-w-none"
+      style={active ? { width: 24.5, height: 27.5 } : { width: 24, height: 24 }}
     />
-    <path d="M13.25 3.5V8H18" stroke={active ? "#ffffff" : "#6c779d"} strokeWidth="1.5" strokeLinejoin="round" />
-    <path
-      d="M9 12.75l1.75 1.75L14.75 10.5"
-      stroke={active ? "#ffffff" : "#6c779d"}
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    <path d="M9 17.25h6" stroke={active ? "#ffffff" : "#6c779d"} strokeWidth="1.5" strokeLinecap="round" />
-  </svg>
+  </span>
 );
 
 /* Order follows the design's tab sequence. The tabs themselves are the design's;
