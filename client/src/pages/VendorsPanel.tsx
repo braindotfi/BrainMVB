@@ -409,76 +409,89 @@ export function VendorsPanel() {
                   </button>
                 </div>
               ) : (
-                /* Expanded: sentence-style form */
+                /* Expanded: sentence-style form — matches Figma 6199:70745 exactly */
                 <div
-                  className="rounded-[16px] overflow-hidden w-full"
+                  className="rounded-[16px] w-full"
                   style={{ background: "#0a0c10" }}
                   data-testid="panel-add-vendor"
                 >
+                  {/* Top section: sentence row + optional error */}
                   <div className="flex flex-col gap-[12px] p-[16px]">
-                    {/* Sentence row */}
-                    <div className="flex flex-wrap gap-[12px] items-center">
-                      <span className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[#a8b9f4] text-[16px] whitespace-nowrap">
-                        Add vendor
-                      </span>
-
-                      {/* Vendor name input */}
-                      <div
-                        className="flex items-center px-[8px] py-[10px] rounded-[8px] shrink-0"
-                        style={{ background: "#222737" }}
-                      >
-                        <input
-                          type="text"
-                          id="vendor-name-inline"
-                          data-testid="input-vendor-name"
-                          placeholder="vendor name"
-                          value={vendorName}
-                          onChange={(e) => setVendorName(e.target.value)}
-                          autoFocus
-                          className="bg-transparent [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] placeholder:text-[#6c779d] outline-none"
-                          style={{ minWidth: "140px" }}
-                          onKeyDown={(e) => { if (e.key === "Enter" && vendorName.trim()) setConfirmSubmit(true); }}
-                        />
+                    {/* Three groups in a wrapping row, gap-[16px] between groups */}
+                    <div className="flex flex-wrap gap-[16px] items-center w-full">
+                      {/* Group 1: "Add vendor" + name input */}
+                      <div className="flex gap-[16px] items-center shrink-0">
+                        <span className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                          Add vendor
+                        </span>
+                        <div
+                          className="flex items-center px-[8px] py-[10px] rounded-[8px] shrink-0"
+                          style={{ background: "#222737" }}
+                        >
+                          <input
+                            type="text"
+                            id="vendor-name-inline"
+                            data-testid="input-vendor-name"
+                            placeholder="vendor name"
+                            value={vendorName}
+                            onChange={(e) => setVendorName(e.target.value)}
+                            autoFocus
+                            className="bg-transparent [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] placeholder:text-[#6c779d] outline-none"
+                            style={{ minWidth: "140px" }}
+                            onKeyDown={(e) => { if (e.key === "Enter" && vendorName.trim()) setConfirmSubmit(true); }}
+                          />
+                        </div>
                       </div>
 
-                      <span className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[#a8b9f4] text-[16px] whitespace-nowrap">
-                        as a
-                      </span>
+                      {/* Group 2: "as a" + category dropdown */}
+                      <div className="flex gap-[16px] items-center shrink-0">
+                        <span className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                          as a
+                        </span>
+                        <CategoryDropdown value={category} onChange={setCategory} />
+                      </div>
 
-                      {/* Category dropdown */}
-                      <CategoryDropdown value={category} onChange={setCategory} />
+                      {/* Group 3: "for review." */}
+                      <div className="flex items-center shrink-0">
+                        <span className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                          for review.
+                        </span>
+                      </div>
                     </div>
 
                     {error && (
                       <AlertCallout testId="text-add-vendor-error">{error}</AlertCallout>
                     )}
+                  </div>
 
-                    {/* Action buttons */}
-                    <div className="flex gap-[8px] items-center">
-                      <button
-                        type="button"
-                        onClick={resetAddVendor}
-                        data-testid="button-add-vendor-cancel"
-                        className="flex items-center justify-center px-[12px] py-[8px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[12px] whitespace-nowrap hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-                        style={{ background: "#222737" }}
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (!vendorName.trim()) { setError("Vendor name is required."); return; }
-                          setError(null);
-                          setConfirmSubmit(true);
-                        }}
-                        disabled={!vendorName.trim()}
-                        data-testid="button-submit-vendor"
-                        className="flex items-center justify-center px-[12px] py-[8px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#ff9400] text-[12px] whitespace-nowrap hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-                        style={{ background: "#4a2300" }}
-                      >
-                        Submit for Verification
-                      </button>
-                    </div>
+                  {/* Bottom section: full-width equal buttons separated by border-t */}
+                  <div
+                    className="flex gap-[16px] items-center p-[16px] border-t border-solid w-full"
+                    style={{ borderColor: "#1d2132", backdropFilter: "blur(10px)" }}
+                  >
+                    <button
+                      type="button"
+                      onClick={resetAddVendor}
+                      data-testid="button-add-vendor-cancel"
+                      className="flex flex-1 items-center justify-center min-w-px px-[12px] py-[8px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[12px] whitespace-nowrap hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                      style={{ background: "#222737" }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!vendorName.trim()) { setError("Vendor name is required."); return; }
+                        setError(null);
+                        setConfirmSubmit(true);
+                      }}
+                      disabled={!vendorName.trim()}
+                      data-testid="button-submit-vendor"
+                      className="flex flex-1 items-center justify-center min-w-px px-[12px] py-[8px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#ff9400] text-[12px] whitespace-nowrap hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                      style={{ background: "#4a2300" }}
+                    >
+                      Submit for Verification
+                    </button>
                   </div>
                 </div>
               )}
