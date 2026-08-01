@@ -787,6 +787,40 @@ Any change to `server/brain/*` must keep the invariant suite green or the PR can
 public repo never drifts. The CI gate above must be green before a PR merges to `main`.
 No work is complete until it is on main; branch-complete is not complete.
 
+### Rebasing a stacked branch (PRs land by SQUASH)
+Rebase a stacked branch ONLY with `git rebase --onto origin/main <the parent branch's
+PRE-rebase tip>`. Never plain `git rebase origin/main`: a squash merge puts the parent's
+combined *content* in `main` but not its commits, so a plain rebase walks back to the
+stack's root and replays every already-merged ancestor, conflicts on the first one, and
+leaves a half-applied rebase.
+
+The conflict is not the dangerous part. `npm test` run against that half-applied tree can
+still report a healthy pass count, because the conflicted files need not be the ones under
+test — a green suite is NOT evidence the rebase worked. After every rebase confirm
+`git status --porcelain` is empty and `git log --oneline` shows only that branch's own
+commits sitting directly on `main`, and only then run the suite.
+
+Related traps:
+- `git log origin/main..<branch>` lists those already-merged ancestor commits, so it is not
+  a reliable "what is still unmerged" signal for this stack.
+- `set -e` does not stop a failing `git rebase … | tail` — a pipeline's status is the last
+  command's. Use `set -eo pipefail` or check the rebase result explicitly.
+- GitHub retargets only the *immediate* child's base to `main` when a parent merges.
+  Retarget the rest through the API, and re-check `base.ref` and `head.sha` in the same
+  call that merges.
+
+### Verification standard for merges: try to break it
+Confirming that a feature works is not verification. For every gated PR in this stack — #38
+(done), #42 and #46 still to come — the pass must also hunt for a live case where the
+feature is WRONG: a record that should be gated differently than it renders, a role or
+limit edge case that slips through, a state the surface has no honest answer for. Derive
+the expected answers from live API data and recompute them independently instead of
+importing the module under test, or the check inherits the bug it is looking for.
+
+Report the attempt explicitly either way. "Tried X and Y against live data, found nothing"
+is a result; silence reads as "not checked". Say so too when a case cannot be reached with
+current live data — an untestable path is not a passing one, it is an unknown.
+
 ## Production tenancy (Phase 2, gated by BRAIN_TENANCY_MODE=production)
 Demo mode (default) is byte-identical to before — `/api/brain/tenancy` returns
 `{mode:"demo", linked:true}` and nothing else changes. In production mode:
