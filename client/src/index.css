@@ -54,7 +54,7 @@
   .decision-checkbox {
     appearance: none;
     background-color: #222737;
-    border: 1px solid #414965;
+    border: 0;
     border-radius: 3px;
   }
 
