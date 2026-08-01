@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/authContext";
 import NotFound from "@/pages/not-found";
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
+import { GlobalSearch } from "@/components/GlobalSearch";
 import { useSessionTimeout } from "@/lib/sessionTimeoutContext";
 import { useAppAlert } from "@/components/AppAlert";
 
@@ -157,7 +158,17 @@ function TenancyGate({ onLogout }: { onLogout: () => void }) {
   return <MainShell onLogout={onLogout} />;
 }
 
+/* Routes that carry the global search bar. The brief scopes it to Overview,
+   Decisions and Ledger; the legacy aliases render those same three pages, so a
+   bookmark on an old path must not lose the bar. Settings is deliberately absent
+   — the mock puts the input in `.main`, which sits above every page including
+   Settings, but nothing in the index is a Settings record. */
+const SEARCH_ROUTES = new Set([
+  "/", "/decisions", "/ledger", "/finances", "/inbox", "/review", "/activity",
+]);
+
 function MainShell({ onLogout }: { onLogout: () => void }) {
+  const [location] = useLocation();
   const [navCollapsed, setNavCollapsed] = useState(() => window.innerWidth < 768);
   const [accountCollapsed, setAccountCollapsed] = useState(() => window.innerWidth < 768);
   const [addSourceOpen, setAddSourceOpen] = useState(false);
@@ -191,7 +202,11 @@ function MainShell({ onLogout }: { onLogout: () => void }) {
           onAddSource={() => setAddSourceOpen(true)}
         />
 
-        <div className="flex-1 min-w-0 min-h-0 overflow-hidden">
+        <div className="flex-1 min-w-0 min-h-0 overflow-hidden flex flex-col">
+          {SEARCH_ROUTES.has(location) && <GlobalSearch />}
+          {/* The pages own their own scroll containers, so the bar is a fixed-height
+              sibling above them rather than something they have to make room for. */}
+          <div className="flex-1 min-w-0 min-h-0 overflow-hidden">
           <Switch>
             <Route path="/" component={HomePage} />
             {/* Canonical IA paths: Overview (/), Decisions, Ledger, Settings */}
@@ -210,6 +225,7 @@ function MainShell({ onLogout }: { onLogout: () => void }) {
             <Route path="/settings" component={SettingsPage} />
             <Route component={NotFound} />
           </Switch>
+          </div>
         </div>
 
         <BrainAssistant

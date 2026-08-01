@@ -52,3 +52,31 @@ timestamps before you go hunting for a regression.
 Installing a system dependency reboots workflows. Sessions here are Postgres-backed whenever
 `DATABASE_URL` is set, so a scripted login survives the reboot. Check that before installing if
 you are holding an expensive session.
+
+## The harness is not durable; the checks should be
+
+`/tmp` gets cleared out from under a session (mid-run, more than once), taking
+scratch scripts, the cookie jar and the npx playwright cache with it. The npx
+cache hash also changes when it is reinstalled, so any hardcoded
+`/home/runner/.npm/_npx/<hash>/...` path is a time bomb.
+
+- Resolve the playwright path at run time: `ls -d /home/runner/.npm/_npx/*/node_modules/playwright/index.mjs | head -1`.
+- Chromium in the nix store is versioned too — glob it (`/nix/store/*chromium-125*/bin/chromium`).
+- Anything worth re-running belongs in `scripts/` behind an npm script, not `/tmp`.
+
+## Demo tenants expire, and the symptom looks like a bug
+
+A stale session cookie can still authenticate while its tenant has been purged
+by the demo TTL cleanup (`[demo-cleanup] purged N expired demo tenant(s)` in the
+workflow log). Every feed then returns 200 with an empty list, so a UI that is
+working correctly reports "no results" and looks broken. Check the log line and
+the tenant's data before debugging the component.
+
+## Never hardcode a search term in QA
+
+Seeded record names are per-tenant. A literal like `"account"` matched nothing
+on a tenant whose accounts are named "Operating" / "Reserve" / "Brightline
+Treasury Wallet" — three checks failed for a component that was fine. Derive the
+known-good term from the API at run time and abort loudly if none can be found:
+without a term that genuinely matches, "found nothing" and "nothing seeded" are
+indistinguishable and the run proves nothing.

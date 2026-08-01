@@ -1,4 +1,5 @@
 import { useFeed } from "@/lib/feed";
+import type { AccountKind, BrainAccountDTO, BrainAccountsResponse } from "@/lib/brainAccounts";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useCurrency } from "@/lib/useCurrency";
 import arrowIcon from "@assets/arrow_1783201262245.png";
@@ -10,33 +11,6 @@ import closeIcon from "@assets/Close_1783293571882.png";
    Opened from an Accounts-tab row. Renders ONE brain-core Ledger account: its
    balance, a provenance block, and its recent activity. No action buttons -
    Previous/Next only cycle between accounts in the same list. */
-
-type AccountKind =
-  | "bank_checking"
-  | "bank_savings"
-  | "card"
-  | "loan"
-  | "line_of_credit"
-  | "onchain"
-  | "payment_processor";
-
-interface BrainAccountDTO {
-  id: string;
-  name: string;
-  account_type: AccountKind;
-  currency: string;
-  institution?: string | null;
-  external_account_id?: string | null;
-  current_balance?: string | null;
-  available_balance?: string | null;
-  status?: string | null;
-  provenance?: string | null;
-  confidence?: number | null;
-  updated_at?: string | null;
-}
-interface BrainAccountsResponse {
-  accounts: BrainAccountDTO[];
-}
 
 interface BrainTransactionDTO {
   id: string;
