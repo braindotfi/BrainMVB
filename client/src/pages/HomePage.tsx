@@ -795,7 +795,35 @@ export function HomePage() {
     rejectLive.isPending,
     rejectIntent.isPending,
     decideProposal.isPending,
+    selectedOverviewIds,
   ]);
+
+  const selectedOverviewRows = useMemo(
+    () => overviewRows.filter((row) => selectedOverviewIds.has(row.id)),
+    [overviewRows, selectedOverviewIds],
+  );
+
+  const approveSelectedOverview = () => {
+    if (selectedOverviewRows.length < 2) return;
+
+    const approvableRows = selectedOverviewRows.filter((row) => {
+      const approveAction = row.actions.find((action) => action.id === "approve");
+      return approveAction && !approveAction.disabled;
+    });
+
+    for (const row of approvableRows) {
+      row.actions.find((action) => action.id === "approve")?.onClick();
+    }
+
+    setSelectedOverviewIds(new Set());
+    toast({
+      title: approvableRows.length > 0 ? `Approving ${approvableRows.length} selected items` : "Nothing was approved",
+      description: approvableRows.length > 0
+        ? "Each selected item is being approved individually."
+        : "The selected items are not currently available for approval.",
+      variant: approvableRows.length > 0 ? "default" : "destructive",
+    });
+  };
 
   // "Money in all accounts" total from brain-core's Ledger (via the BFF proxy).
   // Falls back to the static figure when brain-core is unreachable/unconfigured.
@@ -990,6 +1018,39 @@ export function HomePage() {
                   <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#d20344] text-[14px]">
                     Some items couldn’t be loaded, so this list may be incomplete.
                   </p>
+                </div>
+              )}
+              {selectedOverviewRows.length >= 2 && (
+                <div
+                  className="flex flex-col sm:flex-row gap-[10px] sm:items-center justify-between p-[12px] mb-[12px] rounded-[12px] w-full"
+                  style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.35)" }}
+                  data-testid="bulk-bar"
+                >
+                  <p
+                    className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#a88afa] text-[13px]"
+                    data-testid="bulk-bar-summary"
+                  >
+                    <b className="font-semibold text-[#a8b9f4]">{selectedOverviewRows.length} selected</b>
+                    {" · ready to approve together"}
+                  </p>
+                  <div className="flex gap-[8px] items-center shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedOverviewIds(new Set())}
+                      data-testid="button-bulk-clear"
+                      className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-[#6c779d] hover:text-[#a8b9f4] outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-[4px] px-[8px] py-[6px]"
+                    >
+                      Clear
+                    </button>
+                    <button
+                      type="button"
+                      onClick={approveSelectedOverview}
+                      data-testid="button-bulk-approve"
+                      className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-white bg-[#7631ee] hover:bg-[#8a4bf5] rounded-[8px] px-[12px] py-[7px] outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                    >
+                      Approve selected
+                    </button>
+                  </div>
                 </div>
               )}
               <TierSections
