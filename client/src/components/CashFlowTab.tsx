@@ -281,36 +281,32 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
   const apBills = unpaidApInvoices(invs ?? []);
   const billById = new Map(apBills.map((b) => [b.id, b]));
 
-  const incomeInsight = (() => {
-    if (txs == null) return null;
+  /* ── per-card captions (short; headline number is already in the card) ── */
+
+  // Income: how many customers, who leads — but never restate the total
+  const incomeCaption = (() => {
+    if (txs == null) return periodCaption;
     const s = summarizeIncome(txs);
-    if (!s) return null;
-    const names = s.topCpIds.map((id) => nameOf(id) ?? "a customer");
-    const joined =
-      names.length <= 1
-        ? names[0] ?? "one customer"
-        : names.slice(0, -1).join(", ") + " and " + names[names.length - 1];
-    const verb = names.length > 1 ? "are" : "is";
-    const tail = s.share >= 99 ? ", essentially all your revenue" : `, together about ${s.share}% of your revenue`;
-    return `About ${format(Math.round(s.monthly))} a month from ${s.count} customer${s.count === 1 ? "" : "s"}. Your biggest ${verb} ${joined}${tail}.`;
+    if (!s || s.topCpIds.length === 0) return periodCaption ?? "No dated activity yet";
+    const names = s.topCpIds.slice(0, 2).map((id) => nameOf(id) ?? "a customer");
+    const top = names.length === 1 ? names[0] : `${names[0]} & ${names[1]}`;
+    return `${s.count} customer${s.count === 1 ? "" : "s"} · mostly ${top}`;
   })();
 
-  const liabilityInsight = (() => {
-    if (invs == null) return null;
-    if (apBills.length === 0) return "No outstanding liabilities. You're all caught up.";
-    const total = apBills.reduce((s, i) => s + (Number(i.amount_due) || 0), 0);
-    const overdue = apBills.filter((i) => i.status === "overdue");
+  // Expenses: always make the scope explicit so $0 next to large bills doesn't read as a bug.
+  // Expenses = outflows already settled; unpaid AP bills are captured under Liabilities instead.
+  const expensesCaption = "Outflows settled and posted · unpaid bills are in Liabilities";
+
+  // Liabilities: N bills, next vendor due — never restate the total
+  const liabilitiesCaption = (() => {
+    if (invFailed) return "Source unavailable";
+    if (invs == null) return "Loading…";
+    if (apBills.length === 0) return "No outstanding bills";
     const next = [...apBills]
       .sort((a, b) => new Date(a.due_date ?? 0).getTime() - new Date(b.due_date ?? 0).getTime())
       .find((i) => i.status !== "overdue");
-    const owe = `You owe ${format(Math.round(total))} across ${apBills.length} bill${apBills.length === 1 ? "" : "s"}.`;
-    const od = overdue.length
-      ? ` ${nameOf(overdue[0].counterparty_id) ?? "A vendor"} for ${format(Number(overdue[0].amount_due))} is overdue.`
-      : "";
-    const nx = next
-      ? ` Your next is ${nameOf(next.counterparty_id) ?? "a vendor"} for ${format(Number(next.amount_due))}.`
-      : "";
-    return `${owe}${od}${nx}`;
+    const nextVendor = next ? (nameOf(next.counterparty_id) ?? "a vendor") : null;
+    return `${apBills.length} unpaid bill${apBills.length === 1 ? "" : "s"}${nextVendor ? ` · next due ${nextVendor}` : ""}`;
   })();
 
   return (
@@ -336,7 +332,7 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
         <Metric
           label="Income"
           value={income}
-          caption={periodCaption}
+          caption={incomeCaption}
           colour="#42bf23"
           testId="metric-cashflow-income"
           format={format}
@@ -344,7 +340,7 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
         <Metric
           label="Expenses"
           value={expenses}
-          caption={periodCaption}
+          caption={expensesCaption}
           colour="#d20344"
           testId="metric-cashflow-expenses"
           format={format}
@@ -352,31 +348,11 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
         <Metric
           label="Liabilities"
           value={liabilities}
-          caption={invFailed ? "Source unavailable" : "Unpaid bills you still owe"}
+          caption={liabilitiesCaption}
           testId="metric-cashflow-liabilities"
           format={format}
         />
       </div>
-
-      {incomeInsight && (
-        <p
-          className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[15px] w-full"
-          data-testid="text-cashflow-income-insight"
-        >
-          {incomeInsight}
-        </p>
-      )}
-      {liabilityInsight && (
-        <p
-          className="[font-family:'Gilroy',sans-serif] font-normal leading-[20px] text-[#d20344] text-[16px] w-full"
-          data-testid="text-cashflow-liability-insight"
-        >
-          {liabilityInsight}
-        </p>
-      )}
-      {liabilityInsight && (
-        <div className="h-px relative shrink-0 w-full mb-[26px]" style={{ background: "#1d2132" }} />
-      )}
 
       <WidgetCard title="Cash Flow" count={settling && rows.length === 0 ? undefined : rows.length}>
         {settling && rows.length === 0 ? (
