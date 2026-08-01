@@ -14,8 +14,31 @@ import { resolveProposal } from "@/lib/openProposalDetail";
 import { statusOverrideToAuditRecord, autoApprovedToAuditRecord } from "@/lib/brainFeed";
 import { useAuth } from "@/lib/authContext";
 import { useAcknowledgedRecords } from "@/lib/acknowledgedStore";
+import {
+  partitionSystemActivity,
+  auditEmptyState,
+  systemActivityToggleLabel,
+  readShowSystemActivity,
+  writeShowSystemActivity,
+} from "@/lib/auditVisibility";
 
 type Tab = (typeof AUDIT_TABS)[number];
+
+/** One search predicate, used for what is on screen AND for what the system
+ *  activity filter is holding back — otherwise "no matches" could be hiding
+ *  a match one toggle away. */
+function matchesQuery(r: AuditRecord, q: string, format: (v: number) => string): boolean {
+  return [
+    r.summary,
+    r.rowSubtitle ?? "",
+    r.actor,
+    r.id,
+    r.counterparty ?? "",
+    ...r.linked.map((l) => l.label),
+    typeof r.amount === "number" ? format(r.amount) : "",
+    typeof r.amount === "number" ? String(r.amount) : "",
+  ].join(" ").toLowerCase().includes(q);
+}
 
 const TAB_TO_EVENT: Partial<Record<Tab, AuditEventType>> = {
   Approval: "approved",
@@ -78,6 +101,10 @@ export function AuditLogPage() {
   const [activeTab, setActiveTab] = useState<Tab>("All");
   const [activeRecord, setActiveRecord] = useState<AuditRecord | null>(null);
   const [query, setQuery] = useState("");
+  /* Pipeline events are hidden by default; the choice is remembered per user.
+     Re-read on an account switch, which does not remount this page. */
+  const [showSystem, setShowSystem] = useState(() => readShowSystemActivity(user?.id));
+  useEffect(() => { setShowSystem(readShowSystemActivity(user?.id)); }, [user?.id]);
   const search = useSearch();
   const [, navigate] = useLocation();
 
@@ -106,23 +133,27 @@ export function AuditLogPage() {
     return records;
   }, [activeTab, records]);
 
+  /* Split before searching, so the hidden set can still be reported on. */
+  const { visible: decisionRecords, system: systemRecords } = useMemo(
+    () => partitionSystemActivity(tabRecords),
+    [tabRecords],
+  );
+  const shownRecords = showSystem ? tabRecords : decisionRecords;
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return tabRecords;
-    return tabRecords.filter((r) => {
-      const haystack = [
-        r.summary,
-        r.rowSubtitle ?? "",
-        r.actor,
-        r.id,
-        r.counterparty ?? "",
-        ...r.linked.map((l) => l.label),
-        typeof r.amount === "number" ? format(r.amount) : "",
-        typeof r.amount === "number" ? String(r.amount) : "",
-      ].join(" ").toLowerCase();
-      return haystack.includes(q);
-    });
-  }, [tabRecords, query, format]);
+    if (!q) return shownRecords;
+    return shownRecords.filter((r) => matchesQuery(r, q, format));
+  }, [shownRecords, query, format]);
+
+  /* What this tab is withholding right now, and how much of it the current
+     search would have found. Both drive the empty state's wording. */
+  const hiddenCount = showSystem ? 0 : systemRecords.length;
+  const hiddenMatches = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (showSystem || !q) return 0;
+    return systemRecords.filter((r) => matchesQuery(r, q, format)).length;
+  }, [showSystem, systemRecords, query, format]);
 
   const activeIdx = activeRecord ? filtered.findIndex((r) => r.id === activeRecord.id) : -1;
   const pagerDisabled = activeIdx < 0 || filtered.length <= 1;
@@ -199,6 +230,35 @@ export function AuditLogPage() {
             )}
           </div>
 
+          {/* The default view is decision history. This says so out loud, and
+              says how much pipeline traffic is sitting behind it. */}
+          <button
+            type="button"
+            role="switch"
+            aria-checked={showSystem}
+            onClick={() => {
+              const next = !showSystem;
+              setShowSystem(next);
+              writeShowSystemActivity(user?.id, next);
+            }}
+            data-testid="toggle-system-activity"
+            className="flex items-center gap-[8px] shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-[100px] pr-[8px]"
+          >
+            <span
+              aria-hidden
+              className={`w-[36px] h-[20px] rounded-full relative transition-colors ${showSystem ? "bg-[#7631EE]" : "bg-[#222737]"}`}
+            >
+              <span className={`absolute top-[2px] size-[16px] rounded-full transition-all ${showSystem ? "right-[2px] bg-white" : "left-[2px] bg-[#6c779d]"}`} />
+            </span>
+            <span
+              className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[16px] whitespace-nowrap"
+              style={{ color: showSystem ? "#a8b9f4" : "#6c779d" }}
+              data-testid="text-system-activity-toggle"
+            >
+              {systemActivityToggleLabel(systemRecords.length, showSystem)}
+            </span>
+          </button>
+
           {isLoading && (
             <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
               <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
@@ -235,16 +295,16 @@ export function AuditLogPage() {
             <div className="max-h-[480px] overflow-y-auto p-[8px]">
               {filtered.length === 0 ? (
                 <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
-                  <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
-                    {activeTab === "All" && "No audit records yet."}
-                    {activeTab === "Approval" && "No approval records yet."}
-                    {activeTab === "Auto-Approved" && "No auto-approval records yet."}
-                    {activeTab === "Rejections" && "No rejected payment records yet."}
-                    {activeTab === "Acknowledged" && "No acknowledged records yet."}
-                    {activeTab === "Rule Changes" && "No rule changes recorded yet."}
-                    {activeTab === "Trusted Changes" && "No trust status changes yet."}
-                    {activeTab === "Flagged" && "No flagged transactions yet."}
-                    {activeTab === "Last 30 Days" && "No events in the last 30 days."}
+                  <p
+                    className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]"
+                    data-testid="text-audit-empty"
+                  >
+                    {auditEmptyState({
+                      tab: activeTab,
+                      searching: query.trim().length > 0,
+                      hiddenCount,
+                      hiddenMatches,
+                    })}
                   </p>
                 </div>
               ) : (
