@@ -408,6 +408,73 @@ for (const [segment, expected] of [
   await closePopup();
 }
 
+/* ── Flagged tab: the restore path must be live, not a placeholder ───────────
+   paused → trusted via /trust/restore is the only transition that requires a
+   row to have been actioned once already, so it is the likeliest to silently
+   rot. This is a read-only inspection (no write): open the first Flagged row
+   and prove the restore button is rendered AND enabled, with no stale
+   "unavailable" disclaimer left over from the pre-trust-routes era.
+
+   The Flagged chip is hidden while its bucket is empty (asserted earlier), so
+   an absent chip here means "no paused rows on this tenant" — recorded as an
+   explicit SKIP, never a false pass. */
+
+for (const segment of ["vendor", "customer"]) {
+  await go("/ledger?tab=counterparties");
+  await clickChip(`segment-${segment}`);
+
+  if ((await count('[data-testid="tab-vendor-flagged"]')) === 0) {
+    console.log(
+      `SKIP  ${segment}s: Flagged tab restore-path check — no Flagged chip (no paused rows on this tenant)`,
+    );
+    continue;
+  }
+
+  await clickChip("tab-vendor-flagged");
+  const flaggedRows = await count(ROWS);
+  if (flaggedRows === 0) {
+    /* Vendors keep the Flagged chip visible even when empty (asserted above),
+       so an empty list here just means no paused rows exist yet — a skip. */
+    console.log(
+      `SKIP  ${segment}s: Flagged tab restore-path check — Flagged list is empty (no paused rows on this tenant)`,
+    );
+    continue;
+  }
+
+  if (!(await openFirstRow())) {
+    check(`${segment}s: a flagged row opens its detail popup`, false, "popup did not open");
+    continue;
+  }
+
+  const restoreBtn = page.locator('[data-testid="button-restore-trust"]');
+  const restorePresent = (await restoreBtn.count()) === 1;
+  check(
+    `${segment}s: the Flagged popup renders the restore action`,
+    restorePresent,
+  );
+
+  if (restorePresent) {
+    const restoreEnabled = await restoreBtn.isEnabled().catch(() => false);
+    check(
+      `${segment}s: the restore action is enabled (trust routes live)`,
+      restoreEnabled,
+      restoreEnabled ? "enabled" : "button is disabled",
+    );
+  }
+
+  /* The disabled-placeholder era shipped an "unavailable" note alongside the
+     dead buttons. Both the test-id'd note and its copy must be gone. */
+  const flaggedPopupText = await page.locator(POPUP).innerText();
+  check(
+    `${segment}s: the Flagged popup has no unavailability disclaimer`,
+    (await count('[data-testid="text-review-actions-unavailable"]')) === 0 &&
+      !/isn't available yet|unavailable/i.test(flaggedPopupText),
+    flaggedPopupText.replace(/\n+/g, " | ").slice(0, 200),
+  );
+
+  await closePopup();
+}
+
 /* ── End-to-end trust transition walkthrough ─────────────────────────────────
    Exercises all four real backend calls in sequence against a live demo tenant.
    Each `permitWrite` declaration scopes the write to exactly one button click so
