@@ -67,6 +67,7 @@ import {
   setRuleDraft,
 } from "@/lib/rulesStore";
 import { useReviewStatuses } from "@/lib/reviewStatusStore";
+import { useAcknowledgedRecords } from "@/lib/acknowledgedStore";
 import { AlertCallout } from "@/components/Callout";
 
 /* Your Goals (Figma 3882:43037), progress bars per goal */
@@ -572,9 +573,15 @@ export function HomePage() {
   const { insights: disputeInsights, isError: disputeError } = useBrainDisputeInsights();
   const { insight: cashFlowInsight, isError: cashFlowError } = useBrainCashFlowInsight();
   const [selectedInsight, setSelectedInsight] = useState<LiveInsight | null>(null);
+  const acknowledgedRecords = useAcknowledgedRecords();
+  const acknowledgedInsightIds = useMemo(
+    () => new Set(acknowledgedRecords.map((record) => record.id.replace("local-acknowledged-", ""))),
+    [acknowledgedRecords],
+  );
   const liveInsights: LiveInsight[] = useMemo(
-    () => [...reconInsights, ...subscriptionInsights, ...disputeInsights, ...(cashFlowInsight ? [cashFlowInsight] : [])],
-    [reconInsights, subscriptionInsights, disputeInsights, cashFlowInsight],
+    () => [...reconInsights, ...subscriptionInsights, ...disputeInsights, ...(cashFlowInsight ? [cashFlowInsight] : [])]
+      .filter((insight) => !acknowledgedInsightIds.has(insight.id)),
+    [reconInsights, subscriptionInsights, disputeInsights, cashFlowInsight, acknowledgedInsightIds],
   );
 
   /* Live brain-core agent proposals (GET /v1/proposals) needing a decision -
