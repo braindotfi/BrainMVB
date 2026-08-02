@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Search, ChevronDown } from "lucide-react";
+import { Search } from "lucide-react";
+import chevronDownIcon from "@/assets/chevron_down_dropdown.png";
 import { useBrainAuditRecords, AUDIT_EVENTS_LIMIT } from "@/lib/brainAudit";
 import { partitionSystemActivity } from "@/lib/auditVisibility";
 import { humanReadableActor, isAssistantActivity } from "@/lib/auditTypes";
@@ -39,12 +40,13 @@ import { AlertCallout } from "@/components/Callout";
  * event_type decides, and one place should read it.
  */
 
-type TypeFilter = "all" | "decisions" | "system";
+type TypeFilter = "all" | "decisions" | "assistant" | "system";
 
 const FILTER_OPTIONS: { id: TypeFilter; label: string }[] = [
   { id: "all", label: "All Types" },
-  { id: "decisions", label: "Decisions Only" },
-  { id: "system", label: "System Activity Only" },
+  { id: "decisions", label: "Decisions" },
+  { id: "assistant", label: "Assistant" },
+  { id: "system", label: "System" },
 ];
 
 /* Assistant activity is neither a decision nor pipeline traffic: it is a person
@@ -191,6 +193,7 @@ export function AuditLogSection() {
 
   const visible = useMemo(() => {
     if (filter === "all") return searched;
+    if (filter === "assistant") return searched.filter((r) => categorise(r, systemIds) === "assistant");
     if (filter === "system") return searched.filter((r) => systemIds.has(r.id));
     return searched.filter((r) => categorise(r, systemIds) === "decision");
   }, [searched, filter, systemIds]);
@@ -235,7 +238,12 @@ export function AuditLogSection() {
     if (query.trim() && searched.length === 0) return { title: "No records match your search." };
     if (withheldByFilter > 0) {
       return {
-        title: filter === "system" ? "No system activity here." : "No decision records here.",
+        title:
+          filter === "system"
+            ? "No system activity here."
+            : filter === "assistant"
+              ? "No assistant activity here."
+              : "No decision records here.",
         detail: `${plural(withheldByFilter, "record is", "records are")} hidden by the type filter. Switch to "All Types" to see everything.`,
       };
     }
@@ -309,7 +317,7 @@ export function AuditLogSection() {
               It implements the parts a keyboard user actually needs: open on
               Enter/Space/ArrowDown, move with the arrows and Home/End, commit on
               Enter/Space, dismiss on Escape with focus returned to the trigger. */}
-          <div ref={filterRef} className="relative shrink-0 w-[196px]">
+          <div ref={filterRef} className="relative shrink-0 w-[120px]">
             <button
               ref={triggerRef}
               type="button"
@@ -324,12 +332,12 @@ export function AuditLogSection() {
                   openMenu(true);
                 }
               }}
-              className="bg-[#222737] flex h-[40px] gap-[8px] items-center justify-between p-[8px] rounded-[8px] w-full text-left hover:bg-[#2a3045] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631ee] [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px]"
+              className="bg-[#222737] rounded-[8px] p-[8px] flex items-center gap-[8px] w-full text-left outline-none hover:bg-[#2a3045] transition-colors focus-visible:ring-2 focus-visible:ring-[#7631EE]"
             >
-              <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[14px] leading-[20px] truncate">
+              <span className="flex-1 min-w-0 [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[14px] leading-[20px] whitespace-nowrap truncate">
                 {activeLabel}
               </span>
-              <ChevronDown className="flex-shrink-0 size-[18px]" color="#6c779d" strokeWidth={1.8} />
+              <img src={chevronDownIcon} alt="" aria-hidden="true" className="shrink-0 h-[7px] w-auto" />
             </button>
             {filterOpen && (
               <div
@@ -337,7 +345,7 @@ export function AuditLogSection() {
                 aria-label="Record type"
                 aria-activedescendant={`audit-type-option-${FILTER_OPTIONS[activeIndex]?.id ?? filter}`}
                 onKeyDown={onMenuKeyDown}
-                className="absolute right-0 top-[calc(100%+4px)] w-[208px] z-[60] bg-[#0a0c10] border border-solid border-[#1d2132] rounded-[12px] p-[8px] flex flex-col items-start shadow-[0px_68px_13.5px_rgba(0,0,0,0.06),0px_38px_11.5px_rgba(0,0,0,0.2),0px_17px_8.5px_rgba(0,0,0,0.34),0px_4px_4.5px_rgba(0,0,0,0.39)]"
+                className="absolute left-0 top-[calc(100%+4px)] z-[60] bg-[#0a0c10] border border-[#1d2132] border-solid flex flex-col items-start p-[8px] rounded-[12px] w-[208px] shadow-[0px_68px_13.5px_rgba(0,0,0,0.06),0px_38px_11.5px_rgba(0,0,0,0.2),0px_17px_8.5px_rgba(0,0,0,0.34),0px_4px_4.5px_rgba(0,0,0,0.39)]"
               >
                 {FILTER_OPTIONS.map((o, i) => (
                   <button
@@ -351,8 +359,7 @@ export function AuditLogSection() {
                     data-testid={`option-audit-type-${o.id}`}
                     onFocus={() => setActiveIndex(i)}
                     onClick={() => commit(o.id)}
-                    className="flex items-center p-[8px] rounded-[8px] shrink-0 w-full text-left transition-colors hover:bg-[#222737] focus:bg-[#222737] focus:outline-none [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px]"
-                    style={{ color: filter === o.id ? "#ffffff" : "#a8b9f4" }}
+                    className="flex items-center p-[8px] rounded-[8px] shrink-0 w-full text-left [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[14px] whitespace-nowrap outline-none hover:bg-[#222737] focus-visible:bg-[#222737]"
                   >
                     {o.label}
                   </button>
