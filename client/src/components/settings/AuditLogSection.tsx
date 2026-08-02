@@ -401,8 +401,8 @@ export function AuditLogSection() {
                   className="w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-[#0d1018] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px]"
                 >
                   <div className="flex-1 min-w-0 flex flex-col gap-[4px]">
-                    <div className="flex flex-wrap items-center gap-x-[8px] gap-y-[4px] w-full min-w-0">
-                      <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] min-w-0">
+                    <div className="flex items-center gap-[8px] w-full min-w-0">
+                      <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] min-w-0 flex-1 truncate">
                         {formatText(record.summary)}
                       </span>
                       <span

@@ -157,8 +157,8 @@ export function AuditRecordPopup({
 
             {/* Summary — the status pill follows the title like Inbox decision rows. */}
             <div className="border-[#1d2132] border-b border-solid content-stretch flex flex-col items-start p-[24px] relative shrink-0 w-full">
-              <div className="content-stretch flex flex-wrap gap-x-[8px] gap-y-[8px] items-center relative shrink-0 w-full">
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-[#a8b9f4] text-[20px] min-w-0">
+              <div className="content-stretch flex items-center gap-[8px] relative shrink-0 w-full min-w-0">
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-[#a8b9f4] text-[20px] min-w-0 flex-1 truncate">
                   {formatText(record.summary)}
                 </p>
                 {statusPill()}
