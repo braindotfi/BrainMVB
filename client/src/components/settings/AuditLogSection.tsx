@@ -401,13 +401,13 @@ export function AuditLogSection() {
                   className="w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-[#0d1018] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px]"
                 >
                   <div className="flex-1 min-w-0 flex flex-col gap-[4px]">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] min-w-0 flex-1 truncate">
+                    <div className="flex flex-wrap items-center gap-x-[8px] gap-y-[4px] w-full min-w-0">
+                      <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] min-w-0">
                         {formatText(record.summary)}
                       </span>
                       <span
                         data-testid={`badge-audit-category-${record.id}`}
-                        className="px-2 py-[2px] rounded-[22px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[14px] shrink-0"
+                        className="border border-solid rounded-[22px] px-[8px] py-[2px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-center whitespace-nowrap shrink-0"
                         style={{ background: badge.bg, color: badge.color, border: badge.border }}
                       >
                         {badge.label}

@@ -112,10 +112,10 @@ export function AuditRecordPopup({
     const label = auditRecordLabel(record);
     return (
       <div
-        className="content-stretch flex items-center justify-center px-[10px] py-[4px] relative rounded-[22px] shrink-0 border border-solid bg-[#222737] border-[rgba(108,119,157,0.2)]"
+        className="border border-solid rounded-[22px] px-[8px] py-[2px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-center whitespace-nowrap shrink-0 bg-[#222737] border-[rgba(108,119,157,0.2)]"
       >
         <p
-          className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap"
+          className="whitespace-nowrap"
           style={{ color: "#6c779d" }}
         >
           {label}
@@ -155,13 +155,15 @@ export function AuditRecordPopup({
               </DialogPrimitive.Close>
             </div>
 
-            {/* Summary — Figma 6070:18107: tag pill, title, timestamp */}
+            {/* Summary — the status pill follows the title like Inbox decision rows. */}
             <div className="border-[#1d2132] border-b border-solid content-stretch flex flex-col items-start p-[24px] relative shrink-0 w-full">
-              <div className="content-stretch flex flex-col gap-[8px] items-start relative shrink-0 w-full">
-                {statusPill()}
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-[#a8b9f4] text-[20px]">
+              <div className="content-stretch flex flex-wrap gap-x-[8px] gap-y-[8px] items-center relative shrink-0 w-full">
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-[#a8b9f4] text-[20px] min-w-0">
                   {formatText(record.summary)}
                 </p>
+                {statusPill()}
+              </div>
+              <div className="flex flex-col gap-[8px] items-start relative shrink-0 w-full mt-[8px]">
                 <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
                   {record.occurredAtLabel}
                 </p>
