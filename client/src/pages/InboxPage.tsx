@@ -693,7 +693,7 @@ export function InboxPage() {
         search: buildSearchText(i.title, i.subtitle, i.badge, i.explanation),
         title: i.title,
         tag: i.badge || "Detected",
-        tagClass: TAG_DETECTED,
+        tagClass: TAG_NEEDS_YOU,
         desc: i.subtitle ?? "Brain noticed this in your ledger.",
         time: "",
         /* Only real recorded reasoning — never echo the subtitle as "Why". */

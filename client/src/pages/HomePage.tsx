@@ -776,7 +776,7 @@ export function HomePage() {
       id: `insight-${i.id}`,
       tier: tierForReadOnlyInsight(),
       title: formatText(i.title),
-      badge: { label: i.badge, className: TAG_DETECTED },
+      badge: { label: i.badge, className: TAG_NEEDS_YOU },
       subtitle: i.subtitle ? formatText(i.subtitle) : undefined,
       testIdPrefix,
       onOpenDetail: () => setSelectedInsight(i),

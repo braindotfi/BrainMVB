@@ -45,7 +45,7 @@ export function LiveInsightModal({
         >
           <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-[#1d2132] border-solid h-[56px] shrink-0 w-full flex items-center justify-between px-[16px]">
             <DialogPrimitive.Title
-              className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-[#a8b9f4]"
+              className="inline-flex items-center justify-center px-[8px] py-[2px] rounded-[22px] border border-solid border-[rgba(255,149,0,0.2)] bg-[#4a2300] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-[#ff9500] whitespace-nowrap"
               data-testid="text-live-insight-badge"
             >
               {insight.badge}
@@ -221,8 +221,8 @@ export const LiveInsightRow = ({ insight, onClick }: { insight: LiveInsight; onC
       )}
     </div>
     <span
-      className="inline-flex items-center justify-center gap-[5px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] px-[10px] py-[5px] rounded-[100px] whitespace-nowrap shrink-0"
-      style={{ color: "#6c779d", background: "#1d2132" }}
+      className="inline-flex items-center justify-center gap-[5px] border border-solid border-[rgba(255,149,0,0.2)] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] px-[8px] py-[2px] rounded-[22px] whitespace-nowrap shrink-0"
+      style={{ color: "#ff9500", background: "#4a2300" }}
     >
       {insight.badge}
     </span>
