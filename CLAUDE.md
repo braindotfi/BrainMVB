@@ -707,18 +707,16 @@ delete the template.
 
 ## Full-parity proposal cards: one card for every proposal_type
 
-> **STATUS — PENDING MERGE on `feature/proposal-cards-full-parity` (2026-08-02). NOT merged, NOT
-> landed on `main`.** `main` is at `c81936f`; the branch is 97 commits / 141 files ahead, with 4
-> commits still unpushed and no PR open. Everything in this section describes the **branch**, not
-> shipped `main` behaviour. A human reviewer owns the merge: the diff also carries tiering, the
-> bulk-approve gate and threshold reads, which the standing repo rule keeps off admin/self merge.
+> **STATUS — MERGED to `main` via PR #60 (2026-08-02).** Merge commit:
+> `3a71018c77a27a648aec93fd43dfa674553e631a` (`Feature/proposal cards full parity (#60)`).
+> The PR was merged by `damonnam`. GitHub Actions ran before merge: `tests/vitest` passed;
+> `auto-merge/enable-auto-merge` was skipped. The shared card component covers all proposal types
+> via `details` / `policy` / `presentation` / `available_decisions` binding.
 >
-> **OPEN ITEM — live-verification split.** The shared card component covers all proposal types via
-> `details` / `policy` / `presentation` / `available_decisions` binding. **Live-verified against
-> real API data:** `collections`, `vendor_risk`, `payment`. **Structurally verified only — never
-> rendered from a real pending proposal:** `fraud_anomaly`, `cash_forecast`, `treasury`,
-> `subscription`, `compliance`. Close this out the next time any of those five has a real pending
-> proposal in any tenant.
+> **OPEN ITEM — live-verification split.** **Live-verified against real API data:** `collections`,
+> `vendor_risk`, `payment`. **Structurally verified only — never rendered from a real pending
+> proposal:** `fraud_anomaly`, `cash_forecast`, `treasury`, `subscription`, `compliance`. Close
+> this out the next time any of those five has a real pending proposal in any tenant.
 
 The rich card is no longer Invoice/Cash-only. `LiveProposalModal` renders the **same markup and
 CSS** for all 19 types, driven entirely by what the record carries. Pure builders live in

@@ -13,18 +13,14 @@ brain-core **read integration** across 5 surfaces, all on the demo path, server-
 Accounts + Recent transactions (FinancesPage), "Money in all accounts" total (HomePage),
 grounded BrainAssistant (`/v1/wiki/question`) + evidence trail. `npm run brain:smoke` PASSES.
 
-## PENDING MERGE — `feature/proposal-cards-full-parity` (status 2026-08-02: NOT merged, NOT on `main`)
+## Done ✅ — `feature/proposal-cards-full-parity` merged to `main` (2026-08-02)
 
-> **This work has not landed.** `main` is at `c81936f`. The branch is **97 commits / 141 files**
-> ahead of `origin/main`, and **4 commits are not yet pushed** to `origin`. No PR is open, so
-> **CI has never run on this branch** — `test.yml` fires only on `pull_request` and on push to
-> `main`. Local gates are green (`tsc` clean, 749/749 vitest, counterparties QA 48/48), but a
-> green local run is not CI.
->
-> **A human reviewer owns this merge.** The diff carries tiering, the bulk-approve gate and
-> threshold reads, which the standing repo rule keeps off admin/self merge.
+> Merged via **PR #60** by `damonnam`. The exact merge commit on `main` is
+> **`3a71018c77a27a648aec93fd43dfa674553e631a`** (`Feature/proposal cards full parity (#60)`).
+> GitHub Actions **did run before merge**: the PR Checks tab shows `tests/vitest` successful
+> (`1m5s`) and `auto-merge/enable-auto-merge` skipped. It did not merge with zero checks.
 
-The rich proposal card now serves **all 19 `proposal_type` values** (11 core + 8 advisory), driven
+The shared proposal card now serves **all 19 `proposal_type` values** (11 core + 8 advisory), driven
 by `presentation` / `details` / `policy` / `available_decisions` rather than per-agent branches.
 Field contract, the fallback chains and the live-vs-doc divergences are documented in `CLAUDE.md`
 §"Full-parity proposal cards". The 2026-07-30 preview pass below ran read-only against
