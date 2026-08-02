@@ -4,6 +4,7 @@ import { useBrainAuditRecords, AUDIT_EVENTS_LIMIT } from "@/lib/brainAudit";
 import { partitionSystemActivity } from "@/lib/auditVisibility";
 import { humanReadableActor, isAssistantActivity } from "@/lib/auditTypes";
 import type { AuditRecord } from "@/lib/auditTypes";
+import { useAcknowledgedRecords } from "@/lib/acknowledgedStore";
 import { AuditRecordPopup } from "@/components/AuditRecordPopup";
 import { AlertCallout } from "@/components/Callout";
 
@@ -85,7 +86,8 @@ function plural(n: number, one: string, many: string): string {
 }
 
 export function AuditLogSection() {
-  const { records, isLoading, isError, eventCount } = useBrainAuditRecords();
+  const { records: brainRecords, isLoading, isError, eventCount } = useBrainAuditRecords();
+  const acknowledgedRecords = useAcknowledgedRecords();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<TypeFilter>("all");
   const [filterOpen, setFilterOpen] = useState(false);
@@ -162,6 +164,18 @@ export function AuditLogSection() {
         break;
     }
   };
+
+  /* Local insight acknowledgements are already shaped as canonical audit records,
+     but they are intentionally kept in the user-scoped acknowledgement store until
+     Brain-core has a durable event for them. Include them here so acknowledging an
+     insight removes it from the active queue without making it disappear from the
+     audit trail. Suppress a local duplicate if the same record has reached the
+     authoritative Brain audit feed. */
+  const records = useMemo(() => {
+    const brainIds = new Set(brainRecords.map((record) => record.id));
+    return [...brainRecords, ...acknowledgedRecords.filter((record) => !brainIds.has(record.id))]
+      .sort((a, b) => b.occurredAtMs - a.occurredAtMs);
+  }, [brainRecords, acknowledgedRecords]);
 
   const systemIds = useMemo(() => {
     const { system } = partitionSystemActivity(records);
