@@ -18,7 +18,7 @@ import type { Vendor, VendorTier } from "@/lib/vendorTypes";
 import { VendorDetailPopup } from "@/components/VendorDetailPopup";
 import { FilterChipRow } from "@/components/FilterChipRow";
 import { Plus, ChevronDown } from "lucide-react";
-import { AlertCallout } from "@/components/Callout";
+import { AlertCallout, UnavailableDataBox } from "@/components/Callout";
 import closeIcon from "@assets/Close_1783293571882.png";
 
 /* "New" is deliberately NOT a top-level chip. It was one half of the bug this
@@ -879,11 +879,9 @@ export function VendorsPanel() {
             </p>
           </div>
         ) : isError ? (
-          <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
-            <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#d20344] text-[16px]">
-              Couldn't reach Brain to load counterparties. Try again shortly.
-            </p>
-          </div>
+          <UnavailableDataBox testId="text-counterparties-unavailable">
+            Couldn't reach Brain to load counterparties. Try again shortly.
+          </UnavailableDataBox>
         ) : (
           listBlock
         )}

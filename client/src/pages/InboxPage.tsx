@@ -67,7 +67,7 @@ import {
   tierForReadOnlyInsight,
 } from "@/lib/proposalTiers";
 import { useBrainPolicy } from "@/lib/brainPolicy";
-import { AlertCallout, InfoIcon } from "@/components/Callout";
+import { InfoIcon, UnavailableDataBox } from "@/components/Callout";
 import {
   bulkCandidateFrom,
   bulkLimitFor,
@@ -1197,9 +1197,9 @@ export function InboxPage() {
         {/* A partial list is as misleading as a wrongly-empty one — say so above
             the rows rather than letting the count imply completeness. */}
         {decisionsUnreachable && visibleItems.length > 0 && (
-          <AlertCallout testId="banner-decisions-incomplete">
+          <UnavailableDataBox testId="banner-decisions-incomplete">
             Some decisions couldn’t be loaded, so this list may be incomplete.
-          </AlertCallout>
+          </UnavailableDataBox>
         )}
 
         {/* Bulk bar. Appears at two, matching the prototype — one selected item is
@@ -1269,14 +1269,18 @@ export function InboxPage() {
         )}
 
         {visibleItems.length === 0 ? (
-          <div
-            className="flex items-center px-[16px] py-[20px] w-full rounded-[12px] border border-solid border-[#1d2132] bg-[#0a0c10]"
-            data-testid="text-decisions-empty"
-          >
-            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
-              {emptyText}
-            </p>
-          </div>
+          decisionsUnreachable ? (
+            <UnavailableDataBox testId="text-decisions-empty">{emptyText}</UnavailableDataBox>
+          ) : (
+            <div
+              className="flex items-center px-[16px] py-[20px] w-full rounded-[12px] border border-solid border-[#1d2132] bg-[#0a0c10]"
+              data-testid="text-decisions-empty"
+            >
+              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
+                {emptyText}
+              </p>
+            </div>
+          )
         ) : (
           <div className="shrink-0 flex flex-col w-full rounded-[12px] border border-solid border-[#1d2132] bg-[#0a0c10] overflow-hidden">
             <div className="flex flex-col w-full">

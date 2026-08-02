@@ -78,6 +78,34 @@ type CalloutProps = {
   className?: string;
 };
 
+/**
+ * A remote read was unavailable.
+ *
+ * This is intentionally different from AlertCallout: it does not imply that
+ * the user has an urgent item to resolve, only that the screen cannot make an
+ * empty-state claim yet. It matches the Ledger Accounts unavailable state.
+ */
+export function UnavailableDataBox({
+  children,
+  testId,
+  className = "",
+}: {
+  children: React.ReactNode;
+  testId?: string;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`flex gap-[12px] items-center px-[16px] py-[12px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] ${className}`}
+      data-testid={testId}
+    >
+      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#ff9400] text-[16px] flex-1">
+        {children}
+      </p>
+    </div>
+  );
+}
+
 const TONES = {
   alert: {
     box: "bg-[#350011] border-[rgba(210,3,68,0.2)]",

@@ -28,6 +28,7 @@ import { RulesPanel } from "@/pages/RulesPanel";
 import { WidgetCard } from "@/components/LedgerWidgets";
 import { TransactionDetailPopup } from "@/components/TransactionDetailPopup";
 import { AccountDetailPopup } from "@/components/AccountDetailPopup";
+import { UnavailableDataBox } from "@/components/Callout";
 import {
   ACCOUNT_KIND_LABEL as KIND_LABEL,
   type BrainAccountDTO,
@@ -309,28 +310,30 @@ export function FinancesPage() {
               );
             })}
             {accounts.length === 0 && (
+              accountsFailed ? (
+                <UnavailableDataBox testId="text-accounts-unavailable">
+                  Your accounts couldn't be loaded just now, so this list is empty for the wrong reason. It isn't a sign that you have no accounts.
+                </UnavailableDataBox>
+              ) : (
               <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
                 {/* Three states, not two. An unreachable ledger used to render the
                     same "No connected accounts yet" as a genuinely empty one, which
                     tells someone with accounts that they have none. */}
                 <p
                   className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[16px]"
-                  style={{ color: accountsFailed ? "#ff9400" : "#6c779d" }}
+                  style={{ color: "#6c779d" }}
                   data-testid={
                     accountsLoading
                       ? "text-accounts-loading"
-                      : accountsFailed
-                        ? "text-accounts-unavailable"
-                        : "text-accounts-empty"
+                      : "text-accounts-empty"
                   }
                 >
                   {accountsLoading
                     ? "Loading your accounts from the ledger…"
-                    : accountsFailed
-                      ? "Your accounts couldn't be loaded just now, so this list is empty for the wrong reason. It isn't a sign that you have no accounts."
-                      : "No connected accounts yet. Link an account to see your balances here."}
+                    : "No connected accounts yet. Link an account to see your balances here."}
                 </p>
               </div>
+              )
             )}
           </WidgetCard>
         )}

@@ -31,7 +31,7 @@ import {
 } from "@/components/LedgerWidgets";
 import { BillDetailPopup, type BrainInvoiceDTO as BillDTO } from "@/components/BillDetailPopup";
 import alertIcon from "@assets/Icons_1783274957589.png";
-import { AlertCallout, InfoIcon } from "@/components/Callout";
+import { AlertCallout, UnavailableDataBox } from "@/components/Callout";
 
 interface TxDTO {
   id: string;
@@ -77,40 +77,6 @@ const KindBadge = ({ kind }: { kind: CashFlowKind }) => {
     >
       {KIND_LABEL[kind]}
     </span>
-  );
-};
-
-/* ── notices ─────────────────────────────────────────────────────────────── */
-
-const Notice = ({
-  tone,
-  children,
-  testId,
-}: {
-  tone: "amber" | "muted";
-  children: React.ReactNode;
-  testId?: string;
-}) => {
-  // "amber" was this file's warning tone; warnings now share the app-wide alert
-  // frame, so only the muted/neutral note stays local.
-  if (tone === "amber") {
-    return (
-      <AlertCallout testId={testId} className="shrink-0">
-        {children}
-      </AlertCallout>
-    );
-  }
-  return (
-    <div
-      className="flex items-start gap-[8px] p-[12px] rounded-[12px] w-full border border-solid shrink-0"
-      style={{ background: "#0a0c10", borderColor: "#1d2132" }}
-      data-testid={testId}
-    >
-      <InfoIcon color="#6c779d" className="mt-[2px]" />
-      <p className="[word-break:break-word] flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[18px] min-w-px text-[14px] text-[#6c779d]">
-        {children}
-      </p>
-    </div>
   );
 };
 
@@ -211,8 +177,12 @@ const OverdueInvoicesBanner = ({
         .join(" and ") + ".";
   }
 
-  return (
-    <AlertCallout title={headline} testId={failed ? "banner-overdue-unavailable" : "banner-overdue"}>
+  return failed ? (
+    <UnavailableDataBox testId="banner-overdue-unavailable">
+      {headline}. {detail}
+    </UnavailableDataBox>
+  ) : (
+    <AlertCallout title={headline} testId="banner-overdue">
       {detail}
     </AlertCallout>
   );
@@ -317,13 +287,13 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
           renders. Silence here is the difference between "no expenses" and
           "we could not find out". */}
       {(txFailed || invFailed) && (
-        <Notice tone="amber" testId="banner-cashflow-incomplete">
+        <UnavailableDataBox testId="banner-cashflow-incomplete">
           {txFailed && invFailed
             ? "Cash flow couldn't be loaded. These figures are not a statement that nothing moved — reconnect or refresh to see the real position."
             : txFailed
               ? "Transactions couldn't be loaded, so income and expenses are unavailable. Bills below are complete."
               : "Bills couldn't be loaded, so liabilities are unavailable. Transactions below are complete."}
-        </Notice>
+        </UnavailableDataBox>
       )}
 
       {/* Container-relative, never viewport breakpoints: the Ledger sits in a

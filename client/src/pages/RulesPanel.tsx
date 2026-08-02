@@ -29,7 +29,7 @@ import { useBrainPolicy } from "@/lib/brainPolicy";
 import { useBrainVendors } from "@/lib/brainVendors";
 import { useCurrency } from "@/lib/useCurrency";
 import type { AutoRule, RuleSuggestion } from "@/lib/proposalTypes";
-import { AlertCallout, InfoIcon } from "@/components/Callout";
+import { AlertCallout, InfoIcon, UnavailableDataBox } from "@/components/Callout";
 import { AppAlertLink, useAppAlert } from "@/components/AppAlert";
 
 const ACTIVE = "#42bf23";
@@ -268,11 +268,9 @@ function PolicySection() {
           </div>
         )}
         {!isLoading && isError && (
-          <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
-            <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
-              Couldn't load your active policy from Brain right now.
-            </p>
-          </div>
+          <UnavailableDataBox testId="text-policy-unavailable">
+            Couldn't load your active policy from Brain right now.
+          </UnavailableDataBox>
         )}
         {!isLoading && !isError && rules.length === 0 && (
           <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
@@ -836,15 +834,19 @@ export function RulesPanel() {
                             Saying "none yet" here would invite someone to build a
                             rule around a vendor set that simply failed to load. */}
                         {trustedVendors.length === 0 && (
-                          <p
-                            className="px-[8px] pb-[6px] [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px]"
-                            style={{ color: "#a8b9f4" }}
-                            data-testid={vendorsFailed ? "text-vendors-unavailable" : "text-vendors-empty"}
-                          >
-                            {vendorsFailed
-                              ? "Vendors couldn't be loaded, so this list is empty for the wrong reason."
-                              : "No trusted vendors yet."}
-                          </p>
+                          vendorsFailed ? (
+                            <UnavailableDataBox testId="text-vendors-unavailable">
+                              Vendors couldn't be loaded, so this list is empty for the wrong reason.
+                            </UnavailableDataBox>
+                          ) : (
+                            <p
+                              className="px-[8px] pb-[6px] [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px]"
+                              style={{ color: "#a8b9f4" }}
+                              data-testid="text-vendors-empty"
+                            >
+                              No trusted vendors yet.
+                            </p>
+                          )
                         )}
                         {trustedVendors.map((v) => {
                           const selected = builder.vendor === v;
