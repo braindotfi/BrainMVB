@@ -877,7 +877,7 @@ export function VendorsPanel() {
                 >
                   {bulkBusy
                     ? "Confirming..."
-                    : `Confirm all ${tabVendors.filter((v) => !v.riskLevel).length} customers`}
+                    : `Confirm All ${tabVendors.filter((v) => !v.riskLevel).length} Customers`}
                 </button>
               )}
 
