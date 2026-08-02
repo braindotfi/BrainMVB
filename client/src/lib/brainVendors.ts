@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { Vendor, TrustStatus } from "./vendorTypes";
+import type { Vendor, TrustStatus, TrustState, VendorTier } from "./vendorTypes";
 
 /* ── Live brain-core counterparties → Vendor cards ────────────────────────────
    Replaces MOCK_VENDORS as the VendorsPage/VendorDetailPopup data source with
@@ -60,6 +60,22 @@ export interface BrainCounterparty {
    *  does. Both are coerced defensively below rather than dereferenced. */
   payment_count?: number | null;
   payment_total?: string | number | null;
+  /** Forthcoming. Absent on every deployed brain-core today, hence optional and
+   *  validated against the known set rather than cast — an unrecognised value
+   *  is treated as "field not reported", never coerced into a review state. */
+  trust_status?: string | null;
+}
+
+const TRUST_STATES: readonly TrustState[] = ["unreviewed", "trusted", "paused", "acknowledged"];
+
+/** Read brain-core's review state without trusting it blindly. Returns
+ *  undefined when the field is missing or carries a value we don't know, which
+ *  keeps "brain-core said nothing" distinguishable from "brain-core said
+ *  unreviewed" — the tier derivation below depends on that difference. */
+function readTrustState(value: unknown): TrustState | undefined {
+  return typeof value === "string" && (TRUST_STATES as readonly string[]).includes(value)
+    ? (value as TrustState)
+    : undefined;
 }
 interface ListCounterpartiesResponse {
   counterparties: BrainCounterparty[];
@@ -77,10 +93,22 @@ function toAmount(value: unknown): number {
 }
 
 /** Real signals only. Risk outranks history: a flagged counterparty we have
- *  paid many times is still under review. "trusted" is deliberately
- *  unreachable — see the module header. */
-function deriveTrustStatus(cp: BrainCounterparty, paymentCount: number): TrustStatus {
+ *  paid many times is still under review.
+ *
+ *  When brain-core reports `trust_status` it is the canonical answer and wins
+ *  over the derivation — that is the whole point of the field. Until then
+ *  "trusted" stays unreachable; see the module header. */
+function deriveTrustStatus(
+  cp: BrainCounterparty,
+  paymentCount: number,
+  trustState: TrustState | undefined,
+): TrustStatus {
+  if (trustState === "trusted") return "trusted";
+  if (trustState === "paused") return "under_review";
   if (cp.risk_level === "sanctioned" || cp.risk_level === "high") return "under_review";
+  /* "acknowledged" means a human dismissed the row without granting trust. It
+     leaves the review queue (see isNeedsReview) but it is not a trust grant, so
+     the tier still comes from history. */
   return paymentCount > 0 ? "known" : "new";
 }
 
@@ -90,7 +118,8 @@ function deriveTrustStatus(cp: BrainCounterparty, paymentCount: number): TrustSt
 export function mapCounterpartyToVendor(cp: BrainCounterparty): Vendor {
   const paymentCount = toCount(cp.payment_count);
   const totalPaid = toAmount(cp.payment_total);
-  const trustStatus = deriveTrustStatus(cp, paymentCount);
+  const trustState = readTrustState(cp.trust_status);
+  const trustStatus = deriveTrustStatus(cp, paymentCount, trustState);
   const riskLevel =
     cp.risk_level === "sanctioned" || cp.risk_level === "high" ? cp.risk_level : null;
 
@@ -99,6 +128,7 @@ export function mapCounterpartyToVendor(cp: BrainCounterparty): Vendor {
     name: cp.name,
     category: CATEGORY_LABEL[cp.type] ?? cp.type,
     trustStatus,
+    trustState,
     segment: cp.type === "customer" ? "customer" : "vendor",
     riskLevel,
     // ponytail: brain-core's counterparty row carries no payout account
@@ -138,12 +168,50 @@ export function mapCounterpartyToVendor(cp: BrainCounterparty): Vendor {
    One definition, used by the chip badge, the chip's list, and the row reason
    chip, so a count can never reference rows the list won't render.
 
-   Spec shape: (status = new AND reviewed = false) OR riskFlagged.
-   `reviewed` is permanently false here and that is not a shortcut: marking a
-   counterparty reviewed would be a trust-field write, which brain-core rejects
-   outright. There is nowhere to persist it, so we do not pretend there is. */
+   Two shapes, because the ground truth is moving:
+
+   1. brain-core reports `trust_status` → (trust_status = unreviewed) OR
+      riskFlagged. That is the canonical, audited answer, and acting on a row
+      (grant / pause / acknowledge) is what removes it from the queue.
+   2. brain-core reports nothing → derive it, as we do today: new OR
+      risk-flagged. There is no local "reviewed" bit and that is deliberate,
+      not a shortcut: marking a counterparty reviewed would be a trust-field
+      write, which brain-core rejects outright. There is nowhere to persist it,
+      so we do not pretend there is.
+
+   Risk always wins. A row someone flagged or dismissed is still risk-flagged,
+   and a risk-flagged row is never quietly settled by a click. */
 export function isNeedsReview(v: Vendor): boolean {
+  if (v.riskLevel === "high" || v.riskLevel === "sanctioned") return true;
+  if (v.trustState !== undefined) return v.trustState === "unreviewed";
   return v.trustStatus === "under_review" || v.trustStatus === "new";
+}
+
+/* ── Tier assignment ──────────────────────────────────────────────────────────
+   Exactly one tier per row, first match wins. This is the same invariant the
+   needs-review predicate exists to protect, extended to the whole chip row: a
+   row shown under two chips would let two counts disagree about the same work.
+   Needs Review therefore outranks Flagged — a risk-flagged row that someone
+   also paused is unfinished business, not parked business.
+
+   Returns null when no tier fits, rather than dumping the row into a tier whose
+   copy would misdescribe it. Callers surface that as a dev warning; today the
+   branches below are exhaustive for every reachable combination. */
+export function vendorTier(v: Vendor): VendorTier | null {
+  if (isNeedsReview(v)) return "needsReview";
+  if (v.trustState === "paused") return "flagged";
+  /* Dismissed rows live here too, badged "Reviewed". They are not a trust grant,
+     but they have been dealt with, and a row a user acted on must stay findable
+     somewhere — otherwise dismissing looks like deleting. */
+  if (v.trustStatus === "trusted" || v.trustState === "acknowledged") return "trusted";
+  if (v.trustStatus === "known") return "suggested";
+  return null;
+}
+
+/** Dismissed-but-not-trusted rows, which share the Trusted/Confirmed list and
+ *  need a badge to explain why they are sitting in it. */
+export function isReviewedOnly(v: Vendor): boolean {
+  return v.trustState === "acknowledged" && v.trustStatus !== "trusted";
 }
 
 /** Why a row sits in Needs Review. Risk outranks newness when both apply. */

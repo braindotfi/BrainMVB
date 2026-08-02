@@ -5,7 +5,8 @@ import { useLocation, useSearch } from "wouter";
 import {
   useBrainVendors,
   useBrainVendorDetail,
-  isNeedsReview,
+  vendorTier,
+  isReviewedOnly,
   reviewReasonLabel,
   vendorSegment,
 } from "@/lib/brainVendors";
@@ -13,7 +14,7 @@ import { useCurrency } from "@/lib/useCurrency";
 import { useToast } from "@/hooks/use-toast";
 import { AppAlertLink, useAppAlert } from "@/components/AppAlert";
 import { queryClient } from "@/lib/queryClient";
-import type { Vendor } from "@/lib/vendorTypes";
+import type { Vendor, VendorTier } from "@/lib/vendorTypes";
 import { VendorDetailPopup } from "@/components/VendorDetailPopup";
 import { FilterChipRow } from "@/components/FilterChipRow";
 import { Plus, ChevronDown } from "lucide-react";
@@ -25,10 +26,22 @@ import closeIcon from "@assets/Close_1783293571882.png";
    Review chip counted only risk-flagged ones, so a warning pointed at rows the
    active filter refused to show. Newness is now a REASON inside Needs Review,
    not a competing filter. */
-type VendorTab = "Needs Review" | "Trusted" | "Rejected" | "Suggested";
+type VendorTab = "Needs Review" | "Trusted" | "Flagged" | "Suggested";
 
 /** Vendors (we pay them) vs Customers (they pay us). */
 type Segment = "vendor" | "customer";
+
+/** Tabs are addressed by meaning, not by their label. The Customers segment
+ *  renames "Trusted" to "Confirmed", and that rename is label-only: same tier,
+ *  same underlying state, same endpoint when one exists. Keeping the tab VALUE
+ *  stable across segments is what stops a segment switch from silently
+ *  reinterpreting which rows the user is looking at. */
+const TAB_TIER: Record<VendorTab, VendorTier> = {
+  "Needs Review": "needsReview",
+  Trusted: "trusted",
+  Flagged: "flagged",
+  Suggested: "suggested",
+};
 
 const Divider = () => <div className="h-px shrink-0 w-full" style={{ background: "#1d2132" }} />;
 
@@ -68,17 +81,35 @@ function ReasonChip({ label }: { label: string }) {
   );
 }
 
+/** A row someone dismissed rather than granted. It shares the Trusted/Confirmed
+ *  list so a dismissed row stays findable, and this badge is what keeps that
+ *  list honest — without it the row would read as trusted. */
+function ReviewedChip() {
+  return (
+    <span
+      data-testid="chip-reviewed"
+      className="shrink-0 rounded-[4px] px-[6px] py-[1px] [font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[11px] whitespace-nowrap"
+      style={{ background: "#222737", color: "#6c779d" }}
+    >
+      Reviewed
+    </span>
+  );
+}
+
 function VendorRow({
   vendor,
   onClick,
   format,
   reason,
+  reviewed,
 }: {
   vendor: Vendor;
   onClick: () => void;
   format: (a: string | number) => string;
   /** Non-null only in the Needs Review queue, where every row must say why. */
   reason?: string | null;
+  /** Dismissed-but-not-trusted, shown only in the Trusted/Confirmed list. */
+  reviewed?: boolean;
 }) {
   const { paymentCount, totalPaid } = vendor.history;
   const hasPayments = paymentCount > 0;
@@ -96,6 +127,7 @@ function VendorRow({
             {vendor.name}
           </p>
           {reason ? <ReasonChip label={reason} /> : null}
+          {reviewed ? <ReviewedChip /> : null}
         </div>
         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] whitespace-nowrap">
           {vendor.category || "Vendor"} ·{" "}
@@ -123,6 +155,8 @@ function SubmitConfirmDialog({
   open,
   vendorName,
   category,
+  nounTitle,
+  noun,
   onCancel,
   onConfirm,
   busy,
@@ -130,6 +164,9 @@ function SubmitConfirmDialog({
   open: boolean;
   vendorName: string;
   category: string;
+  /** Segment wording, e.g. "Vendor"/"vendor" or "Customer"/"customer". */
+  nounTitle: string;
+  noun: string;
   onCancel: () => void;
   onConfirm: () => void;
   busy: boolean;
@@ -151,10 +188,10 @@ function SubmitConfirmDialog({
           <DialogPrimitive.Title asChild>
             <div className="flex flex-col gap-[8px] items-center px-[8px] pt-[24px] pb-[16px] text-center">
               <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#a8b9f4] text-[20px] w-full">
-                Submit Vendor for Review
+                Submit {nounTitle} for Review
               </p>
               <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] w-full">
-                Add vendor <span className="text-[#a8b9f4]">{vendorName}</span> as a{" "}
+                Add {noun} <span className="text-[#a8b9f4]">{vendorName}</span> as a{" "}
                 <span className="text-[#a8b9f4]">{category || "supplier"}</span> for review.
               </p>
             </div>
@@ -361,7 +398,7 @@ export function VendorsPanel() {
 
   const submitVendor = async () => {
     if (!vendorName.trim()) {
-      setError("Vendor name is required.");
+      setError(`${segment === "vendor" ? "Vendor" : "Customer"} name is required.`);
       return;
     }
     setBusy(true);
@@ -374,6 +411,10 @@ export function VendorsPanel() {
         body: JSON.stringify({
           name: vendorName.trim(),
           category: category.trim() || undefined,
+          /* The create route accepts `type: "customer"`, so the add box has to
+             follow the active segment. Vendors send no type and keep
+             brain-core's default — changing that is a separate decision. */
+          ...(segment === "customer" ? { type: "customer" } : {}),
         }),
       });
       const body = await res.json().catch(() => undefined);
@@ -381,7 +422,7 @@ export function VendorsPanel() {
         const message =
           (body?.body?.error?.message as string | undefined) ??
           (body?.message as string | undefined) ??
-          "Brain core rejected this vendor.";
+          `Brain core rejected this ${segment === "vendor" ? "vendor" : "customer"}.`;
         setError(message);
         return;
       }
@@ -392,7 +433,8 @@ export function VendorsPanel() {
       alert.success(
         "Success",
         <>
-          You have successfully added vendor: {submittedVendorName}
+          You have successfully added {segment === "vendor" ? "vendor" : "customer"}:{" "}
+          {submittedVendorName}
           <br />
           <br />
           View the vendor{" "}
@@ -474,24 +516,52 @@ export function VendorsPanel() {
     [vendors, segment],
   );
 
-  const grouped = useMemo(
-    () => ({
-      needsReview: segmentVendors.filter(isNeedsReview),
-      trusted: segmentVendors.filter((v) => v.trustStatus === "trusted"),
-      suggested: segmentVendors.filter((v) => v.trustStatus === "known"),
-      /* brain-core has no rejection state today; this tab ships honest-empty
-         like the Trusted tab — it is a placeholder for future upstream support. */
-      rejected: [] as Vendor[],
-    }),
-    [segmentVendors],
-  );
+  /* One pass, one tier per row. Bucketing here (rather than filtering per tab)
+     is what guarantees the chip counts and the rendered lists are the same
+     partition of the same array. */
+  const grouped = useMemo(() => {
+    const buckets: Record<VendorTier, Vendor[]> = {
+      needsReview: [],
+      flagged: [],
+      trusted: [],
+      suggested: [],
+    };
+    for (const v of segmentVendors) {
+      const tier = vendorTier(v);
+      if (tier) buckets[tier].push(v);
+      else if (import.meta.env.DEV) {
+        console.warn(
+          `[counterparties] "${v.name}" (${v.id}) matched no tier ` +
+            `(trustStatus=${v.trustStatus}, trustState=${v.trustState ?? "absent"}) — it is not rendered under any chip.`,
+        );
+      }
+    }
+    return buckets;
+  }, [segmentVendors]);
 
-  const tabVendors: Vendor[] = useMemo(() => {
-    if (activeTab === "Needs Review") return grouped.needsReview;
-    if (activeTab === "Trusted") return grouped.trusted;
-    if (activeTab === "Rejected") return grouped.rejected;
-    return grouped.suggested;
-  }, [activeTab, grouped]);
+  const countsKnown = !isLoading && !isError;
+
+  /* Customers say "Confirmed" where vendors say "Trusted". Same tier, same
+     state, same endpoint — only the word changes, because "trusting" someone
+     who pays you reads as a credit judgement rather than a payment allowlist. */
+  const trustedLabel = segment === "vendor" ? "Trusted" : "Confirmed";
+
+  /* Flagging a customer is rare enough that a permanently-empty chip is just
+     noise on that segment — but hiding a chip that has rows in it would hide
+     the rows, so it stays whenever it has any. */
+  const showFlagged = segment === "vendor" || grouped.flagged.length > 0;
+
+  /* Switching segments can retire the chip that is currently selected. Clamping
+     here rather than in an effect matters: an effect corrects the selection one
+     render LATE, so the list would paint once showing a tier no visible chip is
+     highlighting. Derived, the mismatch never exists.
+
+     `activeTab` itself is left alone, so switching back restores the filter the
+     user actually chose instead of quietly discarding it. */
+  const effectiveTab: VendorTab =
+    activeTab === "Flagged" && !showFlagged ? "Needs Review" : activeTab;
+
+  const tabVendors: Vendor[] = grouped[TAB_TIER[effectiveTab]];
 
   const vendorIdx = activeVendor ? tabVendors.findIndex((v) => v.id === activeVendor.id) : -1;
   const vendorPagerDisabled = vendorIdx < 0 || tabVendors.length <= 1;
@@ -504,7 +574,6 @@ export function VendorsPanel() {
     navigate(`/ledger?${params.toString()}`, { replace: true });
   };
 
-  const countsKnown = !isLoading && !isError;
   const vendorFilters = [
     {
       value: "Needs Review",
@@ -516,16 +585,19 @@ export function VendorsPanel() {
       // loading or failed: no number is honest then.
       count: countsKnown ? grouped.needsReview.length : undefined,
     },
-    // Trusted, Rejected and Suggested stay clean — their counts carry no action signal.
-    { value: "Trusted", label: "Trusted" },
-    { value: "Rejected", label: "Rejected" },
+    // The settled tiers stay clean — their counts carry no action signal.
+    { value: "Trusted", label: trustedLabel },
+    ...(showFlagged ? [{ value: "Flagged", label: "Flagged" }] : []),
     { value: "Suggested", label: "Suggested" },
   ];
+
   const segmentFilters = [
     { value: "vendor", label: "Vendors" },
     { value: "customer", label: "Customers" },
   ];
   const segmentNoun = segment === "vendor" ? "vendors" : "customers";
+  const segmentNounSingular = segment === "vendor" ? "vendor" : "customer";
+  const segmentNounTitle = segment === "vendor" ? "Vendor" : "Customer";
 
   /* ── Idle frame / Expanded form — above the label, same gap-[16px] sub-container as the Rules tab builder ── */
   const addBox = (
@@ -549,7 +621,7 @@ export function VendorsPanel() {
                     />
                   </svg>
                   <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[#6c779d] text-[20px] flex-1 min-w-px relative">
-                    Add a new vendor in plain English
+                    Add a new {segmentNounSingular} in plain English
                   </p>
                   <button
                     type="button"
@@ -559,7 +631,7 @@ export function VendorsPanel() {
                     style={{ background: "#4a2300" }}
                   >
                     <Plus className="size-[16px] shrink-0" />
-                    Add Vendor
+                    Add {segmentNounTitle}
                   </button>
                 </div>
               ) : (
@@ -574,7 +646,7 @@ export function VendorsPanel() {
                       {/* Group 1: "Add vendor" + name input */}
                       <div className="flex gap-[16px] items-center shrink-0">
                         <span className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[#a8b9f4] text-[16px] whitespace-nowrap">
-                          Add vendor
+                          Add {segmentNounSingular}
                         </span>
                         <div
                           className="flex items-center px-[8px] py-[10px] rounded-[8px] shrink-0"
@@ -584,7 +656,7 @@ export function VendorsPanel() {
                             type="text"
                             id="vendor-name-inline"
                             data-testid="input-vendor-name"
-                            placeholder="vendor name"
+                            placeholder={`${segmentNounSingular} name`}
                             value={vendorName}
                             onChange={(e) => setVendorName(e.target.value)}
                             autoFocus
@@ -630,7 +702,7 @@ export function VendorsPanel() {
                     <button
                       type="button"
                       onClick={() => {
-                        if (!vendorName.trim()) { setError("Vendor name is required."); return; }
+                        if (!vendorName.trim()) { setError(`${segmentNounTitle} name is required.`); return; }
                         setError(null);
                         setConfirmSubmit(true);
                       }}
@@ -646,14 +718,47 @@ export function VendorsPanel() {
             </div>
   );
 
+  /* ── Review actions: deliberately not shipped yet ─────────────────────────
+     The Needs Review queue is READ-ONLY. brain-core exposes no trust transition
+     on a counterparty today (its ledger routes reject trust-field writes
+     outright), so there is nothing a Trust / Flag / Dismiss button could call.
+
+     The tempting workaround — keep "reviewed" in local or BFF state — is the one
+     thing not to do. Review state is audited upstream; a second copy here would
+     disagree with brain-core the moment anything else touched the row, and the
+     user would be looking at a queue that only this browser believes in.
+
+     MOUNT POINT. When the contract below goes live, the row actions attach here
+     (and mirror into VendorDetailPopup's under_review branch):
+
+       POST /v1/ledger/counterparties/:id/trust/grant        → Trust / Confirm
+       POST /v1/ledger/counterparties/:id/trust/pause        → Flag
+       POST /v1/ledger/counterparties/:id/trust/acknowledge  → Dismiss
+
+     Plain /v1 JWT routes, `ledger:write`, user principal — the same auth path
+     the counterparties list read already uses, so no new plumbing. Each call
+     writes one audit event; the read side gains `trust_status` (already parsed
+     defensively in brainVendors.ts), and invalidating
+     ["/api/brain/ledger/counterparties"] is what refreshes the counts.
+
+     Segment differences are labels and prominence only, never separate state:
+       Vendors   — Trust / Flag / Dismiss inline.
+       Customers — Confirm / Dismiss inline, Flag demoted to an overflow menu.
+       "Confirm" IS grant. Same endpoint, same resulting state, different word.
+
+     Customers also get a bulk "Confirm all N new customers" above the queue,
+     behind a dialog listing the names, implemented as N individual grant calls
+     so each keeps its own audit event. Risk-flagged rows are excluded from the
+     bulk action and keep their per-item controls. */
+
   /* ── VENDORS label + list — below the frame ── */
   const listBlock = (
             <div className="flex flex-col gap-[10px] w-full">
               <div className="flex items-center gap-[8px] min-h-[16px] w-full">
                 <div className="size-[6px] rounded-full shrink-0 bg-[#6c779d]" />
                 <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[12px] uppercase tracking-[0.4px] whitespace-nowrap">
-                  {activeTab === "Rejected"
-                    ? "Rejected"
+                  {effectiveTab === "Flagged"
+                    ? "Flagged"
                     : segment === "vendor"
                       ? "Added Vendors"
                       : "Customers"}
@@ -673,17 +778,19 @@ export function VendorsPanel() {
                   {tabVendors.length === 0 ? (
                     <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative shrink-0 w-full">
                       <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
-                        {activeTab === "Needs Review" &&
+                        {effectiveTab === "Needs Review" &&
                           `Nothing to review. New and risk-flagged ${segmentNoun} appear here.`}
                         {/* Honest about a tier nothing can currently reach: brain-core
                             has no endpoint to grant trust, so this list stays empty
                             rather than implying the user simply hasn't got there yet. */}
-                        {activeTab === "Trusted" &&
-                          "No trusted counterparties. Granting trust isn't available yet, so this list stays empty for now."}
-                        {activeTab === "Suggested" &&
+                        {effectiveTab === "Trusted" &&
+                          `No ${trustedLabel.toLowerCase()} ${segmentNoun}. ${
+                            segment === "vendor" ? "Granting trust" : "Confirming a customer"
+                          } isn't available yet, so this list stays empty for now.`}
+                        {effectiveTab === "Suggested" &&
                           `No suggestions yet. ${segment === "vendor" ? "Vendors" : "Customers"} Brain has seen real payments for show up here.`}
-                        {activeTab === "Rejected" &&
-                          "No rejected vendors. Rejected vendors will appear here once vendor rejection is supported."}
+                        {effectiveTab === "Flagged" &&
+                          `No flagged ${segmentNoun}. Flagging isn't available yet, so this list stays empty for now.`}
                       </p>
                     </div>
                   ) : (
@@ -695,7 +802,8 @@ export function VendorsPanel() {
                           format={format}
                           // Reason is shown only in the review queue — it answers
                           // "why is this here?", which is only a question there.
-                          reason={activeTab === "Needs Review" ? reviewReasonLabel(vendor) : null}
+                          reason={effectiveTab === "Needs Review" ? reviewReasonLabel(vendor) : null}
+                          reviewed={effectiveTab === "Trusted" && isReviewedOnly(vendor)}
                           onClick={() => handleOpenVendor(vendor)}
                         />
                       ))}
@@ -716,7 +824,7 @@ export function VendorsPanel() {
         <div className="flex flex-wrap items-center justify-between gap-[12px] w-full">
           <FilterChipRow
             chips={vendorFilters}
-            value={activeTab}
+            value={effectiveTab}
             onChange={(v) => setActiveTab(v as VendorTab)}
             label="Filter counterparties"
             testIdPrefix="tab-vendor"
@@ -755,6 +863,8 @@ export function VendorsPanel() {
         open={confirmSubmit}
         vendorName={vendorName}
         category={category}
+        nounTitle={segmentNounTitle}
+        noun={segmentNounSingular}
         onCancel={() => setConfirmSubmit(false)}
         onConfirm={() => { setConfirmSubmit(false); submitVendor(); }}
         busy={busy}

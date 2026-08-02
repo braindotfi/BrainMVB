@@ -61,3 +61,57 @@ a test that asserts *badge value === rendered row count*, and re-assert it after
 scoping (segment/tab) changes — the unit test proves the function agrees with
 itself, so a DOM-level check is what actually proves the component renders what
 it counted.
+
+## Extend the one-predicate rule to the whole chip row
+
+Once there is more than one settled tier, "one predicate" is not enough: two
+chips can both have a claim on the same row. Assign a tier with a single ordered
+classifier returning one tier (or null), bucket in one pass, and let each chip
+read its own bucket.
+
+**Why:** overlapping chips reintroduce the original bug in a subtler form — two
+counts describing the same work, so acting on a row makes an unrelated number
+move. Filtering per-chip invites the overlap; partitioning forbids it.
+
+**How to apply:** order the classifier by *urgency*, so the unfinished tier wins
+over the parked one (a risk-flagged row someone also paused is still unfinished
+business). Return null rather than dumping an unmatched row into a tier whose
+copy would misdescribe it, and surface null as a dev warning — a row that
+matches nothing silently disappears from every chip. Test exclusivity directly:
+bucket a spread of rows and assert `total === rows.length` **and**
+`new Set(all buckets).size === rows.length`.
+
+## Label-only segment aliases, and clamping a retired chip
+
+Renaming a tier per segment ("Trusted" for vendors, "Confirmed" for customers)
+must change the *label* only — same tier, same state, same endpoint. Keep the
+chip's `value` stable across segments and vary only what is rendered.
+
+**Why:** if the value changes too, a segment switch silently reinterprets which
+rows the user is looking at, and every test id moves with the copy.
+
+**How to apply:** when a segment hides a chip that is currently selected, derive
+an effective tab (`selected is hidden ? fallback : selected`) instead of
+correcting it in a `useEffect`. An effect fixes the selection one render late,
+so the list paints once showing a tier no visible chip is highlighting. Leaving
+the underlying state untouched also restores the user's filter when they switch
+back. Hide a rare chip only while it is empty — hiding one that has rows hides
+the rows.
+
+## Reading a trust state that does not exist yet
+
+When upstream promises a review field (e.g. `trust_status`), read it defensively
+now and keep **absent** distinguishable from any known value: validate against
+the known set and return `undefined` for missing/unrecognised, so "the field was
+not reported" can still fall back to the local derivation while a reported value
+overrides it.
+
+**Why:** coercing an unknown string into a review state turns a schema change
+into a silent misclassification of audited state.
+
+**How to apply:** document the forthcoming routes at the mount point in the
+component that will call them, not as exported constants nothing imports. And
+watch the interaction between a default value and the queue predicate: if the
+field defaults to "unreviewed" and the queue is `unreviewed OR risk-flagged`,
+every row lands in the queue on day one and any *suggested* tier empties out —
+raise that with the contract owner rather than resolving it in the client.

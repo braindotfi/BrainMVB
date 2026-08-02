@@ -183,4 +183,80 @@ check(
   `add.y=${addBox?.y} list.y=${listBox?.y}`,
 );
 
+/* ── The segment renames labels, never state ─────────────────────────────────
+   Vendors say "Trusted", customers say "Confirmed", and both chips carry the
+   SAME value — so a segment switch cannot silently reinterpret which rows the
+   user is looking at. Reading the label off a chip located by its stable test
+   id is what proves the rename is cosmetic. */
+
+const chipLabel = async (testid) => {
+  const el = page.locator(`[data-testid="${testid}"]`);
+  return (await el.count()) === 1 ? (await el.innerText()).trim() : null;
+};
+
+await go("/ledger?tab=counterparties");
+await clickChip("segment-vendor");
+check(
+  "vendors call the settled tier Trusted",
+  (await chipLabel("tab-vendor-trusted")) === "Trusted",
+  `label=${await chipLabel("tab-vendor-trusted")}`,
+);
+
+await clickChip("segment-customer");
+check(
+  "customers call the same tier Confirmed, on the same chip",
+  (await chipLabel("tab-vendor-trusted")) === "Confirmed",
+  `label=${await chipLabel("tab-vendor-trusted")}`,
+);
+
+/* Flagging a customer is rare enough that an always-empty chip is noise there.
+   Hiding a chip that HAS rows would hide the rows, so this allows either an
+   absent chip or a present one — never an empty one taking up the row. */
+await clickChip("tab-vendor-needs-review");
+const flaggedOnCustomers = await count('[data-testid="tab-vendor-flagged"]');
+check(
+  "the Flagged chip is hidden on Customers while it has nothing to show",
+  flaggedOnCustomers === 0,
+  `flagged chips on customers=${flaggedOnCustomers}`,
+);
+
+await clickChip("segment-vendor");
+check(
+  "the Flagged chip is present on Vendors",
+  (await count('[data-testid="tab-vendor-flagged"]')) === 1,
+);
+
+/* Selecting a chip the other segment does not offer must not leave the list
+   showing a tier no chip is highlighting. */
+await clickChip("tab-vendor-flagged");
+await clickChip("segment-customer");
+const pressedChips = await page
+  .locator('[data-testid^="tab-vendor-"][aria-pressed="true"]')
+  .evaluateAll((els) => els.map((e) => e.getAttribute("data-testid")));
+check(
+  "switching away from a segment-only chip falls back to a visible one",
+  pressedChips.length === 1 && pressedChips[0] === "tab-vendor-needs-review",
+  `pressed=[${pressedChips.join(", ")}]`,
+);
+
+/* ── The add box follows the segment ─────────────────────────────────────────
+   The create route accepts customers, so an add box that says "vendor" on the
+   Customers segment would be describing a different write than the one it
+   performs. */
+const addBoxText = async () =>
+  (await page.locator('[data-testid="panel-add-vendor-idle"]').innerText()).toLowerCase();
+
+check(
+  "the add box asks for a customer on the Customers segment",
+  /customer/.test(await addBoxText()) && !/vendor/.test(await addBoxText()),
+  (await addBoxText()).replace(/\n+/g, " | ").slice(0, 120),
+);
+
+await clickChip("segment-vendor");
+check(
+  "the add box asks for a vendor on the Vendors segment",
+  /vendor/.test(await addBoxText()) && !/customer/.test(await addBoxText()),
+  (await addBoxText()).replace(/\n+/g, " | ").slice(0, 120),
+);
+
 await finish();

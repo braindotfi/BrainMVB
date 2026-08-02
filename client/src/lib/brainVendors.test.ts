@@ -2,11 +2,13 @@ import { describe, it, expect } from "vitest";
 import {
   mapCounterpartyToVendor,
   isNeedsReview,
+  isReviewedOnly,
   reviewReasonLabel,
   vendorSegment,
+  vendorTier,
   type BrainCounterparty,
 } from "./brainVendors";
-import type { Vendor } from "./vendorTypes";
+import type { Vendor, VendorTier } from "./vendorTypes";
 
 /**
  * Two invariants live here.
@@ -122,7 +124,29 @@ describe("isNeedsReview", () => {
     expect(isNeedsReview(v({ trustStatus: "trusted" }))).toBe(false);
   });
 
-  it("partitions every row into exactly one of the three tabs", () => {
+  it("lets brain-core's own review state settle a row once it reports one", () => {
+    // The whole point of trust_status is that it is the audited answer. Where
+    // it exists it outranks the derivation; where it does not, nothing changes.
+    expect(isNeedsReview(v({ trustStatus: "new", trustState: "unreviewed" }))).toBe(true);
+    expect(isNeedsReview(v({ trustStatus: "new", trustState: "acknowledged" }))).toBe(false);
+    expect(isNeedsReview(v({ trustStatus: "trusted", trustState: "trusted" }))).toBe(false);
+    expect(isNeedsReview(v({ trustStatus: "under_review", trustState: "paused" }))).toBe(false);
+  });
+
+  it("never lets a click settle a risk-flagged row", () => {
+    // Dismissing or flagging is a human saying "seen it". Neither is brain-core
+    // withdrawing a sanctions hit, so the row stays in the queue regardless.
+    for (const state of ["acknowledged", "paused", "trusted"] as const) {
+      expect(isNeedsReview(v({ riskLevel: "high", trustState: state }))).toBe(true);
+      expect(isNeedsReview(v({ riskLevel: "sanctioned", trustState: state }))).toBe(true);
+    }
+  });
+});
+
+describe("vendorTier", () => {
+  const v = (over: Partial<Vendor>): Vendor => ({ ...mapCounterpartyToVendor(cp()), ...over });
+
+  it("files a row under exactly one chip", () => {
     // No row may be counted twice or fall through the gaps — that is how a
     // badge and a list drift apart in the first place.
     const rows: Vendor[] = [
@@ -130,12 +154,85 @@ describe("isNeedsReview", () => {
       v({ id: "b", trustStatus: "under_review" }),
       v({ id: "c", trustStatus: "known" }),
       v({ id: "d", trustStatus: "trusted" }),
+      v({ id: "e", trustStatus: "new", trustState: "unreviewed" }),
+      v({ id: "f", trustStatus: "new", trustState: "acknowledged" }),
+      v({ id: "g", trustStatus: "known", trustState: "acknowledged" }),
+      v({ id: "h", trustStatus: "under_review", trustState: "paused" }),
+      v({ id: "i", trustStatus: "trusted", trustState: "trusted" }),
+      v({ id: "j", riskLevel: "high", trustState: "paused" }),
     ];
-    const needsReview = rows.filter(isNeedsReview);
-    const trusted = rows.filter((r) => r.trustStatus === "trusted");
-    const suggested = rows.filter((r) => r.trustStatus === "known");
-    expect(needsReview.length + trusted.length + suggested.length).toBe(rows.length);
-    expect(new Set([...needsReview, ...trusted, ...suggested]).size).toBe(rows.length);
+
+    const buckets: Record<VendorTier, Vendor[]> = {
+      needsReview: [], flagged: [], trusted: [], suggested: [],
+    };
+    for (const row of rows) {
+      const tier = vendorTier(row);
+      // A null tier means the row renders nowhere — a silent disappearance.
+      expect(tier, `${row.id} matched no tier`).not.toBeNull();
+      buckets[tier!].push(row);
+    }
+
+    const total = Object.values(buckets).reduce((n, b) => n + b.length, 0);
+    expect(total).toBe(rows.length);
+    expect(new Set(Object.values(buckets).flat()).size).toBe(rows.length);
+  });
+
+  it("keeps a risk-flagged, paused row in Needs Review rather than Flagged", () => {
+    // Both chips have a claim on it. Needs Review wins, so its count and list
+    // stay in step and the row is not quietly parked.
+    expect(vendorTier(v({ riskLevel: "high", trustState: "paused" }))).toBe("needsReview");
+    expect(vendorTier(v({ trustStatus: "under_review", trustState: "paused" }))).toBe("flagged");
+  });
+
+  it("keeps a dismissed row findable in the trusted list, badged as reviewed", () => {
+    // Dismissing must not look like deleting: the row still renders somewhere,
+    // and the badge is what stops it from reading as a trust grant.
+    const dismissed = v({ trustStatus: "new", trustState: "acknowledged" });
+    expect(vendorTier(dismissed)).toBe("trusted");
+    expect(isReviewedOnly(dismissed)).toBe(true);
+
+    const granted = v({ trustStatus: "trusted", trustState: "trusted" });
+    expect(vendorTier(granted)).toBe("trusted");
+    expect(isReviewedOnly(granted)).toBe(false);
+  });
+});
+
+describe("reading brain-core's trust_status", () => {
+  it("ignores the field when it is absent or carries an unknown value", () => {
+    // "Field not reported" and "reported unreviewed" are different facts, and
+    // only the first may fall back to deriving the tier from risk + history.
+    expect(mapCounterpartyToVendor(cp()).trustState).toBeUndefined();
+    expect(mapCounterpartyToVendor(cp({ trust_status: null })).trustState).toBeUndefined();
+    expect(mapCounterpartyToVendor(cp({ trust_status: "" })).trustState).toBeUndefined();
+    expect(mapCounterpartyToVendor(cp({ trust_status: "some_future_state" })).trustState)
+      .toBeUndefined();
+    expect(mapCounterpartyToVendor(cp({ trust_status: 1 as never })).trustState).toBeUndefined();
+  });
+
+  it("lets a granted row finally reach 'trusted' — the tier the derivation cannot produce", () => {
+    const v = mapCounterpartyToVendor(cp({ trust_status: "trusted" }));
+    expect(v.trustStatus).toBe("trusted");
+    expect(v.trustState).toBe("trusted");
+  });
+
+  it("does not read a dismissal as a trust grant", () => {
+    // Acknowledged only means "a human looked". The tier still comes from
+    // history, so a zero-payment row must not inherit trusted's copy.
+    const noHistory = mapCounterpartyToVendor(cp({ trust_status: "acknowledged" }));
+    expect(noHistory.trustStatus).toBe("new");
+    expect(noHistory.eligibleForTrust).toBe(false);
+
+    const withHistory = mapCounterpartyToVendor(
+      cp({ trust_status: "acknowledged", payment_count: 3, payment_total: "30" }),
+    );
+    expect(withHistory.trustStatus).toBe("known");
+  });
+
+  it("keeps risk above a pause, so a sanctioned row cannot be flagged out of the queue", () => {
+    const v = mapCounterpartyToVendor(cp({ trust_status: "paused", risk_level: "sanctioned" }));
+    expect(v.trustStatus).toBe("under_review");
+    expect(isNeedsReview(v)).toBe(true);
+    expect(vendorTier(v)).toBe("needsReview");
   });
 });
 
