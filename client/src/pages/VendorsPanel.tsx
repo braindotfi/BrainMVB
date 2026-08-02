@@ -554,14 +554,20 @@ export function VendorsPanel() {
 
      Flagged: rare enough on Customers that a permanently-empty chip is just
      noise there, but it stays on Vendors, where flagging is the point.
-     Suggested: nothing can currently reach the tier on either segment, so it
-     stays hidden until something does.
+     Suggested: nothing can currently reach the tier on either segment — brain-
+     core's provenance enum has no value meaning "Brain-suggested, not yet
+     confirmed". The chip is hidden until vendorTier() returns "suggested" for
+     at least one row; that only happens when brain-core ships a matching
+     provenance value and the implementation here is explicitly wired to it.
+     The loading guard (!countsKnown) is intentionally absent: showing the chip
+     during load and hiding it once the read lands would assert "this tier exists
+     here" on stale data. The chip either has rows or it doesn't.
 
      Both hide only WHILE empty — hiding a chip that has rows would hide the
      rows, which is the failure this screen exists to prevent. */
   const showFlagged =
     !countsKnown || segment === "vendor" || grouped.flagged.length > 0;
-  const showSuggested = !countsKnown || grouped.suggested.length > 0;
+  const showSuggested = grouped.suggested.length > 0;
 
   const tabVisible: Record<VendorTab, boolean> = {
     "Needs Review": true,

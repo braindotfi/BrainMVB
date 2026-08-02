@@ -214,7 +214,13 @@ export function vendorTier(v: Vendor): VendorTier | null {
      but they have been dealt with, and a row a user acted on must stay findable
      somewhere — otherwise dismissing looks like deleting. */
   if (v.trustStatus === "trusted" || v.trustState === "acknowledged") return "trusted";
-  if (v.trustStatus === "known") return "suggested";
+  /* `known` is NOT a proxy for "suggested". brain-core's provenance enum
+     (extracted, inferred, ambiguous, human_confirmed, agent_contributed,
+     customer_asserted) contains no value meaning "Brain-suggested, not yet
+     confirmed". Until brain-core ships a provenance value that explicitly
+     carries that meaning, no row reaches the Suggested bucket and the chip
+     stays hidden. Do not substitute agent_contributed or a confidence
+     threshold as a proxy predicate. */
   return null;
 }
 

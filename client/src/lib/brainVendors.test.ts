@@ -149,10 +149,14 @@ describe("vendorTier", () => {
   it("files a row under exactly one chip", () => {
     // No row may be counted twice or fall through the gaps — that is how a
     // badge and a list drift apart in the first place.
+    //
+    // `known` without trustState: "acknowledged" is intentionally excluded here:
+    // brain-core's provenance enum has no value meaning "Brain-suggested, not yet
+    // confirmed", so vendorTier() returns null for plain `known` rows and the
+    // Suggested bucket stays empty. See the explicit null-result test below.
     const rows: Vendor[] = [
       v({ id: "a", trustStatus: "new" }),
       v({ id: "b", trustStatus: "under_review" }),
-      v({ id: "c", trustStatus: "known" }),
       v({ id: "d", trustStatus: "trusted" }),
       v({ id: "e", trustStatus: "new", trustState: "unreviewed" }),
       v({ id: "f", trustStatus: "new", trustState: "acknowledged" }),
@@ -175,6 +179,20 @@ describe("vendorTier", () => {
     const total = Object.values(buckets).reduce((n, b) => n + b.length, 0);
     expect(total).toBe(rows.length);
     expect(new Set(Object.values(buckets).flat()).size).toBe(rows.length);
+  });
+
+  it("returns null for known without acknowledged — Suggested chip stays hidden", () => {
+    // brain-core's provenance enum (extracted, inferred, ambiguous,
+    // human_confirmed, agent_contributed, customer_asserted) has no value meaning
+    // "Brain-suggested, not yet confirmed". The Suggested chip must not appear
+    // until brain-core ships such a value and the predicate here is wired to it.
+    // `agent_contributed` and confidence thresholds are not valid proxies.
+    //
+    // Note: `known + unreviewed` is NOT null — isNeedsReview() fires first for
+    // any row where trustState === "unreviewed", so those go to Needs Review.
+    // The null path is only reached when trustState is absent entirely.
+    expect(vendorTier(v({ trustStatus: "known" }))).toBeNull();
+    expect(vendorTier(v({ trustStatus: "known", trustState: "unreviewed" }))).toBe("needsReview");
   });
 
   it("keeps a risk-flagged, paused row in Needs Review rather than Flagged", () => {

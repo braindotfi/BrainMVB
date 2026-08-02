@@ -48,9 +48,13 @@ const TRUST_META: Record<
     headlineColor: ACTIVE,
   },
   known: {
-    label: "Suggested",
-    chipBg: "#240757",
-    chipText: PURPLE,
+    /* "known" upstream means the counterparty is identified but not yet
+       actioned — it does NOT mean "Brain-suggested, not yet confirmed".
+       brain-core's provenance enum has no value with that meaning today.
+       Use neutral styling; the Suggested chip/label must not appear here. */
+    label: "Known",
+    chipBg: "#1a1e2b",
+    chipText: "#6c779d",
     icon: Clock,
     headlineColor: "#a8b9f4",
   },
@@ -207,9 +211,7 @@ export function VendorDetailPopup({
                   ? `New ${nounTitle}`
                   : vendor.trustStatus === "trusted"
                     ? `${trustedWord} ${nounTitle}`
-                    : vendor.trustStatus === "known"
-                      ? `Suggested ${nounTitle}`
-                      : `Review ${nounTitle}`}
+                    : `Review ${nounTitle}`}
               </p>
             </DialogPrimitive.Title>
             <DialogPrimitive.Close
@@ -402,10 +404,16 @@ export function VendorDetailPopup({
               </div>
             )}
 
-            {/* Why Brain Suggests Trust (known / suggested only) */}
-            {vendor.trustStatus === "known" && vendor.eligibilityEvidence && vendor.eligibilityEvidence.length > 0 && (
+            {/* Payment eligibility evidence — shown when Brain has recorded
+                fact rows that inform a future trust decision. The section
+                header no longer claims Brain is "suggesting" trust: brain-core
+                has no provenance value meaning "Brain-suggested, not yet
+                confirmed", so the framing is forward-looking rather than
+                assertive. Rendered for any status that carries evidence rows,
+                not only for `known`. */}
+            {vendor.eligibilityEvidence && vendor.eligibilityEvidence.length > 0 && (
               <div className="flex flex-col gap-[16px] items-start w-full">
-                <SectionLabel>Why Brain Suggests Trust</SectionLabel>
+                <SectionLabel>Payment eligibility</SectionLabel>
                 <div className="bg-[#0a0c10] border border-[#1d2132] border-solid flex flex-col items-start rounded-[12px] w-full">
                   {vendor.eligibilityEvidence.map((ev, idx) => (
                     <div
@@ -511,7 +519,12 @@ export function VendorDetailPopup({
                 </div>
               )}
 
-              {/* Suggested → grant (parked) */}
+              {/* `known` → grant (parked).
+                  `known` means the counterparty is identified upstream but has
+                  not been actioned. It does NOT mean "Brain-suggested"; that
+                  provenance value does not exist in brain-core today. The grant
+                  button is parked (disabled) along with all other trust actions
+                  until the trust routes are confirmed deployed. */}
               {vendor.trustStatus === "known" && (
                 <div className="flex flex-col gap-[12px] w-full">
                   <PendingActionNote />
