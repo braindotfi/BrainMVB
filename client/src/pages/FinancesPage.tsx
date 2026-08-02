@@ -52,8 +52,8 @@ function timeAgo(ts: number): string {
 
 // ─── tabs ────────────────────────────────────────────────────────────────────
 
-export type LedgerTab = "Accounts" | "Cash Flow" | "Vendors" | "Rules";
-export const LEDGER_TABS: LedgerTab[] = ["Accounts", "Cash Flow", "Vendors", "Rules"];
+export type LedgerTab = "Accounts" | "Cash Flow" | "Counterparties" | "Rules";
+export const LEDGER_TABS: LedgerTab[] = ["Accounts", "Cash Flow", "Counterparties", "Rules"];
 
 export const ledgerTabSlug = (tab: LedgerTab): string => tab.toLowerCase().replace(/\s+/g, "-");
 
@@ -71,7 +71,11 @@ const TAB_BY_SLUG: Record<string, LedgerTab> = {
   accounts: "Accounts",
   "cash-flow": "Cash Flow",
   cashflow: "Cash Flow",
-  vendors: "Vendors",
+  counterparties: "Counterparties",
+  // Retired canonical name for the same tab. The screen was called "Vendors"
+  // until it grew a Customers segment; every ?tab=vendors link ever emitted
+  // (assistant citations, global search, shared URLs) must keep working.
+  vendors: "Counterparties",
   rules: "Rules",
   recent: "Cash Flow",
   bills: "Cash Flow",
@@ -95,9 +99,9 @@ const TAB_COPY: Record<LedgerTab, { heading: string; sub: string | null }> = {
     heading: "Everywhere your money moved.",
     sub: "Income, expenses and the bills you still owe, in one list.",
   },
-  Vendors: {
-    heading: "The people and businesses you pay.",
-    sub: "See vendor activity, payment history, risks, and recommendations.",
+  Counterparties: {
+    heading: "The people and businesses you trade with.",
+    sub: "Review new and flagged counterparties, and see payment history across vendors and customers.",
   },
   Rules: {
     heading: "Your boundaries that Brain follows.",
@@ -333,7 +337,7 @@ export function FinancesPage() {
 
         {activeTab === "Cash Flow" && <CashFlowTab format={format} onOpenTx={setOpenTxId} />}
 
-        {activeTab === "Vendors" && <VendorsPanel />}
+        {activeTab === "Counterparties" && <VendorsPanel />}
 
         {activeTab === "Rules" && <RulesPanel />}
 

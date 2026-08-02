@@ -1,12 +1,27 @@
 import { describe, it, expect } from "vitest";
-import { mapCounterpartyToVendor, type BrainCounterparty } from "./brainVendors";
+import {
+  mapCounterpartyToVendor,
+  isNeedsReview,
+  reviewReasonLabel,
+  vendorSegment,
+  type BrainCounterparty,
+} from "./brainVendors";
+import type { Vendor } from "./vendorTypes";
 
 /**
- * mapCounterpartyToVendor's only real branch is trust-status derivation from
- * brain-core's actual risk fields. This pins the honesty invariant: only
- * `risk_level` in {high, sanctioned} may produce "under_review" - everything
- * else (including a merely "unverified" counterparty) defaults "new", because
- * brain-core reports no payment history here to ever justify "known"/"trusted".
+ * Two invariants live here.
+ *
+ * 1. Trust status is derived from brain-core's REAL fields and nothing else.
+ *    Only `risk_level` in {high, sanctioned} may produce "under_review"; a
+ *    merely "unverified" counterparty is not a flagged one. "trusted" must stay
+ *    unreachable: brain-core rejects writes to every trust field, so nothing
+ *    could ever have granted it, and rendering it would be a lie about state
+ *    the product cannot hold.
+ *
+ * 2. `isNeedsReview` is the ONE predicate behind the chip badge, the list it
+ *    filters, and the row reason chip. The bug this screen shipped with was two
+ *    predicates disagreeing — a banner counting rows the active filter refused
+ *    to show. Tests below pin count-equals-rows directly.
  */
 
 function cp(overrides: Partial<BrainCounterparty> = {}): BrainCounterparty {
@@ -53,5 +68,131 @@ describe("mapCounterpartyToVendor", () => {
   it("maps counterparty type to a readable category label, falling back to the raw type", () => {
     expect(mapCounterpartyToVendor(cp({ type: "tax_authority" })).category).toBe("Tax authority");
     expect(mapCounterpartyToVendor(cp({ type: "some_future_type" })).category).toBe("some_future_type");
+  });
+
+  it("promotes an unflagged counterparty with real payments to known", () => {
+    const v = mapCounterpartyToVendor(cp({ payment_count: 4, payment_total: "1200.00" }));
+    expect(v.trustStatus).toBe("known");
+    expect(v.history.paymentCount).toBe(4);
+    expect(v.history.totalPaid).toBe(1200);
+    expect(v.history.avgAmount).toBe(300);
+    expect(v.eligibleForTrust).toBe(true);
+  });
+
+  it("keeps a risk-flagged counterparty under review no matter how often it was paid", () => {
+    const v = mapCounterpartyToVendor(
+      cp({ risk_level: "high", payment_count: 40, payment_total: "99000.00" }),
+    );
+    expect(v.trustStatus).toBe("under_review");
+    // Suggesting trust for a flagged payee is the one thing this must never do.
+    expect(v.eligibleForTrust).toBe(false);
+  });
+
+  it("coerces payment rollups defensively - proxied reads arrive unnormalized", () => {
+    // Reads are proxied through the BFF without normalization, so the client
+    // cannot assume numbers. A bad value must read as "no payments", never NaN.
+    const asStrings = mapCounterpartyToVendor(cp({ payment_count: "3" as never, payment_total: "90.5" }));
+    expect(asStrings.history.paymentCount).toBe(3);
+    expect(asStrings.history.totalPaid).toBe(90.5);
+
+    const junk = mapCounterpartyToVendor(cp({ payment_count: "n/a" as never, payment_total: "n/a" }));
+    expect(junk.history.paymentCount).toBe(0);
+    expect(junk.history.totalPaid).toBe(0);
+    expect(junk.trustStatus).toBe("new");
+
+    const missing = mapCounterpartyToVendor(cp());
+    expect(Number.isNaN(missing.history.avgAmount)).toBe(false);
+    expect(missing.history.avgAmount).toBe(0);
+  });
+
+  it("splits customers out of the vendor segment", () => {
+    expect(mapCounterpartyToVendor(cp({ type: "customer" })).segment).toBe("customer");
+    expect(mapCounterpartyToVendor(cp({ type: "vendor" })).segment).toBe("vendor");
+    expect(mapCounterpartyToVendor(cp({ type: "tax_authority" })).segment).toBe("vendor");
+  });
+});
+
+describe("isNeedsReview", () => {
+  const v = (over: Partial<Vendor>): Vendor => ({ ...mapCounterpartyToVendor(cp()), ...over });
+
+  it("covers exactly the new and flagged rows", () => {
+    expect(isNeedsReview(v({ trustStatus: "new" }))).toBe(true);
+    expect(isNeedsReview(v({ trustStatus: "under_review" }))).toBe(true);
+    expect(isNeedsReview(v({ trustStatus: "known" }))).toBe(false);
+    expect(isNeedsReview(v({ trustStatus: "trusted" }))).toBe(false);
+  });
+
+  it("partitions every row into exactly one of the three tabs", () => {
+    // No row may be counted twice or fall through the gaps — that is how a
+    // badge and a list drift apart in the first place.
+    const rows: Vendor[] = [
+      v({ id: "a", trustStatus: "new" }),
+      v({ id: "b", trustStatus: "under_review" }),
+      v({ id: "c", trustStatus: "known" }),
+      v({ id: "d", trustStatus: "trusted" }),
+    ];
+    const needsReview = rows.filter(isNeedsReview);
+    const trusted = rows.filter((r) => r.trustStatus === "trusted");
+    const suggested = rows.filter((r) => r.trustStatus === "known");
+    expect(needsReview.length + trusted.length + suggested.length).toBe(rows.length);
+    expect(new Set([...needsReview, ...trusted, ...suggested]).size).toBe(rows.length);
+  });
+});
+
+describe("the Needs Review badge counts exactly the rows it will show", () => {
+  /* The shipped bug in one assertion: the number on the chip and the length of
+     the list it opens are produced by the same filter over the same segment. */
+  const seed = (specs: Array<Partial<BrainCounterparty>>) =>
+    specs.map((s, i) => mapCounterpartyToVendor(cp({ id: `cp_${i}`, ...s })));
+
+  const cases: Array<[string, Array<Partial<BrainCounterparty>>]> = [
+    ["new only", [{}, {}, {}]],
+    ["flagged only", [{ risk_level: "high" }, { risk_level: "sanctioned" }]],
+    ["new and flagged", [{}, { risk_level: "high" }, { payment_count: 2, payment_total: "10" }]],
+    [
+      "customers present",
+      [
+        { type: "customer" },
+        { type: "customer", risk_level: "high" },
+        {},
+        { payment_count: 5, payment_total: "50" },
+      ],
+    ],
+    ["nothing to review", [{ payment_count: 1, payment_total: "1" }]],
+    ["empty", []],
+  ];
+
+  for (const [name, specs] of cases) {
+    it(`holds for: ${name}`, () => {
+      const all = seed(specs);
+      for (const segment of ["vendor", "customer"] as const) {
+        const inSegment = all.filter((v) => vendorSegment(v) === segment);
+        const badge = inSegment.filter(isNeedsReview).length;
+        const rendered = inSegment.filter(isNeedsReview);
+        expect(rendered).toHaveLength(badge);
+        // And the count is scoped: it never leaks rows from the other segment.
+        expect(rendered.every((r) => vendorSegment(r) === segment)).toBe(true);
+      }
+    });
+  }
+});
+
+describe("reviewReasonLabel", () => {
+  it("prefers the risk reason when a row is both new and flagged", () => {
+    // Both apply to a first-seen sanctioned payee. Only the dangerous one is
+    // worth the row's single chip.
+    expect(reviewReasonLabel(mapCounterpartyToVendor(cp({ risk_level: "sanctioned" })))).toBe(
+      "Risk: sanctioned",
+    );
+    expect(reviewReasonLabel(mapCounterpartyToVendor(cp({ risk_level: "high" })))).toBe("Risk: high");
+  });
+
+  it("labels an unflagged first-seen counterparty New", () => {
+    expect(reviewReasonLabel(mapCounterpartyToVendor(cp()))).toBe("New");
+  });
+
+  it("gives no reason to rows that are not in the queue", () => {
+    const known = mapCounterpartyToVendor(cp({ payment_count: 2, payment_total: "20" }));
+    expect(reviewReasonLabel(known)).toBeNull();
   });
 });

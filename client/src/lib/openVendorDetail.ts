@@ -38,7 +38,9 @@ export function openVendorDetail(
   // closing the vendor detail returns to where it came from, mirroring the
   // stacked invoice-viewer experience. VendorsPage reads `?from=` on close.
   const suffix = returnTo ? `&from=${encodeURIComponent(returnTo)}` : "";
-  // Vendors is a Ledger tab; VendorsPanel reads ?vendor= and ?from= from there.
-  navigate(`/ledger?tab=vendors&vendor=${vendor.id}${suffix}`);
+  // Counterparties is a Ledger tab; VendorsPanel reads ?vendor= and ?from= from
+  // there. `counterparties` is the canonical slug — `vendors` still resolves to
+  // the same tab for links emitted before the rename.
+  navigate(`/ledger?tab=counterparties&vendor=${vendor.id}${suffix}`);
   return true;
 }

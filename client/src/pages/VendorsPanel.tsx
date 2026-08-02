@@ -2,7 +2,13 @@ import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback } fr
 import { createPortal } from "react-dom";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useLocation, useSearch } from "wouter";
-import { useBrainVendors, useBrainVendorDetail } from "@/lib/brainVendors";
+import {
+  useBrainVendors,
+  useBrainVendorDetail,
+  isNeedsReview,
+  reviewReasonLabel,
+  vendorSegment,
+} from "@/lib/brainVendors";
 import { useCurrency } from "@/lib/useCurrency";
 import { useToast } from "@/hooks/use-toast";
 import { AppAlertLink, useAppAlert } from "@/components/AppAlert";
@@ -14,7 +20,15 @@ import { Plus, ChevronDown } from "lucide-react";
 import { AlertCallout } from "@/components/Callout";
 import closeIcon from "@assets/Close_1783293571882.png";
 
-type VendorTab = "Needs Review" | "New" | "Trusted" | "Suggested";
+/* "New" is deliberately NOT a top-level chip. It was one half of the bug this
+   screen used to have: the banner counted new+unreviewed rows while the Needs
+   Review chip counted only risk-flagged ones, so a warning pointed at rows the
+   active filter refused to show. Newness is now a REASON inside Needs Review,
+   not a competing filter. */
+type VendorTab = "Needs Review" | "Trusted" | "Suggested";
+
+/** Vendors (we pay them) vs Customers (they pay us). */
+type Segment = "vendor" | "customer";
 
 const Divider = () => <div className="h-px shrink-0 w-full" style={{ background: "#1d2132" }} />;
 
@@ -35,15 +49,40 @@ const VENDOR_CATEGORIES = [
 ];
 
 /* ── Vendor row ──────────────────────────────────────────────────────────── */
+/** Why a row is in the review queue. Risk reads as danger, newness as amber —
+ *  the same two tones the rest of the app uses for those meanings. */
+function ReasonChip({ label }: { label: string }) {
+  const danger = label.startsWith("Risk:") || label === "Flagged for review";
+  return (
+    <span
+      data-testid="chip-review-reason"
+      className="shrink-0 rounded-[4px] px-[6px] py-[1px] [font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[11px] whitespace-nowrap"
+      style={
+        danger
+          ? { background: "#350011", color: "#d20344" }
+          : { background: "#4a2300", color: "#ff9400" }
+      }
+    >
+      {label}
+    </span>
+  );
+}
+
 function VendorRow({
   vendor,
   onClick,
   format,
+  reason,
 }: {
   vendor: Vendor;
   onClick: () => void;
   format: (a: string | number) => string;
+  /** Non-null only in the Needs Review queue, where every row must say why. */
+  reason?: string | null;
 }) {
+  const { paymentCount, totalPaid } = vendor.history;
+  const hasPayments = paymentCount > 0;
+
   return (
     <button
       type="button"
@@ -52,17 +91,26 @@ function VendorRow({
       className="flex gap-[12px] items-center px-[16px] py-[12px] relative shrink-0 w-full bg-[#0a0c10] transition-colors border-b border-solid border-[#1d2132] last:border-b-0 hover:bg-[#11141b] cursor-pointer text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
     >
       <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
-        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">
-          {vendor.name}
-        </p>
+        <div className="flex items-center gap-[8px] min-w-px max-w-full">
+          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px] truncate">
+            {vendor.name}
+          </p>
+          {reason ? <ReasonChip label={reason} /> : null}
+        </div>
         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] whitespace-nowrap">
-          {vendor.category || "Vendor"} · {vendor.history.paymentCount} payments
+          {vendor.category || "Vendor"} ·{" "}
+          {hasPayments
+            ? `${paymentCount} ${paymentCount === 1 ? "payment" : "payments"}`
+            : "No payments yet"}
         </p>
       </div>
-      {typeof vendor.history.totalPaid === "number" && (
+      {/* The amount column is hidden entirely until there is at least one
+          payment — a "$0.00" next to a brand-new counterparty reads as a real
+          zero balance rather than an absence of history. */}
+      {hasPayments && (
         <div className="flex flex-col items-end justify-center relative shrink-0">
           <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap">
-            {format(vendor.history.totalPaid)}
+            {format(totalPaid)}
           </p>
         </div>
       )}
@@ -291,6 +339,8 @@ export function VendorsPanel() {
   const [activeVendor, setActiveVendor] = useState<Vendor | null>(null);
   const detailVendor = useBrainVendorDetail(activeVendor);
   const [activeTab, setActiveTab] = useState<VendorTab>("Needs Review");
+  /* Vendors first: this screen's primary job is the payables review queue. */
+  const [segment, setSegment] = useState<Segment>("vendor");
 
   /* ── Add vendor state ── */
   const [addOpen, setAddOpen] = useState(false);
@@ -347,7 +397,7 @@ export function VendorsPanel() {
           <br />
           View the vendor{" "}
           {submittedVendorId ? (
-            <AppAlertLink href={`/ledger?tab=vendors&vendor=${encodeURIComponent(submittedVendorId)}`}>
+            <AppAlertLink href={`/ledger?tab=counterparties&vendor=${encodeURIComponent(submittedVendorId)}`}>
               here
             </AppAlertLink>
           ) : (
@@ -380,7 +430,7 @@ export function VendorsPanel() {
       setActiveVendor(null);
       const params = new URLSearchParams(search);
       params.delete("vendor");
-      params.set("tab", "vendors");
+      params.set("tab", "counterparties");
       navigate(`/ledger?${params.toString()}`, { replace: true });
     } catch {
       toast({ title: "Couldn't delete vendor", description: "Couldn't reach Brain core. Nothing was changed.", variant: "destructive" });
@@ -402,31 +452,41 @@ export function VendorsPanel() {
     const from = params.get("from");
     if (from) { navigate(from, { replace: true }); return; }
     params.delete("vendor");
-    params.set("tab", "vendors");
+    params.set("tab", "counterparties");
     navigate(`/ledger?${params.toString()}`, { replace: true });
   };
 
   const handleOpenVendor = (vendor: Vendor) => {
     setActiveVendor(vendor);
     const params = new URLSearchParams(search);
-    params.set("tab", "vendors");
+    params.set("tab", "counterparties");
     params.set("vendor", vendor.id);
     navigate(`/ledger?${params.toString()}`, { replace: true });
   };
 
-  const grouped = useMemo(() => {
-    const trusted = vendors.filter((v) => v.trustStatus === "trusted");
-    const underReview = vendors.filter((v) => v.trustStatus === "under_review");
-    const known = vendors.filter((v) => v.trustStatus === "known");
-    const newVendors = vendors.filter((v) => v.trustStatus === "new");
-    return { trusted, underReview, known, newVendors };
-  }, [vendors]);
+  /* ── One derivation chain ────────────────────────────────────────────────
+     Segment first, then the needs-review predicate, then the tab. The chip
+     badge, the rendered list and the label count all read off THIS chain, so a
+     number on this screen cannot describe rows the list won't render — which is
+     exactly the bug the old banner/chip split produced. */
+  const segmentVendors = useMemo(
+    () => vendors.filter((v) => vendorSegment(v) === segment),
+    [vendors, segment],
+  );
+
+  const grouped = useMemo(
+    () => ({
+      needsReview: segmentVendors.filter(isNeedsReview),
+      trusted: segmentVendors.filter((v) => v.trustStatus === "trusted"),
+      suggested: segmentVendors.filter((v) => v.trustStatus === "known"),
+    }),
+    [segmentVendors],
+  );
 
   const tabVendors: Vendor[] = useMemo(() => {
-    if (activeTab === "Needs Review") return grouped.underReview;
-    if (activeTab === "New") return grouped.newVendors;
+    if (activeTab === "Needs Review") return grouped.needsReview;
     if (activeTab === "Trusted") return grouped.trusted;
-    return grouped.known;
+    return grouped.suggested;
   }, [activeTab, grouped]);
 
   const vendorIdx = activeVendor ? tabVendors.findIndex((v) => v.id === activeVendor.id) : -1;
@@ -435,53 +495,41 @@ export function VendorsPanel() {
     if (vendorPagerDisabled) return;
     const next = tabVendors[(vendorIdx + dir + tabVendors.length) % tabVendors.length];
     const params = new URLSearchParams(search);
-    params.set("tab", "vendors");
+    params.set("tab", "counterparties");
     params.set("vendor", next.id);
     navigate(`/ledger?${params.toString()}`, { replace: true });
   };
 
   const countsKnown = !isLoading && !isError;
   const vendorFilters = [
-    { value: "Needs Review", label: "Needs Review", variant: "amber" as const },
-    { value: "New", label: "New", variant: "amber" as const },
+    {
+      value: "Needs Review",
+      label: "Needs Review",
+      variant: "amber" as const,
+      // This badge REPLACES the old red banner, so it has to carry the "N things
+      // are waiting for you" signal from every filter — including while Trusted
+      // or Suggested is active. It is omitted (not zeroed) while the read is
+      // loading or failed: no number is honest then.
+      count: countsKnown ? grouped.needsReview.length : undefined,
+    },
+    // Trusted and Suggested stay clean — their counts carry no action signal.
     { value: "Trusted", label: "Trusted" },
     { value: "Suggested", label: "Suggested" },
   ];
+  const segmentFilters = [
+    { value: "vendor", label: "Vendors" },
+    { value: "customer", label: "Customers" },
+  ];
+  const segmentNoun = segment === "vendor" ? "vendors" : "customers";
 
-  return (
-    <div className="flex flex-col gap-[26px] items-start w-full pb-[8px]">
+  /* The review queue is this screen's primary job. When there are rows waiting,
+     the add-counterparty box gives up the top of the page to them. Reordered in
+     the DOM rather than with flex `order`, so keyboard and screen-reader order
+     match what is actually on screen. */
+  const addBoxBelow = activeTab === "Needs Review" && tabVendors.length > 0;
 
-      <FilterChipRow
-        chips={vendorFilters}
-        value={activeTab}
-        onChange={(v) => setActiveTab(v as VendorTab)}
-        label="Filter vendors"
-        testIdPrefix="tab-vendor"
-      />
-
-      {countsKnown && grouped.newVendors.length > 0 && activeTab !== "New" && (
-        <AlertCallout testId="notice-new-vendors">
-          {grouped.newVendors.length} new {grouped.newVendors.length === 1 ? "vendor hasn't" : "vendors haven't"} been reviewed yet.
-        </AlertCallout>
-      )}
-
-      <div className="flex flex-col gap-[26px] w-full">
-        {isLoading ? (
-          <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
-            <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
-              Loading vendors from Brain...
-            </p>
-          </div>
-        ) : isError ? (
-          <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
-            <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#d20344] text-[16px]">
-              Couldn't reach Brain to load vendors. Try again shortly.
-            </p>
-          </div>
-        ) : (
-          <>
-            {/* ── Idle frame / Expanded form — above the label, same gap-[16px]
-                sub-container as the Rules tab builder ── */}
+  /* ── Idle frame / Expanded form — above the label, same gap-[16px] sub-container as the Rules tab builder ── */
+  const addBox = (
             <div className="flex flex-col gap-[16px] w-full">
               {!addOpen ? (
                 /* Idle: dashed-border card with prompt + Add Vendor button */
@@ -597,13 +645,15 @@ export function VendorsPanel() {
                 </div>
               )}
             </div>
+  );
 
-            {/* ── VENDORS label + list — below the frame ── */}
+  /* ── VENDORS label + list — below the frame ── */
+  const listBlock = (
             <div className="flex flex-col gap-[10px] w-full">
               <div className="flex items-center gap-[8px] min-h-[16px] w-full">
                 <div className="size-[6px] rounded-full shrink-0 bg-[#6c779d]" />
                 <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[12px] uppercase tracking-[0.4px] whitespace-nowrap">
-                  Vendors
+                  {segment === "vendor" ? "Vendors" : "Customers"}
                 </p>
                 <div className="bg-[#6c779d] flex items-center justify-center min-w-[18px] px-[5px] py-[1px] rounded-[4px] shrink-0">
                   <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#0a0c10] text-[11px] text-center whitespace-nowrap">
@@ -612,15 +662,23 @@ export function VendorsPanel() {
                 </div>
               </div>
 
-              <div className="bg-[#0a0c10] flex flex-col overflow-hidden relative rounded-[16px]">
+              <div
+                className="bg-[#0a0c10] flex flex-col overflow-hidden relative rounded-[16px]"
+                data-testid="list-counterparties"
+              >
                 <div>
                   {tabVendors.length === 0 ? (
                     <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative shrink-0 w-full">
                       <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
-                        {activeTab === "Needs Review" && "No vendors under review. Brain flags new or unusual counterparties here."}
-                        {activeTab === "New" && "No new vendors detected yet."}
-                        {activeTab === "Trusted" && "No trusted vendors yet. Brain promotes vendors here after consistent, safe payments."}
-                        {activeTab === "Suggested" && "No known vendors yet. Regular payees show up here."}
+                        {activeTab === "Needs Review" &&
+                          `Nothing to review. New and risk-flagged ${segmentNoun} appear here.`}
+                        {/* Honest about a tier nothing can currently reach: brain-core
+                            has no endpoint to grant trust, so this list stays empty
+                            rather than implying the user simply hasn't got there yet. */}
+                        {activeTab === "Trusted" &&
+                          "No trusted counterparties. Granting trust isn't available yet, so this list stays empty for now."}
+                        {activeTab === "Suggested" &&
+                          `No suggestions yet. ${segment === "vendor" ? "Vendors" : "Customers"} Brain has seen real payments for show up here.`}
                       </p>
                     </div>
                   ) : (
@@ -630,6 +688,9 @@ export function VendorsPanel() {
                           key={vendor.id}
                           vendor={vendor}
                           format={format}
+                          // Reason is shown only in the review queue — it answers
+                          // "why is this here?", which is only a question there.
+                          reason={activeTab === "Needs Review" ? reviewReasonLabel(vendor) : null}
                           onClick={() => handleOpenVendor(vendor)}
                         />
                       ))}
@@ -638,6 +699,57 @@ export function VendorsPanel() {
                 </div>
               </div>
             </div>
+  );
+
+  return (
+    <div className="flex flex-col gap-[26px] items-start w-full pb-[8px]">
+
+      {/* No warning banner. The Needs Review badge is the single attention
+          signal, and unlike the banner it is always one click from the exact
+          rows it counts. */}
+      <div className="flex flex-wrap items-center justify-between gap-[12px] w-full">
+        <FilterChipRow
+          chips={vendorFilters}
+          value={activeTab}
+          onChange={(v) => setActiveTab(v as VendorTab)}
+          label="Filter counterparties"
+          testIdPrefix="tab-vendor"
+        />
+        <FilterChipRow
+          chips={segmentFilters}
+          value={segment}
+          onChange={(v) => setSegment(v as Segment)}
+          label="Show vendors or customers"
+          testIdPrefix="segment"
+        />
+      </div>
+
+      <div className="flex flex-col gap-[26px] w-full">
+        {isLoading ? (
+          <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
+            <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
+              Loading counterparties from Brain...
+            </p>
+          </div>
+        ) : isError ? (
+          <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
+            <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#d20344] text-[16px]">
+              Couldn't reach Brain to load counterparties. Try again shortly.
+            </p>
+          </div>
+        ) : (
+          <>
+            {addBoxBelow ? (
+              <>
+                {listBlock}
+                {addBox}
+              </>
+            ) : (
+              <>
+                {addBox}
+                {listBlock}
+              </>
+            )}
           </>
         )}
       </div>

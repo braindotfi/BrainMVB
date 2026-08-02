@@ -3,6 +3,11 @@
 
 export type TrustStatus = "new" | "known" | "trusted" | "under_review";
 
+/** Which segment of the Counterparties screen a row belongs to. brain-core's
+ *  counterparty `type` enum mixes people we pay with people who pay us; the
+ *  screen splits them so "the people and businesses you pay" stays true. */
+export type CounterpartySegment = "vendor" | "customer";
+
 export type VendorFlagKind =
   | "bank_detail_change"
   | "amount_anomaly"
@@ -37,6 +42,12 @@ export interface Vendor {
   eligibleForTrust: boolean; // Brain's signal → drives suggestion (known only)
   eligibilityEvidence?: FactRow[];
   ruleIds: string[]; // rules whose allowlist includes this vendor
+  /** Vendors/Customers segment. Optional: mock fixtures predate the split and
+   *  are treated as "vendor" by the segment helper. */
+  segment?: CounterpartySegment;
+  /** brain-core `risk_level`, kept only when it is review-worthy. Drives the
+   *  short reason chip; absent on fixtures that carry hand-written flags. */
+  riskLevel?: "high" | "sanctioned" | null;
 }
 
 /* FactRow - local definition so vendorTypes has no external dep. */

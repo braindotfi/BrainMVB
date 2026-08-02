@@ -22,6 +22,18 @@ export interface FilterChip {
    * Omit for neutral.
    */
   variant?: "amber";
+  /**
+   * Live count rendered as a badge after the label.
+   *
+   * Deliberately opt-in per chip rather than on by default. The badge exists to
+   * carry an ACTION signal — "N things are waiting for you" — from anywhere on
+   * the screen, including while a different filter is active. Chips whose count
+   * carries no such signal stay clean, per the Figma direction.
+   *
+   * Omit (or pass undefined) for no badge; 0 renders a badge reading "0", which
+   * is a meaningful "nothing waiting" for an attention filter.
+   */
+  count?: number;
 }
 
 interface Props {
@@ -67,6 +79,15 @@ export function FilterChipRow({ chips, value, onChange, label, testIdPrefix }: P
             >
               {chip.label}
             </span>
+            {chip.count !== undefined && (
+              <span
+                data-testid={`${testIdPrefix}-${chip.value.toLowerCase().replace(/\s+/g, "-")}-count`}
+                className="ml-[6px] flex items-center justify-center min-w-[18px] px-[5px] py-[1px] rounded-[4px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[11px] text-center whitespace-nowrap transition-colors"
+                style={{ background: text, color: "#0a0c10" }}
+              >
+                {chip.count}
+              </span>
+            )}
           </button>
         );
       })}
