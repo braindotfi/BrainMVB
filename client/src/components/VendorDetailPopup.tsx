@@ -146,7 +146,7 @@ export function VendorDetailPopup({
   onDeleteVendor,
   onGrant,
   onFlag,
-  onRevoke,
+  onRestore,
   onAcknowledge,
   trustBusy,
 }: {
@@ -157,12 +157,12 @@ export function VendorDetailPopup({
   onNext?: () => void;
   pagerDisabled?: boolean;
   onDeleteVendor?: (vendorId: string, vendorName: string) => void;
-  /** Grant trust / confirm. Wired from VendorsPanel only — popup never fetches. */
+  /** Grant trust / confirm. Valid from unreviewed or acknowledged states. */
   onGrant?: (vendorId: string) => void;
-  /** Pause / flag for review. */
+  /** Pause / flag. Moves trusted → paused via /trust/pause. */
   onFlag?: (vendorId: string) => void;
-  /** Revoke trust / confirmation. */
-  onRevoke?: (vendorId: string) => void;
+  /** Restore paused vendor to trusted via /trust/restore. paused → trusted only. */
+  onRestore?: (vendorId: string) => void;
   /** Acknowledge without granting — dismiss from review queue. */
   onAcknowledge?: (vendorId: string) => void;
   /** True while any trust action is in-flight; disables all trust buttons. */
@@ -189,7 +189,7 @@ export function VendorDetailPopup({
   const noun = isCustomer ? "customer" : "vendor";
   const trustedWord = isCustomer ? "Confirmed" : "Trusted";
   const grantLabel = isCustomer ? `Confirm ${nounTitle}` : `Trust ${nounTitle}`;
-  const revokeLabel = isCustomer ? "Revoke Confirmation" : "Revoke Trust";
+  const restoreLabel = isCustomer ? "Restore Confirmation" : "Restore Trust";
 
   const chipLabel =
     vendor.trustStatus === "under_review"
@@ -494,13 +494,16 @@ export function VendorDetailPopup({
                     </div>
                   ) : (
                     <>
+                      {/* trusted → paused via /trust/pause.
+                          "Flag" matches the Flagged chip the row lands under.
+                          The paused → trusted path uses /trust/restore (in the Flagged tab popup). */}
                       <TrustButton
-                        label={revokeLabel}
-                        onClick={() => onRevoke?.(vendor.id)}
+                        label="Flag"
+                        onClick={() => onFlag?.(vendor.id)}
                         busy={trustBusy}
-                        color="#d20344"
-                        background="#350011"
-                        testId="button-revoke-trust"
+                        color="#ff9400"
+                        background="#4a2300"
+                        testId="button-flag-trust"
                       />
                       <button
                         type="button"
@@ -539,29 +542,58 @@ export function VendorDetailPopup({
                 </div>
               )}
 
-              {/* Under review → grant (override flag) or dismiss without trusting */}
+              {/* under_review covers two distinct states with different valid transitions:
+                    trustState === "paused"  → user previously flagged this row;
+                                               only /trust/restore returns it to trusted
+                                               (grant is invalid here per the transition matrix)
+                    trustState !== "paused"  → unreviewed + high/sanctioned risk_level;
+                                               /trust/grant is the correct move */}
               {vendor.trustStatus === "under_review" && (
-                <div className="flex flex-col gap-[14px] w-full">
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
-                    Trust is paused while you review the flag. Verify the new account directly with the {noun} before approving.
-                  </p>
-                  <TrustButton
-                    label={grantLabel}
-                    onClick={() => onGrant?.(vendor.id)}
-                    busy={trustBusy}
-                    color="#42bf23"
-                    background="#123509"
-                    testId="button-grant-trust"
-                  />
-                  <TrustButton
-                    label="Dismiss"
-                    onClick={() => onAcknowledge?.(vendor.id)}
-                    busy={trustBusy}
-                    color="#6c779d"
-                    background="#1d2132"
-                    testId="button-acknowledge-counterparty"
-                  />
-                </div>
+                vendor.trustState === "paused" ? (
+                  <div className="flex flex-col gap-[14px] w-full">
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
+                      Trust is paused. Verify the {noun} account directly before restoring.
+                    </p>
+                    <TrustButton
+                      label={restoreLabel}
+                      onClick={() => onRestore?.(vendor.id)}
+                      busy={trustBusy}
+                      color="#42bf23"
+                      background="#123509"
+                      testId="button-restore-trust"
+                    />
+                    <TrustButton
+                      label="Dismiss"
+                      onClick={() => onAcknowledge?.(vendor.id)}
+                      busy={trustBusy}
+                      color="#6c779d"
+                      background="#1d2132"
+                      testId="button-acknowledge-counterparty"
+                    />
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-[14px] w-full">
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
+                      This {noun} carries a risk flag. Verify the account before granting trust.
+                    </p>
+                    <TrustButton
+                      label={grantLabel}
+                      onClick={() => onGrant?.(vendor.id)}
+                      busy={trustBusy}
+                      color="#42bf23"
+                      background="#123509"
+                      testId="button-grant-trust"
+                    />
+                    <TrustButton
+                      label="Dismiss"
+                      onClick={() => onAcknowledge?.(vendor.id)}
+                      busy={trustBusy}
+                      color="#6c779d"
+                      background="#1d2132"
+                      testId="button-acknowledge-counterparty"
+                    />
+                  </div>
+                )
               )}
 
               {/* New → grant or flag */}

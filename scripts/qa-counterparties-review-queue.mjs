@@ -290,13 +290,13 @@ check(
    the "unavailable" note copy is absent. */
 
 const POPUP = '[data-testid="vendor-detail-popup-content"]';
-/* Trust actions that may render in the Needs Review popup. At least one must
-   be present and enabled for a non-empty queue. */
+/* Trust actions that may render in the Needs Review popup (unreviewed rows only).
+   paused rows live in the Flagged tab — their restore button is checked separately.
+   trusted rows live in the Trusted tab — their flag button is not checked here. */
 const TRUST_ACTIONS = [
   "button-grant-trust",
   "button-flag-counterparty",
   "button-acknowledge-counterparty",
-  "button-revoke-trust",
 ];
 
 const openFirstRow = async () => {

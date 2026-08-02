@@ -743,7 +743,7 @@ export function VendorsPanel() {
      props and never fetches directly: two call sites would mean two places to
      keep invalidation, optimistic state and error handling in sync.
 
-     Routes: POST /ledger/counterparties/:id/trust/{grant|pause|acknowledge|revoke}
+     Routes: POST /ledger/counterparties/:id/trust/{grant|pause|acknowledge|restore}
      Auth:   member token, ledger:write (brain-core PRs #397/#403, GIT deedc628).
      Each call writes one audit event; invalidating the counterparties list key
      is what moves the row to its new tier. */
@@ -752,7 +752,7 @@ export function VendorsPanel() {
 
   const callTrustAction = async (
     vendorId: string,
-    action: "grant" | "pause" | "acknowledge" | "revoke",
+    action: "grant" | "pause" | "acknowledge" | "restore",
     successTitle: string,
     successDesc: string,
   ) => {
@@ -796,13 +796,15 @@ export function VendorsPanel() {
   };
   const handleFlag = (vendorId: string) =>
     callTrustAction(vendorId, "pause", "Flagged", "Flagged for review.");
-  const handleRevoke = (vendorId: string) => {
+  /* paused → trusted. Uses /trust/restore (not grant — grant is only valid from
+     unreviewed/acknowledged; the matrix has no paused→trusted grant transition). */
+  const handleRestore = (vendorId: string) => {
     const v = vendors.find((x) => x.id === vendorId);
     const isCustomer = v ? vendorSegment(v) === "customer" : false;
     return callTrustAction(
-      vendorId, "revoke",
-      isCustomer ? "Confirmation revoked" : "Trust revoked",
-      isCustomer ? "Confirmation has been revoked." : "Trust has been revoked.",
+      vendorId, "restore",
+      isCustomer ? "Confirmation restored" : "Trust restored",
+      isCustomer ? "Confirmation has been restored." : "Trust has been restored.",
     );
   };
   const handleAcknowledge = (vendorId: string) =>
@@ -986,7 +988,7 @@ export function VendorsPanel() {
         onDeleteVendor={(id, name) => handleDeleteVendor(id, name)}
         onGrant={handleGrant}
         onFlag={handleFlag}
-        onRevoke={handleRevoke}
+        onRestore={handleRestore}
         onAcknowledge={handleAcknowledge}
         trustBusy={trustBusy}
       />
