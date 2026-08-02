@@ -520,7 +520,8 @@ export function VendorDetailPopup({
                 </div>
               )}
 
-              {/* known → Brain has seen payments; user confirms or flags */}
+              {/* known → Brain has seen payments; user confirms, flags, or dismisses.
+                  acknowledge is a valid transition from unreviewed per the matrix. */}
               {vendor.trustStatus === "known" && (
                 <div className="flex flex-col gap-[12px] w-full">
                   <TrustButton
@@ -538,6 +539,14 @@ export function VendorDetailPopup({
                     color="#ff9400"
                     background="#4a2300"
                     testId="button-flag-counterparty"
+                  />
+                  <TrustButton
+                    label="Dismiss"
+                    onClick={() => onAcknowledge?.(vendor.id)}
+                    busy={trustBusy}
+                    color="#6c779d"
+                    background="#1d2132"
+                    testId="button-acknowledge-counterparty"
                   />
                 </div>
               )}
@@ -596,7 +605,8 @@ export function VendorDetailPopup({
                 )
               )}
 
-              {/* New → grant or flag */}
+              {/* New → grant, flag, or dismiss.
+                  acknowledge is a valid transition from unreviewed per the matrix. */}
               {vendor.trustStatus === "new" && (
                 <div className="flex flex-col gap-[14px] w-full">
                   <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
@@ -617,6 +627,14 @@ export function VendorDetailPopup({
                     color="#ff9400"
                     background="#4a2300"
                     testId="button-flag-counterparty"
+                  />
+                  <TrustButton
+                    label="Dismiss"
+                    onClick={() => onAcknowledge?.(vendor.id)}
+                    busy={trustBusy}
+                    color="#6c779d"
+                    background="#1d2132"
+                    testId="button-acknowledge-counterparty"
                   />
                 </div>
               )}

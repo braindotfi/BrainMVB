@@ -35,7 +35,7 @@ import { createQaSession } from "./qa-harness.mjs";
 
 const BASE = process.env.QA_BASE ?? "http://127.0.0.1:5000";
 
-const { page, check, finish } = await createQaSession();
+const { page, check, finish, permitWrite } = await createQaSession();
 
 const go = async (path, settle = 2400) => {
   await page.goto(`${BASE}${path}`, { waitUntil: "domcontentloaded" });
@@ -406,6 +406,233 @@ for (const [segment, expected] of [
     grantEnabled ? "enabled" : label === null ? "button not found" : "button is disabled",
   );
   await closePopup();
+}
+
+/* ── End-to-end trust transition walkthrough ─────────────────────────────────
+   Exercises all four real backend calls in sequence against a live demo tenant.
+   Each `permitWrite` declaration scopes the write to exactly one button click so
+   the write-guard still catches anything the script does NOT intend.
+
+   Sequence:
+     1. unreviewed → trusted    via /trust/grant       (Needs Review → Trusted tab)
+     2. trusted    → paused     via /trust/pause        (Trusted → Flagged tab)
+     3. paused     → trusted    via /trust/restore      (Flagged → Trusted tab)
+     4. any        → acknowledged  via /trust/acknowledge (Needs Review → gone)
+
+   If the Needs Review queue is empty the whole block is skipped with a clear
+   note — never a false pass. */
+
+await go("/ledger?tab=counterparties");
+await clickChip("segment-vendor");
+await clickChip("tab-vendor-needs-review");
+
+const needsReviewCount = await count(ROWS);
+if (needsReviewCount === 0) {
+  check(
+    "trust-transition walkthrough: Needs Review has rows to work with",
+    false,
+    "queue is empty — demo tenant may need re-provisioning",
+  );
+} else {
+  /* ── Step 1: unreviewed → trusted (grant) ─────────────────────────────── */
+  const firstRow = page.locator(ROWS).first();
+  const vendorName = await firstRow.locator('[data-testid^="text-vendor-name"], [class*="font-semibold"]').first().innerText().catch(() => "(unknown)");
+  await firstRow.click();
+  await page.waitForTimeout(600);
+
+  const popupOpen = (await count(POPUP)) === 1;
+  if (!popupOpen) {
+    check("trust-transition: popup opens from Needs Review row", false, "popup did not open");
+  } else {
+    const grantBtn = page.locator('[data-testid="button-grant-trust"]');
+    const grantExists = (await grantBtn.count()) === 1;
+    check(
+      "trust-transition 1/4: grant button is present in Needs Review popup",
+      grantExists,
+    );
+
+    if (grantExists) {
+      await permitWrite(
+        /\/trust\/grant/,
+        "step 1: unreviewed → trusted",
+        async () => {
+          await grantBtn.click();
+          /* Wait for the list to invalidate and re-render. */
+          await page.waitForTimeout(2000);
+        },
+      );
+
+      /* Row should now be in the Trusted tab, not Needs Review. */
+      await clickChip("tab-vendor-needs-review");
+      await page.waitForTimeout(400);
+      const stillInQueue = await count(ROWS);
+      check(
+        "trust-transition 1/4: unreviewed → trusted (grant) — row left Needs Review",
+        stillInQueue < needsReviewCount,
+        `before=${needsReviewCount} after=${stillInQueue}`,
+      );
+
+      await clickChip("tab-vendor-trusted");
+      await page.waitForTimeout(400);
+      const trustedCount = await count(ROWS);
+      check(
+        "trust-transition 1/4: unreviewed → trusted (grant) — row appears in Trusted tab",
+        trustedCount > 0,
+        `trusted-tab rows: ${trustedCount}`,
+      );
+
+      /* ── Step 2: trusted → paused (flag/pause) ───────────────────────── */
+      if (trustedCount > 0) {
+        await page.locator(ROWS).first().click();
+        await page.waitForTimeout(600);
+
+        const flagBtn = page.locator('[data-testid="button-flag-trust"]');
+        const flagExists = (await flagBtn.count()) === 1;
+        check(
+          "trust-transition 2/4: flag button is present in Trusted popup",
+          flagExists,
+        );
+
+        if (flagExists) {
+          await permitWrite(
+            /\/trust\/pause/,
+            "step 2: trusted → paused",
+            async () => {
+              await flagBtn.click();
+              await page.waitForTimeout(2000);
+            },
+          );
+
+          await clickChip("tab-vendor-trusted");
+          await page.waitForTimeout(400);
+          const trustedAfterFlag = await count(ROWS);
+          check(
+            "trust-transition 2/4: trusted → paused (flag) — row left Trusted tab",
+            trustedAfterFlag < trustedCount,
+            `before=${trustedCount} after=${trustedAfterFlag}`,
+          );
+
+          /* Flagged chip may only appear while there are flagged rows. */
+          const flaggedChipExists = (await count('[data-testid="tab-vendor-flagged"]')) === 1;
+          if (flaggedChipExists) {
+            await clickChip("tab-vendor-flagged");
+            await page.waitForTimeout(400);
+            const flaggedCount = await count(ROWS);
+            check(
+              "trust-transition 2/4: trusted → paused (flag) — row appears in Flagged tab",
+              flaggedCount > 0,
+              `flagged-tab rows: ${flaggedCount}`,
+            );
+
+            /* ── Step 3: paused → trusted (restore) ──────────────────── */
+            if (flaggedCount > 0) {
+              await page.locator(ROWS).first().click();
+              await page.waitForTimeout(600);
+
+              const restoreBtn = page.locator('[data-testid="button-restore-trust"]');
+              const restoreExists = (await restoreBtn.count()) === 1;
+              check(
+                "trust-transition 3/4: restore button is present in Flagged popup",
+                restoreExists,
+              );
+
+              if (restoreExists) {
+                const restoreEnabled = await restoreBtn.isEnabled().catch(() => false);
+                check(
+                  "trust-transition 3/4: restore button is enabled (not disabled placeholder)",
+                  restoreEnabled,
+                );
+
+                if (restoreEnabled) {
+                  await permitWrite(
+                    /\/trust\/restore/,
+                    "step 3: paused → trusted",
+                    async () => {
+                      await restoreBtn.click();
+                      await page.waitForTimeout(2000);
+                    },
+                  );
+
+                  const flaggedChipGone = (await count('[data-testid="tab-vendor-flagged"]')) === 0;
+                  const flaggedAfterRestore = flaggedChipGone ? 0 : await (async () => {
+                    await clickChip("tab-vendor-flagged");
+                    await page.waitForTimeout(400);
+                    return count(ROWS);
+                  })();
+                  check(
+                    "trust-transition 3/4: paused → trusted (restore) — row left Flagged tab",
+                    flaggedAfterRestore < flaggedCount,
+                    `before=${flaggedCount} after=${flaggedAfterRestore}`,
+                  );
+
+                  await clickChip("tab-vendor-trusted");
+                  await page.waitForTimeout(400);
+                  const trustedAfterRestore = await count(ROWS);
+                  check(
+                    "trust-transition 3/4: paused → trusted (restore) — row back in Trusted tab",
+                    trustedAfterRestore > 0,
+                    `trusted-tab rows: ${trustedAfterRestore}`,
+                  );
+                }
+              }
+            }
+          } else {
+            check(
+              "trust-transition 2/4: trusted → paused (flag) — Flagged chip appeared",
+              false,
+              "Flagged chip not visible after pause — row may not have moved",
+            );
+          }
+        }
+      }
+    }
+  }
+  await closePopup();
+
+  /* ── Step 4: any valid state → acknowledged (dismiss) ─────────────────── */
+  await go("/ledger?tab=counterparties");
+  await clickChip("segment-vendor");
+  await clickChip("tab-vendor-needs-review");
+  await page.waitForTimeout(400);
+
+  const queueForAck = await count(ROWS);
+  if (queueForAck === 0) {
+    check(
+      "trust-transition 4/4: acknowledge — a row is available to dismiss",
+      false,
+      "Needs Review queue is now empty (all rows may have been consumed by steps 1–3)",
+    );
+  } else {
+    await page.locator(ROWS).first().click();
+    await page.waitForTimeout(600);
+
+    const ackBtn = page.locator('[data-testid="button-acknowledge-counterparty"]');
+    const ackExists = (await ackBtn.count()) === 1;
+    check(
+      "trust-transition 4/4: dismiss button is present in popup",
+      ackExists,
+    );
+
+    if (ackExists) {
+      await permitWrite(
+        /\/trust\/acknowledge/,
+        "step 4: any → acknowledged",
+        async () => {
+          await ackBtn.click();
+          await page.waitForTimeout(2000);
+        },
+      );
+
+      await clickChip("tab-vendor-needs-review");
+      await page.waitForTimeout(400);
+      const queueAfterAck = await count(ROWS);
+      check(
+        "trust-transition 4/4: any → acknowledged (dismiss) — row left Needs Review",
+        queueAfterAck < queueForAck,
+        `before=${queueForAck} after=${queueAfterAck}`,
+      );
+    }
+  }
 }
 
 await finish();
