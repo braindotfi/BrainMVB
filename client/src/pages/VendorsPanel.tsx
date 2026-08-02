@@ -529,12 +529,7 @@ export function VendorsPanel() {
     for (const v of segmentVendors) {
       const tier = vendorTier(v);
       if (tier) buckets[tier].push(v);
-      else if (import.meta.env.DEV) {
-        console.warn(
-          `[counterparties] "${v.name}" (${v.id}) matched no tier ` +
-            `(trustStatus=${v.trustStatus}, trustState=${v.trustState ?? "absent"}) - it is not rendered under any chip.`,
-        );
-      }
+      /* vendorTier() already warns unconditionally (dev + prod) when null. */
     }
     return buckets;
   }, [segmentVendors]);
@@ -743,43 +738,109 @@ export function VendorsPanel() {
             </div>
   );
 
-  /* ── Review actions: deliberately not shipped yet ─────────────────────────
-     The Needs Review queue is READ-ONLY. brain-core exposes no trust transition
-     on a counterparty today (its ledger routes reject trust-field writes
-     outright), so there is nothing a Trust / Flag / Dismiss button could call.
+  /* ── Trust action handlers — MOUNT POINT (the only one) ────────────────────
+     All trust writes originate here. VendorDetailPopup receives handlers as
+     props and never fetches directly: two call sites would mean two places to
+     keep invalidation, optimistic state and error handling in sync.
 
-     The tempting workaround — keep "reviewed" in local or BFF state — is the one
-     thing not to do. Review state is audited upstream; a second copy here would
-     disagree with brain-core the moment anything else touched the row, and the
-     user would be looking at a queue that only this browser believes in.
+     Routes: POST /ledger/counterparties/:id/trust/{grant|pause|acknowledge|revoke}
+     Auth:   member token, ledger:write (brain-core PRs #397/#403, GIT deedc628).
+     Each call writes one audit event; invalidating the counterparties list key
+     is what moves the row to its new tier. */
+  const [trustBusy, setTrustBusy] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
 
-     MOUNT POINT — the ONLY one. When the contract below goes live, the row
-     actions attach here:
+  const callTrustAction = async (
+    vendorId: string,
+    action: "grant" | "pause" | "acknowledge" | "revoke",
+    successTitle: string,
+    successDesc: string,
+  ) => {
+    setTrustBusy(true);
+    try {
+      const res = await fetch(
+        `/api/brain/ledger/counterparties/${encodeURIComponent(vendorId)}/trust/${action}`,
+        { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: "{}" },
+      );
+      if (!res.ok) {
+        const body = await res.json().catch(() => undefined);
+        const msg =
+          (body?.body?.error?.message as string | undefined) ??
+          (body?.message as string | undefined) ??
+          "Brain core rejected this action.";
+        toast({ title: "Action failed", description: msg, variant: "destructive" });
+        return;
+      }
+      await queryClient.invalidateQueries({ queryKey: ["/api/brain/ledger/counterparties"] });
+      setActiveVendor(null);
+      const params = new URLSearchParams(search);
+      params.delete("vendor");
+      params.set("tab", "counterparties");
+      navigate(`/ledger?${params.toString()}`, { replace: true });
+      toast({ title: successTitle, description: successDesc });
+    } catch {
+      toast({ title: "Action failed", description: "Couldn't reach Brain core. Nothing was changed.", variant: "destructive" });
+    } finally {
+      setTrustBusy(false);
+    }
+  };
 
-       POST /v1/ledger/counterparties/:id/trust/grant        → Trust / Confirm
-       POST /v1/ledger/counterparties/:id/trust/pause        → Flag
-       POST /v1/ledger/counterparties/:id/trust/acknowledge  → Dismiss
+  const handleGrant = (vendorId: string) => {
+    const v = vendors.find((x) => x.id === vendorId);
+    const isCustomer = v ? vendorSegment(v) === "customer" : false;
+    return callTrustAction(
+      vendorId, "grant",
+      isCustomer ? "Confirmed" : "Trusted",
+      isCustomer ? "Customer confirmed." : "Vendor trusted.",
+    );
+  };
+  const handleFlag = (vendorId: string) =>
+    callTrustAction(vendorId, "pause", "Flagged", "Flagged for review.");
+  const handleRevoke = (vendorId: string) => {
+    const v = vendors.find((x) => x.id === vendorId);
+    const isCustomer = v ? vendorSegment(v) === "customer" : false;
+    return callTrustAction(
+      vendorId, "revoke",
+      isCustomer ? "Confirmation revoked" : "Trust revoked",
+      isCustomer ? "Confirmation has been revoked." : "Trust has been revoked.",
+    );
+  };
+  const handleAcknowledge = (vendorId: string) =>
+    callTrustAction(vendorId, "acknowledge", "Dismissed", "Counterparty dismissed from review queue.");
 
-     VendorDetailPopup shows the same three actions, currently disabled. Wire it
-     by passing these handlers down as props — do NOT give the popup its own
-     fetch calls. Two call sites means two places to get the invalidation, the
-     optimistic state and the error handling right, and they will drift.
-
-     Plain /v1 JWT routes, `ledger:write`, user principal — the same auth path
-     the counterparties list read already uses, so no new plumbing. Each call
-     writes one audit event; the read side gains `trust_status` (already parsed
-     defensively in brainVendors.ts), and invalidating
-     ["/api/brain/ledger/counterparties"] is what refreshes the counts.
-
-     Segment differences are labels and prominence only, never separate state:
-       Vendors   — Trust / Flag / Dismiss inline.
-       Customers — Confirm / Dismiss inline, Flag demoted to an overflow menu.
-       "Confirm" IS grant. Same endpoint, same resulting state, different word.
-
-     Customers also get a bulk "Confirm all N new customers" above the queue,
-     behind a dialog listing the names, implemented as N individual grant calls
-     so each keeps its own audit event. Risk-flagged rows are excluded from the
-     bulk action and keep their per-item controls. */
+  /* Bulk confirm — Customers segment only. N individual grant calls so each
+     row gets its own audit event. Risk-flagged rows (riskLevel set) cannot be
+     cleared here and stay in the per-item queue. */
+  const handleBulkConfirm = async () => {
+    if (bulkBusy) return;
+    const toConfirm = grouped.needsReview.filter(
+      (v) => vendorSegment(v) === "customer" && !v.riskLevel,
+    );
+    if (toConfirm.length === 0) return;
+    setBulkBusy(true);
+    let succeeded = 0;
+    let failed = 0;
+    for (const v of toConfirm) {
+      try {
+        const res = await fetch(
+          `/api/brain/ledger/counterparties/${encodeURIComponent(v.id)}/trust/grant`,
+          { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: "{}" },
+        );
+        if (res.ok) succeeded++; else failed++;
+      } catch { failed++; }
+    }
+    await queryClient.invalidateQueries({ queryKey: ["/api/brain/ledger/counterparties"] });
+    if (failed === 0) {
+      toast({ title: "All confirmed", description: `${succeeded} customer${succeeded !== 1 ? "s" : ""} confirmed.` });
+    } else {
+      toast({
+        title: `${succeeded} confirmed, ${failed} failed`,
+        description: "Some customers couldn't be confirmed. Try those individually.",
+        variant: "destructive",
+      });
+    }
+    setBulkBusy(false);
+  };
 
   /* ── VENDORS label + list — below the frame ── */
   const listBlock = (
@@ -800,6 +861,24 @@ export function VendorsPanel() {
                 </div>
               </div>
 
+              {/* Bulk confirm: Customers segment, Needs Review tab, risk-free rows only.
+                  Risk-flagged rows need per-item review and are excluded here. */}
+              {segment === "customer" && effectiveTab === "Needs Review" &&
+               tabVendors.filter((v) => !v.riskLevel).length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleBulkConfirm}
+                  disabled={bulkBusy || trustBusy}
+                  data-testid="button-bulk-confirm-customers"
+                  className="flex items-center justify-center px-[16px] py-[8px] rounded-[100px] w-full [font-family:'Gilroy',sans-serif] font-semibold text-[14px] disabled:opacity-50 disabled:cursor-wait hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                  style={{ background: "#0d2214", color: "#42bf23" }}
+                >
+                  {bulkBusy
+                    ? "Confirming..."
+                    : `Confirm all ${tabVendors.filter((v) => !v.riskLevel).length} customers`}
+                </button>
+              )}
+
               <div
                 className="bg-[#0a0c10] flex flex-col overflow-hidden relative rounded-[16px]"
                 data-testid="list-counterparties"
@@ -810,18 +889,16 @@ export function VendorsPanel() {
                       <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
                         {effectiveTab === "Needs Review" &&
                           `Nothing to review. New and risk-flagged ${segmentNoun} appear here.`}
-                        {/* Honest about a tier nothing can currently reach: brain-core
-                            has no endpoint to grant trust, so this list stays empty
-                            rather than implying the user simply hasn't got there yet. */}
                         {effectiveTab === "Trusted" &&
-                          `No ${trustedLabel.toLowerCase()} ${segmentNoun}. ${
-                            segment === "vendor" ? "Granting trust" : "Confirming a customer"
-                          } isn't available yet, so this list stays empty for now.`}
+                          `No ${trustedLabel.toLowerCase()} ${segmentNoun} yet. ${
+                            segment === "vendor"
+                              ? "Trust a vendor from the Needs Review tab."
+                              : "Confirm a customer from the Needs Review tab."
+                          }`}
                         {/* No Suggested copy: the chip is only rendered while its
                             bucket has rows, so an empty Suggested list is
                             unreachable. Restore a line here if that changes. */}
-                        {effectiveTab === "Flagged" &&
-                          `No flagged ${segmentNoun}. Flagging isn't available yet, so this list stays empty for now.`}
+                        {effectiveTab === "Flagged" && `No flagged ${segmentNoun}.`}
                       </p>
                     </div>
                   ) : (
@@ -907,6 +984,11 @@ export function VendorsPanel() {
         onNext={() => pageVendor(1)}
         pagerDisabled={vendorPagerDisabled}
         onDeleteVendor={(id, name) => handleDeleteVendor(id, name)}
+        onGrant={handleGrant}
+        onFlag={handleFlag}
+        onRevoke={handleRevoke}
+        onAcknowledge={handleAcknowledge}
+        trustBusy={trustBusy}
       />
 
     </div>

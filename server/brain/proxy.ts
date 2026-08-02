@@ -600,6 +600,14 @@ export function createBrainProxyRouter(): Router {
     { method: "delete", mount: "/sources/:id", upstream: (p) => `/sources/${esc(p.id)}`, principal: "agent", scope: "raw:write" },
     // ledger_and_canonical
     { method: "patch", mount: "/ledger/counterparties/:id", upstream: (p) => `/ledger/counterparties/${esc(p.id)}`, principal: "member", scope: "ledger:write" },
+    // trust_transitions — grant/pause/acknowledge/revoke per counterparty.
+    // member token, ledger:write. Deployed brain-core PRs #397/#403 (migration 0052, GIT deedc628).
+    // Route order: more-specific /trust/* paths are registered before the generic PATCH above
+    // uses a different HTTP method so there is no conflict regardless of order.
+    { method: "post", mount: "/ledger/counterparties/:id/trust/grant", upstream: (p) => `/ledger/counterparties/${esc(p.id)}/trust/grant`, principal: "member", scope: "ledger:write" },
+    { method: "post", mount: "/ledger/counterparties/:id/trust/pause", upstream: (p) => `/ledger/counterparties/${esc(p.id)}/trust/pause`, principal: "member", scope: "ledger:write" },
+    { method: "post", mount: "/ledger/counterparties/:id/trust/acknowledge", upstream: (p) => `/ledger/counterparties/${esc(p.id)}/trust/acknowledge`, principal: "member", scope: "ledger:write" },
+    { method: "post", mount: "/ledger/counterparties/:id/trust/revoke", upstream: (p) => `/ledger/counterparties/${esc(p.id)}/trust/revoke`, principal: "member", scope: "ledger:write" },
     { method: "post", mount: "/ledger/normalize", upstream: () => "/ledger/normalize", principal: "member", scope: "ledger:write" },
     { method: "post", mount: "/ledger/reconcile", upstream: () => "/ledger/reconcile", principal: "member", scope: "ledger:write" },
     // wiki_memory_policy

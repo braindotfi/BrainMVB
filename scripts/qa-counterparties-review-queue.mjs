@@ -161,9 +161,11 @@ check(
 await clickChip("tab-vendor-trusted");
 const trustedText = await page.locator('[data-testid="list-counterparties"]').innerText();
 const trustedRows = await count(ROWS);
+// Trust actions are now live. An empty Trusted list is genuinely empty, not
+// "unavailable". Verify the old "isn't available yet" copy is gone.
 check(
-  "Trusted is honest that granting trust is unavailable, not merely empty",
-  trustedRows > 0 || /isn't available yet/i.test(trustedText),
+  "Trusted tab: trust actions are live, no unavailability disclaimer",
+  !/isn't available yet/i.test(trustedText),
   trustedText.replace(/\n+/g, " | ").slice(0, 160),
 );
 
@@ -283,19 +285,17 @@ check(
 );
 
 /* ── The detail popup tells the same story as the list ───────────────────────
-   The list ships no review actions because brain-core has no trust transition
-   to call. The popup opened FROM that list used to contradict it: full-width
-   Trust / Reject buttons that looked live and only closed the dialog. A control
-   that appears to work and silently changes nothing is the failure this whole
-   screen was rebuilt to remove, so it has to be checked where it renders. */
+   Trust routes are live (brain-core PRs #397/#403, GIT deedc628). Verify the
+   popup's actions are enabled — not the old disabled placeholders — and that
+   the "unavailable" note copy is absent. */
 
 const POPUP = '[data-testid="vendor-detail-popup-content"]';
-/* Every action that would need a trust endpoint. Each must be either absent
-   (that status doesn't offer it) or present-and-disabled — never live. */
-const PARKED_ACTIONS = [
+/* Trust actions that may render in the Needs Review popup. At least one must
+   be present and enabled for a non-empty queue. */
+const TRUST_ACTIONS = [
   "button-grant-trust",
-  "button-trust-vendor-review",
   "button-flag-counterparty",
+  "button-acknowledge-counterparty",
   "button-revoke-trust",
 ];
 
@@ -322,22 +322,23 @@ for (const segment of ["vendor", "customer"]) {
     continue;
   }
 
-  /* Disabled state, read off the live elements rather than assumed from copy. */
+  /* At least one trust action must be live (enabled) in the popup now that
+     brain-core trust routes are deployed. */
   const liveActions = [];
-  for (const id of PARKED_ACTIONS) {
+  for (const id of TRUST_ACTIONS) {
     const el = page.locator(`[data-testid="${id}"]`);
     if ((await el.count()) === 1 && !(await el.first().isDisabled())) liveActions.push(id);
   }
   check(
-    `${segment}s: the popup ships no live trust action`,
-    liveActions.length === 0,
+    `${segment}s: the popup has at least one live trust action`,
+    liveActions.length > 0,
     `enabled=[${liveActions.join(", ")}]`,
   );
 
-  /* A tooltip is undiscoverable on touch, so the reason is also on the page. */
+  /* The old "unavailable" note is gone — actions are live. */
   check(
-    `${segment}s: the popup says why the actions are unavailable`,
-    (await count('[data-testid="text-review-actions-unavailable"]')) >= 1,
+    `${segment}s: the popup has no unavailability disclaimer`,
+    (await count('[data-testid="text-review-actions-unavailable"]')) === 0,
   );
 
   const popupText = await page.locator(POPUP).innerText();
@@ -385,6 +386,8 @@ for (const [segment, expected] of [
     continue;
   }
 
+  // button-trust-vendor-review is the legacy test ID used when under_review had its own label.
+  // Both resolve to the same grant endpoint now; keep the selector broad so either works.
   const grant = page.locator(
     '[data-testid="button-grant-trust"], [data-testid="button-trust-vendor-review"]',
   );
@@ -393,6 +396,14 @@ for (const [segment, expected] of [
     `${segment}s: the grant action is worded for this segment`,
     label !== null && expected.test(label),
     `label=${label ?? "no grant action rendered"}`,
+  );
+  // Trust routes are live — the grant button must not be disabled.
+  const grantEnabled =
+    label !== null && (await grant.first().isEnabled().catch(() => false));
+  check(
+    `${segment}s: the grant action is enabled (trust routes live)`,
+    grantEnabled,
+    grantEnabled ? "enabled" : label === null ? "button not found" : "button is disabled",
   );
   await closePopup();
 }

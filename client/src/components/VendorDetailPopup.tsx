@@ -85,52 +85,37 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-/* ── Trust actions, visibly parked ────────────────────────────────────────────
-   brain-core exposes no trust transition on a counterparty today, so none of
-   Trust / Confirm / Flag / Revoke has anything to call. They ship disabled
-   rather than wired to a close-the-dialog no-op: a control that appears to
-   work and silently changes nothing is worse than one that admits it can't
-   yet, and it would contradict the list behind it, which shows no actions at
-   all. See the mount point in VendorsPanel.tsx for the contract these adopt.
-
-   `disabled` is on the button itself so assistive tech and tests both read it
-   as unavailable; the tooltip sits on a wrapper because a disabled button
-   swallows the hover events that would surface it. The block also carries a
-   visible line of copy, since a tooltip is undiscoverable on touch. */
-function PendingAction({
+/* ── Trust action button — wired to mount-point handlers in VendorsPanel ──────
+   Never fetches itself. Receives onClick from the panel so invalidation,
+   optimistic state and error handling stay in one place.
+   Disabled during in-flight window (`busy`); assistive tech reads it as
+   unavailable without needing a tooltip wrapper. */
+function TrustButton({
   label,
+  onClick,
+  busy,
   color,
   background,
   testId,
 }: {
   label: string;
+  onClick: () => void;
+  busy?: boolean;
   color: string;
   background: string;
   testId: string;
 }) {
   return (
-    <span title="Review actions coming soon" className="w-full">
-      <button
-        type="button"
-        disabled
-        data-testid={testId}
-        className="flex items-center justify-center px-[20px] py-[10px] rounded-[100px] w-full opacity-40 cursor-not-allowed [font-family:'Gilroy',sans-serif] font-semibold text-[16px]"
-        style={{ background, color }}
-      >
-        {label}
-      </button>
-    </span>
-  );
-}
-
-function PendingActionNote() {
-  return (
-    <p
-      className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] w-full"
-      data-testid="text-review-actions-unavailable"
+    <button
+      type="button"
+      disabled={busy}
+      onClick={onClick}
+      data-testid={testId}
+      className="flex items-center justify-center px-[20px] py-[10px] rounded-[100px] w-full disabled:opacity-50 disabled:cursor-wait [font-family:'Gilroy',sans-serif] font-semibold text-[16px] hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+      style={{ background, color }}
     >
-      Review actions aren't available yet.
-    </p>
+      {busy ? "Working..." : label}
+    </button>
   );
 }
 
@@ -159,6 +144,11 @@ export function VendorDetailPopup({
   onNext,
   pagerDisabled,
   onDeleteVendor,
+  onGrant,
+  onFlag,
+  onRevoke,
+  onAcknowledge,
+  trustBusy,
 }: {
   vendor: Vendor | null;
   open: boolean;
@@ -167,6 +157,16 @@ export function VendorDetailPopup({
   onNext?: () => void;
   pagerDisabled?: boolean;
   onDeleteVendor?: (vendorId: string, vendorName: string) => void;
+  /** Grant trust / confirm. Wired from VendorsPanel only — popup never fetches. */
+  onGrant?: (vendorId: string) => void;
+  /** Pause / flag for review. */
+  onFlag?: (vendorId: string) => void;
+  /** Revoke trust / confirmation. */
+  onRevoke?: (vendorId: string) => void;
+  /** Acknowledge without granting — dismiss from review queue. */
+  onAcknowledge?: (vendorId: string) => void;
+  /** True while any trust action is in-flight; disables all trust buttons. */
+  trustBusy?: boolean;
 }) {
   const { format } = useCurrency();
   const [, navigate] = useLocation();
@@ -456,13 +456,13 @@ export function VendorDetailPopup({
               </div>
             )}
 
-            {/* Action buttons */}
+            {/* Action buttons — wired to VendorsPanel mount-point handlers */}
             <div className="flex flex-col gap-[12px] w-full">
               {/* Trusted → Revoke + Delete */}
               {vendor.trustStatus === "trusted" && (
                 <div className="flex flex-col gap-[12px] w-full">
                   {confirmingDelete ? (
-                    /* ── Delete confirmation (Figma: bg-[#0a0c10], p-[40px] body style) ── */
+                    /* ── Delete confirmation ── */
                     <div className="flex flex-col gap-[24px] items-start w-full">
                       <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[28px] text-[#414965] text-[22px] w-full">
                         Deleting removes this {noun} entirely. Are you sure you want to delete this {noun}? This can't be undone.
@@ -494,21 +494,19 @@ export function VendorDetailPopup({
                     </div>
                   ) : (
                     <>
-                      <PendingActionNote />
-                      <PendingAction
+                      <TrustButton
                         label={revokeLabel}
+                        onClick={() => onRevoke?.(vendor.id)}
+                        busy={trustBusy}
                         color="#d20344"
                         background="#350011"
                         testId="button-revoke-trust"
                       />
-
-                      {/* Delete is the one action here that IS backed by a real
-                          endpoint, so it stays live and stays visually distinct
-                          from the parked ones above it. */}
                       <button
                         type="button"
                         onClick={() => setConfirmingDelete(true)}
-                        className="flex items-center justify-center px-[20px] py-[8px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#6c779d] w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                        disabled={trustBusy}
+                        className="flex items-center justify-center px-[20px] py-[8px] rounded-[100px] hover:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#6c779d] w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
                         style={{ background: "#1d2132" }}
                         data-testid="button-delete-vendor"
                       >
@@ -519,61 +517,74 @@ export function VendorDetailPopup({
                 </div>
               )}
 
-              {/* `known` → grant (parked).
-                  `known` means the counterparty is identified upstream but has
-                  not been actioned. It does NOT mean "Brain-suggested"; that
-                  provenance value does not exist in brain-core today. The grant
-                  button is parked (disabled) along with all other trust actions
-                  until the trust routes are confirmed deployed. */}
+              {/* known → Brain has seen payments; user confirms or flags */}
               {vendor.trustStatus === "known" && (
                 <div className="flex flex-col gap-[12px] w-full">
-                  <PendingActionNote />
-                  <PendingAction
+                  <TrustButton
                     label={grantLabel}
+                    onClick={() => onGrant?.(vendor.id)}
+                    busy={trustBusy}
                     color="#42bf23"
                     background="#123509"
                     testId="button-grant-trust"
                   />
+                  <TrustButton
+                    label="Flag"
+                    onClick={() => onFlag?.(vendor.id)}
+                    busy={trustBusy}
+                    color="#ff9400"
+                    background="#4a2300"
+                    testId="button-flag-counterparty"
+                  />
                 </div>
               )}
 
-              {/* Under review → flag / grant (both parked) */}
+              {/* Under review → grant (override flag) or dismiss without trusting */}
               {vendor.trustStatus === "under_review" && (
                 <div className="flex flex-col gap-[14px] w-full">
                   <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
                     Trust is paused while you review the flag. Verify the new account directly with the {noun} before approving.
                   </p>
-                  <PendingActionNote />
-                  {/* "Flag" matches the list chip. The old "Reject Vendor" was a
-                      second word for the same paused state, and two words for one
-                      state is how a queue starts disagreeing with itself. */}
-                  <PendingAction
-                    label="Flag"
-                    color="#d20344"
-                    background="#350011"
-                    testId="button-flag-counterparty"
-                  />
-                  <PendingAction
+                  <TrustButton
                     label={grantLabel}
+                    onClick={() => onGrant?.(vendor.id)}
+                    busy={trustBusy}
                     color="#42bf23"
                     background="#123509"
-                    testId="button-trust-vendor-review"
+                    testId="button-grant-trust"
+                  />
+                  <TrustButton
+                    label="Dismiss"
+                    onClick={() => onAcknowledge?.(vendor.id)}
+                    busy={trustBusy}
+                    color="#6c779d"
+                    background="#1d2132"
+                    testId="button-acknowledge-counterparty"
                   />
                 </div>
               )}
 
-              {/* New → grant (parked) */}
+              {/* New → grant or flag */}
               {vendor.trustStatus === "new" && (
                 <div className="flex flex-col gap-[14px] w-full">
                   <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
                     This {noun} will be eligible for trust after a few more on-time payments with consistent amounts and no flags.
                   </p>
-                  <PendingActionNote />
-                  <PendingAction
+                  <TrustButton
                     label={grantLabel}
+                    onClick={() => onGrant?.(vendor.id)}
+                    busy={trustBusy}
                     color="#42bf23"
                     background="#123509"
                     testId="button-grant-trust"
+                  />
+                  <TrustButton
+                    label="Flag"
+                    onClick={() => onFlag?.(vendor.id)}
+                    busy={trustBusy}
+                    color="#ff9400"
+                    background="#4a2300"
+                    testId="button-flag-counterparty"
                   />
                 </div>
               )}
