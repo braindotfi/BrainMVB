@@ -64,3 +64,4 @@
 - [Vendor Suggested tier gate](vendor-suggested-tier-gate.md) — no provenance value means "suggested"; Suggested chip stays hidden; trust wiring green-lit and shipped.
 - [Overlay menus in clipped surfaces](overlay-menus-in-clipped-surfaces.md) — in-card dropdowns need a fixed portal (not less overflow); fixed owns its own clamp/flip, and never claim listbox without arrow keys.
 - [Live insight card structure](live-insight-card-structure.md) — read-only ledger insights reuse the agent-card rhythm with honest observational sections, never invented decision content.
+- [Agent card section order](agent-card-section-order.md) — one shared card for all 11 agents; fixed 7-section order; "why suggested" only from MATCHED trace checks + ranked_signals, verdict must show.

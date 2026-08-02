@@ -46,6 +46,7 @@ import {
   buildDecisionButtons,
   buildConsequences,
   buildConfidence,
+  buildWhySuggested,
   buildEvidenceTiles,
   buildTechnicalLayers,
   buildRefDisplayMap,
@@ -74,7 +75,8 @@ import {
   KeyFactsTable,
   PagerFooter,
   StatusPill,
-  WarningBox,
+  ReasonList,
+  OutcomeRow,
 } from "./ProposalCardParts";
 import { resolveDocument, openDocumentDetail } from "@/lib/openDocumentDetail";
 import type { DocumentRecord } from "@/lib/documentTypes";
@@ -1474,6 +1476,10 @@ export function LiveProposalModal({
   const policy = proposal.policy ?? presentation?.policy ?? null;
   const confidence = buildConfidence(proposal.confidence, presentation?.confidence_band);
   const flaggedBy = buildFlaggedBy(policy);
+  /* "Why Brain Suggested This" — read back from the policy trace / ranked signals
+     the engine recorded. Empty for a record that carries neither, which drops the
+     section rather than inventing reasons. */
+  const whySuggested = buildWhySuggested(policy, proposal.details);
   const decisions = buildDecisionButtons(proposal.available_decisions, presentation?.actions);
   const consequences = buildConsequences(presentation?.consequences, decisions);
   const technicalLayers = buildTechnicalLayers(presentation?.technical_detail);
@@ -1648,16 +1654,31 @@ export function LiveProposalModal({
             </div>
 
             <CardBody>
-              {/* Recommended Action — brain-core's `presentation.recommendation`. */}
-              {recommendation && (
-                <CardSection title="Recommended Action">
-                  <CardText testId="text-live-proposal-recommendation">{recommendation}</CardText>
+              {/* 1 — Why Brain Suggested This. The signals the engine itself
+                  recorded (policy trace / ranked signals), never client-authored
+                  copy; a record that recorded none drops the section. */}
+              {whySuggested.length > 0 && (
+                <CardSection title="Why Brain Suggested This">
+                  <ReasonList reasons={whySuggested} testId="list-live-proposal-why-suggested" />
+                </CardSection>
+              )}
+
+              {/* 2 — Confidence: "High · 47%". The band is brain-core's own, not
+                  derived from the percentage: the two legitimately differ (a strong
+                  signal the model is only moderately certain about). */}
+              {confidence && (
+                <CardSection
+                  title="Confidence"
+                  trailing={<HeadingValue testId="text-live-proposal-confidence">{confidence.text}</HeadingValue>}
+                  testId="bar-live-proposal-confidence"
+                >
+                  <ConfidenceMeter pct={confidence.pct} />
                 </CardSection>
               )}
 
               {/* The agent's own reasoning, then the structured facts behind it. */}
               {(cardNarrative || detailRows.length > 0) && (
-                <CardSection title="Why This Needs Your Call">
+                <CardSection title="Why This Needs Your Decision">
                   {cardNarrative && (
                     <CardText testId="text-live-proposal-narrative">{prose(cardNarrative)}</CardText>
                   )}
@@ -1677,6 +1698,7 @@ export function LiveProposalModal({
                       <EvidenceLinkRow
                         key={`${tile.label}-${tile.display}-${i}`}
                         label={tile.display}
+                        kind={tile.label}
                         onClick={() => openEvidenceRecord(tile)}
                         testId={`tile-live-proposal-evidence-${i}`}
                       />
@@ -1685,55 +1707,12 @@ export function LiveProposalModal({
                 </CardSection>
               )}
 
-              {/* Confidence — "High · 47%". The band is brain-core's own, not derived
-                  from the percentage: the two legitimately differ (a strong signal the
-                  model is only moderately certain about). */}
-              {confidence && (
-                <CardSection
-                  title="Confidence"
-                  trailing={<HeadingValue testId="text-live-proposal-confidence">{confidence.text}</HeadingValue>}
-                  testId="bar-live-proposal-confidence"
-                >
-                  <ConfidenceMeter pct={confidence.pct} />
-                </CardSection>
-              )}
-
-              {/* What Happens Next / If This Is Wrong — brain-core's own consequence
-                  text per decision. A decision core wrote no consequence for produces
-                  no line, and an empty section is dropped entirely rather than filled
-                  with generic reassurance. */}
-              {consequences.next.length > 0 && (
-                <CardSection title="What Happens Next">
-                  {consequences.next.map((line) => (
-                    <CardText key={line.decisionId} testId={`text-live-proposal-next-${line.decisionId}`}>
-                      <span className="font-semibold text-[#a8b9f4]">{line.label}</span> {prose(line.text)}
-                    </CardText>
-                  ))}
-                </CardSection>
-              )}
-
-              {(consequences.ifWrong.length > 0 || flaggedBy) && (
-                <CardSection title={consequences.ifWrong.length > 0 ? "If This Is Wrong" : "Attribution"}>
-                  {consequences.ifWrong.map((line) => (
-                    <WarningBox key={line.decisionId} testId={`text-live-proposal-if-wrong-${line.decisionId}`}>
-                      <span className="font-semibold">{line.label}</span> {prose(line.text)}
-                    </WarningBox>
-                  ))}
-                  {/* Flagged by — policy_id, else the matched rule, else the policy's
-                      own content. Omitted outright when the record carries no policy
-                      at all, never rendered as "Flagged by —". */}
-                  {flaggedBy && (
-                    <CardText testId={`text-live-proposal-flagged-by-${flaggedBy.source}`}>
-                      Flagged by <span className="text-[#a8b9f4]">{flaggedBy.text}</span>
-                    </CardText>
-                  )}
-                </CardSection>
-              )}
-
-              {/* Message Draft — composed from this proposal's own facts so the
-                  approver can read the chase note before approving. brain-core still
-                  generates the text that actually goes out at execution time, which
-                  the caption says plainly. */}
+              {/* Message Draft — agent-specific, and placed here because the frame
+                  puts the draft between the evidence and the recommendation: you read
+                  what will be sent, then what Brain advises doing about it.
+                  Composed from this proposal's own facts so the approver can read the
+                  chase note before approving. brain-core still generates the text that
+                  actually goes out at execution time, which the caption says plainly. */}
               {messageDraft && (
                 <CardSection title="Message Draft" testId="section-live-proposal-message-draft">
                   <div className="bg-[#0a0c10] border border-solid border-[#1d2132] rounded-[12px] p-[16px] w-full flex flex-col gap-[12px]">
@@ -1754,6 +1733,54 @@ export function LiveProposalModal({
                     Draft for review, composed from this proposal's facts. Brain generates the
                     final wording when the message is sent.
                   </InfoBox>
+                </CardSection>
+              )}
+
+              {/* 5 — Recommended Action: brain-core's `presentation.recommendation`.
+                  It sits after the evidence so the advice follows the facts that
+                  justify it, and immediately before the outcomes it leads to. */}
+              {recommendation && (
+                <CardSection title="Recommended Action">
+                  <CardText testId="text-live-proposal-recommendation">{recommendation}</CardText>
+                </CardSection>
+              )}
+
+              {/* 6 — What Happens Next: brain-core's own consequence text, one row per
+                  decision the card actually offers, the glyph carrying the tone.
+                  Reject is a row here rather than a separate "If This Is Wrong"
+                  section — the frame lists every branch together so the approver
+                  compares them side by side before choosing. A decision core wrote no
+                  consequence for produces no row, and a section with no rows is
+                  dropped rather than filled with generic reassurance. */}
+              {(consequences.next.length > 0 || consequences.ifWrong.length > 0 || flaggedBy) && (
+                <CardSection title="What Happens Next">
+                  {[
+                    ...consequences.next.map((line) => ({
+                      line,
+                      testId: `text-live-proposal-next-${line.decisionId}`,
+                    })),
+                    ...consequences.ifWrong.map((line) => ({
+                      line,
+                      testId: `text-live-proposal-if-wrong-${line.decisionId}`,
+                    })),
+                  ].map(({ line, testId }) => (
+                    <OutcomeRow
+                      key={line.decisionId}
+                      tone={decisions.find((d) => d.id === line.decisionId)?.tone ?? "edit"}
+                      label={line.label}
+                      testId={testId}
+                    >
+                      {prose(line.text)}
+                    </OutcomeRow>
+                  ))}
+                  {/* Flagged by — policy_id, else the matched rule, else the policy's
+                      own content. Omitted outright when the record carries no policy
+                      at all, never rendered as "Flagged by —". */}
+                  {flaggedBy && (
+                    <CardText testId={`text-live-proposal-flagged-by-${flaggedBy.source}`}>
+                      Flagged by <span className="text-[#a8b9f4]">{flaggedBy.text}</span>
+                    </CardText>
+                  )}
                 </CardSection>
               )}
 

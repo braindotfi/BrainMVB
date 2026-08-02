@@ -19,6 +19,7 @@ import type {
   ResolvedKeyFact,
   ProposalDecisionOption,
   ProposalConsequences,
+  ProposalDetails,
   ProposalType,
   BrainProposal,
 } from "./brainProposals";
@@ -449,7 +450,7 @@ export function resolveHeadlineText(
 }
 
 /**
- * The same treatment for the narrative under "Why This Needs Your Call", which
+ * The same treatment for the narrative under "Why This Needs Your Decision", which
  * has the same problem ("Compliance review for inv_01KYS8RK94… found …") but is
  * already prose, so its existing capitalisation is left alone.
  */
@@ -681,6 +682,107 @@ export function buildConsequences(
     (d.tone === "reject" ? ifWrong : next).push({ decisionId: d.id, label: d.label, text: text.trim() });
   }
   return { next, ifWrong };
+}
+
+/* ── Why Brain Suggested This ─────────────────────────────────────────────────
+   The frame opens every agent card with a short arrow-bullet list of the signals
+   behind the proposal.
+
+   brain-core publishes NO dedicated "reasons" array, so nothing here is authored
+   by the client. Each bullet is read back from something the engine actually
+   recorded while producing the record:
+
+     • `policy.trace[].checks[]` — the checks the policy VM walked, but ONLY for
+       trace entries that actually MATCHED. The trace records every rule the
+       engine considered, including ones that did not fire; a check belonging to
+       a rule that did not fire is not a reason this proposal exists, and listing
+       it here would answer the section's question with something that had no
+       bearing on the outcome. `matched` must be explicitly true — an entry that
+       omits the flag leaves us unable to say the rule fired, so it is excluded
+       rather than assumed (the same fail-closed rule the policy scope uses).
+     • `details.ranked_signals` — the per-type scoring signals (fraud_anomaly and
+       vendor_risk carry these) the agent ranked when it scored the record.
+
+   A record carrying neither yields an empty list and the caller drops the whole
+   section. That is the point: an approver who reads an invented reason is worse
+   off than one who reads none, so this never falls back to generic copy. */
+
+export interface ReasonBullet {
+  text: string;
+  /** The check's own verdict when it recorded one, else null.
+   *
+   *  This is carried through to the UI and RENDERED, never flattened away: a
+   *  matched rule's checks can include both satisfied and failed conditions, so
+   *  a list that showed them identically would let an approver read a passing
+   *  check as the thing that escalated the record. A bullet whose source stated
+   *  no verdict (every `ranked_signals` entry) is null and is shown as a plain
+   *  observation rather than being given a verdict we do not have. */
+  passed: boolean | null;
+}
+
+/** Keeps the list scannable; the full trace stays in Technical Detail. */
+export const MAX_REASON_BULLETS = 5;
+
+export function buildWhySuggested(
+  policy: ProposalPolicy | null | undefined,
+  details: ProposalDetails | null | undefined,
+): ReasonBullet[] {
+  const bullets: ReasonBullet[] = [];
+  const seen = new Set<string>();
+
+  const push = (raw: unknown, passed: boolean | null) => {
+    if (typeof raw !== "string") return;
+    const text = raw.trim();
+    // A bare ULID is an identifier, not a reason a human can read.
+    if (!text || isRawIdentifier(text)) return;
+    const key = text.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    bullets.push({ text, passed });
+  };
+
+  for (const entry of policy?.trace ?? []) {
+    // Only rules that actually fired explain this proposal. See the note above.
+    if (entry?.matched !== true) continue;
+    for (const check of entry?.checks ?? []) {
+      if (!check) continue;
+      const verdict = typeof check.passed === "boolean" ? check.passed : null;
+      // `detail` is the written sentence; `key` ("amount_over_limit") is the
+      // machine name, humanized only when there is no sentence to prefer.
+      if (typeof check.detail === "string" && check.detail.trim()) {
+        push(check.detail, verdict);
+      } else if (typeof check.key === "string" && check.key.trim()) {
+        push(humanizeEnumValue(check.key), verdict);
+      }
+    }
+  }
+
+  const signals = details?.ranked_signals;
+  if (Array.isArray(signals)) {
+    for (const signal of signals) {
+      if (typeof signal === "string") {
+        push(signal, null);
+        continue;
+      }
+      if (signal && typeof signal === "object") {
+        const s = signal as Record<string, unknown>;
+        // Prefer a written sentence; fall back to the signal's name humanized.
+        const sentence = [s.detail, s.description, s.reason, s.explanation].find(
+          (v): v is string => typeof v === "string" && v.trim() !== "",
+        );
+        if (sentence) {
+          push(sentence, null);
+          continue;
+        }
+        const name = [s.label, s.name, s.signal, s.key].find(
+          (v): v is string => typeof v === "string" && v.trim() !== "",
+        );
+        if (name) push(humanizeEnumValue(name), null);
+      }
+    }
+  }
+
+  return bullets.slice(0, MAX_REASON_BULLETS);
 }
 
 /* ── Confidence ─────────────────────────────────────────────────────────────── */

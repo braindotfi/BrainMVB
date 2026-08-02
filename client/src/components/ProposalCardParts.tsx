@@ -19,7 +19,7 @@
  *   Box copy .......... Gilroy Medium   14 / 16
  */
 import type { ReactNode } from "react";
-import { ChevronRight, ChevronLeft } from "lucide-react";
+import { ChevronRight, ChevronLeft, ArrowRight, AlertTriangle, Check, X, Pencil } from "lucide-react";
 import infoIconSrc from "@assets/figma_icons/inline/proposal_info.png";
 import warningIconSrc from "@assets/figma_icons/inline/proposal_warning.png";
 import { capitalCase } from "@/lib/displayLabels";
@@ -269,20 +269,149 @@ export const KeyFactsTable = ({
   </div>
 );
 
+/* ── Reason list ──────────────────────────────────────────────────────────────
+   "Why Brain Suggested This": one row per signal the engine recorded.
+
+   Rows share the key-facts shell (one bordered box, hairline between rows) so
+   this section sits in the same visual family as the facts table below it.
+
+   A row's glyph and trailing tag carry its VERDICT, and that is load-bearing
+   rather than decoration: a matched rule's trace can contain both satisfied and
+   failed conditions, so rendering every bullet identically would let an approver
+   read a condition that PASSED as the thing that escalated the record. The tag
+   is real text, not colour alone, so the distinction survives for a colour-blind
+   or screen-reader user. A signal whose source stated no verdict gets the
+   neutral arrow and no tag — we do not label what we were not told. */
+const REASON_VERDICTS = {
+  met: { Icon: Check, color: "#42bf23", label: "Met" },
+  unmet: { Icon: AlertTriangle, color: "#d20344", label: "Not met" },
+  unknown: { Icon: ArrowRight, color: "#6c779d", label: null },
+} as const;
+
+const verdictOf = (passed?: boolean | null) =>
+  passed === true ? REASON_VERDICTS.met : passed === false ? REASON_VERDICTS.unmet : REASON_VERDICTS.unknown;
+
+export const ReasonList = ({
+  reasons,
+  testId,
+}: {
+  reasons: { text: string; passed?: boolean | null }[];
+  testId?: string;
+}) => (
+  <ul
+    className="bg-[#0a0c10] border border-solid border-[#1d2132] rounded-[12px] w-full flex flex-col overflow-hidden list-none"
+    data-testid={testId}
+  >
+    {reasons.map((reason, i) => {
+      const verdict = verdictOf(reason.passed);
+      const { Icon } = verdict;
+      return (
+        <li
+          key={`${reason.text}-${i}`}
+          className={`flex gap-[12px] items-start px-[16px] py-[12px] w-full ${
+            i < reasons.length - 1 ? "border-b border-solid border-[#1d2132]" : ""
+          }`}
+          data-testid={testId ? `${testId}-item-${i}` : undefined}
+        >
+          <Icon size={14} className="shrink-0 mt-[3px]" style={{ color: verdict.color }} aria-hidden="true" />
+          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[20px] text-[#a8b9f4] flex-1 min-w-px">
+            {reason.text}
+          </p>
+          {verdict.label && (
+            <span
+              className="[font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[20px] shrink-0 whitespace-nowrap"
+              style={{ color: verdict.color }}
+              data-testid={testId ? `${testId}-verdict-${i}` : undefined}
+            >
+              {verdict.label}
+            </span>
+          )}
+        </li>
+      );
+    })}
+  </ul>
+);
+
+/* ── Outcome row ──────────────────────────────────────────────────────────────
+   "What Happens Next": one row per decision the card actually offers, with the
+   glyph carrying the tone (approve ✓ green, reject ✗ red, anything else ✎).
+   The label is the decision's own button label, so the row and the footer
+   control that performs it always read the same word. */
+const OUTCOME_TONES: Record<
+  string,
+  { color: string; background: string; Icon: typeof Check; shell?: string }
+> = {
+  approve: { color: "#42bf23", background: "#123509", Icon: Check },
+  acknowledge: { color: "#42bf23", background: "#123509", Icon: Check },
+  /* Reject keeps a tinted shell. This row replaced a full red WarningBox when
+     "If This Is Wrong" was merged into this section, and the reject branch is the
+     one that discards the agent's work — losing all cautionary weight in the move
+     would have made the riskiest option the quietest line on the card. */
+  reject: {
+    color: "#d20344",
+    background: "#350011",
+    Icon: X,
+    shell: "bg-[#350011]/40 border border-solid border-[rgba(210,3,68,0.2)] rounded-[12px] px-[12px] py-[10px]",
+  },
+  edit: { color: "#a8b9f4", background: "#222737", Icon: Pencil },
+};
+
+export const OutcomeRow = ({
+  tone,
+  label,
+  children,
+  testId,
+}: {
+  tone: string;
+  label: string;
+  children: ReactNode;
+  testId?: string;
+}) => {
+  const meta = OUTCOME_TONES[tone] ?? OUTCOME_TONES.edit;
+  const { Icon } = meta;
+  return (
+    <div className={`flex gap-[12px] items-start w-full ${meta.shell ?? ""}`} data-testid={testId}>
+      <div
+        className="size-[24px] rounded-full flex items-center justify-center shrink-0 mt-[1px]"
+        style={{ backgroundColor: meta.background }}
+        aria-hidden="true"
+      >
+        <Icon size={14} style={{ color: meta.color }} />
+      </div>
+      <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-[#6c779d] flex-1 min-w-px">
+        <span className="font-semibold text-[#a8b9f4]">{label}:</span> {children}
+      </p>
+    </div>
+  );
+};
+
 /* ── Linked evidence row ─────────────────────────────────────────────────────
-   The resolved record title and chevron are the only visible content. Every row
-   is a button because every live evidence item has a record surface behind it. */
+   The resolved record title and chevron are the only visible content, preceded
+   by the record's KIND as a pill ("Payment", "Invoice") when the evidence item
+   carried one — that label is brain-core's own caption for the ref, not a guess
+   made from the name. Every row is a button because every live evidence item
+   has a record surface behind it. */
 export const EvidenceLinkRow = ({
   label,
+  kind,
   onClick,
   testId,
 }: {
   label: string;
+  kind?: string | null;
   onClick: () => void;
   testId?: string;
 }) => {
   const inner = (
     <>
+      {kind && (
+        <span
+          className="[font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[16px] text-[#6c779d] bg-[#222737] border border-solid border-[#1d2132] rounded-[6px] px-[8px] py-[2px] shrink-0 whitespace-nowrap"
+          data-testid={testId ? `${testId}-kind` : undefined}
+        >
+          {kind}
+        </span>
+      )}
       <div className="flex flex-1 items-center min-w-px">
         <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-[#a8b9f4] truncate">
           {label}

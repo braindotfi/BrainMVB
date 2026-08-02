@@ -11,6 +11,8 @@ import {
   buildDecisionButtons,
   buildConsequences,
   buildConfidence,
+  buildWhySuggested,
+  MAX_REASON_BULLETS,
   buildEvidenceTiles,
   isDecidableProposal,
   buildTechnicalLayers,
@@ -326,6 +328,120 @@ describe("buildFlaggedBy", () => {
     expect(buildFlaggedBy(null)).toBeNull();
     expect(buildFlaggedBy({})).toBeNull();
     expect(buildFlaggedBy({ policy_id: null, matched_rule_id: null, trace: [] })).toBeNull();
+  });
+});
+
+/* "Why Brain Suggested This" has no dedicated brain-core field, so the whole
+   value of these tests is proving the section stays tied to data the engine
+   actually recorded and produces NOTHING when it recorded none. */
+describe("buildWhySuggested", () => {
+  it("reads the policy trace's own written checks", () => {
+    expect(
+      buildWhySuggested(
+        {
+          trace: [
+            {
+              rule_id: "vendor-bank-change",
+              matched: true,
+              checks: [
+                { key: "new_account", detail: "New account number first seen 2 days ago", passed: false },
+                { key: "vendor_history", detail: "Vendor has no prior record of changing banking details", passed: false },
+              ],
+            },
+          ],
+        },
+        null,
+      ),
+    ).toEqual([
+      { text: "New account number first seen 2 days ago", passed: false },
+      { text: "Vendor has no prior record of changing banking details", passed: false },
+    ]);
+  });
+
+  it("keeps a check's own verdict, including a passing one", () => {
+    const bullets = buildWhySuggested(
+      { trace: [{ matched: true, checks: [{ key: "within_terms", detail: "Invoice is within payment terms", passed: true }] }] },
+      null,
+    );
+    expect(bullets).toEqual([{ text: "Invoice is within payment terms", passed: true }]);
+  });
+
+  it("records no verdict when the check states none", () => {
+    const bullets = buildWhySuggested(
+      { trace: [{ matched: true, checks: [{ detail: "Amount matches the purchase order" }] }] },
+      null,
+    );
+    expect(bullets).toEqual([{ text: "Amount matches the purchase order", passed: null }]);
+  });
+
+  it("humanizes the machine key only when there is no written sentence", () => {
+    expect(
+      buildWhySuggested({ trace: [{ matched: true, checks: [{ key: "amount_over_limit", passed: false }] }] }, null),
+    ).toEqual([{ text: "Amount over limit", passed: false }]);
+  });
+
+  it("reads ranked_signals, as plain strings and as objects", () => {
+    expect(
+      buildWhySuggested(null, {
+        ranked_signals: [
+          "Combined batch fits within this week's operating cash buffer",
+          { label: "velocity_spike", detail: "Payment velocity is 4x the vendor's norm" },
+          { name: "geo_mismatch" },
+        ],
+      }),
+    ).toEqual([
+      { text: "Combined batch fits within this week's operating cash buffer", passed: null },
+      { text: "Payment velocity is 4x the vendor's norm", passed: null },
+      { text: "Geo mismatch", passed: null },
+    ]);
+  });
+
+  it("does not repeat a reason the trace and the signals both carry", () => {
+    const bullets = buildWhySuggested(
+      { trace: [{ matched: true, checks: [{ detail: "Vendor bank details changed" }] }] },
+      { ranked_signals: ["vendor bank details changed"] },
+    );
+    expect(bullets).toEqual([{ text: "Vendor bank details changed", passed: null }]);
+  });
+
+  /* The trace records every rule the engine CONSIDERED. A rule that did not fire
+     had no bearing on this proposal, so quoting its checks under "Why Brain
+     Suggested This" would answer the question with an irrelevance. */
+  it("ignores checks belonging to a rule that did not fire", () => {
+    expect(
+      buildWhySuggested(
+        {
+          trace: [
+            { rule_id: "auto-approve-under-limit", matched: false, checks: [{ detail: "Amount is under the auto-approve limit" }] },
+            { rule_id: "requires-review", matched: true, checks: [{ detail: "Amount exceeds the review threshold" }] },
+          ],
+        },
+        null,
+      ),
+    ).toEqual([{ text: "Amount exceeds the review threshold", passed: null }]);
+  });
+
+  it("will not assume a rule fired when the trace omits the flag", () => {
+    expect(buildWhySuggested({ trace: [{ checks: [{ detail: "Something the engine checked" }] }] }, null)).toEqual([]);
+  });
+
+  it("drops a raw identifier rather than showing it as a reason", () => {
+    expect(
+      buildWhySuggested({ trace: [{ matched: true, checks: [{ detail: "cp_01KYSF0QJ0N18YGNS4JR9EZPHM" }] }] }, null),
+    ).toEqual([]);
+  });
+
+  it("caps the list so the card stays scannable", () => {
+    const checks = Array.from({ length: 9 }, (_, i) => ({ detail: `Signal number ${i}` }));
+    expect(buildWhySuggested({ trace: [{ matched: true, checks }] }, null)).toHaveLength(MAX_REASON_BULLETS);
+  });
+
+  it("invents nothing for a record that recorded no trace and no signals", () => {
+    expect(buildWhySuggested(null, null)).toEqual([]);
+    expect(buildWhySuggested({}, {})).toEqual([]);
+    expect(buildWhySuggested({ trace: [] }, { ranked_signals: [] })).toEqual([]);
+    // A trace that walked rules but recorded no per-check text yields no bullets.
+    expect(buildWhySuggested({ trace: [{ rule_id: "some-rule", matched: true }] }, null)).toEqual([]);
   });
 });
 
