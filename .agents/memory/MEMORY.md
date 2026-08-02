@@ -60,4 +60,5 @@
 - [Shared callout component](callout-component.md) — all alert boxes + info glyphs go through Callout.tsx; find call sites by glyph/colour tokens, not page-by-page; amber meant two things.
 - [Icon from artwork](icon-from-artwork.md) — measure the reference PNG's pixel runs for stroke widths; eyeballing an upscaled bitmap lies, and canvas can't decode file:// images.
 - [Counterparty trust surface](counterparty-trust-surface.md) — brain-core rejects all trust-field writes so "Trusted" is underivable; payment_count/total are real; one predicate must drive a badge and its list.
+- [Vendor Suggested tier gate](vendor-suggested-tier-gate.md) — no provenance value means "suggested"; Suggested chip stays hidden; PR #397 merged not deployed; wiring gate + done criteria recorded.
 - [Overlay menus in clipped surfaces](overlay-menus-in-clipped-surfaces.md) — in-card dropdowns need a fixed portal (not less overflow); fixed owns its own clamp/flip, and never claim listbox without arrow keys.
