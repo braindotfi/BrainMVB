@@ -25,7 +25,7 @@ import closeIcon from "@assets/Close_1783293571882.png";
    Review chip counted only risk-flagged ones, so a warning pointed at rows the
    active filter refused to show. Newness is now a REASON inside Needs Review,
    not a competing filter. */
-type VendorTab = "Needs Review" | "Trusted" | "Suggested" | "Rejected Vendors";
+type VendorTab = "Needs Review" | "Trusted" | "Rejected" | "Suggested";
 
 /** Vendors (we pay them) vs Customers (they pay us). */
 type Segment = "vendor" | "customer";
@@ -489,7 +489,7 @@ export function VendorsPanel() {
   const tabVendors: Vendor[] = useMemo(() => {
     if (activeTab === "Needs Review") return grouped.needsReview;
     if (activeTab === "Trusted") return grouped.trusted;
-    if (activeTab === "Rejected Vendors") return grouped.rejected;
+    if (activeTab === "Rejected") return grouped.rejected;
     return grouped.suggested;
   }, [activeTab, grouped]);
 
@@ -516,10 +516,10 @@ export function VendorsPanel() {
       // loading or failed: no number is honest then.
       count: countsKnown ? grouped.needsReview.length : undefined,
     },
-    // Trusted, Suggested and Rejected Vendors stay clean — their counts carry no action signal.
+    // Trusted, Rejected and Suggested stay clean — their counts carry no action signal.
     { value: "Trusted", label: "Trusted" },
+    { value: "Rejected", label: "Rejected" },
     { value: "Suggested", label: "Suggested" },
-    { value: "Rejected Vendors", label: "Rejected Vendors" },
   ];
   const segmentFilters = [
     { value: "vendor", label: "Vendors" },
@@ -652,8 +652,8 @@ export function VendorsPanel() {
               <div className="flex items-center gap-[8px] min-h-[16px] w-full">
                 <div className="size-[6px] rounded-full shrink-0 bg-[#6c779d]" />
                 <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[12px] uppercase tracking-[0.4px] whitespace-nowrap">
-                  {activeTab === "Rejected Vendors"
-                    ? "Rejected Vendors"
+                  {activeTab === "Rejected"
+                    ? "Rejected"
                     : segment === "vendor"
                       ? "Added Vendors"
                       : "Customers"}
@@ -682,7 +682,7 @@ export function VendorsPanel() {
                           "No trusted counterparties. Granting trust isn't available yet, so this list stays empty for now."}
                         {activeTab === "Suggested" &&
                           `No suggestions yet. ${segment === "vendor" ? "Vendors" : "Customers"} Brain has seen real payments for show up here.`}
-                        {activeTab === "Rejected Vendors" &&
+                        {activeTab === "Rejected" &&
                           "No rejected vendors. Rejected vendors will appear here once vendor rejection is supported."}
                       </p>
                     </div>
