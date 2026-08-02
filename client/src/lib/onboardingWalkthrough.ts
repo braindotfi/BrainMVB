@@ -84,10 +84,10 @@ function step1(read: PolicyRead, rule: WalkthroughRule | null): WalkthroughStep 
     headline: "This is a rule.",
     subhead:
       read.state === "noPolicy"
-        ? "Rules define exactly what Brain may do without asking you first. You haven't set any yet — this is what one looks like."
+        ? "Rules define exactly what Brain may do without asking you first. You haven't set any yet. This is what one looks like."
         : real
-          ? "Rules define exactly what Brain is allowed to do without asking you first — nothing runs outside them."
-          : "Rules define exactly what Brain may do without asking you first — nothing runs outside them.",
+          ? "Rules define exactly what Brain is allowed to do without asking you first. Nothing runs outside them."
+          : "Rules define exactly what Brain may do without asking you first. Nothing runs outside them.",
     row: {
       title: shown.name,
       sub: shown.detail,
@@ -104,7 +104,7 @@ function step2(read: PolicyRead): WalkthroughStep {
     const amount = amountLabel(read.limit);
     return {
       headline,
-      subhead: `Payments at or below ${amount} execute on their own — and every one is logged.`,
+      subhead: `Payments at or below ${amount} execute on their own. Every one is logged.`,
       row: {
         title: "Vendor payment to a supplier",
         sub: `Under your ${amount} rule`,
@@ -118,7 +118,7 @@ function step2(read: PolicyRead): WalkthroughStep {
     return {
       headline,
       subhead:
-        "Some payments execute on their own, but only under the specific conditions your policy sets — not a flat amount.",
+        "Some payments execute on their own, but only under the specific conditions your policy sets. This is not a flat amount.",
       row: {
         title: "Vendor payment to a supplier",
         sub: "Matched a rule that runs automatically",
@@ -132,7 +132,7 @@ function step2(read: PolicyRead): WalkthroughStep {
   if (read.state === "known") {
     return {
       headline,
-      subhead: "Nothing runs automatically today — every payment waits for an approver.",
+      subhead: "Nothing runs automatically today. Every payment waits for an approver.",
       row: null,
     };
   }
@@ -140,7 +140,7 @@ function step2(read: PolicyRead): WalkthroughStep {
   if (read.state === "noPolicy") {
     return {
       headline,
-      subhead: "No rules are active yet, so nothing runs automatically — everything waits for you.",
+      subhead: "No rules are active yet, so nothing runs automatically. Everything waits for you.",
       row: null,
     };
   }
@@ -148,7 +148,7 @@ function step2(read: PolicyRead): WalkthroughStep {
   /* pending / failed: describe the mechanism, claim nothing about this tenant. */
   return {
     headline,
-    subhead: "Anything that fits one of your rules executes on its own — and every one is logged.",
+    subhead: "Anything that fits one of your rules executes on its own. Every one is logged.",
     row: {
       title: "Vendor payment to a supplier",
       sub: "Matched one of your rules",
@@ -166,7 +166,7 @@ function step3(read: PolicyRead): WalkthroughStep {
   return {
     headline: "Here's what always comes to you.",
     /* True regardless of what the policy says, or whether it could be read. */
-    subhead: `${above} Brain proposes — it never executes outside your rules.`,
+    subhead: `${above} Brain proposes. It never executes outside your rules.`,
     row: {
       title: "Confirm treasury transfer to Reserve",
       sub: "Waiting on your approval",

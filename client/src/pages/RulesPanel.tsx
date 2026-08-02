@@ -1,15 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useSearch } from "wouter";
 import {
-  ChevronRight,
+  ChevronDown,
   Plus,
   Sparkles,
   Check,
   Pencil,
   Flag,
+  Lock,
 } from "lucide-react";
 import { FilterChipRow } from "@/components/FilterChipRow";
-import alertIcon from "@assets/Icons_1783274957589.png";
 import closeIcon from "@assets/Close_1783293571882.png";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import shieldKeyIcon from "@assets/Normal_1783346551915.png";
@@ -18,6 +18,7 @@ import {
   createRule,
   consumeRuleDraft,
   hydrateUserRules,
+  useRulesHydration,
 } from "@/lib/rulesStore";
 import {
   useRuleSuggestions,
@@ -29,6 +30,8 @@ import { useBrainPolicy } from "@/lib/brainPolicy";
 import { useBrainVendors } from "@/lib/brainVendors";
 import { useCurrency } from "@/lib/useCurrency";
 import type { AutoRule, RuleSuggestion } from "@/lib/proposalTypes";
+import { AlertCallout, InfoIcon, UnavailableDataBox } from "@/components/Callout";
+import { AppAlertLink, useAppAlert } from "@/components/AppAlert";
 
 const ACTIVE = "#42bf23";
 
@@ -120,18 +123,10 @@ function Section({
   empty?: React.ReactNode;
 }) {
   return (
-    <div className="bg-[#0a0c10] flex flex-col overflow-hidden relative rounded-[16px] w-full">
-      <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative sticky top-0 z-10 w-full">
-        <div className="flex flex-1 gap-[8px] items-center min-w-px relative">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[20px] whitespace-nowrap">{title}</p>
-          <div className="bg-[#414965] flex flex-col items-center justify-center min-w-[16px] p-[2px] relative rounded-[4px] shrink-0">
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[12px] text-[#a8b9f4] text-[12px] text-center whitespace-nowrap">{count}</p>
-          </div>
-        </div>
-      </div>
-      <div className="flex flex-col gap-[8px] items-start p-[8px] relative w-full">
+    <div className="bg-[#0a0c10] border border-solid border-[#1d2132] flex flex-col overflow-hidden relative rounded-[16px] w-full">
+      <div className="flex flex-col items-start relative w-full">
         {count === 0 && empty ? (
-          <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
+          <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative rounded-[8px] shrink-0 w-full">
             {empty}
           </div>
         ) : (
@@ -152,7 +147,7 @@ function AutomationRow({ rule }: { rule: AutoRule }) {
   return (
     <div
       data-testid={`row-automation-${rule.id}`}
-      className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer"
+      className="flex gap-[12px] items-center px-[16px] py-[12px] relative shrink-0 w-full bg-[#0a0c10] transition-colors border-b border-solid border-[#1d2132] last:border-b-0 hover:bg-[#11141b] cursor-pointer"
     >
       <button
         type="button"
@@ -160,21 +155,14 @@ function AutomationRow({ rule }: { rule: AutoRule }) {
         className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px] text-left cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-[6px]"
         data-testid={`button-open-rule-${rule.id}`}
       >
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap w-full">
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap w-full">
           {titleCase(rule.name)}
         </p>
-        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px]">
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px]">
           {titleCase(rule.scopeSummary ?? rule.summary)}
         </p>
         {pausedFromReport && (
-          <div className="bg-[#350011] border border-[rgba(210,3,68,0.2)] border-solid flex items-center p-[8px] relative rounded-[12px] w-full mt-[4px]">
-            <div className="flex gap-[8px] items-start relative">
-              <img src={alertIcon} alt="" className="size-[16px] rounded-full shrink-0 mt-[1px]" />
-              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#d20344] text-[14px]">
-                Paused after you reported a problem.
-              </p>
-            </div>
-          </div>
+          <AlertCallout className="mt-[4px]">Paused after you reported a problem.</AlertCallout>
         )}
       </button>
       <div className="content-stretch flex items-center justify-center px-[10px] py-[4px] relative rounded-[22px] shrink-0 border border-solid bg-[#123509] border-[rgba(66,191,35,0.2)]">
@@ -186,7 +174,7 @@ function AutomationRow({ rule }: { rule: AutoRule }) {
   );
 }
 
-/* ── Guardrail row - pulls you back in above a threshold ─────────────────────── */
+/* ── Guardrail row - fixed safety boundary, not user-configurable ─────────────── */
 function GuardrailRow({ rule }: { rule: AutoRule }) {
   const [, navigate] = useLocation();
   const openReports = (rule.problemReports ?? []).filter((p) => !p.resolved);
@@ -195,7 +183,7 @@ function GuardrailRow({ rule }: { rule: AutoRule }) {
   return (
     <div
       data-testid={`row-guardrail-${rule.id}`}
-      className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer"
+      className="flex gap-[12px] items-center px-[16px] py-[12px] relative shrink-0 w-full bg-[#0a0c10] transition-colors border-b border-solid border-[#1d2132] last:border-b-0 hover:bg-[#11141b] cursor-pointer"
     >
       <button
         type="button"
@@ -203,26 +191,22 @@ function GuardrailRow({ rule }: { rule: AutoRule }) {
         className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px] text-left cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-[6px]"
         data-testid={`button-open-rule-${rule.id}`}
       >
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap w-full">
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap w-full">
           {titleCase(rule.name)}
         </p>
-        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px]">
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px]">
           {titleCase(rule.summary)}
         </p>
         {pausedFromReport && (
-          <div className="bg-[#350011] border border-[rgba(210,3,68,0.2)] border-solid flex items-center p-[8px] relative rounded-[12px] w-full mt-[4px]">
-            <div className="flex gap-[8px] items-start relative">
-              <img src={alertIcon} alt="" className="size-[16px] rounded-full shrink-0 mt-[1px]" />
-              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#d20344] text-[14px]">
-                Paused after you reported a problem.
-              </p>
-            </div>
-          </div>
+          <AlertCallout className="mt-[4px]">Paused after you reported a problem.</AlertCallout>
         )}
       </button>
-      <div className="content-stretch flex items-center justify-center px-[10px] py-[4px] relative rounded-[22px] shrink-0 border border-solid bg-[#123509] border-[rgba(66,191,35,0.2)]">
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap text-[#42bf23]">
-          Anchored
+      {/* Guardrail badge: neutral lock treatment distinguishes a fixed safety
+          boundary without reusing amber's needs-attention meaning. */}
+      <div className="content-stretch flex items-center gap-[5px] justify-center px-[10px] py-[4px] relative rounded-[22px] shrink-0 border border-solid bg-[#222737] border-[rgba(108,119,157,0.2)]">
+        <Lock size={11} className="text-[#6c779d] shrink-0" aria-hidden />
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap text-[#6c779d]">
+          Guardrail
         </p>
       </div>
     </div>
@@ -236,7 +220,7 @@ function AlwaysOnRow({ rule }: { rule: AutoRule }) {
   return (
     <div
       data-testid={`row-alwayson-${rule.id}`}
-      className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer"
+      className="flex gap-[12px] items-center px-[16px] py-[12px] relative shrink-0 w-full bg-[#0a0c10] transition-colors border-b border-solid border-[#1d2132] last:border-b-0 hover:bg-[#11141b] cursor-pointer"
     >
       <img src={shieldKeyIcon} alt="shield" className="shrink-0 w-[20px] h-[20px]" />
       <button
@@ -245,10 +229,10 @@ function AlwaysOnRow({ rule }: { rule: AutoRule }) {
         className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px] text-left cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-[6px]"
         data-testid={`button-open-rule-${rule.id}`}
       >
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap w-full">
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap w-full">
           {titleCase(rule.name)}
         </p>
-        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px]">
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px]">
           {titleCase(rule.summary)}
         </p>
       </button>
@@ -270,49 +254,34 @@ function PolicySection() {
   const { isLoading, isError, rules, version, quorum } = useBrainPolicy();
 
   return (
-    <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
-      <div className="bg-[#0a0c10] border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] relative shrink-0 w-full">
-        <div className="flex flex-1 gap-[8px] items-center min-w-px relative">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[20px] whitespace-nowrap">
-            Default Brain Rules
-          </p>
-          <div className="bg-[#414965] flex flex-col items-center justify-center min-w-[16px] p-[2px] relative rounded-[4px] shrink-0">
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[12px] text-[#a8b9f4] text-[12px] text-center whitespace-nowrap">{rules.length}</p>
-          </div>
-        </div>
+    <div className="bg-[#0a0c10] border border-solid border-[#1d2132] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
+      <div className="flex flex-col items-start relative shrink-0 w-full">
         {!isLoading && !isError && version !== undefined && (
-          <p className="[font-family:'JetBrains_Mono',monospace] text-[12px] text-[#6c779d] whitespace-nowrap">
+          <p className="px-[16px] pt-[12px] [font-family:'JetBrains_Mono',monospace] text-[12px] text-[#6c779d] whitespace-nowrap">
             v{version} · quorum {quorum}
           </p>
         )}
-      </div>
-      <div className="flex flex-col items-start p-[8px] gap-[8px] relative shrink-0 w-full">
         {isLoading && (
-          <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
+          <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
             <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
               Loading your active policy from Brain…
             </p>
           </div>
         )}
         {!isLoading && isError && (
-          <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
-            <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
-              Couldn't load your active policy from Brain right now.
-            </p>
-          </div>
+          <UnavailableDataBox testId="text-policy-unavailable">
+            Couldn't load your active policy from Brain right now.
+          </UnavailableDataBox>
         )}
         {!isLoading && !isError && rules.length === 0 && (
-          <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
+          <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
             <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
               No active policy found for your account yet.
             </p>
           </div>
         )}
-        {!isLoading && !isError && rules.map((r, idx) => (
-          <div key={r.id} className="flex flex-col gap-[8px] w-full">
-            <AlwaysOnRow rule={r} />
-            {idx < rules.length - 1 && <Divider />}
-          </div>
+        {!isLoading && !isError && rules.map((r) => (
+          <AlwaysOnRow key={r.id} rule={r} />
         ))}
       </div>
     </div>
@@ -352,7 +321,7 @@ function SuggestionCard({
   const conf = CONFIDENCE[suggestion.confidence];
   return (
     <div
-      className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full"
+      className="bg-[#0a0c10] border border-solid border-[#1d2132] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full"
       data-testid={`card-suggestion-${suggestion.id}`}
     >
       {/* Header: title + confidence pill */}
@@ -442,14 +411,12 @@ function Chip({
   open,
   onClick,
   testId,
-  compact,
 }: {
   value?: string;
   placeholder: string;
   open: boolean;
   onClick: () => void;
   testId: string;
-  compact?: boolean;
 }) {
   const hasValue = !!value;
   return (
@@ -457,16 +424,18 @@ function Chip({
       type="button"
       onClick={onClick}
       data-testid={testId}
-      className={`inline-flex items-center gap-[4px] rounded-[8px] transition-colors [font-family:'Gilroy',sans-serif] text-[14px] ${
-        compact ? "py-[2px] px-[8px]" : "py-[3px] px-[10px]"
-      } ${
-        hasValue
-          ? "bg-[#240757] text-[#a8b9f4] font-semibold"
-          : "bg-[#11141b] text-[#6c779d] font-medium"
-      }`}
+      className="inline-flex items-center gap-[8px] p-[8px] rounded-[8px] transition-colors [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+      style={{
+        background: hasValue ? "#240757" : "#222737",
+        color: hasValue ? "#ffffff" : "#6c779d",
+      }}
     >
-      {value ?? placeholder}
-      <ChevronRight size={12} className={`transition-transform ${open ? "rotate-90" : ""}`} />
+      <span className="whitespace-nowrap">{value ?? placeholder}</span>
+      <ChevronDown
+        size={20}
+        className={`shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
+        style={{ color: hasValue ? "#ffffff" : "#6c779d" }}
+      />
     </button>
   );
 }
@@ -510,6 +479,7 @@ const TAB_PARAM_MAP: Record<string, RuleTab> = {
 export function RulesPanel() {
   const { format } = useCurrency();
   const [, navigate] = useLocation();
+  const alert = useAppAlert();
   const search = useSearch();
   const rules = useRules();
   const suggestions = useRuleSuggestions();
@@ -547,6 +517,10 @@ export function RulesPanel() {
   const [pendingCreate, setPendingCreate] = useState<AutoRule | null>(null);
   const [pendingSuggestionId, setPendingSuggestionId] = useState<string | null>(null);
 
+  // Lift policy rules to this level so the Default badge tracks the same count
+  // PolicySection renders (brain-core policy rules), not the user-created rules.
+  const { rules: policyRules, isLoading: policyLoading, isError: policyError } = useBrainPolicy();
+  const rulesHydration = useRulesHydration();
   const automations = rules.filter((r) => (r.kind ?? "automation") === "automation");
   const guardrails = rules.filter((r) => r.kind === "guardrail");
 
@@ -663,7 +637,21 @@ export function RulesPanel() {
 
   const onConfirmCreate = () => {
     if (pendingCreate) {
-      createRule(pendingCreate);
+      const createdRule = pendingCreate;
+      createRule(createdRule);
+      alert.success(
+        "Success",
+        <>
+          You have successfully added rule: {createdRule.name}
+          <br />
+          <br />
+          View the rule{" "}
+          <AppAlertLink href={`/rules/${encodeURIComponent(createdRule.id)}`}>
+            here
+          </AppAlertLink>
+          .
+        </>,
+      );
       // Only retire the suggestion once the rule is actually confirmed.
       if (pendingSuggestionId) acceptSuggestion(pendingSuggestionId);
       setPendingSuggestionId(null);
@@ -683,14 +671,25 @@ export function RulesPanel() {
     setPendingCreate(finalizeDraft(s.proposedRule));
   };
 
-  // tab counts removed. Shown in table header instead
+  // Default count tracks policyRules (brain-core policy) — what the tab renders —
+  // not user-created rules, which are shown on the Automations/Guardrails tabs.
+  const activeCount = activeTab === "Default"
+    ? policyRules.length
+    : activeTab === "Automations"
+      ? automations.length
+      : activeTab === "Guardrails"
+        ? guardrails.length
+        : suggestions.length;
 
   return (
-    <div className="flex flex-col gap-[16px] items-start w-full pb-[8px]">
+    <div className="flex flex-col gap-[26px] items-start w-full pb-[8px]">
 
         <div className="flex flex-col gap-[16px] items-start w-full">
           <FilterChipRow
-            chips={RULE_TABS.map((tab) => ({ value: tab, label: tab }))}
+            chips={RULE_TABS.map((tab) => ({
+              value: tab,
+              label: tab,
+            }))}
             value={activeTab}
             onChange={(v) => setActiveTab(v as RuleTab)}
             label="Filter rules"
@@ -765,23 +764,23 @@ export function RulesPanel() {
               </svg>
               <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
                 <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[#6c779d] text-[20px]">
-                  Write a new rule in plain English
+                  Add a new rule in plain English
                 </p>
               </div>
               <div className="bg-[#4a2300] flex gap-[4px] items-center justify-center px-[12px] py-[8px] relative rounded-[100px] shrink-0">
                 <Plus size={16} className="text-[#ff9400]" />
                 <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#ff9400] text-[12px]">
-                  New Rule
+                  Add Rule
                 </span>
               </div>
             </button>
           ) : (
             <div className="w-full rounded-[16px] bg-[#0a0c10] p-[16px] flex flex-col gap-[12px]" data-testid="panel-builder">
-              {/* Two-line sentence builder, matches Figma */}
-              <div className="flex flex-col gap-[6px] [font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[15px] leading-[28px]">
-                {/* Line 1: "When a [kind] from [vendor] is under [amount]" */}
-                <div className="flex flex-wrap items-center gap-[6px]">
-                  <span>When a</span>
+              {/* One continuous wrapping sentence, matches Figma 5734:70625 */}
+              <div className="flex flex-wrap gap-[16px] items-center w-full [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[14px] leading-[20px]">
+                {/* "When a [kind]" */}
+                <div className="flex gap-[16px] items-center shrink-0">
+                  <span className="whitespace-nowrap">When a</span>
                   <div className="relative">
                     <Chip
                       value={builder.category || undefined}
@@ -791,7 +790,7 @@ export function RulesPanel() {
                       testId="chip-category"
                     />
                     {openChip === "category" && (
-                      <div className="absolute z-10 mt-[6px] w-[220px] rounded-[12px] border border-[#1d2132] bg-[#11141b] p-[6px] shadow-lg">
+                      <div className="absolute z-10 mt-[6px] w-[220px] rounded-[12px] border border-[#1d2132] bg-[#0a0c10] p-[8px] shadow-lg">
                         {BUILDER_CATEGORIES.map((c) => {
                           const selected = builder.category === c;
                           const label = titleCase(c);
@@ -801,7 +800,7 @@ export function RulesPanel() {
                               type="button"
                               onClick={() => { setBuilder((b) => ({ ...b, category: c })); setOpenChip(null); }}
                               data-testid={`option-category-${c}`}
-                              className="w-full flex items-center justify-between gap-[8px] text-left rounded-[8px] px-[10px] py-[8px] hover:bg-[#1d2132] transition-colors [font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#a8b9f4]"
+                              className="w-full flex items-center justify-between gap-[8px] text-left rounded-[8px] p-[8px] hover:bg-[#222737] focus-visible:bg-[#222737] transition-colors [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[14px] text-[#a8b9f4]"
                             >
                               {label}
                               {selected && (
@@ -815,7 +814,11 @@ export function RulesPanel() {
                       </div>
                     )}
                   </div>
-                  <span>from</span>
+                </div>
+
+                {/* "from [vendor]" */}
+                <div className="flex gap-[16px] items-center shrink-0">
+                  <span className="whitespace-nowrap">from</span>
                   <div className="relative">
                     <Chip
                       value={builder.vendor || undefined}
@@ -825,23 +828,27 @@ export function RulesPanel() {
                       testId="chip-vendor"
                     />
                     {openChip === "vendor" && (
-                      <div className="absolute z-10 mt-[6px] w-[280px] rounded-[12px] border border-[#1d2132] bg-[#11141b] p-[6px] shadow-lg max-h-[320px] overflow-y-auto">
-                        <p className="px-[10px] pt-[4px] pb-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] uppercase text-[#6c779d]">
+                      <div className="absolute z-10 mt-[6px] w-[280px] rounded-[12px] border border-[#1d2132] bg-[#0a0c10] p-[8px] shadow-lg max-h-[320px] overflow-y-auto">
+                        <p className="px-[10px] pt-[4px] pb-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] uppercase text-[#a8b9f4]">
                           Trusted vendors
                         </p>
                         {/* An unreachable vendor list is not an empty vendor list.
                             Saying "none yet" here would invite someone to build a
                             rule around a vendor set that simply failed to load. */}
                         {trustedVendors.length === 0 && (
-                          <p
-                            className="px-[10px] pb-[6px] [font-family:'Gilroy',sans-serif] font-medium text-[13px]"
-                            style={{ color: vendorsFailed ? "#ff9400" : "#6c779d" }}
-                            data-testid={vendorsFailed ? "text-vendors-unavailable" : "text-vendors-empty"}
-                          >
-                            {vendorsFailed
-                              ? "Vendors couldn't be loaded, so this list is empty for the wrong reason."
-                              : "No trusted vendors yet."}
-                          </p>
+                          vendorsFailed ? (
+                            <UnavailableDataBox testId="text-vendors-unavailable">
+                              Vendors couldn't be loaded, so this list is empty for the wrong reason.
+                            </UnavailableDataBox>
+                          ) : (
+                            <p
+                              className="px-[8px] pb-[6px] [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px]"
+                              style={{ color: "#a8b9f4" }}
+                              data-testid="text-vendors-empty"
+                            >
+                              No trusted vendors yet.
+                            </p>
+                          )
                         )}
                         {trustedVendors.map((v) => {
                           const selected = builder.vendor === v;
@@ -851,7 +858,7 @@ export function RulesPanel() {
                               type="button"
                               onClick={() => { setBuilder((b) => ({ ...b, vendor: v })); setOpenChip(null); }}
                               data-testid={`option-vendor-${slugify(v)}`}
-                              className="w-full flex items-center justify-between gap-[8px] text-left rounded-[8px] px-[10px] py-[8px] hover:bg-[#1d2132] transition-colors [font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#a8b9f4]"
+                              className="w-full flex items-center justify-between gap-[8px] text-left rounded-[8px] p-[8px] hover:bg-[#222737] focus-visible:bg-[#222737] transition-colors [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[14px] text-[#a8b9f4]"
                             >
                               {v}
                               {selected && (
@@ -862,21 +869,21 @@ export function RulesPanel() {
                             </button>
                           );
                         })}
-                        <div className="mx-[10px] my-[6px] h-px bg-[#1d2132]" />
-                        <p className="px-[10px] pt-[2px] pb-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] uppercase text-[#414965]">
+                        <div className="mx-[8px] my-[6px] h-px bg-[#1d2132]" />
+                        <p className="px-[8px] pt-[2px] pb-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] uppercase text-[#414965]">
                           Not Trusted Yet
                         </p>
                         {untrustedVendors.length === 0 ? (
-                          <p className="px-[10px] pb-[4px] [font-family:'Gilroy',sans-serif] font-medium text-[13px] text-[#414965]">
+                          <p className="px-[8px] pb-[4px] [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-[#414965]">
                             Brain doesn't track an untrusted-vendor list yet.
                           </p>
                         ) : (
                           untrustedVendors.map((v) => (
                             <div
                               key={v}
-                              className="w-full flex items-center justify-between gap-[8px] rounded-[8px] px-[10px] py-[8px]"
+                              className="w-full flex items-center justify-between gap-[8px] rounded-[8px] p-[8px]"
                             >
-                              <span className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#414965]">
+                               <span className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[14px] text-[#414965]">
                                 {v}
                               </span>
                               <span className="shrink-0 px-[8px] py-[2px] rounded-[100px] bg-[#350011] text-[#d20344] [font-family:'Gilroy',sans-serif] font-semibold text-[10px] uppercase tracking-[0.04em]">
@@ -888,20 +895,24 @@ export function RulesPanel() {
                       </div>
                     )}
                   </div>
-                  <span>is {isAuto ? "under" : "over"}</span>
+                </div>
+
+                {/* "is under [amount]" */}
+                <div className="flex gap-[16px] items-center shrink-0">
+                  <span className="whitespace-nowrap">is {isAuto ? "under" : "over"}</span>
                   <input
                     value={builder.amount}
                     inputMode="numeric"
                     placeholder="$0"
                     onChange={(e) => setBuilder((b) => ({ ...b, amount: e.target.value }))}
                     data-testid="input-builder-amount"
-                    className="w-[80px] rounded-[8px] border border-[#1d2132] bg-[#06070a] px-[10px] py-[3px] [font-family:'JetBrains_Mono',monospace] text-[14px] text-[#a8b9f4] placeholder:text-[#414965] focus:outline-none focus-visible:border-[rgba(118,49,238,0.5)]"
+                     className="w-[160px] rounded-[8px] bg-[#222737] px-[8px] py-[10px] [font-family:'JetBrains_Mono',monospace] text-[14px] leading-[20px] text-white placeholder:text-[#6c779d] focus:outline-none"
                   />
                 </div>
 
-                {/* Line 2: "then [action]" */}
-                <div className="flex flex-wrap items-center gap-[6px]">
-                  <span>then</span>
+                {/* "then [action]" */}
+                <div className="flex gap-[16px] items-center shrink-0">
+                  <span className="whitespace-nowrap">then</span>
                   <div className="relative">
                     <Chip
                       value={builder.action ? ACTION_LABELS[builder.action] : undefined}
@@ -911,7 +922,7 @@ export function RulesPanel() {
                       testId="chip-action"
                     />
                     {openChip === "action" && (
-                      <div className="absolute z-10 mt-[6px] w-[260px] rounded-[12px] border border-[#1d2132] bg-[#11141b] p-[6px] shadow-lg">
+                      <div className="absolute z-10 mt-[6px] w-[260px] rounded-[12px] border border-[#1d2132] bg-[#0a0c10] p-[8px] shadow-lg">
                         {([
                           { key: "auto", label: "Pay it automatically" },
                           { key: "queue", label: "Queue for one-click approval" },
@@ -924,7 +935,7 @@ export function RulesPanel() {
                               type="button"
                               onClick={() => { setBuilder((b) => ({ ...b, action: key })); setOpenChip(null); }}
                               data-testid={`option-action-${key}`}
-                              className="w-full flex items-center justify-between gap-[8px] text-left rounded-[8px] px-[10px] py-[8px] hover:bg-[#1d2132] transition-colors [font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#a8b9f4]"
+                              className="w-full flex items-center justify-between gap-[8px] text-left rounded-[8px] p-[8px] hover:bg-[#222737] focus-visible:bg-[#222737] transition-colors [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[14px] text-[#a8b9f4]"
                             >
                               {label}
                               {selected && (
@@ -953,7 +964,7 @@ export function RulesPanel() {
                   type="button"
                   onClick={resetBuilder}
                   data-testid="button-builder-cancel"
-                  className="flex-1 px-[12px] py-[10px] rounded-[100px] bg-[#1d2132] hover:bg-[#252a3d] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#a8b9f4]"
+                  className="flex-1 px-[12px] py-[10px] rounded-[100px] bg-[#222737] hover:bg-[#2b3145] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#6c779d]"
                 >
                   Cancel
                 </button>
@@ -964,7 +975,7 @@ export function RulesPanel() {
                   data-testid="button-builder-create"
                   className="flex-1 px-[12px] py-[10px] rounded-[100px] bg-[#4a2300] hover:bg-[#5a2d00] disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#ff9500]"
                 >
-                  Create Rule
+                  Add Rule
                 </button>
               </div>
             </div>
@@ -972,25 +983,32 @@ export function RulesPanel() {
 
         </div>{/* end filter row + builder block */}
 
+      <div className="flex flex-col gap-[10px] w-full">
+      <div className="flex items-center gap-[8px] min-h-[16px] w-full">
+        <div className="size-[6px] rounded-full shrink-0 bg-[#6c779d]" />
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[12px] uppercase tracking-[0.4px] whitespace-nowrap">Rules</p>
+        <div className="bg-[#6c779d] flex items-center justify-center min-w-[18px] px-[5px] py-[1px] rounded-[4px] shrink-0">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#0a0c10] text-[11px] text-center whitespace-nowrap">{activeCount}</p>
+        </div>
+      </div>
+
       <div className="w-full flex flex-col gap-[16px]">
 
         {activeTab === "Default" && (
           <>
             <PolicySection />
             {/* Default-specific purple info banner */}
+            {!policyLoading && !policyError && (
             <div
               className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
               style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
             >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[2px]">
-                <circle cx="8" cy="8" r="7" stroke="#7631ee" strokeWidth="1.3" />
-                <path d="M8 7.3v4.2" stroke="#7631ee" strokeWidth="1.3" strokeLinecap="round" />
-                <circle cx="8" cy="4.7" r="0.9" fill="#7631ee" />
-              </svg>
+              <InfoIcon className="mt-[2px]" />
               <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#7631ee] text-[14px]">
                 These rules are created automatically by Brain as a default policy layer to protect every tenant. They establish essential safeguards from the start, ensuring consistent security, governance, and oversight before any custom rules are added.
               </p>
             </div>
+            )}
           </>
         )}
 
@@ -1008,21 +1026,19 @@ export function RulesPanel() {
                 </div>
               ))}
             </Section>
+            {rulesHydration === "ready" && (
             <div
               className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
               style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
             >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[2px]">
-                <circle cx="8" cy="8" r="7" stroke="#7631ee" strokeWidth="1.3" />
-                <path d="M8 7.3v4.2" stroke="#7631ee" strokeWidth="1.3" strokeLinecap="round" />
-                <circle cx="8" cy="4.7" r="0.9" fill="#7631ee" />
-              </svg>
+              <InfoIcon className="mt-[2px]" />
               <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#7631ee] text-[14px]">
                 Rules are written in plain English, not code. Brain turns each one into an enforceable
                 policy for every agent you use, then keeps learning and suggesting new ones, backed by
                 the evidence behind them.
               </p>
             </div>
+            )}
           </>
         )}
 
@@ -1040,21 +1056,19 @@ export function RulesPanel() {
                 </div>
               ))}
             </Section>
+            {rulesHydration === "ready" && (
             <div
               className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
               style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
             >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[2px]">
-                <circle cx="8" cy="8" r="7" stroke="#7631ee" strokeWidth="1.3" />
-                <path d="M8 7.3v4.2" stroke="#7631ee" strokeWidth="1.3" strokeLinecap="round" />
-                <circle cx="8" cy="4.7" r="0.9" fill="#7631ee" />
-              </svg>
+              <InfoIcon className="mt-[2px]" />
               <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#7631ee] text-[14px]">
                 Rules are written in plain English, not code. Brain turns each one into an enforceable
                 policy for every agent you use, then keeps learning and suggesting new ones, backed by
                 the evidence behind them.
               </p>
             </div>
+            )}
           </>
         )}
 
@@ -1077,6 +1091,7 @@ export function RulesPanel() {
         )}
 
       </div>{/* end table area */}
+      </div>{/* end label + table wrapper */}
     </div>
   );
 }

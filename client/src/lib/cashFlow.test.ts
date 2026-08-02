@@ -204,11 +204,11 @@ describe("cashFlowTotals", () => {
 
 describe("cashFlowPeriodLabel", () => {
   it("names a span inside one year once", () => {
-    expect(cashFlowPeriodLabel("2026-02-10", "2026-06-26")).toBe("Feb – Jun 2026");
+    expect(cashFlowPeriodLabel("2026-02-10", "2026-06-26")).toBe("Feb to Jun 2026");
   });
 
   it("names both years when the span crosses one", () => {
-    expect(cashFlowPeriodLabel("2025-11-01", "2026-06-26")).toBe("Nov 2025 – Jun 2026");
+    expect(cashFlowPeriodLabel("2025-11-01", "2026-06-26")).toBe("Nov 2025 to Jun 2026");
   });
 
   it("collapses a single month to one label", () => {
@@ -230,7 +230,7 @@ describe("cashFlowPeriodLabel", () => {
         TX({ id: "b", transaction_date: "2026-06-26T00:00:00Z", amount: "96000" }),
       ],
     });
-    expect(cashFlowPeriodLabel(t.periodStart, t.periodEnd)).toBe("Feb – Jun 2026");
+    expect(cashFlowPeriodLabel(t.periodStart, t.periodEnd)).toBe("Feb to Jun 2026");
     expect(t.income).toBe(144000);
   });
 });

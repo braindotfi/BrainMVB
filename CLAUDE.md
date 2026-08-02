@@ -58,6 +58,30 @@ agent debugging a bug report against production is looking at that app, not this
 Payment-intent tiering, and any `$` materiality default. Both need a real signal that
 does not exist yet — see the tier module's own comments before adding either.
 
+## Proposal card read-model contract
+
+The shared proposal card is the single presentation path for every public
+`proposal_type`, including advisory domains. The canonical upstream references
+are `https://docs.brain.fi/api-reference/proposals-api.md`,
+`https://docs.brain.fi/api-reference/wiki-api.md`, and
+`https://docs.brain.fi/api-reference/policy-api.md`; the local field contract is
+`docs/contracts/proposals-read-model.md`.
+
+- The read item carries additive `stored_action_type`, open-record `details`,
+  `policy`, `presentation`, and `available_decisions` fields. `presentation`
+  contains `headline`, `recommendation`, `key_facts`, `confidence_band`,
+  `policy`, `consequences`, `actions`, and `technical_detail`.
+- `available_decisions` is authoritative when present, including `[]`; only an
+  absent field may fall back to `presentation.actions`. Labels come from the
+  record. The only writable verbs currently submitted are `approve`, `reject`,
+  `acknowledge`, and `undo`; unsupported advertised decisions render disabled.
+- Policy attribution follows `policy_id → matched_rule_id → policy content`.
+  Opaque IDs are never shown on the primary view. Evidence uses resolved
+  Ledger/Wiki labels; unresolved IDs stay in collapsed Technical Detail.
+- Pending advisory proposals route to Inbox by decidability, not by
+  `mode === "propose"`. The Inbox and detail card both derive controls from the
+  proposal's available decisions and use the Invoice/Cash Agent action palette.
+
 ## Demo vs real accounts — synthetic data fence
 
 Real signups must start **genuinely empty**: zero connected sources, zero raw-layer
@@ -682,6 +706,20 @@ button on a real customer email. When core exposes a propose-time draft field, b
 delete the template.
 
 ## Full-parity proposal cards: one card for every proposal_type
+
+> **STATUS — PENDING MERGE on `feature/proposal-cards-full-parity` (2026-08-02). NOT merged, NOT
+> landed on `main`.** `main` is at `c81936f`; the branch is 97 commits / 141 files ahead, with 4
+> commits still unpushed and no PR open. Everything in this section describes the **branch**, not
+> shipped `main` behaviour. A human reviewer owns the merge: the diff also carries tiering, the
+> bulk-approve gate and threshold reads, which the standing repo rule keeps off admin/self merge.
+>
+> **OPEN ITEM — live-verification split.** The shared card component covers all proposal types via
+> `details` / `policy` / `presentation` / `available_decisions` binding. **Live-verified against
+> real API data:** `collections`, `vendor_risk`, `payment`. **Structurally verified only — never
+> rendered from a real pending proposal:** `fraud_anomaly`, `cash_forecast`, `treasury`,
+> `subscription`, `compliance`. Close this out the next time any of those five has a real pending
+> proposal in any tenant.
+
 The rich card is no longer Invoice/Cash-only. `LiveProposalModal` renders the **same markup and
 CSS** for all 19 types, driven entirely by what the record carries. Pure builders live in
 `client/src/lib/proposalCards.ts` (node-environment suite, no component imports).

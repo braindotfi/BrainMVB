@@ -10,5 +10,3 @@ When the dev server fails to boot right after a task merge, check in order:
 3. **New hard-required env vars** asserted at startup (e.g. a 32-byte `ENCRYPTION_KEY` for Plaid token crypto). Self-generated symmetric keys can be created with `randomBytes(32).toString('hex')` and set as a shared env var; third-party secrets must be requested from the user.
 
 **Why:** all three occurred together after one merge (2026-07-22); fixing only the first still leaves the server down.
-
-Also: `server/auth-security.test.ts` legacy-Plaid-token test reaches into MemStorage internals (`bankConns`) and fails whenever `DATABASE_URL` is set (storage = DatabaseStorage). Environment-dependent, not a regression signal.

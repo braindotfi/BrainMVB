@@ -306,7 +306,7 @@ export interface TierMeta {
 export const TIER_META: Record<ProposalTier, TierMeta> = {
   urgent: { title: "Urgent" },
   waiting: { title: "Waiting on you" },
-  insight: { title: "Insights", note: "informational, no action needed" },
+  insight: { title: "Insights" },
 };
 
 /** Render order. Urgent first — the prototype's promise is that urgent items

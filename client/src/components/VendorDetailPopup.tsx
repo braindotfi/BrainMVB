@@ -21,9 +21,10 @@ import {
 import { useLocation } from "wouter";
 import { useCurrency } from "@/lib/useCurrency";
 import type { Vendor, TrustStatus } from "@/lib/vendorTypes";
+import { vendorSegment, isReviewedOnly } from "@/lib/brainVendors";
 import { openRuleDetail, resolveRule } from "@/lib/openRuleDetail";
-import alertFlagIcon from "@assets/Icons_1783209453304.png";
 import closeIcon from "@assets/Close_1783293571882.png";
+import { AlertCallout, InfoIcon } from "@/components/Callout";
 
 const ALERT = "#d20344";
 const ACTIVE = "#42bf23";
@@ -47,9 +48,13 @@ const TRUST_META: Record<
     headlineColor: ACTIVE,
   },
   known: {
-    label: "Suggested",
-    chipBg: "#240757",
-    chipText: PURPLE,
+    /* "known" upstream means the counterparty is identified but not yet
+       actioned — it does NOT mean "Brain-suggested, not yet confirmed".
+       brain-core's provenance enum has no value with that meaning today.
+       Use neutral styling; the Suggested chip/label must not appear here. */
+    label: "Known",
+    chipBg: "#1a1e2b",
+    chipText: "#6c779d",
     icon: Clock,
     headlineColor: "#a8b9f4",
   },
@@ -80,6 +85,40 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
+/* ── Trust action button — wired to mount-point handlers in VendorsPanel ──────
+   Never fetches itself. Receives onClick from the panel so invalidation,
+   optimistic state and error handling stay in one place.
+   Disabled during in-flight window (`busy`); assistive tech reads it as
+   unavailable without needing a tooltip wrapper. */
+function TrustButton({
+  label,
+  onClick,
+  busy,
+  color,
+  background,
+  testId,
+}: {
+  label: string;
+  onClick: () => void;
+  busy?: boolean;
+  color: string;
+  background: string;
+  testId: string;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={onClick}
+      data-testid={testId}
+      className="flex items-center justify-center px-[20px] py-[10px] rounded-[100px] w-full disabled:opacity-50 disabled:cursor-wait [font-family:'Gilroy',sans-serif] font-semibold text-[16px] hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+      style={{ background, color }}
+    >
+      {busy ? "Working..." : label}
+    </button>
+  );
+}
+
 function Row({ label, value, valueColor = "#a8b9f4" }: { label: string; value: string; valueColor?: string }) {
   return (
     <div className="flex items-center w-full border-b border-[#1d2132] last:border-b-0">
@@ -104,6 +143,12 @@ export function VendorDetailPopup({
   onPrev,
   onNext,
   pagerDisabled,
+  onDeleteVendor,
+  onGrant,
+  onFlag,
+  onRestore,
+  onAcknowledge,
+  trustBusy,
 }: {
   vendor: Vendor | null;
   open: boolean;
@@ -111,22 +156,55 @@ export function VendorDetailPopup({
   onPrev?: () => void;
   onNext?: () => void;
   pagerDisabled?: boolean;
+  onDeleteVendor?: (vendorId: string, vendorName: string) => void;
+  /** Grant trust / confirm. Valid from unreviewed or acknowledged states. */
+  onGrant?: (vendorId: string) => void;
+  /** Pause / flag. Moves trusted → paused via /trust/pause. */
+  onFlag?: (vendorId: string) => void;
+  /** Restore paused vendor to trusted via /trust/restore. paused → trusted only. */
+  onRestore?: (vendorId: string) => void;
+  /** Acknowledge without granting — dismiss from review queue. */
+  onAcknowledge?: (vendorId: string) => void;
+  /** True while any trust action is in-flight; disables all trust buttons. */
+  trustBusy?: boolean;
 }) {
   const { format } = useCurrency();
   const [, navigate] = useLocation();
-  const [confirmingRevoke, setConfirmingRevoke] = useState(false);
-  const [confirmingGrant, setConfirmingGrant] = useState(false);
-  const [reviewed, setReviewed] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   useEffect(() => {
-    setConfirmingRevoke(false);
-    setConfirmingGrant(false);
-    setReviewed(false);
+    setConfirmingDelete(false);
   }, [vendor?.id]);
 
   if (!vendor) return null;
 
   const meta = TRUST_META[vendor.trustStatus];
+
+  /* Dismissed-but-not-trusted rows (trustState === "acknowledged") surface in
+     the Trusted/Confirmed list, but their derived trustStatus is still
+     "known"/"new". They must NOT get the unreviewed action set — the user
+     already decided. The only valid forward transition is grant.
+     Risk-flagged acknowledged rows are excluded: risk keeps them in Needs
+     Review (never the Trusted tab), so they keep the under_review block. */
+  const reviewedOnly = isReviewedOnly(vendor) && vendor.trustStatus !== "under_review";
+
+  /* Segment-aware wording. The Customers segment says "Confirmed" where the
+     Vendors segment says "Trusted" — a label alias over one tier and one
+     future endpoint, never a second state. Read through the same helper the
+     list uses so the popup and the row it opened from can never disagree. */
+  const isCustomer = vendorSegment(vendor) === "customer";
+  const nounTitle = isCustomer ? "Customer" : "Vendor";
+  const noun = isCustomer ? "customer" : "vendor";
+  const trustedWord = isCustomer ? "Confirmed" : "Trusted";
+  const grantLabel = isCustomer ? `Confirm ${nounTitle}` : `Trust ${nounTitle}`;
+  const restoreLabel = isCustomer ? "Restore Confirmation" : "Restore Trust";
+
+  const chipLabel =
+    vendor.trustStatus === "under_review"
+      ? "Paused"
+      : vendor.trustStatus === "trusted"
+        ? trustedWord
+        : meta.label;
 
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
@@ -138,12 +216,10 @@ export function VendorDetailPopup({
             <DialogPrimitive.Title asChild>
               <p className="-translate-x-1/2 absolute font-['Gilroy',sans-serif] font-semibold leading-[24px] left-1/2 not-italic text-[#a8b9f4] text-[20px] text-center top-[calc(50%-12px)] whitespace-nowrap">
                 {vendor.trustStatus === "new"
-                  ? "New Vendor"
+                  ? `New ${nounTitle}`
                   : vendor.trustStatus === "trusted"
-                    ? "Trusted Vendor"
-                    : vendor.trustStatus === "known"
-                      ? "Suggested Vendor"
-                      : "Review Vendor"}
+                    ? `${trustedWord} ${nounTitle}`
+                    : `Review ${nounTitle}`}
               </p>
             </DialogPrimitive.Title>
             <DialogPrimitive.Close
@@ -192,7 +268,7 @@ export function VendorDetailPopup({
                           : meta.chipText,
                     }}
                   >
-                    {vendor.trustStatus === "under_review" ? "Paused" : meta.label}
+                    {chipLabel}
                   </p>
                 </div>
               </div>
@@ -209,11 +285,7 @@ export function VendorDetailPopup({
               <div className="border border-[#1d2132] border-solid rounded-[12px] w-full">
                 <div className="flex items-center p-[8px] w-full">
                   <div className="flex flex-1 gap-[8px] items-start min-w-px">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[2px]">
-        <circle cx="8" cy="8" r="7" stroke="#6c779d" strokeWidth="1.3" />
-        <path d="M8 7.3v4.2" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" />
-        <circle cx="8" cy="4.7" r="0.9" fill="#6c779d" />
-      </svg>
+                    <InfoIcon color="#6c779d" className="mt-[2px]" />
                     <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] flex-1 min-w-px">
                       {vendor.wasTrustedLabel}
                     </p>
@@ -225,11 +297,7 @@ export function VendorDetailPopup({
               <div className="border border-[#1d2132] border-solid rounded-[12px] w-full">
                 <div className="flex items-center p-[8px] w-full">
                   <div className="flex flex-1 gap-[8px] items-start min-w-px">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[2px]">
-        <circle cx="8" cy="8" r="7" stroke="#6c779d" strokeWidth="1.3" />
-        <path d="M8 7.3v4.2" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" />
-        <circle cx="8" cy="4.7" r="0.9" fill="#6c779d" />
-      </svg>
+                    <InfoIcon color="#6c779d" className="mt-[2px]" />
                     <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] flex-1 min-w-px">
                       {vendor.trustGrantedLabel}
                     </p>
@@ -241,11 +309,7 @@ export function VendorDetailPopup({
               <div className="border border-[#1d2132] border-solid rounded-[12px] w-full">
                 <div className="flex items-center p-[8px] w-full">
                   <div className="flex flex-1 gap-[8px] items-start min-w-px">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[2px]">
-        <circle cx="8" cy="8" r="7" stroke="#6c779d" strokeWidth="1.3" />
-        <path d="M8 7.3v4.2" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" />
-        <circle cx="8" cy="4.7" r="0.9" fill="#6c779d" />
-      </svg>
+                    <InfoIcon color="#6c779d" className="mt-[2px]" />
                     <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] flex-1 min-w-px">
                       Only {vendor.history.paymentCount} payment{vendor.history.paymentCount === 1 ? "" : "s"} on record. Brain needs more history before suggesting trust.
                     </p>
@@ -257,14 +321,10 @@ export function VendorDetailPopup({
               <div className="border border-[#1d2132] border-solid rounded-[12px] w-full">
                 <div className="flex items-center p-[8px] w-full">
                   <div className="flex flex-1 gap-[8px] items-start min-w-px">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[2px]">
-        <circle cx="8" cy="8" r="7" stroke="#a8b9f4" strokeWidth="1.3" />
-        <path d="M8 7.3v4.2" stroke="#a8b9f4" strokeWidth="1.3" strokeLinecap="round" />
-        <circle cx="8" cy="4.7" r="0.9" fill="#a8b9f4" />
-      </svg>
+                    <InfoIcon color="#a8b9f4" className="mt-[2px]" />
                     <div className="flex flex-col gap-[8px] flex-1 min-w-px">
                       <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#a8b9f4] text-[14px]">
-                        Brain suggests trusting this vendor.
+                        Brain suggests trusting this {noun}.
                       </p>
                       <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px]">
                         Based on consistent payment history and no unresolved flags. You decide, trust is never auto-granted.
@@ -297,30 +357,21 @@ export function VendorDetailPopup({
                   {vendor.flags.length === 1 ? "Active Flag" : "Active Flags"}
                 </SectionLabel>
                 {vendor.flags.map((flag, idx) => (
-                  <div
-                    key={idx}
-                    className="bg-[#350011] border border-[rgba(210,3,68,0.2)] border-solid flex items-start p-[8px] rounded-[12px] w-full"
-                  >
-                    <div className="flex flex-1 gap-[8px] items-start min-w-px">
-                      <img src={alertFlagIcon} alt="" className="size-[16px] shrink-0 mt-[1px]" />
-                      <div className="flex flex-1 flex-col gap-[8px] items-start justify-center min-w-px">
-                        <p className="[font-family:'Gilroy',sans-serif] font-bold text-[14px] leading-[16px] text-[#d20344] uppercase w-full">
-                          {flag.label}
+                  <AlertCallout key={idx} title={flag.label}>
+                    <div className="flex flex-col gap-[8px] items-start w-full">
+                      {flag.kind === "bank_detail_change" && flag.priorAccountLast4 && flag.newAccountLast4 && (
+                        <p className="[font-family:'JetBrains_Mono',monospace] text-[12px] w-full">
+                          Account changed from ···{flag.priorAccountLast4} to ···{flag.newAccountLast4}
                         </p>
-                        {flag.kind === "bank_detail_change" && flag.priorAccountLast4 && flag.newAccountLast4 && (
-                          <p className="[font-family:'JetBrains_Mono',monospace] text-[12px] text-[#d20344] w-full">
-                            Account changed from ···{flag.priorAccountLast4} to ···{flag.newAccountLast4}
-                          </p>
-                        )}
-                        <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[16px] text-[#d20344] w-full">
-                          A trusted vendor with changed bank details is automatically placed under review. Verify the new account with the vendor before restoring trust.
-                        </p>
-                        <p className="[font-family:'JetBrains_Mono',monospace] text-[11px] text-[#d20344] w-full">
-                          Raised {flag.raisedAtLabel}
-                        </p>
-                      </div>
+                      )}
+                      <p className="w-full">
+                        A trusted vendor with changed bank details is automatically placed under review. Verify the new account with the vendor before restoring trust.
+                      </p>
+                      <p className="[font-family:'JetBrains_Mono',monospace] text-[11px] w-full">
+                        Raised {flag.raisedAtLabel}
+                      </p>
                     </div>
-                  </div>
+                  </AlertCallout>
                 ))}
               </div>
             )}
@@ -361,10 +412,16 @@ export function VendorDetailPopup({
               </div>
             )}
 
-            {/* Why Brain Suggests Trust (known / suggested only) */}
-            {vendor.trustStatus === "known" && vendor.eligibilityEvidence && vendor.eligibilityEvidence.length > 0 && (
+            {/* Payment eligibility evidence — shown when Brain has recorded
+                fact rows that inform a future trust decision. The section
+                header no longer claims Brain is "suggesting" trust: brain-core
+                has no provenance value meaning "Brain-suggested, not yet
+                confirmed", so the framing is forward-looking rather than
+                assertive. Rendered for any status that carries evidence rows,
+                not only for `known`. */}
+            {vendor.eligibilityEvidence && vendor.eligibilityEvidence.length > 0 && (
               <div className="flex flex-col gap-[16px] items-start w-full">
-                <SectionLabel>Why Brain Suggests Trust</SectionLabel>
+                <SectionLabel>Payment eligibility</SectionLabel>
                 <div className="bg-[#0a0c10] border border-[#1d2132] border-solid flex flex-col items-start rounded-[12px] w-full">
                   {vendor.eligibilityEvidence.map((ev, idx) => (
                     <div
@@ -407,190 +464,209 @@ export function VendorDetailPopup({
               </div>
             )}
 
-            {/* Action buttons */}
+            {/* Action buttons — wired to VendorsPanel mount-point handlers */}
             <div className="flex flex-col gap-[12px] w-full">
-              {/* Trusted → Revoke */}
+              {/* Trusted → Revoke + Delete */}
               {vendor.trustStatus === "trusted" && (
                 <div className="flex flex-col gap-[12px] w-full">
-                  {confirmingRevoke ? (
-                    <div className="flex flex-col gap-[12px] p-[16px] rounded-[12px] w-full" style={{ background: "rgba(210,3,68,0.06)", border: "1px solid rgba(210,3,68,0.15)" }}>
-                      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#d20344]">
-                        Revoke trust for {vendor.name}?
+                  {confirmingDelete ? (
+                    /* ── Delete confirmation ── */
+                    <div className="flex flex-col gap-[24px] items-start w-full">
+                      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[28px] text-[#414965] text-[22px] w-full">
+                        Deleting removes this {noun} entirely. Are you sure you want to delete this {noun}? This can't be undone.
                       </p>
-                      <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
-                        This vendor will move to <strong className="text-[#a8b9f4]">Known</strong> and will no longer be auto-paid by rules. Future payments will require manual approval.
-                      </p>
-                      <div className="flex gap-[8px] w-full">
+                      <div className="flex gap-[16px] items-center w-full">
                         <button
                           type="button"
-                          onClick={() => setConfirmingRevoke(false)}
-                          className="flex flex-1 items-center justify-center px-[12px] py-[10px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[13px] text-[#6c779d]"
+                          onClick={() => setConfirmingDelete(false)}
+                          className="flex flex-1 items-center justify-center px-[24px] py-[12px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[18px] leading-[24px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
                           style={{ background: "#222737" }}
+                          data-testid="button-delete-vendor-cancel"
                         >
-                          Cancel
+                          Edit
                         </button>
                         <button
                           type="button"
-                          onClick={() => { setConfirmingRevoke(false); onOpenChange(false); }}
-                          className="flex flex-1 items-center justify-center px-[12px] py-[10px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[13px] text-[#d20344]"
+                          onClick={() => {
+                            setConfirmingDelete(false);
+                            onOpenChange(false);
+                            onDeleteVendor?.(vendor.id, vendor.name);
+                          }}
+                          className="flex flex-1 items-center justify-center px-[24px] py-[12px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[#d20344] text-[18px] leading-[24px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d20344]"
                           style={{ background: "#350011" }}
-                          data-testid="button-confirm-revoke-trust"
+                          data-testid="button-confirm-delete-vendor"
                         >
-                          Revoke trust
+                          Delete
                         </button>
                       </div>
                     </div>
                   ) : (
-                    <button
-                      type="button"
-                      onClick={() => setConfirmingRevoke(true)}
-                      className="flex items-center justify-center px-[20px] py-[8px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#d20344] w-full"
-                      style={{ background: "#350011" }}
-                      data-testid="button-revoke-trust"
-                    >
-                      Revoke Trust
-                    </button>
+                    <>
+                      {/* trusted → paused via /trust/pause.
+                          "Flag" matches the Flagged chip the row lands under.
+                          The paused → trusted path uses /trust/restore (in the Flagged tab popup). */}
+                      <TrustButton
+                        label="Flag"
+                        onClick={() => onFlag?.(vendor.id)}
+                        busy={trustBusy}
+                        color="#ff9400"
+                        background="#4a2300"
+                        testId="button-flag-trust"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setConfirmingDelete(true)}
+                        disabled={trustBusy}
+                        className="flex items-center justify-center px-[20px] py-[8px] rounded-[100px] hover:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#6c779d] w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                        style={{ background: "#1d2132" }}
+                        data-testid="button-delete-vendor"
+                      >
+                        Delete {nounTitle}
+                      </button>
+                    </>
                   )}
                 </div>
               )}
 
-              {/* Known (Suggested) → Trust Vendor */}
-              {vendor.trustStatus === "known" && (
+              {/* Acknowledged (dismissed without granting) → seen from the
+                  Trusted/Confirmed tab. Grant is the only valid transition;
+                  re-flagging an acknowledged row is a non-transition, so no
+                  Flag button, and no Dismiss (it already happened). */}
+              {reviewedOnly && (
+                <div className="flex flex-col gap-[14px] w-full">
+                  <p
+                    className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]"
+                    data-testid="text-acknowledged-note"
+                  >
+                    You dismissed this {noun} without granting trust. You can still grant trust now if you've changed your mind.
+                  </p>
+                  <TrustButton
+                    label={grantLabel}
+                    onClick={() => onGrant?.(vendor.id)}
+                    busy={trustBusy}
+                    color="#42bf23"
+                    background="#123509"
+                    testId="button-grant-trust"
+                  />
+                </div>
+              )}
+
+              {/* known → Brain has seen payments; user confirms, flags, or dismisses.
+                  acknowledge is a valid transition from unreviewed per the matrix. */}
+              {vendor.trustStatus === "known" && !reviewedOnly && (
                 <div className="flex flex-col gap-[12px] w-full">
-                  {confirmingGrant ? (
-                    <div className="flex flex-col gap-[12px] p-[16px] rounded-[12px] w-full" style={{ background: "rgba(118,49,238,0.06)", border: "1px solid rgba(118,49,238,0.20)" }}>
-                      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#7631ee]">
-                        Grant trust to {vendor.name}?
-                      </p>
-                      <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
-                        This vendor will move to <strong className="text-[#a8b9f4]">Trusted</strong> and will be eligible for auto-pay by rules that include them in their allowlist.
-                      </p>
-                      <div className="flex gap-[8px] w-full">
-                        <button
-                          type="button"
-                          onClick={() => setConfirmingGrant(false)}
-                          className="flex flex-1 items-center justify-center px-[12px] py-[10px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[13px] text-[#6c779d]"
-                          style={{ background: "#222737" }}
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => { setConfirmingGrant(false); onOpenChange(false); }}
-                          className="flex flex-1 items-center justify-center px-[12px] py-[10px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[13px] text-[#ffffff]"
-                          style={{ background: PURPLE }}
-                          data-testid="button-confirm-grant-trust"
-                        >
-                          Grant trust
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setConfirmingGrant(true)}
-                      className="flex items-center justify-center px-[20px] py-[8px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#42bf23] w-full"
-                      style={{ background: "#123509" }}
-                      data-testid="button-grant-trust"
-                    >
-                      Trust Vendor
-                    </button>
-                  )}
+                  <TrustButton
+                    label={grantLabel}
+                    onClick={() => onGrant?.(vendor.id)}
+                    busy={trustBusy}
+                    color="#42bf23"
+                    background="#123509"
+                    testId="button-grant-trust"
+                  />
+                  <TrustButton
+                    label="Flag"
+                    onClick={() => onFlag?.(vendor.id)}
+                    busy={trustBusy}
+                    color="#ff9400"
+                    background="#4a2300"
+                    testId="button-flag-counterparty"
+                  />
+                  <TrustButton
+                    label="Dismiss"
+                    onClick={() => onAcknowledge?.(vendor.id)}
+                    busy={trustBusy}
+                    color="#6c779d"
+                    background="#1d2132"
+                    testId="button-acknowledge-counterparty"
+                  />
                 </div>
               )}
 
-              {/* Under review → Review the Change */}
+              {/* under_review covers two distinct states with different valid transitions:
+                    trustState === "paused"  → user previously flagged this row;
+                                               only /trust/restore returns it to trusted
+                                               (grant is invalid here per the transition matrix)
+                    trustState !== "paused"  → unreviewed + high/sanctioned risk_level;
+                                               /trust/grant is the correct move */}
               {vendor.trustStatus === "under_review" && (
-                <div className="flex flex-col gap-[12px] w-full">
-                  {!reviewed ? (
-                    <div className="flex flex-col gap-[12px] w-full">
-                      <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
-                        Trust is paused while you review the flag. Verify the new account directly with the vendor before restoring.
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => setReviewed(true)}
-                        className="flex items-center justify-center px-[20px] py-[8px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#ff9400] w-full"
-                        style={{ background: "#4a2300" }}
-                        data-testid="button-review-change"
-                      >
-                        Review the Change
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col gap-[12px] w-full">
-                      <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
-                        You've reviewed the change. Restore trust only if you've verified the new account directly with the vendor.
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => { setReviewed(false); onOpenChange(false); }}
-                        className="flex items-center justify-center px-[16px] py-[10px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#ffffff] w-full"
-                        style={{ background: ACTIVE }}
-                        data-testid="button-restore-trust"
-                      >
-                        Restore trust
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setReviewed(false)}
-                        className="flex items-center justify-center px-[16px] py-[10px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d] w-full"
-                        style={{ background: "transparent" }}
-                      >
-                        Go back
-                      </button>
-                    </div>
-                  )}
-                </div>
+                vendor.trustState === "paused" ? (
+                  <div className="flex flex-col gap-[14px] w-full">
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
+                      Trust is paused. Verify the {noun} account directly before restoring.
+                    </p>
+                    <TrustButton
+                      label={restoreLabel}
+                      onClick={() => onRestore?.(vendor.id)}
+                      busy={trustBusy}
+                      color="#42bf23"
+                      background="#123509"
+                      testId="button-restore-trust"
+                    />
+                    <TrustButton
+                      label="Dismiss"
+                      onClick={() => onAcknowledge?.(vendor.id)}
+                      busy={trustBusy}
+                      color="#6c779d"
+                      background="#1d2132"
+                      testId="button-acknowledge-counterparty"
+                    />
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-[14px] w-full">
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
+                      This {noun} carries a risk flag. Verify the account before granting trust.
+                    </p>
+                    <TrustButton
+                      label={grantLabel}
+                      onClick={() => onGrant?.(vendor.id)}
+                      busy={trustBusy}
+                      color="#42bf23"
+                      background="#123509"
+                      testId="button-grant-trust"
+                    />
+                    <TrustButton
+                      label="Dismiss"
+                      onClick={() => onAcknowledge?.(vendor.id)}
+                      busy={trustBusy}
+                      color="#6c779d"
+                      background="#1d2132"
+                      testId="button-acknowledge-counterparty"
+                    />
+                  </div>
+                )
               )}
 
-              {/* New → manual Trust */}
-              {vendor.trustStatus === "new" && (
+              {/* New → grant, flag, or dismiss.
+                  acknowledge is a valid transition from unreviewed per the matrix. */}
+              {vendor.trustStatus === "new" && !reviewedOnly && (
                 <div className="flex flex-col gap-[14px] w-full">
                   <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
-                    This vendor will be eligible for trust after a few more on-time payments with consistent amounts and no flags. You can still grant trust manually.
+                    This {noun} will be eligible for trust after a few more on-time payments with consistent amounts and no flags.
                   </p>
-                  {confirmingGrant ? (
-                    <div className="flex flex-col gap-[12px] p-[16px] rounded-[12px] w-full" style={{ background: "rgba(118,49,238,0.06)", border: "1px solid rgba(118,49,238,0.20)" }}>
-                      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#7631ee]">
-                        Grant trust to {vendor.name}?
-                      </p>
-                      <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
-                        Only {vendor.history.paymentCount} payment{vendor.history.paymentCount === 1 ? "" : "s"} on record. This vendor will move to <strong className="text-[#a8b9f4]">Trusted</strong> immediately.
-                      </p>
-                      <div className="flex gap-[8px] w-full">
-                        <button
-                          type="button"
-                          onClick={() => setConfirmingGrant(false)}
-                          className="flex flex-1 items-center justify-center px-[12px] py-[10px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[13px] text-[#6c779d]"
-                          style={{ background: "#222737" }}
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => { setConfirmingGrant(false); onOpenChange(false); }}
-                          className="flex flex-1 items-center justify-center px-[12px] py-[10px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[13px] text-[#ffffff]"
-                          style={{ background: PURPLE }}
-                          data-testid="button-confirm-grant-trust"
-                        >
-                          Grant trust
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex items-center w-full">
-                      <button
-                        type="button"
-                        onClick={() => setConfirmingGrant(true)}
-                        className="flex flex-1 gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#42bf23]"
-                        style={{ background: "#123509" }}
-                        data-testid="button-grant-trust"
-                      >
-                        Trust Vendor
-                      </button>
-                    </div>
-                  )}
+                  <TrustButton
+                    label={grantLabel}
+                    onClick={() => onGrant?.(vendor.id)}
+                    busy={trustBusy}
+                    color="#42bf23"
+                    background="#123509"
+                    testId="button-grant-trust"
+                  />
+                  <TrustButton
+                    label="Flag"
+                    onClick={() => onFlag?.(vendor.id)}
+                    busy={trustBusy}
+                    color="#ff9400"
+                    background="#4a2300"
+                    testId="button-flag-counterparty"
+                  />
+                  <TrustButton
+                    label="Dismiss"
+                    onClick={() => onAcknowledge?.(vendor.id)}
+                    busy={trustBusy}
+                    color="#6c779d"
+                    background="#1d2132"
+                    testId="button-acknowledge-counterparty"
+                  />
                 </div>
               )}
             </div>

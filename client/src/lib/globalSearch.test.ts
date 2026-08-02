@@ -17,12 +17,12 @@ const account = (id: string, name: string, institution?: string) =>
 describe("result builders", () => {
   it("routes each kind at a destination that already exists", () => {
     expect(decision("p1", "Confirm treasury transfer").href).toBe("/decisions?proposal=p1");
-    expect(vendor("v1", "Quick Pay").href).toBe("/ledger?tab=vendors&vendor=v1");
+    expect(vendor("v1", "Quick Pay").href).toBe("/ledger?tab=counterparties&vendor=v1");
     expect(account("a1", "Operating").href).toBe("/ledger?tab=accounts&account=a1");
   });
 
   it("escapes ids rather than splicing them into a query string raw", () => {
-    expect(vendor("a b&c=d", "X").href).toBe("/ledger?tab=vendors&vendor=a%20b%26c%3Dd");
+    expect(vendor("a b&c=d", "X").href).toBe("/ledger?tab=counterparties&vendor=a%20b%26c%3Dd");
   });
 
   it("keys are unique across kinds so a shared id cannot collide", () => {

@@ -81,6 +81,17 @@ known-good term from the API at run time and abort loudly if none can be found:
 without a term that genuinely matches, "found nothing" and "nothing seeded" are
 indistinguishable and the run proves nothing.
 
+## A control swap silently rots the QA scripts
+
+The QA scripts are plain `.mjs` — nothing type-checks them, so replacing a native
+`<select>` with a custom button/listbox leaves `page.selectOption` calls in place
+that only fail at run time, and they throw rather than fail a check, killing the
+rest of the run.
+
+**How to apply:** whenever a form control changes shape, grep `scripts/` for the
+Playwright API tied to the old control (`selectOption`, `check`, `fill`) before
+assuming the suite still exercises that screen.
+
 ## Don't identify a screen by data-dependent markers
 
 A routing check that detects "which panel is open" by looking for a control

@@ -579,9 +579,15 @@ function localQuestionToRecord(q: AssistantQuestion): AuditRecord {
   };
 }
 
+/** How many events a single audit read asks brain-core for. The endpoint pages
+ *  with a cursor this app does not follow, so a response of exactly this many
+ *  events means "there are at least this many", never "this is all of them".
+ *  Surfaces that show a total must say so — see `atEventLimit` below. */
+export const AUDIT_EVENTS_LIMIT = 100;
+
 export function useBrainAuditRecords() {
   const events = useQuery<AuditEventsResponse>({
-    queryKey: ["/api/brain/audit/events?limit=100"],
+    queryKey: [`/api/brain/audit/events?limit=${AUDIT_EVENTS_LIMIT}`],
     retry: false,
   });
   const anchor = useQuery<BrainAnchor>({
@@ -661,5 +667,11 @@ export function useBrainAuditRecords() {
     isLoading: events.isLoading || anchor.isLoading || localQuestions.isLoading,
     isError: events.isError,
     records,
+    /* Raw count from brain-core's page, BEFORE local assistant-question rows are
+       merged in. Only this number can be compared against AUDIT_EVENTS_LIMIT:
+       the cap applies to the /audit/events read alone, so measuring the merged
+       list would let a couple of local rows push a short page over the line and
+       make the UI claim there is more history than there is. */
+    eventCount: events.data?.events.length ?? 0,
   };
 }

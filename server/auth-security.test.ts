@@ -182,28 +182,62 @@ describe("account deletion hygiene", () => {
     expect(await storage.getBrainAgentToken(`tenant-${unique}`)).toBeUndefined();
   });
 
-  it("reads and revokes legacy plaintext Plaid tokens", async () => {
+  /* ── Plaid revocation on account deletion ────────────────────────────────
+     These run against WHICHEVER storage backend is active, which is the whole
+     point: `storage` is picked at module load from DATABASE_URL, so a test that
+     only works in memory verifies nothing about the configuration that actually
+     ships. The earlier version of the legacy-token test seeded through
+     MemStorage's private `bankConns` Map and therefore threw before asserting
+     anything whenever a database was configured — which meant nothing anywhere
+     in this suite proved that deleting an account revokes bank access at all. */
+
+  /** A bank row whose STORED access token is plaintext — the shape rows had
+   *  before encryption-at-rest existed. Both backends encrypt on the public
+   *  write path, so a legacy row can only be produced by overwriting the stored
+   *  value afterwards. */
+  async function seedLegacyPlaintextConnection(bank: BankConnection): Promise<void> {
+    await storage.createBankConnection(bank);
+    if (process.env.DATABASE_URL) {
+      const [{ db }, { bankConnections }, { and, eq }] = await Promise.all([
+        import("./db"),
+        import("@shared/schema"),
+        import("drizzle-orm"),
+      ]);
+      await db
+        .update(bankConnections)
+        .set({ accessToken: bank.accessToken })
+        .where(and(eq(bankConnections.userId, bank.userId), eq(bankConnections.itemId, bank.itemId)));
+    } else {
+      const internals = storage as unknown as { bankConns: Map<string, BankConnection> };
+      internals.bankConns.set(`${bank.userId}::${bank.itemId}`, { ...bank });
+    }
+  }
+
+  const bankFixture = (userId: string, unique: string, accessToken: string): BankConnection => ({
+    userId,
+    itemId: `item-${unique}`,
+    accessToken,
+    institutionId: "ins_legacy",
+    institutionName: "Legacy Bank",
+    accounts: [],
+    connectedAt: new Date().toISOString(),
+  });
+
+  const makeUser = async (prefix: string) => {
     const unique = `${Date.now().toString(36)}${Math.random().toString(16).slice(2, 8)}`;
     const user = await storage.createUser({
-      username: `legacy-${unique}`,
-      email: `legacy-${unique}@example.com`,
+      username: `${prefix}-${unique}`,
+      email: `${prefix}-${unique}@example.com`,
       password: "hashed",
-      name: "Legacy Token",
+      name: "Token Owner",
     });
+    return { user, unique };
+  };
+
+  it("reads and revokes legacy plaintext Plaid tokens", async () => {
+    const { user, unique } = await makeUser("legacy");
     const legacyToken = `legacy-token-${unique}`;
-    const bank: BankConnection = {
-      userId: user.id,
-      itemId: `legacy-item-${unique}`,
-      accessToken: legacyToken,
-      institutionId: "ins_legacy",
-      institutionName: "Legacy Bank",
-      accounts: [],
-      connectedAt: new Date().toISOString(),
-    };
-    const storageInternals = storage as unknown as {
-      bankConns: Map<string, BankConnection>;
-    };
-    storageInternals.bankConns.set(`${bank.userId}::${bank.itemId}`, bank);
+    await seedLegacyPlaintextConnection(bankFixture(user.id, unique, legacyToken));
 
     const listed = await storage.listBankConnections(user.id);
     expect(listed).toHaveLength(1);
@@ -212,5 +246,41 @@ describe("account deletion hygiene", () => {
     const deleted = await storage.deleteUserAccount({ userId: user.id });
     expect(deleted.bankConnectionsDeleted).toBe(1);
     expect(plaidMocks.itemRemove).toHaveBeenCalledWith({ access_token: legacyToken });
+    expect(deleted.bankTokensRevoked).toBe(1);
+    expect(deleted.bankTokenRevocationsFailed).toBe(0);
+  });
+
+  it("revokes normally-encrypted tokens with the DECRYPTED value", async () => {
+    /* The regression this exists to catch: sending the stored column straight to
+       Plaid. Ciphertext is a well-formed string, so itemRemove would be called
+       and nothing would look wrong — but the token would stay live. */
+    const { user, unique } = await makeUser("encrypted");
+    const realToken = `access-sandbox-${unique}`;
+    await storage.createBankConnection(bankFixture(user.id, unique, realToken));
+
+    const deleted = await storage.deleteUserAccount({ userId: user.id });
+    expect(deleted.bankConnectionsDeleted).toBe(1);
+    expect(plaidMocks.itemRemove).toHaveBeenCalledWith({ access_token: realToken });
+    expect(deleted.bankTokensRevoked).toBe(1);
+    expect(deleted.bankTokenRevocationsFailed).toBe(0);
+  });
+
+  it("reports a failed revocation instead of swallowing it", async () => {
+    /* Deletion must still complete — a person's right to delete their account
+       cannot depend on Plaid being up — but the orphaned credential has to be
+       reported, not logged into the void. */
+    const { user, unique } = await makeUser("revokefail");
+    const token = `access-sandbox-${unique}`;
+    await storage.createBankConnection(bankFixture(user.id, unique, token));
+    plaidMocks.itemRemove.mockRejectedValueOnce(new Error("plaid unavailable"));
+
+    const deleted = await storage.deleteUserAccount({ userId: user.id });
+    expect(plaidMocks.itemRemove).toHaveBeenCalledWith({ access_token: token });
+    expect(deleted.bankTokenRevocationsFailed).toBe(1);
+    expect(deleted.bankTokensRevoked).toBe(0);
+    // The user is still deleted, and the row is still gone.
+    expect(deleted.user?.id).toBe(user.id);
+    expect(deleted.bankConnectionsDeleted).toBe(1);
+    expect(await storage.getUser(user.id)).toBeUndefined();
   });
 });

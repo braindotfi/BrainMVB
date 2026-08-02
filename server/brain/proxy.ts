@@ -600,6 +600,14 @@ export function createBrainProxyRouter(): Router {
     { method: "delete", mount: "/sources/:id", upstream: (p) => `/sources/${esc(p.id)}`, principal: "agent", scope: "raw:write" },
     // ledger_and_canonical
     { method: "patch", mount: "/ledger/counterparties/:id", upstream: (p) => `/ledger/counterparties/${esc(p.id)}`, principal: "member", scope: "ledger:write" },
+    // trust_transitions — grant/pause/acknowledge/restore per counterparty.
+    // Transition matrix (brain-core PR #397): unreviewed→trusted(grant), unreviewed→acknowledged(acknowledge),
+    //   trusted→paused(pause), paused→trusted(restore), paused→acknowledged(acknowledge).
+    // There is NO /trust/revoke route. member token, ledger:write. GIT deedc628, migration 0052.
+    { method: "post", mount: "/ledger/counterparties/:id/trust/grant", upstream: (p) => `/ledger/counterparties/${esc(p.id)}/trust/grant`, principal: "member", scope: "ledger:write" },
+    { method: "post", mount: "/ledger/counterparties/:id/trust/pause", upstream: (p) => `/ledger/counterparties/${esc(p.id)}/trust/pause`, principal: "member", scope: "ledger:write" },
+    { method: "post", mount: "/ledger/counterparties/:id/trust/acknowledge", upstream: (p) => `/ledger/counterparties/${esc(p.id)}/trust/acknowledge`, principal: "member", scope: "ledger:write" },
+    { method: "post", mount: "/ledger/counterparties/:id/trust/restore", upstream: (p) => `/ledger/counterparties/${esc(p.id)}/trust/restore`, principal: "member", scope: "ledger:write" },
     { method: "post", mount: "/ledger/normalize", upstream: () => "/ledger/normalize", principal: "member", scope: "ledger:write" },
     { method: "post", mount: "/ledger/reconcile", upstream: () => "/ledger/reconcile", principal: "member", scope: "ledger:write" },
     // wiki_memory_policy

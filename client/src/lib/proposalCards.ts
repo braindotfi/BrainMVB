@@ -526,10 +526,14 @@ export function buildFlaggedBy(policy: ProposalPolicy | null | undefined): Flagg
   const approverSuffix = approvers.length > 0 ? ` · requires ${approvers.map(humanizeEnumValue).join(", ")} approval` : "";
 
   const policyId = policy.policy_id?.trim();
-  if (policyId) return { text: `policy ${policyId}${version}${approverSuffix}`, source: "policy_id" };
+  if (policyId && isHumanReadablePolicyReference(policyId)) {
+    return { text: `policy ${humanizePolicyReference(policyId)}${version}${approverSuffix}`, source: "policy_id" };
+  }
 
   const ruleId = policy.matched_rule_id?.trim();
-  if (ruleId) return { text: `rule ${ruleId}${approverSuffix}`, source: "matched_rule_id" };
+  if (ruleId && !isRawIdentifier(ruleId)) {
+    return { text: `rule ${humanizeRuleId(ruleId)}${approverSuffix}`, source: "matched_rule_id" };
+  }
 
   // Rung 3 — describe the decision from whatever policy content exists.
   const explanation = policy.explanation?.trim();
@@ -551,6 +555,27 @@ export function buildFlaggedBy(policy: ProposalPolicy | null | undefined): Flagg
 function humanizeRuleId(ruleId: string): string {
   const words = ruleId.trim().replace(/[-_]+/g, " ");
   return `the "${words}" rule`;
+}
+
+/** Policy ids are authorities, not human labels. Preserve a readable policy
+ * name when core gives one, but never put a ULID or other opaque identifier on
+ * the primary card face. */
+function humanizePolicyReference(policyId: string): string {
+  return policyId
+    .replace(/^policy[-_:]?/i, "")
+    .replace(/[-_]+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase()) || "the active policy";
+}
+
+/** `pol_8231`, `policy_01KY…`, and similar values are identifiers even when
+ * they are not ULIDs. They may be useful in Technical Detail, but turning them
+ * into title case does not make them a human label for the primary card. */
+function isHumanReadablePolicyReference(value: string): boolean {
+  const v = value.trim();
+  if (!v || isRawIdentifier(v)) return false;
+  if (/^(?:pol|policy)[-_][a-z0-9][a-z0-9_-]*$/i.test(v)) return false;
+  return /[A-Z\s]/.test(v);
 }
 
 /* ── Decisions ──────────────────────────────────────────────────────────────── */
@@ -900,7 +925,7 @@ export function buildCollectionsDraft(
 
   const subject = [invoice ? `Invoice ${invoice}` : "Outstanding balance", amount]
     .filter(Boolean)
-    .join(" — ");
+    .join(": ");
 
   const body = [
     `Hi ${customer ?? "there"},`,

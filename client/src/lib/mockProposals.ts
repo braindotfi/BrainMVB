@@ -40,7 +40,7 @@ export const MOCK_PROPOSALS: Proposal[] = [
       {
         kind: "invoice",
         title: "Invoice #CE-2026-0702",
-        subtitle: "Billing period Jun 1 – Jun 30 · $486.00",
+        subtitle: "Billing period Jun 1 to Jun 30 · $486.00",
         documentId: "CE-2026-0631",
       },
       {
@@ -247,7 +247,7 @@ export const MOCK_PROPOSALS: Proposal[] = [
       {
         kind: "forecast",
         title: "Expected range",
-        subtitle: "$840 – $940 based on trailing 12 months",
+        subtitle: "$840 to $940 based on trailing 12 months",
       },
     ],
     confidence: {

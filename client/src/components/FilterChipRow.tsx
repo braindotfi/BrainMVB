@@ -1,26 +1,38 @@
 /**
- * A secondary filter control, deliberately not a tab bar.
+ * The secondary filter control used by the Ledger's Vendors and Rules tabs.
  *
- * When Vendors and Rules became Ledger tabs, their own tab bars would have sat
- * directly under the Ledger's — two near-identical pill rows, where the top one
- * changes the page and the bottom one filters a list. That is the tabs-within-tabs
- * pattern this restructure is removing everywhere else.
+ * Visually this is an enclosed pill track (a #06070a rail holding rounded-[100px]
+ * pills), matching the Figma tab component. Semantically it is still a filter,
+ * not a tab bar: Needs Review / New / Trusted / Suggested are filters over one
+ * vendor list, and Default / Automations / Guardrails / Suggested are filters
+ * over one rule set.
  *
- * These controls were never really tabs anyway: Trusted / Needs Review / New are
- * filters over one vendor list, and Default / Automations / Guardrails / Suggested
- * are filters over one rule set. So they render as filters — quieter, square, no
- * enclosing track — and the orange pill bar stays the single signal for "this
- * changes which page you are on".
- *
- * `aria-pressed` rather than `role="tab"` for the same reason: they are toggles
- * over a list, not a tabbed region, and mislabelling them makes a screen reader
- * announce a second set of page tabs.
+ * That distinction is why these stay `role="group"` + `aria-pressed` rather than
+ * `role="tab"`. The Ledger's own orange pill bar is the real tab bar; announcing
+ * a second tabbed region here would tell a screen-reader user they had changed
+ * page when they had only narrowed a list.
  */
 
 export interface FilterChip {
   value: string;
   label: string;
-  /** Omitted when a count would be misleading — e.g. a list that has not loaded. */
+  /**
+   * "amber" → attention treatment: the label keeps its orange tone even when the
+   * pill is not selected, so a filter worth noticing stays visible when inactive.
+   * Omit for neutral.
+   */
+  variant?: "amber";
+  /**
+   * Live count rendered as a badge after the label.
+   *
+   * Deliberately opt-in per chip rather than on by default. The badge exists to
+   * carry an ACTION signal — "N things are waiting for you" — from anywhere on
+   * the screen, including while a different filter is active. Chips whose count
+   * carries no such signal stay clean, per the Figma direction.
+   *
+   * Omit (or pass undefined) for no badge; 0 renders a badge reading "0", which
+   * is a meaningful "nothing waiting" for an attention filter.
+   */
   count?: number;
 }
 
@@ -35,9 +47,18 @@ interface Props {
 
 export function FilterChipRow({ chips, value, onChange, label, testIdPrefix }: Props): JSX.Element {
   return (
-    <div role="group" aria-label={label} className="flex gap-[6px] items-center flex-wrap shrink-0">
+    <div
+      role="group"
+      aria-label={label}
+      className="inline-flex gap-[2px] items-center p-[2px] rounded-[400px] shrink-0 w-fit max-w-full flex-wrap"
+      style={{ background: "#06070a" }}
+    >
       {chips.map((chip) => {
         const active = chip.value === value;
+        // Selected is always the amber pill; an unselected amber chip keeps its
+        // orange label so attention filters read as such from across the row.
+        const text = active ? "#ff9400" : chip.variant === "amber" ? "#ff9400" : "#414965";
+
         return (
           <button
             key={chip.value}
@@ -45,29 +66,24 @@ export function FilterChipRow({ chips, value, onChange, label, testIdPrefix }: P
             aria-pressed={active}
             onClick={() => onChange(chip.value)}
             data-testid={`${testIdPrefix}-${chip.value.toLowerCase().replace(/\s+/g, "-")}`}
-            /* border is always present so toggling never shifts layout by a pixel;
-               only its colour changes. */
             className={[
-              "flex items-center gap-[6px] px-[10px] py-[5px] rounded-[8px] border border-solid transition-colors",
+              "flex items-center justify-center px-[16px] py-[8px] rounded-[100px] shrink-0 transition-colors",
               "outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]",
-              active
-                ? "bg-[#11141b] border-[#1d2132]"
-                : "bg-transparent border-transparent hover:bg-[#0a0c10]",
+              active ? "" : "hover:bg-[#11141b]",
             ].join(" ")}
+            style={{ background: active ? "#4a2300" : "transparent" }}
           >
             <span
-              className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[13px] whitespace-nowrap transition-colors"
-              style={{ color: active ? "#a8b9f4" : "#414965" }}
+              className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap transition-colors"
+              style={{ color: text }}
             >
               {chip.label}
             </span>
-            {chip.count != null && (
+            {chip.count !== undefined && (
               <span
-                className="[font-family:'Gilroy',sans-serif] font-semibold leading-[12px] text-[11px] px-[5px] py-[2px] rounded-[4px]"
-                style={{
-                  background: active ? "#414965" : "#0a0c10",
-                  color: active ? "#a8b9f4" : "#414965",
-                }}
+                data-testid={`${testIdPrefix}-${chip.value.toLowerCase().replace(/\s+/g, "-")}-count`}
+                className="ml-[6px] flex items-center justify-center min-w-[18px] px-[5px] py-[1px] rounded-[4px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[11px] text-center whitespace-nowrap transition-colors"
+                style={{ background: text, color: "#0a0c10" }}
               >
                 {chip.count}
               </span>

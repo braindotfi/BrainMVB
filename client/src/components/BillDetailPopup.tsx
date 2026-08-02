@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import type { ReactNode } from "react";
 import { ChevronRight } from "lucide-react";
-import alertIcon from "@assets/Icons_1783274957589.png";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { DocumentViewerPopup } from "@/components/DocumentViewerPopup";
 import { useCurrency } from "@/lib/useCurrency";
@@ -11,6 +10,7 @@ import { toBrainInvoiceDocument } from "@/lib/brainInvoiceDocument";
 import arrowIcon from "@assets/arrow_1783201262245.png";
 import documentIcon from "@assets/doc_1783202136247.png";
 import closeIcon from "@assets/Close_1783293571882.png";
+import { AlertCallout } from "@/components/Callout";
 
 /* ── Bill detail popup ───────────────────────────────────────────────────────────
    Centered modal (DialogPrimitive) pixel-matched to Figma "Bill Details"
@@ -224,23 +224,13 @@ export function BillDetailPopup({
                   {isFlagged && (
                     <div className="flex flex-col gap-[16px] items-start w-full" data-testid="bill-flags">
                       <SectionLabel>Needs a Closer Look</SectionLabel>
-                      <div
-                        className="bg-[#350011] border border-[rgba(210,3,68,0.2)] border-solid flex items-start p-[8px] rounded-[12px] w-full"
-                      >
-                        <div className="flex flex-1 gap-[8px] items-start min-w-px">
-                          <img src={alertIcon} alt="" className="shrink-0 size-[16px] rounded-full mt-[1px]" />
-                          <div className="flex flex-1 flex-col gap-[8px] items-start justify-center min-w-px">
-                            <p className="[font-family:'Gilroy',sans-serif] font-bold text-[14px] leading-[16px] text-[#d20344] uppercase w-full">
-                              ANOMALIES DETECTED
-                            </p>
-                            {flags.map((f) => (
-                              <p key={f} className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[16px] text-[#d20344] w-full">
-                                {humanizeFlag(f)}
-                              </p>
-                            ))}
-                          </div>
+                      <AlertCallout title="Anomalies detected">
+                        <div className="flex flex-col gap-[8px] items-start w-full">
+                          {flags.map((f) => (
+                            <p key={f} className="w-full">{humanizeFlag(f)}</p>
+                          ))}
                         </div>
-                      </div>
+                      </AlertCallout>
                     </div>
                   )}
 

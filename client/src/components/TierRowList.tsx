@@ -18,6 +18,7 @@ import { ActionButton, type ActionTone } from "@/components/ProposalCardParts";
 import { TIER_META, TIER_ORDER, type ProposalTier } from "@/lib/proposalTiers";
 import type { RowTier } from "@/lib/decisionFilters";
 import { Divider } from "@/components/LedgerWidgets";
+import { UnavailableDataBox } from "@/components/Callout";
 
 /* Tier accents. Red = Urgent, amber = Waiting on you, periwinkle = Insights —
    the palette already used for Inbox status tags, not the prototype's colours. */
@@ -91,8 +92,8 @@ export const TierRow = ({ row }: { row: TierRowModel }) => {
   const accent = ROW_ACCENT[row.tier];
   return (
     <div
-      className={`flex flex-col sm:flex-row gap-[12px] items-start sm:items-center justify-between px-[8px] py-[8px] w-full bg-[#0a0c10] rounded-[8px] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] ${
-        accent ? "border-l-[3px] border-solid" : ""
+      className={`flex flex-col sm:flex-row gap-[12px] items-start sm:items-center justify-between px-[16px] py-[12px] w-full bg-[#0a0c10] transition-colors hover:bg-[#11141b] border-b border-solid border-[#1d2132] last:border-b-0 ${
+        accent ? "border-l-[3px]" : ""
       } ${row.onOpenDetail ? "cursor-pointer" : ""}`}
       style={accent ? { borderLeftColor: accent } : undefined}
       data-testid={`${row.testIdPrefix}-${row.id}`}
@@ -108,7 +109,7 @@ export const TierRow = ({ row }: { row: TierRowModel }) => {
           }
         : {})}
     >
-      {row.select && (
+      {row.select ? (
         <input
           type="checkbox"
           checked={row.select.checked}
@@ -119,10 +120,12 @@ export const TierRow = ({ row }: { row: TierRowModel }) => {
           title={row.select.title}
           aria-label={row.select.label}
           data-testid={`${row.testIdPrefix}-${row.id}-select`}
-          className="mt-[3px] sm:mt-0 size-[16px] shrink-0 accent-[#7631ee] cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-[3px]"
+          className="decision-checkbox mt-[3px] sm:mt-0 size-[16px] shrink-0 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
         />
+      ) : (
+        <div aria-hidden="true" className="size-[16px] shrink-0" />
       )}
-      <div className="flex flex-col gap-[3px] items-start min-w-px flex-1">
+      <div className="flex flex-col gap-[4px] items-start min-w-px flex-1">
         {/* Wraps rather than truncates. These titles carry the amount and the
             counterparty; an ellipsis in a ~420px column hides exactly the part
             the reader needs to decide. */}
@@ -132,7 +135,7 @@ export const TierRow = ({ row }: { row: TierRowModel }) => {
           </p>
           {row.badge && (
             <span
-              className={`${row.badge.className} border border-solid rounded-[22px] px-[8px] py-[3px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-center whitespace-nowrap shrink-0`}
+              className={`${row.badge.className} border border-solid rounded-[22px] px-[8px] py-[2px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-center whitespace-nowrap shrink-0`}
               data-testid={`${row.testIdPrefix}-${row.id}-badge`}
             >
               {row.badge.label}
@@ -140,12 +143,12 @@ export const TierRow = ({ row }: { row: TierRowModel }) => {
           )}
         </div>
         {row.subtitle && (
-          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[13px] w-full">
+          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] w-full">
             {row.subtitle}
           </p>
         )}
         {row.note && (
-          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#414965] text-[12px] w-full">
+          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] w-full">
             {row.note}
           </p>
         )}
@@ -184,22 +187,19 @@ export const TierSection = ({ tier, rows }: { tier: ProposalTier; rows: TierRowM
         >
           {meta.title}
         </p>
+        <div className="flex items-center justify-center min-w-[18px] px-[5px] py-[1px] rounded-[4px] shrink-0" style={{ background: accent }}>
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#0a0c10] text-[11px] text-center whitespace-nowrap">{rows.length}</p>
+        </div>
         {meta.note && (
           <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[12px] truncate">
-            — {meta.note}
+            Note: {meta.note}
           </p>
         )}
-        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[12px] ml-auto shrink-0">
-          {rows.length}
-        </p>
       </div>
       <div className="flex flex-col w-full rounded-[12px] border border-solid border-[#1d2132] bg-[#0a0c10] overflow-hidden">
-        <div className="flex flex-col gap-[8px] p-[8px] w-full">
-          {rows.map((row, idx) => (
-            <div key={row.id} className="flex flex-col gap-[8px] w-full">
-              <TierRow row={row} />
-              {idx < rows.length - 1 && <Divider />}
-            </div>
+        <div className="flex flex-col w-full">
+          {rows.map((row) => (
+            <TierRow key={row.id} row={row} />
           ))}
         </div>
       </div>
@@ -217,9 +217,11 @@ export const TierSection = ({ tier, rows }: { tier: ProposalTier; rows: TierRowM
 export const TierSections = ({
   rows,
   emptyMessage,
+  unavailable = false,
 }: {
   rows: TierRowModel[];
   emptyMessage: string;
+  unavailable?: boolean;
 }) => {
   const groups = useMemo(
     () => TIER_ORDER.map((tier) => ({ tier, rows: rows.filter((r) => r.tier === tier) })).filter((g) => g.rows.length > 0),
@@ -227,6 +229,9 @@ export const TierSections = ({
   );
 
   if (groups.length === 0) {
+    if (unavailable) {
+      return <UnavailableDataBox testId="tier-sections-empty">{emptyMessage}</UnavailableDataBox>;
+    }
     return (
       <div
         className="flex items-center px-[16px] py-[20px] w-full rounded-[12px] border border-solid border-[#1d2132] bg-[#0a0c10]"

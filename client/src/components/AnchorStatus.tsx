@@ -29,7 +29,7 @@ function HashRow({
       {/* Value column — Gilroy Medium 13px #a8b9f4 (or #6c779d when dim) */}
       <div className="content-stretch flex flex-[1_0_0] flex-col items-start justify-center min-w-px px-[12px] py-[8px]">
         <p className={`[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[13px] break-all ${valueDim ? "text-[#6c779d]" : "text-[#a8b9f4]"}`}>
-          {value ?? "—"}
+          {value ?? "-"}
         </p>
       </div>
     </div>
@@ -58,7 +58,7 @@ export function AnchorStatus({
   const statusLabel = isAnchored
     ? "Anchored · tamper-evident"
     : isRecorded
-      ? "Recorded & verifiable — on-chain anchor pending."
+      ? "Recorded and verifiable. On-chain anchor pending."
       : "Proof incomplete. This record hasn't been anchored on-chain yet.";
 
   const statusColor = isAnchored ? "text-[#42bf23]" : isRecorded ? "text-[#f59e0b]" : "text-[#a8b9f4]";

@@ -138,14 +138,14 @@ export function ChangePlanModal({
               >
                 <PlanRadio active={isSelected} />
                 <div className="flex-1 min-w-0 flex flex-col justify-center">
-                  <p className="font-['Gilroy',sans-serif] font-medium text-[16px] leading-[20px]" style={{ color: nameColor }}>
+                <p className="font-['Gilroy',sans-serif] font-semibold text-[14px] leading-[20px]" style={{ color: nameColor }}>
                     {plan.name}
                   </p>
                   <div className="flex gap-[4px] items-center flex-wrap">
                     {plan.features.map((f, i) => (
                       <span key={f} className="flex items-center gap-[4px]">
                         {i > 0 && <Dot color={accent} />}
-                        <span className="font-['Gilroy',sans-serif] font-medium text-[14px] leading-[20px] whitespace-nowrap" style={{ color: accent }}>
+                        <span className="font-['Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] whitespace-nowrap" style={{ color: accent }}>
                           {f}
                         </span>
                       </span>
@@ -190,8 +190,8 @@ export function ChangePlanModal({
           className="w-full flex items-center justify-center px-[20px] py-[10px] rounded-full hover-elevate disabled:opacity-40 disabled:cursor-not-allowed"
           style={{ background: "#4a2300" }}
         >
-          <span className="font-['Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-[#ff9400] whitespace-nowrap">
-            {isCurrent ? "Already on this plan" : `Switch to ${selectedPlan?.name}`}
+          <span className="font-['Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-[#ff9400] whitespace-nowrap">
+            {isCurrent ? "Already On This Plan" : `Switch To ${selectedPlan?.name}`}
           </span>
         </button>
       </div>
@@ -310,7 +310,7 @@ export function UpdateCardModal({
             className="w-full flex items-center justify-center px-[20px] py-[10px] rounded-full opacity-50 cursor-not-allowed"
             style={{ background: "#4a2300" }}
           >
-            <span className="font-['Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-[#ff9400] whitespace-nowrap">Processor Required</span>
+            <span className="font-['Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-[#ff9400] whitespace-nowrap">Processor Required</span>
           </button>
         </div>
       </ModalShell>
@@ -379,7 +379,7 @@ export function UpdateCardModal({
           className="w-full flex items-center justify-center px-[20px] py-[10px] rounded-full hover-elevate disabled:opacity-40 disabled:cursor-not-allowed"
           style={{ background: "#240757" }}
         >
-          <span className="font-['Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-[#7631ee] whitespace-nowrap">Add This Card</span>
+          <span className="font-['Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-[#7631ee] whitespace-nowrap">Add This Card</span>
         </button>
       </div>
     </ModalShell>
@@ -424,7 +424,7 @@ export function CancelSubscriptionModal({
             className="flex flex-1 items-center justify-center px-[12px] py-[8px] rounded-[100px] hover:opacity-80 transition-opacity"
             style={{ background: "#222737" }}
           >
-            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[16px] whitespace-nowrap">Cancel</span>
+            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[14px] leading-[20px] whitespace-nowrap">Cancel</span>
           </button>
           <button
             data-testid="button-cancel-sub-confirm"
@@ -432,7 +432,7 @@ export function CancelSubscriptionModal({
             className="flex flex-1 items-center justify-center px-[12px] py-[8px] rounded-[100px] hover:opacity-80 transition-opacity"
             style={{ background: "#350011" }}
           >
-            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#d20344] text-[12px] leading-[16px] whitespace-nowrap">Confirm</span>
+            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#d20344] text-[14px] leading-[20px] whitespace-nowrap">Confirm</span>
           </button>
         </div>
       </div>

@@ -1,4 +1,5 @@
 - [Add Source ingestion wizard](add-source-wizard.md) — source-agnostic connector modal; docs persist metadata only; route-ordering + screen-stack constraints.
+- [Source-to-account resolution](source-account-resolution.md) — source rows open Account Details only after a real upstream ledger-account link is validated.
 - [Linked references contract](linked-references-contract.md) — rules/vendors/invoices resolve by id via one helper+store; unified dev guard; non-vendor parties (employee/protocol/ledger) are never kind:"vendor".
 - [Rule reference wiring](rule-reference-wiring.md) — every "open rule" link goes through openRuleDetail/resolveRule; unresolved → warn + plain "(rule unavailable)"; shipped mock refs must all resolve (dev guard).
 - [Rules store & receipt report-a-problem](rules-and-receipts.md) — rulesStore is the shared source of truth for auto-clear rules; receipt → report → /rules/:id; color/scope/route conventions.
@@ -13,6 +14,7 @@
 - [Dev DB schema drift](dev-db-schema-drift.md) — "column does not exist"/ON CONFLICT errors usually mean dev Postgres lags schema.ts (db:push hangs); fix via psql, use uniqueIndex() for upsert targets.
 - [Section label spacing](section-label-spacing.md) — subpage labels need a 36px-tall row (like button-bearing headers), not gap tweaks; 4px gap to card stays.
 - [Post-merge boot failures](post-merge-boot-failures.md) — after a task merge check conflict markers, uninstalled new deps, AND new required env vars; auth-security bankConns test fails when DATABASE_URL set.
+- [PostgreSQL pool error handling](postgres-pool-error-handling.md) — every pg Pool needs an error listener so managed idle-client termination cannot crash Node.
 - [Durable brain tenancy](durable-tenancy.md) — "Continue with Demo" provisions a PRODUCTION tenant, never /demo/provision-run; create is non-idempotent + founder-email-unique; agent token for raw:write.
 - [Demo tenant TTL cleanup](demo-tenant-ttl.md) — expires demo-fresh users via email pattern + createdAt age; no schema change; brain-core tenant deletion impossible (no API).
 - [Brain staging demo-token](brain-staging-demo-token.md) — staging's key-free /demo/token route currently 401s on its own documented curl example; don't re-diagnose client-side, check with staging owners first.
@@ -45,9 +47,18 @@
 - [Source freshness captions](source-freshness-captions.md) — only brain-core sources publish last_synced_at; a connection time is never a sync time, and sync_disabled is never "overdue".
 - [QA write guard](qa-write-guard.md) — QA scripts drive a live tenant, so writes are denied unless declared; route order + page.request bypass are the traps.
 - [Honest unsupported UI](honest-unsupported-ui.md) — visibly-disabled + honest label beats a placeholder; never invent specifics (channels, thresholds, recipients) in a dead control.
+- [Storage-backend test coverage](storage-backend-test-coverage.md) — storage class is picked at load from DATABASE_URL; a test seeding via one backend's internals = zero coverage on the other, not flake.
+- [Policy read states](policy-read-states.md) — a policy read has 4 answers not 2; an unknown must never render as a permissive known; client flattens status, so refused vs broken is unrecoverable.
 - [Policy clause scope](policy-scope-divergence.md) — only explicit "any" is a wildcard (mirror the VM, it may expand); absent/empty scope is invalid → fail closed, never granting.
 - [First-run copy freeze](first-run-copy-freeze.md) — freeze quoted copy only after the read resolves; "text never changes" is the wrong invariant and hides the tenant's own rule.
 - [Default-on filters](audit-default-filter.md) — a default filter makes "empty" a fact about the filter, so name what's withheld; no client-side user role exists, so role-gated defaults are blocked.
 - [Onboarding walkthrough copy](onboarding-walkthrough-copy.md) — explainer reads the live policy; pending/failed/404/known are four different sentences; copy freezes per step.
 - [Nested scroll layout](inbox-scroll-layout.md) — bounded route surfaces need grid chrome/list rows and overflow on the actual records panel.
 - [In-place settled detail](decisions-timeline-in-place-detail.md) — old Audit Log page is deleted; /audit-log is a query-preserving redirect to /inbox; render the popup locally + set returnToBase.
+- [Row-record type ramp & height](row-record-type-ramp.md) — Security table is the reference; 20+4+16 = a 40px stack, so leading is load-bearing; pin only the shortest row.
+- [Audit Log full history](audit-log-full-history.md) — full trail lives in Settings (Inbox stays decisions-only); measure a read cap pre-merge, and isError needs a path independent of length===0.
+- [Shared callout component](callout-component.md) — all alert boxes + info glyphs go through Callout.tsx; find call sites by glyph/colour tokens, not page-by-page; amber meant two things.
+- [Icon from artwork](icon-from-artwork.md) — measure the reference PNG's pixel runs for stroke widths; eyeballing an upscaled bitmap lies, and canvas can't decode file:// images.
+- [Counterparty trust surface](counterparty-trust-surface.md) — trust routes live (brain-core PRs #397/#403, GIT deedc628); handlers in VendorsPanel only; popup receives props, never fetches; bulk-confirm for customers.
+- [Vendor Suggested tier gate](vendor-suggested-tier-gate.md) — no provenance value means "suggested"; Suggested chip stays hidden; trust wiring green-lit and shipped.
+- [Overlay menus in clipped surfaces](overlay-menus-in-clipped-surfaces.md) — in-card dropdowns need a fixed portal (not less overflow); fixed owns its own clamp/flip, and never claim listbox without arrow keys.

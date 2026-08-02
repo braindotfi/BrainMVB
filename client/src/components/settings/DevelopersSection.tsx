@@ -26,6 +26,10 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAppAlert } from "@/components/AppAlert";
 import { usePlanId, PLAN_RATE_LIMITS } from "@/lib/planStore";
+import { AlertCallout, InfoIcon } from "@/components/Callout";
+import stepOneIcon from "@assets/1_1785602525964.png";
+import stepTwoIcon from "@assets/2_1785602525965.png";
+import stepThreeIcon from "@assets/3_1785602525965.png";
 
 /* ─── Types (wire shapes from server/routes.ts developers block) ─── */
 type DevEnv = "sandbox" | "live";
@@ -139,6 +143,8 @@ const API_ENDPOINTS: Array<{ path: string; scope: string | null; description: st
   { path: "/api/v1/ledger/transactions", scope: "ledger:read", description: "Ledger transactions (supports ?limit=, max 200)" },
   { path: "/api/v1/audit/events", scope: "audit:read", description: "Audit events (supports ?limit= and ?after=)" },
 ];
+
+const GET_STARTED_STEP_ICONS = [stepOneIcon, stepTwoIcon, stepThreeIcon] as const;
 
 /* ─── Shared primitives (Settings/Home card + label patterns) ─── */
 const Card = ({ children, testId }: { children: ReactNode; testId?: string }) => (
@@ -277,7 +283,7 @@ const EnvToggle = ({ env, onChange }: { env: DevEnv; onChange: (e: DevEnv) => vo
           style={{ background: isActive ? "#4a2300" : "transparent" }}
         >
           <p
-            className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap"
+            className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[14px] whitespace-nowrap"
             style={{ color: isActive ? "#ff9500" : "#414965" }}
           >
             {e === "live" ? "Live" : "Sandbox"}
@@ -393,18 +399,7 @@ const PlaintextKeyModal = ({ plaintext, onClose }: { plaintext: string; onClose:
         {/* ── Body ── */}
         <div className="flex flex-col gap-[32px] items-start p-[24px] relative shrink-0 w-full overflow-y-auto">
           {/* Warning info box */}
-          <div className="bg-[#4a2300] border border-[rgba(255,148,0,0.2)] border-solid rounded-[12px] flex items-center p-[8px] w-full">
-            <div className="flex flex-1 min-w-px gap-[8px] items-start">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[1px]">
-                <circle cx="8" cy="8" r="7" stroke="#ff9400" strokeWidth="1.3" />
-                <path d="M8 7.3v4.2" stroke="#ff9400" strokeWidth="1.3" strokeLinecap="round" />
-                <circle cx="8" cy="4.7" r="0.9" fill="#ff9400" />
-              </svg>
-              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#ff9400] text-[14px] leading-[16px] flex-1 min-w-px">
-                Store it safely. For your security, it will never be shown again.
-              </p>
-            </div>
-          </div>
+          <AlertCallout>Store it safely. For your security, it will never be shown again.</AlertCallout>
           {/* API Key section */}
           <PopupSection label="API Key">
             <PopupCodeBox testId="text-plaintext-key">{plaintext}</PopupCodeBox>
@@ -426,7 +421,7 @@ const PlaintextKeyModal = ({ plaintext, onClose }: { plaintext: string; onClose:
               onClick={async () => {
                 try { await navigator.clipboard.writeText(plaintext); setCopied(true); } catch { /* clipboard unavailable */ }
               }}
-              className="bg-[#240757] hover:bg-[#2e0a6e] transition-colors flex flex-[1_0_0] items-center justify-center min-w-px px-[20px] py-[10px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[#7631ee] text-[16px] leading-[20px] whitespace-nowrap focus:outline-none"
+              className="bg-[#240757] hover:bg-[#2e0a6e] transition-colors flex flex-[1_0_0] items-center justify-center min-w-px px-[20px] py-[10px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[#7631ee] text-[14px] leading-[20px] whitespace-nowrap focus:outline-none"
             >
               {copied ? "Copied!" : "Copy Key"}
             </button>
@@ -444,14 +439,14 @@ const PlaintextKeyModal = ({ plaintext, onClose }: { plaintext: string; onClose:
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-[#6c779d] shrink-0">
                 <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
-              <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">Previous</span>
+              <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">Previous</span>
             </button>
             <button
               type="button"
               disabled
               className="bg-[#222737] flex gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] shrink-0 w-[148px] opacity-40 cursor-not-allowed"
             >
-              <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">Next</span>
+              <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">Next</span>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-[#6c779d] shrink-0">
                 <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
@@ -817,9 +812,9 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
                     setSelectedEvent(null);
                     navigate(`/inbox?record=${encodeURIComponent(eventId)}`);
                   }}
-                  className="bg-[#4a2300] flex flex-[1_0_0] items-center justify-center min-w-px px-[20px] py-[10px] relative rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#ff9500] text-[16px] whitespace-nowrap hover:opacity-90 transition-colors"
+                  className="bg-[#4a2300] flex flex-[1_0_0] items-center justify-center min-w-px px-[20px] py-[10px] relative rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#ff9500] text-[14px] whitespace-nowrap hover:opacity-90 transition-colors"
                 >
-                  View in Inbox
+                  View In Inbox
                 </button>
               </div>
             </div>
@@ -837,7 +832,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-[#6c779d] shrink-0">
                     <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
-                  <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">Previous</span>
+                  <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">Previous</span>
                 </button>
                 <button
                   type="button"
@@ -846,7 +841,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
                   disabled={!hasNextEvent}
                   className="bg-[#222737] flex gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] shrink-0 w-[148px] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#2c3247] transition-colors focus:outline-none"
                 >
-                  <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">Next</span>
+                  <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">Next</span>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-[#6c779d] shrink-0">
                     <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
@@ -873,7 +868,11 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
       <div className="flex flex-col gap-[24px] w-full">
 
       <div className="flex flex-col gap-[4px]">
-        <SectionLabel>Get Started</SectionLabel>
+        <div className="flex h-[24px] items-center">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#414965] text-[16px]">
+            Get Started
+          </p>
+        </div>
         <div data-testid="card-get-started" className="bg-[#0a0c10] flex flex-col gap-[16px] items-start p-[16px] rounded-[16px] w-full">
           {steps.map((s, i) => (
             <div key={s.label} className="contents">
@@ -885,18 +884,21 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
               >
                 <div
                   className="size-[32px] rounded-full flex items-center justify-center flex-shrink-0"
-                  style={s.state === "done" ? { background: "#4a2300" } : { background: "#222737" }}
+                  style={s.state === "done" ? { background: "#4a2300" } : undefined}
                 >
                   {s.state === "done" ? (
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                       <path d="M3 8.5L6.2 11.5L13 4.5" stroke="#ff9400" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
-                  ) : s.state === "unknown" ? (
-                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[16px] leading-[20px]">?</span>
-                  ) : s.state === "checking" ? (
-                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[16px] leading-[20px]">…</span>
                   ) : (
-                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px]">{i + 1}</span>
+                    <img
+                      src={GET_STARTED_STEP_ICONS[i]}
+                      alt=""
+                      width={32}
+                      height={32}
+                      data-testid={`img-step-get-started-${i}`}
+                      className="block size-[32px] object-contain"
+                    />
                   )}
                 </div>
                 <div className="flex-1 min-w-0 flex flex-col gap-[2px]">
@@ -911,7 +913,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
                       className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] leading-[16px]"
                       data-testid={`step-get-started-${i}-unknown`}
                     >
-                      Couldn't check this — brain-core is unreachable. It may already be done.
+        Couldn't check this. brain-core is unreachable. It may already be done.
                     </p>
                   )}
                   {s.state === "checking" && (
@@ -928,7 +930,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
                     type="button"
                     data-testid="button-overview-add-tenant"
                     onClick={() => onNavigate("tenants")}
-                    className="bg-[#240757] flex gap-[2px] items-center justify-center px-[10px] py-[4px] rounded-[100px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#7631ee] text-[12px] whitespace-nowrap hover:bg-[#2e0a6e] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                    className="bg-[#240757] flex gap-[2px] items-center justify-center px-[14px] py-[6px] rounded-[100px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#7631ee] text-[12px] whitespace-nowrap hover:bg-[#2e0a6e] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
                   >
                     <Plus className="relative shrink-0 size-[16px] text-[#7631ee]" />
                     Add Tenant
@@ -940,7 +942,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
                     data-testid="button-overview-create-key"
                     onClick={() => onNavigate("keys")}
                     disabled={!hasTenant}
-                    className="bg-[#240757] flex gap-[2px] items-center justify-center px-[10px] py-[4px] rounded-[100px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#7631ee] text-[12px] whitespace-nowrap hover:bg-[#2e0a6e] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="bg-[#240757] flex gap-[2px] items-center justify-center px-[14px] py-[6px] rounded-[100px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#7631ee] text-[12px] whitespace-nowrap hover:bg-[#2e0a6e] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <Plus className="relative shrink-0 size-[16px] text-[#7631ee]" />
                     Create Key
@@ -1014,7 +1016,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
             /* "We could not read the log" is not "nothing happened". The second
                claim is the one a developer acts on when a call seems to vanish. */
             <EmptyRow testId="row-activity-unavailable">
-              Couldn't load activity. brain-core may be unavailable — this is not the same as no activity.
+              Couldn't load activity. brain-core may be unavailable. This is not the same as no activity.
             </EmptyRow>
           ) : !activityQ.data?.events?.length ? (
             <EmptyRow>No recorded activity yet. Calls appear here as brain-core audit events.</EmptyRow>
@@ -1211,7 +1213,7 @@ function KeysSection({ env }: { env: DevEnv }) {
         );
       })()}
 
-      <div className="flex flex-col gap-[12px] shrink-0">
+      <div className="flex flex-col gap-[4px] shrink-0">
         <div className="flex min-h-[36px] items-center justify-between gap-4">
           <SectionLabel testId="text-page-title">{env === "live" ? "Live Keys" : "Sandbox Keys"}</SectionLabel>
           <button
@@ -1224,7 +1226,7 @@ function KeysSection({ env }: { env: DevEnv }) {
                 }
                 setShowCreate(true);
               }}
-              className="bg-[#240757] flex gap-[2px] items-center justify-center px-[10px] py-[4px] rounded-[100px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#7631ee] text-[12px] whitespace-nowrap hover:bg-[#2e0a6e] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+              className="bg-[#240757] flex gap-[2px] items-center justify-center px-[14px] py-[6px] rounded-[100px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#7631ee] text-[12px] whitespace-nowrap hover:bg-[#2e0a6e] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
             >
               <Plus className="relative shrink-0 size-[16px] text-[#7631ee]" />
               Create Key
@@ -1267,7 +1269,7 @@ function KeysSection({ env }: { env: DevEnv }) {
               data-testid="button-create-key"
               onClick={() => createMut.mutate()}
               disabled={createMut.isPending || name.trim().length === 0 || scopes.length === 0}
-              className="w-full bg-[#4a2300] hover:bg-[#5a2b00] transition-colors flex items-center justify-center px-[20px] py-[10px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[#ff9400] text-[16px] leading-[20px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] disabled:opacity-40 disabled:cursor-not-allowed"
+              className="w-full bg-[#4a2300] hover:bg-[#5a2b00] transition-colors flex items-center justify-center px-[20px] py-[10px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[#ff9400] text-[14px] leading-[20px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {createMut.isPending ? "Creating…" : "Create Key"}
             </button>
@@ -1320,25 +1322,21 @@ function KeysSection({ env }: { env: DevEnv }) {
               );
             })}
           </PopupSection>
-          <div
-            className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
-            style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[2px]">
-        <circle cx="8" cy="8" r="7" stroke="#7631ee" strokeWidth="1.3" />
-        <path d="M8 7.3v4.2" stroke="#7631ee" strokeWidth="1.3" strokeLinecap="round" />
-        <circle cx="8" cy="4.7" r="0.9" fill="#7631ee" />
-      </svg>
+          {!keysUnavailable && !keysQ.isLoading && !keysQ.isError && (
+            <div
+              className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
+              style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
+            >
+            <InfoIcon className="mt-[2px]" />
             <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#7631ee] text-[14px] leading-[18px] flex-1 min-w-px">
               Keys are issued by brain-core and stored hashed. Enforcement inside brain-core's API gateway is rolling
               out. Until then, keys authenticate against platform endpoints only.
             </p>
-          </div>
+            </div>
+          )}
         </PopupShell>
       )}
-      </div>
 
-      <div>
         {keysUnavailable ? (
           <KeysUnavailableCard testId="card-keys-unavailable-keys" />
         ) : (
@@ -1404,20 +1402,18 @@ function KeysSection({ env }: { env: DevEnv }) {
       )}
       </div>
 
-      <div
-        className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full shrink-0"
-        style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
-      >
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[2px]">
-        <circle cx="8" cy="8" r="7" stroke="#7631ee" strokeWidth="1.3" />
-        <path d="M8 7.3v4.2" stroke="#7631ee" strokeWidth="1.3" strokeLinecap="round" />
-        <circle cx="8" cy="4.7" r="0.9" fill="#7631ee" />
-      </svg>
-        <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#7631ee] text-[14px] leading-[18px] flex-1 min-w-px">
-          Keys are issued and stored hashed by brain-core, and enforced on every key-authenticated call.
-          Rate limit: 600 requests per 60 seconds per key.
-        </p>
-      </div>
+      {!keysUnavailable && !keysQ.isLoading && !keysQ.isError && (
+        <div
+          className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full shrink-0"
+          style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
+        >
+          <InfoIcon className="mt-[2px]" />
+          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#7631ee] text-[14px] leading-[18px] flex-1 min-w-px">
+            Keys are issued and stored hashed by brain-core, and enforced on every key-authenticated call.
+            Rate limit: 600 requests per 60 seconds per key.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
@@ -1593,7 +1589,7 @@ function TenantsSection({ env, onNavigate }: { env: DevEnv; onNavigate: (s: DevS
                   type="button"
                   data-testid="button-tenant-view-keys"
                   onClick={() => { setSelectedTenantId(null); onNavigate("keys"); }}
-                  className="bg-[#4a2300] flex flex-[1_0_0] items-center justify-center min-w-px px-[20px] py-[10px] relative rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#ff9500] text-[16px] whitespace-nowrap hover:opacity-90 transition-colors"
+                  className="bg-[#4a2300] flex flex-[1_0_0] items-center justify-center min-w-px px-[20px] py-[10px] relative rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#ff9500] text-[14px] whitespace-nowrap hover:opacity-90 transition-colors"
                 >
                   View API Keys
                 </button>
@@ -1612,7 +1608,7 @@ function TenantsSection({ env, onNavigate }: { env: DevEnv; onNavigate: (s: DevS
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-[#6c779d] shrink-0">
                     <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
-                  <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">Previous</span>
+                  <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">Previous</span>
                 </button>
                 <button
                   type="button"
@@ -1621,7 +1617,7 @@ function TenantsSection({ env, onNavigate }: { env: DevEnv; onNavigate: (s: DevS
                   disabled={!hasNext}
                   className="bg-[#222737] flex gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] shrink-0 w-[148px] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#2c3247] transition-colors focus:outline-none"
                 >
-                  <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">Next</span>
+                  <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">Next</span>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-[#6c779d] shrink-0">
                     <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
@@ -1660,7 +1656,7 @@ function TenantsSection({ env, onNavigate }: { env: DevEnv; onNavigate: (s: DevS
                 );
               }
             }}
-            className="bg-[#240757] flex gap-[2px] items-center justify-center px-[10px] py-[4px] rounded-[100px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#7631ee] text-[12px] whitespace-nowrap hover:bg-[#2e0a6e] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+            className="bg-[#240757] flex gap-[2px] items-center justify-center px-[14px] py-[6px] rounded-[100px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#7631ee] text-[12px] whitespace-nowrap hover:bg-[#2e0a6e] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
           >
             {!showCreate && <Plus className="relative shrink-0 size-[16px] text-[#7631ee]" />}
             {showCreate ? "Cancel" : "Create Tenant"}
@@ -1801,7 +1797,7 @@ function UsageSection({ env }: { env: DevEnv }) {
               Requests This Month
             </p>
             <p className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[40px] leading-[48px]">
-              {usageQ.isLoading ? "…" : usageQ.isError ? "—" : String(thisMonth)}
+              {usageQ.isLoading ? "…" : usageQ.isError ? "-" : String(thisMonth)}
             </p>
             <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[20px]">
               {usageQ.isError
@@ -1973,26 +1969,30 @@ function UsageSection({ env }: { env: DevEnv }) {
         )}
       </div>
 
-      <div
-        className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
-        style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
-      >
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[2px]">
-        <circle cx="8" cy="8" r="7" stroke="#7631ee" strokeWidth="1.3" />
-        <path d="M8 7.3v4.2" stroke="#7631ee" strokeWidth="1.3" strokeLinecap="round" />
-        <circle cx="8" cy="4.7" r="0.9" fill="#7631ee" />
-      </svg>
-        <div className="[font-family:'Gilroy',sans-serif] font-medium text-[#7631ee] text-[14px] flex-1 min-w-px">
-          <p className="leading-[18px] mb-[12px]">
-            Key counts come from brain-core's per-key usage attribution ({keyUsageQ.data?.window ?? "30d"} window).
-            They are a different measurement than the tenant-wide audit events above and won't match those totals.
-          </p>
-          <p className="leading-[18px]">
-            Usage is aggregated from brain-core audit events for your tenant, attributed to the environment your
-            tenancy mode runs in (demo → sandbox, production → live).
-          </p>
-        </div>
-      </div>
+      {!keysUnavailable &&
+        !usageQ.isLoading &&
+        !usageQ.isError &&
+        !keysQ.isLoading &&
+        !keysQ.isError &&
+        !keyUsageQ.isLoading &&
+        !keyUsageQ.isError && (
+          <div
+            className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
+            style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
+          >
+            <InfoIcon className="mt-[2px]" />
+            <div className="[font-family:'Gilroy',sans-serif] font-medium text-[#7631ee] text-[14px] flex-1 min-w-px">
+              <p className="leading-[18px] mb-[12px]">
+                Key counts come from brain-core&apos;s per-key usage attribution ({keyUsageQ.data?.window ?? "30d"} window).
+                They are a different measurement than the tenant-wide audit events above and won&apos;t match those totals.
+              </p>
+              <p className="leading-[18px]">
+                Usage is aggregated from brain-core audit events for your tenant, attributed to the environment your
+                tenancy mode runs in (demo to sandbox, production to live).
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

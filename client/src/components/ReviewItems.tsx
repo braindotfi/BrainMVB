@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 import closeIcon from "@assets/Close_1783293571882.png";
 import { ICONS } from "@/assets/figma-icons";
 import { useCurrency } from "@/lib/useCurrency";
+import { AlertCallout } from "@/components/Callout";
 
 export type ReviewItemType = {
   id: number | string;
@@ -200,17 +201,12 @@ export const ReviewModal = ({
             {/* brain-core refusal: the honest, verbatim reason (self-approval, over
                 limit, second approver needed, signer revoked, …). Danger color only. */}
             {rejection && (
-              <div
-                data-testid={`review-rejection-${rejection.reason}`}
-                className="w-full rounded-[12px] border border-[rgba(210,3,68,0.3)] bg-[rgba(210,3,68,0.08)] p-[14px]"
+              <AlertCallout
+                testId={`review-rejection-${rejection.reason}`}
+                title={rejection.title}
               >
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#d20344] text-[15px]">
-                  {rejection.title}
-                </p>
-                <p className="mt-1 [font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[13px]">
-                  {rejection.detail}
-                </p>
-              </div>
+                {rejection.detail}
+              </AlertCallout>
             )}
 
             {/* Action row, Figma 4071:65833. Confirm + Decline. */}

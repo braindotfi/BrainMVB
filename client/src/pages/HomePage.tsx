@@ -67,6 +67,7 @@ import {
   setRuleDraft,
 } from "@/lib/rulesStore";
 import { useReviewStatuses } from "@/lib/reviewStatusStore";
+import { AlertCallout } from "@/components/Callout";
 
 /* Your Goals (Figma 3882:43037), progress bars per goal */
 type GoalRow = {
@@ -227,7 +228,7 @@ const GoalsSection = () => {
             data-testid="text-goals-empty"
             className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px]"
           >
-            No goals yet — add one to start tracking progress.
+            No goals yet. Add one to start tracking progress.
           </p>
         ) : (
           goals.map((g) => <GoalProgress key={g.id} goal={g} />)
@@ -290,7 +291,7 @@ const MetricCard = ({
       : {})}
   >
     <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#414965] text-[13px] uppercase">{label}</p>
-    <p className="[font-family:'Gilroy',sans-serif] leading-[0] relative shrink-0 text-[#a8b9f4] text-[0px] w-full whitespace-nowrap">
+    <p className="[font-family:'JetBrains_Mono',monospace] leading-[0] relative shrink-0 text-[#a8b9f4] text-[0px] w-full whitespace-nowrap">
       <span className="font-medium leading-[36px] text-[28px]">{whole}</span>
       {cents && <span className="font-medium leading-[36px] text-[#6c779d] text-[18px]">{cents}</span>}
       {suffix && <span className="font-medium leading-[36px] text-[#6c779d] text-[18px]">{suffix}</span>}
@@ -315,17 +316,22 @@ const SPENDING_INSIGHT_FALLBACK = { text: "No spending insight available yet.", 
 /** Locale for dates: USD → en-US ("Apr 15, 2025"), EUR → en-GB ("15 Apr 2025"). */
 const DATE_LOCALE: Record<CurrencyCode, string> = { USD: "en-US", EUR: "en-GB" };
 
-function timeAgo(ts: number): string {
-  const diffMs = Date.now() - ts;
-  const diffSec = Math.round(diffMs / 1000);
-  if (diffSec < 10) return "Just now";
-  if (diffSec < 60) return `${diffSec}s ago`;
-  const diffMin = Math.round(diffSec / 60);
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffH = Math.round(diffMin / 60);
-  if (diffH < 24) return `${diffH}h ago`;
-  const diffD = Math.round(diffH / 24);
-  return `${diffD}d ago`;
+function ordinalDay(day: number): string {
+  const suffix =
+    day % 100 >= 11 && day % 100 <= 13
+      ? "th"
+      : ({ 1: "st", 2: "nd", 3: "rd" } as Record<number, string>)[day % 10] ?? "th";
+  return `${day}${suffix}`;
+}
+
+function formatUpdatedAt(ts: number): string {
+  const date = new Date(ts);
+  const weekday = new Intl.DateTimeFormat(undefined, { weekday: "long" }).format(date);
+  const hours = date.getHours();
+  const hour = hours % 12 || 12;
+  const minute = String(date.getMinutes()).padStart(2, "0");
+  const meridiem = hours < 12 ? "am" : "pm";
+  return `${weekday} the ${ordinalDay(date.getDate())} at ${hour}:${minute}${meridiem}.`;
 }
 
 /** Re-format ISO dates (YYYY-MM-DD) and common month-day patterns in the text
@@ -425,7 +431,7 @@ export function HomePage() {
     const id = window.setInterval(() => setLastUpdated(Date.now()), 10000);
     return () => window.clearInterval(id);
   }, []);
-  const updatedLabel = useMemo(() => timeAgo(lastUpdated), [lastUpdated]);
+  const updatedLabel = useMemo(() => formatUpdatedAt(lastUpdated), [lastUpdated]);
   const { format, currency, formatText } = useCurrency();
   const [, navigate] = useLocation();
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -973,7 +979,7 @@ export function HomePage() {
      huge meaningless number, or a figure that silently flips sign. */
   const runway = useMemo(() => {
     if (liveTotal === null || netMonthly === null) return { value: "-", caption: "Connect accounts to see runway." };
-    if (netMonthly >= 0) return { value: "-", caption: "No net burn — cash flow is positive." };
+    if (netMonthly >= 0) return { value: "-", caption: "No net burn. Cash flow is positive." };
     const months = liveTotal / Math.abs(netMonthly);
     if (!Number.isFinite(months) || months < 0) return { value: "-", caption: "Not enough data yet." };
     return { value: `${Math.floor(months)} mo`, caption: "At the current net burn." };
@@ -1012,7 +1018,7 @@ export function HomePage() {
             </div>
             <div className="flex items-center relative shrink-0 w-full">
               <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] not-italic relative text-[#a8b9f4] text-[32px]">
-                Here's where your money stands today.
+                Here's your financial snapshot for today.
               </p>
             </div>
             <div className="flex items-center relative shrink-0 w-full">
@@ -1072,62 +1078,80 @@ export function HomePage() {
             </p>
 
             {/* Divider */}
-            <div className="h-px relative shrink-0 w-full" style={{ background: "#1d2132" }} />
+            <div className="h-px relative shrink-0 w-full mb-[26px]" style={{ background: "#1d2132" }} />
 
             {/* The decision queue: ONE single-column list split into Urgent /
                 Waiting on you / Insights, with each row's own actions inline.
                 Replaces the "Brain Detected" / "Brain Did" two-panel split. */}
             <>
               {overviewUnreachable && overviewRows.length > 0 && (
-                <div
-                  className="flex items-start gap-[10px] p-[12px] mb-[12px] rounded-[12px] w-full"
-                  style={{ background: "rgba(210,3,68,0.08)", border: "1px solid rgba(210,3,68,0.28)" }}
-                  data-testid="banner-overview-incomplete"
-                >
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#d20344] text-[14px]">
-                    Some items couldn’t be loaded, so this list may be incomplete.
-                  </p>
-                </div>
+                <AlertCallout testId="banner-overview-incomplete" className="mb-[12px]">
+                  Some items couldn’t be loaded, so this list may be incomplete.
+                </AlertCallout>
               )}
               {overviewSelection.count >= 2 && overviewSelection.limit && (
                 <div
-                  className="flex flex-col sm:flex-row gap-[10px] sm:items-center justify-between p-[12px] mb-[12px] rounded-[12px] w-full"
-                  style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.35)" }}
+                  className="bg-[#0a0c10] flex flex-col overflow-hidden rounded-[16px] shrink-0 w-full mb-[12px]"
                   data-testid="bulk-bar"
                 >
-                  <p
-                    className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#a88afa] text-[13px]"
-                    data-testid="bulk-bar-summary"
-                  >
-                    <b className="font-semibold text-[#a8b9f4]">{overviewSelection.count} selected</b>
-                    {` · all ${overviewSelection.type ? decisionTypeLabel(overviewSelection.type).toLowerCase() : ""}, each under ${format(overviewSelection.limit.value)} `}
-                    {overviewSelection.limit.source === "rule"
-                      ? "limit from your own rule."
-                      : "limit above which Brain needs a second approver."}
-                  </p>
-                  <div className="flex gap-[8px] items-center shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedOverviewIds(new Set())}
-                      data-testid="button-bulk-clear"
-                      className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-[#6c779d] hover:text-[#a8b9f4] outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-[4px] px-[8px] py-[6px]"
-                    >
-                      Clear
-                    </button>
-                    <button
-                      type="button"
-                      onClick={approveSelectedOverview}
-                      disabled={overviewBulkRunning}
-                      data-testid="button-bulk-approve"
-                      className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-white bg-[#7631ee] hover:bg-[#8a4bf5] disabled:opacity-50 rounded-[8px] px-[12px] py-[7px] outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-                    >
-                      {overviewBulkRunning ? "Approving…" : "Approve Selected"}
-                    </button>
+                  {/* Body — count metric + Brain Observed sentence */}
+                  <div className="flex flex-col items-start p-[16px] w-full">
+                    <div className="bg-[#0a0c10] flex gap-[26px] items-start overflow-hidden p-[16px] rounded-[16px] w-full">
+                      {/* Left: Number Selected */}
+                      <div className="flex flex-col gap-[4px] items-start justify-center shrink-0 w-[128px]">
+                        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px]">
+                          Number Selected
+                        </p>
+                        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[48px] text-[40px] text-white" data-testid="bulk-bar-count">
+                          {overviewSelection.count}
+                        </p>
+                      </div>
+                      {/* Hairline vertical divider */}
+                      <div className="w-px self-stretch shrink-0 bg-[#1d2132]" />
+                      {/* Right: Brain Observed */}
+                      <div className="flex flex-1 flex-col gap-[4px] items-start justify-center min-w-px">
+                        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px]">
+                          Brain Observed
+                        </p>
+                        <p
+                          className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[16px] text-white"
+                          data-testid="bulk-bar-summary"
+                        >
+                          {`All ${overviewSelection.type ? decisionTypeLabel(overviewSelection.type).toLowerCase() : ""}, each under ${format(overviewSelection.limit.value)} `}
+                          {overviewSelection.limit.source === "rule"
+                            ? "limit from your own rule."
+                            : "limit above which Brain needs a second approver."}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Footer — Cancel / Approve Selected */}
+                  <div className="border-t border-[#1d2132] bg-[#0a0c10] flex flex-col items-start p-[16px] w-full">
+                    <div className="flex gap-[16px] items-center w-full">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedOverviewIds(new Set())}
+                        data-testid="button-bulk-clear"
+                        className="bg-[#222737] flex flex-1 items-center justify-center min-w-px px-[12px] py-[8px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[12px] whitespace-nowrap hover:bg-[#2a3046] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] disabled:opacity-40"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={approveSelectedOverview}
+                        disabled={overviewBulkRunning}
+                        data-testid="button-bulk-approve"
+                        className="bg-[#4a2300] flex flex-1 items-center justify-center min-w-px px-[12px] py-[8px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#ff9400] text-[12px] whitespace-nowrap hover:bg-[#5a2d00] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] disabled:opacity-50"
+                      >
+                        {overviewBulkRunning ? "Approving…" : "Approve Selected"}
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
               <TierSections
                 rows={overviewRows}
+                unavailable={overviewUnreachable}
                 emptyMessage={
                   overviewUnreachable
                     ? "Brain couldn’t load what needs your review. This is a connection problem, not an empty queue."

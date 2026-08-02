@@ -50,6 +50,21 @@
   .all-\[unset\] {
     all: unset;
   }
+
+  .decision-checkbox {
+    appearance: none;
+    background-color: #222737;
+    border: 0;
+    border-radius: 3px;
+  }
+
+  .decision-checkbox:checked {
+    background-color: #222737;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 8.2 6.7 11.3 12.5 4.8' fill='none' stroke='%23a8b9f4' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: 12px 12px;
+  }
 }
 
 :root {

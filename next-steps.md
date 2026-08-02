@@ -13,12 +13,22 @@ brain-core **read integration** across 5 surfaces, all on the demo path, server-
 Accounts + Recent transactions (FinancesPage), "Money in all accounts" total (HomePage),
 grounded BrainAssistant (`/v1/wiki/question`) + evidence trail. `npm run brain:smoke` PASSES.
 
-## Done ✅ — `feature/proposal-cards-full-parity` (2026-07-30, branch not pushed)
+## PENDING MERGE — `feature/proposal-cards-full-parity` (status 2026-08-02: NOT merged, NOT on `main`)
+
+> **This work has not landed.** `main` is at `c81936f`. The branch is **97 commits / 141 files**
+> ahead of `origin/main`, and **4 commits are not yet pushed** to `origin`. No PR is open, so
+> **CI has never run on this branch** — `test.yml` fires only on `pull_request` and on push to
+> `main`. Local gates are green (`tsc` clean, 749/749 vitest, counterparties QA 48/48), but a
+> green local run is not CI.
+>
+> **A human reviewer owns this merge.** The diff carries tiering, the bulk-approve gate and
+> threshold reads, which the standing repo rule keeps off admin/self merge.
+
 The rich proposal card now serves **all 19 `proposal_type` values** (11 core + 8 advisory), driven
 by `presentation` / `details` / `policy` / `available_decisions` rather than per-agent branches.
 Field contract, the fallback chains and the live-vs-doc divergences are documented in `CLAUDE.md`
-§"Full-parity proposal cards". Verified in the **running preview** against the 5 live pending
-proposals on `tnt_01KYS8R54VDRSW6ND3GN2649T0` (read-only — no decision was ever submitted):
+§"Full-parity proposal cards". The 2026-07-30 preview pass below ran read-only against
+`tnt_01KYS8R54VDRSW6ND3GN2649T0` (no decision was ever submitted):
 
 | Type | Renders |
 | --- | --- |
@@ -37,6 +47,23 @@ Notes for whoever picks this up:
   Needs Review (29 items on that tenant) instead of only the Audit Log.
 - `server/auth-security.test.ts > reads and revokes legacy plaintext Plaid tokens` fails whenever
   `DATABASE_URL` is set. Pre-existing and unrelated: every other test passes.
+
+### OPEN ITEM — live-verification split (carry forward until closed)
+The shared card component covers **all** proposal types via `details` / `policy` / `presentation` /
+`available_decisions` binding.
+
+- **Live-verified against real API data:** `collections`, `vendor_risk`, `payment`.
+- **Structurally verified only — never rendered from a real pending proposal:** `fraud_anomaly`,
+  `cash_forecast`, `treasury`, `subscription`, `compliance`.
+
+**Close this out** the next time any of those five types has a real pending proposal in **any**
+tenant — render it through the shared card and confirm against real API data.
+
+> ⚠️ This supersedes the 2026-07-30 table above, which recorded the opposite split: it listed the
+> five structural types as preview-verified and `collections` / `vendor_risk` as unverified. Read
+> that table as a historical record of that day's reference tenant, not as current verification
+> status. (Consistent with it: the collections Message Draft was verified by flipping a real
+> record to `pending` in the browser, never against a genuinely pending row.)
 
 ### Figma parity pass (same branch, 2026-07-30)
 `LiveProposalModal` now matches Figma frame `5737-65928` (file `cC2lQwC3g9hv96o5Wgy8Ek`). The

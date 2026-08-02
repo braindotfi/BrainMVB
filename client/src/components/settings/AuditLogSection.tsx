@@ -1,0 +1,417 @@
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Search, ChevronDown } from "lucide-react";
+import { useBrainAuditRecords, AUDIT_EVENTS_LIMIT } from "@/lib/brainAudit";
+import { partitionSystemActivity } from "@/lib/auditVisibility";
+import { humanReadableActor, isAssistantActivity } from "@/lib/auditTypes";
+import type { AuditRecord } from "@/lib/auditTypes";
+import { AuditRecordPopup } from "@/components/AuditRecordPopup";
+import { AlertCallout } from "@/components/Callout";
+
+/* Settings → Audit Log.
+ *
+ * The complete, unfiltered event trail. The Decisions timeline deliberately
+ * shows only what a person decided — it is a working queue, and pipeline noise
+ * buries it. That leaves nowhere in the product to answer "what has actually
+ * happened on this tenant", which is the question an auditor, a security
+ * reviewer, or anyone debugging an ingest asks. This page is that place.
+ *
+ * Two rules it exists to keep:
+ *
+ * 1. NOTHING IS HIDDEN BY DEFAULT. The type filter starts on "All Types". A
+ *    default filter would make an empty list a fact about the filter rather
+ *    than about the tenant, which is the failure `auditVisibility` was written
+ *    to prevent. When the user DOES narrow the list and it comes back empty,
+ *    the copy below names how many records the filter is withholding.
+ *
+ * 2. UNREACHABLE IS NOT EMPTY. `useBrainAuditRecords` returns `records: []`
+ *    when the audit read fails. Rendering that as "no audit records yet" would
+ *    tell someone their history is clean when it is merely unreadable, so the
+ *    error state is handled before the empty state and says so plainly.
+ *
+ * The same care applies to the count. brain-core's event list pages behind a
+ * cursor this app does not follow, so a full page back is "at least N", not
+ * "N". The header badge and caption say which of the two they mean.
+ *
+ * Row categorisation reuses `partitionSystemActivity` / `isAssistantActivity`
+ * rather than re-deriving what counts as pipeline traffic — brain-core's own
+ * event_type decides, and one place should read it.
+ */
+
+type TypeFilter = "all" | "decisions" | "system";
+
+const FILTER_OPTIONS: { id: TypeFilter; label: string }[] = [
+  { id: "all", label: "All Types" },
+  { id: "decisions", label: "Decisions Only" },
+  { id: "system", label: "System Activity Only" },
+];
+
+/* Assistant activity is neither a decision nor pipeline traffic: it is a person
+   asking Brain a question. It gets its own badge so "Decisions Only" can mean
+   decisions, and is reachable through "All Types". */
+type Category = "decision" | "assistant" | "system";
+
+const CATEGORY_BADGE: Record<Category, { label: string; bg: string; color: string; border: string }> = {
+  decision:  { label: "Decision",        bg: "#1d2132", color: "#a8b9f4", border: "1px solid rgba(168,185,244,0.2)" },
+  assistant: { label: "Assistant",       bg: "#222737", color: "#6c779d", border: "1px solid rgba(108,119,157,0.2)" },
+  system:    { label: "System",          bg: "#222737", color: "#6c779d", border: "1px solid rgba(108,119,157,0.2)" },
+};
+
+function categorise(record: AuditRecord, systemIds: ReadonlySet<string>): Category {
+  if (systemIds.has(record.id)) return "system";
+  return isAssistantActivity(record) ? "assistant" : "decision";
+}
+
+/** Free-text match across everything the row actually shows, plus the record
+ *  id so a support ticket quoting an id finds its record. */
+function matches(record: AuditRecord, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  const haystack = [
+    record.summary,
+    record.counterparty,
+    record.actor,
+    record.id,
+    record.rowSubtitle,
+    typeof record.amount === "number" ? String(record.amount) : undefined,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  return haystack.includes(q);
+}
+
+function plural(n: number, one: string, many: string): string {
+  return `${n} ${n === 1 ? one : many}`;
+}
+
+export function AuditLogSection() {
+  const { records, isLoading, isError, eventCount } = useBrainAuditRecords();
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<TypeFilter>("all");
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [activeRecord, setActiveRecord] = useState<AuditRecord | null>(null);
+  const filterRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const optionRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  /* Which option the keyboard is on. Opens on the current selection so an arrow
+     press moves from where the user is, not from the top of the list. */
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  useEffect(() => {
+    if (!filterOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (filterRef.current && !filterRef.current.contains(e.target as Node)) setFilterOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [filterOpen]);
+
+  /* Focus follows activeIndex while the menu is open, so `aria-activedescendant`
+     and the real focus ring never disagree. */
+  useEffect(() => {
+    if (filterOpen) optionRefs.current[activeIndex]?.focus();
+  }, [filterOpen, activeIndex]);
+
+  const openMenu = (open: boolean) => {
+    if (open) {
+      const i = FILTER_OPTIONS.findIndex((o) => o.id === filter);
+      setActiveIndex(i < 0 ? 0 : i);
+    }
+    setFilterOpen(open);
+  };
+
+  const closeMenu = (returnFocus: boolean) => {
+    setFilterOpen(false);
+    if (returnFocus) triggerRef.current?.focus();
+  };
+
+  const commit = (id: TypeFilter) => {
+    setFilter(id);
+    closeMenu(true);
+  };
+
+  const onMenuKeyDown = (e: React.KeyboardEvent) => {
+    const last = FILTER_OPTIONS.length - 1;
+    switch (e.key) {
+      case "ArrowDown":
+        e.preventDefault();
+        setActiveIndex((i) => (i >= last ? 0 : i + 1));
+        break;
+      case "ArrowUp":
+        e.preventDefault();
+        setActiveIndex((i) => (i <= 0 ? last : i - 1));
+        break;
+      case "Home":
+        e.preventDefault();
+        setActiveIndex(0);
+        break;
+      case "End":
+        e.preventDefault();
+        setActiveIndex(last);
+        break;
+      case "Escape":
+        e.preventDefault();
+        closeMenu(true);
+        break;
+      case "Tab":
+        /* Tabbing away is a dismissal, but focus belongs wherever Tab is
+           sending it — do not yank it back to the trigger. */
+        closeMenu(false);
+        break;
+      default:
+        break;
+    }
+  };
+
+  const systemIds = useMemo(() => {
+    const { system } = partitionSystemActivity(records);
+    return new Set(system.map((r) => r.id));
+  }, [records]);
+
+  /* Search applies to every record first, so the "hidden by the type filter"
+     counts below describe what the TYPE filter is withholding from the current
+     search — not the whole log, which would overstate it. */
+  const searched = useMemo(() => records.filter((r) => matches(r, query)), [records, query]);
+
+  const visible = useMemo(() => {
+    if (filter === "all") return searched;
+    if (filter === "system") return searched.filter((r) => systemIds.has(r.id));
+    return searched.filter((r) => categorise(r, systemIds) === "decision");
+  }, [searched, filter, systemIds]);
+
+  const withheldByFilter = searched.length - visible.length;
+
+  /* A full page back means the cursor has more behind it. Nothing here may say
+     "N events" in that case — only "at least N". Measured on brain-core's raw
+     page, never the merged list: locally-recorded assistant questions are not
+     subject to the read's limit, and letting them count would turn a short page
+     into a false "there is more" claim. */
+  const atEventLimit = eventCount >= AUDIT_EVENTS_LIMIT;
+
+  /* The audit read failing does NOT empty the list — locally-recorded assistant
+     questions are merged in from a separate query and survive. So the error
+     cannot be left to the empty state: a list of two local rows under copy that
+     promises "every recorded event" is a completeness claim the page has no
+     standing to make. When the primary feed is unreadable, say so above the
+     rows, whatever else is on screen. */
+  const feedUnavailable = isError;
+
+  /* Pager over exactly what is on screen, so Next never jumps to a row the
+     current filter is hiding. */
+  const stepRecord = (delta: number) => {
+    if (!activeRecord) return;
+    const i = visible.findIndex((r) => r.id === activeRecord.id);
+    if (i < 0) return;
+    const next = visible[i + delta];
+    if (next) setActiveRecord(next);
+  };
+  const pagerDisabled = visible.length < 2;
+
+  const emptyMessage = (): { title: string; detail?: string } => {
+    if (isError) {
+      return {
+        title: "Brain could not read your audit history.",
+        detail: "This list is unavailable, not empty. No conclusion should be drawn from it being blank.",
+      };
+    }
+    if (isLoading) return { title: "Reading your audit history…" };
+    if (records.length === 0) return { title: "No audit records yet." };
+    if (query.trim() && searched.length === 0) return { title: "No records match your search." };
+    if (withheldByFilter > 0) {
+      return {
+        title: filter === "system" ? "No system activity here." : "No decision records here.",
+        detail: `${plural(withheldByFilter, "record is", "records are")} hidden by the type filter. Switch to "All Types" to see everything.`,
+      };
+    }
+    return { title: "No records match your search." };
+  };
+
+  const activeLabel = FILTER_OPTIONS.find((o) => o.id === filter)?.label ?? "All Types";
+
+  return (
+    <div className="flex flex-col gap-[20px] w-full">
+      <div className="flex flex-col gap-[4px] w-full">
+        <div className="flex items-center gap-2 min-h-[36px]">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#414965] text-[16px]">
+            Audit Log
+          </p>
+          {/* Suppressed while the feed is unreadable: a count next to a partial
+              list reads as a total. */}
+          {!isLoading && !feedUnavailable && records.length > 0 && (
+            <span
+              data-testid="badge-audit-count"
+              className="px-2 py-[2px] rounded-[22px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px]"
+              style={{ background: "#222737", color: "#6c779d", border: "1px solid rgba(108,119,157,0.2)" }}
+            >
+              {visible.length === records.length
+                ? `${records.length}${atEventLimit ? "+" : ""}`
+                : `${visible.length} of ${records.length}${atEventLimit ? "+" : ""}`}
+            </span>
+          )}
+        </div>
+
+        {feedUnavailable && (
+          <p
+            className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[13px] pb-[8px]"
+            data-testid="text-audit-scope"
+          >
+            Brain's audit feed could not be read, so this page cannot say what your history contains.
+          </p>
+        )}
+
+        {/* The read can fail and still leave rows on screen: assistant questions
+            are recorded locally and merge in from a separate query. Without this
+            banner those few rows would sit under a heading that implies they are
+            the whole trail. */}
+        {feedUnavailable && visible.length > 0 && (
+          <AlertCallout
+            title="This list is incomplete."
+            testId="notice-audit-unavailable"
+            className="mb-[8px]"
+          >
+            Brain could not read your audit history. What is shown below was recorded in this
+            browser — the events from Brain are missing, not absent. Try again in a moment.
+          </AlertCallout>
+        )}
+
+        {/* Controls */}
+        <div className="flex items-center gap-[8px] w-full">
+          <div className="flex-1 min-w-0 flex h-[40px] items-center gap-[8px] p-[8px] rounded-[8px] bg-[#222737]">
+            <Search className="flex-shrink-0 size-[24px]" color="#6c779d" strokeWidth={1.8} />
+            <input
+              data-testid="input-audit-search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search audit log…"
+              aria-label="Search audit records"
+              className="flex-1 min-w-0 h-[24px] bg-transparent outline-none [font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] placeholder:text-[#6c779d] text-[14px] leading-[20px]"
+            />
+          </div>
+
+          {/* Keyboard behaviour is hand-rolled because this is the only listbox
+              on the page and the shared Select brings its own visual language.
+              It implements the parts a keyboard user actually needs: open on
+              Enter/Space/ArrowDown, move with the arrows and Home/End, commit on
+              Enter/Space, dismiss on Escape with focus returned to the trigger. */}
+          <div ref={filterRef} className="relative shrink-0 w-[196px]">
+            <button
+              ref={triggerRef}
+              type="button"
+              data-testid="button-audit-type-filter"
+              aria-haspopup="listbox"
+              aria-expanded={filterOpen}
+              aria-label={`Filter by record type: ${activeLabel}`}
+              onClick={() => openMenu(!filterOpen)}
+              onKeyDown={(e) => {
+                if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                  e.preventDefault();
+                  openMenu(true);
+                }
+              }}
+              className="bg-[#222737] flex h-[40px] gap-[8px] items-center justify-between p-[8px] rounded-[8px] w-full text-left hover:bg-[#2a3045] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631ee] [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px]"
+            >
+              <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[14px] leading-[20px] truncate">
+                {activeLabel}
+              </span>
+              <ChevronDown className="flex-shrink-0 size-[18px]" color="#6c779d" strokeWidth={1.8} />
+            </button>
+            {filterOpen && (
+              <div
+                role="listbox"
+                aria-label="Record type"
+                aria-activedescendant={`audit-type-option-${FILTER_OPTIONS[activeIndex]?.id ?? filter}`}
+                onKeyDown={onMenuKeyDown}
+                className="absolute right-0 top-[calc(100%+4px)] w-[208px] z-[60] bg-[#0a0c10] border border-solid border-[#1d2132] rounded-[12px] p-[8px] flex flex-col items-start shadow-[0px_68px_13.5px_rgba(0,0,0,0.06),0px_38px_11.5px_rgba(0,0,0,0.2),0px_17px_8.5px_rgba(0,0,0,0.34),0px_4px_4.5px_rgba(0,0,0,0.39)]"
+              >
+                {FILTER_OPTIONS.map((o, i) => (
+                  <button
+                    key={o.id}
+                    id={`audit-type-option-${o.id}`}
+                    ref={(el) => { optionRefs.current[i] = el; }}
+                    type="button"
+                    role="option"
+                    aria-selected={filter === o.id}
+                    tabIndex={i === activeIndex ? 0 : -1}
+                    data-testid={`option-audit-type-${o.id}`}
+                    onFocus={() => setActiveIndex(i)}
+                    onClick={() => commit(o.id)}
+                    className="flex items-center p-[8px] rounded-[8px] shrink-0 w-full text-left transition-colors hover:bg-[#222737] focus:bg-[#222737] focus:outline-none [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px]"
+                    style={{ color: filter === o.id ? "#ffffff" : "#a8b9f4" }}
+                  >
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Records */}
+      <div className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10" }}>
+        {visible.length === 0 ? (
+          <div className="p-[24px] flex flex-col items-center gap-[6px]" data-testid="text-audit-empty">
+            <p
+              className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-center"
+              style={{ color: isError ? "#ff9500" : "#6c779d" }}
+            >
+              {emptyMessage().title}
+            </p>
+            {emptyMessage().detail && (
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] leading-[18px] text-center max-w-[420px]">
+                {emptyMessage().detail}
+              </p>
+            )}
+          </div>
+        ) : (
+          visible.map((record, i) => {
+            const category = categorise(record, systemIds);
+            const badge = CATEGORY_BADGE[category];
+            const actor = humanReadableActor(record.actor);
+            return (
+              <div key={record.id}>
+                {i > 0 && <div className="h-px bg-[#1d2132] mx-4" />}
+                <button
+                  type="button"
+                  data-testid={`row-audit-${record.id}`}
+                  onClick={() => setActiveRecord(record)}
+                  className="w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-[#0d1018] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px]"
+                >
+                  <div className="flex-1 min-w-0 flex flex-col gap-[4px]">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] min-w-0 break-words">
+                        {record.summary}
+                      </span>
+                      <span
+                        data-testid={`badge-audit-category-${record.id}`}
+                        className="px-2 py-[2px] rounded-[22px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[14px] shrink-0"
+                        style={{ background: badge.bg, color: badge.color, border: badge.border }}
+                      >
+                        {badge.label}
+                      </span>
+                    </div>
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[18px]">
+                      {[actor, record.occurredAtLabel]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </p>
+                  </div>
+                </button>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      <AuditRecordPopup
+        record={activeRecord}
+        open={activeRecord !== null}
+        onOpenChange={(o) => { if (!o) setActiveRecord(null); }}
+        onPrev={() => stepRecord(-1)}
+        onNext={() => stepRecord(1)}
+        pagerDisabled={pagerDisabled}
+        returnToBase="/settings?section=audit"
+      />
+    </div>
+  );
+}

@@ -272,15 +272,27 @@ describe("buildKeyFactRows", () => {
 
 describe("buildFlaggedBy", () => {
   it("prefers policy_id when core sends one", () => {
-    expect(buildFlaggedBy({ policy_id: "pol_ap_v2", policy_version: 3 })).toEqual({
-      text: "policy pol_ap_v2 (v3)",
+    expect(buildFlaggedBy({ policy_id: "Wire approval policy", policy_version: 3 })).toEqual({
+      text: "policy Wire Approval Policy (v3)",
       source: "policy_id",
     });
   });
 
   it("falls back to matched_rule_id — the live compliance case", () => {
     const flagged = buildFlaggedBy({ policy_id: null, matched_rule_id: "cmp_policy_violation" });
-    expect(flagged).toEqual({ text: "rule cmp_policy_violation", source: "matched_rule_id" });
+    expect(flagged).toEqual({ text: 'rule the "cmp policy violation" rule', source: "matched_rule_id" });
+  });
+
+  it("does not put opaque policy ids on the primary card", () => {
+    expect(buildFlaggedBy({
+      policy_id: "pol_8231",
+      matched_rule_id: null,
+      explanation: "The active policy requires review.",
+      decision: null,
+    })).toEqual({
+      text: "The active policy requires review.",
+      source: "policy_content",
+    });
   });
 
   it("falls back to policy CONTENT when both ids are null — the majority live case", () => {
@@ -674,7 +686,7 @@ describe("buildCollectionsDraft", () => {
 
   it("composes a draft from the proposal's own facts", () => {
     const draft = buildCollectionsDraft(facts, null, "Brightline Foods")!;
-    expect(draft.subject).toBe("Invoice AR-MIDMARKET-001 — $42,000.00");
+    expect(draft.subject).toBe("Invoice AR-MIDMARKET-001: $42,000.00");
     expect(draft.body).toContain("Hi Thornebury Imports,");
     expect(draft.body).toContain(
       "Our records show invoice AR-MIDMARKET-001 for $42,000.00 is now 45 days past due.",
@@ -699,7 +711,7 @@ describe("buildCollectionsDraft", () => {
     // fixed closing line mentions "the invoice" generically, so scope the check.)
     const factsLine = draft.body.split("\n").find((l) => l.startsWith("Our records show"))!;
     expect(factsLine).not.toMatch(/past due|due on|invoice [A-Z0-9]/i);
-    expect(draft.subject).toBe("Outstanding balance — $1,200.00");
+    expect(draft.subject).toBe("Outstanding balance: $1,200.00");
   });
 
   it("falls back to the due date when no overdue age is known", () => {

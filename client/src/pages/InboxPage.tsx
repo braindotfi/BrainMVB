@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import chevronDownIcon from "@/assets/chevron_down_dropdown.png";
 import { useLocation, useSearch } from "wouter";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -46,7 +46,6 @@ import {
 import { useReviewStatuses, setReviewStatus } from "@/lib/reviewStatusStore";
 import { acknowledgeInsight, useAcknowledgedRecords } from "@/lib/acknowledgedStore";
 import { TierRow, type TierRowModel, type TierRowAction } from "@/components/TierRowList";
-import { Divider } from "@/components/LedgerWidgets";
 import {
   applyDecisionFilters,
   buildSearchText,
@@ -68,6 +67,7 @@ import {
   tierForReadOnlyInsight,
 } from "@/lib/proposalTiers";
 import { useBrainPolicy } from "@/lib/brainPolicy";
+import { InfoIcon, UnavailableDataBox } from "@/components/Callout";
 import {
   bulkCandidateFrom,
   bulkLimitFor,
@@ -215,8 +215,100 @@ const TAG_APPROVED_BY_YOU = "bg-[#240757] text-[#a88afa] border-[rgba(168,138,25
 const TAG_REJECTED = "bg-[#350011] text-[#d20344] border-[rgba(210,3,68,0.2)]";
 const TAG_DETECTED = "bg-[#222737] text-[#6c779d] border-[rgba(108,119,157,0.2)]";
 
-/* No longer a shared CONTROL string — dropdowns are custom-overlay components
-   (transparent native <select> over a styled visual layer) to match Figma exactly. */
+interface InboxDropdownOption {
+  value: string;
+  label: string;
+}
+
+/** Dropdown labels are presentation text; keep their filter values unchanged. */
+function titleCaseDropdownLabel(label: string): string {
+  return label.replace(/\b[a-z]/g, (letter) => letter.toUpperCase());
+}
+
+function InboxDropdown({
+  value,
+  options,
+  onChange,
+  label,
+  testId,
+  open,
+  onOpenChange,
+}: {
+  value: string;
+  options: readonly InboxDropdownOption[];
+  onChange: (value: string) => void;
+  label: string;
+  testId: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const selected = options.find((option) => option.value === value) ?? options[0];
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) onOpenChange(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onOpenChange(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open, onOpenChange]);
+
+  return (
+    <div ref={rootRef} className="relative w-[120px] shrink-0">
+      <button
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={label}
+        data-testid={testId}
+        onClick={() => onOpenChange(!open)}
+        className="bg-[#222737] rounded-[8px] p-[8px] flex items-center gap-[8px] w-full text-left outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+      >
+        <span className="flex-1 min-w-0 [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[14px] leading-[20px] whitespace-nowrap truncate">
+          {titleCaseDropdownLabel(selected?.label ?? "")}
+        </span>
+        <img src={chevronDownIcon} alt="" aria-hidden="true" className="shrink-0 h-[7px] w-auto" />
+      </button>
+
+      {open && (
+        <div
+          role="listbox"
+          aria-label={label}
+          className="absolute left-0 top-[calc(100%+4px)] z-50 bg-[#0a0c10] border border-[#1d2132] border-solid flex flex-col items-start p-[8px] rounded-[12px] w-[208px] shadow-[0px_68px_13.5px_rgba(0,0,0,0.06),0px_38px_11.5px_rgba(0,0,0,0.2),0px_17px_8.5px_rgba(0,0,0,0.34),0px_4px_4.5px_rgba(0,0,0,0.39)]"
+          data-testid={`${testId}-menu`}
+        >
+          {options.map((option) => {
+            const selectedOption = option.value === value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                role="option"
+                aria-selected={selectedOption}
+                onClick={() => {
+                  onChange(option.value);
+                  onOpenChange(false);
+                }}
+                className="flex items-center p-[8px] rounded-[8px] shrink-0 w-full text-left [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[14px] whitespace-nowrap outline-none hover:bg-[#222737] focus-visible:bg-[#222737]"
+                data-testid={`${testId}-option-${option.value}`}
+              >
+                {titleCaseDropdownLabel(option.label)}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 /* ── Page ─────────────────────────────────────────────────────────────────── */
 export function InboxPage() {
@@ -228,6 +320,7 @@ export function InboxPage() {
 
   const statuses = useReviewStatuses();
   const [filters, setFilters] = useState<DecisionFilterState>(EMPTY_FILTERS);
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const setFilter = <K extends keyof DecisionFilterState>(key: K, value: DecisionFilterState[K]) =>
     setFilters((f) => ({ ...f, [key]: value }));
 
@@ -251,12 +344,16 @@ export function InboxPage() {
   const { proposals: liveQueue, isLoading: liveQueueLoading, isError: liveQueueError } = useBrainReviewQueue();
   const sessionIntentIds = new Set(intents.map((i) => i.intentId));
   const queue = liveQueue.filter((p) => !sessionIntentIds.has(p.id));
-  const { proposals: liveAutoApproved, isError: liveAutoApprovedError } = useBrainAutoApproved();
+  const {
+    proposals: liveAutoApproved,
+    isLoading: liveAutoApprovedLoading,
+    isError: liveAutoApprovedError,
+  } = useBrainAutoApproved();
 
-  const { insights: reconInsights, isError: reconError } = useBrainReconciliationInsights();
-  const { insights: subscriptionInsights, isError: subscriptionError } = useBrainSubscriptionInsights();
-  const { insights: disputeInsights, isError: disputeError } = useBrainDisputeInsights();
-  const { insight: cashFlowInsight, isError: cashFlowError } = useBrainCashFlowInsight();
+  const { insights: reconInsights, isLoading: reconLoading, isError: reconError } = useBrainReconciliationInsights();
+  const { insights: subscriptionInsights, isLoading: subscriptionLoading, isError: subscriptionError } = useBrainSubscriptionInsights();
+  const { insights: disputeInsights, isLoading: disputeLoading, isError: disputeError } = useBrainDisputeInsights();
+  const { insight: cashFlowInsight, isLoading: cashFlowLoading, isError: cashFlowError } = useBrainCashFlowInsight();
   const liveInsights: LiveInsight[] = [
     ...reconInsights,
     ...subscriptionInsights,
@@ -273,7 +370,19 @@ export function InboxPage() {
   /* Live brain-core agent proposals (GET /v1/proposals - vendor risk, collections,
      treasury, etc.) - a decision lifecycle distinct from the PaymentIntent queue
      above. Merges into the Needs Review tab alongside the existing payment-intent rows. */
-  const { proposals: liveProposals, isError: liveProposalsError } = useBrainProposals();
+  const {
+    proposals: liveProposals,
+    isLoading: liveProposalsLoading,
+    isError: liveProposalsError,
+  } = useBrainProposals();
+  const inboxSourcesLoading =
+    liveQueueLoading ||
+    liveAutoApprovedLoading ||
+    reconLoading ||
+    subscriptionLoading ||
+    disputeLoading ||
+    cashFlowLoading ||
+    liveProposalsLoading;
   /* Decidable agent proposals only — but decidability is now read from the
      record's own `available_decisions`, not from `mode`.
      
@@ -543,7 +652,7 @@ export function InboxPage() {
       const agentName = p.agent?.display_name || AGENT_DISPLAY_NAME[agentKey];
       const isPaymentAgent = agentKey === "payment" || /^(?:demo\s+)?payment agent$/i.test(agentName.trim());
       const pillName = isPaymentAgent ? "Payment" : agentName;
-      const decisions = buildDecisionButtons(p.available_decisions);
+        const decisions = buildDecisionButtons(p.available_decisions, p.presentation?.actions);
       const headerCopy = buildProposalHeaderCopy(p, agentName, formatText);
       push({
         id: p.id,
@@ -936,10 +1045,29 @@ export function InboxPage() {
   const toRow = (item: InboxItem): TierRowModel => {
     const busy = itemBusy(item);
     const actions: TierRowAction[] = [];
-    if (item.actionable) {
-      const isVendorRisk = item.liveAgentProposal?.type === "vendor_risk";
-      actions.push({ id: "reject", label: isVendorRisk ? "Hold Vendor" : "Reject", tone: "reject", disabled: busy, onClick: () => rejectItem(item) });
-      actions.push({ id: "approve", label: isVendorRisk ? "Clear Vendor" : "Approve", tone: "approve", disabled: busy, onClick: () => approveItem(item) });
+    if (item.liveAgentProposal && item.liveDecisions) {
+      for (const decision of item.liveDecisions) {
+        const label = decision.label;
+        const supported =
+          decision.id === "approve" ||
+          decision.id === "reject" ||
+          decision.id === "acknowledge";
+        actions.push({
+          id: decision.id,
+          label,
+          tone: decision.tone,
+          disabled: busy || !decision.writable || !supported,
+          onClick: () => {
+            if (!decision.writable || !supported) return;
+            if (decision.id === "approve") approveItem(item);
+            else if (decision.id === "reject") rejectItem(item);
+            else acknowledgeItem(item);
+          },
+        });
+      }
+    } else if (item.actionable) {
+      actions.push({ id: "reject", label: "Reject", tone: "reject", disabled: busy, onClick: () => rejectItem(item) });
+      actions.push({ id: "approve", label: "Approve", tone: "approve", disabled: busy, onClick: () => approveItem(item) });
     } else if (item.kind === "detection" || item.acknowledgeOnly) {
       const done = pendingAcknowledgedIds.has(item.id);
       actions.push({
@@ -1004,11 +1132,6 @@ export function InboxPage() {
       ? "Checking for anything that needs your attention\u2026"
       : "Nothing needs your attention right now. Brain is keeping things moving.";
 
-/** Dropdown labels are presentation text; keep their filter values unchanged. */
-function titleCaseDropdownLabel(label: string): string {
-  return label.replace(/\b[a-z]/g, (letter) => letter.toUpperCase());
-}
-
   return (
     <div className="bg-[#11141b] overflow-hidden absolute inset-0 grid grid-rows-[auto_minmax(0,1fr)]">
 
@@ -1022,10 +1145,8 @@ function titleCaseDropdownLabel(label: string): string {
           </p>
         </div>
 
-        {/* Filter toolbar — pixel-perfect Figma dropdowns.
-            Each pill: w-120 bg-#222737 no-border p-8 rounded-8 gap-8 text+icon.
-            Transparent native <select> overlays the visual div so the browser
-            opens the native picker on click while the visual matches Figma. */}
+         {/* Filter toolbar — closed controls stay compact; the open menu follows
+             Figma node 6191:69205 exactly. */}
         <div className="flex flex-row gap-[24px]">
           {([
             {
@@ -1051,41 +1172,32 @@ function titleCaseDropdownLabel(label: string): string {
               options: [{ value: "all", label: "All Types" }, ...availableTypes],
             },
           ] as const).map(({ value, onChange, label, testId, options }) => (
-            <div key={testId} className="relative w-[120px] shrink-0">
-              {/* Native select — invisible, covers full area, handles clicks */}
-              <select
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                value={value}
-                onChange={(e) => onChange(e.target.value)}
-                aria-label={label}
-                data-testid={testId}
-              >
-                {options.map((o) => (
-                  <option key={o.value} value={o.value}>{titleCaseDropdownLabel(o.label)}</option>
-                ))}
-              </select>
-              {/* Visual layer — pointer-events-none so clicks reach the select */}
-              <div className="bg-[#222737] rounded-[8px] p-[8px] flex items-center gap-[8px] pointer-events-none w-full">
-                <span className="flex-1 min-w-0 [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[14px] leading-[20px] whitespace-nowrap">
-                  {titleCaseDropdownLabel(
-                    (options as ReadonlyArray<{ value: string; label: string }>).find((o) => o.value === value)?.label ?? options[0].label,
-                  )}
-                </span>
-                <img src={chevronDownIcon} alt="" aria-hidden="true" className="shrink-0 h-[7px] w-auto" />
-              </div>
-            </div>
+            <InboxDropdown
+              key={testId}
+              value={value}
+              onChange={onChange}
+              label={label}
+              testId={testId}
+              options={options}
+              open={openDropdown === testId}
+              onOpenChange={(nextOpen) => setOpenDropdown(nextOpen ? testId : null)}
+            />
           ))}
         </div>
       </div>
 
       {/* The timeline itself — one list, scrolls. */}
-      <div className="min-h-0 min-w-0 overflow-y-auto overflow-x-hidden px-[16px] pb-[16px] flex flex-col gap-[12px]">
+      <div className="min-h-0 min-w-0 overflow-y-auto overflow-x-hidden px-[16px] pb-[16px] pt-[26px] flex flex-col gap-[10px]">
         <div className="flex items-center gap-[8px] w-full min-h-[20px]">
-          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[13px]" data-testid="text-decision-count">
-            {visibleItems.length === items.length
-              ? `${items.length} ${items.length === 1 ? "decision" : "decisions"}`
-              : `${visibleItems.length} of ${items.length} decisions`}
+          <div className="size-[6px] rounded-full shrink-0 bg-[#6c779d]" />
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[12px] uppercase tracking-[0.4px] whitespace-nowrap">
+            Decisions
           </p>
+          <div className="bg-[#6c779d] flex items-center justify-center min-w-[18px] px-[5px] py-[1px] rounded-[4px] shrink-0" data-testid="text-decision-count">
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#0a0c10] text-[11px] text-center whitespace-nowrap">
+              {visibleItems.length}
+            </p>
+          </div>
           {filtering && (
             <button
               type="button"
@@ -1101,15 +1213,9 @@ function titleCaseDropdownLabel(label: string): string {
         {/* A partial list is as misleading as a wrongly-empty one — say so above
             the rows rather than letting the count imply completeness. */}
         {decisionsUnreachable && visibleItems.length > 0 && (
-          <div
-            className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
-            style={{ background: "rgba(210,3,68,0.08)", border: "1px solid rgba(210,3,68,0.28)" }}
-            data-testid="banner-decisions-incomplete"
-          >
-            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#d20344] text-[14px]">
-              Some decisions couldn’t be loaded, so this list may be incomplete.
-            </p>
-          </div>
+          <UnavailableDataBox testId="banner-decisions-incomplete">
+            Some decisions couldn’t be loaded, so this list may be incomplete.
+          </UnavailableDataBox>
         )}
 
         {/* Bulk bar. Appears at two, matching the prototype — one selected item is
@@ -1118,76 +1224,96 @@ function titleCaseDropdownLabel(label: string): string {
             "eligible" meant. */}
         {selection.count >= 2 && selection.limit && (
           <div
-            className="flex flex-col sm:flex-row gap-[10px] sm:items-center justify-between p-[12px] rounded-[12px] w-full"
-            style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.35)" }}
+            className="bg-[#0a0c10] flex flex-col overflow-hidden rounded-[16px] shrink-0 w-full"
             data-testid="bulk-bar"
           >
-            <p
-              className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#a88afa] text-[13px]"
-              data-testid="bulk-bar-summary"
-            >
-              <b className="font-semibold text-[#a8b9f4]">{selection.count} selected</b>
-              {` \u00b7 all ${selectionLabel}, each under the ${format(selection.limit.value)} `}
-              {selection.limit.source === "rule"
-                ? "limit from your own rule."
-                : "limit above which Brain needs a second approver."}
-            </p>
-            <div className="flex gap-[8px] items-center shrink-0">
-              <button
-                type="button"
-                onClick={() => setSelectedIds(new Set())}
-                disabled={bulkRunning}
-                data-testid="button-bulk-clear"
-                className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-[#6c779d] hover:text-[#a8b9f4] disabled:opacity-40 outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-[4px] px-[8px] py-[6px]"
-              >
-                Clear
-              </button>
-              <button
-                type="button"
-                onClick={() => void approveSelected()}
-                disabled={bulkRunning}
-                data-testid="button-bulk-approve"
-                className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-white bg-[#7631ee] hover:bg-[#8a4bf5] disabled:opacity-50 rounded-[8px] px-[12px] py-[7px] outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-              >
-                {bulkRunning ? "Approving\u2026" : "Approve selected"}
-              </button>
+            {/* Body — count metric + Brain Observed sentence */}
+            <div className="flex flex-col items-start p-[16px] w-full">
+              <div className="bg-[#0a0c10] flex gap-[26px] items-start overflow-hidden p-[16px] rounded-[16px] w-full">
+                {/* Left: Number Selected */}
+                <div className="flex flex-col gap-[4px] items-start justify-center shrink-0 w-[128px]">
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px]">
+                    Number Selected
+                  </p>
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[48px] text-[40px] text-white" data-testid="bulk-bar-count">
+                    {selection.count}
+                  </p>
+                </div>
+                {/* Hairline vertical divider */}
+                <div className="w-px self-stretch shrink-0 bg-[#1d2132]" />
+                {/* Right: Brain Observed */}
+                <div className="flex flex-1 flex-col gap-[4px] items-start justify-center min-w-px">
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px]">
+                    Brain Observed
+                  </p>
+                  <p
+                    className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[16px] text-white"
+                    data-testid="bulk-bar-summary"
+                  >
+                    {`All ${selectionLabel}, each under ${format(selection.limit.value)} `}
+                    {selection.limit.source === "rule"
+                      ? "limit from your own rule."
+                      : "limit above which Brain needs a second approver."}
+                  </p>
+                </div>
+              </div>
+            </div>
+            {/* Footer — Cancel / Approve Selected */}
+            <div className="border-t border-[#1d2132] bg-[#0a0c10] flex flex-col items-start p-[16px] w-full">
+              <div className="flex gap-[16px] items-center w-full">
+                <button
+                  type="button"
+                  onClick={() => setSelectedIds(new Set())}
+                  disabled={bulkRunning}
+                  data-testid="button-bulk-clear"
+                  className="bg-[#222737] flex flex-1 items-center justify-center min-w-px px-[12px] py-[8px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[12px] whitespace-nowrap hover:bg-[#2a3046] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] disabled:opacity-40"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void approveSelected()}
+                  disabled={bulkRunning}
+                  data-testid="button-bulk-approve"
+                  className="bg-[#4a2300] flex flex-1 items-center justify-center min-w-px px-[12px] py-[8px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#ff9400] text-[12px] whitespace-nowrap hover:bg-[#5a2d00] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] disabled:opacity-50"
+                >
+                  {bulkRunning ? "Approving\u2026" : "Approve Selected"}
+                </button>
+              </div>
             </div>
           </div>
         )}
 
         {visibleItems.length === 0 ? (
-          <div
-            className="flex items-center px-[16px] py-[20px] w-full rounded-[12px] border border-solid border-[#1d2132] bg-[#0a0c10]"
-            data-testid="text-decisions-empty"
-          >
-            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
-              {emptyText}
-            </p>
-          </div>
+          decisionsUnreachable ? (
+            <UnavailableDataBox testId="text-decisions-empty">{emptyText}</UnavailableDataBox>
+          ) : (
+            <div
+              className="flex items-center px-[16px] py-[20px] w-full rounded-[12px] border border-solid border-[#1d2132] bg-[#0a0c10]"
+              data-testid="text-decisions-empty"
+            >
+              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
+                {emptyText}
+              </p>
+            </div>
+          )
         ) : (
           <div className="shrink-0 flex flex-col w-full rounded-[12px] border border-solid border-[#1d2132] bg-[#0a0c10] overflow-hidden">
-            <div className="flex flex-col gap-[8px] p-[8px] w-full">
-              {visibleItems.map((item, idx) => (
-                <div key={item.id} className="flex flex-col gap-[8px] w-full">
-                  <TierRow row={toRow(item)} />
-                  {idx < visibleItems.length - 1 && <Divider />}
-                </div>
+            <div className="flex flex-col w-full">
+              {visibleItems.map((item) => (
+                <TierRow key={item.id} row={toRow(item)} />
               ))}
             </div>
           </div>
         )}
 
         {/* Helper banner — shown while anything is still awaiting a decision. */}
-        {visibleItems.some((it) => it.actionable) && (
+        {!inboxSourcesLoading && !decisionsUnreachable && visibleItems.some((it) => it.actionable) && (
           <div
             className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
             style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
           >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0 mt-[2px]">
-              <circle cx="8" cy="8" r="7" stroke="#7631ee" strokeWidth="1.3" />
-              <path d="M8 7.3v4.2" stroke="#7631ee" strokeWidth="1.3" strokeLinecap="round" />
-              <circle cx="8" cy="4.7" r="0.9" fill="#7631ee" />
-            </svg>
+            <InfoIcon className="mt-[2px]" />
             <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#7631ee] text-[14px]">
               Tap any item to see why Brain suggested it, what happens next, and what the risk is before you approve anything. Brain proposes. You decide. A separate execution service settles.
             </p>

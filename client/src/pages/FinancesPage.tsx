@@ -25,9 +25,10 @@ import { useCurrency } from "@/lib/useCurrency";
 import { CashFlowTab } from "@/components/CashFlowTab";
 import { VendorsPanel } from "@/pages/VendorsPanel";
 import { RulesPanel } from "@/pages/RulesPanel";
-import { Divider, WidgetCard } from "@/components/LedgerWidgets";
+import { WidgetCard } from "@/components/LedgerWidgets";
 import { TransactionDetailPopup } from "@/components/TransactionDetailPopup";
 import { AccountDetailPopup } from "@/components/AccountDetailPopup";
+import { UnavailableDataBox } from "@/components/Callout";
 import {
   ACCOUNT_KIND_LABEL as KIND_LABEL,
   type BrainAccountDTO,
@@ -52,8 +53,8 @@ function timeAgo(ts: number): string {
 
 // ─── tabs ────────────────────────────────────────────────────────────────────
 
-export type LedgerTab = "Accounts" | "Cash Flow" | "Vendors" | "Rules";
-export const LEDGER_TABS: LedgerTab[] = ["Accounts", "Cash Flow", "Vendors", "Rules"];
+export type LedgerTab = "Accounts" | "Cash Flow" | "Counterparties" | "Rules";
+export const LEDGER_TABS: LedgerTab[] = ["Accounts", "Cash Flow", "Counterparties", "Rules"];
 
 export const ledgerTabSlug = (tab: LedgerTab): string => tab.toLowerCase().replace(/\s+/g, "-");
 
@@ -71,7 +72,11 @@ const TAB_BY_SLUG: Record<string, LedgerTab> = {
   accounts: "Accounts",
   "cash-flow": "Cash Flow",
   cashflow: "Cash Flow",
-  vendors: "Vendors",
+  counterparties: "Counterparties",
+  // Retired canonical name for the same tab. The screen was called "Vendors"
+  // until it grew a Customers segment; every ?tab=vendors link ever emitted
+  // (assistant citations, global search, shared URLs) must keep working.
+  vendors: "Counterparties",
   rules: "Rules",
   recent: "Cash Flow",
   bills: "Cash Flow",
@@ -95,9 +100,9 @@ const TAB_COPY: Record<LedgerTab, { heading: string; sub: string | null }> = {
     heading: "Everywhere your money moved.",
     sub: "Income, expenses and the bills you still owe, in one list.",
   },
-  Vendors: {
-    heading: "The people and businesses you pay.",
-    sub: "See vendor activity, payment history, risks, and recommendations.",
+  Counterparties: {
+    heading: "The people and businesses you trade with.",
+    sub: "Review new and flagged counterparties, and see payment history across vendors and customers.",
   },
   Rules: {
     heading: "Your boundaries that Brain follows.",
@@ -237,23 +242,25 @@ export function FinancesPage() {
             {copy.sub ?? `Updated ${updatedLabel}`}
           </p>
         </div>
-        <div className="bg-[#06070a] flex gap-[2px] items-center overflow-clip p-[2px] relative rounded-[400px] shrink-0 flex-wrap max-w-full">
+        <div role="tablist" aria-label="Ledger" className="flex items-center gap-[2px] overflow-x-auto border-b border-[#1d2132] w-full">
           {LEDGER_TABS.map((tab) => {
             const isActive = activeTab === tab;
             return (
               <button
                 key={tab}
+                role="tab"
+                aria-selected={isActive}
                 onClick={() => selectTab(tab)}
-                className="flex items-center justify-center px-[14px] py-[8px] relative rounded-[100px] shrink-0 transition-colors"
-                style={{ background: isActive ? "#4a2300" : "transparent" }}
+                className="px-[8px] py-[8px] whitespace-nowrap text-[14px] leading-[18px] transition-colors shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-t-[4px]"
+                style={{
+                  fontFamily: "'Gilroy', sans-serif",
+                  fontWeight: 500,
+                  color: isActive ? "#ffffff" : "#6c779d",
+                  borderBottom: isActive ? "2px solid #7631ee" : "2px solid transparent",
+                }}
                 data-testid={`tab-finance-${ledgerTabSlug(tab)}`}
               >
-                <p
-                  className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap"
-                  style={{ color: isActive ? "#ff9500" : "#414965" }}
-                >
-                  {tab}
-                </p>
+                {tab}
               </button>
             );
           })}
@@ -261,15 +268,15 @@ export function FinancesPage() {
       </div>
 
       {/* Table area: scrolls as a whole; panel headers are sticky */}
-      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-[16px] pb-[16px]">
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-[16px] pb-[16px] pt-[26px]">
 
         {activeTab === "Accounts" && (
           <WidgetCard title="Accounts" count={accounts.length}>
             {accounts.map((acc, idx) => {
               const clickable = !!acc.id;
               return (
-              <div key={acc.name} className="flex flex-col gap-[8px] w-full">
-                <div
+              <div
+                  key={acc.name}
                   data-testid={`row-account-${idx}`}
                   {...(clickable
                     ? {
@@ -281,16 +288,16 @@ export function FinancesPage() {
                         },
                       }
                     : {})}
-                  className={`flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors ${clickable ? "hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer" : ""}`}
+                  className={`flex gap-[12px] items-center px-[16px] py-[12px] relative shrink-0 w-full bg-[#0a0c10] transition-colors border-b border-solid border-[#1d2132] last:border-b-0 ${clickable ? "hover:bg-[#11141b] cursor-pointer" : ""}`}
                 >
                   <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
-                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">{acc.name}</p>
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">{acc.name}</p>
                     <div className="flex gap-[4px] items-center relative shrink-0">
-                      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">{acc.sub}</p>
+                      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] whitespace-nowrap">{acc.sub}</p>
                       {acc.sub2 && (
                         <>
                           <div className="relative shrink-0 size-[4px]"><img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_DOT} /></div>
-                          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">{acc.sub2}</p>
+                          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] whitespace-nowrap">{acc.sub2}</p>
                         </>
                       )}
                     </div>
@@ -299,40 +306,41 @@ export function FinancesPage() {
                     <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap">{rowBalanceLabel(acc, format)}</p>
                   </div>
                 </div>
-                {idx < accounts.length - 1 && <Divider />}
-              </div>
+              
               );
             })}
             {accounts.length === 0 && (
-              <div className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
+              accountsFailed ? (
+                <UnavailableDataBox testId="text-accounts-unavailable">
+                  Your accounts couldn't be loaded just now, so this list is empty for the wrong reason. It isn't a sign that you have no accounts.
+                </UnavailableDataBox>
+              ) : (
+              <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
                 {/* Three states, not two. An unreachable ledger used to render the
                     same "No connected accounts yet" as a genuinely empty one, which
                     tells someone with accounts that they have none. */}
                 <p
                   className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[16px]"
-                  style={{ color: accountsFailed ? "#ff9400" : "#6c779d" }}
+                  style={{ color: "#6c779d" }}
                   data-testid={
                     accountsLoading
                       ? "text-accounts-loading"
-                      : accountsFailed
-                        ? "text-accounts-unavailable"
-                        : "text-accounts-empty"
+                      : "text-accounts-empty"
                   }
                 >
                   {accountsLoading
                     ? "Loading your accounts from the ledger…"
-                    : accountsFailed
-                      ? "Your accounts couldn't be loaded just now, so this list is empty for the wrong reason. It isn't a sign that you have no accounts."
-                      : "No connected accounts yet. Link an account to see your balances here."}
+                    : "No connected accounts yet. Link an account to see your balances here."}
                 </p>
               </div>
+              )
             )}
           </WidgetCard>
         )}
 
         {activeTab === "Cash Flow" && <CashFlowTab format={format} onOpenTx={setOpenTxId} />}
 
-        {activeTab === "Vendors" && <VendorsPanel />}
+        {activeTab === "Counterparties" && <VendorsPanel />}
 
         {activeTab === "Rules" && <RulesPanel />}
 

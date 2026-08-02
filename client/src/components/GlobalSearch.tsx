@@ -30,6 +30,7 @@ import { openVendorDetail } from "@/lib/openVendorDetail";
 import { buildProposalHeaderCopy } from "@/lib/proposalCards";
 import { AGENT_DISPLAY_NAME } from "@/components/AgentProposalModal";
 import { ACCOUNT_KIND_LABEL, type BrainAccountsResponse } from "@/lib/brainAccounts";
+import searchIcon from "@assets/search_1785584120256.png";
 import {
   accountResult,
   decisionResult,
@@ -40,7 +41,7 @@ import {
 } from "@/lib/globalSearch";
 
 const INPUT =
-  "w-full h-[40px] min-w-0 bg-[#06070a] border-0 rounded-[10px] px-[12px] py-0 [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[18px] text-[#a8b9f4] outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] placeholder:text-[#414965]";
+  "flex-1 min-w-0 h-[24px] bg-transparent border-0 px-0 py-0 [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-[#6c779d] caret-[#7631ee] outline-none placeholder:text-[#6c779d]";
 
 export function GlobalSearch() {
   const [, navigate] = useLocation();
@@ -176,27 +177,35 @@ export function GlobalSearch() {
 
   return (
     <div className="relative mx-[7px] w-auto shrink-0 mt-[12px] mb-[7px]" ref={wrapRef} data-testid="global-search">
-      <input
-        type="text"
-        role="combobox"
-        aria-expanded={showPanel}
-        aria-controls="global-search-results"
-        aria-activedescendant={
-          showPanel && results[activeIndex] ? `gs-${results[activeIndex].key}` : undefined
-        }
-        aria-autocomplete="list"
-        aria-label="Search decisions, vendors, accounts, and descriptions from your financial brain"
-        className={INPUT}
-        placeholder="Search any decisions, vendors, accounts, and descriptions from your financial brain..."
-        value={query}
-        onChange={(e) => {
-          setQuery(e.target.value);
-          setOpen(true);
-        }}
-        onFocus={() => setOpen(true)}
-        onKeyDown={onKeyDown}
-        data-testid="input-global-search"
-      />
+      <div className="flex h-[40px] w-full items-center gap-[8px] rounded-[8px] bg-[#222737] px-[8px]">
+        <img
+          src={searchIcon}
+          alt=""
+          aria-hidden="true"
+          className="size-[24px] shrink-0"
+        />
+        <input
+          type="text"
+          role="combobox"
+          aria-expanded={showPanel}
+          aria-controls="global-search-results"
+          aria-activedescendant={
+            showPanel && results[activeIndex] ? `gs-${results[activeIndex].key}` : undefined
+          }
+          aria-autocomplete="list"
+          aria-label="Search"
+          className={INPUT}
+          placeholder="Search any text including title, description, amount, vendor..."
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          onKeyDown={onKeyDown}
+          data-testid="input-global-search"
+        />
+      </div>
 
       {showPanel && (
         <div
@@ -212,7 +221,7 @@ export function GlobalSearch() {
               className="px-[14px] py-[10px] [font-family:'Gilroy',sans-serif] font-medium text-[13px] text-[#ff9400]"
               data-testid="text-search-unavailable"
             >
-              Search is unavailable — decisions, vendors and accounts could not be
+              Search is unavailable. Decisions, vendors and accounts could not be
               loaded. This is not a result of "nothing found".
             </p>
           ) : (

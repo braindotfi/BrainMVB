@@ -71,3 +71,20 @@ id). The session exchange then mints a normal member session and every read work
 
 **How to apply:** insert the row, verify **read-only**, and delete both the row and the throwaway
 user afterwards. Never submit a decision — the proposals belong to a real workspace.
+
+## List and detail must share the same decision fallback
+
+The `available_decisions` rule applies to the Inbox row as well as the detail card:
+when the field is absent, both may fall back to `presentation.actions`; when it is
+present, including `[]`, both must treat it as authoritative. The list should expose
+every advertised decision, but disable values the client cannot submit rather than
+silently replacing them with Approve/Reject.
+
+**Why:** fixing only the modal leaves the quick-action row able to invent a write,
+while fixing only the row makes opening the card change the available actions.
+
+**How to apply:** build both surfaces from one pure decision helper and keep the
+write allowlist separate from the display label. Likewise, policy attribution may
+use `policy_id` or `matched_rule_id` only when they are human labels; machine-shaped
+values such as `pol_8231` belong in Technical Detail and must fall through to policy
+content or omission on the primary card.
