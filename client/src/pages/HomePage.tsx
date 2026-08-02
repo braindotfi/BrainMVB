@@ -67,7 +67,7 @@ import {
   setRuleDraft,
 } from "@/lib/rulesStore";
 import { useReviewStatuses } from "@/lib/reviewStatusStore";
-import { useAcknowledgedRecords } from "@/lib/acknowledgedStore";
+import { useAcknowledgedRecords, acknowledgeInsight } from "@/lib/acknowledgedStore";
 import { AlertCallout } from "@/components/Callout";
 
 /* Your Goals (Figma 3882:43037), progress bars per goal */
@@ -583,6 +583,18 @@ export function HomePage() {
       .filter((insight) => !acknowledgedInsightIds.has(insight.id)),
     [reconInsights, subscriptionInsights, disputeInsights, cashFlowInsight, acknowledgedInsightIds],
   );
+  /* Mirrors InboxPage's pending-acknowledgement set so the button disables
+     immediately without waiting for the store write to propagate. */
+  const [pendingAcknowledgedIds, setPendingAcknowledgedIds] = useState<Set<string>>(() => new Set());
+  const acknowledgeInsightRow = (insight: LiveInsight) => {
+    const key = insight.id;
+    if (pendingAcknowledgedIds.has(key) || acknowledgedInsightIds.has(key)) return;
+    setPendingAcknowledgedIds((prev) => new Set(prev).add(key));
+    window.setTimeout(() => {
+      acknowledgeInsight(insight);
+      setPendingAcknowledgedIds((prev) => { const next = new Set(prev); next.delete(key); return next; });
+    }, 250);
+  };
 
   /* Live brain-core agent proposals (GET /v1/proposals) needing a decision -
      merged into the same "Brain Detected" widget as the live payment queue
@@ -770,18 +782,30 @@ export function HomePage() {
       ],
     }));
 
-    /* Read-only ledger insights. No actions by design: they have no proposal
-       lifecycle and nothing to decide, so a button here would be theatre. */
-    const insightRows: TierRowModel[] = liveInsights.map((i) => ({
-      id: `insight-${i.id}`,
-      tier: tierForReadOnlyInsight(),
-      title: formatText(i.title),
-      badge: { label: i.badge, className: TAG_NEEDS_YOU },
-      subtitle: i.subtitle ? formatText(i.subtitle) : undefined,
-      testIdPrefix,
-      onOpenDetail: () => setSelectedInsight(i),
-      actions: [],
-    }));
+    /* Read-only ledger insights — one Acknowledge action, matching the Inbox.
+       Acknowledging removes the row from the active queue without making it
+       disappear from the Audit Log. */
+    const insightRows: TierRowModel[] = liveInsights.map((i) => {
+      const done = pendingAcknowledgedIds.has(i.id) || acknowledgedInsightIds.has(i.id);
+      return {
+        id: `insight-${i.id}`,
+        tier: tierForReadOnlyInsight(),
+        title: formatText(i.title),
+        badge: { label: i.badge, className: TAG_NEEDS_YOU },
+        subtitle: i.subtitle ? formatText(i.subtitle) : undefined,
+        testIdPrefix,
+        onOpenDetail: () => setSelectedInsight(i),
+        actions: [
+          {
+            id: "acknowledge",
+            label: done ? "Acknowledged" : "Acknowledge",
+            tone: "acknowledge" as const,
+            disabled: done,
+            onClick: () => acknowledgeInsightRow(i),
+          },
+        ],
+      };
+    });
 
     // Brain-core agent proposals (collections, vendor risk, etc.) — narrative is
     // the specific "Why:" text shown in Inbox; agent display name is the category.
@@ -794,7 +818,9 @@ export function HomePage() {
          a row's heading and its position in the pager would come apart. */
       const tier = deriveProposalTier(p, { thresholds: tierThresholds });
       if (!tier) return [];
-      const agentName = AGENT_DISPLAY_NAME[agentKeyForProposalType(p.type)];
+      /* Match InboxPage: prefer the display name brain-core attaches to the
+         proposal record itself; fall back to the local AGENT_DISPLAY_NAME map. */
+      const agentName = p.agent?.display_name || AGENT_DISPLAY_NAME[agentKeyForProposalType(p.type)];
       const headerCopy = buildProposalHeaderCopy(p, agentName, formatText);
       /* Exactly the decision set the detail sheet renders, from the same builder.
          A decision brain-core won't accept is shown DISABLED rather than dropped,
@@ -860,6 +886,8 @@ export function HomePage() {
     overviewSelection.type,
     overviewBatchIds,
     overviewBulkRunning,
+    pendingAcknowledgedIds,
+    acknowledgedInsightIds,
   ]);
 
   const overviewProposalByRowId = useMemo<Map<string, BrainProposal>>(
