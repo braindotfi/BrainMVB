@@ -337,7 +337,7 @@ const ACTION_TONES: Record<ActionTone, { background: string; color: string }> = 
   approve: { background: "#123509", color: "#42bf23" },
   reject: { background: "#350011", color: "#d20344" },
   neutral: { background: "#222737", color: "#6c779d" },
-  acknowledge: { background: "#240757", color: "#a88afa" },
+  acknowledge: { background: "#240757", color: "#7631ee" },
 };
 
 /* `full` fills the card footer (the detail sheets); `compact` sits inline at the
