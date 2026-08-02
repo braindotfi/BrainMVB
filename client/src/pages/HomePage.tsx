@@ -316,17 +316,22 @@ const SPENDING_INSIGHT_FALLBACK = { text: "No spending insight available yet.", 
 /** Locale for dates: USD → en-US ("Apr 15, 2025"), EUR → en-GB ("15 Apr 2025"). */
 const DATE_LOCALE: Record<CurrencyCode, string> = { USD: "en-US", EUR: "en-GB" };
 
-function timeAgo(ts: number): string {
-  const diffMs = Date.now() - ts;
-  const diffSec = Math.round(diffMs / 1000);
-  if (diffSec < 10) return "Just now";
-  if (diffSec < 60) return `${diffSec}s ago`;
-  const diffMin = Math.round(diffSec / 60);
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffH = Math.round(diffMin / 60);
-  if (diffH < 24) return `${diffH}h ago`;
-  const diffD = Math.round(diffH / 24);
-  return `${diffD}d ago`;
+function ordinalDay(day: number): string {
+  const suffix =
+    day % 100 >= 11 && day % 100 <= 13
+      ? "th"
+      : ({ 1: "st", 2: "nd", 3: "rd" } as Record<number, string>)[day % 10] ?? "th";
+  return `${day}${suffix}`;
+}
+
+function formatUpdatedAt(ts: number): string {
+  const date = new Date(ts);
+  const weekday = new Intl.DateTimeFormat(undefined, { weekday: "long" }).format(date);
+  const hours = date.getHours();
+  const hour = hours % 12 || 12;
+  const minute = String(date.getMinutes()).padStart(2, "0");
+  const meridiem = hours < 12 ? "am" : "pm";
+  return `${weekday} the ${ordinalDay(date.getDate())} at ${hour}:${minute}${meridiem}.`;
 }
 
 /** Re-format ISO dates (YYYY-MM-DD) and common month-day patterns in the text
@@ -426,7 +431,7 @@ export function HomePage() {
     const id = window.setInterval(() => setLastUpdated(Date.now()), 10000);
     return () => window.clearInterval(id);
   }, []);
-  const updatedLabel = useMemo(() => timeAgo(lastUpdated), [lastUpdated]);
+  const updatedLabel = useMemo(() => formatUpdatedAt(lastUpdated), [lastUpdated]);
   const { format, currency, formatText } = useCurrency();
   const [, navigate] = useLocation();
   const [showOnboarding, setShowOnboarding] = useState(false);
