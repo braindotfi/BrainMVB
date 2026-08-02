@@ -312,7 +312,7 @@ function CategoryDropdown({
         style={{ background: selected ? "#240757" : "#222737" }}
       >
         <span
-          className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[16px] whitespace-nowrap"
+          className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[14px] whitespace-nowrap"
           style={{ color: selected ? "#ffffff" : "#6c779d" }}
         >
           {value || "category"}
@@ -351,8 +351,8 @@ function CategoryDropdown({
               className="flex items-start p-[8px] rounded-[8px] w-full text-left hover:bg-[#222737] transition-colors focus:outline-none focus-visible:bg-[#222737]"
             >
               <span
-                className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[16px] whitespace-nowrap"
-                style={{ color: cat === value ? "#a8b9f4" : "#6c779d" }}
+                className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[14px] whitespace-nowrap"
+                style={{ color: "#a8b9f4" }}
               >
                 {cat}
               </span>
@@ -670,7 +670,7 @@ export function VendorsPanel() {
                     <div className="flex flex-wrap gap-[16px] items-center w-full">
                       {/* Group 1: "Add vendor" + name input */}
                       <div className="flex gap-[16px] items-center shrink-0">
-                        <span className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                        <span className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[14px] whitespace-nowrap">
                           Add {segmentNounSingular}
                         </span>
                         <div
@@ -685,7 +685,7 @@ export function VendorsPanel() {
                             value={vendorName}
                             onChange={(e) => setVendorName(e.target.value)}
                             autoFocus
-                            className="bg-transparent [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] placeholder:text-[#6c779d] outline-none"
+                            className="bg-transparent [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[14px] leading-[20px] placeholder:text-[#6c779d] outline-none"
                             style={{ minWidth: "140px" }}
                             onKeyDown={(e) => { if (e.key === "Enter" && vendorName.trim()) setConfirmSubmit(true); }}
                           />
@@ -694,7 +694,7 @@ export function VendorsPanel() {
 
                       {/* Group 2: "as a" + category dropdown */}
                       <div className="flex gap-[16px] items-center shrink-0">
-                        <span className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                        <span className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[14px] whitespace-nowrap">
                           as a
                         </span>
                         <CategoryDropdown value={category} onChange={setCategory} />
@@ -702,7 +702,7 @@ export function VendorsPanel() {
 
                       {/* Group 3: "for review." */}
                       <div className="flex items-center shrink-0">
-                        <span className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                        <span className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[14px] whitespace-nowrap">
                           for review.
                         </span>
                       </div>

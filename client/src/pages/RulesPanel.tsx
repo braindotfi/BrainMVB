@@ -425,7 +425,7 @@ function Chip({
       type="button"
       onClick={onClick}
       data-testid={testId}
-      className="inline-flex items-center gap-[8px] p-[8px] rounded-[8px] transition-colors [font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+      className="inline-flex items-center gap-[8px] p-[8px] rounded-[8px] transition-colors [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
       style={{
         background: hasValue ? "#240757" : "#222737",
         color: hasValue ? "#ffffff" : "#6c779d",
@@ -777,7 +777,7 @@ export function RulesPanel() {
           ) : (
             <div className="w-full rounded-[16px] bg-[#0a0c10] p-[16px] flex flex-col gap-[12px]" data-testid="panel-builder">
               {/* One continuous wrapping sentence, matches Figma 5734:70625 */}
-              <div className="flex flex-wrap gap-[16px] items-center w-full [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[24px]">
+              <div className="flex flex-wrap gap-[16px] items-center w-full [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[14px] leading-[20px]">
                 {/* "When a [kind]" */}
                 <div className="flex gap-[16px] items-center shrink-0">
                   <span className="whitespace-nowrap">When a</span>
@@ -790,7 +790,7 @@ export function RulesPanel() {
                       testId="chip-category"
                     />
                     {openChip === "category" && (
-                      <div className="absolute z-10 mt-[6px] w-[220px] rounded-[12px] border border-[#1d2132] bg-[#11141b] p-[6px] shadow-lg">
+                      <div className="absolute z-10 mt-[6px] w-[220px] rounded-[12px] border border-[#1d2132] bg-[#0a0c10] p-[8px] shadow-lg">
                         {BUILDER_CATEGORIES.map((c) => {
                           const selected = builder.category === c;
                           const label = titleCase(c);
@@ -800,7 +800,7 @@ export function RulesPanel() {
                               type="button"
                               onClick={() => { setBuilder((b) => ({ ...b, category: c })); setOpenChip(null); }}
                               data-testid={`option-category-${c}`}
-                              className="w-full flex items-center justify-between gap-[8px] text-left rounded-[8px] px-[10px] py-[8px] hover:bg-[#1d2132] transition-colors [font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#a8b9f4]"
+                              className="w-full flex items-center justify-between gap-[8px] text-left rounded-[8px] p-[8px] hover:bg-[#222737] focus-visible:bg-[#222737] transition-colors [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[14px] text-[#a8b9f4]"
                             >
                               {label}
                               {selected && (
@@ -828,7 +828,7 @@ export function RulesPanel() {
                       testId="chip-vendor"
                     />
                     {openChip === "vendor" && (
-                      <div className="absolute z-10 mt-[6px] w-[280px] rounded-[12px] border border-[#1d2132] bg-[#11141b] p-[6px] shadow-lg max-h-[320px] overflow-y-auto">
+                      <div className="absolute z-10 mt-[6px] w-[280px] rounded-[12px] border border-[#1d2132] bg-[#0a0c10] p-[8px] shadow-lg max-h-[320px] overflow-y-auto">
                         <p className="px-[10px] pt-[4px] pb-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] uppercase text-[#6c779d]">
                           Trusted vendors
                         </p>
@@ -837,7 +837,7 @@ export function RulesPanel() {
                             rule around a vendor set that simply failed to load. */}
                         {trustedVendors.length === 0 && (
                           <p
-                            className="px-[10px] pb-[6px] [font-family:'Gilroy',sans-serif] font-medium text-[13px]"
+                            className="px-[8px] pb-[6px] [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px]"
                             style={{ color: vendorsFailed ? "#ff9400" : "#6c779d" }}
                             data-testid={vendorsFailed ? "text-vendors-unavailable" : "text-vendors-empty"}
                           >
@@ -854,7 +854,7 @@ export function RulesPanel() {
                               type="button"
                               onClick={() => { setBuilder((b) => ({ ...b, vendor: v })); setOpenChip(null); }}
                               data-testid={`option-vendor-${slugify(v)}`}
-                              className="w-full flex items-center justify-between gap-[8px] text-left rounded-[8px] px-[10px] py-[8px] hover:bg-[#1d2132] transition-colors [font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#a8b9f4]"
+                              className="w-full flex items-center justify-between gap-[8px] text-left rounded-[8px] p-[8px] hover:bg-[#222737] focus-visible:bg-[#222737] transition-colors [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[14px] text-[#a8b9f4]"
                             >
                               {v}
                               {selected && (
@@ -865,21 +865,21 @@ export function RulesPanel() {
                             </button>
                           );
                         })}
-                        <div className="mx-[10px] my-[6px] h-px bg-[#1d2132]" />
-                        <p className="px-[10px] pt-[2px] pb-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] uppercase text-[#414965]">
+                        <div className="mx-[8px] my-[6px] h-px bg-[#1d2132]" />
+                        <p className="px-[8px] pt-[2px] pb-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] uppercase text-[#414965]">
                           Not Trusted Yet
                         </p>
                         {untrustedVendors.length === 0 ? (
-                          <p className="px-[10px] pb-[4px] [font-family:'Gilroy',sans-serif] font-medium text-[13px] text-[#414965]">
+                          <p className="px-[8px] pb-[4px] [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-[#414965]">
                             Brain doesn't track an untrusted-vendor list yet.
                           </p>
                         ) : (
                           untrustedVendors.map((v) => (
                             <div
                               key={v}
-                              className="w-full flex items-center justify-between gap-[8px] rounded-[8px] px-[10px] py-[8px]"
+                              className="w-full flex items-center justify-between gap-[8px] rounded-[8px] p-[8px]"
                             >
-                              <span className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#414965]">
+                               <span className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[14px] text-[#414965]">
                                 {v}
                               </span>
                               <span className="shrink-0 px-[8px] py-[2px] rounded-[100px] bg-[#350011] text-[#d20344] [font-family:'Gilroy',sans-serif] font-semibold text-[10px] uppercase tracking-[0.04em]">
@@ -902,7 +902,7 @@ export function RulesPanel() {
                     placeholder="$0"
                     onChange={(e) => setBuilder((b) => ({ ...b, amount: e.target.value }))}
                     data-testid="input-builder-amount"
-                    className="w-[160px] rounded-[8px] bg-[#222737] px-[8px] py-[10px] [font-family:'JetBrains_Mono',monospace] text-[16px] leading-[20px] text-white placeholder:text-[#6c779d] focus:outline-none"
+                     className="w-[160px] rounded-[8px] bg-[#222737] px-[8px] py-[10px] [font-family:'JetBrains_Mono',monospace] text-[14px] leading-[20px] text-white placeholder:text-[#6c779d] focus:outline-none"
                   />
                 </div>
 
@@ -918,7 +918,7 @@ export function RulesPanel() {
                       testId="chip-action"
                     />
                     {openChip === "action" && (
-                      <div className="absolute z-10 mt-[6px] w-[260px] rounded-[12px] border border-[#1d2132] bg-[#11141b] p-[6px] shadow-lg">
+                      <div className="absolute z-10 mt-[6px] w-[260px] rounded-[12px] border border-[#1d2132] bg-[#0a0c10] p-[8px] shadow-lg">
                         {([
                           { key: "auto", label: "Pay it automatically" },
                           { key: "queue", label: "Queue for one-click approval" },
@@ -931,7 +931,7 @@ export function RulesPanel() {
                               type="button"
                               onClick={() => { setBuilder((b) => ({ ...b, action: key })); setOpenChip(null); }}
                               data-testid={`option-action-${key}`}
-                              className="w-full flex items-center justify-between gap-[8px] text-left rounded-[8px] px-[10px] py-[8px] hover:bg-[#1d2132] transition-colors [font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#a8b9f4]"
+                              className="w-full flex items-center justify-between gap-[8px] text-left rounded-[8px] p-[8px] hover:bg-[#222737] focus-visible:bg-[#222737] transition-colors [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[14px] text-[#a8b9f4]"
                             >
                               {label}
                               {selected && (
