@@ -51,7 +51,7 @@ const FILTER_OPTIONS: { id: TypeFilter; label: string }[] = [
 type Category = "decision" | "assistant" | "system";
 
 const CATEGORY_BADGE: Record<Category, { label: string; bg: string; color: string; border: string }> = {
-  decision:  { label: "Decision",        bg: "#1d2132", color: "#a8b9f4", border: "1px solid rgba(168,185,244,0.2)" },
+  decision:  { label: "Decision",        bg: "#222737", color: "#6c779d", border: "1px solid rgba(108,119,157,0.2)" },
   assistant: { label: "Assistant",       bg: "#222737", color: "#6c779d", border: "1px solid rgba(108,119,157,0.2)" },
   system:    { label: "System",          bg: "#222737", color: "#6c779d", border: "1px solid rgba(108,119,157,0.2)" },
 };
@@ -378,8 +378,8 @@ export function AuditLogSection() {
                   className="w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-[#0d1018] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px]"
                 >
                   <div className="flex-1 min-w-0 flex flex-col gap-[4px]">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] min-w-0 break-words">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] min-w-0 flex-1 truncate">
                         {record.summary}
                       </span>
                       <span
