@@ -1778,6 +1778,11 @@ export function LiveProposalModal({
                           </span>
                         </TechnicalBlock>
                       )}
+                      {proposal.details && Object.keys(proposal.details).length > 0 && (
+                        <TechnicalBlock label="Action details" testId="row-live-proposal-details">
+                          {JSON.stringify(proposal.details, null, 2)}
+                        </TechnicalBlock>
+                      )}
                       {/* Identifier facts, kept out of the card face by
                           buildKeyFactRows but preserved verbatim for support. */}
                       {keyFacts.technical.map((r, i) => (

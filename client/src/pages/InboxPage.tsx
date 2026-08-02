@@ -636,7 +636,7 @@ export function InboxPage() {
       const agentName = p.agent?.display_name || AGENT_DISPLAY_NAME[agentKey];
       const isPaymentAgent = agentKey === "payment" || /^(?:demo\s+)?payment agent$/i.test(agentName.trim());
       const pillName = isPaymentAgent ? "Payment" : agentName;
-      const decisions = buildDecisionButtons(p.available_decisions);
+        const decisions = buildDecisionButtons(p.available_decisions, p.presentation?.actions);
       const headerCopy = buildProposalHeaderCopy(p, agentName, formatText);
       push({
         id: p.id,
@@ -1029,10 +1029,29 @@ export function InboxPage() {
   const toRow = (item: InboxItem): TierRowModel => {
     const busy = itemBusy(item);
     const actions: TierRowAction[] = [];
-    if (item.actionable) {
-      const isVendorRisk = item.liveAgentProposal?.type === "vendor_risk";
-      actions.push({ id: "reject", label: isVendorRisk ? "Hold Vendor" : "Reject", tone: "reject", disabled: busy, onClick: () => rejectItem(item) });
-      actions.push({ id: "approve", label: isVendorRisk ? "Clear Vendor" : "Approve", tone: "approve", disabled: busy, onClick: () => approveItem(item) });
+    if (item.liveAgentProposal && item.liveDecisions) {
+      for (const decision of item.liveDecisions) {
+        const label = decision.label;
+        const supported =
+          decision.id === "approve" ||
+          decision.id === "reject" ||
+          decision.id === "acknowledge";
+        actions.push({
+          id: decision.id,
+          label,
+          tone: decision.tone,
+          disabled: busy || !decision.writable || !supported,
+          onClick: () => {
+            if (!decision.writable || !supported) return;
+            if (decision.id === "approve") approveItem(item);
+            else if (decision.id === "reject") rejectItem(item);
+            else acknowledgeItem(item);
+          },
+        });
+      }
+    } else if (item.actionable) {
+      actions.push({ id: "reject", label: "Reject", tone: "reject", disabled: busy, onClick: () => rejectItem(item) });
+      actions.push({ id: "approve", label: "Approve", tone: "approve", disabled: busy, onClick: () => approveItem(item) });
     } else if (item.kind === "detection" || item.acknowledgeOnly) {
       const done = pendingAcknowledgedIds.has(item.id);
       actions.push({
