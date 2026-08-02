@@ -96,7 +96,7 @@ export function UnavailableDataBox({
 }) {
   return (
     <div
-      className={`flex gap-[12px] items-center px-[16px] py-[12px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] ${className}`}
+      className={`flex gap-[12px] items-center px-[16px] py-[12px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-solid border-[#1d2132] ${className}`}
       data-testid={testId}
     >
       <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#ff9400] text-[16px] flex-1">

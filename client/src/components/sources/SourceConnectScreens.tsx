@@ -161,7 +161,7 @@ export function BankConnect({ onDone }: { onDone: () => void }) {
         <AlertCallout testId="alert-bank-error">{error}</AlertCallout>
       )}
 
-      {!isConfigured ? (
+      {statusQuery.isSuccess && !isConfigured ? (
         <div
           data-testid="alert-plaid-not-configured"
           className="rounded-[12px] px-[14px] py-[12px] [font-family:'Gilroy',sans-serif] text-[13px] leading-[18px]"
@@ -171,7 +171,7 @@ export function BankConnect({ onDone }: { onDone: () => void }) {
           <code className="text-[#7631EE]">PLAID_CLIENT_ID</code> and{" "}
           <code className="text-[#7631EE]">PLAID_SECRET</code> to enable this.
         </div>
-      ) : (
+      ) : statusQuery.isSuccess && isConfigured ? (
         <PlaidConnectButton
           token={linkTokenQuery.data?.link_token ?? null}
           isLoading={linkTokenQuery.isLoading}
@@ -188,7 +188,7 @@ export function BankConnect({ onDone }: { onDone: () => void }) {
           }}
           onExit={(err) => { if (err) setError(err.display_message ?? err.error_message ?? "Bank connection cancelled"); }}
         />
-      )}
+      ) : null}
 
 
     </div>

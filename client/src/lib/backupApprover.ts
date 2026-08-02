@@ -26,7 +26,7 @@ import { useSyncExternalStore } from "react";
 const KEY_PREFIX = "brain_backup_approvers_";
 
 export const BACKUP_APPROVER_NOTE =
-  "Recorded here only — Brain core has no backup-approver role yet, so this changes nothing about who can approve what.";
+  "Recorded here only. Brain core has no backup-approver role yet, so this changes nothing about who can approve what.";
 
 type Listener = () => void;
 const listeners = new Set<Listener>();

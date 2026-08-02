@@ -211,7 +211,7 @@ export function AuditLogSection() {
     if (isError) {
       return {
         title: "Brain could not read your audit history.",
-        detail: "This list is unavailable, not empty — no conclusion should be drawn from it being blank.",
+        detail: "This list is unavailable, not empty. No conclusion should be drawn from it being blank.",
       };
     }
     if (isLoading) return { title: "Reading your audit history…" };
@@ -220,7 +220,7 @@ export function AuditLogSection() {
     if (withheldByFilter > 0) {
       return {
         title: filter === "system" ? "No system activity here." : "No decision records here.",
-        detail: `${plural(withheldByFilter, "record is", "records are")} hidden by the type filter — switch to "All Types" to see everything.`,
+        detail: `${plural(withheldByFilter, "record is", "records are")} hidden by the type filter. Switch to "All Types" to see everything.`,
       };
     }
     return { title: "No records match your search." };

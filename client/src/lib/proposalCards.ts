@@ -925,7 +925,7 @@ export function buildCollectionsDraft(
 
   const subject = [invoice ? `Invoice ${invoice}` : "Outstanding balance", amount]
     .filter(Boolean)
-    .join(" — ");
+    .join(": ");
 
   const body = [
     `Hi ${customer ?? "there"},`,

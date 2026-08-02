@@ -686,7 +686,7 @@ describe("buildCollectionsDraft", () => {
 
   it("composes a draft from the proposal's own facts", () => {
     const draft = buildCollectionsDraft(facts, null, "Brightline Foods")!;
-    expect(draft.subject).toBe("Invoice AR-MIDMARKET-001 — $42,000.00");
+    expect(draft.subject).toBe("Invoice AR-MIDMARKET-001: $42,000.00");
     expect(draft.body).toContain("Hi Thornebury Imports,");
     expect(draft.body).toContain(
       "Our records show invoice AR-MIDMARKET-001 for $42,000.00 is now 45 days past due.",
@@ -711,7 +711,7 @@ describe("buildCollectionsDraft", () => {
     // fixed closing line mentions "the invoice" generically, so scope the check.)
     const factsLine = draft.body.split("\n").find((l) => l.startsWith("Our records show"))!;
     expect(factsLine).not.toMatch(/past due|due on|invoice [A-Z0-9]/i);
-    expect(draft.subject).toBe("Outstanding balance — $1,200.00");
+    expect(draft.subject).toBe("Outstanding balance: $1,200.00");
   });
 
   it("falls back to the due date when no overdue age is known", () => {

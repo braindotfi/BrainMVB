@@ -265,9 +265,9 @@ export function useBrainCashFlowInsight() {
       windowCount >= 30 ? "30-day" : `${windowCount}-day (all available data)`;
     const avgStr = format(avgDailyNet.toFixed(2));
     if (windowNet < 0) {
-      explanation = `Cash flow is trending negative — outflows exceeded inflows by ${format(Math.abs(windowNet).toFixed(2))} over the past ${windowCount} days.`;
+      explanation = `Cash flow is trending negative. Outflows exceeded inflows by ${format(Math.abs(windowNet).toFixed(2))} over the past ${windowCount} days.`;
     } else if (avgDailyNet > 0 && latestNet > 2 * avgDailyNet) {
-      explanation = `Latest day netted ${format(latestNet.toFixed(2))}, well above your ${avgStr} ${windowLabel} daily average — check for a one-time item before reading this as a trend.`;
+      explanation = `Latest day netted ${format(latestNet.toFixed(2))}, well above your ${avgStr} ${windowLabel} daily average. Check for a one-time item before reading this as a trend.`;
     } else if (avgDailyNet > 0 && latestNet < 0.5 * avgDailyNet) {
       explanation = `Latest day netted ${format(latestNet.toFixed(2))}, well below your ${avgStr} ${windowLabel} daily average.`;
     } else {

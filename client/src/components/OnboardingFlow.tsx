@@ -136,7 +136,7 @@ export function OnboardingFlow({ open, onClose, onComplete }: OnboardingFlowProp
                   className="flex flex-1 items-center justify-center px-[20px] py-[10px] rounded-[100px] bg-[#4a2300] hover:bg-[#5a2c00] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ff9500]"
                 >
                   <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#ff9500] text-[16px] whitespace-nowrap">
-                    {isLast ? "Got it — take me to Brain" : "Next"}
+                    {isLast ? "Got it. Take me to Brain" : "Next"}
                   </span>
                 </button>
               </div>

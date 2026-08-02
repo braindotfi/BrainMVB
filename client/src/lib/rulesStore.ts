@@ -14,6 +14,7 @@ import { apiRequest } from "./queryClient";
 
 let rules: AutoRule[] = [];
 const listeners = new Set<() => void>();
+let hydrationStatus: "idle" | "loading" | "ready" | "error" = "idle";
 
 function subscribe(cb: () => void) {
   listeners.add(cb);
@@ -27,6 +28,7 @@ function notify() {
 }
 
 const getSnapshot = () => rules;
+const getHydrationSnapshot = () => hydrationStatus;
 
 let reportCounter = 0;
 function nextReportId(): string {
@@ -65,6 +67,10 @@ function updateRule(id: string, fn: (r: AutoRule) => AutoRule) {
 /* ── Hooks ──────────────────────────────────────────────────────────────────── */
 export function useRules(): AutoRule[] {
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+}
+
+export function useRulesHydration(): "idle" | "loading" | "ready" | "error" {
+  return useSyncExternalStore(subscribe, getHydrationSnapshot, getHydrationSnapshot);
 }
 
 export function useRule(id: string | undefined): AutoRule | undefined {
@@ -234,6 +240,8 @@ let hydrated = false;
 export async function hydrateUserRules() {
   if (hydrated) return;
   hydrated = true;
+  hydrationStatus = "loading";
+  notify();
   try {
     const res = await apiRequest("GET", "/api/rules");
     const rows: any[] = await res.json();
@@ -260,10 +268,13 @@ export async function hydrateUserRules() {
       }));
     if (incoming.length) {
       rules = [...incoming, ...rules];
-      notify();
     }
+    hydrationStatus = "ready";
+    notify();
   } catch (err) {
     hydrated = false; // allow a retry on the next mount
+    hydrationStatus = "error";
+    notify();
     console.warn("[rulesStore] failed to hydrate user rules", err);
   }
 }

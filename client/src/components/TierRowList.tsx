@@ -18,6 +18,7 @@ import { ActionButton, type ActionTone } from "@/components/ProposalCardParts";
 import { TIER_META, TIER_ORDER, type ProposalTier } from "@/lib/proposalTiers";
 import type { RowTier } from "@/lib/decisionFilters";
 import { Divider } from "@/components/LedgerWidgets";
+import { UnavailableDataBox } from "@/components/Callout";
 
 /* Tier accents. Red = Urgent, amber = Waiting on you, periwinkle = Insights —
    the palette already used for Inbox status tags, not the prototype's colours. */
@@ -191,7 +192,7 @@ export const TierSection = ({ tier, rows }: { tier: ProposalTier; rows: TierRowM
         </div>
         {meta.note && (
           <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[12px] truncate">
-            — {meta.note}
+            Note: {meta.note}
           </p>
         )}
       </div>
@@ -216,9 +217,11 @@ export const TierSection = ({ tier, rows }: { tier: ProposalTier; rows: TierRowM
 export const TierSections = ({
   rows,
   emptyMessage,
+  unavailable = false,
 }: {
   rows: TierRowModel[];
   emptyMessage: string;
+  unavailable?: boolean;
 }) => {
   const groups = useMemo(
     () => TIER_ORDER.map((tier) => ({ tier, rows: rows.filter((r) => r.tier === tier) })).filter((g) => g.rows.length > 0),
@@ -226,6 +229,9 @@ export const TierSections = ({
   );
 
   if (groups.length === 0) {
+    if (unavailable) {
+      return <UnavailableDataBox testId="tier-sections-empty">{emptyMessage}</UnavailableDataBox>;
+    }
     return (
       <div
         className="flex items-center px-[16px] py-[20px] w-full rounded-[12px] border border-solid border-[#1d2132] bg-[#0a0c10]"

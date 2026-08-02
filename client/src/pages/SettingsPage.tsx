@@ -664,14 +664,14 @@ function ProfileSection() {
               policy.isLoading
                 ? "Reading your approval policy…"
                 : policy.isError
-                  ? "Brain could not read your approval policy — this limit is unknown, not absent."
+                  ? "Brain could not read your approval policy. This limit is unknown, not absent."
                   : autoLimit === null
                     ? "No approval policy is active on this tenant yet."
                     : autoLimit.kind === "limit"
                       ? "Payments at or below this run without waiting for a person."
                       : autoLimit.kind === "conditional"
                         ? "Automatic approval applies only under specific conditions, not a flat amount."
-                        : "Nothing runs automatically — every payment waits for an approver."
+                        : "Nothing runs automatically. Every payment waits for an approver."
             }
             testId="setting-row-auto-approve-limit"
             right={

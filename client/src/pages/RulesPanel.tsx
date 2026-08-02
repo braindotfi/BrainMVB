@@ -18,6 +18,7 @@ import {
   createRule,
   consumeRuleDraft,
   hydrateUserRules,
+  useRulesHydration,
 } from "@/lib/rulesStore";
 import {
   useRuleSuggestions,
@@ -518,7 +519,8 @@ export function RulesPanel() {
 
   // Lift policy rules to this level so the Default badge tracks the same count
   // PolicySection renders (brain-core policy rules), not the user-created rules.
-  const { rules: policyRules } = useBrainPolicy();
+  const { rules: policyRules, isLoading: policyLoading, isError: policyError } = useBrainPolicy();
+  const rulesHydration = useRulesHydration();
   const automations = rules.filter((r) => (r.kind ?? "automation") === "automation");
   const guardrails = rules.filter((r) => r.kind === "guardrail");
 
@@ -996,6 +998,7 @@ export function RulesPanel() {
           <>
             <PolicySection />
             {/* Default-specific purple info banner */}
+            {!policyLoading && !policyError && (
             <div
               className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
               style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
@@ -1005,6 +1008,7 @@ export function RulesPanel() {
                 These rules are created automatically by Brain as a default policy layer to protect every tenant. They establish essential safeguards from the start, ensuring consistent security, governance, and oversight before any custom rules are added.
               </p>
             </div>
+            )}
           </>
         )}
 
@@ -1022,6 +1026,7 @@ export function RulesPanel() {
                 </div>
               ))}
             </Section>
+            {rulesHydration === "ready" && (
             <div
               className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
               style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
@@ -1033,6 +1038,7 @@ export function RulesPanel() {
                 the evidence behind them.
               </p>
             </div>
+            )}
           </>
         )}
 
@@ -1050,6 +1056,7 @@ export function RulesPanel() {
                 </div>
               ))}
             </Section>
+            {rulesHydration === "ready" && (
             <div
               className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
               style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
@@ -1061,6 +1068,7 @@ export function RulesPanel() {
                 the evidence behind them.
               </p>
             </div>
+            )}
           </>
         )}
 

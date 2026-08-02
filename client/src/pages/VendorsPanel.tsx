@@ -532,7 +532,7 @@ export function VendorsPanel() {
       else if (import.meta.env.DEV) {
         console.warn(
           `[counterparties] "${v.name}" (${v.id}) matched no tier ` +
-            `(trustStatus=${v.trustStatus}, trustState=${v.trustState ?? "absent"}) — it is not rendered under any chip.`,
+            `(trustStatus=${v.trustStatus}, trustState=${v.trustState ?? "absent"}) - it is not rendered under any chip.`,
         );
       }
     }

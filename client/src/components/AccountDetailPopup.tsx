@@ -307,7 +307,7 @@ export function AccountDetailPopup({
           ) : (
             <div className="flex flex-col gap-[24px] items-start p-[24px] w-full">
               {/* "Isn't in your ledger" is a strong claim about the account. When the
-                  read failed we have no basis for it — the account may be perfectly
+                  read failed we have no basis for it. The account may be perfectly
                   fine and simply unreadable this second. */}
               <p
                 className="[font-family:'Gilroy',sans-serif] font-medium text-[14px]"

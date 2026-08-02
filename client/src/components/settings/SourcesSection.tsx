@@ -203,7 +203,7 @@ function EmptyRow({ states, emptyLabel, testId }: { states: ReadState[]; emptyLa
   const pending = states.some((s) => s === "pending");
 
   const text = failed
-    ? "Brain couldn't load this list. Anything connected here is missing from the page — it has not been disconnected."
+    ? "Brain couldn't load this list. Anything connected here is missing from the page. It has not been disconnected."
     : pending
       ? "Checking…"
       : emptyLabel;
@@ -450,7 +450,7 @@ export function SourcesSection() {
             </div>
 
             <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[12px] leading-[16px]">
-              Connecting an account hands off to that provider's own secure login — Brain never sees
+              Connecting an account hands off to that provider's own secure login. Brain never sees
               or stores your credentials. Uploaded documents are read once, and anything Brain
               extracts shows up in Decisions for you to confirm individually.
             </p>
@@ -463,7 +463,7 @@ export function SourcesSection() {
           Brain could not load {failedFeeds.length === 1
             ? failedFeeds[0]
             : `${failedFeeds.slice(0, -1).join(", ")} and ${failedFeeds[failedFeeds.length - 1]}`}
-          . Anything connected there is missing from this page — it has not been disconnected.
+          . Anything connected there is missing from this page. It has not been disconnected.
           Try again in a moment.
         </AlertCallout>
       )}

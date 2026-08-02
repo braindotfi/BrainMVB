@@ -236,6 +236,6 @@ export function cashFlowPeriodLabel(start: string | null, end: string | null): s
   const [ya] = a.split(" ").slice(-1);
   const [yb] = b.split(" ").slice(-1);
   /* Same year: name it once — "Feb – Jun 2026", not "Feb 2026 – Jun 2026". */
-  if (ya === yb) return `${a.split(" ")[0]} – ${b}`;
-  return `${a} – ${b}`;
+  if (ya === yb) return `${a.split(" ")[0]} to ${b}`;
+  return `${a} to ${b}`;
 }

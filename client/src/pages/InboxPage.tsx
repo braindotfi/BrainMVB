@@ -344,12 +344,16 @@ export function InboxPage() {
   const { proposals: liveQueue, isLoading: liveQueueLoading, isError: liveQueueError } = useBrainReviewQueue();
   const sessionIntentIds = new Set(intents.map((i) => i.intentId));
   const queue = liveQueue.filter((p) => !sessionIntentIds.has(p.id));
-  const { proposals: liveAutoApproved, isError: liveAutoApprovedError } = useBrainAutoApproved();
+  const {
+    proposals: liveAutoApproved,
+    isLoading: liveAutoApprovedLoading,
+    isError: liveAutoApprovedError,
+  } = useBrainAutoApproved();
 
-  const { insights: reconInsights, isError: reconError } = useBrainReconciliationInsights();
-  const { insights: subscriptionInsights, isError: subscriptionError } = useBrainSubscriptionInsights();
-  const { insights: disputeInsights, isError: disputeError } = useBrainDisputeInsights();
-  const { insight: cashFlowInsight, isError: cashFlowError } = useBrainCashFlowInsight();
+  const { insights: reconInsights, isLoading: reconLoading, isError: reconError } = useBrainReconciliationInsights();
+  const { insights: subscriptionInsights, isLoading: subscriptionLoading, isError: subscriptionError } = useBrainSubscriptionInsights();
+  const { insights: disputeInsights, isLoading: disputeLoading, isError: disputeError } = useBrainDisputeInsights();
+  const { insight: cashFlowInsight, isLoading: cashFlowLoading, isError: cashFlowError } = useBrainCashFlowInsight();
   const liveInsights: LiveInsight[] = [
     ...reconInsights,
     ...subscriptionInsights,
@@ -366,7 +370,19 @@ export function InboxPage() {
   /* Live brain-core agent proposals (GET /v1/proposals - vendor risk, collections,
      treasury, etc.) - a decision lifecycle distinct from the PaymentIntent queue
      above. Merges into the Needs Review tab alongside the existing payment-intent rows. */
-  const { proposals: liveProposals, isError: liveProposalsError } = useBrainProposals();
+  const {
+    proposals: liveProposals,
+    isLoading: liveProposalsLoading,
+    isError: liveProposalsError,
+  } = useBrainProposals();
+  const inboxSourcesLoading =
+    liveQueueLoading ||
+    liveAutoApprovedLoading ||
+    reconLoading ||
+    subscriptionLoading ||
+    disputeLoading ||
+    cashFlowLoading ||
+    liveProposalsLoading;
   /* Decidable agent proposals only — but decidability is now read from the
      record's own `available_decisions`, not from `mode`.
      
@@ -1292,7 +1308,7 @@ export function InboxPage() {
         )}
 
         {/* Helper banner — shown while anything is still awaiting a decision. */}
-        {visibleItems.some((it) => it.actionable) && (
+        {!inboxSourcesLoading && !decisionsUnreachable && visibleItems.some((it) => it.actionable) && (
           <div
             className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
             style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}

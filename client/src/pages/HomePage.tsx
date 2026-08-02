@@ -228,7 +228,7 @@ const GoalsSection = () => {
             data-testid="text-goals-empty"
             className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px]"
           >
-            No goals yet — add one to start tracking progress.
+            No goals yet. Add one to start tracking progress.
           </p>
         ) : (
           goals.map((g) => <GoalProgress key={g.id} goal={g} />)
@@ -979,7 +979,7 @@ export function HomePage() {
      huge meaningless number, or a figure that silently flips sign. */
   const runway = useMemo(() => {
     if (liveTotal === null || netMonthly === null) return { value: "-", caption: "Connect accounts to see runway." };
-    if (netMonthly >= 0) return { value: "-", caption: "No net burn — cash flow is positive." };
+    if (netMonthly >= 0) return { value: "-", caption: "No net burn. Cash flow is positive." };
     const months = liveTotal / Math.abs(netMonthly);
     if (!Number.isFinite(months) || months < 0) return { value: "-", caption: "Not enough data yet." };
     return { value: `${Math.floor(months)} mo`, caption: "At the current net burn." };
@@ -1151,6 +1151,7 @@ export function HomePage() {
               )}
               <TierSections
                 rows={overviewRows}
+                unavailable={overviewUnreachable}
                 emptyMessage={
                   overviewUnreachable
                     ? "Brain couldn’t load what needs your review. This is a connection problem, not an empty queue."

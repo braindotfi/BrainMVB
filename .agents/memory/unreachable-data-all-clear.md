@@ -121,3 +121,15 @@ pending into EITHER neighbour is the same family of bug: fold it into "failed"
 and a slow feed cries wolf; fold it into "succeeded" and a slow feed renders the
 negative claim. Any surface with a slow-but-not-broken feed will read as the
 negative case unless all three states are handled explicitly.
+
+Shared unavailable-state boxes should use the same visible border as surrounding
+data cards, and informational banners should wait for every backing read to finish.
+An unavailable or pending read must not quietly remove the warning or show a healthy
+policy explanation.
+
+**Why:** consistent styling makes a failed read visible on every surface, while
+gating dependent banners prevents partial or not-yet-loaded data from being presented
+as settled tenant configuration.
+
+**How to apply:** route failed and pending branches through the shared unavailable
+component; keep neutral styling only for a confirmed empty result.

@@ -99,7 +99,7 @@ const Metric = ({
   format: Format;
 }) => (
   (() => {
-    const formatted = value == null ? "—" : format(value);
+    const formatted = value == null ? "-" : format(value);
     const parts = formatted.match(/^(.+)\.(\d{2})$/);
     const whole = parts ? parts[1] : formatted;
     const cents = parts ? `.${parts[2]}` : "";
@@ -154,7 +154,7 @@ const OverdueInvoicesBanner = ({
        It now shares the parent's read and says so when that read failed. */
     headline = "Overdue invoices couldn't be checked";
     detail =
-      "The invoice feed is unavailable. That is not the same as nothing being overdue — treat this as unknown, not clear.";
+      "The invoice feed is unavailable. That is not the same as nothing being overdue. Treat this as unknown, not clear.";
   } else {
     if (invoices == null) return null; // still loading; the parent shows the settling state
     const overdue = invoices.filter(
@@ -162,7 +162,7 @@ const OverdueInvoicesBanner = ({
     );
     if (overdue.length === 0) return null;
     /* "Customer" is doing real work here. This counts receivables — money owed TO
-       you — but it now sits directly above the liabilities card and a list of bills
+       you, but it now sits directly above the liabilities card and a list of bills
        you owe. On the old split tabs the two piles never shared a screen; here, an
        unqualified "6 invoices overdue" over "3 bills" reads as one number
        contradicting the other. */
@@ -289,7 +289,7 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
       {(txFailed || invFailed) && (
         <UnavailableDataBox testId="banner-cashflow-incomplete">
           {txFailed && invFailed
-            ? "Cash flow couldn't be loaded. These figures are not a statement that nothing moved — reconnect or refresh to see the real position."
+            ? "Cash flow couldn't be loaded. These figures are not a statement that nothing moved. Reconnect or refresh to see the real position."
             : txFailed
               ? "Transactions couldn't be loaded, so income and expenses are unavailable. Bills below are complete."
               : "Bills couldn't be loaded, so liabilities are unavailable. Transactions below are complete."}
@@ -336,13 +336,21 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
             </p>
           </div>
         ) : rows.length === 0 ? (
-          <div className="flex gap-[12px] items-center px-[16px] py-[12px] rounded-[8px] w-full bg-[#0a0c10]" data-testid="text-cashflow-empty">
-            <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
+          txFailed || invFailed ? (
+            <UnavailableDataBox testId="text-cashflow-empty">
               {txFailed && invFailed
                 ? "Nothing could be loaded, so there is nothing to show here yet."
-                : "No money movement recorded yet. This fills in from your ledger as money comes in and goes out."}
-            </p>
-          </div>
+                : txFailed
+                  ? "Transactions couldn't be loaded, so there is nothing to show here yet."
+                  : "Bills couldn't be loaded, so this list may be incomplete."}
+            </UnavailableDataBox>
+          ) : (
+            <div className="flex gap-[12px] items-center px-[16px] py-[12px] rounded-[8px] w-full bg-[#0a0c10]" data-testid="text-cashflow-empty">
+              <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
+                No money movement recorded yet. This fills in from your ledger as money comes in and goes out.
+              </p>
+            </div>
+          )
         ) : (
           rows.map((row, idx) => {
             const bill = row.invoiceId ? billById.get(row.invoiceId) : undefined;

@@ -126,10 +126,10 @@ async function humanizeWikiAnswer(raw: string, lastUserMessage?: string): Promis
       system:
         "You turn a structured financial result into a concise, warm prose answer for a business owner. " +
         (parsedSuccessfully
-          ? "Keep every number and date EXACTLY as given — do not round, recompute, or drop any. "
-          : "The data may contain arithmetic expressions (like '48000 + 96000') — evaluate them to give the correct totals. ") +
+          ? "Keep every number and date EXACTLY as given. Do not round, recompute, or drop any. "
+          : "The data may contain arithmetic expressions (like '48000 + 96000'). Evaluate them to give the correct totals. ") +
         "Format all currency with a $ sign and thousands separators (e.g. $144,000). No JSON, no code fences. " +
-        "Write about 1–4 sentences, plus a short list only if it genuinely helps readability.",
+        "Write about 1-4 sentences, plus a short list only if it genuinely helps readability.",
       messages: [{ role: "user", content: payload }],
     });
     const text = (message.content.find((b) => b.type === "text") as Anthropic.TextBlock | undefined)?.text?.trim();
@@ -225,12 +225,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (code === "route_not_found") {
         res.status(503).json({
           error: "keys_api_unavailable",
-          message: "The brain-core API-key service isn't enabled yet. Keys become available as soon as it is — no action needed on your side.",
+          message: "The brain-core API-key service isn't enabled yet. Keys become available as soon as it is. No action needed on your side.",
         });
         return;
       }
       if (code === "api_key_not_found" || error.status === 404) {
-        res.status(404).json({ error: "api_key_not_found", message: "This key no longer exists — it may already have been rotated or revoked." });
+        res.status(404).json({ error: "api_key_not_found", message: "This key no longer exists. It may already have been rotated or revoked." });
         return;
       }
       if (code === "rate_limited" || error.status === 429) {

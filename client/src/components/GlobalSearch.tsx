@@ -221,7 +221,7 @@ export function GlobalSearch() {
               className="px-[14px] py-[10px] [font-family:'Gilroy',sans-serif] font-medium text-[13px] text-[#ff9400]"
               data-testid="text-search-unavailable"
             >
-              Search is unavailable — decisions, vendors and accounts could not be
+              Search is unavailable. Decisions, vendors and accounts could not be
               loaded. This is not a result of "nothing found".
             </p>
           ) : (

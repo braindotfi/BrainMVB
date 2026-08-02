@@ -427,11 +427,11 @@ export function ProposalDetail({
                     <span className="text-[#a8b9f4]">{format(proposal.sweepMath.totalCash)}</span>
                   </div>
                   <div className="flex items-center justify-between gap-[12px]">
-                    <span className="text-[#6c779d]">– {proposal.sweepMath.bufferMonths}-month buffer</span>
+                    <span className="text-[#6c779d]">Buffer: {proposal.sweepMath.bufferMonths} months</span>
                     <span className="text-[#a8b9f4]">−{format(proposal.sweepMath.bufferAmount)}</span>
                   </div>
                   <div className="flex items-center justify-between gap-[12px]">
-                    <span className="text-[#6c779d]">– pending AP</span>
+                    <span className="text-[#6c779d]">Pending AP</span>
                     <span className="text-[#a8b9f4]">−{format(proposal.sweepMath.pendingAP)}</span>
                   </div>
                   <div className="h-px w-full bg-[#1d2132] my-[2px]" />
