@@ -117,10 +117,13 @@ describe("mapCounterpartyToVendor", () => {
 describe("isNeedsReview", () => {
   const v = (over: Partial<Vendor>): Vendor => ({ ...mapCounterpartyToVendor(cp()), ...over });
 
-  it("covers exactly the new and flagged rows", () => {
+  it("covers new, known, and flagged rows — not confirmed ones", () => {
+    // "known" is now in the queue: paymentCount > 0 means payment history exists
+    // but no human has confirmed trust. The row needs review before it can be
+    // relied on in automation or auto-clear. Only an explicit trust grant removes it.
     expect(isNeedsReview(v({ trustStatus: "new" }))).toBe(true);
     expect(isNeedsReview(v({ trustStatus: "under_review" }))).toBe(true);
-    expect(isNeedsReview(v({ trustStatus: "known" }))).toBe(false);
+    expect(isNeedsReview(v({ trustStatus: "known" }))).toBe(true);
     expect(isNeedsReview(v({ trustStatus: "trusted" }))).toBe(false);
   });
 
@@ -150,13 +153,15 @@ describe("vendorTier", () => {
     // No row may be counted twice or fall through the gaps — that is how a
     // badge and a list drift apart in the first place.
     //
-    // `known` without trustState: "acknowledged" is intentionally excluded here:
-    // brain-core's provenance enum has no value meaning "Brain-suggested, not yet
-    // confirmed", so vendorTier() returns null for plain `known` rows and the
-    // Suggested bucket stays empty. See the explicit null-result test below.
+    // "known" (payment history, no trust grant) IS included: these are real live
+    // rows that a user must be able to find and act on. They land in Needs Review
+    // until confirmed. The Suggested chip is separately kept hidden until
+    // brain-core ships a provenance value; that is a chip-visibility decision,
+    // not a reason to drop rows on the floor.
     const rows: Vendor[] = [
       v({ id: "a", trustStatus: "new" }),
       v({ id: "b", trustStatus: "under_review" }),
+      v({ id: "c", trustStatus: "known" }),                         // has payment history, unconfirmed
       v({ id: "d", trustStatus: "trusted" }),
       v({ id: "e", trustStatus: "new", trustState: "unreviewed" }),
       v({ id: "f", trustStatus: "new", trustState: "acknowledged" }),
@@ -181,17 +186,17 @@ describe("vendorTier", () => {
     expect(new Set(Object.values(buckets).flat()).size).toBe(rows.length);
   });
 
-  it("returns null for known without acknowledged — Suggested chip stays hidden", () => {
-    // brain-core's provenance enum (extracted, inferred, ambiguous,
-    // human_confirmed, agent_contributed, customer_asserted) has no value meaning
-    // "Brain-suggested, not yet confirmed". The Suggested chip must not appear
-    // until brain-core ships such a value and the predicate here is wired to it.
-    // `agent_contributed` and confidence thresholds are not valid proxies.
+  it("routes known (unconfirmed payment history) to Needs Review, not Suggested", () => {
+    // "known" is a locally-derived status (paymentCount > 0, no risk signal,
+    // no trust_status from brain-core). It is NOT a value brain-core sends.
+    // brain-core's trust_status contract is: unreviewed | trusted | paused |
+    // acknowledged — no "known" in that set.
     //
-    // Note: `known + unreviewed` is NOT null — isNeedsReview() fires first for
-    // any row where trustState === "unreviewed", so those go to Needs Review.
-    // The null path is only reached when trustState is absent entirely.
-    expect(vendorTier(v({ trustStatus: "known" }))).toBeNull();
+    // These rows must reach a tier so users can confirm them. Needs Review is
+    // the right queue: the counterparty has history but no human confirmation.
+    // The Suggested chip stays hidden separately — its visibility is driven by
+    // bucket count, and routing here never adds to it.
+    expect(vendorTier(v({ trustStatus: "known" }))).toBe("needsReview");
     expect(vendorTier(v({ trustStatus: "known", trustState: "unreviewed" }))).toBe("needsReview");
   });
 
@@ -306,8 +311,19 @@ describe("reviewReasonLabel", () => {
     expect(reviewReasonLabel(mapCounterpartyToVendor(cp()))).toBe("New");
   });
 
-  it("gives no reason to rows that are not in the queue", () => {
+  it("labels a known counterparty New — payment history alone is not a reason chip", () => {
+    // "known" rows are in the Needs Review queue (unconfirmed payment history).
+    // They carry no risk signal and no explicit flag, so their reason chip reads
+    // "New" — the same as a first-seen counterparty. The eligibleForTrust flag
+    // in the detail popup is what surfaces the payment history context.
     const known = mapCounterpartyToVendor(cp({ payment_count: 2, payment_total: "20" }));
-    expect(reviewReasonLabel(known)).toBeNull();
+    expect(reviewReasonLabel(known)).toBe("New");
+  });
+
+  it("gives no reason to rows that are not in the queue", () => {
+    // Only rows where isNeedsReview() is true get a reason label. A confirmed
+    // (trusted) row is out of the queue entirely.
+    const trusted = mapCounterpartyToVendor(cp({ trust_status: "trusted" }));
+    expect(reviewReasonLabel(trusted)).toBeNull();
   });
 });

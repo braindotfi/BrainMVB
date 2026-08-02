@@ -173,18 +173,25 @@ export function mapCounterpartyToVendor(cp: BrainCounterparty): Vendor {
    1. brain-core reports `trust_status` → (trust_status = unreviewed) OR
       riskFlagged. That is the canonical, audited answer, and acting on a row
       (grant / pause / acknowledge) is what removes it from the queue.
-   2. brain-core reports nothing → derive it, as we do today: new OR
-      risk-flagged. There is no local "reviewed" bit and that is deliberate,
-      not a shortcut: marking a counterparty reviewed would be a trust-field
-      write, which brain-core rejects outright. There is nowhere to persist it,
-      so we do not pretend there is.
+   2. brain-core reports nothing → derive it: new, known, OR risk-flagged.
+      "known" is a locally-derived status (paymentCount > 0, no risk/trust
+      override) that means "Brain has seen us pay this counterparty but no
+      human has confirmed trust". It is NOT a value brain-core sends — its
+      trust_status field can only be unreviewed/trusted/paused/acknowledged.
+      These rows belong in the review queue until a user acts on them.
+      There is no local "reviewed" bit and that is deliberate, not a shortcut:
+      marking a counterparty reviewed would be a trust-field write, which
+      brain-core rejects outright. There is nowhere to persist it.
 
    Risk always wins. A row someone flagged or dismissed is still risk-flagged,
    and a risk-flagged row is never quietly settled by a click. */
 export function isNeedsReview(v: Vendor): boolean {
   if (v.riskLevel === "high" || v.riskLevel === "sanctioned") return true;
   if (v.trustState !== undefined) return v.trustState === "unreviewed";
-  return v.trustStatus === "under_review" || v.trustStatus === "new";
+  /* "known" is included here: a counterparty with payment history but no
+     explicit trust grant has not been reviewed — they need confirmation.
+     Excluding them from this predicate silently drops real live rows. */
+  return v.trustStatus === "under_review" || v.trustStatus === "new" || v.trustStatus === "known";
 }
 
 /* ── Tier assignment ──────────────────────────────────────────────────────────
@@ -194,9 +201,11 @@ export function isNeedsReview(v: Vendor): boolean {
    Needs Review therefore outranks Flagged — a risk-flagged row that someone
    also paused is unfinished business, not parked business.
 
-   Returns null when no tier fits, rather than dumping the row into a tier whose
-   copy would misdescribe it. Callers surface that as a dev warning; today the
-   branches below are exhaustive for every reachable combination. */
+   Returns null when no tier fits. Every combination that is reachable from
+   real brain-core data must land in a named tier — a null today means a row
+   a user can never find or act on. A console.warn fires unconditionally on
+   null so that a future regression is detectable in production telemetry
+   rather than silently losing rows. */
 export function vendorTier(v: Vendor): VendorTier | null {
   /* Suggested slots in HERE, first, once brain-core confirms which provenance
      values (if any) mean "Brain inferred this, nobody has confirmed it". Order
@@ -214,13 +223,13 @@ export function vendorTier(v: Vendor): VendorTier | null {
      but they have been dealt with, and a row a user acted on must stay findable
      somewhere — otherwise dismissing looks like deleting. */
   if (v.trustStatus === "trusted" || v.trustState === "acknowledged") return "trusted";
-  /* `known` is NOT a proxy for "suggested". brain-core's provenance enum
-     (extracted, inferred, ambiguous, human_confirmed, agent_contributed,
-     customer_asserted) contains no value meaning "Brain-suggested, not yet
-     confirmed". Until brain-core ships a provenance value that explicitly
-     carries that meaning, no row reaches the Suggested bucket and the chip
-     stays hidden. Do not substitute agent_contributed or a confidence
-     threshold as a proxy predicate. */
+  /* Nothing matched. This path should be unreachable for any combination
+     derivable from real brain-core data — if it fires, a row is silently
+     invisible and the bug needs a new branch above, not a suppression here. */
+  console.warn(
+    "[vendorTier] unclassifiable row — no tier matched; row will not render.",
+    { id: v.id, trustStatus: v.trustStatus, trustState: v.trustState, riskLevel: v.riskLevel },
+  );
   return null;
 }
 
