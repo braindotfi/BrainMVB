@@ -100,13 +100,15 @@ for (const segment of ["vendor", "customer"]) {
   );
 
   /* The badge is the only attention signal left, so it has to stay readable
-     from the other filters — that is the job the banner used to do. */
-  await clickChip("tab-vendor-suggested");
-  const badgeFromSuggested = await badgeValue();
+     from the other filters — that is the job the banner used to do. Read it
+     from Trusted rather than Suggested: Suggested is hidden while its bucket is
+     empty, so it is not a chip this loop can rely on being there. */
+  await clickChip("tab-vendor-trusted");
+  const badgeFromSettled = await badgeValue();
   check(
     `${segment}s: badge stays visible and unchanged from another filter`,
-    badgeFromSuggested === badge,
-    `needs-review=${badge} from-suggested=${badgeFromSuggested}`,
+    badgeFromSettled === badge,
+    `needs-review=${badge} from-trusted=${badgeFromSettled}`,
   );
 
   /* And it must describe THIS segment. A count that silently includes the other
@@ -148,7 +150,7 @@ check(
 /* ── Reason chips belong to the queue only ───────────────────────────────── */
 
 await go("/ledger?tab=counterparties");
-await clickChip("tab-vendor-suggested");
+await clickChip("tab-vendor-trusted");
 check(
   "settled rows carry no review reason",
   (await count('[data-testid="chip-review-reason"]')) === 0,
@@ -226,8 +228,29 @@ check(
   (await count('[data-testid="tab-vendor-flagged"]')) === 1,
 );
 
+/* Suggested is hidden on BOTH segments while nothing can reach the tier —
+   nothing upstream marks a counterparty as Brain-suggested yet. The moment
+   something does, the chip must come back, so this asserts the pairing (chip
+   present iff it has rows) rather than hard-coding "always absent". */
+for (const segment of ["vendor", "customer"]) {
+  await clickChip(`segment-${segment}`);
+  const suggestedChips = await count('[data-testid="tab-vendor-suggested"]');
+  let suggestedRows = null;
+  if (suggestedChips === 1) {
+    await clickChip("tab-vendor-suggested");
+    suggestedRows = await count(ROWS);
+    await clickChip("tab-vendor-needs-review");
+  }
+  check(
+    `${segment}s: the Suggested chip is shown only when it has rows`,
+    suggestedChips === 0 || suggestedRows > 0,
+    `chip=${suggestedChips} rows=${suggestedRows}`,
+  );
+}
+
 /* Selecting a chip the other segment does not offer must not leave the list
    showing a tier no chip is highlighting. */
+await clickChip("segment-vendor");
 await clickChip("tab-vendor-flagged");
 await clickChip("segment-customer");
 const pressedChips = await page
@@ -258,5 +281,120 @@ check(
   /vendor/.test(await addBoxText()) && !/customer/.test(await addBoxText()),
   (await addBoxText()).replace(/\n+/g, " | ").slice(0, 120),
 );
+
+/* ── The detail popup tells the same story as the list ───────────────────────
+   The list ships no review actions because brain-core has no trust transition
+   to call. The popup opened FROM that list used to contradict it: full-width
+   Trust / Reject buttons that looked live and only closed the dialog. A control
+   that appears to work and silently changes nothing is the failure this whole
+   screen was rebuilt to remove, so it has to be checked where it renders. */
+
+const POPUP = '[data-testid="vendor-detail-popup-content"]';
+/* Every action that would need a trust endpoint. Each must be either absent
+   (that status doesn't offer it) or present-and-disabled — never live. */
+const PARKED_ACTIONS = [
+  "button-grant-trust",
+  "button-trust-vendor-review",
+  "button-flag-counterparty",
+  "button-revoke-trust",
+];
+
+const openFirstRow = async () => {
+  const rows = page.locator(ROWS);
+  if ((await rows.count()) === 0) return false;
+  await rows.first().click();
+  await page.waitForTimeout(600);
+  return (await count(POPUP)) === 1;
+};
+const closePopup = async () => {
+  const btn = page.locator('[data-testid="button-close-vendor-popup"]');
+  if ((await btn.count()) === 1) await btn.click();
+  await page.waitForTimeout(300);
+};
+
+for (const segment of ["vendor", "customer"]) {
+  await go("/ledger?tab=counterparties");
+  await clickChip(`segment-${segment}`);
+  await clickChip("tab-vendor-needs-review");
+
+  if (!(await openFirstRow())) {
+    check(`${segment}s: a queued row opens its detail popup`, false, "no rows to open");
+    continue;
+  }
+
+  /* Disabled state, read off the live elements rather than assumed from copy. */
+  const liveActions = [];
+  for (const id of PARKED_ACTIONS) {
+    const el = page.locator(`[data-testid="${id}"]`);
+    if ((await el.count()) === 1 && !(await el.first().isDisabled())) liveActions.push(id);
+  }
+  check(
+    `${segment}s: the popup ships no live trust action`,
+    liveActions.length === 0,
+    `enabled=[${liveActions.join(", ")}]`,
+  );
+
+  /* A tooltip is undiscoverable on touch, so the reason is also on the page. */
+  check(
+    `${segment}s: the popup says why the actions are unavailable`,
+    (await count('[data-testid="text-review-actions-unavailable"]')) >= 1,
+  );
+
+  const popupText = await page.locator(POPUP).innerText();
+
+  /* One word per state. "Reject" was a second name for the paused state the
+     list now calls Flagged, and two words for one state is how a queue starts
+     disagreeing with itself. */
+  check(
+    `${segment}s: the popup says Flag, never Reject`,
+    !/reject/i.test(popupText) && (await count('[data-testid="button-reject-vendor"]')) === 0,
+    popupText.replace(/\n+/g, " | ").slice(0, 200),
+  );
+
+  /* The popup inherits the segment's vocabulary from the row that opened it —
+     a customer's popup calling them a vendor would undo the rename one click in. */
+  const otherNoun = segment === "vendor" ? /\bcustomer/i : /\bvendor/i;
+  check(
+    `${segment}s: the popup uses this segment's noun`,
+    !otherNoun.test(popupText),
+    popupText.replace(/\n+/g, " | ").slice(0, 200),
+  );
+
+  await closePopup();
+}
+
+/* And the grant action is worded per segment: "Trust" for people we pay,
+   "Confirm" for people who pay us — the same alias the chip uses. */
+for (const [segment, expected] of [
+  ["vendor", /^Trust Vendor$/],
+  ["customer", /^Confirm Customer$/],
+]) {
+  await go("/ledger?tab=counterparties");
+  await clickChip(`segment-${segment}`);
+  await clickChip("tab-vendor-needs-review");
+
+  /* Recorded as a failure, not skipped. A wording regression that only shows up
+     on a populated tenant is exactly the kind this check exists to catch, so an
+     empty queue has to fail loudly rather than quietly passing the run. */
+  if (!(await openFirstRow())) {
+    check(
+      `${segment}s: the grant action is worded for this segment`,
+      false,
+      "no queued row to open — cannot read the label",
+    );
+    continue;
+  }
+
+  const grant = page.locator(
+    '[data-testid="button-grant-trust"], [data-testid="button-trust-vendor-review"]',
+  );
+  const label = (await grant.count()) >= 1 ? (await grant.first().innerText()).trim() : null;
+  check(
+    `${segment}s: the grant action is worded for this segment`,
+    label !== null && expected.test(label),
+    `label=${label ?? "no grant action rendered"}`,
+  );
+  await closePopup();
+}
 
 await finish();

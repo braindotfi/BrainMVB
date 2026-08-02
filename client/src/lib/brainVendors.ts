@@ -198,6 +198,16 @@ export function isNeedsReview(v: Vendor): boolean {
    copy would misdescribe it. Callers surface that as a dev warning; today the
    branches below are exhaustive for every reachable combination. */
 export function vendorTier(v: Vendor): VendorTier | null {
+  /* Suggested slots in HERE, first, once brain-core confirms which provenance
+     values (if any) mean "Brain inferred this, nobody has confirmed it". Order
+     is the whole decision: a suggested row is also unreviewed, so whichever
+     check runs first owns it. Ahead of the unreviewed check, suggestions read
+     as an opportunity; behind it, they vanish into the review queue.
+
+     If brain-core reports that no suggestion-shaped provenance value exists,
+     leave this alone — the chip stays hidden while its bucket is empty. Do not
+     substitute a locally-invented predicate; a tier the user can act on has to
+     mean something upstream can vouch for. */
   if (isNeedsReview(v)) return "needsReview";
   if (v.trustState === "paused") return "flagged";
   /* Dismissed rows live here too, badged "Reviewed". They are not a trust grant,

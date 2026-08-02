@@ -546,20 +546,39 @@ export function VendorsPanel() {
      who pays you reads as a credit judgement rather than a payment allowlist. */
   const trustedLabel = segment === "vendor" ? "Trusted" : "Confirmed";
 
-  /* Flagging a customer is rare enough that a permanently-empty chip is just
-     noise on that segment — but hiding a chip that has rows in it would hide
-     the rows, so it stays whenever it has any. */
-  const showFlagged = segment === "vendor" || grouped.flagged.length > 0;
+  /* Which chips are worth showing. A chip is retired only while we KNOW its
+     bucket is empty — never mid-read, when an absent chip would assert "this
+     tier doesn't exist here" on the strength of data we haven't got yet. Same
+     reasoning as the Needs Review count, which is omitted rather than zeroed
+     until the read lands.
 
-  /* Switching segments can retire the chip that is currently selected. Clamping
-     here rather than in an effect matters: an effect corrects the selection one
-     render LATE, so the list would paint once showing a tier no visible chip is
-     highlighting. Derived, the mismatch never exists.
+     Flagged: rare enough on Customers that a permanently-empty chip is just
+     noise there, but it stays on Vendors, where flagging is the point.
+     Suggested: nothing can currently reach the tier on either segment, so it
+     stays hidden until something does.
+
+     Both hide only WHILE empty — hiding a chip that has rows would hide the
+     rows, which is the failure this screen exists to prevent. */
+  const showFlagged =
+    !countsKnown || segment === "vendor" || grouped.flagged.length > 0;
+  const showSuggested = !countsKnown || grouped.suggested.length > 0;
+
+  const tabVisible: Record<VendorTab, boolean> = {
+    "Needs Review": true,
+    Trusted: true,
+    Flagged: showFlagged,
+    Suggested: showSuggested,
+  };
+
+  /* A segment switch — or a bucket emptying out — can retire the chip that is
+     currently selected. Clamping here rather than in an effect matters: an
+     effect corrects the selection one render LATE, so the list would paint once
+     showing a tier no visible chip is highlighting. Derived, the mismatch never
+     exists.
 
      `activeTab` itself is left alone, so switching back restores the filter the
      user actually chose instead of quietly discarding it. */
-  const effectiveTab: VendorTab =
-    activeTab === "Flagged" && !showFlagged ? "Needs Review" : activeTab;
+  const effectiveTab: VendorTab = tabVisible[activeTab] ? activeTab : "Needs Review";
 
   const tabVendors: Vendor[] = grouped[TAB_TIER[effectiveTab]];
 
@@ -588,7 +607,7 @@ export function VendorsPanel() {
     // The settled tiers stay clean — their counts carry no action signal.
     { value: "Trusted", label: trustedLabel },
     ...(showFlagged ? [{ value: "Flagged", label: "Flagged" }] : []),
-    { value: "Suggested", label: "Suggested" },
+    ...(showSuggested ? [{ value: "Suggested", label: "Suggested" }] : []),
   ];
 
   const segmentFilters = [
@@ -728,12 +747,17 @@ export function VendorsPanel() {
      disagree with brain-core the moment anything else touched the row, and the
      user would be looking at a queue that only this browser believes in.
 
-     MOUNT POINT. When the contract below goes live, the row actions attach here
-     (and mirror into VendorDetailPopup's under_review branch):
+     MOUNT POINT — the ONLY one. When the contract below goes live, the row
+     actions attach here:
 
        POST /v1/ledger/counterparties/:id/trust/grant        → Trust / Confirm
        POST /v1/ledger/counterparties/:id/trust/pause        → Flag
        POST /v1/ledger/counterparties/:id/trust/acknowledge  → Dismiss
+
+     VendorDetailPopup shows the same three actions, currently disabled. Wire it
+     by passing these handlers down as props — do NOT give the popup its own
+     fetch calls. Two call sites means two places to get the invalidation, the
+     optimistic state and the error handling right, and they will drift.
 
      Plain /v1 JWT routes, `ledger:write`, user principal — the same auth path
      the counterparties list read already uses, so no new plumbing. Each call
@@ -787,8 +811,9 @@ export function VendorsPanel() {
                           `No ${trustedLabel.toLowerCase()} ${segmentNoun}. ${
                             segment === "vendor" ? "Granting trust" : "Confirming a customer"
                           } isn't available yet, so this list stays empty for now.`}
-                        {effectiveTab === "Suggested" &&
-                          `No suggestions yet. ${segment === "vendor" ? "Vendors" : "Customers"} Brain has seen real payments for show up here.`}
+                        {/* No Suggested copy: the chip is only rendered while its
+                            bucket has rows, so an empty Suggested list is
+                            unreachable. Restore a line here if that changes. */}
                         {effectiveTab === "Flagged" &&
                           `No flagged ${segmentNoun}. Flagging isn't available yet, so this list stays empty for now.`}
                       </p>

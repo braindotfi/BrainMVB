@@ -109,9 +109,34 @@ overrides it.
 **Why:** coercing an unknown string into a review state turns a schema change
 into a silent misclassification of audited state.
 
-**How to apply:** document the forthcoming routes at the mount point in the
-component that will call them, not as exported constants nothing imports. And
-watch the interaction between a default value and the queue predicate: if the
+**How to apply:** document the forthcoming routes at ONE mount point — the
+component that will own the fetch — not as exported constants nothing imports,
+and not copied into every surface that shows the actions. A detail popup opened
+from a list takes the handlers as props; two call sites means two places to get
+invalidation, optimistic state and error handling right, and they will drift.
+
+Watch the interaction between a default value and the queue predicate: if the
 field defaults to "unreviewed" and the queue is `unreviewed OR risk-flagged`,
 every row lands in the queue on day one and any *suggested* tier empties out —
 raise that with the contract owner rather than resolving it in the client.
+
+## A parked control still has to be honest, and so does the frame around it
+
+A Figma frame is not a licence to ship a button with no endpoint. Where a design
+specifies an action the backend cannot perform, the decision wins over the frame:
+disable it, and say why in visible copy — a `title` tooltip alone is
+undiscoverable on touch, and a disabled button swallows the hover events that
+would surface it, so put the tooltip on a wrapper and the reason on the page.
+Prefer the real `disabled` attribute over `aria-disabled` so assistive tech and
+tests read the same fact.
+
+**Why:** a control that appears live and silently changes nothing is worse than
+an absent one — and if the list behind it already shows no actions, the popup
+contradicting it teaches the user that neither surface can be trusted.
+
+**How to apply:** when you park an action, delete the confirmation dialogs and
+state that only its enabled path could reach, rather than leaving them as
+unreachable branches to rot. Keep any sibling action that IS backed by a real
+endpoint visually distinct from the parked ones. And check the whole frame, not
+just the button: titles, chip labels and body copy that name the old action or
+the wrong segment noun are the same inconsistency one layer up.
