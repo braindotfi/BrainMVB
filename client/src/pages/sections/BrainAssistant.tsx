@@ -982,7 +982,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                                 else if (resolvedType === "wiki.question") navigate(`/audit-log?record=${s.entityId}`);
                               }}
                               title={s.entityId}
-                              className="[font-family:'Gilroy',sans-serif] font-medium text-[#7631ee] text-[11px] leading-[15px] text-left hover:underline break-words"
+                              className="[font-family:'Gilroy',sans-serif] font-medium text-[#7631ee] text-[11px] leading-[15px] text-left hover:underline block w-full min-w-0 truncate"
                             >
                               {text}
                             </button>
@@ -990,7 +990,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                             <span
                               key={`${s.entityId}-${i}`}
                               title={s.entityId}
-                              className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[11px] leading-[15px] break-words"
+                              className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[11px] leading-[15px] block w-full min-w-0 truncate"
                             >
                               {text}
                             </span>
