@@ -33,7 +33,7 @@ export const WidgetCard = ({
 }): JSX.Element => (
   <div className="flex flex-col gap-[10px] w-full">
     <WidgetHeader title={title} count={count} />
-    <div className="bg-[#0a0c10] flex flex-col overflow-hidden relative rounded-[16px] w-full">
+    <div className="bg-[#0a0c10] border border-solid border-[#1d2132] flex flex-col overflow-hidden relative rounded-[16px] w-full">
       <div className="flex flex-col items-start relative w-full overflow-x-hidden">
         <div className="flex flex-col items-start w-full">{children}</div>
       </div>

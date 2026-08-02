@@ -882,7 +882,7 @@ export function VendorsPanel() {
               )}
 
               <div
-                className="bg-[#0a0c10] flex flex-col overflow-hidden relative rounded-[16px]"
+                className="bg-[#0a0c10] border border-solid border-[#1d2132] flex flex-col overflow-hidden relative rounded-[16px]"
                 data-testid="list-counterparties"
               >
                 <div>

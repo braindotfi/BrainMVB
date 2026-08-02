@@ -123,7 +123,7 @@ function Section({
   empty?: React.ReactNode;
 }) {
   return (
-    <div className="bg-[#0a0c10] flex flex-col overflow-hidden relative rounded-[16px] w-full">
+    <div className="bg-[#0a0c10] border border-solid border-[#1d2132] flex flex-col overflow-hidden relative rounded-[16px] w-full">
       <div className="flex flex-col items-start relative w-full">
         {count === 0 && empty ? (
           <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative rounded-[8px] shrink-0 w-full">
@@ -254,7 +254,7 @@ function PolicySection() {
   const { isLoading, isError, rules, version, quorum } = useBrainPolicy();
 
   return (
-    <div className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
+    <div className="bg-[#0a0c10] border border-solid border-[#1d2132] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
       <div className="flex flex-col items-start relative shrink-0 w-full">
         {!isLoading && !isError && version !== undefined && (
           <p className="px-[16px] pt-[12px] [font-family:'JetBrains_Mono',monospace] text-[12px] text-[#6c779d] whitespace-nowrap">
@@ -321,7 +321,7 @@ function SuggestionCard({
   const conf = CONFIDENCE[suggestion.confidence];
   return (
     <div
-      className="bg-[#0a0c10] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full"
+      className="bg-[#0a0c10] border border-solid border-[#1d2132] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full"
       data-testid={`card-suggestion-${suggestion.id}`}
     >
       {/* Header: title + confidence pill */}
