@@ -24,3 +24,17 @@ id = "I0xNp8HuIM02xKbulgEWL"
 uri = "file://.local/exports/linked-references-diagnosis.md"
 type = "text"
 title = "Linked References — Diagnosis & Proposed Fix"
+
+[[outputs]]
+id = "FrimytnVWnVDOsBWldq3f"
+uri = "file://attached_assets/proposal-card-parity-demo-inbox.png"
+type = "image"
+title = "Proposal card parity — authenticated demo Inbox"
+description = "Authenticated browser capture of the real fresh-demo tenant Inbox. It shows nine decision rows across seeded Collections, Vendor Risk, and Payment items with live labels and action controls."
+
+[[outputs]]
+id = "X5vApb7YbRCAr7y0Is5hO"
+uri = "file://attached_assets/proposal-card-parity-demo-detail.png"
+type = "image"
+title = "Proposal card parity — live proposal detail"
+description = "Authenticated browser capture of a real seeded Collections proposal detail card showing headline, recommendation, key facts, resolved evidence, confidence, policy attribution, message draft, Technical Detail, and decision buttons."
