@@ -5,6 +5,7 @@ import { useLocation, useSearch } from "wouter";
 import { useBrainVendors, useBrainVendorDetail } from "@/lib/brainVendors";
 import { useCurrency } from "@/lib/useCurrency";
 import { useToast } from "@/hooks/use-toast";
+import { AppAlertLink, useAppAlert } from "@/components/AppAlert";
 import { queryClient } from "@/lib/queryClient";
 import type { Vendor } from "@/lib/vendorTypes";
 import { VendorDetailPopup } from "@/components/VendorDetailPopup";
@@ -286,6 +287,7 @@ export function VendorsPanel() {
   const search = useSearch();
   const { vendors, isLoading, isError } = useBrainVendors();
   const { toast } = useToast();
+  const alert = useAppAlert();
   const [activeVendor, setActiveVendor] = useState<Vendor | null>(null);
   const detailVendor = useBrainVendorDetail(activeVendor);
   const [activeTab, setActiveTab] = useState<VendorTab>("Needs Review");
@@ -334,7 +336,26 @@ export function VendorsPanel() {
         return;
       }
       await queryClient.invalidateQueries({ queryKey: ["/api/brain/ledger/counterparties"] });
-      toast({ title: "Vendor submitted", description: `${vendorName.trim()} has been added and queued for verification.` });
+      const submittedVendorName = vendorName.trim();
+      const submittedVendorId =
+        typeof body?.counterparty?.id === "string" ? body.counterparty.id : null;
+      alert.success(
+        "Success",
+        <>
+          You have successfully added vendor: {submittedVendorName}
+          <br />
+          <br />
+          View the vendor{" "}
+          {submittedVendorId ? (
+            <AppAlertLink href={`/ledger?tab=vendors&vendor=${encodeURIComponent(submittedVendorId)}`}>
+              here
+            </AppAlertLink>
+          ) : (
+            "here"
+          )}
+          .
+        </>,
+      );
       resetAddVendor();
     } catch {
       setError("Couldn't reach Brain core. Nothing was changed.");

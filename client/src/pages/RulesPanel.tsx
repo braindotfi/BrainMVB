@@ -30,6 +30,7 @@ import { useBrainVendors } from "@/lib/brainVendors";
 import { useCurrency } from "@/lib/useCurrency";
 import type { AutoRule, RuleSuggestion } from "@/lib/proposalTypes";
 import { AlertCallout, InfoIcon } from "@/components/Callout";
+import { AppAlertLink, useAppAlert } from "@/components/AppAlert";
 
 const ACTIVE = "#42bf23";
 
@@ -479,6 +480,7 @@ const TAB_PARAM_MAP: Record<string, RuleTab> = {
 export function RulesPanel() {
   const { format } = useCurrency();
   const [, navigate] = useLocation();
+  const alert = useAppAlert();
   const search = useSearch();
   const rules = useRules();
   const suggestions = useRuleSuggestions();
@@ -635,7 +637,21 @@ export function RulesPanel() {
 
   const onConfirmCreate = () => {
     if (pendingCreate) {
-      createRule(pendingCreate);
+      const createdRule = pendingCreate;
+      createRule(createdRule);
+      alert.success(
+        "Success",
+        <>
+          You have successfully added rule: {createdRule.name}
+          <br />
+          <br />
+          View the rule{" "}
+          <AppAlertLink href={`/rules/${encodeURIComponent(createdRule.id)}`}>
+            here
+          </AppAlertLink>
+          .
+        </>,
+      );
       // Only retire the suggestion once the rule is actually confirmed.
       if (pendingSuggestionId) acceptSuggestion(pendingSuggestionId);
       setPendingSuggestionId(null);
