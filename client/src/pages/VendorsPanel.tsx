@@ -25,7 +25,7 @@ import closeIcon from "@assets/Close_1783293571882.png";
    Review chip counted only risk-flagged ones, so a warning pointed at rows the
    active filter refused to show. Newness is now a REASON inside Needs Review,
    not a competing filter. */
-type VendorTab = "Needs Review" | "Trusted" | "Suggested";
+type VendorTab = "Needs Review" | "Trusted" | "Suggested" | "Rejected Vendors";
 
 /** Vendors (we pay them) vs Customers (they pay us). */
 type Segment = "vendor" | "customer";
@@ -479,6 +479,9 @@ export function VendorsPanel() {
       needsReview: segmentVendors.filter(isNeedsReview),
       trusted: segmentVendors.filter((v) => v.trustStatus === "trusted"),
       suggested: segmentVendors.filter((v) => v.trustStatus === "known"),
+      /* brain-core has no rejection state today; this tab ships honest-empty
+         like the Trusted tab — it is a placeholder for future upstream support. */
+      rejected: [] as Vendor[],
     }),
     [segmentVendors],
   );
@@ -486,6 +489,7 @@ export function VendorsPanel() {
   const tabVendors: Vendor[] = useMemo(() => {
     if (activeTab === "Needs Review") return grouped.needsReview;
     if (activeTab === "Trusted") return grouped.trusted;
+    if (activeTab === "Rejected Vendors") return grouped.rejected;
     return grouped.suggested;
   }, [activeTab, grouped]);
 
@@ -512,9 +516,10 @@ export function VendorsPanel() {
       // loading or failed: no number is honest then.
       count: countsKnown ? grouped.needsReview.length : undefined,
     },
-    // Trusted and Suggested stay clean — their counts carry no action signal.
+    // Trusted, Suggested and Rejected Vendors stay clean — their counts carry no action signal.
     { value: "Trusted", label: "Trusted" },
     { value: "Suggested", label: "Suggested" },
+    { value: "Rejected Vendors", label: "Rejected Vendors" },
   ];
   const segmentFilters = [
     { value: "vendor", label: "Vendors" },
@@ -647,7 +652,11 @@ export function VendorsPanel() {
               <div className="flex items-center gap-[8px] min-h-[16px] w-full">
                 <div className="size-[6px] rounded-full shrink-0 bg-[#6c779d]" />
                 <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[12px] uppercase tracking-[0.4px] whitespace-nowrap">
-                  {segment === "vendor" ? "Vendors" : "Customers"}
+                  {activeTab === "Rejected Vendors"
+                    ? "Rejected Vendors"
+                    : segment === "vendor"
+                      ? "Added Vendors"
+                      : "Customers"}
                 </p>
                 <div className="bg-[#6c779d] flex items-center justify-center min-w-[18px] px-[5px] py-[1px] rounded-[4px] shrink-0">
                   <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#0a0c10] text-[11px] text-center whitespace-nowrap">
@@ -673,6 +682,8 @@ export function VendorsPanel() {
                           "No trusted counterparties. Granting trust isn't available yet, so this list stays empty for now."}
                         {activeTab === "Suggested" &&
                           `No suggestions yet. ${segment === "vendor" ? "Vendors" : "Customers"} Brain has seen real payments for show up here.`}
+                        {activeTab === "Rejected Vendors" &&
+                          "No rejected vendors. Rejected vendors will appear here once vendor rejection is supported."}
                       </p>
                     </div>
                   ) : (

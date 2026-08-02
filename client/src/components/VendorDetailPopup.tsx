@@ -118,13 +118,11 @@ export function VendorDetailPopup({
   const [, navigate] = useLocation();
   const [confirmingRevoke, setConfirmingRevoke] = useState(false);
   const [confirmingGrant, setConfirmingGrant] = useState(false);
-  const [reviewed, setReviewed] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   useEffect(() => {
     setConfirmingRevoke(false);
     setConfirmingGrant(false);
-    setReviewed(false);
     setConfirmingDelete(false);
   }, [vendor?.id]);
 
@@ -526,48 +524,30 @@ export function VendorDetailPopup({
                 </div>
               )}
 
-              {/* Under review → Review the Change */}
+              {/* Under review → Reject / Trust */}
               {vendor.trustStatus === "under_review" && (
-                <div className="flex flex-col gap-[12px] w-full">
-                  {!reviewed ? (
-                    <div className="flex flex-col gap-[12px] w-full">
-                      <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
-                        Trust is paused while you review the flag. Verify the new account directly with the vendor before restoring.
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => setReviewed(true)}
-                        className="flex items-center justify-center px-[20px] py-[8px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#ff9400] w-full"
-                        style={{ background: "#4a2300" }}
-                        data-testid="button-review-change"
-                      >
-                        Review the Change
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col gap-[12px] w-full">
-                      <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
-                        You've reviewed the change. Restore trust only if you've verified the new account directly with the vendor.
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => { setReviewed(false); onOpenChange(false); }}
-                        className="flex items-center justify-center px-[16px] py-[10px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#ffffff] w-full"
-                        style={{ background: ACTIVE }}
-                        data-testid="button-restore-trust"
-                      >
-                        Restore trust
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setReviewed(false)}
-                        className="flex items-center justify-center px-[16px] py-[10px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d] w-full"
-                        style={{ background: "transparent" }}
-                      >
-                        Go back
-                      </button>
-                    </div>
-                  )}
+                <div className="flex flex-col gap-[14px] w-full">
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
+                    Trust is paused while you review the flag. Verify the new account directly with the vendor before approving.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => onOpenChange(false)}
+                    className="flex items-center justify-center px-[20px] py-[10px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#d20344] w-full"
+                    style={{ background: "#350011" }}
+                    data-testid="button-reject-vendor"
+                  >
+                    Reject Vendor
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onOpenChange(false)}
+                    className="flex items-center justify-center px-[20px] py-[10px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#42bf23] w-full"
+                    style={{ background: "#123509" }}
+                    data-testid="button-trust-vendor-review"
+                  >
+                    Trust Vendor
+                  </button>
                 </div>
               )}
 
