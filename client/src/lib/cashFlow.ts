@@ -76,11 +76,11 @@ const SIGN_OF: Record<CashFlowKind, "+" | "-" | ""> = {
 };
 
 export const KIND_LABEL: Record<CashFlowKind, string> = {
-  income: "income",
-  expense: "expense",
-  transfer: "transfer",
-  adjustment: "adjustment",
-  bill: "bill",
+  income: "Income",
+  expense: "Expense",
+  transfer: "Transfer",
+  adjustment: "Adjustment",
+  bill: "Bill",
 };
 
 function num(v: unknown): number {

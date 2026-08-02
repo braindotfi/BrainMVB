@@ -96,8 +96,12 @@ export function setupAuth(app: Express) {
   let store: session.Store | undefined;
   if (process.env.DATABASE_URL) {
     const PgStore = connectPgSimple(session);
+    const sessionPool = new Pool({ connectionString: process.env.DATABASE_URL });
+    sessionPool.on("error", (error) => {
+      console.error("[auth] PostgreSQL session pool client error:", error);
+    });
     store = new PgStore({
-      pool: new Pool({ connectionString: process.env.DATABASE_URL }),
+      pool: sessionPool,
       tableName: "user_sessions",
       createTableIfMissing: true,
     });

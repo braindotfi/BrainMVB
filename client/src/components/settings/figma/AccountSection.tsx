@@ -43,12 +43,12 @@ const POPUP_BUTTON_ROW = "flex gap-[8px] items-start p-[8px] w-full";
 const POPUP_BUTTON_NEUTRAL =
   "flex-1 min-w-px flex items-center justify-center px-[12px] py-[8px] rounded-[100px] " +
   "bg-[#222737] disabled:opacity-50 disabled:cursor-not-allowed " +
-  "font-['Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[16px] whitespace-nowrap";
+  "font-['Gilroy',sans-serif] font-semibold text-[#6c779d] text-[14px] leading-[20px] whitespace-nowrap";
 
 const POPUP_BUTTON_DESTRUCTIVE =
   "flex-1 min-w-px flex items-center justify-center px-[12px] py-[8px] rounded-[100px] " +
   "bg-[#350011] disabled:opacity-60 disabled:cursor-not-allowed " +
-  "font-['Gilroy',sans-serif] font-semibold text-[#d20344] text-[12px] leading-[16px] whitespace-nowrap";
+  "font-['Gilroy',sans-serif] font-semibold text-[#d20344] text-[14px] leading-[20px] whitespace-nowrap";
 
 function ConfirmCloseModal({ onCancel, onConfirm, isDeleting }: { onCancel: () => void; onConfirm: () => void; isDeleting: boolean }) {
   return (
@@ -224,11 +224,11 @@ export default function AccountSection() {
                 </div>
               </div>
               <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
-                <p className="font-['Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                  <p className="font-['Gilroy',sans-serif] font-semibold leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[14px] whitespace-nowrap">
                   Export My Data
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
-                  <p className="font-['Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
+                  <p className="font-['Gilroy',sans-serif] font-semibold leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[12px] whitespace-nowrap">
                     Last updated January 1, 2025
                   </p>
                 </div>
@@ -334,11 +334,11 @@ export default function AccountSection() {
                 </div>
               </div>
               <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
-                <p className="font-['Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[#d20344] text-[16px] whitespace-nowrap">
+                <p className="font-['Gilroy',sans-serif] font-semibold leading-[20px] not-italic relative shrink-0 text-[#d20344] text-[14px] whitespace-nowrap">
                   Close Account
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
-                  <p className="font-['Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
+                  <p className="font-['Gilroy',sans-serif] font-semibold leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[12px] whitespace-nowrap">
                     Permanently delete your Brain account
                   </p>
                 </div>

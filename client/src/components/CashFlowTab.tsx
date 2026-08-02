@@ -72,7 +72,7 @@ const KindBadge = ({ kind }: { kind: CashFlowKind }) => {
   const c = KIND_BADGE[kind];
   return (
     <span
-      className="[font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[12px] px-[6px] py-[3px] rounded-[4px] border border-solid shrink-0"
+      className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] px-[10px] py-[4px] rounded-[22px] border border-solid shrink-0"
       style={{ background: c.bg, borderColor: c.border, color: c.fg }}
     >
       {KIND_LABEL[kind]}
@@ -281,36 +281,32 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
   const apBills = unpaidApInvoices(invs ?? []);
   const billById = new Map(apBills.map((b) => [b.id, b]));
 
-  const incomeInsight = (() => {
-    if (txs == null) return null;
+  /* ── per-card captions (short; headline number is already in the card) ── */
+
+  // Income: how many customers, who leads — but never restate the total
+  const incomeCaption = (() => {
+    if (txs == null) return periodCaption;
     const s = summarizeIncome(txs);
-    if (!s) return null;
-    const names = s.topCpIds.map((id) => nameOf(id) ?? "a customer");
-    const joined =
-      names.length <= 1
-        ? names[0] ?? "one customer"
-        : names.slice(0, -1).join(", ") + " and " + names[names.length - 1];
-    const verb = names.length > 1 ? "are" : "is";
-    const tail = s.share >= 99 ? ", essentially all your revenue" : `, together about ${s.share}% of your revenue`;
-    return `About ${format(Math.round(s.monthly))} a month from ${s.count} customer${s.count === 1 ? "" : "s"}. Your biggest ${verb} ${joined}${tail}.`;
+    if (!s || s.topCpIds.length === 0) return periodCaption ?? "No dated activity yet";
+    const names = s.topCpIds.slice(0, 2).map((id) => nameOf(id) ?? "a customer");
+    const top = names.length === 1 ? names[0] : `${names[0]} & ${names[1]}`;
+    return `${s.count} customer${s.count === 1 ? "" : "s"} · mostly ${top}`;
   })();
 
-  const liabilityInsight = (() => {
-    if (invs == null) return null;
-    if (apBills.length === 0) return "No outstanding liabilities. You're all caught up.";
-    const total = apBills.reduce((s, i) => s + (Number(i.amount_due) || 0), 0);
-    const overdue = apBills.filter((i) => i.status === "overdue");
+  // Expenses: always make the scope explicit so $0 next to large bills doesn't read as a bug.
+  // Expenses = outflows already settled; unpaid AP bills are captured under Liabilities instead.
+  const expensesCaption = "Outflows settled and posted · unpaid bills are in Liabilities";
+
+  // Liabilities: N bills, next vendor due — never restate the total
+  const liabilitiesCaption = (() => {
+    if (invFailed) return "Source unavailable";
+    if (invs == null) return "Loading…";
+    if (apBills.length === 0) return "No outstanding bills";
     const next = [...apBills]
       .sort((a, b) => new Date(a.due_date ?? 0).getTime() - new Date(b.due_date ?? 0).getTime())
       .find((i) => i.status !== "overdue");
-    const owe = `You owe ${format(Math.round(total))} across ${apBills.length} bill${apBills.length === 1 ? "" : "s"}.`;
-    const od = overdue.length
-      ? ` ${nameOf(overdue[0].counterparty_id) ?? "A vendor"} for ${format(Number(overdue[0].amount_due))} is overdue.`
-      : "";
-    const nx = next
-      ? ` Your next is ${nameOf(next.counterparty_id) ?? "a vendor"} for ${format(Number(next.amount_due))}.`
-      : "";
-    return `${owe}${od}${nx}`;
+    const nextVendor = next ? (nameOf(next.counterparty_id) ?? "a vendor") : null;
+    return `${apBills.length} unpaid bill${apBills.length === 1 ? "" : "s"}${nextVendor ? ` · next due ${nextVendor}` : ""}`;
   })();
 
   return (
@@ -336,7 +332,7 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
         <Metric
           label="Income"
           value={income}
-          caption={periodCaption}
+          caption={incomeCaption}
           colour="#42bf23"
           testId="metric-cashflow-income"
           format={format}
@@ -344,7 +340,7 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
         <Metric
           label="Expenses"
           value={expenses}
-          caption={periodCaption}
+          caption={expensesCaption}
           colour="#d20344"
           testId="metric-cashflow-expenses"
           format={format}
@@ -352,33 +348,17 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
         <Metric
           label="Liabilities"
           value={liabilities}
-          caption={invFailed ? "Source unavailable" : "Unpaid bills you still owe"}
+          caption={liabilitiesCaption}
           testId="metric-cashflow-liabilities"
           format={format}
         />
       </div>
 
-      {incomeInsight && (
-        <p
-          className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[15px] w-full"
-          data-testid="text-cashflow-income-insight"
-        >
-          {incomeInsight}
-        </p>
-      )}
-      {liabilityInsight && (
-        <p
-          className="[font-family:'Gilroy',sans-serif] font-normal leading-[20px] text-[#d20344] text-[16px] w-full"
-          data-testid="text-cashflow-liability-insight"
-        >
-          {liabilityInsight}
-        </p>
-      )}
-      {liabilityInsight && (
-        <div className="h-px relative shrink-0 w-full mb-[26px]" style={{ background: "#1d2132" }} />
-      )}
+      {/* Separator — same pattern as Overview: h-px hairline + mb-[26px] gives the
+          same breathing room between the metric block and the section label below. */}
+      <div className="h-px relative shrink-0 w-full mb-[26px]" style={{ background: "#1d2132" }} />
 
-      <WidgetCard title="Cash Flow" count={settling && rows.length === 0 ? undefined : rows.length}>
+      <WidgetCard title="Transactions" count={settling && rows.length === 0 ? undefined : rows.length}>
         {settling && rows.length === 0 ? (
           <div className="flex gap-[12px] items-center px-[16px] py-[12px] rounded-[8px] w-full bg-[#0a0c10]">
             <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
@@ -432,10 +412,10 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
                       </p>
                       <KindBadge kind={row.kind} />
                       {row.flagged && (
-                        <span className="flex items-center gap-[4px] bg-[#350011] border border-solid border-[rgba(210,3,68,0.2)] rounded-[4px] px-[6px] py-[3px]">
+                        <span className="flex items-center gap-[4px] bg-[#350011] border border-solid border-[rgba(210,3,68,0.2)] rounded-[22px] px-[10px] py-[4px]">
                           <img src={alertIcon} alt="" className="size-[12px]" />
-                          <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[12px] text-[#d20344] text-[11px]">
-                            anomaly
+                          <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#d20344] text-[12px]">
+                            Anomaly
                           </span>
                         </span>
                       )}

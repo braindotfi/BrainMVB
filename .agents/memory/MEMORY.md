@@ -1,4 +1,5 @@
 - [Add Source ingestion wizard](add-source-wizard.md) — source-agnostic connector modal; docs persist metadata only; route-ordering + screen-stack constraints.
+- [Source-to-account resolution](source-account-resolution.md) — source rows open Account Details only after a real upstream ledger-account link is validated.
 - [Linked references contract](linked-references-contract.md) — rules/vendors/invoices resolve by id via one helper+store; unified dev guard; non-vendor parties (employee/protocol/ledger) are never kind:"vendor".
 - [Rule reference wiring](rule-reference-wiring.md) — every "open rule" link goes through openRuleDetail/resolveRule; unresolved → warn + plain "(rule unavailable)"; shipped mock refs must all resolve (dev guard).
 - [Rules store & receipt report-a-problem](rules-and-receipts.md) — rulesStore is the shared source of truth for auto-clear rules; receipt → report → /rules/:id; color/scope/route conventions.
@@ -13,6 +14,7 @@
 - [Dev DB schema drift](dev-db-schema-drift.md) — "column does not exist"/ON CONFLICT errors usually mean dev Postgres lags schema.ts (db:push hangs); fix via psql, use uniqueIndex() for upsert targets.
 - [Section label spacing](section-label-spacing.md) — subpage labels need a 36px-tall row (like button-bearing headers), not gap tweaks; 4px gap to card stays.
 - [Post-merge boot failures](post-merge-boot-failures.md) — after a task merge check conflict markers, uninstalled new deps, AND new required env vars; auth-security bankConns test fails when DATABASE_URL set.
+- [PostgreSQL pool error handling](postgres-pool-error-handling.md) — every pg Pool needs an error listener so managed idle-client termination cannot crash Node.
 - [Durable brain tenancy](durable-tenancy.md) — "Continue with Demo" provisions a PRODUCTION tenant, never /demo/provision-run; create is non-idempotent + founder-email-unique; agent token for raw:write.
 - [Demo tenant TTL cleanup](demo-tenant-ttl.md) — expires demo-fresh users via email pattern + createdAt age; no schema change; brain-core tenant deletion impossible (no API).
 - [Brain staging demo-token](brain-staging-demo-token.md) — staging's key-free /demo/token route currently 401s on its own documented curl example; don't re-diagnose client-side, check with staging owners first.
@@ -57,3 +59,5 @@
 - [Audit Log full history](audit-log-full-history.md) — full trail lives in Settings (Inbox stays decisions-only); measure a read cap pre-merge, and isError needs a path independent of length===0.
 - [Shared callout component](callout-component.md) — all alert boxes + info glyphs go through Callout.tsx; find call sites by glyph/colour tokens, not page-by-page; amber meant two things.
 - [Icon from artwork](icon-from-artwork.md) — measure the reference PNG's pixel runs for stroke widths; eyeballing an upscaled bitmap lies, and canvas can't decode file:// images.
+- [Counterparty trust surface](counterparty-trust-surface.md) — brain-core rejects all trust-field writes so "Trusted" is underivable; payment_count/total are real; one predicate must drive a badge and its list.
+- [Overlay menus in clipped surfaces](overlay-menus-in-clipped-surfaces.md) — in-card dropdowns need a fixed portal (not less overflow); fixed owns its own clamp/flip, and never claim listbox without arrow keys.

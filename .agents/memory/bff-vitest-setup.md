@@ -11,6 +11,9 @@ description: How the BFF safety-invariant test suite is wired and the env quirks
 platform-side twins of brain-core invariants; changing `server/brain/*` must keep them
 green.
 
+Use `npm test` as-is for the full suite; this Vitest CLI does not support Jest's
+`--runInBand` option.
+
 ## Non-obvious constraints
 
 - **Use a dedicated `vitest.config.ts`, do NOT let vitest extend `vite.config.ts`.**

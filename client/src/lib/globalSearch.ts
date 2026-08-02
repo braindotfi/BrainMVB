@@ -79,7 +79,7 @@ export function vendorResult(v: VendorLike): SearchResult {
     kind: "vendor",
     label: v.name,
     detail: v.category ?? null,
-    href: `/ledger?tab=vendors&vendor=${encodeURIComponent(v.id)}`,
+    href: `/ledger?tab=counterparties&vendor=${encodeURIComponent(v.id)}`,
     search: buildSearchText(v.name, v.category),
   };
 }

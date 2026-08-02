@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useSearch } from "wouter";
 import {
-  ChevronRight,
+  ChevronDown,
   Plus,
   Sparkles,
   Check,
@@ -30,6 +30,7 @@ import { useBrainVendors } from "@/lib/brainVendors";
 import { useCurrency } from "@/lib/useCurrency";
 import type { AutoRule, RuleSuggestion } from "@/lib/proposalTypes";
 import { AlertCallout, InfoIcon } from "@/components/Callout";
+import { AppAlertLink, useAppAlert } from "@/components/AppAlert";
 
 const ACTIVE = "#42bf23";
 
@@ -411,14 +412,12 @@ function Chip({
   open,
   onClick,
   testId,
-  compact,
 }: {
   value?: string;
   placeholder: string;
   open: boolean;
   onClick: () => void;
   testId: string;
-  compact?: boolean;
 }) {
   const hasValue = !!value;
   return (
@@ -426,16 +425,18 @@ function Chip({
       type="button"
       onClick={onClick}
       data-testid={testId}
-      className={`inline-flex items-center gap-[4px] rounded-[8px] transition-colors [font-family:'Gilroy',sans-serif] text-[14px] ${
-        compact ? "py-[2px] px-[8px]" : "py-[3px] px-[10px]"
-      } ${
-        hasValue
-          ? "bg-[#240757] text-[#a8b9f4] font-semibold"
-          : "bg-[#11141b] text-[#6c779d] font-medium"
-      }`}
+      className="inline-flex items-center gap-[8px] p-[8px] rounded-[8px] transition-colors [font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+      style={{
+        background: hasValue ? "#240757" : "#222737",
+        color: hasValue ? "#ffffff" : "#6c779d",
+      }}
     >
-      {value ?? placeholder}
-      <ChevronRight size={12} className={`transition-transform ${open ? "rotate-90" : ""}`} />
+      <span className="whitespace-nowrap">{value ?? placeholder}</span>
+      <ChevronDown
+        size={20}
+        className={`shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
+        style={{ color: hasValue ? "#ffffff" : "#6c779d" }}
+      />
     </button>
   );
 }
@@ -479,6 +480,7 @@ const TAB_PARAM_MAP: Record<string, RuleTab> = {
 export function RulesPanel() {
   const { format } = useCurrency();
   const [, navigate] = useLocation();
+  const alert = useAppAlert();
   const search = useSearch();
   const rules = useRules();
   const suggestions = useRuleSuggestions();
@@ -635,7 +637,21 @@ export function RulesPanel() {
 
   const onConfirmCreate = () => {
     if (pendingCreate) {
-      createRule(pendingCreate);
+      const createdRule = pendingCreate;
+      createRule(createdRule);
+      alert.success(
+        "Success",
+        <>
+          You have successfully added rule: {createdRule.name}
+          <br />
+          <br />
+          View the rule{" "}
+          <AppAlertLink href={`/rules/${encodeURIComponent(createdRule.id)}`}>
+            here
+          </AppAlertLink>
+          .
+        </>,
+      );
       // Only retire the suggestion once the rule is actually confirmed.
       if (pendingSuggestionId) acceptSuggestion(pendingSuggestionId);
       setPendingSuggestionId(null);
@@ -673,7 +689,6 @@ export function RulesPanel() {
             chips={RULE_TABS.map((tab) => ({
               value: tab,
               label: tab,
-              icon: tab === "Guardrails" ? <Lock size={11} aria-hidden /> : undefined,
             }))}
             value={activeTab}
             onChange={(v) => setActiveTab(v as RuleTab)}
@@ -749,23 +764,23 @@ export function RulesPanel() {
               </svg>
               <div className="flex flex-1 flex-col items-start justify-center min-w-px relative">
                 <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[#6c779d] text-[20px]">
-                  Write a new rule in plain English
+                  Add a new rule in plain English
                 </p>
               </div>
               <div className="bg-[#4a2300] flex gap-[4px] items-center justify-center px-[12px] py-[8px] relative rounded-[100px] shrink-0">
                 <Plus size={16} className="text-[#ff9400]" />
                 <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#ff9400] text-[12px]">
-                  New Rule
+                  Add Rule
                 </span>
               </div>
             </button>
           ) : (
             <div className="w-full rounded-[16px] bg-[#0a0c10] p-[16px] flex flex-col gap-[12px]" data-testid="panel-builder">
-              {/* Two-line sentence builder, matches Figma */}
-              <div className="flex flex-col gap-[6px] [font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[15px] leading-[28px]">
-                {/* Line 1: "When a [kind] from [vendor] is under [amount]" */}
-                <div className="flex flex-wrap items-center gap-[6px]">
-                  <span>When a</span>
+              {/* One continuous wrapping sentence, matches Figma 5734:70625 */}
+              <div className="flex flex-wrap gap-[16px] items-center w-full [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[24px]">
+                {/* "When a [kind]" */}
+                <div className="flex gap-[16px] items-center shrink-0">
+                  <span className="whitespace-nowrap">When a</span>
                   <div className="relative">
                     <Chip
                       value={builder.category || undefined}
@@ -799,7 +814,11 @@ export function RulesPanel() {
                       </div>
                     )}
                   </div>
-                  <span>from</span>
+                </div>
+
+                {/* "from [vendor]" */}
+                <div className="flex gap-[16px] items-center shrink-0">
+                  <span className="whitespace-nowrap">from</span>
                   <div className="relative">
                     <Chip
                       value={builder.vendor || undefined}
@@ -872,20 +891,24 @@ export function RulesPanel() {
                       </div>
                     )}
                   </div>
-                  <span>is {isAuto ? "under" : "over"}</span>
+                </div>
+
+                {/* "is under [amount]" */}
+                <div className="flex gap-[16px] items-center shrink-0">
+                  <span className="whitespace-nowrap">is {isAuto ? "under" : "over"}</span>
                   <input
                     value={builder.amount}
                     inputMode="numeric"
                     placeholder="$0"
                     onChange={(e) => setBuilder((b) => ({ ...b, amount: e.target.value }))}
                     data-testid="input-builder-amount"
-                    className="w-[80px] rounded-[8px] border border-[#1d2132] bg-[#06070a] px-[10px] py-[3px] [font-family:'JetBrains_Mono',monospace] text-[14px] text-[#a8b9f4] placeholder:text-[#414965] focus:outline-none focus-visible:border-[rgba(118,49,238,0.5)]"
+                    className="w-[160px] rounded-[8px] bg-[#222737] px-[8px] py-[10px] [font-family:'JetBrains_Mono',monospace] text-[16px] leading-[20px] text-white placeholder:text-[#6c779d] focus:outline-none"
                   />
                 </div>
 
-                {/* Line 2: "then [action]" */}
-                <div className="flex flex-wrap items-center gap-[6px]">
-                  <span>then</span>
+                {/* "then [action]" */}
+                <div className="flex gap-[16px] items-center shrink-0">
+                  <span className="whitespace-nowrap">then</span>
                   <div className="relative">
                     <Chip
                       value={builder.action ? ACTION_LABELS[builder.action] : undefined}
@@ -937,7 +960,7 @@ export function RulesPanel() {
                   type="button"
                   onClick={resetBuilder}
                   data-testid="button-builder-cancel"
-                  className="flex-1 px-[12px] py-[10px] rounded-[100px] bg-[#1d2132] hover:bg-[#252a3d] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#a8b9f4]"
+                  className="flex-1 px-[12px] py-[10px] rounded-[100px] bg-[#222737] hover:bg-[#2b3145] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#6c779d]"
                 >
                   Cancel
                 </button>
@@ -948,7 +971,7 @@ export function RulesPanel() {
                   data-testid="button-builder-create"
                   className="flex-1 px-[12px] py-[10px] rounded-[100px] bg-[#4a2300] hover:bg-[#5a2d00] disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#ff9500]"
                 >
-                  Create Rule
+                  Add Rule
                 </button>
               </div>
             </div>
@@ -956,6 +979,7 @@ export function RulesPanel() {
 
         </div>{/* end filter row + builder block */}
 
+      <div className="flex flex-col gap-[10px] w-full">
       <div className="flex items-center gap-[8px] min-h-[16px] w-full">
         <div className="size-[6px] rounded-full shrink-0 bg-[#6c779d]" />
         <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[12px] uppercase tracking-[0.4px] whitespace-nowrap">Rules</p>
@@ -1057,6 +1081,7 @@ export function RulesPanel() {
         )}
 
       </div>{/* end table area */}
+      </div>{/* end label + table wrapper */}
     </div>
   );
 }

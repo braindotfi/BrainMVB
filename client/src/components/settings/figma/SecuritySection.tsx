@@ -8,6 +8,7 @@ import {
 } from "@/lib/sessionTimeoutContext";
 import { LoginHistoryModal, ChangePinModal } from "@/components/SecurityModals";
 import { useAppAlert } from "@/components/AppAlert";
+import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
 
   export default function SecuritySection() {
     const alert = useAppAlert();
@@ -115,40 +116,20 @@ import { useAppAlert } from "@/components/AppAlert";
                 </div>
               </div>
             </div>
-            <div ref={dropdownRef} className="relative shrink-0 w-[120px]">
-              <button
-                type="button"
-                onClick={() => setOpen((v) => !v)}
-                className="bg-[#222737] content-stretch flex gap-[8px] items-center p-[8px] rounded-[8px] w-full text-left hover:bg-[#2a3045] transition-colors"
-                data-testid="button-session-timeout"
-              >
-                <div className="content-stretch flex flex-[1_0_0] items-center min-w-px relative">
-                  <p className="font-['Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[16px] text-white whitespace-nowrap">
-                    {formatTimeoutLabel(timeoutMin)}
-                  </p>
-                </div>
-                <Icons className="relative shrink-0 size-[24px]" icon="Chevron Down" />
-              </button>
-              {open && (
-                <div className="absolute right-0 top-[calc(100%+4px)] z-50 bg-[#222737] border border-[#414965] rounded-[8px] overflow-hidden w-full shadow-lg">
-                  {SESSION_TIMEOUT_OPTIONS_MIN.map((opt) => (
-                    <button
-                      key={opt}
-                      type="button"
-                      onClick={() => {
-                        setTimeoutMin(opt);
-                        setOpen(false);
-                      }}
-                      className={`w-full text-left px-[12px] py-[8px] font-['Gilroy',sans-serif] font-medium text-[16px] leading-[20px] hover:bg-[#2a3045] transition-colors ${
-                        timeoutMin === opt ? "text-white" : "text-[#a8b9f4]"
-                      }`}
-                      data-testid={`option-session-timeout-${opt}`}
-                    >
-                      {formatTimeoutLabel(opt)}
-                    </button>
-                  ))}
-                </div>
-              )}
+            <div ref={dropdownRef} className="relative shrink-0 w-[80px]">
+              <SettingsDropdown
+                value={String(timeoutMin)}
+                options={SESSION_TIMEOUT_OPTIONS_MIN.map((opt) => ({
+                  value: String(opt),
+                  label: formatTimeoutLabel(opt),
+                }))}
+                onChange={(value) => setTimeoutMin(Number(value))}
+                testId="button-session-timeout"
+                ariaLabel="Session timeout"
+                open={open}
+                onOpenChange={setOpen}
+                matchMenuWidth
+              />
             </div>
           </div>
         </div>

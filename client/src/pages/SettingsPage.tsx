@@ -18,6 +18,8 @@ import sourcesActiveIcon from "@assets/Sources_Active_1785554383441.png";
 import sourcesInactiveIcon from "@assets/Sources_Inactive_1785554383442.png";
 import developersActiveIcon from "@assets/developers_active_1785554383446.png";
 import developersInactiveIcon from "@assets/developers_inactive_1785554383446.png";
+import auditActiveIcon from "@assets/0_auditactive_1785598481541.png";
+import auditInactiveIcon from "@assets/1_auditinactive_1785598481543.png";
 import billingActiveIcon from "@assets/BillingActive_1782953915934.png";
 import teamActiveIcon from "@assets/Active_1783634473571.png";
 import teamInactiveIcon from "@assets/Normal_1783634473571.png";
@@ -32,6 +34,8 @@ import NotificationsFigma from "@/components/settings/figma/NotificationsSection
 import TeamFigma from "@/components/settings/figma/TeamSection";
 import LegalFigma from "@/components/settings/figma/LegalSection";
 import AccountFigma from "@/components/settings/figma/AccountSection";
+import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
+import { Plus } from "lucide-react";
 
 /* ─── Section type ───────────────────────────────────────── */
 type Section =
@@ -161,26 +165,23 @@ const DevelopersNavIcon = ({ active }: { active: boolean }) => (
   />
 );
 
-/* No Figma export exists for an Audit Log nav item either — drawn inline at the
-   same 24px box and 1.5 stroke weight as the exported icons. */
+/* The two supplied Audit Log exports do not share a canvas: the active one is
+   49×55 because it carries a soft drop shadow, the inactive one is a plain
+   48×48 like every other nav export. The glyph itself occupies identical pixels
+   in both, so each state is pinned to half its own natural size from the same
+   top-left origin — sizing both to a 24px square would squash the active state,
+   and centring them would make the glyph jump on selection. The shadow spills
+   past the 24px box on purpose; that is what the artwork draws. */
 const AuditNavIcon = ({ active }: { active: boolean }) => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="shrink-0" aria-hidden="true">
-    <path
-      d="M6.5 3.5h7L18 8v12.5H6.5V3.5z"
-      stroke={active ? "#ffffff" : "#6c779d"}
-      strokeWidth="1.5"
-      strokeLinejoin="round"
+  <span className="relative block size-[24px] shrink-0">
+    <img
+      src={active ? auditActiveIcon : auditInactiveIcon}
+      alt=""
+      aria-hidden="true"
+      className="absolute left-0 top-0 max-w-none"
+      style={active ? { width: 24.5, height: 27.5 } : { width: 24, height: 24 }}
     />
-    <path d="M13.25 3.5V8H18" stroke={active ? "#ffffff" : "#6c779d"} strokeWidth="1.5" strokeLinejoin="round" />
-    <path
-      d="M9 12.75l1.75 1.75L14.75 10.5"
-      stroke={active ? "#ffffff" : "#6c779d"}
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    <path d="M9 17.25h6" stroke={active ? "#ffffff" : "#6c779d"} strokeWidth="1.5" strokeLinecap="round" />
-  </svg>
+  </span>
 );
 
 /* Order follows the design's tab sequence. The tabs themselves are the design's;
@@ -530,9 +531,9 @@ function ProfileSection() {
               }
               setEditing(v => !v);
             }}
-            className="bg-[#4a2300] flex gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] hover:opacity-90 transition-opacity flex-shrink-0"
+            className="bg-[#4a2300] flex gap-[8px] items-center justify-center px-[14px] py-[8px] rounded-[100px] hover:opacity-90 transition-opacity flex-shrink-0"
           >
-            <div className="overflow-clip relative shrink-0 size-[24px]">
+            <div className="overflow-clip relative shrink-0 size-[16px]">
               <div className="absolute inset-[13.87%_13.87%_12.5%_12.5%]">
                 <div className="absolute inset-[-5.66%]">
                   <img alt="" className="block max-w-none size-full" src={ICONS.settings_edit_pencil1} />
@@ -544,7 +545,7 @@ function ProfileSection() {
                 </div>
               </div>
             </div>
-            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#ff9500] text-[16px] leading-[20px] whitespace-nowrap">
+            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#ff9500] text-[14px] leading-[20px] whitespace-nowrap">
               {editing ? "Save" : "Edit"}
             </span>
           </button>
@@ -561,7 +562,7 @@ function ProfileSection() {
             sublabel={email}
             right={
               <ChevronActionButton
-                label="Edit email"
+                label="Edit Email"
                 testId="button-edit-email"
                 onClick={() => setContactModal("email")}
               />
@@ -575,7 +576,7 @@ function ProfileSection() {
             sublabel={phone}
             right={
               <ChevronActionButton
-                label="Edit phone"
+                label="Edit Phone"
                 testId="button-edit-phone"
                 onClick={() => setContactModal("phone")}
               />
@@ -625,42 +626,17 @@ function ProfileSection() {
             label="Default Currency"
             sublabel="Used for balance display"
             right={
-              <div ref={currencyRef} className="relative shrink-0 w-[120px]">
-                <button
-                  type="button"
-                  onClick={() => setCurrencyOpen((v) => !v)}
-                  className="bg-[#222737] content-stretch flex gap-[8px] items-center p-[8px] rounded-[8px] w-full text-left hover:bg-[#2a3045] transition-colors"
-                  data-testid="button-default-currency"
-                >
-                  <div className="content-stretch flex flex-[1_0_0] items-center min-w-px relative">
-                    <p className="font-['Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[16px] text-white whitespace-nowrap">
-                      {currency}
-                    </p>
-                  </div>
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="relative shrink-0 size-[24px]">
-                    <path d="M7 10l5 5 5-5" stroke="#6c779d" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </button>
-                {currencyOpen && (
-                  <div className="absolute right-0 top-[calc(100%+4px)] z-50 bg-[#222737] border border-[#414965] rounded-[8px] overflow-hidden w-full shadow-lg">
-                    {CURRENCY_OPTIONS.map((opt) => (
-                      <button
-                        key={opt}
-                        type="button"
-                        onClick={() => {
-                          setCurrency(opt);
-                          setCurrencyOpen(false);
-                        }}
-                        className={`w-full text-left px-[12px] py-[8px] font-['Gilroy',sans-serif] font-medium text-[16px] leading-[20px] hover:bg-[#2a3045] transition-colors ${
-                          currency === opt ? "text-white" : "text-[#a8b9f4]"
-                        }`}
-                        data-testid={`option-default-currency-${opt}`}
-                      >
-                        {opt}
-                      </button>
-                    ))}
-                  </div>
-                )}
+              <div ref={currencyRef} className="relative shrink-0 w-[80px]">
+                <SettingsDropdown
+                  value={currency}
+                  options={CURRENCY_OPTIONS.map((opt) => ({ value: opt, label: opt }))}
+                  onChange={setCurrency}
+                  testId="button-default-currency"
+                  ariaLabel="Default currency"
+                  open={currencyOpen}
+                  onOpenChange={setCurrencyOpen}
+                  matchMenuWidth
+                />
               </div>
             }
             useCircleIcon
@@ -762,7 +738,7 @@ function ProfileSection() {
                   clearOnboarding(user?.id);
                   navigate("/");
                 }}
-                className="shrink-0 rounded-[8px] px-[12px] py-[8px] bg-[#222737] hover:bg-[#2c3247] transition-colors [font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#a8b9f4] whitespace-nowrap"
+                className="shrink-0 rounded-[100px] px-[14px] py-[8px] bg-[#222737] hover:bg-[#2c3247] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-[#a8b9f4] whitespace-nowrap"
               >
                 Replay
               </button>
@@ -828,12 +804,14 @@ function BillingSection() {
                   </span>
                 )}
               </div>
-              <p
-                data-testid="text-plan-name"
-                style={{ color: "#a8b9f4", fontFamily: "'Gilroy', sans-serif", fontWeight: 500, fontSize: "24px", lineHeight: "32px" }}
-              >
-                {plan ? plan.label : "Not Configured"}
-              </p>
+              {plan && (
+                <p
+                  data-testid="text-plan-name"
+                  style={{ color: "#a8b9f4", fontFamily: "'Gilroy', sans-serif", fontWeight: 500, fontSize: "24px", lineHeight: "32px" }}
+                >
+                  {plan.label}
+                </p>
+              )}
               {plan && (
                 <p
                   data-testid="text-plan-price"
@@ -848,10 +826,10 @@ function BillingSection() {
                 type="button"
                 data-testid="button-upgrade-plan"
                 onClick={() => setChangePlanOpen(true)}
-                className="rounded-full px-[20px] py-[10px] hover-elevate"
-                style={{ background: "#240757", color: "#7631ee", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "16px", lineHeight: "20px", whiteSpace: "nowrap" }}
+                className="rounded-[100px] px-[14px] py-[8px] hover-elevate"
+                style={{ background: "#240757", color: "#7631ee", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "14px", lineHeight: "20px", whiteSpace: "nowrap" }}
               >
-                {plan ? "Change Plan" : "Choose a Plan"}
+                  {plan ? "Change Plan" : "Choose A Plan"}
               </button>
               {plan && !cancelled && (
                 <button
@@ -861,7 +839,7 @@ function BillingSection() {
                   className="rounded-full px-[20px] py-[10px] hover-elevate"
                   style={{ background: "transparent", color: "#6c779d", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "14px", lineHeight: "20px", border: "1px solid #1d2132", whiteSpace: "nowrap" }}
                 >
-                  Cancel subscription
+                  Cancel Subscription
                 </button>
               )}
             </div>
@@ -915,9 +893,10 @@ function BillingSection() {
               type="button"
               data-testid="button-update-card"
               onClick={() => setUpdateCardOpen(true)}
-              className="rounded-full px-[20px] py-[10px] hover-elevate flex-shrink-0"
-              style={{ background: "#240757", color: "#7631ee", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "16px", lineHeight: "20px", whiteSpace: "nowrap" }}
+              className="rounded-[100px] px-[14px] py-[8px] hover-elevate flex-shrink-0 flex items-center justify-center gap-[2px]"
+              style={{ background: "#240757", color: "#7631ee", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "14px", lineHeight: "20px", whiteSpace: "nowrap" }}
             >
+              {!cardLast4 && <Plus className="relative shrink-0 size-[16px] text-[#7631ee]" />}
               {cardLast4 ? "Update Card" : "Add Card"}
             </button>
           </div>
@@ -1056,10 +1035,10 @@ export function SettingsPage() {
                   <Icon active={active} />
                 </div>
                 <span
-                  className="flex-1 text-[16px] leading-5 whitespace-nowrap"
+                  className="flex-1 text-[14px] leading-[20px] whitespace-nowrap"
                   style={{
                     fontFamily: "'Gilroy', 'Plus Jakarta Sans', system-ui, sans-serif",
-                    fontWeight: 500,
+                    fontWeight: 600,
                     color: active ? "#ffffff" : "#6c779d",
                   }}
                 >
