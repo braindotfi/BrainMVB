@@ -829,7 +829,7 @@ export function RulesPanel() {
                     />
                     {openChip === "vendor" && (
                       <div className="absolute z-10 mt-[6px] w-[280px] rounded-[12px] border border-[#1d2132] bg-[#0a0c10] p-[8px] shadow-lg max-h-[320px] overflow-y-auto">
-                        <p className="px-[10px] pt-[4px] pb-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] uppercase text-[#6c779d]">
+                        <p className="px-[10px] pt-[4px] pb-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] uppercase text-[#a8b9f4]">
                           Trusted vendors
                         </p>
                         {/* An unreachable vendor list is not an empty vendor list.
@@ -838,7 +838,7 @@ export function RulesPanel() {
                         {trustedVendors.length === 0 && (
                           <p
                             className="px-[8px] pb-[6px] [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px]"
-                            style={{ color: vendorsFailed ? "#ff9400" : "#6c779d" }}
+                            style={{ color: "#a8b9f4" }}
                             data-testid={vendorsFailed ? "text-vendors-unavailable" : "text-vendors-empty"}
                           >
                             {vendorsFailed
