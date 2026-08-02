@@ -522,12 +522,6 @@ export function VendorsPanel() {
   ];
   const segmentNoun = segment === "vendor" ? "vendors" : "customers";
 
-  /* The review queue is this screen's primary job. When there are rows waiting,
-     the add-counterparty box gives up the top of the page to them. Reordered in
-     the DOM rather than with flex `order`, so keyboard and screen-reader order
-     match what is actually on screen. */
-  const addBoxBelow = activeTab === "Needs Review" && tabVendors.length > 0;
-
   /* ── Idle frame / Expanded form — above the label, same gap-[16px] sub-container as the Rules tab builder ── */
   const addBox = (
             <div className="flex flex-col gap-[16px] w-full">
@@ -707,24 +701,27 @@ export function VendorsPanel() {
       {/* No warning banner. The Needs Review badge is the single attention
           signal, and unlike the banner it is always one click from the exact
           rows it counts. */}
-      <div className="flex flex-wrap items-center justify-between gap-[12px] w-full">
-        <FilterChipRow
-          chips={vendorFilters}
-          value={activeTab}
-          onChange={(v) => setActiveTab(v as VendorTab)}
-          label="Filter counterparties"
-          testIdPrefix="tab-vendor"
-        />
-        <FilterChipRow
-          chips={segmentFilters}
-          value={segment}
-          onChange={(v) => setSegment(v as Segment)}
-          label="Show vendors or customers"
-          testIdPrefix="segment"
-        />
+      <div className="flex flex-col gap-[16px] items-start w-full">
+        <div className="flex flex-wrap items-center justify-between gap-[12px] w-full">
+          <FilterChipRow
+            chips={vendorFilters}
+            value={activeTab}
+            onChange={(v) => setActiveTab(v as VendorTab)}
+            label="Filter counterparties"
+            testIdPrefix="tab-vendor"
+          />
+          <FilterChipRow
+            chips={segmentFilters}
+            value={segment}
+            onChange={(v) => setSegment(v as Segment)}
+            label="Show vendors or customers"
+            testIdPrefix="segment"
+          />
+        </div>
+        {!isLoading && !isError && addBox}
       </div>
 
-      <div className="flex flex-col gap-[26px] w-full">
+      <div className="w-full flex flex-col gap-[16px]">
         {isLoading ? (
           <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
             <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
@@ -738,19 +735,7 @@ export function VendorsPanel() {
             </p>
           </div>
         ) : (
-          <>
-            {addBoxBelow ? (
-              <>
-                {listBlock}
-                {addBox}
-              </>
-            ) : (
-              <>
-                {addBox}
-                {listBlock}
-              </>
-            )}
-          </>
+          listBlock
         )}
       </div>
 

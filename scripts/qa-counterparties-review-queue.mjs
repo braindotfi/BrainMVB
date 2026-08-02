@@ -173,32 +173,14 @@ check(
   queueText.replace(/\n+/g, " | ").slice(0, 200),
 );
 
-/* ── The queue outranks the add box ──────────────────────────────────────── */
+/* ── The add box follows the tabs, before the records label ──────────────── */
 
-const queueRows = await count(ROWS);
-if (queueRows > 0) {
-  const listBox = await page.locator('[data-testid="list-counterparties"]').boundingBox();
-  const addBox = await page.locator('[data-testid="panel-add-vendor-idle"]').boundingBox();
-  check(
-    "with rows waiting, the add box yields the top of the page to the queue",
-    listBox && addBox && listBox.y < addBox.y,
-    `list.y=${listBox?.y} add.y=${addBox?.y}`,
-  );
-} else {
-  check("queue is empty, so add-box ordering is not exercised", true, "no rows seeded");
-}
-
-/* When there is nothing to review, the add box is the only useful thing on the
-   tab, so it goes back to the top. */
-await clickChip("tab-vendor-trusted");
-if ((await count(ROWS)) === 0) {
-  const listBox = await page.locator('[data-testid="list-counterparties"]').boundingBox();
-  const addBox = await page.locator('[data-testid="panel-add-vendor-idle"]').boundingBox();
-  check(
-    "with no queue, the add box returns above the list",
-    listBox && addBox && addBox.y < listBox.y,
-    `add.y=${addBox?.y} list.y=${listBox?.y}`,
-  );
-}
+const listBox = await page.locator('[data-testid="list-counterparties"]').boundingBox();
+const addBox = await page.locator('[data-testid="panel-add-vendor-idle"]').boundingBox();
+check(
+  "the add box sits below the tabs and above the records label",
+  listBox && addBox && addBox.y < listBox.y,
+  `add.y=${addBox?.y} list.y=${listBox?.y}`,
+);
 
 await finish();
