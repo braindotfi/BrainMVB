@@ -574,12 +574,14 @@ export function InboxPage() {
        without an explicit precedence a URL carrying both params would have two
        handlers racing to open a different surface and rewrite the route. */
     if (params.get("proposal") || params.get("receipt")) return;
-    const found = auditRecords.find((r) => r.id === recordId || r.anchor.auditId === recordId);
+    const found = [...auditRecords, ...acknowledgedRecords].find(
+      (r) => r.id === recordId || r.anchor.auditId === recordId,
+    );
     if (!found) return;
     setActiveRecord(found);
     navigate("/inbox", { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, auditRecords]);
+  }, [search, auditRecords, acknowledgedRecords]);
 
   const dismissDetail = () => {
     setActive(null);
@@ -778,8 +780,33 @@ export function InboxPage() {
       });
     }
 
+    /* Local insight acknowledgements are settled history even though their
+       source insight is removed from `visibleLiveInsights`. Keep the canonical
+       acknowledgement record in Inbox so the action removes the item from the
+       attention queue without making it disappear. Brain-core acknowledgements
+       are already represented by the audit-record loop above; the id guard in
+       push prevents a duplicate if a local record is later mirrored upstream. */
+    for (const r of acknowledgedRecords) {
+      push({
+        id: r.id,
+        kind: "proposal",
+        tier: "decided",
+        status: "informational",
+        type: "payment",
+        search: buildSearchText(r.summary, r.rowSubtitle, humanReadableActor(r.actor), r.occurredAtLabel),
+        title: r.summary,
+        tag: "Acknowledged",
+        tagClass: TAG_DETECTED,
+        desc: r.rowSubtitle ?? "",
+        time: r.occurredAtLabel,
+        why: auditWhy(r),
+        actionable: false,
+        record: r,
+      });
+    }
+
     return out;
-  }, [liveReviews, queue, needsReviewProposals, visibleLiveInsights, liveAutoApproved, statuses, auditRecords, format, formatText, thresholds]);
+  }, [liveReviews, queue, needsReviewProposals, visibleLiveInsights, liveAutoApproved, statuses, auditRecords, acknowledgedRecords, format, formatText, thresholds]);
 
   /* EVERY feed that contributes a row, not just the obvious ones. If any of them
      failed, this timeline is incomplete and must not be presented as an
