@@ -21,7 +21,7 @@ import {
 import { useLocation } from "wouter";
 import { useCurrency } from "@/lib/useCurrency";
 import type { Vendor, TrustStatus } from "@/lib/vendorTypes";
-import { vendorSegment } from "@/lib/brainVendors";
+import { vendorSegment, isReviewedOnly } from "@/lib/brainVendors";
 import { openRuleDetail, resolveRule } from "@/lib/openRuleDetail";
 import closeIcon from "@assets/Close_1783293571882.png";
 import { AlertCallout, InfoIcon } from "@/components/Callout";
@@ -179,6 +179,14 @@ export function VendorDetailPopup({
   if (!vendor) return null;
 
   const meta = TRUST_META[vendor.trustStatus];
+
+  /* Dismissed-but-not-trusted rows (trustState === "acknowledged") surface in
+     the Trusted/Confirmed list, but their derived trustStatus is still
+     "known"/"new". They must NOT get the unreviewed action set — the user
+     already decided. The only valid forward transition is grant.
+     Risk-flagged acknowledged rows are excluded: risk keeps them in Needs
+     Review (never the Trusted tab), so they keep the under_review block. */
+  const reviewedOnly = isReviewedOnly(vendor) && vendor.trustStatus !== "under_review";
 
   /* Segment-aware wording. The Customers segment says "Confirmed" where the
      Vendors segment says "Trusted" — a label alias over one tier and one
@@ -520,9 +528,32 @@ export function VendorDetailPopup({
                 </div>
               )}
 
+              {/* Acknowledged (dismissed without granting) → seen from the
+                  Trusted/Confirmed tab. Grant is the only valid transition;
+                  re-flagging an acknowledged row is a non-transition, so no
+                  Flag button, and no Dismiss (it already happened). */}
+              {reviewedOnly && (
+                <div className="flex flex-col gap-[14px] w-full">
+                  <p
+                    className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]"
+                    data-testid="text-acknowledged-note"
+                  >
+                    You dismissed this {noun} without granting trust. You can still grant trust now if you've changed your mind.
+                  </p>
+                  <TrustButton
+                    label={grantLabel}
+                    onClick={() => onGrant?.(vendor.id)}
+                    busy={trustBusy}
+                    color="#42bf23"
+                    background="#123509"
+                    testId="button-grant-trust"
+                  />
+                </div>
+              )}
+
               {/* known → Brain has seen payments; user confirms, flags, or dismisses.
                   acknowledge is a valid transition from unreviewed per the matrix. */}
-              {vendor.trustStatus === "known" && (
+              {vendor.trustStatus === "known" && !reviewedOnly && (
                 <div className="flex flex-col gap-[12px] w-full">
                   <TrustButton
                     label={grantLabel}
@@ -607,7 +638,7 @@ export function VendorDetailPopup({
 
               {/* New → grant, flag, or dismiss.
                   acknowledge is a valid transition from unreviewed per the matrix. */}
-              {vendor.trustStatus === "new" && (
+              {vendor.trustStatus === "new" && !reviewedOnly && (
                 <div className="flex flex-col gap-[14px] w-full">
                   <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
                     This {noun} will be eligible for trust after a few more on-time payments with consistent amounts and no flags.

@@ -214,6 +214,12 @@ describe("vendorTier", () => {
     expect(vendorTier(dismissed)).toBe("trusted");
     expect(isReviewedOnly(dismissed)).toBe(true);
 
+    // Both derived statuses an acknowledged row can carry (new = no payments,
+    // known = payment history) are reviewed-only in the trusted list.
+    const dismissedKnown = v({ trustStatus: "known", trustState: "acknowledged" });
+    expect(vendorTier(dismissedKnown)).toBe("trusted");
+    expect(isReviewedOnly(dismissedKnown)).toBe(true);
+
     const granted = v({ trustStatus: "trusted", trustState: "trusted" });
     expect(vendorTier(granted)).toBe("trusted");
     expect(isReviewedOnly(granted)).toBe(false);
