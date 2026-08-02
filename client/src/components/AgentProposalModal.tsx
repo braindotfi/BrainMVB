@@ -122,6 +122,7 @@ export type AgentModalAction = "approve" | "reject" | "acknowledge" | "undo";
 
 import type { AgentModalEditPayload } from "@/lib/agentProposals";
 import { InfoIcon } from "@/components/Callout";
+import { capitalCase } from "@/lib/displayLabels";
 export type { AgentModalEditPayload };
 
 const AGENT_ICONS: Record<AgentKey, LucideIcon> = {
@@ -501,7 +502,7 @@ function renderScenarioModule(
             </p>
             <div className="inline-flex items-center justify-center bg-[#222737] border border-[rgba(108,119,157,0.2)] px-[8px] py-[3px] rounded-[22px] shrink-0">
               <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-[#6c779d] whitespace-nowrap">
-                {module.badge}
+                {capitalCase(module.badge)}
               </span>
             </div>
           </div>

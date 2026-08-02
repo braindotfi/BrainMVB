@@ -63,3 +63,4 @@
 - [Counterparty trust surface](counterparty-trust-surface.md) — trust routes live (brain-core PRs #397/#403, GIT deedc628); handlers in VendorsPanel only; popup receives props, never fetches; bulk-confirm for customers.
 - [Vendor Suggested tier gate](vendor-suggested-tier-gate.md) — no provenance value means "suggested"; Suggested chip stays hidden; trust wiring green-lit and shipped.
 - [Overlay menus in clipped surfaces](overlay-menus-in-clipped-surfaces.md) — in-card dropdowns need a fixed portal (not less overflow); fixed owns its own clamp/flip, and never claim listbox without arrow keys.
+- [Live insight card structure](live-insight-card-structure.md) — read-only ledger insights reuse the agent-card rhythm with honest observational sections, never invented decision content.

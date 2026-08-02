@@ -1,7 +1,19 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { X } from "lucide-react";
 import type { LiveInsight } from "@/lib/brainAgentSurfaces";
 import { useCurrency } from "@/lib/useCurrency";
+import { capitalCase } from "@/lib/displayLabels";
+import {
+  CardBody,
+  CardSection,
+  CardText,
+  CollapsibleSection,
+  ConfidenceMeter,
+  HeadingValue,
+  KeyFactsTable,
+  PagerFooter,
+} from "@/components/ProposalCardParts";
+import { useState } from "react";
 
 /* Read-only viewer for live brain-core Ledger facts (reconciliation matches,
    subscription/disputed obligations, cash-flow aggregates) - see
@@ -27,9 +39,15 @@ export function LiveInsightModal({
   pagerDisabled?: boolean;
 }) {
   const { formatText } = useCurrency();
+  const [showTechnical, setShowTechnical] = useState(false);
   if (!insight) return null;
   const confidencePct = typeof insight.confidence === "number" ? Math.round(insight.confidence * 100) : null;
   const hasPager = Boolean(onPrev && onNext);
+  const agentName = capitalCase(`${insight.badge} Agent`);
+  const factRows = (insight.fields ?? []).map((field) => ({
+    label: capitalCase(field.label),
+    value: formatText(field.value),
+  }));
 
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
@@ -43,149 +61,140 @@ export function LiveInsightModal({
           className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[24px] w-[480px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
           data-testid="live-insight-modal"
         >
-          <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-[#1d2132] border-solid h-[56px] shrink-0 w-full flex items-center justify-between px-[16px]">
+          <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-[#1d2132] border-solid h-[56px] shrink-0 w-full flex items-center justify-center px-[16px]">
             <DialogPrimitive.Title
-              className="inline-flex items-center justify-center px-[8px] py-[2px] rounded-[22px] border border-solid border-[rgba(255,149,0,0.2)] bg-[#4a2300] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-[#ff9500] whitespace-nowrap"
-              data-testid="text-live-insight-badge"
+              className="[font-family:'Gilroy',sans-serif] font-semibold text-[20px] leading-[24px] text-[#a8b9f4] text-center whitespace-nowrap"
+              data-testid="text-live-insight-agent-name"
             >
-              {insight.badge}
+              {agentName}
             </DialogPrimitive.Title>
             <DialogPrimitive.Close
               data-testid="button-live-insight-close"
               aria-label="Close"
-              className="size-[32px] flex items-center justify-center rounded-full hover:bg-[#1d2132] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+              className="absolute right-[11px] top-[11px] size-[32px] flex items-center justify-center rounded-full bg-[#222737] hover:bg-[#2a3050] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
             >
-              <X size={18} className="text-[#6c779d]" />
+              <X size={16} className="text-[#6c779d]" />
             </DialogPrimitive.Close>
           </div>
 
-          <div className="flex flex-col gap-[16px] p-[24px] w-full overflow-y-auto">
-            <div>
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[20px] leading-[26px] text-[#a8b9f4]">
-                {insight.title}
+          <div className="flex flex-col items-start w-full overflow-y-auto">
+            <div className="border-b border-[#1d2132] border-solid flex flex-col gap-[8px] items-start p-[24px] shrink-0 w-full">
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[20px] leading-[28px] text-[#a8b9f4] w-full truncate">
+                {formatText(insight.title)}
               </p>
               {insight.subtitle && (
-                <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d] mt-[4px]">
-                  {insight.subtitle}
+                <p className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#6c779d] w-full">
+                  {formatText(insight.subtitle)}
                 </p>
               )}
             </div>
 
-            {confidencePct !== null && (
-              <div className="flex flex-col gap-[8px] w-full" data-testid="bar-live-insight-confidence">
-                <div className="flex items-center justify-between">
-                  <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#6c779d]">
-                    Match confidence
-                  </span>
-                  <span className="[font-family:'JetBrains_Mono',monospace] text-[13px] text-[#a8b9f4]">
-                    {confidencePct}%
-                  </span>
-                </div>
-                <div className="h-[6px] w-full rounded-full bg-[#1d2132] overflow-hidden">
-                  <div className="h-full rounded-full bg-[#7631ee]" style={{ width: `${confidencePct}%` }} />
-                </div>
-              </div>
-            )}
-
-            {insight.explanation && (
-              <p
-                id="live-insight-description"
-                className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-[#a8b9f4]"
-              >
-                {formatText(insight.explanation)}
-              </p>
-            )}
-
-            {insight.fields && insight.fields.length > 0 && (
-              <div className="flex flex-col gap-[1px] w-full rounded-[8px] overflow-hidden border border-[#1d2132]">
-                {insight.fields.map((f) => (
-                  <div key={f.label} className="flex items-center justify-between px-[12px] py-[8px] bg-[#0a0c10] gap-[12px]">
-                    <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#6c779d] shrink-0">
-                      {f.label}
-                    </span>
-                    <span className="[font-family:'JetBrains_Mono',monospace] text-[13px] text-[#a8b9f4] text-right truncate">
-                      {formatText(f.value)}
-                    </span>
+            <CardBody>
+              {insight.explanation && (
+                <CardSection title="Why This Matters" testId="section-live-insight-why">
+                  <div id="live-insight-description" className="w-full">
+                    <CardText testId="live-insight-description-text">{formatText(insight.explanation)}</CardText>
                   </div>
-                ))}
-              </div>
-            )}
+                </CardSection>
+              )}
 
-            {insight.chart && (
-              <div className="flex flex-col gap-[8px] w-full" data-testid="chart-live-insight">
-                <div className="flex gap-[8px] items-end w-full">
-                  {(() => {
-                    const chart = insight.chart!;
-                    const max = Math.max(1, ...chart.points.map((p) => Math.abs(p.value)));
-                    return chart.points.map((p, idx) => (
-                      <div key={`${p.label}-${idx}`} className="flex-1 flex flex-col gap-[4px] items-center min-w-0">
-                        <div
-                          className="w-full rounded-[8px] min-h-[4px]"
-                          style={{
-                            height: `${Math.max(4, Math.round((Math.abs(p.value) / max) * 88))}px`,
-                            background: p.value >= 0 ? "#123509" : "#350011",
-                            border: `1px solid ${p.value >= 0 ? "rgba(66,191,35,0.4)" : "rgba(210,3,68,0.4)"}`,
-                          }}
-                        />
-                        <span className="[font-family:'JetBrains_Mono',monospace] font-medium text-[11px] leading-[14px] text-[#6c779d] text-center w-full truncate">
-                          {p.label}
-                        </span>
+              {factRows.length > 0 && (
+                <CardSection title="Key Facts" testId="section-live-insight-facts">
+                  <KeyFactsTable rows={factRows} testId="table-live-insight-facts" />
+                </CardSection>
+              )}
+
+              {insight.evidenceIds && insight.evidenceIds.length > 0 && (
+                <CardSection title="Linked Evidence" testId="section-live-insight-evidence">
+                  <div className="flex flex-col gap-[8px] w-full">
+                    {insight.evidenceIds.map((id) => (
+                      <div
+                        key={id}
+                        className="bg-[#0a0c10] border border-solid border-[#1d2132] rounded-[12px] px-[16px] py-[12px] w-full"
+                      >
+                        <p className="[font-family:'JetBrains_Mono',monospace] text-[12px] leading-[16px] text-[#a8b9f4] truncate">
+                          {id}
+                        </p>
                       </div>
-                    ));
-                  })()}
+                    ))}
+                  </div>
+                </CardSection>
+              )}
+
+              {confidencePct !== null && (
+                <CardSection
+                  title="Confidence"
+                  trailing={<HeadingValue>{`${confidencePct}%`}</HeadingValue>}
+                  testId="section-live-insight-confidence"
+                >
+                  <ConfidenceMeter pct={confidencePct} />
+                </CardSection>
+              )}
+
+              {insight.chart && (
+                <CardSection title="Trend" testId="section-live-insight-chart">
+                  <div className="flex flex-col gap-[8px] w-full" data-testid="chart-live-insight">
+                    <div className="flex gap-[8px] items-end w-full">
+                      {(() => {
+                        const chart = insight.chart!;
+                        const max = Math.max(1, ...chart.points.map((point) => Math.abs(point.value)));
+                        return chart.points.map((point, idx) => (
+                          <div key={`${point.label}-${idx}`} className="flex-1 flex flex-col gap-[4px] items-center min-w-0">
+                            <div
+                              className="w-full rounded-[8px] min-h-[4px]"
+                              style={{
+                                height: `${Math.max(4, Math.round((Math.abs(point.value) / max) * 88))}px`,
+                                background: point.value >= 0 ? "#123509" : "#350011",
+                                border: `1px solid ${point.value >= 0 ? "rgba(66,191,35,0.4)" : "rgba(210,3,68,0.4)"}`,
+                              }}
+                            />
+                            <span className="[font-family:'JetBrains_Mono',monospace] font-medium text-[11px] leading-[14px] text-[#6c779d] text-center w-full truncate">
+                              {point.label}
+                            </span>
+                          </div>
+                        ));
+                      })()}
+                    </div>
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[11px] leading-[14px] text-[#414965] w-full">
+                      {formatText(insight.chart.note)}
+                    </p>
+                  </div>
+                </CardSection>
+              )}
+
+              <CardSection title="What Happens Next" testId="section-live-insight-next">
+                <CardText>
+                  Brain will continue monitoring this live ledger signal. This record is read-only;
+                  no approval or automatic action is available for it yet.
+                </CardText>
+              </CardSection>
+
+              <CollapsibleSection
+                title="Technical Detail"
+                expanded={showTechnical}
+                onToggle={() => setShowTechnical((expanded) => !expanded)}
+                toggleTestId="button-live-insight-technical"
+                testId="section-live-insight-technical"
+              >
+                <div className="flex flex-col gap-[8px] w-full">
+                  <CardText className="text-[14px] leading-[20px]">
+                    Source: Brain Core Ledger · Type: {capitalCase(insight.kind)}
+                  </CardText>
+                  <CardText className="text-[14px] leading-[20px]">
+                    Record ID: <span className="[font-family:'JetBrains_Mono',monospace]">{insight.id}</span>
+                  </CardText>
                 </div>
-                <p className="[font-family:'Gilroy',sans-serif] font-medium text-[11px] leading-[14px] text-[#414965] w-full">
-                  {insight.chart.note}
-                </p>
-              </div>
-            )}
-
-            {insight.evidenceIds && insight.evidenceIds.length > 0 && (
-              <div className="flex flex-col gap-[4px] w-full">
-                <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#6c779d]">
-                  Evidence
-                </span>
-                {insight.evidenceIds.map((id) => (
-                  <p key={id} className="[font-family:'JetBrains_Mono',monospace] text-[12px] text-[#a8b9f4] truncate">
-                    {id}
-                  </p>
-                ))}
-              </div>
-            )}
-
-            <p className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-[#414965] pt-[8px] border-t border-[#1d2132] w-full">
-              Read-only. Live data from brain-core's Ledger - brain-core has no
-              decision workflow (/v1/proposals) for this record type yet.
-            </p>
+              </CollapsibleSection>
+            </CardBody>
           </div>
 
           {hasPager && (
-            <div className="border-t border-[#1d2132] bg-[rgba(17,20,27,0.9)] px-[24px] py-[16px] w-full shrink-0">
-              <div className="flex items-center gap-[16px] w-full">
-                <button
-                  type="button"
-                  onClick={onPrev}
-                  disabled={pagerDisabled}
-                  aria-label="Previous record"
-                  data-testid="button-live-insight-prev"
-                  className="flex flex-1 items-center justify-center gap-[8px] px-[20px] py-[8px] rounded-[100px] bg-[#222737] hover:bg-[#2c3247] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#6c779d] disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-                >
-                  <ChevronLeft size={18} />
-                  Previous
-                </button>
-                <button
-                  type="button"
-                  onClick={onNext}
-                  disabled={pagerDisabled}
-                  aria-label="Next record"
-                  data-testid="button-live-insight-next"
-                  className="flex flex-1 items-center justify-center gap-[8px] px-[20px] py-[8px] rounded-[100px] bg-[#222737] hover:bg-[#2c3247] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#6c779d] disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-                >
-                  Next
-                  <ChevronRight size={18} />
-                </button>
-              </div>
-            </div>
+            <PagerFooter
+              onPrev={onPrev!}
+              onNext={onNext!}
+              hasPrev={!pagerDisabled}
+              hasNext={!pagerDisabled}
+            />
           )}
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
@@ -224,7 +233,7 @@ export const LiveInsightRow = ({ insight, onClick }: { insight: LiveInsight; onC
       className="inline-flex items-center justify-center gap-[5px] border border-solid border-[rgba(255,149,0,0.2)] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] px-[8px] py-[2px] rounded-[22px] whitespace-nowrap shrink-0"
       style={{ color: "#ff9500", background: "#4a2300" }}
     >
-      {insight.badge}
+      {capitalCase(insight.badge)}
     </span>
   </div>
 );

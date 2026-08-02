@@ -1,4 +1,5 @@
 import type { WalkthroughStep as StepContent } from "@/lib/onboardingWalkthrough";
+import { capitalCase } from "@/lib/displayLabels";
 
 /* Chip colours follow the app's tag vocabulary. Per the shared convention the
    constants carry the border COLOUR only, so the element adds `border
@@ -13,7 +14,7 @@ function Chip({ label, tone, testId }: { label: string; tone: string; testId: st
       data-testid={testId}
       className={`inline-flex items-center rounded-[22px] border border-solid px-[8px] py-[3px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[14px] whitespace-nowrap ${tone}`}
     >
-      {label}
+      {capitalCase(label)}
     </span>
   );
 }

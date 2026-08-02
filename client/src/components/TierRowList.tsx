@@ -19,6 +19,7 @@ import { TIER_META, TIER_ORDER, type ProposalTier } from "@/lib/proposalTiers";
 import type { RowTier } from "@/lib/decisionFilters";
 import { Divider } from "@/components/LedgerWidgets";
 import { UnavailableDataBox } from "@/components/Callout";
+import { capitalCase } from "@/lib/displayLabels";
 
 /* Tier accents. Red = Urgent, amber = Waiting on you, periwinkle = Insights —
    the palette already used for Inbox status tags, not the prototype's colours. */
@@ -138,7 +139,7 @@ export const TierRow = ({ row }: { row: TierRowModel }) => {
               className={`${row.badge.className} border border-solid rounded-[22px] px-[8px] py-[2px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-center whitespace-nowrap shrink-0`}
               data-testid={`${row.testIdPrefix}-${row.id}-badge`}
             >
-              {row.badge.label}
+              {capitalCase(row.badge.label)}
             </span>
           )}
         </div>

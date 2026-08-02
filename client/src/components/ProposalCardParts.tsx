@@ -22,6 +22,7 @@ import type { ReactNode } from "react";
 import { ChevronRight, ChevronLeft } from "lucide-react";
 import infoIconSrc from "@assets/figma_icons/inline/proposal_info.png";
 import warningIconSrc from "@assets/figma_icons/inline/proposal_warning.png";
+import { capitalCase } from "@/lib/displayLabels";
 
 /* ── Section heading ──────────────────────────────────────────────────────────
    Label, then a hairline rule that fills the remaining width, then an optional
@@ -162,7 +163,7 @@ export const StatusPill = ({
       className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[16px] text-center whitespace-nowrap"
       style={{ color }}
     >
-      {label}
+      {capitalCase(label)}
     </span>
   </div>
 );
@@ -171,7 +172,7 @@ export const StatusPill = ({
 export const TypeTag = ({ label }: { label: string }) => (
   <div className="inline-flex items-center justify-center bg-[#222737] border border-solid border-[rgba(108,119,157,0.2)] px-[8px] py-[3px] rounded-[22px] shrink-0">
     <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-[#6c779d] text-center whitespace-nowrap">
-      {label}
+      {capitalCase(label)}
     </span>
   </div>
 );

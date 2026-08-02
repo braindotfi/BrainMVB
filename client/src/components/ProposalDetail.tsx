@@ -40,6 +40,7 @@ import type {
   Severity,
   FactRow,
 } from "@/lib/proposalTypes";
+import { capitalCase } from "@/lib/displayLabels";
 
 /* Title case helper, used for all labels platform-wide */
 function titleCase(str: string) {
@@ -239,7 +240,7 @@ export function ProposalDetail({
                 <div className="flex flex-col gap-[16px] items-start w-full border-b border-[#1d2132] pb-[24px]">
                   <span className={`inline-flex items-center justify-center gap-[5px] px-[10px] py-[5px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] whitespace-nowrap ${badge.className}`}>
                     {BadgeIcon && <BadgeIcon size={12} className="shrink-0" />}
-                    {badge.label}
+              {capitalCase(badge.label)}
                   </span>
                   <div className="flex items-start justify-between gap-[12px] w-full">
                     <p

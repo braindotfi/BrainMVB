@@ -21,6 +21,7 @@ import type { DocumentRecord } from "@/lib/documentTypes";
 import { RecordPager } from "./RecordPager";
 import { matchCannedPrompt } from "@shared/cannedPrompts";
 import { anchorFromInclusionProof, type BrainAuditEventDetail } from "@/lib/brainAudit";
+import { capitalCase } from "@/lib/displayLabels";
 
 export function AuditRecordPopup({
   record,
@@ -118,7 +119,7 @@ export function AuditRecordPopup({
           className="whitespace-nowrap"
           style={{ color: "#6c779d" }}
         >
-          {label}
+          {capitalCase(label)}
         </p>
       </div>
     );

@@ -9,6 +9,7 @@ import { useAcknowledgedRecords } from "@/lib/acknowledgedStore";
 import { useCurrency } from "@/lib/useCurrency";
 import { AuditRecordPopup } from "@/components/AuditRecordPopup";
 import { AlertCallout } from "@/components/Callout";
+import { capitalCase } from "@/lib/displayLabels";
 
 /* Settings → Audit Log.
  *
@@ -410,7 +411,7 @@ export function AuditLogSection() {
                         className="border border-solid rounded-[22px] px-[8px] py-[2px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-center whitespace-nowrap shrink-0"
                         style={{ background: badge.bg, color: badge.color, border: badge.border }}
                       >
-                        {badge.label}
+                        {capitalCase(badge.label)}
                       </span>
                     </div>
                     <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[18px]">
