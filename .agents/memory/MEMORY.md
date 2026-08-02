@@ -23,6 +23,7 @@
 - [brain-core API surface wiring](brain-api-surface-wiring.md) — api-surface artifact is sole truth; writes via WRITE_ROUTES allowlist; proxied READS reach the UI unnormalized, so client types lie.
 - [Replit git branch tracking](replit-git-branch-tracking.md) — auto-checkpoints push local main (and upstream-tracking branches) straight to origin/main, past required reviews; PR stays open while its content lands.
 - [Git sync stale locks](git-sync-stale-locks.md) — generic Sync fatal errors can come from abandoned .git/*.lock files; remove only confirmed stale locks, never reset refs.
+- [Deleted merged feature refs](deleted-merged-feature-ref.md) — after PR merge branch deletion, Git pane UNKNOWN_REF is fixed by recreating the same remote ref; preserve local commits and untracked uploads.
 - [Stacked PR rebases](stacked-pr-rebase.md) — squash merges hide the parent's commits: always `rebase --onto origin/main <parent's old tip>`, never plain rebase, and re-test after.
 - [CI red + armed auto-merge](ci-red-and-auto-merge.md) — npm ci fails on lock drift so every PR is red before tests run; fixing it squash-merges open PRs unreviewed (main unprotected).
 - [Admin-merge rule](merge-bypass-rule.md) — docs/memory and presentation of reviewed logic may be admin-merged; tiering, the bulk-approve gate and any threshold reading need a real reviewer.
