@@ -5,6 +5,7 @@ import { partitionSystemActivity } from "@/lib/auditVisibility";
 import { humanReadableActor, isAssistantActivity } from "@/lib/auditTypes";
 import type { AuditRecord } from "@/lib/auditTypes";
 import { useAcknowledgedRecords } from "@/lib/acknowledgedStore";
+import { useCurrency } from "@/lib/useCurrency";
 import { AuditRecordPopup } from "@/components/AuditRecordPopup";
 import { AlertCallout } from "@/components/Callout";
 
@@ -88,6 +89,7 @@ function plural(n: number, one: string, many: string): string {
 export function AuditLogSection() {
   const { records: brainRecords, isLoading, isError, eventCount } = useBrainAuditRecords();
   const acknowledgedRecords = useAcknowledgedRecords();
+  const { formatText } = useCurrency();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<TypeFilter>("all");
   const [filterOpen, setFilterOpen] = useState(false);
@@ -394,7 +396,7 @@ export function AuditLogSection() {
                   <div className="flex-1 min-w-0 flex flex-col gap-[4px]">
                     <div className="flex items-center gap-2 min-w-0">
                       <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] min-w-0 flex-1 truncate">
-                        {record.summary}
+                        {formatText(record.summary)}
                       </span>
                       <span
                         data-testid={`badge-audit-category-${record.id}`}
@@ -405,7 +407,7 @@ export function AuditLogSection() {
                       </span>
                     </div>
                     <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[18px]">
-                      {[actor, record.occurredAtLabel]
+                      {[actor, formatText(record.rowSubtitle ?? ""), record.occurredAtLabel]
                         .filter(Boolean)
                         .join(" · ")}
                     </p>

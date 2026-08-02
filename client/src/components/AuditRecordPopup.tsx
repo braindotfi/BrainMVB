@@ -218,7 +218,7 @@ export function AuditRecordPopup({
                                     )}
                                     {step.authority && (
                                       <span data-testid={`text-actor-authority-${idx}`} className="text-[#6c779d]">
-                                        {" "}· {step.authority}
+                                        {" "}· {formatText(step.authority)}
                                       </span>
                                     )}
                                   </p>
@@ -230,16 +230,17 @@ export function AuditRecordPopup({
                                     const canned = matchCannedPrompt(step.note);
                                     if (!canned) {
                                       return step.note ? (
-                                        <p className="relative shrink-0 text-[#414965] w-full">{step.note}</p>
+                                         <p className="relative shrink-0 text-[#414965] w-full">{formatText(step.note)}</p>
                                       ) : null;
                                     }
                                     return (
                                       <>
                                         <p data-testid={`text-canned-description-${idx}`} className="relative shrink-0 text-[#414965] w-full">
-                                          {canned.description}
+                                           {formatText(canned.description)}
                                         </p>
                                         <p data-testid={`text-canned-prompt-${idx}`} className="relative shrink-0 text-[#414965] w-full">
-                                          <span className="text-[#6c779d]">Exact prompt used:</span> {canned.prompt}
+                                           <span className="text-[#6c779d]">Exact prompt used:</span>{" "}
+                                           {formatText(canned.prompt)}
                                         </p>
                                       </>
                                     );
@@ -309,7 +310,7 @@ export function AuditRecordPopup({
                                   </p>
                                 </div>
                                 <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
-                                  {link.label}
+                                  {formatText(link.label)}
                                 </p>
                               </div>
                               {(ruleGone || vendorGone || invoiceGone || proposalGone) && (
@@ -336,7 +337,7 @@ export function AuditRecordPopup({
                                 </p>
                               </div>
                               <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#a8b9f4]">
-                                {link.label}
+                                {formatText(link.label)}
                               </p>
                             </div>
                             <ChevronRight size={16} className="text-[#6c779d] shrink-0" />
