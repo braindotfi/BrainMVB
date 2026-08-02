@@ -402,7 +402,7 @@ export function AuditLogSection() {
                 >
                   <div className="flex-1 min-w-0 flex flex-col gap-[4px]">
                     <div className="flex items-center gap-[8px] w-full min-w-0">
-                      <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] min-w-0 flex-1 truncate">
+                      <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] min-w-0 max-w-full basis-auto grow-0 shrink truncate">
                         {formatText(record.summary)}
                       </span>
                       <span
