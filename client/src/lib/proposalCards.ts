@@ -746,6 +746,10 @@ export function buildWhySuggested(
     const text = raw.trim();
     // A bare ULID is an identifier, not a reason a human can read.
     if (!text || isRawIdentifier(text)) return;
+    // A string with no alphabetic characters is a raw metric (e.g. "0.6",
+    // "70197.57", "1,200"), not a sentence a reviewer can act on. Suppress it
+    // rather than surfacing a dimensionless number as a reason bullet.
+    if (!/[a-zA-Z]/.test(text)) return;
     const key = text.toLowerCase();
     if (seen.has(key)) return;
     seen.add(key);

@@ -29,7 +29,7 @@ import {
 import {
   ActionButton,
   ActionRow,
-  CardActionDivider,
+  CardActions,
   CardBody,
   CardSection,
   CardText,
@@ -512,37 +512,36 @@ export function LiveProposalModal({
                   sweep Approve / Reject — without this component knowing anything
                   about those types. Labels are brain-core's; the wire value stays
                   the documented write verb (see buildDecisionButtons). */}
-              <CardActionDivider testId="divider-live-proposal-actions" />
-
-              {needsReview && decisions.length > 0 ? (
-                <ActionRow testId="group-live-proposal-decisions">
-                  {decisions.map((d) => (
-                    <ActionButton
-                      key={d.id}
-                      label={d.label}
-                      tone={d.tone}
-                      disabled={!d.writable || decide.isPending}
-                      title={
-                        d.writable
-                          ? (d.meaning ?? undefined)
-                          : `brain-core offers "${d.id}", which this app cannot submit yet.`
-                      }
-                      onClick={d.writable ? () => act(d.id as ProposalDecision) : undefined}
-                      testId={`button-live-proposal-decision-${d.id}`}
-                    />
-                  ))}
-                </ActionRow>
-              ) : needsReview ? (
-                /* Pending, but core offered no decision this client can write. Say so
-                   rather than showing an Approve button that would 400. */
-                <CardText className="text-center" testId="text-live-proposal-no-decisions">
-                  No decision is available for this proposal.
-                </CardText>
-              ) : (
-                <CardText className="text-center" testId="text-live-proposal-decided">
-                  Decision recorded: {proposal.status}
-                </CardText>
-              )}
+              <CardActions testId="group-live-proposal-decisions">
+                {needsReview && decisions.length > 0 ? (
+                  <ActionRow testId="group-live-proposal-decisions">
+                    {decisions.map((d) => (
+                      <ActionButton
+                        key={d.id}
+                        label={d.label}
+                        tone={d.tone}
+                        disabled={!d.writable || decide.isPending}
+                        title={
+                          d.writable
+                            ? (d.meaning ?? undefined)
+                            : `brain-core offers "${d.id}", which this app cannot submit yet.`
+                        }
+                        onClick={d.writable ? () => act(d.id as ProposalDecision) : undefined}
+                        testId={`button-live-proposal-decision-${d.id}`}
+                      />
+                    ))}
+                  </ActionRow>
+                ) : needsReview ? (
+                  /* Pending, but core offered no decision this client can write. */
+                  <CardText className="text-center" testId="text-live-proposal-no-decisions">
+                    No decision is available for this proposal.
+                  </CardText>
+                ) : (
+                  <CardText className="text-center" testId="text-live-proposal-decided">
+                    Decision recorded: {proposal.status}
+                  </CardText>
+                )}
+              </CardActions>
             </CardBody>
           </div>
 

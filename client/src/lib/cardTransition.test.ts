@@ -86,14 +86,17 @@ describe("card action areas", () => {
   ];
   for (const file of WITH_ACTIONS) {
     it(`${file} separates its buttons from the card body`, () => {
-      expect(readFileSync(file, "utf8")).toContain("<CardActionDivider");
+      expect(readFileSync(file, "utf8")).toContain("<CardActions");
     });
   }
 
-  it("the divider reaches both edges of a 24px-padded column", () => {
+  it("the action footer rule reaches both edges and gives 24px to the buttons", () => {
     const src = readFileSync("client/src/components/ProposalCardParts.tsx", "utf8");
-    const decl = src.slice(src.indexOf("export const CardActionDivider"));
+    const decl = src.slice(src.indexOf("export const CardActions"));
+    /* -mx-[24px] makes the border-t span the full card width past the 24px
+       padding; pt-[24px] gives exactly 24px from that line to the buttons. */
     expect(decl).toContain("-mx-[24px]");
-    expect(decl).toContain("self-stretch");
+    expect(decl).toContain("pt-[24px]");
+    expect(decl).toContain("border-t");
   });
 });

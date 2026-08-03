@@ -86,21 +86,23 @@ export const CardSection = ({
 );
 
 /**
- * Edge-to-edge rule inside a 24px-padded card column.
+ * Full-width footer that closes every record card with a border rule and 24px
+ * of space from that rule to the buttons inside it.
  *
- * The frames close every record card with a full-width line above its action
- * buttons — the same rule the header, the hero and the pager footer use, so the
- * buttons read as the card's footer rather than as one more section. A line
- * drawn inside the padding would stop short at both ends and read as a section
- * divider instead, hence the negative margin: it assumes a parent with 24px of
- * horizontal padding, which every card column here has.
+ * The border reaches both card edges with `-mx-[24px]`; `px-[24px]` restores
+ * the 24px inset for the buttons. This matches the PagerFooter rhythm and the
+ * Figma spec: 24px from the rule to the first button, rule spans 100% of card.
+ * A plain flex-gap between a 1px divider div and the buttons would expose the
+ * parent's section rhythm (32px in most scroll columns) rather than the 24px
+ * the footer zone deserves.
  */
-export const CardActionDivider = ({ testId }: { testId?: string }) => (
+export const CardActions = ({ children, testId }: { children: ReactNode; testId?: string }) => (
   <div
-    className="h-px shrink-0 self-stretch -mx-[24px] bg-[#1d2132]"
+    className="border-t border-solid border-[#1d2132] -mx-[24px] px-[24px] pt-[24px] shrink-0 w-[calc(100%+48px)]"
     data-testid={testId}
-    aria-hidden="true"
-  />
+  >
+    {children}
+  </div>
 );
 
 /** The frame's 32px section rhythm. */

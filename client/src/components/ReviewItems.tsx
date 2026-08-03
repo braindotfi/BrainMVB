@@ -5,7 +5,7 @@ import closeIcon from "@assets/Close_1783293571882.png";
 import { ICONS } from "@/assets/figma-icons";
 import { useCurrency } from "@/lib/useCurrency";
 import { AlertCallout } from "@/components/Callout";
-import { CardActionDivider } from "@/components/ProposalCardParts";
+import { CardActions } from "@/components/ProposalCardParts";
 import { useCardTransition } from "@/lib/cardTransition";
 
 export type ReviewItemType = {
@@ -229,8 +229,8 @@ export const ReviewModal = ({
 
             {/* Action row, Figma 4071:65833. Confirm + Decline, under the same
                 full-width rule every other record card closes with. */}
-            <CardActionDivider testId="divider-review-actions" />
-            <div className="flex gap-[16px] items-start w-full">
+            <CardActions testId="divider-review-actions">
+              <div className="flex gap-[16px] items-start w-full">
               <button
                 onClick={() => onConfirm(auto)}
                 disabled={busy}
@@ -247,7 +247,8 @@ export const ReviewModal = ({
               >
                 <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#d20344] text-[16px] whitespace-nowrap">Decline</span>
               </button>
-            </div>
+              </div>
+            </CardActions>
 
             {hasPager && (
               <div className="border-t border-[#1d2132] pt-[16px] flex gap-[16px] items-center w-full">

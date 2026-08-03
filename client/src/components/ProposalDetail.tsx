@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import closeIcon from "@assets/Close_1783293571882.png";
 import { ArrowLeft, ArrowRight } from "lucide-react";
-import { CardActionDivider } from "@/components/ProposalCardParts";
+import { CardActions } from "@/components/ProposalCardParts";
 import { useCardTransition } from "@/lib/cardTransition";
 import {
   Receipt,
@@ -493,8 +493,8 @@ export function ProposalDetail({
             )}
 
             {/* ── Actions footer ────────────────────────────────────────────── */}
-            <CardActionDivider testId="divider-proposal-detail-actions" />
-            <div className="flex flex-col gap-[16px] items-start w-full">
+            <CardActions testId="divider-proposal-detail-actions">
+              <div className="flex flex-col gap-[16px] items-start w-full">
               {proposal.actions.verifyFirst && (
                 <button
                   type="button"
@@ -547,7 +547,8 @@ export function ProposalDetail({
                   </span>
                 </button>
               )}
-            </div>
+              </div>
+            </CardActions>
 
           </>
           )}

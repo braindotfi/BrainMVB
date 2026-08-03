@@ -7,7 +7,7 @@ import { capitalCase } from "@/lib/displayLabels";
 import {
   ActionButton,
   ActionRow,
-  CardActionDivider,
+  CardActions,
   CardBody,
   CardSection,
   CardText,
@@ -232,18 +232,17 @@ export function LiveInsightModal({
                   it from the queue. Nothing is approved and no money moves, so
                   it is the only control here — never Approve/Reject. */}
               {onAcknowledge && (
-                <>
-                <CardActionDivider testId="divider-live-insight-actions" />
-                <ActionRow testId="actions-live-insight">
-                  <ActionButton
-                    label={acknowledged ? "Acknowledged" : "Acknowledge"}
-                    tone="acknowledge"
-                    disabled={acknowledged}
-                    onClick={acknowledged ? undefined : onAcknowledge}
-                    testId="button-live-insight-acknowledge"
-                  />
-                </ActionRow>
-                </>
+                <CardActions testId="actions-live-insight">
+                  <ActionRow testId="actions-live-insight">
+                    <ActionButton
+                      label={acknowledged ? "Acknowledged" : "Acknowledge"}
+                      tone="acknowledge"
+                      disabled={acknowledged}
+                      onClick={acknowledged ? undefined : onAcknowledge}
+                      testId="button-live-insight-acknowledge"
+                    />
+                  </ActionRow>
+                </CardActions>
               )}
 
             </CardBody>
