@@ -585,6 +585,26 @@ export function InboxPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search]);
 
+  /* Deep-link: /inbox?proposal=<id> — brain-core agent proposals.
+     Brain proposals come from an async fetch (`liveProposals`) so they cannot
+     be resolved in the synchronous `resolveProposal` call above.  This second
+     effect re-runs whenever liveProposals loads or the search param changes so
+     it still fires even if the data arrives after the URL does.
+     Priority: if the durable-queue resolver already claimed the id, skip — one
+     card per URL, first match wins. */
+  useEffect(() => {
+    const params = new URLSearchParams(search);
+    const proposalId = params.get("proposal") ?? params.get("receipt");
+    if (!proposalId) return;
+    if (resolveProposal(proposalId)) return; // handled by the durable-queue effect
+    const brainTarget = liveProposals.find((p) => p.id === proposalId);
+    if (!brainTarget) return;
+    setSelectedProposal(brainTarget);
+    setOpenItemId(brainTarget.id);
+    navigate("/inbox", { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, liveProposals]);
+
   /* Deep-link: /inbox?record=<id>. This is the route a linked entity returns to
      after being opened FROM a settled record here, so it must reopen the popup
      rather than silently dropping the user on a bare timeline. Audit records

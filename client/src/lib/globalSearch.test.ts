@@ -37,6 +37,26 @@ describe("result builders", () => {
   });
 });
 
+describe("decision deep-link contract", () => {
+  it("decision href uses ?proposal= so InboxPage's brain-proposal deep-link can pick it up", () => {
+    const r = decision("brain-abc123", "Treasury sweep", "cash flow");
+    expect(r.href).toBe("/decisions?proposal=brain-abc123");
+    // The param name must match what InboxPage reads in its deep-link effects.
+    const params = new URLSearchParams(r.href.split("?")[1]);
+    expect(params.get("proposal")).toBe("brain-abc123");
+  });
+
+  it("InboxPage has a brain-proposal deep-link effect that reads liveProposals", () => {
+    // Source guard: the effect must exist and depend on liveProposals so it
+    // fires when async data arrives, not only when the URL changes.
+    const { readFileSync } = require("fs");
+    const src = readFileSync("client/src/pages/InboxPage.tsx", "utf8");
+    expect(src).toContain("liveProposals.find((p) => p.id === proposalId)");
+    expect(src).toContain("setSelectedProposal(brainTarget)");
+    expect(src).toContain("}, [search, liveProposals]);");
+  });
+});
+
 describe("rankResults", () => {
   const rows: SearchResult[] = [
     decision("p1", "Collections outreach for Riverside Co"),
