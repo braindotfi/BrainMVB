@@ -16,9 +16,11 @@
 import { useMemo } from "react";
 import { ActionButton, type ActionTone } from "@/components/ProposalCardParts";
 import { TIER_META, TIER_ORDER, type ProposalTier } from "@/lib/proposalTiers";
+import { orderRowsForDisplay } from "@/lib/tierRowOrder";
 import type { RowTier } from "@/lib/decisionFilters";
 import { Divider } from "@/components/LedgerWidgets";
 import { UnavailableDataBox } from "@/components/Callout";
+import { capitalCase } from "@/lib/displayLabels";
 
 /* Tier accents. Red = Urgent, amber = Waiting on you, periwinkle = Insights —
    the palette already used for Inbox status tags, not the prototype's colours. */
@@ -49,6 +51,10 @@ export interface TierRowAction {
 export interface TierRowBadge {
   label: string;
   className: string;
+  /** Anything the pill encodes in COLOUR alone. Decision rows are pilled with
+   *  the agent name, so severity survives only as the chip's palette — this
+   *  carries it as text for anyone who cannot see the colour. */
+  srLabel?: string;
 }
 
 /**
@@ -138,7 +144,8 @@ export const TierRow = ({ row }: { row: TierRowModel }) => {
               className={`${row.badge.className} border border-solid rounded-[22px] px-[8px] py-[2px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-center whitespace-nowrap shrink-0`}
               data-testid={`${row.testIdPrefix}-${row.id}-badge`}
             >
-              {row.badge.label}
+              {capitalCase(row.badge.label)}
+              {row.badge.srLabel && <span className="sr-only">{`, ${row.badge.srLabel}`}</span>}
             </span>
           )}
         </div>
@@ -223,10 +230,15 @@ export const TierSections = ({
   emptyMessage: string;
   unavailable?: boolean;
 }) => {
-  const groups = useMemo(
-    () => TIER_ORDER.map((tier) => ({ tier, rows: rows.filter((r) => r.tier === tier) })).filter((g) => g.rows.length > 0),
-    [rows],
-  );
+  /* Grouped through the same ordering the unified pager walks (tierRowOrder.ts)
+     so the sections and Previous/Next can never disagree about what comes after
+     what. */
+  const groups = useMemo(() => {
+    const ordered = orderRowsForDisplay(rows);
+    return TIER_ORDER.map((tier) => ({ tier, rows: ordered.filter((r) => r.tier === tier) })).filter(
+      (g) => g.rows.length > 0,
+    );
+  }, [rows]);
 
   if (groups.length === 0) {
     if (unavailable) {

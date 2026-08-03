@@ -32,6 +32,7 @@ import {
 import { BillDetailPopup, type BrainInvoiceDTO as BillDTO } from "@/components/BillDetailPopup";
 import alertIcon from "@assets/Icons_1783274957589.png";
 import { AlertCallout, UnavailableDataBox } from "@/components/Callout";
+import { capitalCase } from "@/lib/displayLabels";
 
 interface TxDTO {
   id: string;
@@ -75,7 +76,7 @@ const KindBadge = ({ kind }: { kind: CashFlowKind }) => {
       className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] px-[10px] py-[4px] rounded-[22px] border border-solid shrink-0"
       style={{ background: c.bg, borderColor: c.border, color: c.fg }}
     >
-      {KIND_LABEL[kind]}
+      {capitalCase(KIND_LABEL[kind])}
     </span>
   );
 };

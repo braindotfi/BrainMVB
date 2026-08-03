@@ -12,6 +12,7 @@ import { resolveMemberByTokens, openMemberDetail, useMembersCache } from "@/lib/
 import { AnchorStatus } from "./AnchorStatus";
 import { DocumentViewerPopup } from "./DocumentViewerPopup";
 import { useCurrency } from "@/lib/useCurrency";
+import { useCardTransition } from "@/lib/cardTransition";
 import { useLocation } from "wouter";
 import { openRuleDetail, resolveRule } from "@/lib/openRuleDetail";
 import { openVendorDetail, resolveVendor } from "@/lib/openVendorDetail";
@@ -21,6 +22,7 @@ import type { DocumentRecord } from "@/lib/documentTypes";
 import { RecordPager } from "./RecordPager";
 import { matchCannedPrompt } from "@shared/cannedPrompts";
 import { anchorFromInclusionProof, type BrainAuditEventDetail } from "@/lib/brainAudit";
+import { capitalCase } from "@/lib/displayLabels";
 
 export function AuditRecordPopup({
   record,
@@ -29,6 +31,9 @@ export function AuditRecordPopup({
   onPrev,
   onNext,
   pagerDisabled,
+  hasPrev,
+  hasNext,
+  pagerStep,
   returnToBase,
 }: {
   record: AuditRecord | null;
@@ -37,6 +42,16 @@ export function AuditRecordPopup({
   onPrev?: () => void;
   onNext?: () => void;
   pagerDisabled?: boolean;
+  /** Per-direction state, for a pager walking one shared list of mixed record
+   *  kinds: at the first row Previous is dead while Next is not, and a single
+   *  `pagerDisabled` cannot say that. Defaults to `pagerDisabled` for callers
+   *  that still page within one uniform queue. */
+  hasPrev?: boolean;
+  hasNext?: boolean;
+  /** True when this surface was opened by a Previous/Next step rather than by
+   *  the user picking a record. Skips the entrance animation — see
+   *  useCardTransition. */
+  pagerStep?: boolean;
   /* Route this popup should come BACK to when the user follows a linked entity
      (vendor / proposal) and then returns. Defaults to the unified Inbox
      timeline — the old Audit Log page is retired and /audit-log is now only a
@@ -44,6 +59,7 @@ export function AuditRecordPopup({
   returnToBase?: string;
 }) {
   const { format, formatText } = useCurrency();
+  const transition = useCardTransition(open, pagerStep);
   const [, navigate] = useLocation();
   useMembersCache();
   const [viewingDocument, setViewingDocument] = useState<DocumentRecord | null>(null);
@@ -112,13 +128,13 @@ export function AuditRecordPopup({
     const label = auditRecordLabel(record);
     return (
       <div
-        className="content-stretch flex items-center justify-center px-[10px] py-[4px] relative rounded-[22px] shrink-0 border border-solid bg-[#222737] border-[rgba(108,119,157,0.2)]"
+        className="border border-solid rounded-[22px] px-[8px] py-[2px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-center whitespace-nowrap shrink-0 bg-[#222737] border-[rgba(108,119,157,0.2)]"
       >
         <p
-          className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap"
+          className="whitespace-nowrap"
           style={{ color: "#6c779d" }}
         >
-          {label}
+          {capitalCase(label)}
         </p>
       </div>
     );
@@ -139,8 +155,8 @@ export function AuditRecordPopup({
     <>
       <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
         <DialogPrimitive.Portal>
-          <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
-          <DialogPrimitive.Content className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[24px] w-[520px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out">
+          <DialogPrimitive.Overlay className={`fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px] ${transition.overlay}`} />
+          <DialogPrimitive.Content className={`fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[24px] w-[520px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none ${transition.card}`}>
 
             {/* Header - close button right, title centred */}
             <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-[#1d2132] border-b border-solid h-[56px] relative shrink-0 w-full">
@@ -155,13 +171,15 @@ export function AuditRecordPopup({
               </DialogPrimitive.Close>
             </div>
 
-            {/* Summary — Figma 6070:18107: tag pill, title, timestamp */}
+            {/* Summary — the status pill follows the title like Inbox decision rows. */}
             <div className="border-[#1d2132] border-b border-solid content-stretch flex flex-col items-start p-[24px] relative shrink-0 w-full">
-              <div className="content-stretch flex flex-col gap-[8px] items-start relative shrink-0 w-full">
-                {statusPill()}
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-[#a8b9f4] text-[20px]">
+              <div className="content-stretch flex items-center gap-[8px] relative shrink-0 w-full min-w-0">
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-[#a8b9f4] text-[20px] min-w-0 max-w-full basis-auto grow-0 shrink truncate">
                   {formatText(record.summary)}
                 </p>
+                {statusPill()}
+              </div>
+              <div className="flex flex-col gap-[8px] items-start relative shrink-0 w-full mt-[8px]">
                 <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
                   {record.occurredAtLabel}
                 </p>
@@ -218,7 +236,7 @@ export function AuditRecordPopup({
                                     )}
                                     {step.authority && (
                                       <span data-testid={`text-actor-authority-${idx}`} className="text-[#6c779d]">
-                                        {" "}· {step.authority}
+                                        {" "}· {formatText(step.authority)}
                                       </span>
                                     )}
                                   </p>
@@ -230,16 +248,17 @@ export function AuditRecordPopup({
                                     const canned = matchCannedPrompt(step.note);
                                     if (!canned) {
                                       return step.note ? (
-                                        <p className="relative shrink-0 text-[#414965] w-full">{step.note}</p>
+                                         <p className="relative shrink-0 text-[#414965] w-full">{formatText(step.note)}</p>
                                       ) : null;
                                     }
                                     return (
                                       <>
                                         <p data-testid={`text-canned-description-${idx}`} className="relative shrink-0 text-[#414965] w-full">
-                                          {canned.description}
+                                           {formatText(canned.description)}
                                         </p>
                                         <p data-testid={`text-canned-prompt-${idx}`} className="relative shrink-0 text-[#414965] w-full">
-                                          <span className="text-[#6c779d]">Exact prompt used:</span> {canned.prompt}
+                                           <span className="text-[#6c779d]">Exact prompt used:</span>{" "}
+                                           {formatText(canned.prompt)}
                                         </p>
                                       </>
                                     );
@@ -309,7 +328,7 @@ export function AuditRecordPopup({
                                   </p>
                                 </div>
                                 <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
-                                  {link.label}
+                                  {formatText(link.label)}
                                 </p>
                               </div>
                               {(ruleGone || vendorGone || invoiceGone || proposalGone) && (
@@ -336,7 +355,7 @@ export function AuditRecordPopup({
                                 </p>
                               </div>
                               <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#a8b9f4]">
-                                {link.label}
+                                {formatText(link.label)}
                               </p>
                             </div>
                             <ChevronRight size={16} className="text-[#6c779d] shrink-0" />
@@ -365,7 +384,7 @@ export function AuditRecordPopup({
                   <button
                     type="button"
                     onClick={onPrev}
-                    disabled={pagerDisabled}
+                    disabled={hasPrev === undefined ? pagerDisabled : !hasPrev}
                     data-testid="button-audit-record-prev"
                     className="bg-[#222737] flex-1 flex gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#2c3247] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
                   >
@@ -375,7 +394,7 @@ export function AuditRecordPopup({
                   <button
                     type="button"
                     onClick={onNext}
-                    disabled={pagerDisabled}
+                    disabled={hasNext === undefined ? pagerDisabled : !hasNext}
                     data-testid="button-audit-record-next"
                     className="bg-[#222737] flex-1 flex gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#2c3247] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
                   >

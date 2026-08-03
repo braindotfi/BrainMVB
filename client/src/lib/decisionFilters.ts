@@ -45,7 +45,7 @@ export const STATUS_OPTIONS: readonly { value: DecisionStatus; label: string }[]
   { value: "approved", label: "Approved" },
   { value: "auto-approved", label: "Auto-approved" },
   { value: "declined", label: "Declined" },
-  { value: "informational", label: "Informational" },
+  { value: "informational", label: "Acknowledged" },
 ] as const;
 
 /**

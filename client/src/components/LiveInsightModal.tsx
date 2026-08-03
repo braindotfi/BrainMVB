@@ -1,16 +1,33 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { X } from "lucide-react";
 import type { LiveInsight } from "@/lib/brainAgentSurfaces";
 import { useCurrency } from "@/lib/useCurrency";
+import { useCardTransition } from "@/lib/cardTransition";
+import { capitalCase } from "@/lib/displayLabels";
+import {
+  ActionButton,
+  ActionRow,
+  CardActions,
+  CardBody,
+  CardSection,
+  CardText,
+  ConfidenceMeter,
+  HeadingValue,
+  KeyFactsTable,
+  PagerFooter,
+  StatusPill,
+} from "@/components/ProposalCardParts";
 
 /* Read-only viewer for live brain-core Ledger facts (reconciliation matches,
    subscription/disputed obligations, cash-flow aggregates) - see
    client/src/lib/brainAgentSurfaces.ts. These have no proposal lifecycle
    (brain-core has no /v1/proposals endpoint yet - see
    deliverables/BRAIN-CORE-ORCHESTRATION-GAP.md), so there is deliberately no
-   approve/reject/acknowledge footer here, and no scenario module fabricated
-   to fill AgentProposalModal's shape - only the sections a record actually
-   has real data for are rendered. */
+   approve/reject footer here, and no scenario module fabricated to fill
+   AgentProposalModal's shape - only the sections a record actually has real
+   data for are rendered. Acknowledge is the exception: it writes to the LOCAL
+   acknowledgement store (audit trail + queue removal), not to brain-core, so it
+   is offered while approve/reject are not. */
 export function LiveInsightModal({
   insight,
   open,
@@ -18,6 +35,11 @@ export function LiveInsightModal({
   onPrev,
   onNext,
   pagerDisabled = false,
+  hasPrev,
+  hasNext,
+  pagerStep,
+  onAcknowledge,
+  acknowledged = false,
 }: {
   insight: LiveInsight | null;
   open: boolean;
@@ -25,167 +47,214 @@ export function LiveInsightModal({
   onPrev?: () => void;
   onNext?: () => void;
   pagerDisabled?: boolean;
+  /** Per-direction state, for a pager walking one shared list of mixed record
+   *  kinds: at the first row Previous is dead while Next is not, and a single
+   *  `pagerDisabled` cannot say that. Defaults to `pagerDisabled` for callers
+   *  that still page within one uniform queue. */
+  hasPrev?: boolean;
+  hasNext?: boolean;
+  /** True when this surface was opened by a Previous/Next step rather than by
+   *  the user picking a record. Skips the entrance animation — see
+   *  useCardTransition. */
+  pagerStep?: boolean;
+  /** Files the observation to the audit trail and clears it from the queue.
+   *  Omit on surfaces with no acknowledgement store and the control is hidden
+   *  rather than shown dead. */
+  onAcknowledge?: () => void;
+  /** Already acknowledged (or a write is in flight) — the button stays visible
+   *  and disabled so the card does not change height under the user. */
+  acknowledged?: boolean;
 }) {
   const { formatText } = useCurrency();
+  const transition = useCardTransition(open, pagerStep);
   if (!insight) return null;
   const confidencePct = typeof insight.confidence === "number" ? Math.round(insight.confidence * 100) : null;
   const hasPager = Boolean(onPrev && onNext);
+  /* Title names the agent WITHOUT the word "Agent", matching the decision cards. */
+  const agentName = capitalCase(insight.badge);
+  /* The chart means something different per insight kind, and the cash frame
+     titles it for what it plots rather than the generic shape of it. */
+  const chartTitle = insight.kind === "cashflow" ? "Cash Flow Details" : "Trend";
+  const factRows = (insight.fields ?? []).map((field) => ({
+    label: capitalCase(field.label),
+    value: formatText(field.value),
+  }));
 
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+          className={`fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px] ${transition.overlay}`}
           data-testid="live-insight-backdrop"
         />
         <DialogPrimitive.Content
           aria-describedby={insight.explanation ? "live-insight-description" : undefined}
-          className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[24px] w-[480px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
+          className={`fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[24px] w-[480px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none ${transition.card}`}
           data-testid="live-insight-modal"
         >
-          <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-[#1d2132] border-solid h-[56px] shrink-0 w-full flex items-center justify-between px-[16px]">
+          <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-[#1d2132] border-solid h-[56px] shrink-0 w-full flex items-center justify-center px-[16px]">
             <DialogPrimitive.Title
-              className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-[#a8b9f4]"
-              data-testid="text-live-insight-badge"
+              className="[font-family:'Gilroy',sans-serif] font-semibold text-[20px] leading-[24px] text-[#a8b9f4] text-center whitespace-nowrap"
+              data-testid="text-live-insight-agent-name"
             >
-              {insight.badge}
+              {agentName}
             </DialogPrimitive.Title>
             <DialogPrimitive.Close
               data-testid="button-live-insight-close"
               aria-label="Close"
-              className="size-[32px] flex items-center justify-center rounded-full hover:bg-[#1d2132] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+              className="absolute right-[11px] top-[11px] size-[32px] flex items-center justify-center rounded-full bg-[#222737] hover:bg-[#2a3050] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
             >
-              <X size={18} className="text-[#6c779d]" />
+              <X size={16} className="text-[#6c779d]" />
             </DialogPrimitive.Close>
           </div>
 
-          <div className="flex flex-col gap-[16px] p-[24px] w-full overflow-y-auto">
-            <div>
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[20px] leading-[26px] text-[#a8b9f4]">
-                {insight.title}
+          <div className="flex flex-col items-start w-full overflow-y-auto">
+            <div className="border-b border-[#1d2132] border-solid flex flex-col gap-[8px] items-start p-[24px] shrink-0 w-full">
+              {/* These records have no decision to make, so the hero pill states
+                  what the card IS rather than borrowing a risk colour it has no
+                  risk to report — the frame (6206:71135) shows the same. */}
+              <StatusPill
+                label={INSIGHT_PILL_LABEL}
+                color="#6c779d"
+                background="#222737"
+                border="rgba(108,119,157,0.2)"
+                testId="pill-live-insight-kind"
+              />
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[20px] leading-[28px] text-[#a8b9f4] w-full truncate">
+                {formatText(insight.title)}
               </p>
               {insight.subtitle && (
-                <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d] mt-[4px]">
-                  {insight.subtitle}
+                <p className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#6c779d] w-full">
+                  {formatText(insight.subtitle)}
                 </p>
               )}
             </div>
 
-            {confidencePct !== null && (
-              <div className="flex flex-col gap-[8px] w-full" data-testid="bar-live-insight-confidence">
-                <div className="flex items-center justify-between">
-                  <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#6c779d]">
-                    Match confidence
-                  </span>
-                  <span className="[font-family:'JetBrains_Mono',monospace] text-[13px] text-[#a8b9f4]">
-                    {confidencePct}%
-                  </span>
-                </div>
-                <div className="h-[6px] w-full rounded-full bg-[#1d2132] overflow-hidden">
-                  <div className="h-full rounded-full bg-[#7631ee]" style={{ width: `${confidencePct}%` }} />
-                </div>
-              </div>
-            )}
-
-            {insight.explanation && (
-              <p
-                id="live-insight-description"
-                className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-[#a8b9f4]"
-              >
-                {formatText(insight.explanation)}
-              </p>
-            )}
-
-            {insight.fields && insight.fields.length > 0 && (
-              <div className="flex flex-col gap-[1px] w-full rounded-[8px] overflow-hidden border border-[#1d2132]">
-                {insight.fields.map((f) => (
-                  <div key={f.label} className="flex items-center justify-between px-[12px] py-[8px] bg-[#0a0c10] gap-[12px]">
-                    <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#6c779d] shrink-0">
-                      {f.label}
-                    </span>
-                    <span className="[font-family:'JetBrains_Mono',monospace] text-[13px] text-[#a8b9f4] text-right truncate">
-                      {formatText(f.value)}
-                    </span>
+            <CardBody>
+              {/* Named as on the decision cards (frame 6206:71135) — the section
+                  answers the same question, so it should not read as a different
+                  one just because the record is read-only. */}
+              {insight.explanation && (
+                <CardSection title="Why Brain Suggested This" testId="section-live-insight-why">
+                  <div id="live-insight-description" className="w-full">
+                    <CardText testId="live-insight-description-text">{formatText(insight.explanation)}</CardText>
                   </div>
-                ))}
-              </div>
-            )}
+                </CardSection>
+              )}
 
-            {insight.chart && (
-              <div className="flex flex-col gap-[8px] w-full" data-testid="chart-live-insight">
-                <div className="flex gap-[8px] items-end w-full">
-                  {(() => {
-                    const chart = insight.chart!;
-                    const max = Math.max(1, ...chart.points.map((p) => Math.abs(p.value)));
-                    return chart.points.map((p, idx) => (
-                      <div key={`${p.label}-${idx}`} className="flex-1 flex flex-col gap-[4px] items-center min-w-0">
-                        <div
-                          className="w-full rounded-[8px] min-h-[4px]"
-                          style={{
-                            height: `${Math.max(4, Math.round((Math.abs(p.value) / max) * 88))}px`,
-                            background: p.value >= 0 ? "#123509" : "#350011",
-                            border: `1px solid ${p.value >= 0 ? "rgba(66,191,35,0.4)" : "rgba(210,3,68,0.4)"}`,
-                          }}
-                        />
-                        <span className="[font-family:'JetBrains_Mono',monospace] font-medium text-[11px] leading-[14px] text-[#6c779d] text-center w-full truncate">
-                          {p.label}
-                        </span>
+              {confidencePct !== null && (
+                <CardSection
+                  title="Confidence"
+                  trailing={<HeadingValue>{`${confidencePct}%`}</HeadingValue>}
+                  testId="section-live-insight-confidence"
+                >
+                  <ConfidenceMeter pct={confidencePct} />
+                </CardSection>
+              )}
+
+              {factRows.length > 0 && (
+                <CardSection title="Key Facts" testId="section-live-insight-facts">
+                  <KeyFactsTable rows={factRows} testId="table-live-insight-facts" />
+                </CardSection>
+              )}
+
+              {insight.evidenceIds && insight.evidenceIds.length > 0 && (
+                <CardSection title="Linked Evidence" testId="section-live-insight-evidence">
+                  <div className="flex flex-col gap-[8px] w-full">
+                    {insight.evidenceIds.map((id) => (
+                      <div
+                        key={id}
+                        className="bg-[#0a0c10] border border-solid border-[#1d2132] rounded-[12px] px-[16px] py-[12px] w-full"
+                      >
+                        <p className="[font-family:'JetBrains_Mono',monospace] text-[12px] leading-[16px] text-[#a8b9f4] truncate">
+                          {id}
+                        </p>
                       </div>
-                    ));
-                  })()}
-                </div>
-                <p className="[font-family:'Gilroy',sans-serif] font-medium text-[11px] leading-[14px] text-[#414965] w-full">
-                  {insight.chart.note}
-                </p>
-              </div>
-            )}
+                    ))}
+                  </div>
+                </CardSection>
+              )}
 
-            {insight.evidenceIds && insight.evidenceIds.length > 0 && (
-              <div className="flex flex-col gap-[4px] w-full">
-                <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#6c779d]">
-                  Evidence
-                </span>
-                {insight.evidenceIds.map((id) => (
-                  <p key={id} className="[font-family:'JetBrains_Mono',monospace] text-[12px] text-[#a8b9f4] truncate">
-                    {id}
-                  </p>
-                ))}
-              </div>
-            )}
+              {insight.chart && (
+                <CardSection title={chartTitle} testId="section-live-insight-chart">
+                  <div className="flex flex-col gap-[8px] w-full" data-testid="chart-live-insight">
+                    <div className="flex gap-[8px] items-end w-full">
+                      {(() => {
+                        const chart = insight.chart!;
+                        const max = Math.max(1, ...chart.points.map((point) => Math.abs(point.value)));
+                        return chart.points.map((point, idx) => (
+                          <div key={`${point.label}-${idx}`} className="flex-1 flex flex-col gap-[4px] items-center min-w-0">
+                            <div
+                              className="w-full rounded-[8px] min-h-[4px]"
+                              style={{
+                                height: `${Math.max(4, Math.round((Math.abs(point.value) / max) * 88))}px`,
+                                background: point.value >= 0 ? "#123509" : "#350011",
+                                border: `1px solid ${point.value >= 0 ? "rgba(66,191,35,0.4)" : "rgba(210,3,68,0.4)"}`,
+                              }}
+                            />
+                            <span className="[font-family:'JetBrains_Mono',monospace] font-medium text-[11px] leading-[14px] text-[#6c779d] text-center w-full truncate">
+                              {point.label}
+                            </span>
+                          </div>
+                        ));
+                      })()}
+                    </div>
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[11px] leading-[14px] text-[#414965] w-full">
+                      {formatText(insight.chart.note)}
+                    </p>
+                  </div>
+                </CardSection>
+              )}
 
-            <p className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-[#414965] pt-[8px] border-t border-[#1d2132] w-full">
-              Read-only. Live data from brain-core's Ledger - brain-core has no
-              decision workflow (/v1/proposals) for this record type yet.
-            </p>
+              {/* What YOU should do, as against What Happens Next's "what Brain
+                  will do". Every read-only insight has the same answer because
+                  it is a property of the record, not of the agent: there is no
+                  decision to submit. Deliberately generic — a specific
+                  recommendation here would be advice about money that nothing
+                  in the response supports. */}
+              <CardSection title="Recommended Action" testId="section-live-insight-recommendation">
+                <CardText testId="live-insight-recommendation-text">
+                  {onAcknowledge
+                    ? "No approval is required — Brain is reporting what it found, not proposing anything. Review the figures above, then acknowledge to clear this from your queue."
+                    : "No approval is required — Brain is reporting what it found, not proposing anything. Review the figures above."}
+                </CardText>
+              </CardSection>
+
+              <CardSection title="What Happens Next" testId="section-live-insight-next">
+                <CardText>
+                  This is a flag for your awareness. Brain doesn't take action on it
+                  automatically.
+                </CardText>
+              </CardSection>
+
+              {/* Acknowledge is the one thing you CAN do with a read-only
+                  observation: it files the record to the audit trail and clears
+                  it from the queue. Nothing is approved and no money moves, so
+                  it is the only control here — never Approve/Reject. */}
+              {onAcknowledge && (
+                <CardActions testId="actions-live-insight">
+                  <ActionRow testId="actions-live-insight">
+                    <ActionButton
+                      label={acknowledged ? "Acknowledged" : "Acknowledge"}
+                      tone="acknowledge"
+                      disabled={acknowledged}
+                      onClick={acknowledged ? undefined : onAcknowledge}
+                      testId="button-live-insight-acknowledge"
+                    />
+                  </ActionRow>
+                </CardActions>
+              )}
+
+            </CardBody>
           </div>
 
           {hasPager && (
-            <div className="border-t border-[#1d2132] bg-[rgba(17,20,27,0.9)] px-[24px] py-[16px] w-full shrink-0">
-              <div className="flex items-center gap-[16px] w-full">
-                <button
-                  type="button"
-                  onClick={onPrev}
-                  disabled={pagerDisabled}
-                  aria-label="Previous record"
-                  data-testid="button-live-insight-prev"
-                  className="flex flex-1 items-center justify-center gap-[8px] px-[20px] py-[8px] rounded-[100px] bg-[#222737] hover:bg-[#2c3247] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#6c779d] disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-                >
-                  <ChevronLeft size={18} />
-                  Previous
-                </button>
-                <button
-                  type="button"
-                  onClick={onNext}
-                  disabled={pagerDisabled}
-                  aria-label="Next record"
-                  data-testid="button-live-insight-next"
-                  className="flex flex-1 items-center justify-center gap-[8px] px-[20px] py-[8px] rounded-[100px] bg-[#222737] hover:bg-[#2c3247] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#6c779d] disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-                >
-                  Next
-                  <ChevronRight size={18} />
-                </button>
-              </div>
-            </div>
+            <PagerFooter
+              onPrev={onPrev!}
+              onNext={onNext!}
+              hasPrev={hasPrev === undefined ? !pagerDisabled : hasPrev}
+              hasNext={hasNext === undefined ? !pagerDisabled : hasNext}
+            />
           )}
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
@@ -193,9 +262,14 @@ export function LiveInsightModal({
   );
 }
 
+/** Every live insight is a read-only ledger observation with no decision
+ *  attached, so the pill reports that status rather than the producing agent —
+ *  the agent's name is the modal's own header, and an amber "needs you" pill on
+ *  a record you cannot act on was reading as an unactioned task. */
+export const INSIGHT_PILL_LABEL = "Informational";
+
 /** Compact row for a live insight, matching ReviewPage/HomePage's existing
- *  ProposalRow/ListItem styling. Shows the badge instead of a "Demo scenario"
- *  pill - this is real data, not a seeded record. */
+ *  ProposalRow/ListItem styling. */
 export const LiveInsightRow = ({ insight, onClick }: { insight: LiveInsight; onClick: () => void }) => (
   <div
     onClick={onClick}
@@ -221,10 +295,10 @@ export const LiveInsightRow = ({ insight, onClick }: { insight: LiveInsight; onC
       )}
     </div>
     <span
-      className="inline-flex items-center justify-center gap-[5px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] px-[10px] py-[5px] rounded-[100px] whitespace-nowrap shrink-0"
-      style={{ color: "#6c779d", background: "#1d2132" }}
+      className="inline-flex items-center justify-center gap-[5px] border border-solid border-[rgba(108,119,157,0.2)] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] px-[8px] py-[2px] rounded-[22px] whitespace-nowrap shrink-0 text-[#6c779d] bg-[#222737]"
+      data-testid={`pill-live-insight-row-${insight.id}`}
     >
-      {insight.badge}
+      {INSIGHT_PILL_LABEL}
     </span>
   </div>
 );

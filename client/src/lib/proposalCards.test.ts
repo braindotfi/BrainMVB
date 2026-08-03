@@ -3,7 +3,6 @@ import {
   buildProposalDetailRows,
   buildProposalHeadline,
   initialsOf,
-  MAX_VISIBLE_DETAIL_ROWS,
   isRawIdentifier,
   humanizeEnumValue,
   buildKeyFactRows,
@@ -11,9 +10,10 @@ import {
   buildDecisionButtons,
   buildConsequences,
   buildConfidence,
+  buildWhySuggested,
+  MAX_REASON_BULLETS,
   buildEvidenceTiles,
   isDecidableProposal,
-  buildTechnicalLayers,
   keyFactsFromPresentation,
   resolveHeadlineText,
   resolveProseText,
@@ -121,9 +121,15 @@ describe("buildProposalDetailRows", () => {
     expect(rows.slice(0, 4).map((r) => r.label)).toEqual(["Amount", "Overdue by", "Due", "Status"]);
   });
 
-  it("keeps overflow rows available rather than dropping them", () => {
+  /* The card renders every row this returns — there is no longer a "Technical
+     reference" section for a remainder to spill into, so anything dropped here
+     is a fact the approver never sees. */
+  it("returns every derived row rather than capping the list", () => {
     const rows = buildProposalDetailRows([invoice, counterparty], null, money);
-    expect(rows.length).toBeGreaterThan(MAX_VISIBLE_DETAIL_ROWS);
+    expect(rows.map((r) => r.label)).toEqual(
+      expect.arrayContaining(["Amount", "Overdue by", "Due", "Status", "Counterparty"]),
+    );
+    expect(rows.length).toBeGreaterThan(4);
   });
 });
 
@@ -329,20 +335,160 @@ describe("buildFlaggedBy", () => {
   });
 });
 
+/* "Why Brain Suggested This" has no dedicated brain-core field, so the whole
+   value of these tests is proving the section stays tied to data the engine
+   actually recorded and produces NOTHING when it recorded none. */
+describe("buildWhySuggested", () => {
+  it("reads the policy trace's own written checks", () => {
+    expect(
+      buildWhySuggested(
+        {
+          trace: [
+            {
+              rule_id: "vendor-bank-change",
+              matched: true,
+              checks: [
+                { key: "new_account", detail: "New account number first seen 2 days ago", passed: false },
+                { key: "vendor_history", detail: "Vendor has no prior record of changing banking details", passed: false },
+              ],
+            },
+          ],
+        },
+        null,
+      ),
+    ).toEqual([
+      { text: "New account number first seen 2 days ago", passed: false },
+      { text: "Vendor has no prior record of changing banking details", passed: false },
+    ]);
+  });
+
+  it("keeps a check's own verdict, including a passing one", () => {
+    const bullets = buildWhySuggested(
+      { trace: [{ matched: true, checks: [{ key: "within_terms", detail: "Invoice is within payment terms", passed: true }] }] },
+      null,
+    );
+    expect(bullets).toEqual([{ text: "Invoice is within payment terms", passed: true }]);
+  });
+
+  it("records no verdict when the check states none", () => {
+    const bullets = buildWhySuggested(
+      { trace: [{ matched: true, checks: [{ detail: "Amount matches the purchase order" }] }] },
+      null,
+    );
+    expect(bullets).toEqual([{ text: "Amount matches the purchase order", passed: null }]);
+  });
+
+  it("humanizes the machine key only when there is no written sentence", () => {
+    expect(
+      buildWhySuggested({ trace: [{ matched: true, checks: [{ key: "amount_over_limit", passed: false }] }] }, null),
+    ).toEqual([{ text: "Amount over limit", passed: false }]);
+  });
+
+  it("reads ranked_signals, as plain strings and as objects", () => {
+    expect(
+      buildWhySuggested(null, {
+        ranked_signals: [
+          "Combined batch fits within this week's operating cash buffer",
+          { label: "velocity_spike", detail: "Payment velocity is 4x the vendor's norm" },
+          { name: "geo_mismatch" },
+        ],
+      }),
+    ).toEqual([
+      { text: "Combined batch fits within this week's operating cash buffer", passed: null },
+      { text: "Payment velocity is 4x the vendor's norm", passed: null },
+      { text: "Geo mismatch", passed: null },
+    ]);
+  });
+
+  it("does not repeat a reason the trace and the signals both carry", () => {
+    const bullets = buildWhySuggested(
+      { trace: [{ matched: true, checks: [{ detail: "Vendor bank details changed" }] }] },
+      { ranked_signals: ["vendor bank details changed"] },
+    );
+    expect(bullets).toEqual([{ text: "Vendor bank details changed", passed: null }]);
+  });
+
+  /* The trace records every rule the engine CONSIDERED. A rule that did not fire
+     had no bearing on this proposal, so quoting its checks under "Why Brain
+     Suggested This" would answer the question with an irrelevance. */
+  it("ignores checks belonging to a rule that did not fire", () => {
+    expect(
+      buildWhySuggested(
+        {
+          trace: [
+            { rule_id: "auto-approve-under-limit", matched: false, checks: [{ detail: "Amount is under the auto-approve limit" }] },
+            { rule_id: "requires-review", matched: true, checks: [{ detail: "Amount exceeds the review threshold" }] },
+          ],
+        },
+        null,
+      ),
+    ).toEqual([{ text: "Amount exceeds the review threshold", passed: null }]);
+  });
+
+  it("will not assume a rule fired when the trace omits the flag", () => {
+    expect(buildWhySuggested({ trace: [{ checks: [{ detail: "Something the engine checked" }] }] }, null)).toEqual([]);
+  });
+
+  it("drops a raw identifier rather than showing it as a reason", () => {
+    expect(
+      buildWhySuggested({ trace: [{ matched: true, checks: [{ detail: "cp_01KYSF0QJ0N18YGNS4JR9EZPHM" }] }] }, null),
+    ).toEqual([]);
+  });
+
+  it("caps the list so the card stays scannable", () => {
+    const checks = Array.from({ length: 9 }, (_, i) => ({ detail: `Signal number ${i}` }));
+    expect(buildWhySuggested({ trace: [{ matched: true, checks }] }, null)).toHaveLength(MAX_REASON_BULLETS);
+  });
+
+  it("invents nothing for a record that recorded no trace and no signals", () => {
+    expect(buildWhySuggested(null, null)).toEqual([]);
+    expect(buildWhySuggested({}, {})).toEqual([]);
+    expect(buildWhySuggested({ trace: [] }, { ranked_signals: [] })).toEqual([]);
+    // A trace that walked rules but recorded no per-check text yields no bullets.
+    expect(buildWhySuggested({ trace: [{ rule_id: "some-rule", matched: true }] }, null)).toEqual([]);
+  });
+});
+
 describe("buildDecisionButtons", () => {
   it("builds acknowledge-only footers from the record, not from a hardcoded pair", () => {
     const buttons = buildDecisionButtons([{ id: "acknowledge", label: "Acknowledge", meaning: "Mark as seen" }]);
     expect(buttons).toEqual([
-      { id: "acknowledge", label: "Acknowledge", meaning: "Mark as seen", tone: "acknowledge", writable: true },
+      {
+        id: "acknowledge",
+        label: "Acknowledge",
+        meaning: "Mark as seen",
+        tone: "acknowledge",
+        writable: true,
+      },
     ]);
   });
 
-  it("orders reject before approve to match the existing footer", () => {
+  it("orders reject before approve to match the design's footer", () => {
     const buttons = buildDecisionButtons([
       { id: "approve", label: "Approve" },
       { id: "reject", label: "Reject" },
     ]);
     expect(buttons.map((b) => b.id)).toEqual(["reject", "approve"]);
+  });
+
+  it("never renders an Edit button, even if core starts offering the decision", () => {
+    /* brain-core has no `edit` decision and no route that would accept one, so
+       the control could only ever be a disabled placeholder. Filtering by id
+       (rather than merely not synthesising one) is what stops a future core
+       release from quietly resurrecting a button nothing can service. */
+    expect(
+      buildDecisionButtons([
+        { id: "approve", label: "Approve" },
+        { id: "reject", label: "Reject" },
+      ]).map((b) => b.id),
+    ).toEqual(["reject", "approve"]);
+    expect(
+      buildDecisionButtons([
+        { id: "approve", label: "Approve" },
+        { id: "edit", label: "Edit amount", meaning: "Change the amount first" },
+      ]).map((b) => b.id),
+    ).toEqual(["approve"]);
+    expect(buildDecisionButtons([{ id: "edit", label: "Edit amount" }])).toEqual([]);
   });
 
   it("keeps brain-core's domain label but marks an unwritable id disabled", () => {
@@ -365,7 +511,8 @@ describe("buildDecisionButtons", () => {
   });
 
   it("falls back to presentation.actions, then to nothing", () => {
-    expect(buildDecisionButtons(null, [{ id: "approve", label: "Approve" }]).map((b) => b.id)).toEqual(["approve"]);
+    expect(buildDecisionButtons(null, [{ id: "approve", label: "Approve" }]).map((b) => b.id))
+      .toEqual(["approve"]);
     expect(buildDecisionButtons(null, null)).toEqual([]);
   });
 
@@ -381,9 +528,8 @@ describe("buildDecisionButtons", () => {
 
   it("still falls back when the field is absent rather than empty", () => {
     /* Guards the other direction: the fix must not silence a legitimate fallback. */
-    expect(buildDecisionButtons(undefined, [{ id: "approve", label: "Approve" }]).map((b) => b.id)).toEqual([
-      "approve",
-    ]);
+    expect(buildDecisionButtons(undefined, [{ id: "approve", label: "Approve" }]).map((b) => b.id))
+      .toEqual(["approve"]);
   });
 });
 
@@ -475,23 +621,6 @@ describe("isDecidableProposal", () => {
   it("falls back to the old mode rule for rows that predate available_decisions", () => {
     expect(isDecidableProposal({ mode: "propose" })).toBe(true);
     expect(isDecidableProposal({ mode: "notify_only" })).toBe(false);
-  });
-});
-
-describe("buildTechnicalLayers", () => {
-  it("emits the six layers in contract order, skipping the ones core omitted", () => {
-    const layers = buildTechnicalLayers({
-      "6_propose": { action: "flag" },
-      "1_ingest": { source: "plaid" },
-      "4_score": null,
-      extra_layer: { x: 1 },
-    });
-    expect(layers.map((l) => l.key)).toEqual(["1_ingest", "6_propose", "extra_layer"]);
-    expect(layers[0].title).toBe("1 · Ingest");
-    expect(layers[0].json).toContain("plaid");
-  });
-  it("returns nothing when core sent no technical detail", () => {
-    expect(buildTechnicalLayers(null)).toEqual([]);
   });
 });
 

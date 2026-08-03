@@ -2,13 +2,14 @@ import { useEffect, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import closeIcon from "@assets/Close_1783293571882.png";
 import { ArrowLeft, ArrowRight } from "lucide-react";
+import { CardActions } from "@/components/ProposalCardParts";
+import { useCardTransition } from "@/lib/cardTransition";
 import {
   Receipt,
   HandCoins,
   Landmark,
   BookCheck,
   ShieldAlert,
-  ChevronDown,
   ChevronRight,
   Check,
   CircleCheckBig,
@@ -40,6 +41,7 @@ import type {
   Severity,
   FactRow,
 } from "@/lib/proposalTypes";
+import { capitalCase } from "@/lib/displayLabels";
 
 /* Title case helper, used for all labels platform-wide */
 function titleCase(str: string) {
@@ -158,15 +160,28 @@ export function ProposalDetail({
   onPrev,
   onNext,
   pagerDisabled,
+  hasPrev,
+  hasNext,
+  pagerStep,
 }: {
   proposal: Proposal | null;
   currentStatus?: ProposalStatus;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /* Header pager. Cycle through the other records in the active tab */
+  /* Footer pager. Steps through the other records on the surface that opened it */
   onPrev?: () => void;
   onNext?: () => void;
   pagerDisabled?: boolean;
+  /* Per-direction state, for a pager walking one shared list of mixed record
+     kinds: at the first row Previous is dead while Next is not, and a single
+     `pagerDisabled` cannot say that. Defaults to `pagerDisabled` for callers
+     that still page within one uniform queue. */
+  hasPrev?: boolean;
+  hasNext?: boolean;
+  /** True when this surface was opened by a Previous/Next step rather than by
+   *  the user picking a record. Skips the entrance animation — see
+   *  useCardTransition. */
+  pagerStep?: boolean;
   onAction: (action: ProposalAction) => void;
   /* Auto_handled receipt. Retroactive controls (decision already happened) */
   rulePaused?: boolean;
@@ -177,7 +192,7 @@ export function ProposalDetail({
   onAlwaysHandle?: (proposal: Proposal) => void;
 }) {
   const { format, formatText } = useCurrency();
-  const [showTrace, setShowTrace] = useState(false);
+  const transition = useCardTransition(open, pagerStep);
   const [viewingDocument, setViewingDocument] = useState<DocumentRecord | null>(null);
   const [documentOpen, setDocumentOpen] = useState(false);
   // A LIVE proposal's invoiceId is a brain-core ledger id; fetch its invoice as a DocumentRecord
@@ -197,12 +212,12 @@ export function ProposalDetail({
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+          className={`fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px] ${transition.overlay}`}
           data-testid="proposal-detail-backdrop"
         />
         <DialogPrimitive.Content
           aria-describedby="proposal-detail-rationale"
-          className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[24px] w-[520px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
+          className={`fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[24px] w-[520px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none ${transition.card}`}
           data-testid="proposal-detail"
         >
           {/* Header: full agent name centered + close X */}
@@ -239,7 +254,7 @@ export function ProposalDetail({
                 <div className="flex flex-col gap-[16px] items-start w-full border-b border-[#1d2132] pb-[24px]">
                   <span className={`inline-flex items-center justify-center gap-[5px] px-[10px] py-[5px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] whitespace-nowrap ${badge.className}`}>
                     {BadgeIcon && <BadgeIcon size={12} className="shrink-0" />}
-                    {badge.label}
+              {capitalCase(badge.label)}
                   </span>
                   <div className="flex items-start justify-between gap-[12px] w-full">
                     <p
@@ -478,7 +493,8 @@ export function ProposalDetail({
             )}
 
             {/* ── Actions footer ────────────────────────────────────────────── */}
-            <div className="flex flex-col gap-[16px] items-start w-full">
+            <CardActions testId="divider-proposal-detail-actions">
+              <div className="flex flex-col gap-[16px] items-start w-full">
               {proposal.actions.verifyFirst && (
                 <button
                   type="button"
@@ -531,31 +547,12 @@ export function ProposalDetail({
                   </span>
                 </button>
               )}
-            </div>
+              </div>
+            </CardActions>
 
           </>
           )}
 
-            {/* Technical detail: raw six-layer trace / JSON, collapsed */}
-            <div className="w-full border-t border-[#1d2132] pt-[16px]">
-              <button
-                type="button"
-                onClick={() => setShowTrace((s) => !s)}
-                data-testid="button-toggle-trace"
-                className="flex items-center gap-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-[#414965] hover:text-[#6c779d] transition-colors uppercase"
-              >
-                <ChevronDown size={14} className={`transition-transform ${showTrace ? "rotate-180" : ""}`} />
-                Technical detail
-              </button>
-              {showTrace && (
-                <pre
-                  data-testid="trace-json"
-                  className="mt-[12px] bg-[#06070a] rounded-[12px] p-[14px] w-full overflow-x-auto [font-family:'JetBrains_Mono',monospace] text-[11px] leading-[16px] text-[#6c779d] whitespace-pre"
-                >
-{JSON.stringify(buildTrace(proposal, currentStatus), null, 2)}
-                </pre>
-              )}
-            </div>
           </div>
 
           {/* Footer: Previous/Next pill buttons (matches Figma) */}
@@ -565,7 +562,7 @@ export function ProposalDetail({
                 <button
                   type="button"
                   onClick={onPrev}
-                  disabled={pagerDisabled}
+                  disabled={hasPrev === undefined ? pagerDisabled : !hasPrev}
                   data-testid="button-proposal-prev"
                   className="flex-[1_0_0] flex items-center justify-center gap-[8px] min-w-px px-[20px] py-[8px] rounded-[100px] bg-[#222737] text-[#6c779d] hover:bg-[#2c3247] transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[#222737] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
                 >
@@ -575,7 +572,7 @@ export function ProposalDetail({
                 <button
                   type="button"
                   onClick={onNext}
-                  disabled={pagerDisabled}
+                  disabled={hasNext === undefined ? pagerDisabled : !hasNext}
                   data-testid="button-proposal-next"
                   className="flex-[1_0_0] flex items-center justify-center gap-[8px] min-w-px px-[20px] py-[8px] rounded-[100px] bg-[#222737] text-[#6c779d] hover:bg-[#2c3247] transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[#222737] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
                 >
@@ -1019,24 +1016,4 @@ function ActionButton({
       </span>
     </button>
   );
-}
-
-/* The raw "six-layer trace" surfaced behind the Technical detail disclosure. */
-function buildTrace(p: Proposal, currentStatus?: ProposalStatus) {
-  return {
-    audit_id: p.auditId,
-    layers: {
-      "1_ingest": { agent: p.agent, surface: p.surface, source_evidence: p.evidence.length },
-      "2_extract": p.facts ?? [],
-      "3_classify": { severity: p.severity, reason_chips: p.reasonChips },
-      "4_score": p.confidence,
-      "5_policy": p.policy,
-      "6_propose": {
-        action: p.actionStatement,
-        execution: p.executionLabel,
-        cancel_window: p.cancelDeadlineLabel,
-        status: currentStatus ?? p.status,
-      },
-    },
-  };
 }
