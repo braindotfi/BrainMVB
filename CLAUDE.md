@@ -118,6 +118,16 @@ money or setup, every fallback string still works through the same assistant
 pipe, and an empty row would read as broken. The hook still exposes `isError`
 separately for callers that must distinguish them.
 
+**Two similarly-named routes exist — do not conflate them.**
+
+| Route | Backed by | Feeds |
+| --- | --- | --- |
+| `/api/assistant/questions` | local Postgres (`storage.listAssistantQuestions`) | Anthropic-fallback Q&A rows merged into the **audit log** (`brainAudit.ts`) |
+| `/api/brain/assistant/questions` | brain-core, via passthrough | tenant **suggestion chips** (`brainAssistantQuestions.ts`) |
+
+Same tail path, different origin, different purpose. Reaching for the one-word-shorter
+path will silently feed audit rows into the chip row.
+
 ## Brain Assistant answer status
 
 The Brain Assistant's fallback prompt is intentionally **"Show recent cash flow"**:

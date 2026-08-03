@@ -1099,9 +1099,12 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
         {(onDevelopersPage
           ? [...DEVELOPER_QUESTIONS, ...suggestionChips.chips]
           : suggestionChips.chips
-        ).map((q) => (
+        ).map((q, i) => (
           <button
-            key={q}
+            /* Index-prefixed: tenant chip text is upstream-controlled, so it can
+               coincide with a DEVELOPER_QUESTIONS string and collide on a bare
+               text key. */
+            key={`${i}-${q}`}
             data-testid={`button-suggested-${q.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`}
             onClick={() => sendMessage(q)}
             className="flex-shrink-0 bg-[#222737] px-[12px] py-[8px] rounded-[100px] transition-colors hover:bg-[#2a3145] [font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[12px] leading-[16px] whitespace-nowrap"
