@@ -656,7 +656,7 @@ if (needsReviewCount === 0) {
   }
   await closePopup();
 
-  /* ── Step 4: any valid state → acknowledged (dismiss) ─────────────────── */
+  /* ── Step 4: any valid state → acknowledged ("No action") ─────────────── */
   await go("/ledger?tab=counterparties");
   await clickChip("segment-vendor");
   await clickChip("tab-vendor-needs-review");
@@ -665,7 +665,7 @@ if (needsReviewCount === 0) {
   const queueForAck = await count(ROWS);
   if (queueForAck === 0) {
     check(
-      "trust-transition 4/4: acknowledge — a row is available to dismiss",
+      "trust-transition 4/4: acknowledge — a row is available to mark no action",
       false,
       "Needs Review queue is now empty (all rows may have been consumed by steps 1–3)",
     );
@@ -676,7 +676,7 @@ if (needsReviewCount === 0) {
     const ackBtn = page.locator('[data-testid="button-acknowledge-counterparty"]');
     const ackExists = (await ackBtn.count()) === 1;
     check(
-      "trust-transition 4/4: dismiss button is present in popup",
+      "trust-transition 4/4: No action button is present in popup",
       ackExists,
     );
 
@@ -694,7 +694,7 @@ if (needsReviewCount === 0) {
       await page.waitForTimeout(400);
       const queueAfterAck = await count(ROWS);
       check(
-        "trust-transition 4/4: any → acknowledged (dismiss) — row left Needs Review",
+        "trust-transition 4/4: any → acknowledged (No action) — row left Needs Review",
         queueAfterAck < queueForAck,
         `before=${queueForAck} after=${queueAfterAck}`,
       );

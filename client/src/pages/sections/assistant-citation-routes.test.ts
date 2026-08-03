@@ -36,6 +36,14 @@ function navigateTargets(file: string): string[] {
 }
 
 describe("Brain Assistant citation links", () => {
+  it("does not label operational-error context as a grounded answer", () => {
+    const src = readFileSync(ASSISTANT, "utf8");
+    expect(src).toContain('data?.answerError === true');
+    expect(src).toContain('answerStatus === "error"');
+    expect(src).toContain("answer unavailable");
+    expect(src).toContain('data-testid="assistant-error"');
+  });
+
   it("navigates only to routes App.tsx actually registers", () => {
     const routes = registeredRoutes();
     const targets = navigateTargets(ASSISTANT);

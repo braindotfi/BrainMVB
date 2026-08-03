@@ -213,6 +213,13 @@ export function getWikiSchema(token: string): Promise<WikiSchemaResponse> {
 
 interface WikiQuestionResponse {
   answer?: unknown;
+  /**
+   * New brain-core contract: true means the answer was actually produced,
+   * false means the question could not be answered from the evidence.
+   * Absent means an older brain-core response, so callers use the refusal
+   * phrase stopgap below.
+   */
+  answered?: unknown;
   /** Live shape: array of `{ entityType, entityId, excerpt }`. */
   evidence?: unknown;
   /** OpenAPI-spec shape: array of `{ entity_id, description, result_summary, … }`. */
@@ -241,11 +248,31 @@ export interface WikiEvidence {
 export interface WikiAnswer {
   /** The answer text/JSON, fence-stripped - suitable to ground an LLM or render. */
   raw: string;
+  /**
+   * `true`/`false` when brain-core sends the explicit status; `null` for a
+   * legacy response with no status field. Known refusal prose is normalized to
+   * false even for those legacy responses.
+   */
+  answered: boolean | null;
   /** Evidence records backing the answer (id + optional type/excerpt), deduped by id. */
   evidence: WikiEvidence[];
   /** Evidence ids only, deduped - kept for back-compat (recommendation route, grounding). */
   evidenceIds: string[];
   confidence: number | null;
+}
+
+/** Known brain-core refusal wording must never be presented as a successful answer. */
+export function isKnownWikiRefusal(raw: string): boolean {
+  const normalized = raw.trim().toLowerCase().replace(/\s+/g, " ");
+  return (
+    normalized.includes("couldn't produce a grounded answer") ||
+    normalized.includes("could not produce a grounded answer") ||
+    normalized.includes("couldn't provide a grounded answer") ||
+    normalized.includes("could not provide a grounded answer") ||
+    normalized.includes("unable to produce a grounded answer") ||
+    normalized.includes("unable to provide a grounded answer") ||
+    normalized.includes("no grounded answer")
+  );
 }
 
 // ─── Ledger invoices (the AP "bills" inbox the propose demo pays from) ───────
@@ -585,7 +612,15 @@ export async function askWikiQuestion(token: string, question: string): Promise<
   }
 
   const evidence = Array.from(byId.values());
-  return { raw, evidence, evidenceIds: evidence.map((e) => e.entityId), confidence };
+  const explicitAnswered = typeof resp.answered === "boolean" ? resp.answered : null;
+  const answered =
+    (explicitAnswered === true && raw.trim().length === 0) ||
+    explicitAnswered === false ||
+    (explicitAnswered === null && isKnownWikiRefusal(raw))
+      ? false
+      : explicitAnswered;
+
+  return { raw, answered, evidence, evidenceIds: evidence.map((e) => e.entityId), confidence };
 }
 
 // ─── Document ingestion (files live in Brain, not on our box) ────────────────

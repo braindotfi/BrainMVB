@@ -972,19 +972,35 @@ When you mention a money amount, always reproduce it exactly as the grounding da
     try {
       const { token } = await getBrainSession(req.session.userId!);
       const wiki = await askWikiQuestion(token, lastUserContent);
-      if (wiki.raw.trim().length > 0) {
-        /* Only return the wiki result when there is real content. An envelope
-           with an empty/null answer humanizes to "" — treat that as "wiki
-           could not answer" and fall through to ledger grounding below. */
+      if (wiki.raw.trim().length > 0 && wiki.answered !== false) {
+        /* Only return the wiki result when it explicitly answered, or when a
+           legacy response has non-refusal prose. A non-empty refusal is not an
+           answer, even when brain-core attached evidence records to it. */
         const reply = await humanizeWikiAnswer(wiki.raw, lastUserContent);
         if (reply.trim().length > 0) {
           return res.json({
             reply,
             sources: wiki.evidence,
             grounded: true,
+            answered: true,
             engine: "wiki",
           });
         }
+      }
+
+      /* Preserve the upstream evidence on a no-answer response, but mark it
+         explicitly so the UI cannot present the refusal as an answer backed by
+         those records. Do not fall through to the broad ledger snapshot here:
+         brain-core has already decided that this question was not answerable
+         from the evidence it selected. */
+      if (wiki.answered === false) {
+        return res.json({
+          reply: wiki.raw.trim() || "I couldn't produce a grounded answer from the available evidence.",
+          sources: wiki.evidence,
+          grounded: false,
+          answered: false,
+          engine: "wiki",
+        });
       }
     } catch (e) {
       console.warn("[Assistant] wiki/question failed, falling back to ledger grounding:", (e as Error)?.message);
@@ -1017,6 +1033,7 @@ When you mention a money amount, always reproduce it exactly as the grounding da
           reply: `Assistant is offline (no API key configured), so here is your live data snapshot instead:\n\n${grounding}`,
           sources,
           grounded: true,
+          answered: true,
           assistantOffline: true,
           engine: "grounding-fallback",
         });
@@ -1026,6 +1043,8 @@ When you mention a money amount, always reproduce it exactly as the grounding da
         reply:
           "I'm not connected to my brain yet. An ANTHROPIC_API_KEY needs to be configured before I can answer live.",
         sources: [],
+        answered: false,
+        answerError: true,
       });
     }
 
@@ -1035,6 +1054,7 @@ When you mention a money amount, always reproduce it exactly as the grounding da
         reply: "I can't access your live account data right now. This usually means your brain-core session is still initializing or the connection is warming up. Try again in a moment, or check your Finances page to confirm your accounts are connected.",
         sources: [],
         grounded: false,
+        answered: false,
         ungrounded: true,
         engine: "grounding-fallback",
       });
@@ -1050,10 +1070,13 @@ When you mention a money amount, always reproduce it exactly as the grounding da
       const reply = (message.content.find((b) => b.type === "text") as
         | Anthropic.TextBlock
         | undefined)?.text?.trim();
+      const generatedReply = Boolean(reply);
       return res.json({
         reply: reply || "Sorry, I couldn't generate a response. Please try again.",
         sources,
-        grounded: grounding.length > 0,
+        grounded: generatedReply && grounding.length > 0,
+        answered: generatedReply,
+        answerError: !generatedReply,
         engine: "anthropic",
       });
     } catch (err) {
@@ -1071,12 +1094,16 @@ When you mention a money amount, always reproduce it exactly as the grounding da
           reply:
             "I can't answer right now. The Anthropic API key has no available credit. Please add credits or billing at console.anthropic.com to enable live answers.",
           sources: [],
+        answered: false,
+        answerError: true,
         });
       }
       return res.status(500).json({
         error: "assistant_failed",
         reply: "Something went wrong reaching the assistant. Please try again.",
         sources: [],
+        answered: false,
+        answerError: true,
       });
     }
   });
