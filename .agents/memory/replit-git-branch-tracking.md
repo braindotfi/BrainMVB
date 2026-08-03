@@ -35,6 +35,26 @@ When `enforce_admins` is `false`, a required-review rule does **not** stop this:
 direct write by an admin, not a merge, so it never consults the review requirement and leaves
 no PR trail. Protection can be fully intact and still be bypassed this way.
 
+### This bypass is now closed (observed 2026-08-03)
+
+`refs/heads/main` is covered by a **repository ruleset**, which — unlike the classic
+`enforce_admins: false` protection above — rejects the direct write outright:
+
+```
+remote: error: GH013: Repository rule violations found for refs/heads/main.
+remote: - Changes must be made through a pull request.
+```
+
+**Why this matters:** rulesets and classic branch protection are different mechanisms with
+different admin semantics, so "admins can push straight to main here" is a claim with a shelf
+life. Local `main` can now sit many commits ahead of `origin/main` indefinitely, which is the
+opposite of the old hazard — work is stranded rather than silently published.
+
+**How to apply:** treat a GH013 rejection as the expected path, not a broken credential. Land
+work by pushing a *branch* (branch pushes are still permitted with the same token) and opening
+a PR. Re-verify which mechanism is in force before repeating either the old warning or this
+one — check the rejection text, not memory.
+
 Confirmed by the workspace's own `.git/logs/refs/remotes/origin/main`, which records an
 `update by push` entry for a push nobody ran from the shell — the shell has no credential
 helper, so a plain `git push` there cannot authenticate to `origin` at all.

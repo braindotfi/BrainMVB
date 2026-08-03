@@ -33,20 +33,20 @@ function formatTimestamp(ms: number) {
 
 function insightToRecord(insight: LiveInsight): AuditRecord {
   const occurredAtMs = Date.now();
-  const summary = `Acknowledged: ${insight.title}`;
   const occurredAtLabel = formatTimestamp(occurredAtMs);
   return {
     id: `local-acknowledged-${insight.id}`,
     eventType: "acknowledged",
     subtype: "inbox.acknowledge",
-    summary,
+    summary: insight.title,
     actor: "operator",
     occurredAtLabel,
     occurredAtMs,
-    lifecycle: [{ label: summary, timestamp: occurredAtLabel, kind: "ok", actor: "operator" }],
+    lifecycle: [{ label: `Acknowledged: ${insight.title}`, timestamp: occurredAtLabel, kind: "ok", actor: "operator" }],
     linked: [],
     anchor: { status: "pending_next_batch", auditId: `local-acknowledged-${insight.id}` },
     rowSubtitle: "Acknowledged from the Inbox; no payment was initiated.",
+    agentLabel: insight.badge,
   };
 }
 

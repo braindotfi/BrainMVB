@@ -29,7 +29,7 @@ describe("acknowledgedStore", () => {
 
     expect(acknowledgedInsightIds().has("cashflow-usd")).toBe(true);
     expect(acknowledgedRecordsSnapshot().map((r) => r.summary)).toEqual([
-      "Acknowledged: Trailing cash flow (USD)",
+      "Trailing cash flow (USD)",
     ]);
   });
 

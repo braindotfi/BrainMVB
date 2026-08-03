@@ -35,6 +35,8 @@ import {
   type DecisionButton,
 } from "@/lib/proposalCards";
 import { LiveProposalModal, AGENT_DISPLAY_NAME } from "@/components/AgentProposalModal";
+import type { AgentKey } from "@/lib/agentProposals";
+import { capitalCase } from "@/lib/displayLabels";
 import { useBrainAuditRecords } from "@/lib/brainAudit";
 import { inboxTapTarget } from "@/lib/inboxTap";
 import { pagerState, stepPager, type PagerEntry } from "@/lib/unifiedPager";
@@ -53,7 +55,8 @@ import {
 } from "@/lib/rulesStore";
 import { useReviewStatuses, setReviewStatus } from "@/lib/reviewStatusStore";
 import { acknowledgeInsight, useAcknowledgedRecords } from "@/lib/acknowledgedStore";
-import { TierRow, type TierRowModel, type TierRowAction } from "@/components/TierRowList";
+import { TierRow, type TierRowModel, type TierRowAction, type TierRowStatusPill } from "@/components/TierRowList";
+import { FilterChipRow } from "@/components/FilterChipRow";
 import {
   applyDecisionFilters,
   buildSearchText,
@@ -204,6 +207,12 @@ type InboxItem = DecisionFacets & {
    *  (auto-approved, decided, audit, acknowledged) is Inbox-only and keeps the
    *  outcome pills composed below. */
   presentation?: RecordRowPresentation;
+  /** Right-side outcome pill for settled/decided rows (Figma nodes 6214-69xxx).
+   *  When set, the badge slot shows the agent name instead of the status. */
+  statusPill?: TierRowStatusPill;
+  /** Container background override for settled rows. User-decided outcomes
+   *  get a purple tint (#12032d); automated/in-flight stay on base (#0a0c10). */
+  rowBg?: string;
   /* "proposal" items are decidable (Approve/Reject); "detection" items are
      ledger-derived observations — nothing is proposed, no decision buttons. */
   kind: "proposal" | "detection";
@@ -227,10 +236,57 @@ type InboxItem = DecisionFacets & {
   acknowledgeOnly?: boolean;
 };
 
-const TAG_AUTO = "bg-[#1d2132] text-[#a8b9f4] border-[rgba(168,185,244,0.2)]";
-const TAG_APPROVED_BY_YOU = "bg-[#240757] text-[#a88afa] border-[rgba(168,138,250,0.2)]";
+const TAG_AUTO = "bg-[rgba(255,255,255,0.3)] text-white border-[rgba(255,255,255,0.2)] backdrop-blur-sm";
+const TAG_APPROVED_BY_YOU = "bg-[#123509] text-[#42bf23] border-[rgba(66,191,35,0.2)]";
 const TAG_REJECTED = "bg-[#350011] text-[#d20344] border-[rgba(210,3,68,0.2)]";
+const TAG_ACKNOWLEDGED = "bg-[#123509] text-[#42bf23] border-[rgba(66,191,35,0.2)]";
 const TAG_DETECTED = "bg-[#222737] text-[#6c779d] border-[rgba(108,119,157,0.2)]";
+/* Orange agent-name chip — matches the orange badges on live proposals so the
+   settled history reads consistently with the queue above it. */
+const TAG_AGENT = "bg-[#4a2300] text-[#ff9400] border-[rgba(255,149,0,0.2)]";
+
+/* ── Decision outcome pills (right-side, Figma nodes 6214-69xxx) ─────────────
+   Five states: Approved, Auto-Approved (both green), Rejected (red),
+   Acknowledged (green), Pending (frosted-white). Container backgrounds:
+   user-decided outcomes → purple tint; automated/in-flight → base dark. */
+/* Figma nodes 6214-69210 / 69233 / 69246 / 69258 / 69270.
+   All settled pills use 60 % opacity on both bg and text so the purple-tinted
+   row shows through; Pending uses a lighter frosted-white with 40 % text. */
+const PILL_APPROVED: TierRowStatusPill = { label: "Approved",      bg: "rgba(18,53,9,0.6)",       textColor: "rgba(66,191,35,0.6)",   icon: "check"   };
+const PILL_AUTO:     TierRowStatusPill = { label: "Auto-Approved", bg: "rgba(18,53,9,0.6)",       textColor: "rgba(66,191,35,0.6)",   icon: "check"   };
+const PILL_REJECTED: TierRowStatusPill = { label: "Rejected",      bg: "rgba(53,0,17,0.6)",       textColor: "rgba(210,3,68,0.6)",    icon: "x"       };
+const PILL_ACKED:    TierRowStatusPill = { label: "Acknowledged",  bg: "rgba(18,53,9,0.6)",       textColor: "rgba(66,191,35,0.6)",   icon: "check"   };
+const PILL_PENDING:  TierRowStatusPill = { label: "Pending",       bg: "rgba(255,255,255,0.15)",  textColor: "rgba(255,255,255,0.4)", icon: "pending" };
+
+/** Background applied to the row container for settled records. */
+const ROW_BG_DECIDED = "#12032d"; // purple tint — user was involved in this outcome
+const ROW_BG_BASE    = "#0a0c10"; // no tint — automated / in-flight
+
+/** Map a brain-core audit event type to its right-side outcome pill. */
+function auditStatusPill(eventType: AuditEventType): TierRowStatusPill | undefined {
+  switch (eventType) {
+    case "approved":      return PILL_APPROVED;
+    case "auto_approved": return PILL_AUTO;
+    case "rejected":
+    case "flagged":
+    case "trust_revoked": return PILL_REJECTED;
+    case "acknowledged":  return PILL_ACKED;
+    case "postponed":     return PILL_PENDING;
+    default:              return undefined;
+  }
+}
+
+/** Row container background for settled audit-event records. */
+function auditRowBg(eventType: AuditEventType): string {
+  switch (eventType) {
+    case "approved":
+    case "rejected":
+    case "flagged":
+    case "trust_revoked":
+    case "acknowledged": return ROW_BG_DECIDED;
+    default:             return ROW_BG_BASE;
+  }
+}
 
 interface InboxDropdownOption {
   value: string;
@@ -647,6 +703,15 @@ export function InboxPage() {
       out.push(it);
     };
 
+    /* Brain-core never removes a proposal from the live /v1/proposals feed when
+       it gets decided — it only adds an audit record. Without this guard a
+       proposal and its settled audit record both appear simultaneously (the user
+       sees two rows for the same invoice). Build a set of proposal IDs that the
+       audit log already confirms as decided so we can suppress the live copy. */
+    const decidedProposalIds = new Set(
+      auditRecords.flatMap((r) => (r.proposalId ? [r.proposalId] : [])),
+    );
+
     /* Needs you: session-scoped §6-gated intents (decidable). */
     for (const item of liveReviews) {
       const sessionPresentation = sessionIntentRow(item, fmt);
@@ -703,6 +768,10 @@ export function InboxPage() {
        originating agent's identity; the "Why:" line is the agent's own
        narrative — omitted when the record carries none (honest omission). */
     for (const p of needsReviewProposals) {
+      /* Skip proposals the audit log already confirms as decided — brain-core
+         never removes them from the feed, so without this guard both the live
+         pending row and the settled audit row render for the same invoice. */
+      if (decidedProposalIds.has(p.id)) continue;
       const agentKey = agentKeyForProposalType(p.type);
       const agentName = p.agent?.display_name || AGENT_DISPLAY_NAME[agentKey];
       const isPaymentAgent = agentKey === "payment" || /^(?:demo\s+)?payment agent$/i.test(agentName.trim());
@@ -766,6 +835,7 @@ export function InboxPage() {
 
     /* Auto-approved: live brain-core intents that cleared §6 automatically. */
     for (const p of liveAutoApproved) {
+      const autoAgentLabel = AGENT_DISPLAY_NAME[p.agent as AgentKey] ?? capitalCase(String(p.agent).replace(/_/g, " "));
       push({
         id: p.id,
         kind: "proposal",
@@ -774,8 +844,8 @@ export function InboxPage() {
         type: "payment",
         search: buildSearchText(p.title, p.rowSubtitle, p.amountDisplay),
         title: p.title,
-        tag: "Auto-Approved",
-        tagClass: TAG_AUTO,
+        tag: autoAgentLabel,
+        tagClass: TAG_AGENT,
         desc: p.rowSubtitle,
         time: p.settledMeta ? "" : p.dueLabel ?? "",
         why: p.rationale,
@@ -783,6 +853,8 @@ export function InboxPage() {
         actionable: false,
         proposal: p,
         proposalIsLive: true,
+        statusPill: PILL_AUTO,
+        rowBg: ROW_BG_BASE,
       });
     }
 
@@ -792,6 +864,13 @@ export function InboxPage() {
       const p = resolveProposal(id);
       if (!p) continue;
       const approved = status === "executing" || status === "executed";
+      /* "executing" = brain is processing — still in-flight → Pending pill.
+         "executed"  = confirmed done → Approved pill. */
+      const sessionPill: TierRowStatusPill | undefined =
+        status === "executed"   ? PILL_APPROVED  :
+        status === "executing"  ? PILL_PENDING   :
+        status === "rejected"   ? PILL_REJECTED  :
+        undefined; // postponed keeps the badge (waiting tier, not decided)
       push({
         id: `${p.id}--${status}`,
         kind: "proposal",
@@ -801,8 +880,12 @@ export function InboxPage() {
         type: p.agent ?? "payment",
         search: buildSearchText(p.title, p.rowSubtitle, p.amountDisplay, p.agent),
         title: p.title,
-        tag: approved ? "Approved by you" : status === "rejected" ? "Rejected by you" : "Postponed",
-        tagClass: approved ? TAG_APPROVED_BY_YOU : status === "rejected" ? TAG_REJECTED : TAG_DETECTED,
+        /* Postponed keeps a small badge (no status pill); decided rows show agent
+           name in the badge so the pill stands alone as the outcome. */
+        tag: sessionPill
+          ? (AGENT_DISPLAY_NAME[p.agent as AgentKey] ?? capitalCase(String(p.agent).replace(/_/g, " ")))
+          : (status === "postponed" ? "Postponed" : ""),
+        tagClass: sessionPill ? TAG_AGENT : (status === "postponed" ? TAG_DETECTED : ""),
         desc: p.rowSubtitle,
         time: "Just now",
         why: p.rationale,
@@ -810,6 +893,10 @@ export function InboxPage() {
         actionable: status === "postponed",
         proposal: p,
         proposalIsLive: false,
+        statusPill: sessionPill,
+        rowBg: sessionPill
+          ? (status === "executed" || status === "rejected" ? ROW_BG_DECIDED : ROW_BG_BASE)
+          : undefined,
       });
     }
 
@@ -822,6 +909,7 @@ export function InboxPage() {
          background jobs) are informational — nothing to approve or reject —
          so they stay in the Audit Log only, never in Inbox queues. */
       if (isAssistantActivity(r) || isSystemActivity(r)) continue;
+      const aPill = auditStatusPill(r.eventType);
       push({
         id: r.id,
         kind: "proposal",
@@ -830,14 +918,19 @@ export function InboxPage() {
         type: auditDecisionType(r),
         search: buildSearchText(r.summary, r.rowSubtitle, humanReadableActor(r.actor), r.occurredAtLabel),
         title: r.summary,
-        tag: auditEventLabel(r.eventType),
-        tagClass: auditEventChipClass(r.eventType),
+        /* Decided rows show the actor as a badge so the status pill stands alone. */
+        tag: aPill ? (humanReadableActor(r.actor) ?? "") : auditEventLabel(r.eventType),
+        tagClass: aPill
+          ? (humanReadableActor(r.actor) ? TAG_AGENT : "")
+          : auditEventChipClass(r.eventType),
         desc: r.rowSubtitle ?? [typeof r.amount === "number" ? format(r.amount) : "", humanReadableActor(r.actor) ?? ""].filter(Boolean).join(" · "),
         time: r.occurredAtLabel,
         why: auditWhy(r),
         amountDisplay: typeof r.amount === "number" ? format(r.amount) : undefined,
         actionable: false,
         record: r,
+        statusPill: aPill,
+        rowBg: aPill ? auditRowBg(r.eventType) : undefined,
       });
     }
 
@@ -856,13 +949,15 @@ export function InboxPage() {
         type: "payment",
         search: buildSearchText(r.summary, r.rowSubtitle, humanReadableActor(r.actor), r.occurredAtLabel),
         title: r.summary,
-        tag: "Acknowledged",
-        tagClass: TAG_DETECTED,
+        tag: r.agentLabel ?? "",
+        tagClass: r.agentLabel ? TAG_AGENT : "",
         desc: r.rowSubtitle ?? "",
         time: r.occurredAtLabel,
         why: auditWhy(r),
         actionable: false,
         record: r,
+        statusPill: PILL_ACKED,
+        rowBg: ROW_BG_DECIDED,
       });
     }
 
@@ -886,8 +981,18 @@ export function InboxPage() {
     disputeError ||
     cashFlowError;
 
-  const visibleItems = useMemo(() => applyDecisionFilters(items, filters), [items, filters]);
-  const availableTypes = useMemo(() => typeOptions(items), [items]);
+  /* ── Unresolved / Resolved tab ─────────────────────────────────────────────
+     "Unresolved" = no decision taken yet (urgent / elevated / waiting tiers).
+     "Resolved"   = a decision was recorded (decided tier — user, auto, or audit). */
+  type InboxTab = "Unresolved" | "Resolved";
+  const [activeTab, setActiveTab] = useState<InboxTab>("Unresolved");
+
+  const unresolvedItems = useMemo(() => items.filter((it) => it.tier !== "decided"), [items]);
+  const resolvedItems   = useMemo(() => items.filter((it) => it.tier === "decided"),  [items]);
+  const tabItems        = activeTab === "Unresolved" ? unresolvedItems : resolvedItems;
+
+  const visibleItems = useMemo(() => applyDecisionFilters(tabItems, filters), [tabItems, filters]);
+  const availableTypes = useMemo(() => typeOptions(tabItems), [tabItems]);
   const filtering = hasActiveFilter(filters);
 
   /* ── Bulk approve ───────────────────────────────────────────────────────────
@@ -1229,6 +1334,8 @@ export function InboxPage() {
         : undefined,
       onOpenDetail: () => openItem(item),
       testIdPrefix: "row-decision",
+      statusPill: item.statusPill,
+      rowBg: item.rowBg,
     };
   };
 
@@ -1238,10 +1345,12 @@ export function InboxPage() {
   const emptyText = decisionsUnreachable
     ? "Brain couldn\u2019t load your decisions. This is a connection problem, not an empty queue \u2014 don\u2019t read it as \u201cnothing to approve\u201d."
     : filtering
-    ? "No decisions match this filter."
+    ? `No ${activeTab.toLowerCase()} decisions match this filter.`
     : liveQueueLoading
       ? "Checking for anything that needs your attention\u2026"
-      : "Nothing needs your attention right now. Brain is keeping things moving.";
+      : activeTab === "Unresolved"
+        ? "Nothing needs your attention right now. Brain is keeping things moving."
+        : "No resolved decisions yet.";
 
   return (
     <div className="bg-[#11141b] overflow-hidden absolute inset-0 grid grid-rows-[auto_minmax(0,1fr)]">
@@ -1298,7 +1407,31 @@ export function InboxPage() {
       </div>
 
       {/* The timeline itself — one list, scrolls. */}
-      <div className="min-h-0 min-w-0 overflow-y-auto overflow-x-hidden px-[16px] pb-[16px] pt-[26px] flex flex-col gap-[10px]">
+      <div className="min-h-0 min-w-0 overflow-y-auto overflow-x-hidden px-[16px] pb-[16px] pt-[26px] flex flex-col gap-[26px]">
+
+        {/* Unresolved / Resolved tab strip — same FilterChipRow pattern as the
+            Rules subpage. Counts show items before the dropdown filters apply so
+            the badge is always honest even when a filter hides rows. */}
+        <FilterChipRow
+          chips={[
+            { value: "Unresolved", label: "Unresolved", count: unresolvedItems.length },
+            { value: "Resolved",   label: "Resolved",   count: resolvedItems.length   },
+          ]}
+          value={activeTab}
+          onChange={(v) => {
+            setActiveTab(v as InboxTab);
+            setFilters(EMPTY_FILTERS);
+          }}
+          label="Filter by resolution status"
+          testIdPrefix="tab-inbox"
+        />
+
+        {/* Inner content — count label + list rows. gap-[10px] matches the
+            original row-to-row spacing; the 26px gap above comes from the
+            outer container separating this block from the chip strip. */}
+        <div className="flex flex-col gap-[10px] items-start w-full">
+
+        {/* Count row + clear-filter link */}
         <div className="flex items-center gap-[8px] w-full min-h-[20px]">
           <div className="size-[6px] rounded-full shrink-0 bg-[#6c779d]" />
           <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[12px] uppercase tracking-[0.4px] whitespace-nowrap">
@@ -1430,6 +1563,7 @@ export function InboxPage() {
             </p>
           </div>
         )}
+        </div>{/* end inner gap-[10px] wrapper */}
       </div>
 
       {/* Existing detail surfaces — unchanged components */}

@@ -82,9 +82,55 @@ are `https://docs.brain.fi/api-reference/proposals-api.md`,
   `mode === "propose"`. The Inbox and detail card both derive controls from the
   proposal's available decisions and use the Invoice/Cash Agent action palette.
 
+## Brain Assistant suggestion chips are tenant-sourced
+
+The chips above the assistant input are **not** a hardcoded list. They come from
+brain-core per tenant via `useAssistantQuestions()` in
+`client/src/lib/brainAssistantQuestions.ts`.
+
+Three things about that endpoint are easy to get wrong:
+
+- **The path is `GET /assistant/questions`, not `/wiki/suggested-questions`.**
+  The latter 404s (`route_not_found`). The real route is tagged `Wiki`, requires
+  `wiki:read`, and takes an optional `limit` (default 50, max 100). It arrives
+  through the BFF's generic GET passthrough, so it needs no proxy route — and,
+  like every passthrough read, it is **not** normalized, hence the defensive
+  parse in `eligibleAssistantQuestions()`.
+- **There is no rank field.** `AssistantQuestion` carries
+  `{id, question, answer, status, source, evidence_ids, metadata, ...}` and
+  nothing that orders it. "Ranked" therefore means *the order brain-core
+  returned*. Never `.sort()` these — a sort key invented client-side would mean
+  we chose the ranking, which is the thing this wiring exists to prevent.
+- **Eligible means `status === "suggested"`** (`answered` is spent, `dismissed`
+  was rejected). A row with an absent or unrecognised status fails closed.
+
+When nothing is eligible — which is the **current** state, the deployed API
+returns `{"questions": []}` for the demo tenant — or the read fails, the UI
+falls back to `FALLBACK_QUESTIONS` in `BrainAssistant.tsx`. That constant holds
+only the four strings the component already shipped. **Do not add new suggestion
+copy to it.** A hand-authored chip can promise a capability the backend lacks,
+which is exactly the defect this change removes; anything tenant-specific must
+come from the endpoint.
+
+Collapsing loading + failure + empty onto one fallback is intentional here and is
+*not* the false-all-clear defect: these chips make no claim about the tenant's
+money or setup, every fallback string still works through the same assistant
+pipe, and an empty row would read as broken. The hook still exposes `isError`
+separately for callers that must distinguish them.
+
+**Two similarly-named routes exist — do not conflate them.**
+
+| Route | Backed by | Feeds |
+| --- | --- | --- |
+| `/api/assistant/questions` | local Postgres (`storage.listAssistantQuestions`) | Anthropic-fallback Q&A rows merged into the **audit log** (`brainAudit.ts`) |
+| `/api/brain/assistant/questions` | brain-core, via passthrough | tenant **suggestion chips** (`brainAssistantQuestions.ts`) |
+
+Same tail path, different origin, different purpose. Reaching for the one-word-shorter
+path will silently feed audit rows into the chip row.
+
 ## Brain Assistant answer status
 
-The Brain Assistant's suggested prompt is intentionally **"Show recent cash flow"**:
+The Brain Assistant's fallback prompt is intentionally **"Show recent cash flow"**:
 `GET /ledger/cash_flows` provides trailing actuals, not a forward projection.
 
 `POST /wiki/question` may attach evidence even when it cannot answer the question.
