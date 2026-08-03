@@ -1407,7 +1407,7 @@ export function InboxPage() {
       </div>
 
       {/* The timeline itself — one list, scrolls. */}
-      <div className="min-h-0 min-w-0 overflow-y-auto overflow-x-hidden px-[16px] pb-[16px] pt-[26px] flex flex-col gap-[16px]">
+      <div className="min-h-0 min-w-0 overflow-y-auto overflow-x-hidden px-[16px] pb-[16px] pt-[26px] flex flex-col gap-[26px]">
 
         {/* Unresolved / Resolved tab strip — same FilterChipRow pattern as the
             Rules subpage. Counts show items before the dropdown filters apply so
@@ -1426,11 +1426,16 @@ export function InboxPage() {
           testIdPrefix="tab-inbox"
         />
 
+        {/* Inner content — count label + list rows. gap-[10px] matches the
+            original row-to-row spacing; the 26px gap above comes from the
+            outer container separating this block from the chip strip. */}
+        <div className="flex flex-col gap-[10px] items-start w-full">
+
         {/* Count row + clear-filter link */}
         <div className="flex items-center gap-[8px] w-full min-h-[20px]">
           <div className="size-[6px] rounded-full shrink-0 bg-[#6c779d]" />
           <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[12px] uppercase tracking-[0.4px] whitespace-nowrap">
-            {activeTab}
+            Decisions
           </p>
           <div className="bg-[#6c779d] flex items-center justify-center min-w-[18px] px-[5px] py-[1px] rounded-[4px] shrink-0" data-testid="text-decision-count">
             <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#0a0c10] text-[11px] text-center whitespace-nowrap">
@@ -1558,6 +1563,7 @@ export function InboxPage() {
             </p>
           </div>
         )}
+        </div>{/* end inner gap-[10px] wrapper */}
       </div>
 
       {/* Existing detail surfaces — unchanged components */}
