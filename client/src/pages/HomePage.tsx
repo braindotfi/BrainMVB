@@ -21,6 +21,9 @@ import {
   type LiveInsight,
 } from "@/lib/brainAgentSurfaces";
 import { LiveInsightModal } from "@/components/LiveInsightModal";
+import { sessionIntentRow, queueIntentRow, liveProposalRow, insightRow } from "@/lib/recordRows";
+import { orderRowsForDisplay } from "@/lib/tierRowOrder";
+import { pagerState, stepPager, type PagerEntry } from "@/lib/unifiedPager";
 import {
   useBrainProposals,
   useDecideProposal,
@@ -67,6 +70,7 @@ import {
   setRuleDraft,
 } from "@/lib/rulesStore";
 import { useReviewStatuses } from "@/lib/reviewStatusStore";
+import { useAcknowledgedRecords, acknowledgeInsight } from "@/lib/acknowledgedStore";
 import { AlertCallout } from "@/components/Callout";
 
 /* Your Goals (Figma 3882:43037), progress bars per goal */
@@ -572,10 +576,34 @@ export function HomePage() {
   const { insights: disputeInsights, isError: disputeError } = useBrainDisputeInsights();
   const { insight: cashFlowInsight, isError: cashFlowError } = useBrainCashFlowInsight();
   const [selectedInsight, setSelectedInsight] = useState<LiveInsight | null>(null);
-  const liveInsights: LiveInsight[] = useMemo(
-    () => [...reconInsights, ...subscriptionInsights, ...disputeInsights, ...(cashFlowInsight ? [cashFlowInsight] : [])],
-    [reconInsights, subscriptionInsights, disputeInsights, cashFlowInsight],
+  /* Which Overview ROW currently has a detail surface open. The four surfaces
+     hold four unrelated record types, so the row id is the only handle the
+     shared pager can compare across them. */
+  const [openRowId, setOpenRowId] = useState<string | null>(null);
+  /** The open surface arrived via Previous/Next rather than a row tap. */
+  const [steppedViaPager, setSteppedViaPager] = useState(false);
+  const acknowledgedRecords = useAcknowledgedRecords();
+  const acknowledgedInsightIds = useMemo(
+    () => new Set(acknowledgedRecords.map((record) => record.id.replace("local-acknowledged-", ""))),
+    [acknowledgedRecords],
   );
+  const liveInsights: LiveInsight[] = useMemo(
+    () => [...reconInsights, ...subscriptionInsights, ...disputeInsights, ...(cashFlowInsight ? [cashFlowInsight] : [])]
+      .filter((insight) => !acknowledgedInsightIds.has(insight.id)),
+    [reconInsights, subscriptionInsights, disputeInsights, cashFlowInsight, acknowledgedInsightIds],
+  );
+  /* Mirrors InboxPage's pending-acknowledgement set so the button disables
+     immediately without waiting for the store write to propagate. */
+  const [pendingAcknowledgedIds, setPendingAcknowledgedIds] = useState<Set<string>>(() => new Set());
+  const acknowledgeInsightRow = (insight: LiveInsight) => {
+    const key = insight.id;
+    if (pendingAcknowledgedIds.has(key) || acknowledgedInsightIds.has(key)) return;
+    setPendingAcknowledgedIds((prev) => new Set(prev).add(key));
+    window.setTimeout(() => {
+      acknowledgeInsight(insight);
+      setPendingAcknowledgedIds((prev) => { const next = new Set(prev); next.delete(key); return next; });
+    }, 250);
+  };
 
   /* Live brain-core agent proposals (GET /v1/proposals) needing a decision -
      merged into the same "Brain Detected" widget as the live payment queue
@@ -639,35 +667,6 @@ export function HomePage() {
   const overviewBatchIds = useMemo(() => new Set(overviewSelection.ids), [overviewSelection.ids]);
   const [overviewBulkRunning, setOverviewBulkRunning] = useState(false);
 
-  const cycleRecord = <T extends { id: string | number }>(
-    records: T[],
-    selected: T | null,
-    setSelected: (record: T) => void,
-    delta: 1 | -1,
-  ) => {
-    if (!selected || records.length < 2) return;
-    const index = records.findIndex((record) => record.id === selected.id);
-    if (index < 0) return;
-    setSelected(records[(index + delta + records.length) % records.length]);
-  };
-
-  const selectedReviewIndex = selectedReview
-    ? liveNeedsReview.findIndex((record) => record.id === selectedReview.id)
-    : -1;
-  const selectedLiveIntentIndex = selectedLiveIntent
-    ? sessionReviews.findIndex((record) => record.id === selectedLiveIntent.id)
-    : -1;
-  const selectedInsightIndex = selectedInsight
-    ? liveInsights.findIndex((record) => record.id === selectedInsight.id)
-    : -1;
-  const selectedProposalIndex = selectedProposal
-    ? tieredProposals.findIndex((record) => record.id === selectedProposal.id)
-    : -1;
-  const reviewPagerDisabled = selectedReviewIndex < 0 || liveNeedsReview.length < 2;
-  const liveIntentPagerDisabled = selectedLiveIntentIndex < 0 || sessionReviews.length < 2;
-  const insightPagerDisabled = selectedInsightIndex < 0 || liveInsights.length < 2;
-  const proposalPagerDisabled = selectedProposalIndex < 0 || tieredProposals.length < 2;
-
   const decideProposal = useDecideProposal();
 
   /* Every row Overview shows, as ONE list. Tier decides which section it lands in
@@ -687,14 +686,12 @@ export function HomePage() {
     disputeError ||
     cashFlowError;
 
-  /* Status tag pill classes — mirrors InboxPage's TAG_* constants so Overview
-     rows carry the same visual language as the Inbox timeline. */
-  const TAG_NEEDS_YOU = "bg-[#4a2300] text-[#ff9500] border-[rgba(255,149,0,0.2)]";
-  const TAG_DETECTED  = "bg-[#222737] text-[#6c779d] border-[rgba(108,119,157,0.2)]";
-  const TAG_REJECTED  = "bg-[#350011] text-[#d20344] border-[rgba(210,3,68,0.2)]";
-
   const overviewRows: TierRowModel[] = useMemo(() => {
     const testIdPrefix = "row-overview";
+    /* Title, pill and second line for every row below come from recordRows.ts,
+       which the Inbox uses too. Overview decides what a row can DO; it does not
+       get its own opinion about what the record SAYS. */
+    const fmt = { format, formatText };
 
     // Session-scoped intents — title is specific; description is the "Why:".
     const sessionRows: TierRowModel[] = sessionReviews.map((r) => {
@@ -705,10 +702,7 @@ export function HomePage() {
            space and one test-id namespace in this list. */
         id: `session-${String(r.intentId ?? r.id)}`,
         tier: tierForPaymentIntent(),
-        title: formatText(r.title),
-        badge: { label: "Needs approval", className: TAG_NEEDS_YOU },
-        /* Match InboxPage toRow: amount · vendor · due */
-        subtitle: [r.amount, r.vendor ? `${r.vendor} · ${r.due}` : r.due].filter(Boolean).join(" · ") || undefined,
+        ...sessionIntentRow(r, fmt),
         /* Session payment intents do not carry the policy category and threshold
            fields required by the shared bulk-approval guard, matching Inbox. */
         select: undefined,
@@ -744,14 +738,7 @@ export function HomePage() {
     const queueRows: TierRowModel[] = liveNeedsReview.map((p) => ({
       id: `queue-${p.id}`,
       tier: tierForPaymentIntent(),
-      title: formatText(p.title),
-      /* Match InboxPage badge logic — severity drives the label and colour */
-      badge: {
-        label: p.severity === "danger" ? "High risk" : p.severity === "warning" ? "Elevated" : "Needs review",
-        className: p.severity === "danger" ? TAG_REJECTED : TAG_NEEDS_YOU,
-      },
-      /* Match InboxPage toRow: amount · rowSubtitle */
-      subtitle: [typeof p.amount === "number" ? format(p.amount) : undefined, p.rowSubtitle].filter(Boolean).join(" · ") || undefined,
+      ...queueIntentRow(p, fmt),
       /* Durable payment-intent rows do not carry a policy category in this
          surface, so they are not bulk-selectable, matching Inbox. */
       select: undefined,
@@ -763,18 +750,28 @@ export function HomePage() {
       ],
     }));
 
-    /* Read-only ledger insights. No actions by design: they have no proposal
-       lifecycle and nothing to decide, so a button here would be theatre. */
-    const insightRows: TierRowModel[] = liveInsights.map((i) => ({
-      id: `insight-${i.id}`,
-      tier: tierForReadOnlyInsight(),
-      title: formatText(i.title),
-      badge: { label: i.badge, className: TAG_DETECTED },
-      subtitle: i.subtitle ? formatText(i.subtitle) : undefined,
-      testIdPrefix,
-      onOpenDetail: () => setSelectedInsight(i),
-      actions: [],
-    }));
+    /* Read-only ledger insights — one Acknowledge action, matching the Inbox.
+       Acknowledging removes the row from the active queue without making it
+       disappear from the Audit Log. */
+    const insightRows: TierRowModel[] = liveInsights.map((i) => {
+      const done = pendingAcknowledgedIds.has(i.id) || acknowledgedInsightIds.has(i.id);
+      return {
+        id: `insight-${i.id}`,
+        tier: tierForReadOnlyInsight(),
+        ...insightRow(i, fmt),
+        testIdPrefix,
+        onOpenDetail: () => setSelectedInsight(i),
+        actions: [
+          {
+            id: "acknowledge",
+            label: done ? "Acknowledged" : "Acknowledge",
+            tone: "acknowledge" as const,
+            disabled: done,
+            onClick: () => acknowledgeInsightRow(i),
+          },
+        ],
+      };
+    });
 
     // Brain-core agent proposals (collections, vendor risk, etc.) — narrative is
     // the specific "Why:" text shown in Inbox; agent display name is the category.
@@ -787,7 +784,9 @@ export function HomePage() {
          a row's heading and its position in the pager would come apart. */
       const tier = deriveProposalTier(p, { thresholds: tierThresholds });
       if (!tier) return [];
-      const agentName = AGENT_DISPLAY_NAME[agentKeyForProposalType(p.type)];
+      /* Match InboxPage: prefer the display name brain-core attaches to the
+         proposal record itself; fall back to the local AGENT_DISPLAY_NAME map. */
+      const agentName = p.agent?.display_name || AGENT_DISPLAY_NAME[agentKeyForProposalType(p.type)];
       const headerCopy = buildProposalHeaderCopy(p, agentName, formatText);
       /* Exactly the decision set the detail sheet renders, from the same builder.
          A decision brain-core won't accept is shown DISABLED rather than dropped,
@@ -813,10 +812,7 @@ export function HomePage() {
       return [{
         id: rowId,
         tier,
-        title: headerCopy.title,
-        badge: { label: pillName, className: TAG_NEEDS_YOU },
-        /* Match InboxPage toRow: narrative text as subtitle */
-        subtitle: headerCopy.text || undefined,
+        ...liveProposalRow(headerCopy, pillName),
         /* Vendor risk doesn't require a human approval decision — no checkbox */
         select: candidate && p.type !== "vendor_risk"
           ? {
@@ -835,7 +831,11 @@ export function HomePage() {
       }];
     });
 
-    return [...sessionRows, ...queueRows, ...insightRows, ...proposalRows];
+    /* Ordered the way TierSections draws them, because the pager walks this
+       same list — see tierRowOrder.ts. Built order is by source; drawn order is
+       by tier, and the two disagreeing left the Insights rows unreachable from
+       Next. */
+    return orderRowsForDisplay([...sessionRows, ...queueRows, ...insightRows, ...proposalRows]);
   }, [
     liveNeedsReview,
     sessionReviews,
@@ -853,7 +853,66 @@ export function HomePage() {
     overviewSelection.type,
     overviewBatchIds,
     overviewBulkRunning,
+    pendingAcknowledgedIds,
+    acknowledgedInsightIds,
   ]);
+
+  /* One pager across the whole Overview list. Every openable row participates in
+     display order, whichever of the four surfaces it opens, so Previous/Next
+     mean "the next row you can see" instead of "the next row from this same
+     source" — which used to strand the user at the edge of whichever of the four
+     queues they had happened to open. Rows are re-wrapped rather than each
+     `onOpenDetail` recording the id itself, so a row added later cannot join the
+     list while silently opting out of the pager. */
+  const pagerRows: TierRowModel[] = useMemo(
+    () =>
+      overviewRows.map((row) => {
+        const openDetail = row.onOpenDetail;
+        if (!openDetail) return row;
+        return {
+          ...row,
+          onOpenDetail: () => {
+            setOpenRowId(row.id);
+            openDetail();
+          },
+        };
+      }),
+    [overviewRows],
+  );
+  const pagerEntries: PagerEntry[] = pagerRows
+    .filter((row) => row.onOpenDetail)
+    .map((row) => ({ id: row.id, open: row.onOpenDetail! }));
+  const pager = pagerState(pagerEntries, openRowId);
+  const closeOpenSurface = () => {
+    setSelectedInsight(null);
+    setSelectedProposal(null);
+    setSelectedReview(null);
+    setSelectedLiveIntent(null);
+    setLiveRejection(null);
+  };
+  const stepRow = (delta: 1 | -1) => {
+    /* Stepping closes one dialog and opens another; the surface that opens must
+       know it is a step, not a fresh open, so it can skip the entrance
+       animation. Cleared below once nothing is open. */
+    setSteppedViaPager(true);
+    stepPager(pagerEntries, openRowId, delta, closeOpenSurface);
+  };
+  /* Reset off the SURFACES, not off openRowId: an action that closes a card
+     (approve, acknowledge, follow a link out) does not always clear the open row
+     id, and a flag left set would silence the next card the user opens by hand. */
+  const anySurfaceOpen =
+    selectedInsight !== null || selectedProposal !== null || selectedReview !== null || selectedLiveIntent !== null;
+  useEffect(() => {
+    if (!anySurfaceOpen) setSteppedViaPager(false);
+  }, [anySurfaceOpen]);
+  /* Every surface below shares these, so the pager reads the same everywhere. */
+  const pagerProps = {
+    onPrev: () => stepRow(-1),
+    onNext: () => stepRow(1),
+    hasPrev: pager.hasPrev,
+    hasNext: pager.hasNext,
+    pagerStep: steppedViaPager,
+  };
 
   const overviewProposalByRowId = useMemo<Map<string, BrainProposal>>(
     () => new Map(tieredProposals.map((proposal) => [`proposal-${proposal.id}`, proposal])),
@@ -1150,7 +1209,7 @@ export function HomePage() {
                 </div>
               )}
               <TierSections
-                rows={overviewRows}
+                rows={pagerRows}
                 unavailable={overviewUnreachable}
                 emptyMessage={
                   overviewUnreachable
@@ -1176,26 +1235,22 @@ export function HomePage() {
       <LiveInsightModal
         insight={selectedInsight}
         open={selectedInsight !== null}
-        onOpenChange={(o) => { if (!o) setSelectedInsight(null); }}
-        onPrev={() => cycleRecord(liveInsights, selectedInsight, setSelectedInsight, -1)}
-        onNext={() => cycleRecord(liveInsights, selectedInsight, setSelectedInsight, 1)}
-        pagerDisabled={insightPagerDisabled}
+        onOpenChange={(o) => { if (!o) { setSelectedInsight(null); setOpenRowId(null); } }}
+        {...pagerProps}
+        onAcknowledge={selectedInsight ? () => acknowledgeInsightRow(selectedInsight) : undefined}
+        acknowledged={
+          selectedInsight !== null &&
+          (acknowledgedInsightIds.has(selectedInsight.id) || pendingAcknowledgedIds.has(selectedInsight.id))
+        }
       />
 
       {/* Brain Detected - live brain-core agent proposal */}
       <LiveProposalModal
         proposal={selectedProposal}
         open={selectedProposal !== null}
-        onOpenChange={(o) => { if (!o) setSelectedProposal(null); }}
-        onPrev={() => cycleRecord(tieredProposals, selectedProposal, setSelectedProposal, -1)}
-        onNext={() => cycleRecord(tieredProposals, selectedProposal, setSelectedProposal, 1)}
-        hasPrev={!proposalPagerDisabled}
-        hasNext={!proposalPagerDisabled}
-        position={
-          !proposalPagerDisabled
-            ? `Proposal ${selectedProposalIndex + 1} of ${tieredProposals.length}`
-            : undefined
-        }
+        onOpenChange={(o) => { if (!o) { setSelectedProposal(null); setOpenRowId(null); } }}
+        {...pagerProps}
+        position={pager.position ?? undefined}
       />
 
       {/* Brain Detected - proposal sheet, opened in place */}
@@ -1203,10 +1258,8 @@ export function HomePage() {
         proposal={selectedReview}
         currentStatus={selectedReview ? (reviewStatuses[selectedReview.id] ?? selectedReview.status) : undefined}
         open={selectedReview !== null}
-        onOpenChange={(o) => { if (!o) setSelectedReview(null); }}
-        onPrev={() => cycleRecord(liveNeedsReview, selectedReview, setSelectedReview, -1)}
-        onNext={() => cycleRecord(liveNeedsReview, selectedReview, setSelectedReview, 1)}
-        pagerDisabled={reviewPagerDisabled}
+        onOpenChange={(o) => { if (!o) { setSelectedReview(null); setOpenRowId(null); } }}
+        {...pagerProps}
         onAction={handleReviewAction}
         rulePaused={selectedReview ? isRulePaused(selectedReview) : undefined}
         onPauseRule={(p) => { const r = ruleOf(p); if (r) storePauseRule(r.id); }}
@@ -1243,7 +1296,7 @@ export function HomePage() {
       <ReviewModal
         item={selectedLiveIntent}
         open={selectedLiveIntent !== null}
-        onOpenChange={(o) => { if (!o) { setSelectedLiveIntent(null); setLiveRejection(null); } }}
+        onOpenChange={(o) => { if (!o) { setSelectedLiveIntent(null); setLiveRejection(null); setOpenRowId(null); } }}
         onConfirm={() => {
           if (selectedLiveIntent?.live && selectedLiveIntent.intentId) void approveIntent(selectedLiveIntent.intentId, true);
           else setSelectedLiveIntent(null);
@@ -1256,9 +1309,7 @@ export function HomePage() {
           setSelectedLiveIntent(null);
           setLiveRejection(null);
         }}
-        onPrev={() => cycleRecord(sessionReviews, selectedLiveIntent, setSelectedLiveIntent, -1)}
-        onNext={() => cycleRecord(sessionReviews, selectedLiveIntent, setSelectedLiveIntent, 1)}
-        pagerDisabled={liveIntentPagerDisabled}
+        {...pagerProps}
         busy={approvingIntentId !== null}
         rejection={liveRejection}
       />

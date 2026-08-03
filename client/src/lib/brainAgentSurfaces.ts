@@ -273,12 +273,21 @@ export function useBrainCashFlowInsight() {
     } else {
       explanation = `Latest day netted ${format(latestNet.toFixed(2))}, in line with your ${avgStr} ${windowLabel} daily average.`;
     }
+  } else {
+    /* Too short a window to compare against anything — but the card still owes
+       the reader a reason it is on their screen, so state the trigger and the
+       limitation instead of dropping the section. Never a comparison the data
+       cannot support. */
+    explanation =
+      `Brain reports your trailing cash position whenever the ledger has activity. ` +
+      `Only ${windowCount} day${windowCount === 1 ? "" : "s"} of movement ${windowCount === 1 ? "has" : "have"} been recorded so far, ` +
+      `which is too short a window to compare against a trend.`;
   }
   const insight: LiveInsight = {
     id: "cashflow-trailing",
     kind: "cashflow",
     itemKind: "detection",
-    badge: "Cash flow",
+    badge: "Cash Forecasting",
     title: `Trailing cash flow (${currency.currency})`,
     subtitle: `Net ${format(currency.net)} over ${currency.transaction_count} transactions`,
     explanation,

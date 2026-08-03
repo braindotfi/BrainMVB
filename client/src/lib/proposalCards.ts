@@ -19,12 +19,10 @@ import type {
   ResolvedKeyFact,
   ProposalDecisionOption,
   ProposalConsequences,
+  ProposalDetails,
   ProposalType,
   BrainProposal,
 } from "./brainProposals";
-
-/** Keeps the card scannable: the rest moves into "Technical reference". */
-export const MAX_VISIBLE_DETAIL_ROWS = 4;
 
 /** Most decision-relevant first. Rows not listed keep their arrival order after
  *  these, so a new brain-core fact still renders instead of being dropped. */
@@ -449,7 +447,7 @@ export function resolveHeadlineText(
 }
 
 /**
- * The same treatment for the narrative under "Why This Needs Your Call", which
+ * The same treatment for the narrative under "Why This Needs Your Decision", which
  * has the same problem ("Compliance review for inv_01KYS8RK94… found …") but is
  * already prose, so its existing capitalisation is left alone.
  */
@@ -590,6 +588,19 @@ function isHumanReadablePolicyReference(value: string): boolean {
  */
 const WRITABLE_DECISIONS = new Set(["approve", "reject", "acknowledge", "undo"]);
 
+/** `edit` is never rendered as a decision button on any card. brain-core offers
+ *  no such decision and no route that would accept one, so the control could
+ *  only ever be a disabled placeholder — which was tried and rejected. Filtering
+ *  by id (rather than merely not synthesising one) means a future core release
+ *  that starts advertising `edit` cannot quietly resurrect the button either. */
+export const EDIT_DECISION_ID = "edit";
+
+/** Pill text for the rows raised by the payment agent — session payment intents
+ *  and the durable review queue. Every decision row is pilled with the AGENT
+ *  that raised it, and both of those sources are the payment agent, so the two
+ *  pages must not drift into separate spellings of it. */
+export const PAYMENT_AGENT_PILL = "Payment";
+
 export type DecisionTone = "approve" | "reject" | "neutral" | "acknowledge";
 
 export interface DecisionButton {
@@ -634,6 +645,7 @@ export function buildDecisionButtons(
   const source = (available ?? fallback) ?? [];
   const buttons = source
     .filter((d) => typeof d?.id === "string" && d.id.trim())
+    .filter((d) => d.id.trim() !== EDIT_DECISION_ID)
     .map((d) => ({
       id: d.id.trim(),
       label: titleCaseDecisionLabel(d.label?.trim() || humanizeEnumValue(d.id.trim())),
@@ -681,6 +693,111 @@ export function buildConsequences(
     (d.tone === "reject" ? ifWrong : next).push({ decisionId: d.id, label: d.label, text: text.trim() });
   }
   return { next, ifWrong };
+}
+
+/* ── Why Brain Suggested This ─────────────────────────────────────────────────
+   The frame opens every agent card with a short arrow-bullet list of the signals
+   behind the proposal.
+
+   brain-core publishes NO dedicated "reasons" array, so nothing here is authored
+   by the client. Each bullet is read back from something the engine actually
+   recorded while producing the record:
+
+     • `policy.trace[].checks[]` — the checks the policy VM walked, but ONLY for
+       trace entries that actually MATCHED. The trace records every rule the
+       engine considered, including ones that did not fire; a check belonging to
+       a rule that did not fire is not a reason this proposal exists, and listing
+       it here would answer the section's question with something that had no
+       bearing on the outcome. `matched` must be explicitly true — an entry that
+       omits the flag leaves us unable to say the rule fired, so it is excluded
+       rather than assumed (the same fail-closed rule the policy scope uses).
+     • `details.ranked_signals` — the per-type scoring signals (fraud_anomaly and
+       vendor_risk carry these) the agent ranked when it scored the record.
+
+   A record carrying neither yields an empty list and the caller drops the whole
+   section. That is the point: an approver who reads an invented reason is worse
+   off than one who reads none, so this never falls back to generic copy. */
+
+export interface ReasonBullet {
+  text: string;
+  /** The check's own verdict when it recorded one, else null.
+   *
+   *  This is carried through to the UI and RENDERED, never flattened away: a
+   *  matched rule's checks can include both satisfied and failed conditions, so
+   *  a list that showed them identically would let an approver read a passing
+   *  check as the thing that escalated the record. A bullet whose source stated
+   *  no verdict (every `ranked_signals` entry) is null and is shown as a plain
+   *  observation rather than being given a verdict we do not have. */
+  passed: boolean | null;
+}
+
+/** Keeps the list scannable; the full trace stays in Technical Detail. */
+export const MAX_REASON_BULLETS = 5;
+
+export function buildWhySuggested(
+  policy: ProposalPolicy | null | undefined,
+  details: ProposalDetails | null | undefined,
+): ReasonBullet[] {
+  const bullets: ReasonBullet[] = [];
+  const seen = new Set<string>();
+
+  const push = (raw: unknown, passed: boolean | null) => {
+    if (typeof raw !== "string") return;
+    const text = raw.trim();
+    // A bare ULID is an identifier, not a reason a human can read.
+    if (!text || isRawIdentifier(text)) return;
+    // A string with no alphabetic characters is a raw metric (e.g. "0.6",
+    // "70197.57", "1,200"), not a sentence a reviewer can act on. Suppress it
+    // rather than surfacing a dimensionless number as a reason bullet.
+    if (!/[a-zA-Z]/.test(text)) return;
+    const key = text.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    bullets.push({ text, passed });
+  };
+
+  for (const entry of policy?.trace ?? []) {
+    // Only rules that actually fired explain this proposal. See the note above.
+    if (entry?.matched !== true) continue;
+    for (const check of entry?.checks ?? []) {
+      if (!check) continue;
+      const verdict = typeof check.passed === "boolean" ? check.passed : null;
+      // `detail` is the written sentence; `key` ("amount_over_limit") is the
+      // machine name, humanized only when there is no sentence to prefer.
+      if (typeof check.detail === "string" && check.detail.trim()) {
+        push(check.detail, verdict);
+      } else if (typeof check.key === "string" && check.key.trim()) {
+        push(humanizeEnumValue(check.key), verdict);
+      }
+    }
+  }
+
+  const signals = details?.ranked_signals;
+  if (Array.isArray(signals)) {
+    for (const signal of signals) {
+      if (typeof signal === "string") {
+        push(signal, null);
+        continue;
+      }
+      if (signal && typeof signal === "object") {
+        const s = signal as Record<string, unknown>;
+        // Prefer a written sentence; fall back to the signal's name humanized.
+        const sentence = [s.detail, s.description, s.reason, s.explanation].find(
+          (v): v is string => typeof v === "string" && v.trim() !== "",
+        );
+        if (sentence) {
+          push(sentence, null);
+          continue;
+        }
+        const name = [s.label, s.name, s.signal, s.key].find(
+          (v): v is string => typeof v === "string" && v.trim() !== "",
+        );
+        if (name) push(humanizeEnumValue(name), null);
+      }
+    }
+  }
+
+  return bullets.slice(0, MAX_REASON_BULLETS);
 }
 
 /* ── Confidence ─────────────────────────────────────────────────────────────── */
@@ -810,43 +927,6 @@ export const ADVISORY_PROPOSAL_TYPES: ProposalType[] = [
 
 export function isAdvisoryProposalType(type: string): boolean {
   return (ADVISORY_PROPOSAL_TYPES as string[]).includes(type);
-}
-
-/* ── Technical layers ───────────────────────────────────────────────────────── */
-
-export const TECHNICAL_LAYER_TITLES: Record<string, string> = {
-  "1_ingest": "1 · Ingest",
-  "2_extract": "2 · Extract",
-  "3_classify": "3 · Classify",
-  "4_score": "4 · Score",
-  "5_policy": "5 · Policy",
-  "6_propose": "6 · Propose",
-};
-
-export interface TechnicalLayer {
-  key: string;
-  title: string;
-  json: string;
-}
-
-/** The six-layer breakdown, in contract order, skipping layers core omitted. */
-export function buildTechnicalLayers(detail: Record<string, unknown> | null | undefined): TechnicalLayer[] {
-  if (!detail) return [];
-  const ordered = Object.keys(TECHNICAL_LAYER_TITLES).filter((k) => detail[k] !== undefined && detail[k] !== null);
-  const extras = Object.keys(detail).filter((k) => !(k in TECHNICAL_LAYER_TITLES) && detail[k] != null);
-  return [...ordered, ...extras].map((key) => ({
-    key,
-    title: TECHNICAL_LAYER_TITLES[key] ?? humanizeEnumValue(key),
-    json: safeJson(detail[key]),
-  }));
-}
-
-function safeJson(value: unknown): string {
-  try {
-    return JSON.stringify(value, null, 2) ?? String(value);
-  } catch {
-    return String(value);
-  }
 }
 
 /** Fallback key-fact builder for rows the BFF did not enrich (a cached pre-#384

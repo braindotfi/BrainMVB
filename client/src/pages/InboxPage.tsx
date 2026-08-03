@@ -20,6 +20,13 @@ import {
   type LiveInsight,
 } from "@/lib/brainAgentSurfaces";
 import { LiveInsightModal } from "@/components/LiveInsightModal";
+import {
+  sessionIntentRow,
+  queueIntentRow,
+  liveProposalRow,
+  insightRow,
+  type RecordRowPresentation,
+} from "@/lib/recordRows";
 import { useBrainProposals, useDecideProposal, isNeedsReview, agentKeyForProposalType, type BrainProposal } from "@/lib/brainProposals";
 import {
   isDecidableProposal,
@@ -30,6 +37,7 @@ import {
 import { LiveProposalModal, AGENT_DISPLAY_NAME } from "@/components/AgentProposalModal";
 import { useBrainAuditRecords } from "@/lib/brainAudit";
 import { inboxTapTarget } from "@/lib/inboxTap";
+import { pagerState, stepPager, type PagerEntry } from "@/lib/unifiedPager";
 import { AuditRecordPopup } from "@/components/AuditRecordPopup";
 import type { AuditRecord, AuditEventType } from "@/lib/auditTypes";
 import { auditEventLabel, auditEventChipClass, isAssistantActivity, isSystemActivity, humanReadableActor } from "@/lib/auditTypes";
@@ -180,12 +188,22 @@ type InboxItem = DecisionFacets & {
   /* Status tag pill */
   tag: string;
   tagClass: string;
+  /** Anything the pill encodes in COLOUR alone. Decision rows are pilled with the
+   *  agent name, so severity survives only as the chip's palette — this carries
+   *  it as text for anyone who cannot see the colour. */
+  tagSr?: string;
   /* One-line description (may carry vendor / rule / audit-id facts) */
   desc: string;
   time: string;
   /* "Why:" line — only real recorded reasoning; omitted (honest omission) when
      the source record carries no rationale. */
   why?: string;
+  /** Title, pill and second line as rendered, from the shared presenters in
+   *  recordRows.ts. Set on every LIVE record, because Overview renders the same
+   *  four sources and the two screens must read identically. Settled history
+   *  (auto-approved, decided, audit, acknowledged) is Inbox-only and keeps the
+   *  outcome pills composed below. */
+  presentation?: RecordRowPresentation;
   /* "proposal" items are decidable (Approve/Reject); "detection" items are
      ledger-derived observations — nothing is proposed, no decision buttons. */
   kind: "proposal" | "detection";
@@ -209,7 +227,6 @@ type InboxItem = DecisionFacets & {
   acknowledgeOnly?: boolean;
 };
 
-const TAG_NEEDS_YOU = "bg-[#4a2300] text-[#ff9500] border-[rgba(255,149,0,0.2)]";
 const TAG_AUTO = "bg-[#1d2132] text-[#a8b9f4] border-[rgba(168,185,244,0.2)]";
 const TAG_APPROVED_BY_YOU = "bg-[#240757] text-[#a88afa] border-[rgba(168,138,250,0.2)]";
 const TAG_REJECTED = "bg-[#350011] text-[#d20344] border-[rgba(210,3,68,0.2)]";
@@ -400,6 +417,12 @@ export function InboxPage() {
   // read model carries no decider-identity field (no `decided_by`), so there's
   // no honest way to tell an agent decision from a human one here.
   const [selectedProposal, setSelectedProposal] = useState<BrainProposal | null>(null);
+  /* Which timeline ROW currently has a detail surface open. The five surfaces
+     below hold five unrelated record types, so the row id is the only handle
+     the shared pager can compare across them. */
+  const [openItemId, setOpenItemId] = useState<string | null>(null);
+  /** The open surface arrived via Previous/Next rather than a row tap. */
+  const [steppedViaPager, setSteppedViaPager] = useState(false);
 
   const liveReviews = intents
     .filter((i) => i.outcome === "confirm" && !i.declined && i.approvalState !== "approved")
@@ -562,6 +585,26 @@ export function InboxPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search]);
 
+  /* Deep-link: /inbox?proposal=<id> — brain-core agent proposals.
+     Brain proposals come from an async fetch (`liveProposals`) so they cannot
+     be resolved in the synchronous `resolveProposal` call above.  This second
+     effect re-runs whenever liveProposals loads or the search param changes so
+     it still fires even if the data arrives after the URL does.
+     Priority: if the durable-queue resolver already claimed the id, skip — one
+     card per URL, first match wins. */
+  useEffect(() => {
+    const params = new URLSearchParams(search);
+    const proposalId = params.get("proposal") ?? params.get("receipt");
+    if (!proposalId) return;
+    if (resolveProposal(proposalId)) return; // handled by the durable-queue effect
+    const brainTarget = liveProposals.find((p) => p.id === proposalId);
+    if (!brainTarget) return;
+    setSelectedProposal(brainTarget);
+    setOpenItemId(brainTarget.id);
+    navigate("/inbox", { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, liveProposals]);
+
   /* Deep-link: /inbox?record=<id>. This is the route a linked entity returns to
      after being opened FROM a settled record here, so it must reopen the popup
      rather than silently dropping the user on a bare timeline. Audit records
@@ -574,15 +617,18 @@ export function InboxPage() {
        without an explicit precedence a URL carrying both params would have two
        handlers racing to open a different surface and rewrite the route. */
     if (params.get("proposal") || params.get("receipt")) return;
-    const found = auditRecords.find((r) => r.id === recordId || r.anchor.auditId === recordId);
+    const found = [...auditRecords, ...acknowledgedRecords].find(
+      (r) => r.id === recordId || r.anchor.auditId === recordId,
+    );
     if (!found) return;
     setActiveRecord(found);
     navigate("/inbox", { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, auditRecords]);
+  }, [search, auditRecords, acknowledgedRecords]);
 
   const dismissDetail = () => {
     setActive(null);
+    setOpenItemId(null);
     if (returnTo) {
       const dest = returnTo;
       setReturnTo(null);
@@ -592,6 +638,7 @@ export function InboxPage() {
 
   /* ── Build the unified item list ───────────────────────────────────────── */
   const items: InboxItem[] = useMemo(() => {
+    const fmt = { format, formatText };
     const out: InboxItem[] = [];
     const seen = new Set<string>();
     const push = (it: InboxItem) => {
@@ -602,6 +649,7 @@ export function InboxPage() {
 
     /* Needs you: session-scoped §6-gated intents (decidable). */
     for (const item of liveReviews) {
+      const sessionPresentation = sessionIntentRow(item, fmt);
       push({
         id: String(item.id),
         kind: "proposal",
@@ -610,8 +658,12 @@ export function InboxPage() {
         type: "payment",
         search: buildSearchText(item.title, item.vendor, item.due, item.amount),
         title: item.title,
-        tag: "Needs approval",
-        tagClass: TAG_NEEDS_YOU,
+        /* Every live row's wording and pill come from recordRows.ts, which
+           Overview renders too — see the note on InboxItem.presentation. */
+        presentation: sessionPresentation,
+        tag: sessionPresentation.badge.label,
+        tagClass: sessionPresentation.badge.className,
+        tagSr: sessionPresentation.badge.srLabel,
         desc: item.vendor ? `${item.vendor} · ${item.due}` : item.due,
         time: item.dueBy ?? "",
         why: item.description,
@@ -623,6 +675,7 @@ export function InboxPage() {
 
     /* Needs you: durable brain-core review queue (decidable). */
     for (const p of queue) {
+      const queuePresentation = queueIntentRow(p, fmt);
       push({
         id: p.id,
         kind: "proposal",
@@ -631,8 +684,10 @@ export function InboxPage() {
         type: "payment",
         search: buildSearchText(p.title, p.rowSubtitle, p.amountDisplay),
         title: p.title,
-        tag: p.severity === "danger" ? "High risk" : p.severity === "warning" ? "Elevated" : "Needs review",
-        tagClass: p.severity === "danger" ? TAG_REJECTED : TAG_NEEDS_YOU,
+        presentation: queuePresentation,
+        tag: queuePresentation.badge.label,
+        tagClass: queuePresentation.badge.className,
+        tagSr: queuePresentation.badge.srLabel,
         desc: p.rowSubtitle,
         time: p.dueLabel ?? "",
         why: p.rationale,
@@ -654,6 +709,7 @@ export function InboxPage() {
       const pillName = isPaymentAgent ? "Payment" : agentName;
         const decisions = buildDecisionButtons(p.available_decisions, p.presentation?.actions);
       const headerCopy = buildProposalHeaderCopy(p, agentName, formatText);
+      const proposalPresentation = liveProposalRow(headerCopy, pillName);
       push({
         id: p.id,
         kind: "proposal",
@@ -665,8 +721,10 @@ export function InboxPage() {
         type: p.type ?? "payment",
         search: buildSearchText(headerCopy.title, headerCopy.text, agentName, p.type),
         title: headerCopy.title,
-        tag: pillName,
-        tagClass: TAG_NEEDS_YOU,
+        presentation: proposalPresentation,
+        tag: proposalPresentation.badge.label,
+        tagClass: proposalPresentation.badge.className,
+        tagSr: proposalPresentation.badge.srLabel,
         desc: headerCopy.text,
         time: "",
         /* Approve/Decline only when core actually offers them. */
@@ -682,6 +740,7 @@ export function InboxPage() {
     /* Needs you: read-only live ledger facts Brain detected (not decidable —
        there is nothing to approve; "Ask Brain why" opens the insight). */
     for (const i of visibleLiveInsights) {
+      const insightPresentation = insightRow(i, fmt);
       push({
         id: i.id,
         kind: "detection",
@@ -690,12 +749,16 @@ export function InboxPage() {
         type: i.kind,
         search: buildSearchText(i.title, i.subtitle, i.badge, i.explanation),
         title: i.title,
-        tag: i.badge || "Detected",
-        tagClass: TAG_DETECTED,
-        desc: i.subtitle ?? "Brain noticed this in your ledger.",
+        /* Badge and second line come from the shared presenter Overview uses,
+           so the same record cannot read differently on the two screens. The
+           reasoning stays on the card (its "Why Brain Suggested This") rather
+           than being promoted into the row here and nowhere else. */
+        presentation: insightPresentation,
+        tag: insightPresentation.badge.label,
+        tagClass: insightPresentation.badge.className,
+        tagSr: insightPresentation.badge.srLabel,
+        desc: insightPresentation.subtitle ?? "",
         time: "",
-        /* Only real recorded reasoning — never echo the subtitle as "Why". */
-        why: i.explanation,
         actionable: false,
         insight: i,
       });
@@ -778,8 +841,33 @@ export function InboxPage() {
       });
     }
 
+    /* Local insight acknowledgements are settled history even though their
+       source insight is removed from `visibleLiveInsights`. Keep the canonical
+       acknowledgement record in Inbox so the action removes the item from the
+       attention queue without making it disappear. Brain-core acknowledgements
+       are already represented by the audit-record loop above; the id guard in
+       push prevents a duplicate if a local record is later mirrored upstream. */
+    for (const r of acknowledgedRecords) {
+      push({
+        id: r.id,
+        kind: "proposal",
+        tier: "decided",
+        status: "informational",
+        type: "payment",
+        search: buildSearchText(r.summary, r.rowSubtitle, humanReadableActor(r.actor), r.occurredAtLabel),
+        title: r.summary,
+        tag: "Acknowledged",
+        tagClass: TAG_DETECTED,
+        desc: r.rowSubtitle ?? "",
+        time: r.occurredAtLabel,
+        why: auditWhy(r),
+        actionable: false,
+        record: r,
+      });
+    }
+
     return out;
-  }, [liveReviews, queue, needsReviewProposals, visibleLiveInsights, liveAutoApproved, statuses, auditRecords, format, formatText, thresholds]);
+  }, [liveReviews, queue, needsReviewProposals, visibleLiveInsights, liveAutoApproved, statuses, auditRecords, acknowledgedRecords, format, formatText, thresholds]);
 
   /* EVERY feed that contributes a row, not just the obvious ones. If any of them
      failed, this timeline is incomplete and must not be presented as an
@@ -911,36 +999,6 @@ export function InboxPage() {
     }
   };
 
-  /* Proposal queue behind the card's Previous / Next, in the order the rows are
-     listed so paging matches what the user just scrolled past. Only live
-     proposals participate — the other row kinds open different modals. */
-  const pagedProposals = visibleItems
-    .map((it) => it.liveAgentProposal)
-    .filter((p): p is BrainProposal => p != null);
-  const pagedIndex = selectedProposal
-    ? pagedProposals.findIndex((p) => p.id === selectedProposal.id)
-    : -1;
-  const canPage = pagedIndex >= 0 && pagedProposals.length > 1;
-  const stepProposal = (delta: number) => {
-    const next = pagedProposals[pagedIndex + delta];
-    if (next) setSelectedProposal(next);
-  };
-
-  /* Same pager contract for settled history: walk exactly the audit records the
-     current filters left on screen, so Previous/Next never steps onto a row the
-     user cannot see. */
-  const pagedRecords = visibleItems
-    .map((it) => it.record)
-    .filter((r): r is AuditRecord => r != null);
-  const recordIndex = activeRecord
-    ? pagedRecords.findIndex((r) => r.id === activeRecord.id)
-    : -1;
-  const recordPagerDisabled = recordIndex < 0 || pagedRecords.length <= 1;
-  const stepRecord = (delta: 1 | -1) => {
-    if (recordPagerDisabled) return;
-    setActiveRecord(pagedRecords[(recordIndex + delta + pagedRecords.length) % pagedRecords.length]);
-  };
-
   /* ── Tap / button handlers ─────────────────────────────────────────────── */
   /* Row taps route through inboxTapTarget — a pure helper whose return type has
      NO navigation variant, so a settled row can never navigate away from /inbox
@@ -948,6 +1006,10 @@ export function InboxPage() {
      behavior is pinned by client/src/lib/inboxTap.test.ts. */
   const openItem = (item: InboxItem) => {
     const target = inboxTapTarget(item);
+    /* The pager needs to know WHICH ROW is open, not just which record: the
+       five surfaces below hold five unrelated record types, and only the row id
+       is comparable across them. */
+    setOpenItemId(target.surface === "none" ? null : item.id);
     switch (target.surface) {
       case "agent-proposal-modal":
         setSelectedProposal(target.proposal);
@@ -1023,19 +1085,58 @@ export function InboxPage() {
     (item.proposal != null && item.proposalIsLive === true && (approveLive.isPending || rejectLive.isPending)) ||
     (item.liveAgentProposal != null && decideProposal.isPending);
 
-  /* Header pager for the ProposalDetail sheet — cycles the live queue. */
-  const pagerList: Proposal[] | null = !active
-    ? null
-    : queue.some((p) => p.id === active.id)
-      ? queue
-      : null;
-  const pagerIdx = active && pagerList ? pagerList.findIndex((p) => p.id === active.id) : -1;
-  const proposalPagerDisabled = !pagerList || pagerList.length <= 1 || pagerIdx < 0;
-  const pageProposal = (dir: 1 | -1) => {
-    if (!pagerList || proposalPagerDisabled) return;
-    setReturnTo(null);
-    setActiveIsLive(true);
-    setActive(pagerList[(pagerIdx + dir + pagerList.length) % pagerList.length]);
+  /* One pager across the whole timeline. Every openable row participates in
+     display order, whichever of the five surfaces it opens, so Previous/Next
+     mean "the next row you can see" instead of "the next row of this same kind"
+     — which used to strand the user at the edge of whichever queue they had
+     happened to open. */
+  /* The row behind the open insight card, so the card's Acknowledge writes to
+     the same pending/acknowledged state the row's own button does. Resolved by
+     insight id against the UNFILTERED list: the row id and the insight id are
+     different namespaces, and the row leaves `visibleItems` the moment it is
+     acknowledged (or a filter hides it) while the card is still open. */
+  const selectedInsightItem = selectedInsight
+    ? (items.find((item) => item.insight?.id === selectedInsight.id) ?? null)
+    : null;
+
+  const pagerEntries: PagerEntry[] = visibleItems
+    .filter((item) => inboxTapTarget(item).surface !== "none")
+    .map((item) => ({ id: item.id, open: () => openItem(item) }));
+  const pager = pagerState(pagerEntries, openItemId);
+  const closeOpenSurface = () => {
+    setActive(null);
+    setActiveLive(null);
+    setLiveRejection(null);
+    setSelectedInsight(null);
+    setSelectedProposal(null);
+    setActiveRecord(null);
+  };
+  const stepItem = (delta: 1 | -1) => {
+    /* Stepping closes one dialog and opens another; the surface that opens must
+       know it is a step, not a fresh open, so it can skip the entrance
+       animation. Cleared below once nothing is open. */
+    setSteppedViaPager(true);
+    stepPager(pagerEntries, openItemId, delta, closeOpenSurface);
+  };
+  /* Reset off the SURFACES, not off openItemId: an action that closes a card
+     (approve, acknowledge, follow a link out) does not always clear the open item
+     id, and a flag left set would silence the next card the user opens by hand. */
+  const anySurfaceOpen =
+    active !== null ||
+    activeLive !== null ||
+    selectedInsight !== null ||
+    selectedProposal !== null ||
+    activeRecord !== null;
+  useEffect(() => {
+    if (!anySurfaceOpen) setSteppedViaPager(false);
+  }, [anySurfaceOpen]);
+  /* Every surface below shares these, so the pager reads the same everywhere. */
+  const pagerProps = {
+    onPrev: () => stepItem(-1),
+    onNext: () => stepItem(1),
+    hasPrev: pager.hasPrev,
+    hasNext: pager.hasNext,
+    pagerStep: steppedViaPager,
   };
 
   /* One timeline row from a unified item.
@@ -1097,13 +1198,23 @@ export function InboxPage() {
     const candidate = candidateById.get(item.id);
     const blocked = candidate ? isBlockedByType(candidate, selection.type) : false;
 
+    /* Live records read exactly as they do on Overview, because both screens
+       render the SAME presenter output. Settled history has no counterpart
+       there, so it keeps the composition above. */
+    const presentation: RecordRowPresentation = item.presentation ?? {
+      title: formatText(item.title),
+      badge: { label: item.tag, className: item.tagClass, srLabel: item.tagSr },
+      subtitle: [item.amountDisplay, detail].filter(Boolean).join(" · ") || undefined,
+      note: item.time || undefined,
+    };
+
     return {
       id: item.id,
       tier: item.tier,
-      title: formatText(item.title),
-      badge: item.tag ? { label: item.tag, className: item.tagClass } : undefined,
-      subtitle: [item.amountDisplay, detail].filter(Boolean).join(" · ") || undefined,
-      note: item.time || undefined,
+      title: presentation.title,
+      badge: item.tag ? presentation.badge : undefined,
+      subtitle: presentation.subtitle,
+      note: presentation.note,
       actions,
       select: candidate
         ? {
@@ -1327,9 +1438,7 @@ export function InboxPage() {
         currentStatus={active ? statusOf(active) : undefined}
         open={active !== null}
         onOpenChange={(o) => { if (!o) dismissDetail(); }}
-        onPrev={() => pageProposal(-1)}
-        onNext={() => pageProposal(1)}
-        pagerDisabled={proposalPagerDisabled}
+        {...pagerProps}
         onAction={handleAction}
         rulePaused={active ? isRulePaused(active) : undefined}
         onPauseRule={pauseRule}
@@ -1365,7 +1474,8 @@ export function InboxPage() {
       <ReviewModal
         item={activeLive}
         open={activeLive !== null}
-        onOpenChange={(o) => { if (!o) { setActiveLive(null); setLiveRejection(null); } }}
+        onOpenChange={(o) => { if (!o) { setActiveLive(null); setLiveRejection(null); setOpenItemId(null); } }}
+        {...pagerProps}
         onConfirm={() => {
           if (activeLive?.live && activeLive.intentId) void approveIntent(activeLive.intentId, true);
           else setActiveLive(null);
@@ -1382,10 +1492,24 @@ export function InboxPage() {
         rejection={liveRejection}
       />
 
+      {/* Acknowledge is bound to the open INSIGHT, never to the row: the row
+          disappears from the list the instant it is acknowledged, and a control
+          that vanishes mid-interaction reads as a bug. It stays put, disabled. */}
       <LiveInsightModal
         insight={selectedInsight}
         open={selectedInsight !== null}
-        onOpenChange={(o) => { if (!o) setSelectedInsight(null); }}
+        onOpenChange={(o) => { if (!o) { setSelectedInsight(null); setOpenItemId(null); } }}
+        {...pagerProps}
+        onAcknowledge={
+          selectedInsight
+            ? () => { if (selectedInsightItem) acknowledgeItem(selectedInsightItem); }
+            : undefined
+        }
+        acknowledged={
+          selectedInsight !== null &&
+          (acknowledgedIds.has(selectedInsight.id) ||
+            (selectedInsightItem !== null && pendingAcknowledgedIds.has(selectedInsightItem.id)))
+        }
       />
 
       {/* Settled history, opened in place. Same popup the Audit Log uses, so the
@@ -1394,10 +1518,8 @@ export function InboxPage() {
       <AuditRecordPopup
         record={activeRecord}
         open={activeRecord !== null}
-        onOpenChange={(o) => { if (!o) setActiveRecord(null); }}
-        onPrev={() => stepRecord(-1)}
-        onNext={() => stepRecord(1)}
-        pagerDisabled={recordPagerDisabled}
+        onOpenChange={(o) => { if (!o) { setActiveRecord(null); setOpenItemId(null); } }}
+        {...pagerProps}
         returnToBase="/inbox"
       />
 
@@ -1405,12 +1527,9 @@ export function InboxPage() {
       <LiveProposalModal
         proposal={selectedProposal}
         open={selectedProposal !== null}
-        onOpenChange={(o) => { if (!o) setSelectedProposal(null); }}
-        onPrev={canPage ? () => stepProposal(-1) : undefined}
-        onNext={canPage ? () => stepProposal(1) : undefined}
-        hasPrev={pagedIndex > 0}
-        hasNext={pagedIndex >= 0 && pagedIndex < pagedProposals.length - 1}
-        position={canPage ? `Proposal ${pagedIndex + 1} of ${pagedProposals.length}` : undefined}
+        onOpenChange={(o) => { if (!o) { setSelectedProposal(null); setOpenItemId(null); } }}
+        {...pagerProps}
+        position={pager.position ?? undefined}
       />
     </div>
   );

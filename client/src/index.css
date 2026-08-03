@@ -282,6 +282,12 @@
 }
 
 @layer base {
+  /* Platform button labels use title case consistently, including labels
+     assembled from live counts or loading state text. */
+  button {
+    text-transform: capitalize;
+  }
+
   * {
     @apply border-border;
   }

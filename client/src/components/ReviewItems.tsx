@@ -5,6 +5,8 @@ import closeIcon from "@assets/Close_1783293571882.png";
 import { ICONS } from "@/assets/figma-icons";
 import { useCurrency } from "@/lib/useCurrency";
 import { AlertCallout } from "@/components/Callout";
+import { CardActions } from "@/components/ProposalCardParts";
+import { useCardTransition } from "@/lib/cardTransition";
 
 export type ReviewItemType = {
   id: number | string;
@@ -84,6 +86,9 @@ export const ReviewModal = ({
   onPrev,
   onNext,
   pagerDisabled = false,
+  hasPrev,
+  hasNext,
+  pagerStep,
   busy = false,
   rejection = null,
 }: {
@@ -95,6 +100,16 @@ export const ReviewModal = ({
   onPrev?: () => void;
   onNext?: () => void;
   pagerDisabled?: boolean;
+  /** Per-direction state, for a pager walking one shared list of mixed record
+   *  kinds: at the first row Previous is dead while Next is not, and a single
+   *  `pagerDisabled` cannot say that. Defaults to `pagerDisabled` for callers
+   *  that still page within one uniform queue. */
+  hasPrev?: boolean;
+  hasNext?: boolean;
+  /** True when this surface was opened by a Previous/Next step rather than by
+   *  the user picking a record. Skips the entrance animation — see
+   *  useCardTransition. */
+  pagerStep?: boolean;
   /** True while a real approve/decline call to brain-core is in flight. */
   busy?: boolean;
   /** brain-core's refusal, mapped to user copy. Rendered inline (danger tone). */
@@ -102,8 +117,11 @@ export const ReviewModal = ({
 }) => {
   const [auto, setAuto] = useState(false);
   const { format, formatText } = useCurrency();
+  const transition = useCardTransition(open, pagerStep);
   const swap = (s: string) => s.replace(/\$[\d,]+(?:\.\d+)?/g, m => format(m));
   const hasPager = Boolean(onPrev && onNext);
+  const prevDisabled = hasPrev === undefined ? pagerDisabled : !hasPrev;
+  const nextDisabled = hasNext === undefined ? pagerDisabled : !hasNext;
 
   // Reset the "auto" checkbox whenever the modal opens for a new item
   // or whenever it closes, so prior state doesn't leak between reviews.
@@ -123,12 +141,12 @@ export const ReviewModal = ({
     >
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+          className={`fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px] ${transition.overlay}`}
           data-testid="review-modal-backdrop"
         />
         <DialogPrimitive.Content
           aria-describedby="review-modal-description"
-          className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[24px] w-[440px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
+          className={`fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[24px] w-[440px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none ${transition.card}`}
           data-testid="review-modal"
         >
           {/* Title bar, Figma 4062:65550. Border on all sides per
@@ -209,8 +227,10 @@ export const ReviewModal = ({
               </AlertCallout>
             )}
 
-            {/* Action row, Figma 4071:65833. Confirm + Decline. */}
-            <div className="flex gap-[16px] items-start w-full">
+            {/* Action row, Figma 4071:65833. Confirm + Decline, under the same
+                full-width rule every other record card closes with. */}
+            <CardActions testId="divider-review-actions">
+              <div className="flex gap-[16px] items-start w-full">
               <button
                 onClick={() => onConfirm(auto)}
                 disabled={busy}
@@ -227,14 +247,15 @@ export const ReviewModal = ({
               >
                 <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#d20344] text-[16px] whitespace-nowrap">Decline</span>
               </button>
-            </div>
+              </div>
+            </CardActions>
 
             {hasPager && (
               <div className="border-t border-[#1d2132] pt-[16px] flex gap-[16px] items-center w-full">
                 <button
                   type="button"
                   onClick={onPrev}
-                  disabled={pagerDisabled}
+                  disabled={prevDisabled}
                   aria-label="Previous record"
                   data-testid="button-review-prev"
                   className="flex flex-1 items-center justify-center gap-[8px] px-[20px] py-[8px] rounded-[100px] bg-[#222737] hover:bg-[#2c3247] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#6c779d] disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
@@ -245,7 +266,7 @@ export const ReviewModal = ({
                 <button
                   type="button"
                   onClick={onNext}
-                  disabled={pagerDisabled}
+                  disabled={nextDisabled}
                   aria-label="Next record"
                   data-testid="button-review-next"
                   className="flex flex-1 items-center justify-center gap-[8px] px-[20px] py-[8px] rounded-[100px] bg-[#222737] hover:bg-[#2c3247] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#6c779d] disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"

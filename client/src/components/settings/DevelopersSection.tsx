@@ -30,6 +30,7 @@ import { AlertCallout, InfoIcon } from "@/components/Callout";
 import stepOneIcon from "@assets/1_1785602525964.png";
 import stepTwoIcon from "@assets/2_1785602525965.png";
 import stepThreeIcon from "@assets/3_1785602525965.png";
+import { capitalCase } from "@/lib/displayLabels";
 
 /* ─── Types (wire shapes from server/routes.ts developers block) ─── */
 type DevEnv = "sandbox" | "live";
@@ -1032,7 +1033,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
                     data-testid={`row-activity-${ev.id}`}
                   >
                     <span className="inline-flex items-center justify-center px-[8px] py-[3px] rounded-[22px] bg-[#222737] border border-[rgba(108,119,157,0.2)] [font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[14px] whitespace-nowrap shrink-0">
-                      {ev.layer}
+                      {capitalCase(ev.layer)}
                     </span>
                     <p className="flex-1 min-w-px [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] break-words group-hover:text-white transition-colors" title={ev.action}>{humanizeAction(ev.action)}</p>
                     <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[20px] text-right shrink-0">{formatDateTime(ev.created_at)}</p>
