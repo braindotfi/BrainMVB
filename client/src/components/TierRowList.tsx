@@ -172,11 +172,14 @@ export const TierRow = ({ row }: { row: TierRowModel }) => {
      The hover needs to lighten that tint, not snap back to the default. */
   const baseBg = row.rowBg ?? "#0a0c10";
   const hoverBg = row.rowBg ? "#1a0442" : "#11141b";
-  /* Settled rows show Figma's 16px / semibold / leading-[20px] for the two
-     secondary lines; live-queue rows keep the existing compact 14px / medium. */
-  const secondaryClass = row.statusPill
-    ? "[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] w-full truncate"
-    : "[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] w-full truncate";
+  /* Both secondary lines — the "why" subtitle and the timestamp note — share one
+     treatment on EVERY row, settled or not: 14px / medium / leading-[16px] in
+     #6c779d. Settled rows briefly carried a heavier 16px semibold variant here;
+     that made a decided row's supporting text compete with its own title (which
+     is the same 16px) and gave the two halves of the list different row heights.
+     Only the title and the right-hand pill distinguish a settled row now. */
+  const secondaryClass =
+    "[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] w-full truncate";
 
   return (
     <div
