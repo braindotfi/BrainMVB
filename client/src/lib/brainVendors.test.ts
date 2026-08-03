@@ -333,3 +333,46 @@ describe("reviewReasonLabel", () => {
     expect(reviewReasonLabel(trusted)).toBeNull();
   });
 });
+
+/* ── Display copy: "No action" ────────────────────────────────────────────────
+ *  The counterparty trust surface calls the acknowledged state "No action" to a
+ *  human. The WIRE VALUE is still `acknowledged` — the enum, the stored
+ *  trustState and the /trust/acknowledge route are untouched. These guards fail
+ *  if either half drifts: a rename that reaches the API, or a revert of the copy.
+ */
+describe("acknowledged reads as \"No action\" without changing the wire value", () => {
+  const read = (p: string) => require("fs").readFileSync(p, "utf8");
+
+  it("keeps `acknowledged` as the enum value and the route verb", () => {
+    expect(read("client/src/lib/vendorTypes.ts")).toContain(
+      '"unreviewed" | "trusted" | "paused" | "acknowledged"',
+    );
+    // The POST target is built from the literal action name.
+    expect(read("client/src/pages/VendorsPanel.tsx")).toContain(
+      'callTrustAction(vendorId, "acknowledge"',
+    );
+    expect(read("client/src/pages/VendorsPanel.tsx")).toContain("/trust/${action}");
+  });
+
+  it("shows \"No action\" on the chip, with the reviewed tooltip", () => {
+    const src = read("client/src/pages/VendorsPanel.tsx");
+    expect(src).toContain("No action");
+    expect(src).toContain('title="Reviewed — no action taken"');
+    // The old chip word must be gone from the chip itself.
+    expect(src).not.toContain(">\n      Reviewed\n    </span>");
+  });
+
+  it("labels every trust dismissal button \"No action\", never \"Dismiss\"", () => {
+    const src = read("client/src/components/VendorDetailPopup.tsx");
+    expect(src).not.toContain('label="Dismiss"');
+    // All four action blocks (known, paused, risk-flagged, new) carry the button.
+    expect(src.split('label="No action"').length - 1).toBe(4);
+  });
+
+  it("explains the acknowledged row without the word dismissed, and still offers Grant", () => {
+    const src = read("client/src/components/VendorDetailPopup.tsx");
+    expect(src).toContain("You reviewed this {noun} and took no action.");
+    // acknowledged → grant stays available on that row.
+    expect(src).toContain('data-testid="text-acknowledged-note"');
+  });
+});

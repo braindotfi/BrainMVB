@@ -183,7 +183,7 @@ export function VendorDetailPopup({
   /* Dismissed-but-not-trusted rows (trustState === "acknowledged") surface in
      the Trusted/Confirmed list, but their derived trustStatus is still
      "known"/"new". They must NOT get the unreviewed action set — the user
-     already decided. The only valid forward transition is grant.
+     already decided. The valid forward transitions are grant or pause.
      Risk-flagged acknowledged rows are excluded: risk keeps them in Needs
      Review (never the Trusted tab), so they keep the under_review block. */
   const reviewedOnly = isReviewedOnly(vendor) && vendor.trustStatus !== "under_review";
@@ -529,16 +529,15 @@ export function VendorDetailPopup({
               )}
 
               {/* Acknowledged (dismissed without granting) → seen from the
-                  Trusted/Confirmed tab. Grant is the only valid transition;
-                  re-flagging an acknowledged row is a non-transition, so no
-                  Flag button, and no Dismiss (it already happened). */}
+                  Trusted/Confirmed tab. Grant and Flag are both valid
+                  transitions; no Dismiss (it already happened). */}
               {reviewedOnly && (
                 <div className="flex flex-col gap-[14px] w-full">
                   <p
                     className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]"
                     data-testid="text-acknowledged-note"
                   >
-                    You dismissed this {noun} without granting trust. You can still grant trust now if you've changed your mind.
+                    You reviewed this {noun} and took no action. You can still grant trust now if you've changed your mind.
                   </p>
                   <TrustButton
                     label={grantLabel}
@@ -547,6 +546,14 @@ export function VendorDetailPopup({
                     color="#42bf23"
                     background="#123509"
                     testId="button-grant-trust"
+                  />
+                  <TrustButton
+                    label="Flag"
+                    onClick={() => onFlag?.(vendor.id)}
+                    busy={trustBusy}
+                    color="#ff9400"
+                    background="#4a2300"
+                    testId="button-flag-counterparty"
                   />
                 </div>
               )}
@@ -572,7 +579,7 @@ export function VendorDetailPopup({
                     testId="button-flag-counterparty"
                   />
                   <TrustButton
-                    label="Dismiss"
+                    label="No action"
                     onClick={() => onAcknowledge?.(vendor.id)}
                     busy={trustBusy}
                     color="#6c779d"
@@ -603,7 +610,7 @@ export function VendorDetailPopup({
                       testId="button-restore-trust"
                     />
                     <TrustButton
-                      label="Dismiss"
+                      label="No action"
                       onClick={() => onAcknowledge?.(vendor.id)}
                       busy={trustBusy}
                       color="#6c779d"
@@ -625,7 +632,7 @@ export function VendorDetailPopup({
                       testId="button-grant-trust"
                     />
                     <TrustButton
-                      label="Dismiss"
+                      label="No action"
                       onClick={() => onAcknowledge?.(vendor.id)}
                       busy={trustBusy}
                       color="#6c779d"
@@ -660,7 +667,7 @@ export function VendorDetailPopup({
                     testId="button-flag-counterparty"
                   />
                   <TrustButton
-                    label="Dismiss"
+                    label="No action"
                     onClick={() => onAcknowledge?.(vendor.id)}
                     busy={trustBusy}
                     color="#6c779d"

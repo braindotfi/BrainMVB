@@ -3,10 +3,35 @@ name: Counterparty trust is not a state machine brain-core has
 description: Why the Ledger's Trusted tier is underivable, which counterparty fields are real vs rejected, and the one-predicate rule for the review queue.
 ---
 
-# There is no vendor/counterparty trust state machine upstream
+# The trust state machine DOES exist now — the section below is history
 
-brain-core's ledger counterparty surface is: list, create, get by id, patch, get
-resolved. There is no grant-trust, revoke, pause or restore — not in the
+Trust transitions shipped upstream: grant / pause / restore / acknowledge per
+counterparty, member principal + `ledger:write`. There is **no** revoke.
+
+The durable lesson is about the BFF, not the route list: the generic brain-core
+passthrough is **GET-only**, and every write it does not recognise gets a 405
+saying only GET is proxied. That message reads like a policy ("writes are off in
+this build") but it is really "this path is missing from the write allowlist".
+
+**Why:** the misreading sends you to look for a feature flag or a disabled-writes
+switch, when the fix is one allowlist entry. It also tempts a wildcard write
+proxy, which would forward *any* method to *any* upstream path.
+
+**How to apply:** add one explicit entry per endpoint, never a wildcard. Register
+write routes BEFORE the GET passthrough and the 405 catch-all or the catch-all
+shadows them. Pick the principal deliberately — these routes are user-principal
+only, so they must carry the member session token; the platform shared secret and
+API keys are rejected upstream, and the shared secret's only job is minting the
+session in the first place.
+
+The rest of this file's opening argument is kept as the record of what was true
+before those PRs, because the *reasoning* about underivable tiers still applies
+to any field brain-core derives server-side.
+
+## (Historical) There was no trust state machine upstream
+
+brain-core's ledger counterparty surface was: list, create, get by id, patch, get
+resolved. There was no grant-trust, revoke, pause or restore — not in the
 api-surface artifact, not in the deployed `openapi.yaml`, not in the service
 routes. Do not go looking for one because a PR title mentions counterparties;
 the "manual counterparty" PRs add create/patch, not trust.
@@ -140,3 +165,20 @@ unreachable branches to rot. Keep any sibling action that IS backed by a real
 endpoint visually distinct from the parked ones. And check the whole frame, not
 just the button: titles, chip labels and body copy that name the old action or
 the wrong segment noun are the same inconsistency one layer up.
+
+## Display copy vs wire value on a state name
+
+The acknowledged state reads "No action" to a human while `acknowledged` remains
+the enum, the stored `trustState`, and the `/trust/acknowledge` verb.
+
+**Why:** state names get renamed for clarity far more often than the protocol
+does, and a find-and-replace on the word will silently rewrite the route string
+that is built from the action name (`/trust/${action}`), turning a copy change
+into a 404 that only shows up live.
+
+**How to apply:** pin BOTH halves in one test — the enum/route literals AND the
+rendered copy — so a future rename cannot move only one. When sweeping copy,
+scope it to the trust surface: "acknowledge"/"dismiss" also name unrelated
+things (insight acknowledgement, proposal reject, audit outcomes) that must not
+change. Note the chip's own word was "Reviewed", not "Acknowledged" — grep for
+what renders, not for the enum, or the sweep misses the string the user sees.

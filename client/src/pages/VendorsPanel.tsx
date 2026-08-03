@@ -81,17 +81,22 @@ function ReasonChip({ label }: { label: string }) {
   );
 }
 
-/** A row someone dismissed rather than granted. It shares the Trusted/Confirmed
- *  list so a dismissed row stays findable, and this badge is what keeps that
- *  list honest — without it the row would read as trusted. */
+/** A row someone reviewed but took no action on. It shares the Trusted/Confirmed
+ *  list so the row stays findable, and this badge is what keeps that list honest
+ *  — without it the row would read as trusted.
+ *
+ *  DISPLAY COPY ONLY: the wire/enum value stays `acknowledged` everywhere
+ *  (trustState, the /trust/acknowledge route, stored values). "No action" is
+ *  what a human sees; nothing about the API changed. */
 function ReviewedChip() {
   return (
     <span
       data-testid="chip-reviewed"
+      title="Reviewed — no action taken"
       className="shrink-0 rounded-[4px] px-[6px] py-[1px] [font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[11px] whitespace-nowrap"
       style={{ background: "#222737", color: "#6c779d" }}
     >
-      Reviewed
+      No action
     </span>
   );
 }
@@ -808,7 +813,7 @@ export function VendorsPanel() {
     );
   };
   const handleAcknowledge = (vendorId: string) =>
-    callTrustAction(vendorId, "acknowledge", "Dismissed", "Counterparty dismissed from review queue.");
+    callTrustAction(vendorId, "acknowledge", "No action", "Marked reviewed with no action taken.");
 
   /* Bulk confirm — Customers segment only. N individual grant calls so each
      row gets its own audit event. Risk-flagged rows (riskLevel set) cannot be
@@ -877,7 +882,7 @@ export function VendorsPanel() {
                 >
                   {bulkBusy
                     ? "Confirming..."
-                    : `Confirm all ${tabVendors.filter((v) => !v.riskLevel).length} customers`}
+                    : `Confirm All ${tabVendors.filter((v) => !v.riskLevel).length} Customers`}
                 </button>
               )}
 
