@@ -1,0 +1,214 @@
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
+import express, { type Express } from "express";
+import { type Server } from "node:http";
+import { type AddressInfo } from "node:net";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, resolve } from "node:path";
+
+/**
+ * Counterparty trust-route contract.
+ *
+ * This mounts the real BFF router and mocks brain-core only at fetch. The
+ * allowlist is intentionally explicit: a trust action must use the member
+ * session token, while an unlisted POST must fall through to the 405 guard.
+ */
+
+const PROVISION_SECRET = "test-provision-secret-trust-routes";
+const MEMBER_TOKEN = "MEMBER_TOKEN_trust_routes";
+const AGENT_TOKEN = "AGENT_TOKEN_trust_routes";
+const TENANT_ID = "tenant_trust_routes";
+
+process.env.BRAIN_DEMO_PROVISION_SECRET = PROVISION_SECRET;
+process.env.BRAIN_API_BASE_URL = "https://api.brain.fi/v1";
+delete process.env.BRAIN_AUTH_SIGN_KEY;
+delete process.env.BRAIN_TENANCY_MODE;
+delete process.env.BRAIN_PLATFORM_SERVICE_SECRET;
+delete process.env.BRAIN_AUTH_JWT_SECRET;
+
+interface RecordedCall {
+  url: string;
+  method: string;
+  auth?: string;
+  provisionAuth?: string;
+}
+
+const realFetch = globalThis.fetch;
+let calls: RecordedCall[] = [];
+let server: Server;
+let baseUrl: string;
+let createBrainProxyRouter: typeof import("./proxy").createBrainProxyRouter;
+let clearBrainTokenCache: typeof import("./auth").clearBrainTokenCache;
+
+function json(value: unknown, status = 200): Response {
+  return new Response(JSON.stringify(value), {
+    status,
+    headers: { "content-type": "application/json" },
+  });
+}
+
+function routeBrainCore(fullUrl: string, method: string): Response {
+  const path = fullUrl.split("?")[0];
+  if (path.endsWith("/demo/provision-run")) {
+    return json({
+      tenant_id: TENANT_ID,
+      member_token: MEMBER_TOKEN,
+      agent_token: AGENT_TOKEN,
+      expires_in: 1800,
+    });
+  }
+
+  if (
+    method === "POST" &&
+    /^https:\/\/api\.brain\.fi\/v1\/ledger\/counterparties\/[^/]+\/trust\/(grant|pause|acknowledge|restore)$/.test(
+      path,
+    )
+  ) {
+    return json({ ok: true, path });
+  }
+
+  throw new Error(`unexpected brain-core call in trust route test: ${method} ${path}`);
+}
+
+function installFetchMock(): void {
+  globalThis.fetch = (async (input: unknown, init: RequestInit = {}) => {
+    const url =
+      typeof input === "string"
+        ? input
+        : input instanceof URL
+          ? input.toString()
+          : (input as Request).url;
+
+    if (!url.startsWith("https://api.brain.fi")) {
+      return realFetch(input as never, init as never);
+    }
+
+    const headers = (init.headers ?? {}) as Record<string, string>;
+    calls.push({
+      url,
+      method: (init.method ?? "GET").toUpperCase(),
+      auth: headers.Authorization ?? headers.authorization,
+      provisionAuth: headers["X-Demo-Provision-Auth"],
+    });
+    return routeBrainCore(url, (init.method ?? "GET").toUpperCase());
+  }) as typeof fetch;
+}
+
+async function post(path: string): Promise<{ status: number; json: unknown }> {
+  const response = await realFetch(`${baseUrl}${path}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: "{}",
+  });
+  return { status: response.status, json: await response.json() };
+}
+
+function callsEndingWith(suffix: string): RecordedCall[] {
+  return calls.filter((call) => call.url.split("?")[0].endsWith(suffix));
+}
+
+function proxySource(): string {
+  const testDir = dirname(fileURLToPath(import.meta.url));
+  return readFileSync(resolve(testDir, "proxy.ts"), "utf8");
+}
+
+beforeAll(async () => {
+  installFetchMock();
+  ({ createBrainProxyRouter } = await import("./proxy"));
+  ({ clearBrainTokenCache } = await import("./auth"));
+
+  const app: Express = express();
+  app.use(express.json());
+  app.use((req, _res, next) => {
+    (req as unknown as { session: { userId: string } }).session = {
+      userId: "user-trust-routes",
+    };
+    next();
+  });
+  app.use("/api/brain", createBrainProxyRouter());
+
+  await new Promise<void>((resolveListen) => {
+    server = app.listen(0, resolveListen);
+  });
+  const address = server.address() as AddressInfo;
+  baseUrl = `http://127.0.0.1:${address.port}`;
+});
+
+afterAll(() => {
+  globalThis.fetch = realFetch;
+  server?.close();
+});
+
+beforeEach(() => {
+  calls = [];
+  clearBrainTokenCache();
+});
+
+describe("counterparty trust BFF route contract", () => {
+  const routes = [
+    ["grant", "/trust/grant"],
+    ["pause", "/trust/pause"],
+    ["acknowledge", "/trust/acknowledge"],
+    ["restore", "/trust/restore"],
+  ] as const;
+
+  it.each(routes)(
+    "mounts POST %s and forwards to the matching brain-core transition",
+    async (action, upstreamSuffix) => {
+      const result = await post(
+        `/api/brain/ledger/counterparties/cp_contract/trust/${action}`,
+      );
+
+      expect(result.status).toBe(200);
+      const upstreamCalls = callsEndingWith(
+        `/ledger/counterparties/cp_contract${upstreamSuffix}`,
+      );
+      expect(upstreamCalls).toHaveLength(1);
+      expect(upstreamCalls[0].method).toBe("POST");
+      expect(upstreamCalls[0].auth).toBe(`Bearer ${MEMBER_TOKEN}`);
+      expect(upstreamCalls[0].provisionAuth).toBeUndefined();
+      expect(result.json).toEqual({
+        ok: true,
+        path: `https://api.brain.fi/v1/ledger/counterparties/cp_contract${upstreamSuffix}`,
+      });
+    },
+  );
+
+  it("declares every trust route as a member ledger:write allowlist entry", () => {
+    const source = proxySource();
+
+    for (const action of ["grant", "pause", "acknowledge", "restore"]) {
+      const route = new RegExp(
+        String.raw`\{ method: "post", mount: "/ledger/counterparties/:id/trust/${action}", upstream:`,
+      );
+      expect(source).toMatch(route);
+
+      const routeLine = source
+        .split("\n")
+        .find((line) => line.includes(`mount: "/ledger/counterparties/:id/trust/${action}"`));
+      expect(routeLine).toContain('principal: "member"');
+      expect(routeLine).toContain('scope: "ledger:write"');
+    }
+
+    expect(source).not.toContain('mount: "/ledger/counterparties/:id/trust/revoke"');
+    expect(source).not.toContain(
+      'upstream: (p) => `/ledger/counterparties/${esc(p.id)}/trust/revoke`',
+    );
+  });
+
+  it.each(["revoke", "resume", "delete"])(
+    "rejects unallowlisted trust action %s with 405 instead of proxying it",
+    async (action) => {
+      const result = await post(
+        `/api/brain/ledger/counterparties/cp_contract/trust/${action}`,
+      );
+
+      expect(result.status).toBe(405);
+      expect(result.json).toEqual({
+        error: "method_not_allowed",
+        message: "Only GET is proxied to brain-core in this build; write paths are added per-endpoint.",
+      });
+      expect(calls).toHaveLength(0);
+    },
+  );
+});
