@@ -248,11 +248,14 @@ const TAG_AGENT = "bg-[#4a2300] text-[#ff9400] border-[rgba(255,149,0,0.2)]";
    Five states: Approved, Auto-Approved (both green), Rejected (red),
    Acknowledged (green), Pending (frosted-white). Container backgrounds:
    user-decided outcomes → purple tint; automated/in-flight → base dark. */
-const PILL_APPROVED: TierRowStatusPill = { label: "Approved",      bg: "#123509",                textColor: "#42bf23", icon: "check"   };
-const PILL_AUTO:     TierRowStatusPill = { label: "Auto-Approved", bg: "#123509",                textColor: "#42bf23", icon: "check"   };
-const PILL_REJECTED: TierRowStatusPill = { label: "Rejected",      bg: "#350011",                textColor: "#d20344", icon: "x"       };
-const PILL_ACKED:    TierRowStatusPill = { label: "Acknowledged",  bg: "#123509",                textColor: "#42bf23", icon: "check"   };
-const PILL_PENDING:  TierRowStatusPill = { label: "Pending",       bg: "rgba(255,255,255,0.3)", textColor: "#ffffff", icon: "pending" };
+/* Figma nodes 6214-69210 / 69233 / 69246 / 69258 / 69270.
+   All settled pills use 60 % opacity on both bg and text so the purple-tinted
+   row shows through; Pending uses a lighter frosted-white with 40 % text. */
+const PILL_APPROVED: TierRowStatusPill = { label: "Approved",      bg: "rgba(18,53,9,0.6)",       textColor: "rgba(66,191,35,0.6)",   icon: "check"   };
+const PILL_AUTO:     TierRowStatusPill = { label: "Auto-Approved", bg: "rgba(18,53,9,0.6)",       textColor: "rgba(66,191,35,0.6)",   icon: "check"   };
+const PILL_REJECTED: TierRowStatusPill = { label: "Rejected",      bg: "rgba(53,0,17,0.6)",       textColor: "rgba(210,3,68,0.6)",    icon: "x"       };
+const PILL_ACKED:    TierRowStatusPill = { label: "Acknowledged",  bg: "rgba(18,53,9,0.6)",       textColor: "rgba(66,191,35,0.6)",   icon: "check"   };
+const PILL_PENDING:  TierRowStatusPill = { label: "Pending",       bg: "rgba(255,255,255,0.15)",  textColor: "rgba(255,255,255,0.4)", icon: "pending" };
 
 /** Background applied to the row container for settled records. */
 const ROW_BG_DECIDED = "#12032d"; // purple tint — user was involved in this outcome
