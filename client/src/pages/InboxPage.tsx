@@ -702,6 +702,15 @@ export function InboxPage() {
       out.push(it);
     };
 
+    /* Brain-core never removes a proposal from the live /v1/proposals feed when
+       it gets decided — it only adds an audit record. Without this guard a
+       proposal and its settled audit record both appear simultaneously (the user
+       sees two rows for the same invoice). Build a set of proposal IDs that the
+       audit log already confirms as decided so we can suppress the live copy. */
+    const decidedProposalIds = new Set(
+      auditRecords.flatMap((r) => (r.proposalId ? [r.proposalId] : [])),
+    );
+
     /* Needs you: session-scoped §6-gated intents (decidable). */
     for (const item of liveReviews) {
       const sessionPresentation = sessionIntentRow(item, fmt);
@@ -758,6 +767,10 @@ export function InboxPage() {
        originating agent's identity; the "Why:" line is the agent's own
        narrative — omitted when the record carries none (honest omission). */
     for (const p of needsReviewProposals) {
+      /* Skip proposals the audit log already confirms as decided — brain-core
+         never removes them from the feed, so without this guard both the live
+         pending row and the settled audit row render for the same invoice. */
+      if (decidedProposalIds.has(p.id)) continue;
       const agentKey = agentKeyForProposalType(p.type);
       const agentName = p.agent?.display_name || AGENT_DISPLAY_NAME[agentKey];
       const isPaymentAgent = agentKey === "payment" || /^(?:demo\s+)?payment agent$/i.test(agentName.trim());
