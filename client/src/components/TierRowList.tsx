@@ -75,6 +75,22 @@ export interface TierRowSelect {
   onChange: () => void;
 }
 
+/** Right-side outcome pill for settled / decided rows.
+ *
+ *  When this is set the row renders the pill instead of action buttons — the
+ *  outcome is final so there is nothing to act on. The three icon variants map
+ *  to the three semantic outcomes (done-positive, done-negative, in-progress).
+ */
+export interface TierRowStatusPill {
+  label: string;
+  /** Background of the pill capsule, e.g. "#123509" or "rgba(255,255,255,0.3)". */
+  bg: string;
+  /** Text + icon stroke colour. */
+  textColor: string;
+  /** Semantic shape: checkmark (approved/acknowledged), X (rejected), clock (pending). */
+  icon: "check" | "x" | "pending";
+}
+
 export interface TierRowModel {
   id: string;
   tier: RowTier;
@@ -92,16 +108,87 @@ export interface TierRowModel {
   select?: TierRowSelect;
   /** Stable prefix for this row's test ids, e.g. `row-overview`. */
   testIdPrefix: string;
+  /** Right-side outcome pill for settled records. Replaces action buttons. */
+  statusPill?: TierRowStatusPill;
+  /** Container background override. Settled records get a purple tint (#12032d)
+   *  when a human made the decision; automated/in-progress rows stay on base. */
+  rowBg?: string;
+}
+
+/* ── Outcome-status pill (right side of settled rows) ──────────────────────
+   Figma nodes 6214-69210 / 6214-69233 / 6214-69246 / 6214-69258 / 6214-69270.
+   Three icon shapes: checkmark (approved / acknowledged / auto-approved),
+   X (rejected), clock (pending / in-flight). All stroked in the pill's own
+   textColor so they recolour automatically. */
+
+function PillCheckIcon({ color }: { color: string }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0">
+      <path d="M3.5 8.5 7 12l5.5-8" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function PillXIcon({ color }: { color: string }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0">
+      <path d="M4.5 4.5 11.5 11.5M11.5 4.5 4.5 11.5" stroke={color} strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function PillClockIcon({ color }: { color: string }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0">
+      <circle cx="8" cy="8" r="5.5" stroke={color} strokeWidth="1.5" />
+      <path d="M8 5.5V8l2 1.5" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function DecisionPill({ pill }: { pill: TierRowStatusPill }) {
+  const Icon =
+    pill.icon === "check" ? PillCheckIcon : pill.icon === "x" ? PillXIcon : PillClockIcon;
+  return (
+    <div
+      className="flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] shrink-0"
+      style={{ background: pill.bg }}
+      data-testid="status-pill"
+    >
+      <Icon color={pill.textColor} />
+      <span
+        className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[12px] whitespace-nowrap"
+        style={{ color: pill.textColor }}
+      >
+        {pill.label}
+      </span>
+    </div>
+  );
 }
 
 export const TierRow = ({ row }: { row: TierRowModel }) => {
   const accent = ROW_ACCENT[row.tier];
+  /* Settled rows tint their background (purple for user-decided, base for auto).
+     The hover needs to lighten that tint, not snap back to the default. */
+  const baseBg = row.rowBg ?? "#0a0c10";
+  const hoverBg = row.rowBg ? "#1a0442" : "#11141b";
+  /* Settled rows show Figma's 16px / semibold / leading-[20px] for the two
+     secondary lines; live-queue rows keep the existing compact 14px / medium. */
+  const secondaryClass = row.statusPill
+    ? "[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] w-full truncate"
+    : "[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] w-full truncate";
+
   return (
     <div
-      className={`flex flex-col sm:flex-row gap-[12px] items-start sm:items-center justify-between px-[16px] py-[12px] w-full bg-[#0a0c10] transition-colors hover:bg-[#11141b] border-b border-solid border-[#1d2132] last:border-b-0 ${
+      className={`flex flex-col sm:flex-row gap-[12px] items-start sm:items-center justify-between px-[16px] py-[12px] w-full transition-colors border-b border-solid border-[#1d2132] last:border-b-0 ${
         accent ? "border-l-[3px]" : ""
       } ${row.onOpenDetail ? "cursor-pointer" : ""}`}
-      style={accent ? { borderLeftColor: accent } : undefined}
+      style={{
+        background: baseBg,
+        ...(accent ? { borderLeftColor: accent } : {}),
+      }}
+      onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = hoverBg; }}
+      onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = baseBg; }}
       data-testid={`${row.testIdPrefix}-${row.id}`}
       data-tier={row.tier}
       {...(row.onOpenDetail
@@ -147,17 +234,19 @@ export const TierRow = ({ row }: { row: TierRowModel }) => {
           )}
         </div>
         {row.subtitle && (
-          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] w-full truncate">
+          <p className={secondaryClass}>
             {row.subtitle}
           </p>
         )}
         {row.note && (
-          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] w-full truncate">
+          <p className={secondaryClass}>
             {row.note}
           </p>
         )}
       </div>
-      {row.actions.length > 0 && (
+      {row.statusPill ? (
+        <DecisionPill pill={row.statusPill} />
+      ) : row.actions.length > 0 ? (
         <div className="flex gap-[8px] items-center shrink-0">
           {row.actions.map((a) => (
             <ActionButton
@@ -172,7 +261,7 @@ export const TierRow = ({ row }: { row: TierRowModel }) => {
             />
           ))}
         </div>
-      )}
+      ) : null}
     </div>
   );
 };

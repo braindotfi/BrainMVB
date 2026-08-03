@@ -53,7 +53,7 @@ import {
 } from "@/lib/rulesStore";
 import { useReviewStatuses, setReviewStatus } from "@/lib/reviewStatusStore";
 import { acknowledgeInsight, useAcknowledgedRecords } from "@/lib/acknowledgedStore";
-import { TierRow, type TierRowModel, type TierRowAction } from "@/components/TierRowList";
+import { TierRow, type TierRowModel, type TierRowAction, type TierRowStatusPill } from "@/components/TierRowList";
 import {
   applyDecisionFilters,
   buildSearchText,
@@ -204,6 +204,12 @@ type InboxItem = DecisionFacets & {
    *  (auto-approved, decided, audit, acknowledged) is Inbox-only and keeps the
    *  outcome pills composed below. */
   presentation?: RecordRowPresentation;
+  /** Right-side outcome pill for settled/decided rows (Figma nodes 6214-69xxx).
+   *  When set, the badge slot shows the agent name instead of the status. */
+  statusPill?: TierRowStatusPill;
+  /** Container background override for settled rows. User-decided outcomes
+   *  get a purple tint (#12032d); automated/in-flight stay on base (#0a0c10). */
+  rowBg?: string;
   /* "proposal" items are decidable (Approve/Reject); "detection" items are
      ledger-derived observations — nothing is proposed, no decision buttons. */
   kind: "proposal" | "detection";
@@ -232,6 +238,49 @@ const TAG_APPROVED_BY_YOU = "bg-[#123509] text-[#42bf23] border-[rgba(66,191,35,
 const TAG_REJECTED = "bg-[#350011] text-[#d20344] border-[rgba(210,3,68,0.2)]";
 const TAG_ACKNOWLEDGED = "bg-[#123509] text-[#42bf23] border-[rgba(66,191,35,0.2)]";
 const TAG_DETECTED = "bg-[#222737] text-[#6c779d] border-[rgba(108,119,157,0.2)]";
+/* Orange agent-name chip — matches the orange badges on live proposals so the
+   settled history reads consistently with the queue above it. */
+const TAG_AGENT = "bg-[#4a2300] text-[#ff9400] border-[rgba(255,149,0,0.2)]";
+
+/* ── Decision outcome pills (right-side, Figma nodes 6214-69xxx) ─────────────
+   Five states: Approved, Auto-Approved (both green), Rejected (red),
+   Acknowledged (green), Pending (frosted-white). Container backgrounds:
+   user-decided outcomes → purple tint; automated/in-flight → base dark. */
+const PILL_APPROVED: TierRowStatusPill = { label: "Approved",      bg: "#123509",                textColor: "#42bf23", icon: "check"   };
+const PILL_AUTO:     TierRowStatusPill = { label: "Auto-Approved", bg: "#123509",                textColor: "#42bf23", icon: "check"   };
+const PILL_REJECTED: TierRowStatusPill = { label: "Rejected",      bg: "#350011",                textColor: "#d20344", icon: "x"       };
+const PILL_ACKED:    TierRowStatusPill = { label: "Acknowledged",  bg: "#123509",                textColor: "#42bf23", icon: "check"   };
+const PILL_PENDING:  TierRowStatusPill = { label: "Pending",       bg: "rgba(255,255,255,0.3)", textColor: "#ffffff", icon: "pending" };
+
+/** Background applied to the row container for settled records. */
+const ROW_BG_DECIDED = "#12032d"; // purple tint — user was involved in this outcome
+const ROW_BG_BASE    = "#0a0c10"; // no tint — automated / in-flight
+
+/** Map a brain-core audit event type to its right-side outcome pill. */
+function auditStatusPill(eventType: AuditEventType): TierRowStatusPill | undefined {
+  switch (eventType) {
+    case "approved":      return PILL_APPROVED;
+    case "auto_approved": return PILL_AUTO;
+    case "rejected":
+    case "flagged":
+    case "trust_revoked": return PILL_REJECTED;
+    case "acknowledged":  return PILL_ACKED;
+    case "postponed":     return PILL_PENDING;
+    default:              return undefined;
+  }
+}
+
+/** Row container background for settled audit-event records. */
+function auditRowBg(eventType: AuditEventType): string {
+  switch (eventType) {
+    case "approved":
+    case "rejected":
+    case "flagged":
+    case "trust_revoked":
+    case "acknowledged": return ROW_BG_DECIDED;
+    default:             return ROW_BG_BASE;
+  }
+}
 
 interface InboxDropdownOption {
   value: string;
@@ -775,8 +824,8 @@ export function InboxPage() {
         type: "payment",
         search: buildSearchText(p.title, p.rowSubtitle, p.amountDisplay),
         title: p.title,
-        tag: "Auto-Approved",
-        tagClass: TAG_AUTO,
+        tag: p.agent ?? "",
+        tagClass: p.agent ? TAG_AGENT : "",
         desc: p.rowSubtitle,
         time: p.settledMeta ? "" : p.dueLabel ?? "",
         why: p.rationale,
@@ -784,6 +833,8 @@ export function InboxPage() {
         actionable: false,
         proposal: p,
         proposalIsLive: true,
+        statusPill: PILL_AUTO,
+        rowBg: ROW_BG_BASE,
       });
     }
 
@@ -793,6 +844,13 @@ export function InboxPage() {
       const p = resolveProposal(id);
       if (!p) continue;
       const approved = status === "executing" || status === "executed";
+      /* "executing" = brain is processing — still in-flight → Pending pill.
+         "executed"  = confirmed done → Approved pill. */
+      const sessionPill: TierRowStatusPill | undefined =
+        status === "executed"   ? PILL_APPROVED  :
+        status === "executing"  ? PILL_PENDING   :
+        status === "rejected"   ? PILL_REJECTED  :
+        undefined; // postponed keeps the badge (waiting tier, not decided)
       push({
         id: `${p.id}--${status}`,
         kind: "proposal",
@@ -802,8 +860,10 @@ export function InboxPage() {
         type: p.agent ?? "payment",
         search: buildSearchText(p.title, p.rowSubtitle, p.amountDisplay, p.agent),
         title: p.title,
-        tag: approved ? "Approved by you" : status === "rejected" ? "Rejected by you" : "Postponed",
-        tagClass: approved ? TAG_APPROVED_BY_YOU : status === "rejected" ? TAG_REJECTED : TAG_DETECTED,
+        /* Postponed keeps a small badge (no status pill); decided rows show agent
+           name in the badge so the pill stands alone as the outcome. */
+        tag: sessionPill ? (p.agent ?? "") : (status === "postponed" ? "Postponed" : ""),
+        tagClass: sessionPill ? (p.agent ? TAG_AGENT : "") : (status === "postponed" ? TAG_DETECTED : ""),
         desc: p.rowSubtitle,
         time: "Just now",
         why: p.rationale,
@@ -811,6 +871,10 @@ export function InboxPage() {
         actionable: status === "postponed",
         proposal: p,
         proposalIsLive: false,
+        statusPill: sessionPill,
+        rowBg: sessionPill
+          ? (status === "executed" || status === "rejected" ? ROW_BG_DECIDED : ROW_BG_BASE)
+          : undefined,
       });
     }
 
@@ -823,6 +887,7 @@ export function InboxPage() {
          background jobs) are informational — nothing to approve or reject —
          so they stay in the Audit Log only, never in Inbox queues. */
       if (isAssistantActivity(r) || isSystemActivity(r)) continue;
+      const aPill = auditStatusPill(r.eventType);
       push({
         id: r.id,
         kind: "proposal",
@@ -831,14 +896,19 @@ export function InboxPage() {
         type: auditDecisionType(r),
         search: buildSearchText(r.summary, r.rowSubtitle, humanReadableActor(r.actor), r.occurredAtLabel),
         title: r.summary,
-        tag: auditEventLabel(r.eventType),
-        tagClass: auditEventChipClass(r.eventType),
+        /* Decided rows show the actor as a badge so the status pill stands alone. */
+        tag: aPill ? (humanReadableActor(r.actor) ?? "") : auditEventLabel(r.eventType),
+        tagClass: aPill
+          ? (humanReadableActor(r.actor) ? TAG_AGENT : "")
+          : auditEventChipClass(r.eventType),
         desc: r.rowSubtitle ?? [typeof r.amount === "number" ? format(r.amount) : "", humanReadableActor(r.actor) ?? ""].filter(Boolean).join(" · "),
         time: r.occurredAtLabel,
         why: auditWhy(r),
         amountDisplay: typeof r.amount === "number" ? format(r.amount) : undefined,
         actionable: false,
         record: r,
+        statusPill: aPill,
+        rowBg: aPill ? auditRowBg(r.eventType) : undefined,
       });
     }
 
@@ -857,13 +927,15 @@ export function InboxPage() {
         type: "payment",
         search: buildSearchText(r.summary, r.rowSubtitle, humanReadableActor(r.actor), r.occurredAtLabel),
         title: r.summary,
-        tag: "Acknowledged",
-        tagClass: TAG_ACKNOWLEDGED,
+        tag: "",
+        tagClass: "",
         desc: r.rowSubtitle ?? "",
         time: r.occurredAtLabel,
         why: auditWhy(r),
         actionable: false,
         record: r,
+        statusPill: PILL_ACKED,
+        rowBg: ROW_BG_DECIDED,
       });
     }
 
@@ -1230,6 +1302,8 @@ export function InboxPage() {
         : undefined,
       onOpenDetail: () => openItem(item),
       testIdPrefix: "row-decision",
+      statusPill: item.statusPill,
+      rowBg: item.rowBg,
     };
   };
 
