@@ -8,7 +8,6 @@ import {
   Landmark,
   BookCheck,
   ShieldAlert,
-  ChevronDown,
   ChevronRight,
   Check,
   CircleCheckBig,
@@ -159,15 +158,23 @@ export function ProposalDetail({
   onPrev,
   onNext,
   pagerDisabled,
+  hasPrev,
+  hasNext,
 }: {
   proposal: Proposal | null;
   currentStatus?: ProposalStatus;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /* Header pager. Cycle through the other records in the active tab */
+  /* Footer pager. Steps through the other records on the surface that opened it */
   onPrev?: () => void;
   onNext?: () => void;
   pagerDisabled?: boolean;
+  /* Per-direction state, for a pager walking one shared list of mixed record
+     kinds: at the first row Previous is dead while Next is not, and a single
+     `pagerDisabled` cannot say that. Defaults to `pagerDisabled` for callers
+     that still page within one uniform queue. */
+  hasPrev?: boolean;
+  hasNext?: boolean;
   onAction: (action: ProposalAction) => void;
   /* Auto_handled receipt. Retroactive controls (decision already happened) */
   rulePaused?: boolean;
@@ -178,7 +185,6 @@ export function ProposalDetail({
   onAlwaysHandle?: (proposal: Proposal) => void;
 }) {
   const { format, formatText } = useCurrency();
-  const [showTrace, setShowTrace] = useState(false);
   const [viewingDocument, setViewingDocument] = useState<DocumentRecord | null>(null);
   const [documentOpen, setDocumentOpen] = useState(false);
   // A LIVE proposal's invoiceId is a brain-core ledger id; fetch its invoice as a DocumentRecord
@@ -537,26 +543,6 @@ export function ProposalDetail({
           </>
           )}
 
-            {/* Technical detail: raw six-layer trace / JSON, collapsed */}
-            <div className="w-full border-t border-[#1d2132] pt-[16px]">
-              <button
-                type="button"
-                onClick={() => setShowTrace((s) => !s)}
-                data-testid="button-toggle-trace"
-                className="flex items-center gap-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-[#414965] hover:text-[#6c779d] transition-colors uppercase"
-              >
-                <ChevronDown size={14} className={`transition-transform ${showTrace ? "rotate-180" : ""}`} />
-                Technical detail
-              </button>
-              {showTrace && (
-                <pre
-                  data-testid="trace-json"
-                  className="mt-[12px] bg-[#06070a] rounded-[12px] p-[14px] w-full overflow-x-auto [font-family:'JetBrains_Mono',monospace] text-[11px] leading-[16px] text-[#6c779d] whitespace-pre"
-                >
-{JSON.stringify(buildTrace(proposal, currentStatus), null, 2)}
-                </pre>
-              )}
-            </div>
           </div>
 
           {/* Footer: Previous/Next pill buttons (matches Figma) */}
@@ -566,7 +552,7 @@ export function ProposalDetail({
                 <button
                   type="button"
                   onClick={onPrev}
-                  disabled={pagerDisabled}
+                  disabled={hasPrev === undefined ? pagerDisabled : !hasPrev}
                   data-testid="button-proposal-prev"
                   className="flex-[1_0_0] flex items-center justify-center gap-[8px] min-w-px px-[20px] py-[8px] rounded-[100px] bg-[#222737] text-[#6c779d] hover:bg-[#2c3247] transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[#222737] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
                 >
@@ -576,7 +562,7 @@ export function ProposalDetail({
                 <button
                   type="button"
                   onClick={onNext}
-                  disabled={pagerDisabled}
+                  disabled={hasNext === undefined ? pagerDisabled : !hasNext}
                   data-testid="button-proposal-next"
                   className="flex-[1_0_0] flex items-center justify-center gap-[8px] min-w-px px-[20px] py-[8px] rounded-[100px] bg-[#222737] text-[#6c779d] hover:bg-[#2c3247] transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[#222737] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
                 >
@@ -1022,22 +1008,3 @@ function ActionButton({
   );
 }
 
-/* The raw "six-layer trace" surfaced behind the Technical detail disclosure. */
-function buildTrace(p: Proposal, currentStatus?: ProposalStatus) {
-  return {
-    audit_id: p.auditId,
-    layers: {
-      "1_ingest": { agent: p.agent, surface: p.surface, source_evidence: p.evidence.length },
-      "2_extract": p.facts ?? [],
-      "3_classify": { severity: p.severity, reason_chips: p.reasonChips },
-      "4_score": p.confidence,
-      "5_policy": p.policy,
-      "6_propose": {
-        action: p.actionStatement,
-        execution: p.executionLabel,
-        cancel_window: p.cancelDeadlineLabel,
-        status: currentStatus ?? p.status,
-      },
-    },
-  };
-}

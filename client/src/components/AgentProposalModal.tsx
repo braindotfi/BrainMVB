@@ -39,7 +39,6 @@ import {
   buildProposalDetailRows,
   buildProposalHeadline,
   initialsOf,
-  MAX_VISIBLE_DETAIL_ROWS,
   buildKeyFactRows,
   keyFactsFromPresentation,
   buildFlaggedBy,
@@ -48,7 +47,6 @@ import {
   buildConfidence,
   buildWhySuggested,
   buildEvidenceTiles,
-  buildTechnicalLayers,
   buildRefDisplayMap,
   resolveHeadlineText,
   resolveProseText,
@@ -67,7 +65,6 @@ import {
   CardBody,
   CardSection,
   CardText,
-  CollapsibleSection,
   ConfidenceMeter,
   EvidenceLinkRow,
   HeadingValue,
@@ -1482,7 +1479,6 @@ export function LiveProposalModal({
   const whySuggested = buildWhySuggested(policy, proposal.details);
   const decisions = buildDecisionButtons(proposal.available_decisions, presentation?.actions);
   const consequences = buildConsequences(presentation?.consequences, decisions);
-  const technicalLayers = buildTechnicalLayers(presentation?.technical_detail);
 
   // `evidence` is defensive: this record can arrive from any cached /proposals
   // read, and the enriching route is not the only way one reaches this modal.
@@ -1504,8 +1500,11 @@ export function LiveProposalModal({
     formatText,
   );
   const allRows = buildProposalDetailRows(evidence, subjectName, money, headline.code);
-  const visibleRows = allRows.slice(0, MAX_VISIBLE_DETAIL_ROWS);
-  const overflowRows = allRows.slice(MAX_VISIBLE_DETAIL_ROWS);
+  /* Every derived row is shown. These used to be capped at MAX_VISIBLE_DETAIL_ROWS
+     with the remainder spilling into Technical Detail; with that section gone the
+     cap would silently discard facts instead of relocating them, and a key-facts
+     table that quietly drops rows is worse than a slightly longer card. */
+  const visibleRows = allRows;
 
   /* Key facts: brain-core's own table, with ids already swapped for names by the
      BFF. `keyFactsFromPresentation` is the fallback for a record that reached this
@@ -1582,13 +1581,6 @@ export function LiveProposalModal({
       )
     : null;
 
-  const hasTechnical =
-    evidence.length > 0 ||
-    Boolean(proposal.payment_intent_id) ||
-    technicalLayers.length > 0 ||
-    keyFacts.technical.length > 0 ||
-    overflowRows.length > 0;
-
   const showPager = Boolean(onPrev && onNext);
 
   const act = (decision: ProposalDecision) => {
@@ -1627,7 +1619,7 @@ export function LiveProposalModal({
 
           <div className="flex flex-col items-start w-full overflow-y-auto">
             {/* Hero — risk pill directly under the header, then the headline group. */}
-            <div className="border-b border-[#1d2132] border-solid flex flex-col gap-[24px] items-start p-[24px] shrink-0 w-full">
+            <div className="border-b border-[#1d2132] border-solid flex flex-col gap-[8px] items-start p-[24px] shrink-0 w-full">
               {risk && (
                 <StatusPill
                   label={titleCaseLabel(risk.label)}
@@ -1690,9 +1682,9 @@ export function LiveProposalModal({
 
               {/* Linked Evidence — Wiki-resolved records only. A ref that resolved to
                   nothing yields NO row: the only thing left to show would be the raw
-                  id this view must not contain, and it is already in Technical Detail. */}
+                  id, which this view must not put in front of an approver. */}
               {evidenceTiles.length > 0 && (
-                <CardSection title="Linked Evidence">
+                <CardSection title="Linked Evidence" gap={8}>
                   <div className="flex flex-col gap-[8px] items-start w-full" data-testid="list-live-proposal-evidence">
                     {evidenceTiles.map((tile, i) => (
                       <EvidenceLinkRow
@@ -1777,82 +1769,11 @@ export function LiveProposalModal({
                       own content. Omitted outright when the record carries no policy
                       at all, never rendered as "Flagged by —". */}
                   {flaggedBy && (
-                    <CardText testId={`text-live-proposal-flagged-by-${flaggedBy.source}`}>
+                    <CardText tone="muted" testId={`text-live-proposal-flagged-by-${flaggedBy.source}`}>
                       Flagged by <span className="text-[#a8b9f4]">{flaggedBy.text}</span>
                     </CardText>
                   )}
                 </CardSection>
-              )}
-
-              {/* Technical reference — raw ids live here, collapsed, so the card reads
-                  as names but the underlying refs stay available for support. */}
-              {hasTechnical && (
-                <CollapsibleSection
-                  title="Technical Detail"
-                  expanded={showTechnical}
-                  onToggle={() => setShowTechnical((v) => !v)}
-                  toggleTestId="button-live-proposal-technical-toggle"
-                >
-                  <div
-                    className="bg-[#0a0c10] border border-solid border-[#1d2132] rounded-[16px] p-[16px] w-full flex flex-col gap-[16px]"
-                    data-testid="list-live-proposal-technical"
-                  >
-                      {/* The stored action type the public `type` was derived from —
-                          the first thing to check when a card routes oddly. */}
-                      {proposal.stored_action_type && (
-                        <TechnicalBlock label="Stored action type">
-                          <span data-testid="text-live-proposal-stored-action-type">
-                            {proposal.stored_action_type}
-                          </span>
-                        </TechnicalBlock>
-                      )}
-                      {proposal.details && Object.keys(proposal.details).length > 0 && (
-                        <TechnicalBlock label="Action details" testId="row-live-proposal-details">
-                          {JSON.stringify(proposal.details, null, 2)}
-                        </TechnicalBlock>
-                      )}
-                      {/* Identifier facts, kept out of the card face by
-                          buildKeyFactRows but preserved verbatim for support. */}
-                      {keyFacts.technical.map((r, i) => (
-                        <TechnicalBlock key={`tech-fact-${i}`} label={r.label} testId={`row-live-proposal-technical-fact-${i}`}>
-                          {r.value}
-                        </TechnicalBlock>
-                      ))}
-                      {overflowRows.map((r, i) => (
-                        <TechnicalBlock key={`overflow-${i}`} label={r.label}>
-                          {r.value}
-                        </TechnicalBlock>
-                      ))}
-                      {evidence.map((e, i) => (
-                        <TechnicalBlock
-                          key={`ev-${i}`}
-                          label={e.display ? `${e.label ?? e.kind} · ${e.display}` : (e.label ?? e.kind)}
-                        >
-                          {e.ref}
-                        </TechnicalBlock>
-                      ))}
-                      {/* No live PaymentIntent-by-id detail viewer exists outside ReviewPage's
-                          own local queue state (openProposalDetail.ts only resolves the
-                          fabricated mock catalogue) - reference text, not a link. */}
-                      {proposal.payment_intent_id && (
-                        <TechnicalBlock label="Payment intent">
-                          <span data-testid="text-live-proposal-payment-intent">{proposal.payment_intent_id}</span>
-                        </TechnicalBlock>
-                      )}
-                      {/* The six pipeline layers, in contract order. Rendered as the
-                          JSON core sent: this is the audit trail, so it is shown
-                          as-is rather than reworded. */}
-                      {technicalLayers.map((layer) => (
-                        <TechnicalBlock
-                          key={layer.key}
-                          label={layer.title}
-                          testId={`layer-live-proposal-technical-${layer.key}`}
-                        >
-                          {layer.json}
-                        </TechnicalBlock>
-                      ))}
-                  </div>
-                </CollapsibleSection>
               )}
 
               {/* Decisions close the card, as in the frame. Buttons come from
@@ -1872,7 +1793,9 @@ export function LiveProposalModal({
                       title={
                         d.writable
                           ? (d.meaning ?? undefined)
-                          : `brain-core offers "${d.id}", which this app cannot submit yet.`
+                          : d.offeredByCore
+                            ? `brain-core offers "${d.id}", which this app cannot submit yet.`
+                            : "Brain has no edit action for this proposal. Reject it and raise a corrected one instead."
                       }
                       onClick={d.writable ? () => act(d.id as ProposalDecision) : undefined}
                       testId={`button-live-proposal-decision-${d.id}`}
@@ -1951,26 +1874,6 @@ export function LiveProposalModal({
     </DialogPrimitive.Root>
   );
 }
-
-/** One labelled block inside the collapsed technical card. */
-const TechnicalBlock = ({
-  label,
-  children,
-  testId,
-}: {
-  label: string;
-  children: ReactNode;
-  testId?: string;
-}) => (
-  <div className="flex flex-col gap-[4px] w-full" data-testid={testId}>
-    <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-[#6c779d]">
-      {label}
-    </span>
-    <pre className="[font-family:'JetBrains_Mono',monospace] font-medium text-[12px] leading-[16px] text-[#414965] whitespace-pre-wrap break-all m-0">
-      {children}
-    </pre>
-  </div>
-);
 
 /** Compact row for a live proposal, matching LiveInsightRow/ProposalRow's existing
  *  styling. Works off the list SUMMARY shape (no fan-out needed just to render a row). */

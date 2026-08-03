@@ -30,6 +30,8 @@ export function AuditRecordPopup({
   onPrev,
   onNext,
   pagerDisabled,
+  hasPrev,
+  hasNext,
   returnToBase,
 }: {
   record: AuditRecord | null;
@@ -38,6 +40,12 @@ export function AuditRecordPopup({
   onPrev?: () => void;
   onNext?: () => void;
   pagerDisabled?: boolean;
+  /** Per-direction state, for a pager walking one shared list of mixed record
+   *  kinds: at the first row Previous is dead while Next is not, and a single
+   *  `pagerDisabled` cannot say that. Defaults to `pagerDisabled` for callers
+   *  that still page within one uniform queue. */
+  hasPrev?: boolean;
+  hasNext?: boolean;
   /* Route this popup should come BACK to when the user follows a linked entity
      (vendor / proposal) and then returns. Defaults to the unified Inbox
      timeline — the old Audit Log page is retired and /audit-log is now only a
@@ -369,7 +377,7 @@ export function AuditRecordPopup({
                   <button
                     type="button"
                     onClick={onPrev}
-                    disabled={pagerDisabled}
+                    disabled={hasPrev === undefined ? pagerDisabled : !hasPrev}
                     data-testid="button-audit-record-prev"
                     className="bg-[#222737] flex-1 flex gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#2c3247] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
                   >
@@ -379,7 +387,7 @@ export function AuditRecordPopup({
                   <button
                     type="button"
                     onClick={onNext}
-                    disabled={pagerDisabled}
+                    disabled={hasNext === undefined ? pagerDisabled : !hasNext}
                     data-testid="button-audit-record-next"
                     className="bg-[#222737] flex-1 flex gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#2c3247] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
                   >

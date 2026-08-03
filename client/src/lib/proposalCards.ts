@@ -24,9 +24,6 @@ import type {
   BrainProposal,
 } from "./brainProposals";
 
-/** Keeps the card scannable: the rest moves into "Technical reference". */
-export const MAX_VISIBLE_DETAIL_ROWS = 4;
-
 /** Most decision-relevant first. Rows not listed keep their arrival order after
  *  these, so a new brain-core fact still renders instead of being dropped. */
 const DETAIL_ROW_PRIORITY = ["Amount", "Overdue by", "Due", "Status", "Invoice", "Counterparty", "PO"];
@@ -591,6 +588,10 @@ function isHumanReadablePolicyReference(value: string): boolean {
  */
 const WRITABLE_DECISIONS = new Set(["approve", "reject", "acknowledge", "undo"]);
 
+/** The design's decision row is Reject / Edit / Approve, but `edit` is not a
+ *  decision brain-core offers and there is no endpoint that would accept it. */
+export const EDIT_DECISION_ID = "edit";
+
 export type DecisionTone = "approve" | "reject" | "neutral" | "acknowledge";
 
 export interface DecisionButton {
@@ -603,6 +604,11 @@ export interface DecisionButton {
   /** False when the id is outside the documented write set: the button renders,
    *  disabled, instead of firing a call the API would reject. */
   writable: boolean;
+  /** False for the placeholder Edit button, which the design requires but no
+   *  brain-core decision backs. Callers must word its disabled state as "the
+   *  API has no such action", not "this app cannot submit it yet" — the two are
+   *  different facts and only one of them is ours to fix. */
+  offeredByCore: boolean;
 }
 
 function toneFor(id: string): DecisionTone {
@@ -641,7 +647,29 @@ export function buildDecisionButtons(
       meaning: d.meaning?.trim() || null,
       tone: toneFor(d.id.trim()),
       writable: WRITABLE_DECISIONS.has(d.id.trim()),
+      offeredByCore: true,
     }));
+  /* The design draws Edit between Reject and Approve on every decidable card,
+     and it was simply absent wherever core's decision list omitted it — which is
+     every card today. Render it, visibly disabled, rather than either dropping a
+     control the design promises or wiring a write the API has no route for.
+     Gated on the card offering approve or reject — the design's Edit means
+     "change this proposed action before accepting it", so it belongs only where
+     an action is actually being proposed. A notify-only finding whose sole
+     decision is `acknowledge` has nothing to edit, and on a record core says
+     accepts no decision at all a lone disabled Edit would imply the card is
+     actionable when it is not. */
+  const proposesAnAction = buttons.some((b) => b.id === "approve" || b.id === "reject");
+  if (proposesAnAction && !buttons.some((b) => b.id === EDIT_DECISION_ID)) {
+    buttons.push({
+      id: EDIT_DECISION_ID,
+      label: "Edit",
+      meaning: null,
+      tone: "neutral",
+      writable: false,
+      offeredByCore: false,
+    });
+  }
   return buttons.sort((a, b) => rankTone(a.tone) - rankTone(b.tone));
 }
 
@@ -912,43 +940,6 @@ export const ADVISORY_PROPOSAL_TYPES: ProposalType[] = [
 
 export function isAdvisoryProposalType(type: string): boolean {
   return (ADVISORY_PROPOSAL_TYPES as string[]).includes(type);
-}
-
-/* ── Technical layers ───────────────────────────────────────────────────────── */
-
-export const TECHNICAL_LAYER_TITLES: Record<string, string> = {
-  "1_ingest": "1 · Ingest",
-  "2_extract": "2 · Extract",
-  "3_classify": "3 · Classify",
-  "4_score": "4 · Score",
-  "5_policy": "5 · Policy",
-  "6_propose": "6 · Propose",
-};
-
-export interface TechnicalLayer {
-  key: string;
-  title: string;
-  json: string;
-}
-
-/** The six-layer breakdown, in contract order, skipping layers core omitted. */
-export function buildTechnicalLayers(detail: Record<string, unknown> | null | undefined): TechnicalLayer[] {
-  if (!detail) return [];
-  const ordered = Object.keys(TECHNICAL_LAYER_TITLES).filter((k) => detail[k] !== undefined && detail[k] !== null);
-  const extras = Object.keys(detail).filter((k) => !(k in TECHNICAL_LAYER_TITLES) && detail[k] != null);
-  return [...ordered, ...extras].map((key) => ({
-    key,
-    title: TECHNICAL_LAYER_TITLES[key] ?? humanizeEnumValue(key),
-    json: safeJson(detail[key]),
-  }));
-}
-
-function safeJson(value: unknown): string {
-  try {
-    return JSON.stringify(value, null, 2) ?? String(value);
-  } catch {
-    return String(value);
-  }
 }
 
 /** Fallback key-fact builder for rows the BFF did not enrich (a cached pre-#384

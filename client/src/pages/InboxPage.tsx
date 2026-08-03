@@ -30,6 +30,7 @@ import {
 import { LiveProposalModal, AGENT_DISPLAY_NAME } from "@/components/AgentProposalModal";
 import { useBrainAuditRecords } from "@/lib/brainAudit";
 import { inboxTapTarget } from "@/lib/inboxTap";
+import { pagerState, stepPager, type PagerEntry } from "@/lib/unifiedPager";
 import { AuditRecordPopup } from "@/components/AuditRecordPopup";
 import type { AuditRecord, AuditEventType } from "@/lib/auditTypes";
 import { auditEventLabel, auditEventChipClass, isAssistantActivity, isSystemActivity, humanReadableActor } from "@/lib/auditTypes";
@@ -400,6 +401,10 @@ export function InboxPage() {
   // read model carries no decider-identity field (no `decided_by`), so there's
   // no honest way to tell an agent decision from a human one here.
   const [selectedProposal, setSelectedProposal] = useState<BrainProposal | null>(null);
+  /* Which timeline ROW currently has a detail surface open. The five surfaces
+     below hold five unrelated record types, so the row id is the only handle
+     the shared pager can compare across them. */
+  const [openItemId, setOpenItemId] = useState<string | null>(null);
 
   const liveReviews = intents
     .filter((i) => i.outcome === "confirm" && !i.declined && i.approvalState !== "approved")
@@ -585,6 +590,7 @@ export function InboxPage() {
 
   const dismissDetail = () => {
     setActive(null);
+    setOpenItemId(null);
     if (returnTo) {
       const dest = returnTo;
       setReturnTo(null);
@@ -938,36 +944,6 @@ export function InboxPage() {
     }
   };
 
-  /* Proposal queue behind the card's Previous / Next, in the order the rows are
-     listed so paging matches what the user just scrolled past. Only live
-     proposals participate — the other row kinds open different modals. */
-  const pagedProposals = visibleItems
-    .map((it) => it.liveAgentProposal)
-    .filter((p): p is BrainProposal => p != null);
-  const pagedIndex = selectedProposal
-    ? pagedProposals.findIndex((p) => p.id === selectedProposal.id)
-    : -1;
-  const canPage = pagedIndex >= 0 && pagedProposals.length > 1;
-  const stepProposal = (delta: number) => {
-    const next = pagedProposals[pagedIndex + delta];
-    if (next) setSelectedProposal(next);
-  };
-
-  /* Same pager contract for settled history: walk exactly the audit records the
-     current filters left on screen, so Previous/Next never steps onto a row the
-     user cannot see. */
-  const pagedRecords = visibleItems
-    .map((it) => it.record)
-    .filter((r): r is AuditRecord => r != null);
-  const recordIndex = activeRecord
-    ? pagedRecords.findIndex((r) => r.id === activeRecord.id)
-    : -1;
-  const recordPagerDisabled = recordIndex < 0 || pagedRecords.length <= 1;
-  const stepRecord = (delta: 1 | -1) => {
-    if (recordPagerDisabled) return;
-    setActiveRecord(pagedRecords[(recordIndex + delta + pagedRecords.length) % pagedRecords.length]);
-  };
-
   /* ── Tap / button handlers ─────────────────────────────────────────────── */
   /* Row taps route through inboxTapTarget — a pure helper whose return type has
      NO navigation variant, so a settled row can never navigate away from /inbox
@@ -975,6 +951,10 @@ export function InboxPage() {
      behavior is pinned by client/src/lib/inboxTap.test.ts. */
   const openItem = (item: InboxItem) => {
     const target = inboxTapTarget(item);
+    /* The pager needs to know WHICH ROW is open, not just which record: the
+       five surfaces below hold five unrelated record types, and only the row id
+       is comparable across them. */
+    setOpenItemId(target.surface === "none" ? null : item.id);
     switch (target.surface) {
       case "agent-proposal-modal":
         setSelectedProposal(target.proposal);
@@ -1050,19 +1030,30 @@ export function InboxPage() {
     (item.proposal != null && item.proposalIsLive === true && (approveLive.isPending || rejectLive.isPending)) ||
     (item.liveAgentProposal != null && decideProposal.isPending);
 
-  /* Header pager for the ProposalDetail sheet — cycles the live queue. */
-  const pagerList: Proposal[] | null = !active
-    ? null
-    : queue.some((p) => p.id === active.id)
-      ? queue
-      : null;
-  const pagerIdx = active && pagerList ? pagerList.findIndex((p) => p.id === active.id) : -1;
-  const proposalPagerDisabled = !pagerList || pagerList.length <= 1 || pagerIdx < 0;
-  const pageProposal = (dir: 1 | -1) => {
-    if (!pagerList || proposalPagerDisabled) return;
-    setReturnTo(null);
-    setActiveIsLive(true);
-    setActive(pagerList[(pagerIdx + dir + pagerList.length) % pagerList.length]);
+  /* One pager across the whole timeline. Every openable row participates in
+     display order, whichever of the five surfaces it opens, so Previous/Next
+     mean "the next row you can see" instead of "the next row of this same kind"
+     — which used to strand the user at the edge of whichever queue they had
+     happened to open. */
+  const pagerEntries: PagerEntry[] = visibleItems
+    .filter((item) => inboxTapTarget(item).surface !== "none")
+    .map((item) => ({ id: item.id, open: () => openItem(item) }));
+  const pager = pagerState(pagerEntries, openItemId);
+  const closeOpenSurface = () => {
+    setActive(null);
+    setActiveLive(null);
+    setLiveRejection(null);
+    setSelectedInsight(null);
+    setSelectedProposal(null);
+    setActiveRecord(null);
+  };
+  const stepItem = (delta: 1 | -1) => stepPager(pagerEntries, openItemId, delta, closeOpenSurface);
+  /* Every surface below shares these, so the pager reads the same everywhere. */
+  const pagerProps = {
+    onPrev: () => stepItem(-1),
+    onNext: () => stepItem(1),
+    hasPrev: pager.hasPrev,
+    hasNext: pager.hasNext,
   };
 
   /* One timeline row from a unified item.
@@ -1354,9 +1345,7 @@ export function InboxPage() {
         currentStatus={active ? statusOf(active) : undefined}
         open={active !== null}
         onOpenChange={(o) => { if (!o) dismissDetail(); }}
-        onPrev={() => pageProposal(-1)}
-        onNext={() => pageProposal(1)}
-        pagerDisabled={proposalPagerDisabled}
+        {...pagerProps}
         onAction={handleAction}
         rulePaused={active ? isRulePaused(active) : undefined}
         onPauseRule={pauseRule}
@@ -1392,7 +1381,8 @@ export function InboxPage() {
       <ReviewModal
         item={activeLive}
         open={activeLive !== null}
-        onOpenChange={(o) => { if (!o) { setActiveLive(null); setLiveRejection(null); } }}
+        onOpenChange={(o) => { if (!o) { setActiveLive(null); setLiveRejection(null); setOpenItemId(null); } }}
+        {...pagerProps}
         onConfirm={() => {
           if (activeLive?.live && activeLive.intentId) void approveIntent(activeLive.intentId, true);
           else setActiveLive(null);
@@ -1412,7 +1402,8 @@ export function InboxPage() {
       <LiveInsightModal
         insight={selectedInsight}
         open={selectedInsight !== null}
-        onOpenChange={(o) => { if (!o) setSelectedInsight(null); }}
+        onOpenChange={(o) => { if (!o) { setSelectedInsight(null); setOpenItemId(null); } }}
+        {...pagerProps}
       />
 
       {/* Settled history, opened in place. Same popup the Audit Log uses, so the
@@ -1421,10 +1412,8 @@ export function InboxPage() {
       <AuditRecordPopup
         record={activeRecord}
         open={activeRecord !== null}
-        onOpenChange={(o) => { if (!o) setActiveRecord(null); }}
-        onPrev={() => stepRecord(-1)}
-        onNext={() => stepRecord(1)}
-        pagerDisabled={recordPagerDisabled}
+        onOpenChange={(o) => { if (!o) { setActiveRecord(null); setOpenItemId(null); } }}
+        {...pagerProps}
         returnToBase="/inbox"
       />
 
@@ -1432,12 +1421,9 @@ export function InboxPage() {
       <LiveProposalModal
         proposal={selectedProposal}
         open={selectedProposal !== null}
-        onOpenChange={(o) => { if (!o) setSelectedProposal(null); }}
-        onPrev={canPage ? () => stepProposal(-1) : undefined}
-        onNext={canPage ? () => stepProposal(1) : undefined}
-        hasPrev={pagedIndex > 0}
-        hasNext={pagedIndex >= 0 && pagedIndex < pagedProposals.length - 1}
-        position={canPage ? `Proposal ${pagedIndex + 1} of ${pagedProposals.length}` : undefined}
+        onOpenChange={(o) => { if (!o) { setSelectedProposal(null); setOpenItemId(null); } }}
+        {...pagerProps}
+        position={pager.position ?? undefined}
       />
     </div>
   );

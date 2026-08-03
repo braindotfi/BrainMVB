@@ -278,7 +278,7 @@ export function useBrainCashFlowInsight() {
     id: "cashflow-trailing",
     kind: "cashflow",
     itemKind: "detection",
-    badge: "Cash flow",
+    badge: "Cash Forecasting",
     title: `Trailing cash flow (${currency.currency})`,
     subtitle: `Net ${format(currency.net)} over ${currency.transaction_count} transactions`,
     explanation,

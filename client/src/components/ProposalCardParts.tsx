@@ -19,9 +19,12 @@
  *   Box copy .......... Gilroy Medium   14 / 16
  */
 import type { ReactNode } from "react";
-import { ChevronRight, ChevronLeft, ArrowRight, AlertTriangle, Check, X, Pencil } from "lucide-react";
+import { ChevronRight, ChevronLeft, ArrowRight, AlertTriangle } from "lucide-react";
 import infoIconSrc from "@assets/figma_icons/inline/proposal_info.png";
 import warningIconSrc from "@assets/figma_icons/inline/proposal_warning.png";
+import approveIconSrc from "@assets/figma_icons/inline/outcome_approve.png";
+import editIconSrc from "@assets/figma_icons/inline/outcome_edit.png";
+import rejectIconSrc from "@assets/figma_icons/inline/outcome_reject.png";
 import { capitalCase } from "@/lib/displayLabels";
 
 /* ── Section heading ──────────────────────────────────────────────────────────
@@ -50,67 +53,35 @@ export const SectionHeading = ({
   </div>
 );
 
-/** Heading + body, at the frame's 16px internal gap. */
+/** Heading + body, at the frame's 16px internal gap.
+ *
+ *  `gap` exists for the one section that measures differently: Linked Evidence
+ *  sits 8px under its heading (frame 5875:65797 — heading ends at y=14, the first
+ *  row starts at y=22) because the rows carry their own 12px inner padding, so a
+ *  full 16px there reads as a hole. Every other section stays at 16px. */
 export const CardSection = ({
   title,
   trailing,
   leading,
+  gap = 16,
   children,
   testId,
 }: {
   title: string;
   trailing?: ReactNode;
   leading?: ReactNode;
+  gap?: 8 | 16;
   children: ReactNode;
   testId?: string;
 }) => (
-  <section className="flex flex-col gap-[16px] items-start w-full" data-testid={testId}>
+  <section
+    className={`flex flex-col ${gap === 8 ? "gap-[8px]" : "gap-[16px]"} items-start w-full`}
+    data-testid={testId}
+  >
     <SectionHeading trailing={trailing} leading={leading}>
       {title}
     </SectionHeading>
     {children}
-  </section>
-);
-
-/** A section whose heading IS the disclosure control (Technical Detail in the
- *  frame). The chevron sits beside the label and the whole row is the hit area —
- *  a chevron that only responds to a separate control reads as decoration. */
-export const CollapsibleSection = ({
-  title,
-  expanded,
-  onToggle,
-  children,
-  toggleTestId,
-  testId,
-}: {
-  title: string;
-  expanded: boolean;
-  onToggle: () => void;
-  children: ReactNode;
-  toggleTestId?: string;
-  testId?: string;
-}) => (
-  <section className="flex flex-col gap-[16px] items-start w-full" data-testid={testId}>
-    <button
-      type="button"
-      onClick={onToggle}
-      aria-expanded={expanded}
-      data-testid={toggleTestId}
-      className="w-full text-left rounded-[4px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-    >
-      <SectionHeading
-        leading={
-          <ChevronRight
-            size={14}
-            className={`text-[#6c779d] transition-transform ${expanded ? "rotate-90" : ""}`}
-            aria-hidden="true"
-          />
-        }
-      >
-        {title}
-      </SectionHeading>
-    </button>
-    {expanded && children}
   </section>
 );
 
@@ -119,18 +90,29 @@ export const CardBody = ({ children }: { children: ReactNode }) => (
   <div className="flex flex-col gap-[32px] items-start p-[24px] w-full">{children}</div>
 );
 
-/** Body copy — Gilroy Medium 16/20 #6c779d. */
+/** Body copy — Gilroy Medium 16/20.
+ *
+ *  The frames set section prose in #a8b9f4, the same value as a fact VALUE: it is
+ *  the card's content, so it carries the card's reading colour. #6c779d is the
+ *  chrome colour — section headings, fact labels, captions ABOUT the content —
+ *  and using it for prose was what made the sections read as greyed-out. `tone`
+ *  is therefore opt-in: pass "muted" for a caption, never for a sentence the
+ *  approver is meant to read. */
 export const CardText = ({
   children,
+  tone = "primary",
   className = "",
   testId,
 }: {
   children: ReactNode;
+  tone?: "primary" | "muted";
   className?: string;
   testId?: string;
 }) => (
   <p
-    className={`[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#6c779d] w-full ${className}`}
+    className={`[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] ${
+      tone === "muted" ? "text-[#6c779d]" : "text-[#a8b9f4]"
+    } w-full ${className}`}
     data-testid={testId}
   >
     {children}
@@ -168,9 +150,13 @@ export const StatusPill = ({
   </div>
 );
 
-/** Small caption pill used on evidence rows ("Payment", "Invoice"). */
-export const TypeTag = ({ label }: { label: string }) => (
-  <div className="inline-flex items-center justify-center bg-[#222737] border border-solid border-[rgba(108,119,157,0.2)] px-[8px] py-[3px] rounded-[22px] shrink-0">
+/** Small caption pill used on evidence rows ("Payment", "Invoice").
+ *  20px tall in the frame (2px padding + 14px line + 2px padding + 1px borders). */
+export const TypeTag = ({ label, testId }: { label: string; testId?: string }) => (
+  <div
+    className="inline-flex items-center justify-center bg-[#222737] border border-solid border-[rgba(108,119,157,0.2)] px-[8px] py-[2px] rounded-[22px] shrink-0"
+    data-testid={testId}
+  >
     <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-[#6c779d] text-center whitespace-nowrap">
       {capitalCase(label)}
     </span>
@@ -275,22 +261,19 @@ export const KeyFactsTable = ({
    Rows share the key-facts shell (one bordered box, hairline between rows) so
    this section sits in the same visual family as the facts table below it.
 
-   A row's glyph and trailing tag carry its VERDICT, and that is load-bearing
-   rather than decoration: a matched rule's trace can contain both satisfied and
-   failed conditions, so rendering every bullet identically would let an approver
-   read a condition that PASSED as the thing that escalated the record. The tag
-   is real text, not colour alone, so the distinction survives for a colour-blind
-   or screen-reader user. A signal whose source stated no verdict gets the
-   neutral arrow and no tag — we do not label what we were not told. */
-const REASON_VERDICTS = {
-  met: { Icon: Check, color: "#42bf23", label: "Met" },
-  unmet: { Icon: AlertTriangle, color: "#d20344", label: "Not met" },
-  unknown: { Icon: ArrowRight, color: "#6c779d", label: null },
-} as const;
+   Row geometry is the frame's (5875:65772): 36px tall — 10px padding, a 16px
+   glyph at x=12, and the copy at x=36, i.e. an 8px gap, set 13/16.
 
-const verdictOf = (passed?: boolean | null) =>
-  passed === true ? REASON_VERDICTS.met : passed === false ? REASON_VERDICTS.unmet : REASON_VERDICTS.unknown;
-
+   The frame draws every bullet with a plain arrow, and every bullet it shows is
+   a condition that HELD. A check the engine recorded as FAILED is therefore the
+   one case the frame does not cover, and it must not inherit the satisfied
+   styling: inside a matched rule the failed condition is usually the thing that
+   escalated the record, and showing it as another neutral arrow would let an
+   approver read it as more supporting evidence. It gets a red glyph and a "Not
+   met" tag — real text, not colour alone, so the distinction survives for a
+   colour-blind or screen-reader user. A check that passed and a check whose
+   source stated no verdict both render as the frame's plain arrow: neither
+   claims a verdict the data does not contain. */
 export const ReasonList = ({
   reasons,
   testId,
@@ -303,27 +286,30 @@ export const ReasonList = ({
     data-testid={testId}
   >
     {reasons.map((reason, i) => {
-      const verdict = verdictOf(reason.passed);
-      const { Icon } = verdict;
+      const failed = reason.passed === false;
+      const Icon = failed ? AlertTriangle : ArrowRight;
       return (
         <li
           key={`${reason.text}-${i}`}
-          className={`flex gap-[12px] items-start px-[16px] py-[12px] w-full ${
+          className={`flex gap-[8px] items-start px-[12px] py-[10px] w-full ${
             i < reasons.length - 1 ? "border-b border-solid border-[#1d2132]" : ""
           }`}
           data-testid={testId ? `${testId}-item-${i}` : undefined}
         >
-          <Icon size={14} className="shrink-0 mt-[3px]" style={{ color: verdict.color }} aria-hidden="true" />
-          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[20px] text-[#a8b9f4] flex-1 min-w-px">
+          <Icon
+            size={16}
+            className={`shrink-0 ${failed ? "text-[#d20344]" : "text-[#6c779d]"}`}
+            aria-hidden="true"
+          />
+          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[16px] text-[#a8b9f4] flex-1 min-w-px">
             {reason.text}
           </p>
-          {verdict.label && (
+          {failed && (
             <span
-              className="[font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[20px] shrink-0 whitespace-nowrap"
-              style={{ color: verdict.color }}
+              className="[font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[16px] text-[#d20344] shrink-0 whitespace-nowrap"
               data-testid={testId ? `${testId}-verdict-${i}` : undefined}
             >
-              {verdict.label}
+              Not met
             </span>
           )}
         </li>
@@ -337,23 +323,16 @@ export const ReasonList = ({
    glyph carrying the tone (approve ✓ green, reject ✗ red, anything else ✎).
    The label is the decision's own button label, so the row and the footer
    control that performs it always read the same word. */
-const OUTCOME_TONES: Record<
-  string,
-  { color: string; background: string; Icon: typeof Check; shell?: string }
-> = {
-  approve: { color: "#42bf23", background: "#123509", Icon: Check },
-  acknowledge: { color: "#42bf23", background: "#123509", Icon: Check },
-  /* Reject keeps a tinted shell. This row replaced a full red WarningBox when
-     "If This Is Wrong" was merged into this section, and the reject branch is the
-     one that discards the agent's work — losing all cautionary weight in the move
-     would have made the riskiest option the quietest line on the card. */
-  reject: {
-    color: "#d20344",
-    background: "#350011",
-    Icon: X,
-    shell: "bg-[#350011]/40 border border-solid border-[rgba(210,3,68,0.2)] rounded-[12px] px-[12px] py-[10px]",
-  },
-  edit: { color: "#a8b9f4", background: "#222737", Icon: Pencil },
+/* The supplied artwork, not a drawn approximation: each is a filled 32px disc
+   with the glyph already inside it, so the row renders the image alone rather
+   than a coloured wrapper around a lucide icon. Reject carries its own dark-red
+   disc, which is what gives the destructive branch its weight here — the frame
+   has no tinted row behind it. */
+const OUTCOME_TONES: Record<string, { icon: string; alt: string }> = {
+  approve: { icon: approveIconSrc, alt: "" },
+  acknowledge: { icon: approveIconSrc, alt: "" },
+  reject: { icon: rejectIconSrc, alt: "" },
+  edit: { icon: editIconSrc, alt: "" },
 };
 
 export const OutcomeRow = ({
@@ -368,16 +347,15 @@ export const OutcomeRow = ({
   testId?: string;
 }) => {
   const meta = OUTCOME_TONES[tone] ?? OUTCOME_TONES.edit;
-  const { Icon } = meta;
   return (
-    <div className={`flex gap-[12px] items-start w-full ${meta.shell ?? ""}`} data-testid={testId}>
-      <div
-        className="size-[24px] rounded-full flex items-center justify-center shrink-0 mt-[1px]"
-        style={{ backgroundColor: meta.background }}
+    <div className="flex gap-[16px] items-start w-full" data-testid={testId}>
+      <img
+        src={meta.icon}
+        alt={meta.alt}
         aria-hidden="true"
-      >
-        <Icon size={14} style={{ color: meta.color }} />
-      </div>
+        className="size-[32px] shrink-0"
+        data-testid={testId ? `${testId}-glyph` : undefined}
+      />
       <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-[#6c779d] flex-1 min-w-px">
         <span className="font-semibold text-[#a8b9f4]">{label}:</span> {children}
       </p>
@@ -404,14 +382,7 @@ export const EvidenceLinkRow = ({
 }) => {
   const inner = (
     <>
-      {kind && (
-        <span
-          className="[font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[16px] text-[#6c779d] bg-[#222737] border border-solid border-[#1d2132] rounded-[6px] px-[8px] py-[2px] shrink-0 whitespace-nowrap"
-          data-testid={testId ? `${testId}-kind` : undefined}
-        >
-          {kind}
-        </span>
-      )}
+      {kind && <TypeTag label={kind} testId={testId ? `${testId}-kind` : undefined} />}
       <div className="flex flex-1 items-center min-w-px">
         <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-[#a8b9f4] truncate">
           {label}

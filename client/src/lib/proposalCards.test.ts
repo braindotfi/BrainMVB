@@ -3,7 +3,6 @@ import {
   buildProposalDetailRows,
   buildProposalHeadline,
   initialsOf,
-  MAX_VISIBLE_DETAIL_ROWS,
   isRawIdentifier,
   humanizeEnumValue,
   buildKeyFactRows,
@@ -15,7 +14,6 @@ import {
   MAX_REASON_BULLETS,
   buildEvidenceTiles,
   isDecidableProposal,
-  buildTechnicalLayers,
   keyFactsFromPresentation,
   resolveHeadlineText,
   resolveProseText,
@@ -123,9 +121,15 @@ describe("buildProposalDetailRows", () => {
     expect(rows.slice(0, 4).map((r) => r.label)).toEqual(["Amount", "Overdue by", "Due", "Status"]);
   });
 
-  it("keeps overflow rows available rather than dropping them", () => {
+  /* The card renders every row this returns — there is no longer a "Technical
+     reference" section for a remainder to spill into, so anything dropped here
+     is a fact the approver never sees. */
+  it("returns every derived row rather than capping the list", () => {
     const rows = buildProposalDetailRows([invoice, counterparty], null, money);
-    expect(rows.length).toBeGreaterThan(MAX_VISIBLE_DETAIL_ROWS);
+    expect(rows.map((r) => r.label)).toEqual(
+      expect.arrayContaining(["Amount", "Overdue by", "Due", "Status", "Counterparty"]),
+    );
+    expect(rows.length).toBeGreaterThan(4);
   });
 });
 
@@ -449,22 +453,61 @@ describe("buildDecisionButtons", () => {
   it("builds acknowledge-only footers from the record, not from a hardcoded pair", () => {
     const buttons = buildDecisionButtons([{ id: "acknowledge", label: "Acknowledge", meaning: "Mark as seen" }]);
     expect(buttons).toEqual([
-      { id: "acknowledge", label: "Acknowledge", meaning: "Mark as seen", tone: "acknowledge", writable: true },
+      {
+        id: "acknowledge",
+        label: "Acknowledge",
+        meaning: "Mark as seen",
+        tone: "acknowledge",
+        writable: true,
+        offeredByCore: true,
+      },
     ]);
   });
 
-  it("orders reject before approve to match the existing footer", () => {
+  it("orders reject, then edit, then approve to match the design's footer", () => {
     const buttons = buildDecisionButtons([
       { id: "approve", label: "Approve" },
       { id: "reject", label: "Reject" },
     ]);
-    expect(buttons.map((b) => b.id)).toEqual(["reject", "approve"]);
+    expect(buttons.map((b) => b.id)).toEqual(["reject", "edit", "approve"]);
+  });
+
+  it("renders the design's Edit button disabled, flagged as core's gap not ours", () => {
+    // brain-core has no `edit` decision and no route that would accept one, so
+    // the control must never be clickable — but dropping it left the footer a
+    // button short of the design on every decidable card.
+    const edit = buildDecisionButtons([
+      { id: "approve", label: "Approve" },
+      { id: "reject", label: "Reject" },
+    ]).find((b) => b.id === "edit");
+    expect(edit).toBeDefined();
+    expect(edit!.writable).toBe(false);
+    expect(edit!.offeredByCore).toBe(false);
+  });
+
+  it("omits Edit where nothing is being proposed to edit", () => {
+    // A notify-only finding, and a record core says accepts no decision at all.
+    expect(buildDecisionButtons([{ id: "acknowledge", label: "Acknowledge" }]).map((b) => b.id))
+      .toEqual(["acknowledge"]);
+    expect(buildDecisionButtons([])).toEqual([]);
+  });
+
+  it("prefers a real Edit decision over the placeholder if core ever offers one", () => {
+    const buttons = buildDecisionButtons([
+      { id: "approve", label: "Approve" },
+      { id: "edit", label: "Edit amount", meaning: "Change the amount first" },
+    ]);
+    const edits = buttons.filter((b) => b.id === "edit");
+    expect(edits).toHaveLength(1);
+    expect(edits[0].label).toBe("Edit Amount");
+    expect(edits[0].offeredByCore).toBe(true);
   });
 
   it("keeps brain-core's domain label but marks an unwritable id disabled", () => {
     const [button] = buildDecisionButtons([{ id: "hold_transaction", label: "Hold transaction" }]);
     expect(button.label).toBe("Hold Transaction");
     expect(button.writable).toBe(false);
+    expect(button.offeredByCore).toBe(true);
   });
 
   it("capitalizes multi-word action labels without changing the API id", () => {
@@ -473,7 +516,9 @@ describe("buildDecisionButtons", () => {
       { id: "clear_vendor", label: "clear vendor" },
       { id: "reject", label: "reject" },
     ]);
-    expect(buttons.map((button) => [button.id, button.label])).toEqual([
+    expect(
+      buttons.filter((b) => b.offeredByCore).map((button) => [button.id, button.label]),
+    ).toEqual([
       ["reject", "Reject"],
       ["hold_vendor", "Hold Vendor"],
       ["clear_vendor", "Clear Vendor"],
@@ -481,7 +526,11 @@ describe("buildDecisionButtons", () => {
   });
 
   it("falls back to presentation.actions, then to nothing", () => {
-    expect(buildDecisionButtons(null, [{ id: "approve", label: "Approve" }]).map((b) => b.id)).toEqual(["approve"]);
+    expect(
+      buildDecisionButtons(null, [{ id: "approve", label: "Approve" }])
+        .filter((b) => b.offeredByCore)
+        .map((b) => b.id),
+    ).toEqual(["approve"]);
     expect(buildDecisionButtons(null, null)).toEqual([]);
   });
 
@@ -497,9 +546,11 @@ describe("buildDecisionButtons", () => {
 
   it("still falls back when the field is absent rather than empty", () => {
     /* Guards the other direction: the fix must not silence a legitimate fallback. */
-    expect(buildDecisionButtons(undefined, [{ id: "approve", label: "Approve" }]).map((b) => b.id)).toEqual([
-      "approve",
-    ]);
+    expect(
+      buildDecisionButtons(undefined, [{ id: "approve", label: "Approve" }])
+        .filter((b) => b.offeredByCore)
+        .map((b) => b.id),
+    ).toEqual(["approve"]);
   });
 });
 
@@ -591,23 +642,6 @@ describe("isDecidableProposal", () => {
   it("falls back to the old mode rule for rows that predate available_decisions", () => {
     expect(isDecidableProposal({ mode: "propose" })).toBe(true);
     expect(isDecidableProposal({ mode: "notify_only" })).toBe(false);
-  });
-});
-
-describe("buildTechnicalLayers", () => {
-  it("emits the six layers in contract order, skipping the ones core omitted", () => {
-    const layers = buildTechnicalLayers({
-      "6_propose": { action: "flag" },
-      "1_ingest": { source: "plaid" },
-      "4_score": null,
-      extra_layer: { x: 1 },
-    });
-    expect(layers.map((l) => l.key)).toEqual(["1_ingest", "6_propose", "extra_layer"]);
-    expect(layers[0].title).toBe("1 · Ingest");
-    expect(layers[0].json).toContain("plaid");
-  });
-  it("returns nothing when core sent no technical detail", () => {
-    expect(buildTechnicalLayers(null)).toEqual([]);
   });
 });
 

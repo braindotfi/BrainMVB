@@ -7,13 +7,12 @@ import {
   CardBody,
   CardSection,
   CardText,
-  CollapsibleSection,
   ConfidenceMeter,
   HeadingValue,
   KeyFactsTable,
   PagerFooter,
+  StatusPill,
 } from "@/components/ProposalCardParts";
-import { useState } from "react";
 
 /* Read-only viewer for live brain-core Ledger facts (reconciliation matches,
    subscription/disputed obligations, cash-flow aggregates) - see
@@ -30,6 +29,8 @@ export function LiveInsightModal({
   onPrev,
   onNext,
   pagerDisabled = false,
+  hasPrev,
+  hasNext,
 }: {
   insight: LiveInsight | null;
   open: boolean;
@@ -37,9 +38,14 @@ export function LiveInsightModal({
   onPrev?: () => void;
   onNext?: () => void;
   pagerDisabled?: boolean;
+  /** Per-direction state, for a pager walking one shared list of mixed record
+   *  kinds: at the first row Previous is dead while Next is not, and a single
+   *  `pagerDisabled` cannot say that. Defaults to `pagerDisabled` for callers
+   *  that still page within one uniform queue. */
+  hasPrev?: boolean;
+  hasNext?: boolean;
 }) {
   const { formatText } = useCurrency();
-  const [showTechnical, setShowTechnical] = useState(false);
   if (!insight) return null;
   const confidencePct = typeof insight.confidence === "number" ? Math.round(insight.confidence * 100) : null;
   const hasPager = Boolean(onPrev && onNext);
@@ -79,6 +85,16 @@ export function LiveInsightModal({
 
           <div className="flex flex-col items-start w-full overflow-y-auto">
             <div className="border-b border-[#1d2132] border-solid flex flex-col gap-[8px] items-start p-[24px] shrink-0 w-full">
+              {/* These records have no decision to make, so the hero pill states
+                  what the card IS rather than borrowing a risk colour it has no
+                  risk to report — the frame (6206:71135) shows the same. */}
+              <StatusPill
+                label={INSIGHT_PILL_LABEL}
+                color="#6c779d"
+                background="#222737"
+                border="rgba(108,119,157,0.2)"
+                testId="pill-live-insight-kind"
+              />
               <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[20px] leading-[28px] text-[#a8b9f4] w-full truncate">
                 {formatText(insight.title)}
               </p>
@@ -169,22 +185,6 @@ export function LiveInsightModal({
                 </CardText>
               </CardSection>
 
-              <CollapsibleSection
-                title="Technical Detail"
-                expanded={showTechnical}
-                onToggle={() => setShowTechnical((expanded) => !expanded)}
-                toggleTestId="button-live-insight-technical"
-                testId="section-live-insight-technical"
-              >
-                <div className="flex flex-col gap-[8px] w-full">
-                  <CardText className="text-[14px] leading-[20px]">
-                    Source: Brain Core Ledger · Type: {capitalCase(insight.kind)}
-                  </CardText>
-                  <CardText className="text-[14px] leading-[20px]">
-                    Record ID: <span className="[font-family:'JetBrains_Mono',monospace]">{insight.id}</span>
-                  </CardText>
-                </div>
-              </CollapsibleSection>
             </CardBody>
           </div>
 
@@ -192,8 +192,8 @@ export function LiveInsightModal({
             <PagerFooter
               onPrev={onPrev!}
               onNext={onNext!}
-              hasPrev={!pagerDisabled}
-              hasNext={!pagerDisabled}
+              hasPrev={hasPrev === undefined ? !pagerDisabled : hasPrev}
+              hasNext={hasNext === undefined ? !pagerDisabled : hasNext}
             />
           )}
         </DialogPrimitive.Content>
@@ -202,9 +202,14 @@ export function LiveInsightModal({
   );
 }
 
+/** Every live insight is a read-only ledger observation with no decision
+ *  attached, so the pill reports that status rather than the producing agent —
+ *  the agent's name is the modal's own header, and an amber "needs you" pill on
+ *  a record you cannot act on was reading as an unactioned task. */
+export const INSIGHT_PILL_LABEL = "Informational";
+
 /** Compact row for a live insight, matching ReviewPage/HomePage's existing
- *  ProposalRow/ListItem styling. Shows the badge instead of a "Demo scenario"
- *  pill - this is real data, not a seeded record. */
+ *  ProposalRow/ListItem styling. */
 export const LiveInsightRow = ({ insight, onClick }: { insight: LiveInsight; onClick: () => void }) => (
   <div
     onClick={onClick}
@@ -230,10 +235,10 @@ export const LiveInsightRow = ({ insight, onClick }: { insight: LiveInsight; onC
       )}
     </div>
     <span
-      className="inline-flex items-center justify-center gap-[5px] border border-solid border-[rgba(255,149,0,0.2)] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] px-[8px] py-[2px] rounded-[22px] whitespace-nowrap shrink-0"
-      style={{ color: "#ff9500", background: "#4a2300" }}
+      className="inline-flex items-center justify-center gap-[5px] border border-solid border-[rgba(108,119,157,0.2)] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] px-[8px] py-[2px] rounded-[22px] whitespace-nowrap shrink-0 text-[#6c779d] bg-[#222737]"
+      data-testid={`pill-live-insight-row-${insight.id}`}
     >
-      {capitalCase(insight.badge)}
+      {INSIGHT_PILL_LABEL}
     </span>
   </div>
 );

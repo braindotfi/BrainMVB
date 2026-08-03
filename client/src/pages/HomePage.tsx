@@ -20,7 +20,8 @@ import {
   useBrainCashFlowInsight,
   type LiveInsight,
 } from "@/lib/brainAgentSurfaces";
-import { LiveInsightModal } from "@/components/LiveInsightModal";
+import { LiveInsightModal, INSIGHT_PILL_LABEL } from "@/components/LiveInsightModal";
+import { pagerState, stepPager, type PagerEntry } from "@/lib/unifiedPager";
 import {
   useBrainProposals,
   useDecideProposal,
@@ -573,6 +574,10 @@ export function HomePage() {
   const { insights: disputeInsights, isError: disputeError } = useBrainDisputeInsights();
   const { insight: cashFlowInsight, isError: cashFlowError } = useBrainCashFlowInsight();
   const [selectedInsight, setSelectedInsight] = useState<LiveInsight | null>(null);
+  /* Which Overview ROW currently has a detail surface open. The four surfaces
+     hold four unrelated record types, so the row id is the only handle the
+     shared pager can compare across them. */
+  const [openRowId, setOpenRowId] = useState<string | null>(null);
   const acknowledgedRecords = useAcknowledgedRecords();
   const acknowledgedInsightIds = useMemo(
     () => new Set(acknowledgedRecords.map((record) => record.id.replace("local-acknowledged-", ""))),
@@ -657,35 +662,6 @@ export function HomePage() {
   );
   const overviewBatchIds = useMemo(() => new Set(overviewSelection.ids), [overviewSelection.ids]);
   const [overviewBulkRunning, setOverviewBulkRunning] = useState(false);
-
-  const cycleRecord = <T extends { id: string | number }>(
-    records: T[],
-    selected: T | null,
-    setSelected: (record: T) => void,
-    delta: 1 | -1,
-  ) => {
-    if (!selected || records.length < 2) return;
-    const index = records.findIndex((record) => record.id === selected.id);
-    if (index < 0) return;
-    setSelected(records[(index + delta + records.length) % records.length]);
-  };
-
-  const selectedReviewIndex = selectedReview
-    ? liveNeedsReview.findIndex((record) => record.id === selectedReview.id)
-    : -1;
-  const selectedLiveIntentIndex = selectedLiveIntent
-    ? sessionReviews.findIndex((record) => record.id === selectedLiveIntent.id)
-    : -1;
-  const selectedInsightIndex = selectedInsight
-    ? liveInsights.findIndex((record) => record.id === selectedInsight.id)
-    : -1;
-  const selectedProposalIndex = selectedProposal
-    ? tieredProposals.findIndex((record) => record.id === selectedProposal.id)
-    : -1;
-  const reviewPagerDisabled = selectedReviewIndex < 0 || liveNeedsReview.length < 2;
-  const liveIntentPagerDisabled = selectedLiveIntentIndex < 0 || sessionReviews.length < 2;
-  const insightPagerDisabled = selectedInsightIndex < 0 || liveInsights.length < 2;
-  const proposalPagerDisabled = selectedProposalIndex < 0 || tieredProposals.length < 2;
 
   const decideProposal = useDecideProposal();
 
@@ -791,7 +767,7 @@ export function HomePage() {
         id: `insight-${i.id}`,
         tier: tierForReadOnlyInsight(),
         title: formatText(i.title),
-        badge: { label: i.badge, className: TAG_NEEDS_YOU },
+        badge: { label: INSIGHT_PILL_LABEL, className: TAG_DETECTED },
         subtitle: i.subtitle ? formatText(i.subtitle) : undefined,
         testIdPrefix,
         onOpenDetail: () => setSelectedInsight(i),
@@ -889,6 +865,48 @@ export function HomePage() {
     pendingAcknowledgedIds,
     acknowledgedInsightIds,
   ]);
+
+  /* One pager across the whole Overview list. Every openable row participates in
+     display order, whichever of the four surfaces it opens, so Previous/Next
+     mean "the next row you can see" instead of "the next row from this same
+     source" — which used to strand the user at the edge of whichever of the four
+     queues they had happened to open. Rows are re-wrapped rather than each
+     `onOpenDetail` recording the id itself, so a row added later cannot join the
+     list while silently opting out of the pager. */
+  const pagerRows: TierRowModel[] = useMemo(
+    () =>
+      overviewRows.map((row) => {
+        const openDetail = row.onOpenDetail;
+        if (!openDetail) return row;
+        return {
+          ...row,
+          onOpenDetail: () => {
+            setOpenRowId(row.id);
+            openDetail();
+          },
+        };
+      }),
+    [overviewRows],
+  );
+  const pagerEntries: PagerEntry[] = pagerRows
+    .filter((row) => row.onOpenDetail)
+    .map((row) => ({ id: row.id, open: row.onOpenDetail! }));
+  const pager = pagerState(pagerEntries, openRowId);
+  const closeOpenSurface = () => {
+    setSelectedInsight(null);
+    setSelectedProposal(null);
+    setSelectedReview(null);
+    setSelectedLiveIntent(null);
+    setLiveRejection(null);
+  };
+  const stepRow = (delta: 1 | -1) => stepPager(pagerEntries, openRowId, delta, closeOpenSurface);
+  /* Every surface below shares these, so the pager reads the same everywhere. */
+  const pagerProps = {
+    onPrev: () => stepRow(-1),
+    onNext: () => stepRow(1),
+    hasPrev: pager.hasPrev,
+    hasNext: pager.hasNext,
+  };
 
   const overviewProposalByRowId = useMemo<Map<string, BrainProposal>>(
     () => new Map(tieredProposals.map((proposal) => [`proposal-${proposal.id}`, proposal])),
@@ -1185,7 +1203,7 @@ export function HomePage() {
                 </div>
               )}
               <TierSections
-                rows={overviewRows}
+                rows={pagerRows}
                 unavailable={overviewUnreachable}
                 emptyMessage={
                   overviewUnreachable
@@ -1211,26 +1229,17 @@ export function HomePage() {
       <LiveInsightModal
         insight={selectedInsight}
         open={selectedInsight !== null}
-        onOpenChange={(o) => { if (!o) setSelectedInsight(null); }}
-        onPrev={() => cycleRecord(liveInsights, selectedInsight, setSelectedInsight, -1)}
-        onNext={() => cycleRecord(liveInsights, selectedInsight, setSelectedInsight, 1)}
-        pagerDisabled={insightPagerDisabled}
+        onOpenChange={(o) => { if (!o) { setSelectedInsight(null); setOpenRowId(null); } }}
+        {...pagerProps}
       />
 
       {/* Brain Detected - live brain-core agent proposal */}
       <LiveProposalModal
         proposal={selectedProposal}
         open={selectedProposal !== null}
-        onOpenChange={(o) => { if (!o) setSelectedProposal(null); }}
-        onPrev={() => cycleRecord(tieredProposals, selectedProposal, setSelectedProposal, -1)}
-        onNext={() => cycleRecord(tieredProposals, selectedProposal, setSelectedProposal, 1)}
-        hasPrev={!proposalPagerDisabled}
-        hasNext={!proposalPagerDisabled}
-        position={
-          !proposalPagerDisabled
-            ? `Proposal ${selectedProposalIndex + 1} of ${tieredProposals.length}`
-            : undefined
-        }
+        onOpenChange={(o) => { if (!o) { setSelectedProposal(null); setOpenRowId(null); } }}
+        {...pagerProps}
+        position={pager.position ?? undefined}
       />
 
       {/* Brain Detected - proposal sheet, opened in place */}
@@ -1238,10 +1247,8 @@ export function HomePage() {
         proposal={selectedReview}
         currentStatus={selectedReview ? (reviewStatuses[selectedReview.id] ?? selectedReview.status) : undefined}
         open={selectedReview !== null}
-        onOpenChange={(o) => { if (!o) setSelectedReview(null); }}
-        onPrev={() => cycleRecord(liveNeedsReview, selectedReview, setSelectedReview, -1)}
-        onNext={() => cycleRecord(liveNeedsReview, selectedReview, setSelectedReview, 1)}
-        pagerDisabled={reviewPagerDisabled}
+        onOpenChange={(o) => { if (!o) { setSelectedReview(null); setOpenRowId(null); } }}
+        {...pagerProps}
         onAction={handleReviewAction}
         rulePaused={selectedReview ? isRulePaused(selectedReview) : undefined}
         onPauseRule={(p) => { const r = ruleOf(p); if (r) storePauseRule(r.id); }}
@@ -1278,7 +1285,7 @@ export function HomePage() {
       <ReviewModal
         item={selectedLiveIntent}
         open={selectedLiveIntent !== null}
-        onOpenChange={(o) => { if (!o) { setSelectedLiveIntent(null); setLiveRejection(null); } }}
+        onOpenChange={(o) => { if (!o) { setSelectedLiveIntent(null); setLiveRejection(null); setOpenRowId(null); } }}
         onConfirm={() => {
           if (selectedLiveIntent?.live && selectedLiveIntent.intentId) void approveIntent(selectedLiveIntent.intentId, true);
           else setSelectedLiveIntent(null);
@@ -1291,9 +1298,7 @@ export function HomePage() {
           setSelectedLiveIntent(null);
           setLiveRejection(null);
         }}
-        onPrev={() => cycleRecord(sessionReviews, selectedLiveIntent, setSelectedLiveIntent, -1)}
-        onNext={() => cycleRecord(sessionReviews, selectedLiveIntent, setSelectedLiveIntent, 1)}
-        pagerDisabled={liveIntentPagerDisabled}
+        {...pagerProps}
         busy={approvingIntentId !== null}
         rejection={liveRejection}
       />

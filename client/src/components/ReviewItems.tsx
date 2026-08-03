@@ -84,6 +84,8 @@ export const ReviewModal = ({
   onPrev,
   onNext,
   pagerDisabled = false,
+  hasPrev,
+  hasNext,
   busy = false,
   rejection = null,
 }: {
@@ -95,6 +97,12 @@ export const ReviewModal = ({
   onPrev?: () => void;
   onNext?: () => void;
   pagerDisabled?: boolean;
+  /** Per-direction state, for a pager walking one shared list of mixed record
+   *  kinds: at the first row Previous is dead while Next is not, and a single
+   *  `pagerDisabled` cannot say that. Defaults to `pagerDisabled` for callers
+   *  that still page within one uniform queue. */
+  hasPrev?: boolean;
+  hasNext?: boolean;
   /** True while a real approve/decline call to brain-core is in flight. */
   busy?: boolean;
   /** brain-core's refusal, mapped to user copy. Rendered inline (danger tone). */
@@ -104,6 +112,8 @@ export const ReviewModal = ({
   const { format, formatText } = useCurrency();
   const swap = (s: string) => s.replace(/\$[\d,]+(?:\.\d+)?/g, m => format(m));
   const hasPager = Boolean(onPrev && onNext);
+  const prevDisabled = hasPrev === undefined ? pagerDisabled : !hasPrev;
+  const nextDisabled = hasNext === undefined ? pagerDisabled : !hasNext;
 
   // Reset the "auto" checkbox whenever the modal opens for a new item
   // or whenever it closes, so prior state doesn't leak between reviews.
@@ -234,7 +244,7 @@ export const ReviewModal = ({
                 <button
                   type="button"
                   onClick={onPrev}
-                  disabled={pagerDisabled}
+                  disabled={prevDisabled}
                   aria-label="Previous record"
                   data-testid="button-review-prev"
                   className="flex flex-1 items-center justify-center gap-[8px] px-[20px] py-[8px] rounded-[100px] bg-[#222737] hover:bg-[#2c3247] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#6c779d] disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
@@ -245,7 +255,7 @@ export const ReviewModal = ({
                 <button
                   type="button"
                   onClick={onNext}
-                  disabled={pagerDisabled}
+                  disabled={nextDisabled}
                   aria-label="Next record"
                   data-testid="button-review-next"
                   className="flex flex-1 items-center justify-center gap-[8px] px-[20px] py-[8px] rounded-[100px] bg-[#222737] hover:bg-[#2c3247] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#6c779d] disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
