@@ -63,6 +63,6 @@
 - [Counterparty trust surface](counterparty-trust-surface.md) — trust routes live (brain-core PRs #397/#403, GIT deedc628); handlers in VendorsPanel only; popup receives props, never fetches; bulk-confirm for customers.
 - [Vendor Suggested tier gate](vendor-suggested-tier-gate.md) — no provenance value means "suggested"; Suggested chip stays hidden; trust wiring green-lit and shipped.
 - [Overlay menus in clipped surfaces](overlay-menus-in-clipped-surfaces.md) — in-card dropdowns need a fixed portal (not less overflow); fixed owns its own clamp/flip, and never claim listbox without arrow keys.
-- [Live insight card structure](live-insight-card-structure.md) — read-only ledger insights reuse the agent-card rhythm with honest observational sections, never invented decision content.
-- [Agent card section order](agent-card-section-order.md) — "all cards" = 4 surfaces, not one; fixed 7-section order; no Technical Detail; Edit has no decision behind it.
+- [Live insight card structure](live-insight-card-structure.md) — ledger insights reuse the agent-card rhythm; sections are data-gated, and Acknowledge (local store) is the one allowed action.
+- [Agent card section order](agent-card-section-order.md) — "all cards" = 4 surfaces; fixed 7-section order; no Technical Detail, no Edit button; titles drop "Agent"; hero vs row pill.
 - [Unified record pager](unified-record-pager.md) — Prev/Next must walk the rendered row list, not each source queue; spread props hide a modal that ignores per-direction state.

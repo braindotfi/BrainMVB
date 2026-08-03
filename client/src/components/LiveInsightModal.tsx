@@ -4,6 +4,8 @@ import type { LiveInsight } from "@/lib/brainAgentSurfaces";
 import { useCurrency } from "@/lib/useCurrency";
 import { capitalCase } from "@/lib/displayLabels";
 import {
+  ActionButton,
+  ActionRow,
   CardBody,
   CardSection,
   CardText,
@@ -19,9 +21,11 @@ import {
    client/src/lib/brainAgentSurfaces.ts. These have no proposal lifecycle
    (brain-core has no /v1/proposals endpoint yet - see
    deliverables/BRAIN-CORE-ORCHESTRATION-GAP.md), so there is deliberately no
-   approve/reject/acknowledge footer here, and no scenario module fabricated
-   to fill AgentProposalModal's shape - only the sections a record actually
-   has real data for are rendered. */
+   approve/reject footer here, and no scenario module fabricated to fill
+   AgentProposalModal's shape - only the sections a record actually has real
+   data for are rendered. Acknowledge is the exception: it writes to the LOCAL
+   acknowledgement store (audit trail + queue removal), not to brain-core, so it
+   is offered while approve/reject are not. */
 export function LiveInsightModal({
   insight,
   open,
@@ -31,6 +35,8 @@ export function LiveInsightModal({
   pagerDisabled = false,
   hasPrev,
   hasNext,
+  onAcknowledge,
+  acknowledged = false,
 }: {
   insight: LiveInsight | null;
   open: boolean;
@@ -44,12 +50,23 @@ export function LiveInsightModal({
    *  that still page within one uniform queue. */
   hasPrev?: boolean;
   hasNext?: boolean;
+  /** Files the observation to the audit trail and clears it from the queue.
+   *  Omit on surfaces with no acknowledgement store and the control is hidden
+   *  rather than shown dead. */
+  onAcknowledge?: () => void;
+  /** Already acknowledged (or a write is in flight) — the button stays visible
+   *  and disabled so the card does not change height under the user. */
+  acknowledged?: boolean;
 }) {
   const { formatText } = useCurrency();
   if (!insight) return null;
   const confidencePct = typeof insight.confidence === "number" ? Math.round(insight.confidence * 100) : null;
   const hasPager = Boolean(onPrev && onNext);
-  const agentName = capitalCase(`${insight.badge} Agent`);
+  /* Title names the agent WITHOUT the word "Agent", matching the decision cards. */
+  const agentName = capitalCase(insight.badge);
+  /* The chart means something different per insight kind, and the cash frame
+     titles it for what it plots rather than the generic shape of it. */
+  const chartTitle = insight.kind === "cashflow" ? "Cash Flow Details" : "Trend";
   const factRows = (insight.fields ?? []).map((field) => ({
     label: capitalCase(field.label),
     value: formatText(field.value),
@@ -106,8 +123,11 @@ export function LiveInsightModal({
             </div>
 
             <CardBody>
+              {/* Named as on the decision cards (frame 6206:71135) — the section
+                  answers the same question, so it should not read as a different
+                  one just because the record is read-only. */}
               {insight.explanation && (
-                <CardSection title="Why This Matters" testId="section-live-insight-why">
+                <CardSection title="Why Brain Suggested This" testId="section-live-insight-why">
                   <div id="live-insight-description" className="w-full">
                     <CardText testId="live-insight-description-text">{formatText(insight.explanation)}</CardText>
                   </div>
@@ -148,7 +168,7 @@ export function LiveInsightModal({
               )}
 
               {insight.chart && (
-                <CardSection title="Trend" testId="section-live-insight-chart">
+                <CardSection title={chartTitle} testId="section-live-insight-chart">
                   <div className="flex flex-col gap-[8px] w-full" data-testid="chart-live-insight">
                     <div className="flex gap-[8px] items-end w-full">
                       {(() => {
@@ -180,10 +200,26 @@ export function LiveInsightModal({
 
               <CardSection title="What Happens Next" testId="section-live-insight-next">
                 <CardText>
-                  Brain will continue monitoring this live ledger signal. This record is read-only;
-                  no approval or automatic action is available for it yet.
+                  This is a flag for your awareness. Brain doesn't take action on it
+                  automatically.
                 </CardText>
               </CardSection>
+
+              {/* Acknowledge is the one thing you CAN do with a read-only
+                  observation: it files the record to the audit trail and clears
+                  it from the queue. Nothing is approved and no money moves, so
+                  it is the only control here — never Approve/Reject. */}
+              {onAcknowledge && (
+                <ActionRow testId="actions-live-insight">
+                  <ActionButton
+                    label={acknowledged ? "Acknowledged" : "Acknowledge"}
+                    tone="acknowledge"
+                    disabled={acknowledged}
+                    onClick={acknowledged ? undefined : onAcknowledge}
+                    testId="button-live-insight-acknowledge"
+                  />
+                </ActionRow>
+              )}
 
             </CardBody>
           </div>

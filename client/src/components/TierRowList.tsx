@@ -50,6 +50,10 @@ export interface TierRowAction {
 export interface TierRowBadge {
   label: string;
   className: string;
+  /** Anything the pill encodes in COLOUR alone. Decision rows are pilled with
+   *  the agent name, so severity survives only as the chip's palette — this
+   *  carries it as text for anyone who cannot see the colour. */
+  srLabel?: string;
 }
 
 /**
@@ -140,6 +144,7 @@ export const TierRow = ({ row }: { row: TierRowModel }) => {
               data-testid={`${row.testIdPrefix}-${row.id}-badge`}
             >
               {capitalCase(row.badge.label)}
+              {row.badge.srLabel && <span className="sr-only">{`, ${row.badge.srLabel}`}</span>}
             </span>
           )}
         </div>

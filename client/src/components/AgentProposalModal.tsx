@@ -1461,7 +1461,10 @@ export function LiveProposalModal({
   const agentName = proposal.agent?.display_name || AGENT_DISPLAY_NAME[agentKey];
   const isPaymentAgent = agentKey === "payment" || /^(?:demo\s+)?payment agent$/i.test(agentName.trim());
   const normalizedAgentName = isPaymentAgent ? "Payment Agent" : agentName.trim();
-  const agentHeaderName = /\bagent$/i.test(normalizedAgentName) ? normalizedAgentName : `${normalizedAgentName} Agent`;
+  /* Card titles name the agent WITHOUT the word "Agent" — "Payment", not
+     "Payment Agent". Core's display_name sometimes carries the suffix already,
+     so strip it rather than assuming it is absent. */
+  const agentHeaderName = normalizedAgentName.replace(/\s*\bagent\b\s*$/i, "").trim() || normalizedAgentName;
   const risk = proposal.risk_band ? RISK_META[proposal.risk_band] : null;
   const needsReview = isNeedsReview(proposal);
 
@@ -1793,9 +1796,7 @@ export function LiveProposalModal({
                       title={
                         d.writable
                           ? (d.meaning ?? undefined)
-                          : d.offeredByCore
-                            ? `brain-core offers "${d.id}", which this app cannot submit yet.`
-                            : "Brain has no edit action for this proposal. Reject it and raise a corrected one instead."
+                          : `brain-core offers "${d.id}", which this app cannot submit yet.`
                       }
                       onClick={d.writable ? () => act(d.id as ProposalDecision) : undefined}
                       testId={`button-live-proposal-decision-${d.id}`}

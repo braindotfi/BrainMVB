@@ -25,6 +25,7 @@ import {
   isDecidableProposal,
   buildDecisionButtons,
   buildProposalHeaderCopy,
+  PAYMENT_AGENT_PILL,
   type DecisionButton,
 } from "@/lib/proposalCards";
 import { LiveProposalModal, AGENT_DISPLAY_NAME } from "@/components/AgentProposalModal";
@@ -181,6 +182,10 @@ type InboxItem = DecisionFacets & {
   /* Status tag pill */
   tag: string;
   tagClass: string;
+  /** Anything the pill encodes in COLOUR alone. Decision rows are pilled with the
+   *  agent name, so severity survives only as the chip's palette — this carries
+   *  it as text for anyone who cannot see the colour. */
+  tagSr?: string;
   /* One-line description (may carry vendor / rule / audit-id facts) */
   desc: string;
   time: string;
@@ -618,8 +623,13 @@ export function InboxPage() {
         type: "payment",
         search: buildSearchText(item.title, item.vendor, item.due, item.amount),
         title: item.title,
-        tag: "Needs approval",
+        /* Every decision row is pilled with the AGENT that raised it, so a mixed
+           list reads as "who is asking" rather than several vocabularies for
+           "needs you". The record's own risk band is stated in full on the card
+           the row opens. */
+        tag: PAYMENT_AGENT_PILL,
         tagClass: TAG_NEEDS_YOU,
+        tagSr: "needs approval",
         desc: item.vendor ? `${item.vendor} · ${item.due}` : item.due,
         time: item.dueBy ?? "",
         why: item.description,
@@ -639,8 +649,10 @@ export function InboxPage() {
         type: "payment",
         search: buildSearchText(p.title, p.rowSubtitle, p.amountDisplay),
         title: p.title,
-        tag: p.severity === "danger" ? "High risk" : p.severity === "warning" ? "Elevated" : "Needs review",
+        /* Agent name, as above. Severity still drives the colour. */
+        tag: PAYMENT_AGENT_PILL,
         tagClass: p.severity === "danger" ? TAG_REJECTED : TAG_NEEDS_YOU,
+        tagSr: p.severity === "danger" ? "high risk" : p.severity === "warning" ? "elevated" : "needs review",
         desc: p.rowSubtitle,
         time: p.dueLabel ?? "",
         why: p.rationale,
@@ -1035,6 +1047,15 @@ export function InboxPage() {
      mean "the next row you can see" instead of "the next row of this same kind"
      — which used to strand the user at the edge of whichever queue they had
      happened to open. */
+  /* The row behind the open insight card, so the card's Acknowledge writes to
+     the same pending/acknowledged state the row's own button does. Resolved by
+     insight id against the UNFILTERED list: the row id and the insight id are
+     different namespaces, and the row leaves `visibleItems` the moment it is
+     acknowledged (or a filter hides it) while the card is still open. */
+  const selectedInsightItem = selectedInsight
+    ? (items.find((item) => item.insight?.id === selectedInsight.id) ?? null)
+    : null;
+
   const pagerEntries: PagerEntry[] = visibleItems
     .filter((item) => inboxTapTarget(item).surface !== "none")
     .map((item) => ({ id: item.id, open: () => openItem(item) }));
@@ -1119,7 +1140,7 @@ export function InboxPage() {
       id: item.id,
       tier: item.tier,
       title: formatText(item.title),
-      badge: item.tag ? { label: item.tag, className: item.tagClass } : undefined,
+      badge: item.tag ? { label: item.tag, className: item.tagClass, srLabel: item.tagSr } : undefined,
       subtitle: [item.amountDisplay, detail].filter(Boolean).join(" · ") || undefined,
       note: item.time || undefined,
       actions,
@@ -1399,11 +1420,24 @@ export function InboxPage() {
         rejection={liveRejection}
       />
 
+      {/* Acknowledge is bound to the open INSIGHT, never to the row: the row
+          disappears from the list the instant it is acknowledged, and a control
+          that vanishes mid-interaction reads as a bug. It stays put, disabled. */}
       <LiveInsightModal
         insight={selectedInsight}
         open={selectedInsight !== null}
         onOpenChange={(o) => { if (!o) { setSelectedInsight(null); setOpenItemId(null); } }}
         {...pagerProps}
+        onAcknowledge={
+          selectedInsight
+            ? () => { if (selectedInsightItem) acknowledgeItem(selectedInsightItem); }
+            : undefined
+        }
+        acknowledged={
+          selectedInsight !== null &&
+          (acknowledgedIds.has(selectedInsight.id) ||
+            (selectedInsightItem !== null && pendingAcknowledgedIds.has(selectedInsightItem.id)))
+        }
       />
 
       {/* Settled history, opened in place. Same popup the Audit Log uses, so the

@@ -39,7 +39,7 @@ import {
   TIER_ORDER,
 } from "@/lib/proposalTiers";
 import { TierSections, type TierRowAction, type TierRowModel } from "@/components/TierRowList";
-import { buildProposalHeaderCopy, buildDecisionButtons } from "@/lib/proposalCards";
+import { buildProposalHeaderCopy, buildDecisionButtons, PAYMENT_AGENT_PILL } from "@/lib/proposalCards";
 import { liabilitiesTotal, type ApInvoiceLike } from "@/lib/liabilities";
 import { apiRequest } from "@/lib/queryClient";
 import { mapApprovalRejection, parseCoreError, type ApprovalRejection } from "@/lib/approvalRejections";
@@ -701,7 +701,7 @@ export function HomePage() {
         id: `session-${String(r.intentId ?? r.id)}`,
         tier: tierForPaymentIntent(),
         title: formatText(r.title),
-        badge: { label: "Needs approval", className: TAG_NEEDS_YOU },
+        badge: { label: PAYMENT_AGENT_PILL, className: TAG_NEEDS_YOU, srLabel: "needs approval" },
         /* Match InboxPage toRow: amount · vendor · due */
         subtitle: [r.amount, r.vendor ? `${r.vendor} · ${r.due}` : r.due].filter(Boolean).join(" · ") || undefined,
         /* Session payment intents do not carry the policy category and threshold
@@ -740,10 +740,14 @@ export function HomePage() {
       id: `queue-${p.id}`,
       tier: tierForPaymentIntent(),
       title: formatText(p.title),
-      /* Match InboxPage badge logic — severity drives the label and colour */
+      /* Every decision row is pilled with the AGENT that raised it, so a mixed
+         list reads as "who is asking" rather than four different vocabularies
+         for "needs you". Severity still drives the colour, and the record's own
+         risk band is stated in full on the card the row opens. */
       badge: {
-        label: p.severity === "danger" ? "High risk" : p.severity === "warning" ? "Elevated" : "Needs review",
+        label: PAYMENT_AGENT_PILL,
         className: p.severity === "danger" ? TAG_REJECTED : TAG_NEEDS_YOU,
+        srLabel: p.severity === "danger" ? "high risk" : p.severity === "warning" ? "elevated" : "needs review",
       },
       /* Match InboxPage toRow: amount · rowSubtitle */
       subtitle: [typeof p.amount === "number" ? format(p.amount) : undefined, p.rowSubtitle].filter(Boolean).join(" · ") || undefined,
@@ -1231,6 +1235,11 @@ export function HomePage() {
         open={selectedInsight !== null}
         onOpenChange={(o) => { if (!o) { setSelectedInsight(null); setOpenRowId(null); } }}
         {...pagerProps}
+        onAcknowledge={selectedInsight ? () => acknowledgeInsightRow(selectedInsight) : undefined}
+        acknowledged={
+          selectedInsight !== null &&
+          (acknowledgedInsightIds.has(selectedInsight.id) || pendingAcknowledgedIds.has(selectedInsight.id))
+        }
       />
 
       {/* Brain Detected - live brain-core agent proposal */}

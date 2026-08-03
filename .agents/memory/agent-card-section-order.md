@@ -87,17 +87,39 @@ inventing advice about money movement is the worst available invention.
 - Neither present → empty list → the section disappears. It never falls back to
   generic copy.
 
-# The Edit button has no decision behind it
+# No Edit button on any card
 
 The frames draw Reject / Edit / Approve, but brain-core offers no `edit`
-decision and there is no route that would accept one. Edit is therefore
-synthesised as a permanently disabled button, flagged as *core's* gap rather than
-the client's (the disabled-button copy for "core offers an id we cannot submit"
-is a different sentence from "core has no such action"). It is added only when
-the card already offers approve or reject: a notify-only `acknowledge` finding
-has nothing to edit, and on a record core says accepts no decision at all a lone
-disabled Edit would imply the card is actionable.
+decision and no route that would accept one, so the control could only ever be a
+disabled placeholder. That placeholder was built and then rejected: a dead button
+the design happens to draw is worse than an honest two-button footer.
 
-**How to apply:** if core ever ships a real `edit` decision, the synthetic one
-must not duplicate it — the builder skips insertion when the id is already
-present, and that behaviour is test-pinned.
+**Why:** a decision footer is a list of things you can actually do. A permanently
+disabled third option teaches the user the card is more capable than it is, and
+"the frames show it" is not a reason to ship a control nothing can service.
+
+**How to apply:** the decision builder filters `edit` out by id rather than
+merely declining to synthesise one, so a future core release that starts
+advertising the decision cannot quietly resurrect the button. Consequence rows in
+What Happens Next are built from the same decision list, so no orphaned "Edit:"
+branch survives either. Test-pinned.
+
+# Titles name the agent without the word "Agent"
+
+Every card title is "Payment", "Cash Forecasting" — never "Payment Agent". Core's
+`display_name` sometimes carries the suffix already, so strip a trailing "Agent"
+rather than assuming it is absent.
+
+# Two different pills, two different jobs
+
+- **Hero pill on the card** = the record's own risk/nature band ("Standard",
+  "Informational"). Geometry: 12px semibold on a 14px line, `px-[12px] py-[4px]`,
+  1px border → 24px tall. That reproduces the frames' measured pill widths
+  exactly (81px "Standard", 107px "Informational"); the earlier 14/16 type made
+  it 26px tall and too wide at both lengths. Measure a pill by its *width at two
+  different label lengths* — height alone does not pin the type size.
+- **Row pill in Overview/Inbox** = the **agent name** that raised the row, for
+  every decision row. A mixed queue then reads as "who is asking" rather than
+  four vocabularies for "needs you"; the risk band is stated in full on the card
+  the row opens. Severity still drives the pill colour. Read-only insight rows
+  keep "Informational" instead — they were raised by no decision.

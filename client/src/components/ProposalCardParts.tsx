@@ -136,13 +136,17 @@ export const StatusPill = ({
   border: string;
   testId?: string;
 }) => (
+  /* 24px tall in the frames (1px border + 4px + 14px line + 4px + 1px). The
+     12/14 type with 12px side padding is what reproduces the frames' measured
+     pill widths exactly — 81px for "Standard", 107px for "Informational". At
+     14/16 the pill came out 26px tall and too wide at both lengths. */
   <div
-    className="inline-flex items-center justify-center px-[10px] py-[4px] rounded-[22px] border border-solid shrink-0"
+    className="inline-flex items-center justify-center px-[12px] py-[4px] rounded-[22px] border border-solid shrink-0"
     style={{ background, borderColor: border }}
     data-testid={testId}
   >
     <span
-      className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[16px] text-center whitespace-nowrap"
+      className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-center whitespace-nowrap"
       style={{ color }}
     >
       {capitalCase(label)}

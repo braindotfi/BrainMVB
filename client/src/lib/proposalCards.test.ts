@@ -459,55 +459,42 @@ describe("buildDecisionButtons", () => {
         meaning: "Mark as seen",
         tone: "acknowledge",
         writable: true,
-        offeredByCore: true,
       },
     ]);
   });
 
-  it("orders reject, then edit, then approve to match the design's footer", () => {
+  it("orders reject before approve to match the design's footer", () => {
     const buttons = buildDecisionButtons([
       { id: "approve", label: "Approve" },
       { id: "reject", label: "Reject" },
     ]);
-    expect(buttons.map((b) => b.id)).toEqual(["reject", "edit", "approve"]);
+    expect(buttons.map((b) => b.id)).toEqual(["reject", "approve"]);
   });
 
-  it("renders the design's Edit button disabled, flagged as core's gap not ours", () => {
-    // brain-core has no `edit` decision and no route that would accept one, so
-    // the control must never be clickable — but dropping it left the footer a
-    // button short of the design on every decidable card.
-    const edit = buildDecisionButtons([
-      { id: "approve", label: "Approve" },
-      { id: "reject", label: "Reject" },
-    ]).find((b) => b.id === "edit");
-    expect(edit).toBeDefined();
-    expect(edit!.writable).toBe(false);
-    expect(edit!.offeredByCore).toBe(false);
-  });
-
-  it("omits Edit where nothing is being proposed to edit", () => {
-    // A notify-only finding, and a record core says accepts no decision at all.
-    expect(buildDecisionButtons([{ id: "acknowledge", label: "Acknowledge" }]).map((b) => b.id))
-      .toEqual(["acknowledge"]);
-    expect(buildDecisionButtons([])).toEqual([]);
-  });
-
-  it("prefers a real Edit decision over the placeholder if core ever offers one", () => {
-    const buttons = buildDecisionButtons([
-      { id: "approve", label: "Approve" },
-      { id: "edit", label: "Edit amount", meaning: "Change the amount first" },
-    ]);
-    const edits = buttons.filter((b) => b.id === "edit");
-    expect(edits).toHaveLength(1);
-    expect(edits[0].label).toBe("Edit Amount");
-    expect(edits[0].offeredByCore).toBe(true);
+  it("never renders an Edit button, even if core starts offering the decision", () => {
+    /* brain-core has no `edit` decision and no route that would accept one, so
+       the control could only ever be a disabled placeholder. Filtering by id
+       (rather than merely not synthesising one) is what stops a future core
+       release from quietly resurrecting a button nothing can service. */
+    expect(
+      buildDecisionButtons([
+        { id: "approve", label: "Approve" },
+        { id: "reject", label: "Reject" },
+      ]).map((b) => b.id),
+    ).toEqual(["reject", "approve"]);
+    expect(
+      buildDecisionButtons([
+        { id: "approve", label: "Approve" },
+        { id: "edit", label: "Edit amount", meaning: "Change the amount first" },
+      ]).map((b) => b.id),
+    ).toEqual(["approve"]);
+    expect(buildDecisionButtons([{ id: "edit", label: "Edit amount" }])).toEqual([]);
   });
 
   it("keeps brain-core's domain label but marks an unwritable id disabled", () => {
     const [button] = buildDecisionButtons([{ id: "hold_transaction", label: "Hold transaction" }]);
     expect(button.label).toBe("Hold Transaction");
     expect(button.writable).toBe(false);
-    expect(button.offeredByCore).toBe(true);
   });
 
   it("capitalizes multi-word action labels without changing the API id", () => {
@@ -516,9 +503,7 @@ describe("buildDecisionButtons", () => {
       { id: "clear_vendor", label: "clear vendor" },
       { id: "reject", label: "reject" },
     ]);
-    expect(
-      buttons.filter((b) => b.offeredByCore).map((button) => [button.id, button.label]),
-    ).toEqual([
+    expect(buttons.map((button) => [button.id, button.label])).toEqual([
       ["reject", "Reject"],
       ["hold_vendor", "Hold Vendor"],
       ["clear_vendor", "Clear Vendor"],
@@ -526,11 +511,8 @@ describe("buildDecisionButtons", () => {
   });
 
   it("falls back to presentation.actions, then to nothing", () => {
-    expect(
-      buildDecisionButtons(null, [{ id: "approve", label: "Approve" }])
-        .filter((b) => b.offeredByCore)
-        .map((b) => b.id),
-    ).toEqual(["approve"]);
+    expect(buildDecisionButtons(null, [{ id: "approve", label: "Approve" }]).map((b) => b.id))
+      .toEqual(["approve"]);
     expect(buildDecisionButtons(null, null)).toEqual([]);
   });
 
@@ -546,11 +528,8 @@ describe("buildDecisionButtons", () => {
 
   it("still falls back when the field is absent rather than empty", () => {
     /* Guards the other direction: the fix must not silence a legitimate fallback. */
-    expect(
-      buildDecisionButtons(undefined, [{ id: "approve", label: "Approve" }])
-        .filter((b) => b.offeredByCore)
-        .map((b) => b.id),
-    ).toEqual(["approve"]);
+    expect(buildDecisionButtons(undefined, [{ id: "approve", label: "Approve" }]).map((b) => b.id))
+      .toEqual(["approve"]);
   });
 });
 

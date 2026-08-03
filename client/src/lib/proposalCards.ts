@@ -588,9 +588,18 @@ function isHumanReadablePolicyReference(value: string): boolean {
  */
 const WRITABLE_DECISIONS = new Set(["approve", "reject", "acknowledge", "undo"]);
 
-/** The design's decision row is Reject / Edit / Approve, but `edit` is not a
- *  decision brain-core offers and there is no endpoint that would accept it. */
+/** `edit` is never rendered as a decision button on any card. brain-core offers
+ *  no such decision and no route that would accept one, so the control could
+ *  only ever be a disabled placeholder — which was tried and rejected. Filtering
+ *  by id (rather than merely not synthesising one) means a future core release
+ *  that starts advertising `edit` cannot quietly resurrect the button either. */
 export const EDIT_DECISION_ID = "edit";
+
+/** Pill text for the rows raised by the payment agent — session payment intents
+ *  and the durable review queue. Every decision row is pilled with the AGENT
+ *  that raised it, and both of those sources are the payment agent, so the two
+ *  pages must not drift into separate spellings of it. */
+export const PAYMENT_AGENT_PILL = "Payment";
 
 export type DecisionTone = "approve" | "reject" | "neutral" | "acknowledge";
 
@@ -604,11 +613,6 @@ export interface DecisionButton {
   /** False when the id is outside the documented write set: the button renders,
    *  disabled, instead of firing a call the API would reject. */
   writable: boolean;
-  /** False for the placeholder Edit button, which the design requires but no
-   *  brain-core decision backs. Callers must word its disabled state as "the
-   *  API has no such action", not "this app cannot submit it yet" — the two are
-   *  different facts and only one of them is ours to fix. */
-  offeredByCore: boolean;
 }
 
 function toneFor(id: string): DecisionTone {
@@ -641,35 +645,14 @@ export function buildDecisionButtons(
   const source = (available ?? fallback) ?? [];
   const buttons = source
     .filter((d) => typeof d?.id === "string" && d.id.trim())
+    .filter((d) => d.id.trim() !== EDIT_DECISION_ID)
     .map((d) => ({
       id: d.id.trim(),
       label: titleCaseDecisionLabel(d.label?.trim() || humanizeEnumValue(d.id.trim())),
       meaning: d.meaning?.trim() || null,
       tone: toneFor(d.id.trim()),
       writable: WRITABLE_DECISIONS.has(d.id.trim()),
-      offeredByCore: true,
     }));
-  /* The design draws Edit between Reject and Approve on every decidable card,
-     and it was simply absent wherever core's decision list omitted it — which is
-     every card today. Render it, visibly disabled, rather than either dropping a
-     control the design promises or wiring a write the API has no route for.
-     Gated on the card offering approve or reject — the design's Edit means
-     "change this proposed action before accepting it", so it belongs only where
-     an action is actually being proposed. A notify-only finding whose sole
-     decision is `acknowledge` has nothing to edit, and on a record core says
-     accepts no decision at all a lone disabled Edit would imply the card is
-     actionable when it is not. */
-  const proposesAnAction = buttons.some((b) => b.id === "approve" || b.id === "reject");
-  if (proposesAnAction && !buttons.some((b) => b.id === EDIT_DECISION_ID)) {
-    buttons.push({
-      id: EDIT_DECISION_ID,
-      label: "Edit",
-      meaning: null,
-      tone: "neutral",
-      writable: false,
-      offeredByCore: false,
-    });
-  }
   return buttons.sort((a, b) => rankTone(a.tone) - rankTone(b.tone));
 }
 
