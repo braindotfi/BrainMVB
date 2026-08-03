@@ -49,6 +49,10 @@ interface ChatMessage {
   dateTag?: string;
   /** Evidence records (ledger rows / raw artifacts) backing a grounded answer. */
   sources?: EvidenceRecord[];
+  /** Evidence can be present even when the assistant could not produce an answer. */
+  answerStatus?: "answered" | "no_answer" | "error";
+  /** Operational failure, distinct from a valid no-answer result. */
+  answerError?: boolean;
   /** True when the assistant answered without access to live ledger data. */
   ungrounded?: boolean;
 }
@@ -74,7 +78,7 @@ function sessionGroup(createdAt: number): string {
 }
 
 const SUGGESTED_QUESTIONS = [
-  "Forecast cash flow",
+  "Show recent cash flow",
   "Anything change overnight?",
   "What needs attention?",
   "Show last 10 transactions",
@@ -574,6 +578,15 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
       const data = await res.json().catch(() => null);
       const reply = (data?.reply as string)?.trim() || CANNED_REPLY;
       const isUngrounded = data?.ungrounded === true;
+      const answerStatus =
+        data?.answerError === true
+          ? ("error" as const)
+          : data?.answered === false
+            ? ("no_answer" as const)
+          : data?.answered === true
+            ? ("answered" as const)
+            : undefined;
+      const answerError = data?.answerError === true;
       // Tolerate both the structured `{entityId,entityType,excerpt}` shape and the
       // legacy bare-string-id shape.
       const sources: EvidenceRecord[] = Array.isArray(data?.sources)
@@ -597,7 +610,14 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
       setSessions((prev) =>
         prev.map((s) =>
           s.id === sessionId
-            ? { ...s, messages: s.messages.map((m) => (m.id === assistantId ? { ...m, text: reply, sources, ungrounded: isUngrounded } : m)) }
+            ? {
+                ...s,
+                messages: s.messages.map((m) =>
+                  m.id === assistantId
+                    ? { ...m, text: reply, sources, answerStatus, answerError, ungrounded: isUngrounded }
+                    : m,
+                ),
+              }
             : s,
         ),
       );
@@ -895,7 +915,11 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                     className={`max-w-[75%] break-words px-[12px] py-[8px] rounded-[12px] [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] ${
                       msg.role === "user"
                         ? "bg-[#7631ee] text-white text-right"
-                        : "bg-[#222737] text-[#6c779d] text-left"
+                        : msg.answerStatus === "no_answer"
+                          ? "bg-[#1b1e2a] border border-dashed border-[#6c779d] text-[#8b95b8] text-left"
+                          : msg.answerStatus === "error"
+                            ? "bg-[#211c22] border border-dashed border-[#8b5362] text-[#b99aa5] text-left"
+                          : "bg-[#222737] text-[#6c779d] text-left"
                     }`}
                   >
                     {msg.role === "assistant" && msg.text === "" ? (
@@ -909,6 +933,34 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                     )}
                   </ChatBubble>
                 </div>
+                {msg.role === "assistant" && msg.answerStatus === "no_answer" && (
+                  <div
+                    className="flex items-center gap-[4px] px-[4px] w-full"
+                    data-testid="assistant-no-answer"
+                  >
+                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#ff9500] text-[11px] leading-[14px]">
+                      No grounded answer
+                    </span>
+                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[11px] leading-[14px]">
+                      {msg.sources && msg.sources.length > 0
+                        ? "evidence was found, but it was not sufficient to answer"
+                        : "no supporting records were available"}
+                    </span>
+                  </div>
+                )}
+                {msg.role === "assistant" && msg.answerStatus === "error" && (
+                  <div
+                    className="flex items-center gap-[4px] px-[4px] w-full"
+                    data-testid="assistant-error"
+                  >
+                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#ff9500] text-[11px] leading-[14px]">
+                      Assistant unavailable
+                    </span>
+                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[11px] leading-[14px]">
+                      this response was not generated from your ledger
+                    </span>
+                  </div>
+                )}
                 {msg.role === "assistant" && msg.ungrounded && (
                   <div className="flex items-center gap-[4px] px-[4px] w-full">
                     <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#ff9500] text-[11px] leading-[14px]">
@@ -929,7 +981,13 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                       onClick={() => setOpenEvidenceFor((cur) => (cur === msg.id ? null : msg.id))}
                       className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[11px] leading-[14px] px-[4px] cursor-pointer hover:underline text-left"
                     >
-                      Grounded in {msg.sources.length} record{msg.sources.length === 1 ? "" : "s"} from your ledger
+                      {msg.answerStatus === "error"
+                        ? `${msg.sources.length} record${msg.sources.length === 1 ? "" : "s"} available as context — answer unavailable`
+                        : msg.answerStatus === "no_answer"
+                        ? msg.sources.length > 0
+                          ? `${msg.sources.length} record${msg.sources.length === 1 ? "" : "s"} found as evidence — no answer returned`
+                          : "No supporting records found — no answer returned"
+                        : `Grounded in ${msg.sources.length} record${msg.sources.length === 1 ? "" : "s"} from your ledger`}
                       {openEvidenceFor === msg.id ? " ▾" : " ▸"}
                     </button>
                     {/* Evidence list — sibling of the toggle, never nested inside it */}

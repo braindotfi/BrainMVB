@@ -82,6 +82,19 @@ are `https://docs.brain.fi/api-reference/proposals-api.md`,
   `mode === "propose"`. The Inbox and detail card both derive controls from the
   proposal's available decisions and use the Invoice/Cash Agent action palette.
 
+## Brain Assistant answer status
+
+The Brain Assistant's suggested prompt is intentionally **"Show recent cash flow"**:
+`GET /ledger/cash_flows` provides trailing actuals, not a forward projection.
+
+`POST /wiki/question` may attach evidence even when it cannot answer the question.
+The BFF must not infer success from a non-empty `answer`: use brain-core's explicit
+`answered` boolean when present. Until every upstream response carries it, the
+legacy stopgap is `isKnownWikiRefusal()` in `server/brain/client.ts`; known refusal
+prose is `answered: false`, while a legacy non-refusal response remains compatible.
+The chat UI must render no-answer status separately from an answered message with
+supporting records. Evidence count alone never proves that an answer was produced.
+
 ## Demo vs real accounts — synthetic data fence
 
 Real signups must start **genuinely empty**: zero connected sources, zero raw-layer
