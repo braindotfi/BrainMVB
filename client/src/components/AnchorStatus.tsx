@@ -1,5 +1,5 @@
 import clockIcon from "@assets/clock_1784932797624.png";
-import anchoredIcon from "@assets/anchored_1783385308122.png";
+import anchoredIcon from "@assets/anchored_1785799770049.png";
 import type { AnchorProof } from "@/lib/auditTypes";
 
 /* ── Shared AnchorStatus component ───────────────────────────────────────────────────────────
@@ -56,7 +56,7 @@ export function AnchorStatus({
   const pending = !isAnchored;
 
   const statusLabel = isAnchored
-    ? "Anchored · tamper-evident"
+    ? "Anchored · Tamper-Evident"
     : isRecorded
       ? "Recorded and verifiable. On-chain anchor pending."
       : "Proof incomplete. This record hasn't been anchored on-chain yet.";
@@ -76,11 +76,11 @@ export function AnchorStatus({
     <div className="flex flex-col gap-[16px] w-full">
 
       {/* Status line: icon + label */}
-      <div className="content-stretch flex gap-[8px] items-start relative shrink-0 w-full">
+      <div className="content-stretch flex gap-[4px] items-center relative shrink-0 w-full">
         {pending ? (
           <img src={clockIcon} alt="Pending" className="size-[16px] shrink-0 object-contain" />
         ) : (
-          <img src={anchoredIcon} alt="Anchored" className="size-[16px] shrink-0 mt-[2px]" />
+          <img src={anchoredIcon} alt="Anchored" className="size-[16px] shrink-0" />
         )}
         <p className={`[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[16px] flex-[1_0_0] min-w-px ${statusColor}`}>
           {statusLabel}
@@ -99,24 +99,24 @@ export function AnchorStatus({
         <div className="bg-[#0a0c10] border border-[#1d2132] border-solid content-stretch flex flex-col items-start relative rounded-[12px] shrink-0 w-full overflow-hidden">
           <HashRow first label="Audit ID" value={anchor.auditId} />
           {(isAnchored || isRecorded) && (
-            <HashRow label="Merkle root" value={anchor.merkleRoot} />
+            <HashRow label="Merkle Root" value={anchor.merkleRoot} />
           )}
           {isAnchored && (
             <>
-              <HashRow label="Base tx" value={anchor.baseTx} />
+              <HashRow label="Base TX" value={anchor.baseTx} />
               <HashRow label="Block" value={anchor.block?.toLocaleString()} />
-              <HashRow label="Anchored at" value={anchor.anchoredAtLabel} valueDim />
+              <HashRow label="Anchored On" value={anchor.anchoredAtLabel} valueDim />
             </>
           )}
           {isRecorded && (
-            <HashRow label="Recorded at" value={anchor.recordedAtLabel} valueDim />
+            <HashRow label="Recorded On" value={anchor.recordedAtLabel} valueDim />
           )}
         </div>
       )}
 
       {/* Action row */}
       {mode === "proof" ? (
-        <div className="flex flex-col gap-[12px] w-full mt-[4px]">
+        <div className="flex flex-col gap-[12px] w-full">
           {/* Verify On-Chain is CONDITIONALLY RENDERED, never a dead/disabled
               link — it only exists when a confirmed tx hash backs it. */}
           {isAnchored && (
@@ -124,7 +124,7 @@ export function AnchorStatus({
               type="button"
               onClick={onVerify}
               data-testid="button-verify-on-chain"
-              className="flex items-center justify-center gap-[6px] px-[20px] py-[10px] rounded-[100px] transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[16px] w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+              className="flex items-center justify-center gap-[6px] px-[20px] py-[10px] rounded-[100px] transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
               style={{ background: "#240757", color: "#7631ee" }}
             >
               Verify On-Chain

@@ -712,15 +712,17 @@ export function VendorsPanel() {
                       <AlertCallout testId="text-add-vendor-error">{error}</AlertCallout>
                     )}
 
-                  {/* Inset separator + buttons — same shape as the rules builder box */}
-                  <div className="h-px w-full bg-[#1d2132]" />
+                  {/* Full-bleed separator + buttons — same shape as the rules
+                      builder box. The box is padded p-[16px], so the rule is
+                      pulled out by that padding to span the card edge-to-edge. */}
+                  <div className="h-px -mx-[16px] w-[calc(100%+32px)] bg-[#1d2132]" />
 
                   <div className="flex gap-[10px] items-stretch w-full">
                     <button
                       type="button"
                       onClick={resetAddVendor}
                       data-testid="button-add-vendor-cancel"
-                      className="flex-1 px-[12px] py-[10px] rounded-[100px] bg-[#222737] hover:bg-[#2b3145] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#6c779d]"
+                      className="flex-1 px-[12px] py-[8px] rounded-[100px] bg-[#222737] hover:bg-[#2b3145] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[16px] text-[#6c779d]"
                     >
                       Cancel
                     </button>
@@ -733,7 +735,7 @@ export function VendorsPanel() {
                       }}
                       disabled={!vendorName.trim()}
                       data-testid="button-submit-vendor"
-                      className="flex-1 px-[12px] py-[10px] rounded-[100px] bg-[#4a2300] hover:bg-[#5a2d00] disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#ff9500]"
+                      className="flex-1 px-[12px] py-[8px] rounded-[100px] bg-[#4a2300] hover:bg-[#5a2d00] disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[16px] text-[#ff9500]"
                     >
                       Submit for Verification
                     </button>

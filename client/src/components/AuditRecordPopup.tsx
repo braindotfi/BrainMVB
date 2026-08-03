@@ -6,7 +6,7 @@ import closeIcon from "@assets/Close_1783293571882.png";
 import checkIcon from "@assets/check_1784935340999.png";
 import warningIcon from "@assets/warning_1783385196939.png";
 import type { AuditRecord, LinkedEntity } from "@/lib/auditTypes";
-import { auditRecordLabel, isAssistantActivity, linkedRelationship, humanReadableActor } from "@/lib/auditTypes";
+import { auditRecordLabel, auditEventChipClass, isAssistantActivity, linkedRelationship, humanReadableActor } from "@/lib/auditTypes";
 import { resolveActorRole, actorIdentityTokens } from "@/lib/actors";
 import { resolveMemberByTokens, openMemberDetail, useMembersCache } from "@/lib/membersStore";
 import { AnchorStatus } from "./AnchorStatus";
@@ -23,6 +23,21 @@ import { RecordPager } from "./RecordPager";
 import { matchCannedPrompt } from "@shared/cannedPrompts";
 import { anchorFromInclusionProof, type BrainAuditEventDetail } from "@/lib/brainAudit";
 import { capitalCase } from "@/lib/displayLabels";
+
+/* Outcome families for the status pill's glyph. The Figma frame only
+   specifies the approved case, so the split reuses this component's existing
+   check/alert vocabulary rather than inventing new artwork: a positive
+   outcome gets the check, a negative one the alert triangle, and everything
+   that is merely informational (postponed, system/assistant activity) stays
+   glyphless rather than implying an outcome it doesn't have. */
+const POSITIVE_EVENTS: ReadonlyArray<string> = [
+  "approved",
+  "auto_approved",
+  "acknowledged",
+  "trust_granted",
+  "rule_change",
+];
+const NEGATIVE_EVENTS: ReadonlyArray<string> = ["flagged", "rejected", "trust_revoked"];
 
 export function AuditRecordPopup({
   record,
@@ -124,16 +139,34 @@ export function AuditRecordPopup({
     }
   };
 
+  /* Status pill — Figma 6216:69517. The frame's geometry (pill, 4px gap, 16px
+     glyph, 12px SemiBold label) is taken verbatim. The COLOUR comes from the
+     shared auditEventChipClass mapping rather than the frame's single
+     "Approved" swatch, so a rejected record can never render in approving
+     green. Assistant activity stays neutral, matching auditRecordLabel.
+     auditEventChipClass supplies a border COLOUR only and no `border
+     border-solid` is added, so the pill renders borderless as the frame
+     specifies (see the chip-border convention). */
   const statusPill = () => {
     const label = auditRecordLabel(record);
+    const assistant = isAssistantActivity(record);
+    const chipClass = assistant
+      ? "bg-[#222737] text-[#6c779d]"
+      : auditEventChipClass(record.eventType);
+    const glyph = assistant
+      ? null
+      : POSITIVE_EVENTS.includes(record.eventType)
+        ? checkIcon
+        : NEGATIVE_EVENTS.includes(record.eventType)
+          ? warningIcon
+          : null;
     return (
       <div
-        className="border border-solid rounded-[22px] px-[8px] py-[2px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-center whitespace-nowrap shrink-0 bg-[#222737] border-[rgba(108,119,157,0.2)]"
+        data-testid="status-audit-record"
+        className={`content-stretch flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] shrink-0 ${chipClass}`}
       >
-        <p
-          className="whitespace-nowrap"
-          style={{ color: "#6c779d" }}
-        >
+        {glyph && <img src={glyph} alt="" className="size-[16px] shrink-0" />}
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-center whitespace-nowrap">
           {capitalCase(label)}
         </p>
       </div>
@@ -172,14 +205,17 @@ export function AuditRecordPopup({
             </div>
 
             {/* Summary — the status pill follows the title like Inbox decision rows. */}
-            <div className="border-[#1d2132] border-b border-solid content-stretch flex flex-col items-start p-[24px] relative shrink-0 w-full">
-              <div className="content-stretch flex items-center gap-[8px] relative shrink-0 w-full min-w-0">
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-[#a8b9f4] text-[20px] min-w-0 max-w-full basis-auto grow-0 shrink truncate">
+            <div className="border-[#1d2132] border-b border-solid content-stretch flex flex-col gap-[8px] items-start p-[24px] relative shrink-0 w-full">
+              {/* Figma 5734:71725 — the summary WRAPS beside a shrink-0 pill
+                  (top-aligned), it does not truncate: an audit record's own
+                  headline is the one string this surface must never clip. */}
+              <div className="content-stretch flex items-start gap-[8px] relative shrink-0 w-full">
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-[#a8b9f4] text-[20px] flex-[1_0_0] min-w-px [word-break:break-word]">
                   {formatText(record.summary)}
                 </p>
                 {statusPill()}
               </div>
-              <div className="flex flex-col gap-[8px] items-start relative shrink-0 w-full mt-[8px]">
+              <div className="content-stretch flex items-center relative shrink-0 w-full">
                 <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
                   {record.occurredAtLabel}
                 </p>
@@ -215,7 +251,7 @@ export function AuditRecordPopup({
                                     <div className="mt-[4px] mb-[4px] w-[2px] flex-1 bg-[#1d2132]" />
                                   )}
                                 </div>
-                                <div className="[word-break:break-word] content-stretch flex flex-[1_0_0] flex-col font-['Gilroy',sans-serif] font-medium gap-[12px] items-start justify-center leading-[16px] min-w-px not-italic relative text-[14px]">
+                                <div className="[word-break:break-word] content-stretch flex flex-[1_0_0] flex-col font-['Gilroy',sans-serif] font-medium gap-[8px] items-start justify-center leading-[16px] min-w-px not-italic relative text-[14px]">
                                   <p className="relative shrink-0 text-[#a8b9f4] w-full">
                                     {actorMember ? (
                                       <button
@@ -323,11 +359,11 @@ export function AuditRecordPopup({
                             >
                               <div className="content-stretch flex flex-[1_0_0] gap-[16px] items-center min-w-px relative">
                                 <div className="bg-[#222737] border border-[rgba(108,119,157,0.2)] border-solid content-stretch flex items-center justify-center px-[8px] py-[3px] relative rounded-[22px] shrink-0">
-                                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#6c779d] text-[12px] text-center whitespace-nowrap uppercase">
-                                    {chipLabel}
+                                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#6c779d] text-[12px] text-center whitespace-nowrap">
+                                    {capitalCase(chipLabel)}
                                   </p>
                                 </div>
-                                <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
+                                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[16px] text-[#6c779d]">
                                   {formatText(link.label)}
                                 </p>
                               </div>
@@ -350,11 +386,11 @@ export function AuditRecordPopup({
                           >
                             <div className="content-stretch flex flex-[1_0_0] gap-[16px] items-center min-w-px relative">
                               <div className="bg-[#222737] border border-[rgba(108,119,157,0.2)] border-solid content-stretch flex items-center justify-center px-[8px] py-[3px] relative rounded-[22px] shrink-0">
-                                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#6c779d] text-[12px] text-center whitespace-nowrap uppercase">
-                                  {chipLabel}
+                                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#6c779d] text-[12px] text-center whitespace-nowrap">
+                                  {capitalCase(chipLabel)}
                                 </p>
                               </div>
-                              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#a8b9f4]">
+                              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[16px] text-[#a8b9f4]">
                                 {formatText(link.label)}
                               </p>
                             </div>
