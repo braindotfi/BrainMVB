@@ -16,6 +16,7 @@
 import { useMemo } from "react";
 import { ActionButton, type ActionTone } from "@/components/ProposalCardParts";
 import { TIER_META, TIER_ORDER, type ProposalTier } from "@/lib/proposalTiers";
+import { orderRowsForDisplay } from "@/lib/tierRowOrder";
 import type { RowTier } from "@/lib/decisionFilters";
 import { Divider } from "@/components/LedgerWidgets";
 import { UnavailableDataBox } from "@/components/Callout";
@@ -229,10 +230,15 @@ export const TierSections = ({
   emptyMessage: string;
   unavailable?: boolean;
 }) => {
-  const groups = useMemo(
-    () => TIER_ORDER.map((tier) => ({ tier, rows: rows.filter((r) => r.tier === tier) })).filter((g) => g.rows.length > 0),
-    [rows],
-  );
+  /* Grouped through the same ordering the unified pager walks (tierRowOrder.ts)
+     so the sections and Previous/Next can never disagree about what comes after
+     what. */
+  const groups = useMemo(() => {
+    const ordered = orderRowsForDisplay(rows);
+    return TIER_ORDER.map((tier) => ({ tier, rows: ordered.filter((r) => r.tier === tier) })).filter(
+      (g) => g.rows.length > 0,
+    );
+  }, [rows]);
 
   if (groups.length === 0) {
     if (unavailable) {

@@ -119,7 +119,9 @@ rather than assuming it is absent.
   it 26px tall and too wide at both lengths. Measure a pill by its *width at two
   different label lengths* — height alone does not pin the type size.
 - **Row pill in Overview/Inbox** = the **agent name** that raised the row, for
-  every decision row. A mixed queue then reads as "who is asking" rather than
-  four vocabularies for "needs you"; the risk band is stated in full on the card
-  the row opens. Severity still drives the pill colour. Read-only insight rows
-  keep "Informational" instead — they were raised by no decision.
+  every row including read-only insights. A mixed queue then reads as "who is
+  asking" rather than several vocabularies for "needs you"; the risk band is
+  stated in full on the card the row opens. Severity drives the pill COLOUR, so
+  the word it replaced survives as an `sr-only` suffix. Insight rows take the
+  grey "detected" palette, never amber — amber on a record you cannot action
+  reads as an unfinished task.

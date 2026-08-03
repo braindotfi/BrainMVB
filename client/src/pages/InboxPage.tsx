@@ -20,6 +20,7 @@ import {
   type LiveInsight,
 } from "@/lib/brainAgentSurfaces";
 import { LiveInsightModal } from "@/components/LiveInsightModal";
+import { insightRowBadge, insightRowDetail } from "@/lib/insightRow";
 import { useBrainProposals, useDecideProposal, isNeedsReview, agentKeyForProposalType, type BrainProposal } from "@/lib/brainProposals";
 import {
   isDecidableProposal,
@@ -702,6 +703,7 @@ export function InboxPage() {
     /* Needs you: read-only live ledger facts Brain detected (not decidable —
        there is nothing to approve; "Ask Brain why" opens the insight). */
     for (const i of visibleLiveInsights) {
+      const insightBadge = insightRowBadge(i);
       push({
         id: i.id,
         kind: "detection",
@@ -710,12 +712,15 @@ export function InboxPage() {
         type: i.kind,
         search: buildSearchText(i.title, i.subtitle, i.badge, i.explanation),
         title: i.title,
-        tag: i.badge || "Detected",
-        tagClass: TAG_NEEDS_YOU,
-        desc: i.subtitle ?? "Brain noticed this in your ledger.",
+        /* Badge and second line come from the shared helper Overview uses, so
+           the same record cannot read differently on the two screens. The
+           reasoning stays on the card (its "Why Brain Suggested This") rather
+           than being promoted into the row here and nowhere else. */
+        tag: insightBadge.label,
+        tagClass: insightBadge.className,
+        tagSr: insightBadge.srLabel,
+        desc: insightRowDetail(i),
         time: "",
-        /* Only real recorded reasoning — never echo the subtitle as "Why". */
-        why: i.explanation,
         actionable: false,
         insight: i,
       });

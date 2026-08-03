@@ -32,6 +32,17 @@ Stepping closes whatever surface is open and then opens the neighbour's.
 - An open record the list no longer contains (just decided, or filtered away)
   reports no position and no arrows. Stepping from a stale index lands on a row
   the user cannot see.
+- **"Display order" means the order the SECTIONS draw, not the order the page
+  built.** A tiered surface groups rows into Urgent / Waiting / Insights at
+  render time, so a list assembled by source is silently a different sequence.
+  Overview built [payments, insights, proposals] and drew [urgent, waiting,
+  insight]: the insight rows were last on screen but third in the array, so Next
+  from the top row (an urgent proposal, last in the array) could never reach
+  them, while Previous could — the arrows worked, they just walked a list nobody
+  could see. Order once, in a shared helper the sections and the pager both use;
+  two call sites agreeing today is not the same as being unable to disagree.
+- A row in a tier no section renders must be dropped from the pager too, not
+  parked at the end. An entry for an invisible row is the same bug reversed.
 
 # The regression a type-check cannot catch
 

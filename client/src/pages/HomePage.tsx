@@ -20,7 +20,9 @@ import {
   useBrainCashFlowInsight,
   type LiveInsight,
 } from "@/lib/brainAgentSurfaces";
-import { LiveInsightModal, INSIGHT_PILL_LABEL } from "@/components/LiveInsightModal";
+import { LiveInsightModal } from "@/components/LiveInsightModal";
+import { insightRowBadge, insightRowDetail } from "@/lib/insightRow";
+import { orderRowsForDisplay } from "@/lib/tierRowOrder";
 import { pagerState, stepPager, type PagerEntry } from "@/lib/unifiedPager";
 import {
   useBrainProposals,
@@ -771,8 +773,10 @@ export function HomePage() {
         id: `insight-${i.id}`,
         tier: tierForReadOnlyInsight(),
         title: formatText(i.title),
-        badge: { label: INSIGHT_PILL_LABEL, className: TAG_DETECTED },
-        subtitle: i.subtitle ? formatText(i.subtitle) : undefined,
+        /* Badge and second line come from the shared helper the Inbox uses, so
+           the same record cannot read differently on the two screens. */
+        badge: insightRowBadge(i),
+        subtitle: formatText(insightRowDetail(i)),
         testIdPrefix,
         onOpenDetail: () => setSelectedInsight(i),
         actions: [
@@ -848,7 +852,11 @@ export function HomePage() {
       }];
     });
 
-    return [...sessionRows, ...queueRows, ...insightRows, ...proposalRows];
+    /* Ordered the way TierSections draws them, because the pager walks this
+       same list — see tierRowOrder.ts. Built order is by source; drawn order is
+       by tier, and the two disagreeing left the Insights rows unreachable from
+       Next. */
+    return orderRowsForDisplay([...sessionRows, ...queueRows, ...insightRows, ...proposalRows]);
   }, [
     liveNeedsReview,
     sessionReviews,

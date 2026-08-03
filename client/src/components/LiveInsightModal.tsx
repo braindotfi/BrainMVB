@@ -134,6 +134,16 @@ export function LiveInsightModal({
                 </CardSection>
               )}
 
+              {confidencePct !== null && (
+                <CardSection
+                  title="Confidence"
+                  trailing={<HeadingValue>{`${confidencePct}%`}</HeadingValue>}
+                  testId="section-live-insight-confidence"
+                >
+                  <ConfidenceMeter pct={confidencePct} />
+                </CardSection>
+              )}
+
               {factRows.length > 0 && (
                 <CardSection title="Key Facts" testId="section-live-insight-facts">
                   <KeyFactsTable rows={factRows} testId="table-live-insight-facts" />
@@ -154,16 +164,6 @@ export function LiveInsightModal({
                       </div>
                     ))}
                   </div>
-                </CardSection>
-              )}
-
-              {confidencePct !== null && (
-                <CardSection
-                  title="Confidence"
-                  trailing={<HeadingValue>{`${confidencePct}%`}</HeadingValue>}
-                  testId="section-live-insight-confidence"
-                >
-                  <ConfidenceMeter pct={confidencePct} />
                 </CardSection>
               )}
 
@@ -197,6 +197,20 @@ export function LiveInsightModal({
                   </div>
                 </CardSection>
               )}
+
+              {/* What YOU should do, as against What Happens Next's "what Brain
+                  will do". Every read-only insight has the same answer because
+                  it is a property of the record, not of the agent: there is no
+                  decision to submit. Deliberately generic — a specific
+                  recommendation here would be advice about money that nothing
+                  in the response supports. */}
+              <CardSection title="Recommended Action" testId="section-live-insight-recommendation">
+                <CardText testId="live-insight-recommendation-text">
+                  {onAcknowledge
+                    ? "No approval is required — Brain is reporting what it found, not proposing anything. Review the figures above, then acknowledge to clear this from your queue."
+                    : "No approval is required — Brain is reporting what it found, not proposing anything. Review the figures above."}
+                </CardText>
+              </CardSection>
 
               <CardSection title="What Happens Next" testId="section-live-insight-next">
                 <CardText>
