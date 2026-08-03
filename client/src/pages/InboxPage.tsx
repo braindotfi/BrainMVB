@@ -227,9 +227,10 @@ type InboxItem = DecisionFacets & {
   acknowledgeOnly?: boolean;
 };
 
-const TAG_AUTO = "bg-[#1d2132] text-[#a8b9f4] border-[rgba(168,185,244,0.2)]";
-const TAG_APPROVED_BY_YOU = "bg-[#240757] text-[#a88afa] border-[rgba(168,138,250,0.2)]";
+const TAG_AUTO = "bg-[rgba(255,255,255,0.3)] text-white border-[rgba(255,255,255,0.2)] backdrop-blur-sm";
+const TAG_APPROVED_BY_YOU = "bg-[#123509] text-[#42bf23] border-[rgba(66,191,35,0.2)]";
 const TAG_REJECTED = "bg-[#350011] text-[#d20344] border-[rgba(210,3,68,0.2)]";
+const TAG_ACKNOWLEDGED = "bg-[#123509] text-[#42bf23] border-[rgba(66,191,35,0.2)]";
 const TAG_DETECTED = "bg-[#222737] text-[#6c779d] border-[rgba(108,119,157,0.2)]";
 
 interface InboxDropdownOption {
@@ -857,7 +858,7 @@ export function InboxPage() {
         search: buildSearchText(r.summary, r.rowSubtitle, humanReadableActor(r.actor), r.occurredAtLabel),
         title: r.summary,
         tag: "Acknowledged",
-        tagClass: TAG_DETECTED,
+        tagClass: TAG_ACKNOWLEDGED,
         desc: r.rowSubtitle ?? "",
         time: r.occurredAtLabel,
         why: auditWhy(r),

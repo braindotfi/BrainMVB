@@ -155,16 +155,23 @@ export function auditEventLabel(type: AuditEventType): string {
 
 export function auditEventChipClass(type: AuditEventType): string {
   switch (type) {
+    case "approved":
+    case "trust_granted":
+    case "rule_change":
+      return "bg-[#123509] text-[#42bf23] border-[rgba(66,191,35,0.2)]";
+    case "acknowledged":
+      return "bg-[#123509] text-[#42bf23] border-[rgba(66,191,35,0.2)]";
+    case "auto_approved":
+      return "bg-[rgba(255,255,255,0.3)] text-white border-[rgba(255,255,255,0.2)] backdrop-blur-sm";
     case "flagged":
-      return "bg-[#350011] text-[#d20344]";
     case "rejected":
-      return "bg-[#350011] text-[#d20344]";
+      return "bg-[#350011] text-[#d20344] border-[rgba(210,3,68,0.2)]";
+    case "trust_revoked":
+      return "bg-[#350011] text-[#d20344] border-[rgba(210,3,68,0.2)]";
     case "postponed":
-      return "bg-[#1a1c24] text-[#6c779d]";
+      return "bg-[#1a1c24] text-[#6c779d] border-[rgba(108,119,157,0.2)]";
     case "system_activity":
-      return "bg-[#222737] text-[#6c779d] border border-[rgba(108,119,157,0.2)]";
-    default:
-      return "bg-[#1d2132] text-[#a8b9f4]";
+      return "bg-[#222737] text-[#6c779d] border-[rgba(108,119,157,0.2)]";
   }
 }
 
