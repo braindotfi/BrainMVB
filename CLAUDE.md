@@ -85,32 +85,49 @@ are `https://docs.brain.fi/api-reference/proposals-api.md`,
 ## Brain Assistant suggestion chips are tenant-sourced
 
 The chips above the assistant input are **not** a hardcoded list. They come from
-brain-core per tenant via `useAssistantQuestions()` in
-`client/src/lib/brainAssistantQuestions.ts`.
+brain-core per tenant via `useSuggestedQuestions()` in
+`client/src/lib/brainSuggestedQuestions.ts`.
 
-Three things about that endpoint are easy to get wrong:
+Four things about that endpoint are easy to get wrong:
 
-- **The path is `GET /assistant/questions`, not `/wiki/suggested-questions`.**
-  The latter 404s (`route_not_found`). The real route is tagged `Wiki`, requires
-  `wiki:read`, and takes an optional `limit` (default 50, max 100). It arrives
-  through the BFF's generic GET passthrough, so it needs no proxy route — and,
-  like every passthrough read, it is **not** normalized, hence the defensive
-  parse in `eligibleAssistantQuestions()`.
-- **There is no rank field.** `AssistantQuestion` carries
-  `{id, question, answer, status, source, evidence_ids, metadata, ...}` and
-  nothing that orders it. "Ranked" therefore means *the order brain-core
-  returned*. Never `.sort()` these — a sort key invented client-side would mean
-  we chose the ranking, which is the thing this wiring exists to prevent.
-- **Eligible means `status === "suggested"`** (`answered` is spent, `dismissed`
-  was rejected). A row with an absent or unrecognised status fails closed.
+- **The path is `GET /wiki/suggested-questions`.** It is live and returns real
+  rows. Do **not** use `GET /assistant/questions` — that is an unrelated legacy
+  route over the old `assistant_questions` table which answers
+  `200 {"questions": []}` for every tenant and always will. The two differ in
+  path, response field *and* row shape, so getting it wrong fails **silently**:
+  the parse yields nothing, the fallback renders, and the row looks healthy.
+  This module shipped wired to the legacy route for exactly that reason.
+- **An unauthenticated 401 does not prove a route exists.** brain-core runs auth
+  *before* routing, so every path — including `/wiki/__nonexistent__` — answers
+  `401 auth_token_missing`. Only an authenticated call separates a live route
+  (`200`) from a dead one (`404 route_not_found`). Probe through the BFF with a
+  real session cookie, never anonymously.
+- **Eligibility is the server's job.** The spec: "Returns only currently
+  eligible questions backed by the deterministic Wiki-question registry." There
+  is no `status` field. A client-side eligibility rule would re-suppress rows
+  core already cleared — the parse does *structural* validation only (drop rows
+  without usable `display_text`, since passthrough reads are unnormalized).
+- **Order is the ranking; never `.sort()`.** Rows carry `usage_rank_score`, but
+  per the spec that is "the tenant's all-time invocation count for that intent",
+  which core *uses to rank* — it is core's input to a ranking already applied,
+  not the rank itself. On a new tenant every count is `0`, so a client sort
+  would reshuffle a deliberate order into an arbitrary one.
 
-When nothing is eligible — which is the **current** state, the deployed API
-returns `{"questions": []}` for the demo tenant — or the read fails, the UI
-falls back to `FALLBACK_QUESTIONS` in `BrainAssistant.tsx`. That constant holds
-only the four strings the component already shipped. **Do not add new suggestion
-copy to it.** A hand-authored chip can promise a capability the backend lacks,
-which is exactly the defect this change removes; anything tenant-specific must
-come from the endpoint.
+Row shape is `{intent_id, display_text, usage_rank_score}` — note `display_text`,
+not `question`, and `suggestions`, not `questions`. `intent_id` is an enum
+(`transaction_count|transaction_sum|transaction_average|transaction_listing|cash_flow_listing|invoice_listing`)
+and serves as the React key.
+
+Like every passthrough read this needs **no BFF proxy route**: `proxy.ts` ends in
+a catch-all GET passthrough that already forwards it. Only writes are allowlisted;
+a dedicated read route would be dead code shadowed by the passthrough.
+
+When nothing is eligible or the read fails, the UI falls back to
+`FALLBACK_QUESTIONS` in `BrainAssistant.tsx`. That constant holds only the four
+strings the component already shipped. **Do not add new suggestion copy to it.**
+A hand-authored chip can promise a capability the backend lacks, which is exactly
+the defect this wiring removes; anything tenant-specific must come from the
+endpoint.
 
 Collapsing loading + failure + empty onto one fallback is intentional here and is
 *not* the false-all-clear defect: these chips make no claim about the tenant's
@@ -123,7 +140,8 @@ separately for callers that must distinguish them.
 | Route | Backed by | Feeds |
 | --- | --- | --- |
 | `/api/assistant/questions` | local Postgres (`storage.listAssistantQuestions`) | Anthropic-fallback Q&A rows merged into the **audit log** (`brainAudit.ts`) |
-| `/api/brain/assistant/questions` | brain-core, via passthrough | tenant **suggestion chips** (`brainAssistantQuestions.ts`) |
+| `/api/brain/assistant/questions` | brain-core, via passthrough | **nothing — legacy, always `{"questions": []}`.** Not the chips; do not wire anything to it |
+| `/api/brain/wiki/suggested-questions` | brain-core, via passthrough | tenant **suggestion chips** (`brainSuggestedQuestions.ts`) |
 
 Same tail path, different origin, different purpose. Reaching for the one-word-shorter
 path will silently feed audit rows into the chip row.

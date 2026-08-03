@@ -1,53 +1,67 @@
 ---
-name: Assistant suggestion chips endpoint
-description: Where tenant suggestion chips really come from — the route the brief named does not exist, and the payload has no rank field.
+name: Brain Assistant suggestion chips
+description: Which brain-core route actually backs the assistant's suggestion chips, why the look-alike route is a silent trap, and how to probe brain-core for route existence without fooling yourself.
 ---
 
-# The briefed path does not exist
+# Assistant suggestion chips
 
-A task brief specified `GET /wiki/suggested-questions` for tenant-aware assistant
-suggestion chips. brain-core answers **`404 route_not_found`** for it. The deployed
-surface is **`GET /assistant/questions`** — tagged `Wiki`, requires `wiki:read`,
-optional `limit` (default 50, max 100).
+## The chips come from `GET /wiki/suggested-questions`
 
-**Why:** the brief was written ahead of the endpoint and guessed its shape. Building
-on the named path would have shipped a permanently-404ing read whose failure is
-invisible, because the fallback renders identically to the success path.
+Response shape:
 
-**How to apply:** when a brief says "once available", treat the path as a claim to
-verify, not a fact. Grep the live spec (`https://api.brain.fi/v1/openapi.yaml`) AND
-call both candidate paths against a real tenant before writing the hook — the
-published spec under-reports, so a grep miss is a reason to probe, not to conclude.
+```json
+{"suggestions":[{"intent_id":"cash_flow_listing","display_text":"Show recent cash flow","usage_rank_score":0}]}
+```
 
-# "Ranked" means the returned order — there is no rank field
+`intent_id` is an enum (`transaction_count|transaction_sum|transaction_average|transaction_listing|cash_flow_listing|invoice_listing`). Requires `wiki:read`.
 
-`AssistantQuestion` is `{id, question, answer, status, source, evidence_ids,
-metadata, created_at, updated_at}`. Nothing in it orders the list.
+## Two look-alike routes; one is a silent trap
 
-**Why:** a request to reflect "ranking order" invites inventing a sort key. Any
-client-side sort would mean *we* chose the ranking, which defeats the purpose of
-sourcing suggestions from the backend at all.
+`GET /assistant/questions` is an unrelated **legacy** route over the old
+`assistant_questions` table. It answers `200 {"questions": []}` for every tenant
+and always will.
 
-**How to apply:** preserve upstream array order verbatim; never `.sort()`. Eligibility
-is `status === "suggested"` (`answered` is spent, `dismissed` was rejected), and an
-absent or unrecognised status fails closed — passthrough reads are unnormalized, so
-"I could not confirm this is suggested" must not become "show it".
+**Why this matters:** it differs in path, response field (`questions` vs
+`suggestions`) *and* row shape (`question`/`status` vs
+`display_text`/`intent_id`). So wiring to the wrong one fails **silently** — the
+defensive parse finds nothing, the fallback chips render, and the surface looks
+completely healthy. This shipped wrong once and only surfaced because someone
+asked why the chips never changed.
 
-# Fallback chips are not a false all-clear
+**How to apply:** if a tenant-aware surface renders its fallback forever, suspect
+the endpoint before the tenant's data. Diff the response *field names* against
+what the parser reads — an always-empty list from a plausible route is the tell.
 
-Collapsing loading + error + empty onto one vetted fallback set is correct for this
-surface, even though the codebase's standing rule forbids a failed read rendering as
-a reassuring state.
+## An unauthenticated 401 never proves a route exists
 
-**Why:** that rule governs surfaces that make a *claim* about the tenant's money or
-setup. Prompt chips claim nothing, every fallback string still routes through the
-same assistant pipe and works regardless of the read, and an empty chip row reads as
-broken. The distinction is claim-bearing vs affordance — apply the rule accordingly
-rather than mechanically.
+brain-core runs auth **before** routing. Every path answers
+`401 auth_token_missing` without a token — including deliberately fake ones like
+`/wiki/__nonexistent__` and `/__totally_fake__` (both verified).
 
-# Two routes, one tail path
+**Why:** "I got a 401, not a 404, so the route is mounted" is a natural
+inference and it is wrong on this API. It was the stated evidence for one route
+decision here.
 
-`/api/assistant/questions` (local Postgres) serves Anthropic-fallback Q&A rows to the
-**audit log**. `/api/brain/assistant/questions` (brain-core passthrough) serves the
-**suggestion chips**. Same tail, unrelated data. Dropping the `/brain` segment feeds
-audit rows into the chip row with no type error.
+**How to apply:** to test whether a brain-core route exists, call it
+**authenticated** — `200` vs `404 route_not_found` is the only reliable signal.
+Always include a known-fake path as a control in the same probe batch. Probe
+through the BFF with a real session cookie:
+`curl -b <cookie> localhost:5000/api/brain/<path>`.
+
+## Eligibility is server-side; ordering is upstream
+
+The spec states the route "returns only currently eligible questions". There is
+no `status` field to filter on — a client-side eligibility rule would
+re-suppress rows core already cleared.
+
+`usage_rank_score` is present but is **the tenant's all-time invocation count**,
+i.e. core's *input* to a ranking it has already applied — not the rank itself.
+Never sort by it: on a new tenant every count is `0`, so a client sort turns a
+deliberate order into an arbitrary one. Render upstream order verbatim.
+
+## No BFF route needed for reads
+
+`server/brain/proxy.ts` ends in a catch-all GET passthrough that forwards any
+GET on the member token, so new brain-core **reads** need no proxy entry. Only
+writes are allowlisted. Adding a dedicated read route creates dead code shadowed
+by the passthrough — check the passthrough before writing one.
