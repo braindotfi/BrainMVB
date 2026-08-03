@@ -132,11 +132,8 @@ export const TierRow = ({ row }: { row: TierRowModel }) => {
         <div aria-hidden="true" className="size-[16px] shrink-0" />
       )}
       <div className="flex flex-col gap-[4px] items-start min-w-px flex-1">
-        {/* Wraps rather than truncates. These titles carry the amount and the
-            counterparty; an ellipsis in a ~420px column hides exactly the part
-            the reader needs to decide. */}
-        <div className="flex flex-wrap items-center gap-x-[8px] gap-y-[4px] w-full min-w-0">
-          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px] min-w-0">
+        <div className="flex flex-nowrap items-center gap-x-[8px] w-full min-w-0">
+          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px] min-w-0 truncate">
             {row.title}
           </p>
           {row.badge && (
