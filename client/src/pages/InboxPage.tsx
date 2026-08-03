@@ -56,6 +56,7 @@ import {
 import { useReviewStatuses, setReviewStatus } from "@/lib/reviewStatusStore";
 import { acknowledgeInsight, useAcknowledgedRecords } from "@/lib/acknowledgedStore";
 import { TierRow, type TierRowModel, type TierRowAction, type TierRowStatusPill } from "@/components/TierRowList";
+import { FilterChipRow } from "@/components/FilterChipRow";
 import {
   applyDecisionFilters,
   buildSearchText,
@@ -980,8 +981,18 @@ export function InboxPage() {
     disputeError ||
     cashFlowError;
 
-  const visibleItems = useMemo(() => applyDecisionFilters(items, filters), [items, filters]);
-  const availableTypes = useMemo(() => typeOptions(items), [items]);
+  /* ── Unresolved / Resolved tab ─────────────────────────────────────────────
+     "Unresolved" = no decision taken yet (urgent / elevated / waiting tiers).
+     "Resolved"   = a decision was recorded (decided tier — user, auto, or audit). */
+  type InboxTab = "Unresolved" | "Resolved";
+  const [activeTab, setActiveTab] = useState<InboxTab>("Unresolved");
+
+  const unresolvedItems = useMemo(() => items.filter((it) => it.tier !== "decided"), [items]);
+  const resolvedItems   = useMemo(() => items.filter((it) => it.tier === "decided"),  [items]);
+  const tabItems        = activeTab === "Unresolved" ? unresolvedItems : resolvedItems;
+
+  const visibleItems = useMemo(() => applyDecisionFilters(tabItems, filters), [tabItems, filters]);
+  const availableTypes = useMemo(() => typeOptions(tabItems), [tabItems]);
   const filtering = hasActiveFilter(filters);
 
   /* ── Bulk approve ───────────────────────────────────────────────────────────
@@ -1334,10 +1345,12 @@ export function InboxPage() {
   const emptyText = decisionsUnreachable
     ? "Brain couldn\u2019t load your decisions. This is a connection problem, not an empty queue \u2014 don\u2019t read it as \u201cnothing to approve\u201d."
     : filtering
-    ? "No decisions match this filter."
+    ? `No ${activeTab.toLowerCase()} decisions match this filter.`
     : liveQueueLoading
       ? "Checking for anything that needs your attention\u2026"
-      : "Nothing needs your attention right now. Brain is keeping things moving.";
+      : activeTab === "Unresolved"
+        ? "Nothing needs your attention right now. Brain is keeping things moving."
+        : "No resolved decisions yet.";
 
   return (
     <div className="bg-[#11141b] overflow-hidden absolute inset-0 grid grid-rows-[auto_minmax(0,1fr)]">
@@ -1394,11 +1407,30 @@ export function InboxPage() {
       </div>
 
       {/* The timeline itself — one list, scrolls. */}
-      <div className="min-h-0 min-w-0 overflow-y-auto overflow-x-hidden px-[16px] pb-[16px] pt-[26px] flex flex-col gap-[10px]">
+      <div className="min-h-0 min-w-0 overflow-y-auto overflow-x-hidden px-[16px] pb-[16px] pt-[26px] flex flex-col gap-[16px]">
+
+        {/* Unresolved / Resolved tab strip — same FilterChipRow pattern as the
+            Rules subpage. Counts show items before the dropdown filters apply so
+            the badge is always honest even when a filter hides rows. */}
+        <FilterChipRow
+          chips={[
+            { value: "Unresolved", label: "Unresolved", count: unresolvedItems.length },
+            { value: "Resolved",   label: "Resolved",   count: resolvedItems.length   },
+          ]}
+          value={activeTab}
+          onChange={(v) => {
+            setActiveTab(v as InboxTab);
+            setFilters(EMPTY_FILTERS);
+          }}
+          label="Filter by resolution status"
+          testIdPrefix="tab-inbox"
+        />
+
+        {/* Count row + clear-filter link */}
         <div className="flex items-center gap-[8px] w-full min-h-[20px]">
           <div className="size-[6px] rounded-full shrink-0 bg-[#6c779d]" />
           <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[12px] uppercase tracking-[0.4px] whitespace-nowrap">
-            Decisions
+            {activeTab}
           </p>
           <div className="bg-[#6c779d] flex items-center justify-center min-w-[18px] px-[5px] py-[1px] rounded-[4px] shrink-0" data-testid="text-decision-count">
             <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#0a0c10] text-[11px] text-center whitespace-nowrap">
