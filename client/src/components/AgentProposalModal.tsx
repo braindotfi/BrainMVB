@@ -3,6 +3,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useQuery } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import { useCurrency } from "@/lib/useCurrency";
+import { useCardTransition } from "@/lib/cardTransition";
 import {
   buildProposalDetailRows,
   buildProposalHeadline,
@@ -28,6 +29,7 @@ import {
 import {
   ActionButton,
   ActionRow,
+  CardActionDivider,
   CardBody,
   CardSection,
   CardText,
@@ -141,6 +143,7 @@ export function LiveProposalModal({
   onNext,
   hasPrev = false,
   hasNext = false,
+  pagerStep,
   position,
 }: {
   proposal: BrainProposal | null;
@@ -152,11 +155,16 @@ export function LiveProposalModal({
   onNext?: () => void;
   hasPrev?: boolean;
   hasNext?: boolean;
+  /** True when this surface was opened by a Previous/Next step rather than by
+   *  the user picking a record. Skips the entrance animation — see
+   *  useCardTransition. */
+  pagerStep?: boolean;
   /** "3 of 12", announced to screen readers only. */
   position?: string;
 }) {
   const decide = useDecideProposal();
   const { formatText } = useCurrency();
+  const transition = useCardTransition(open, pagerStep);
   const [showTechnical, setShowTechnical] = useState(false);
   const [openTransactionId, setOpenTransactionId] = useState<string | null>(null);
   const [openAccountId, setOpenAccountId] = useState<string | null>(null);
@@ -313,13 +321,13 @@ export function LiveProposalModal({
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+          className={`fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px] ${transition.overlay}`}
           data-testid="live-proposal-backdrop"
         />
         <DialogPrimitive.Content
           aria-describedby={undefined}
           data-testid="live-proposal-modal"
-          className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[24px] w-[480px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
+          className={`fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[24px] w-[480px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none ${transition.card}`}
         >
           {/* Header — agent name centered, close right. No avatar anywhere on the
               card: the agent is named once, here. */}
@@ -504,6 +512,8 @@ export function LiveProposalModal({
                   sweep Approve / Reject — without this component knowing anything
                   about those types. Labels are brain-core's; the wire value stays
                   the documented write verb (see buildDecisionButtons). */}
+              <CardActionDivider testId="divider-live-proposal-actions" />
+
               {needsReview && decisions.length > 0 ? (
                 <ActionRow testId="group-live-proposal-decisions">
                   {decisions.map((d) => (

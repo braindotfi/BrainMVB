@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import closeIcon from "@assets/Close_1783293571882.png";
 import { ArrowLeft, ArrowRight } from "lucide-react";
+import { CardActionDivider } from "@/components/ProposalCardParts";
+import { useCardTransition } from "@/lib/cardTransition";
 import {
   Receipt,
   HandCoins,
@@ -160,6 +162,7 @@ export function ProposalDetail({
   pagerDisabled,
   hasPrev,
   hasNext,
+  pagerStep,
 }: {
   proposal: Proposal | null;
   currentStatus?: ProposalStatus;
@@ -175,6 +178,10 @@ export function ProposalDetail({
      that still page within one uniform queue. */
   hasPrev?: boolean;
   hasNext?: boolean;
+  /** True when this surface was opened by a Previous/Next step rather than by
+   *  the user picking a record. Skips the entrance animation — see
+   *  useCardTransition. */
+  pagerStep?: boolean;
   onAction: (action: ProposalAction) => void;
   /* Auto_handled receipt. Retroactive controls (decision already happened) */
   rulePaused?: boolean;
@@ -185,6 +192,7 @@ export function ProposalDetail({
   onAlwaysHandle?: (proposal: Proposal) => void;
 }) {
   const { format, formatText } = useCurrency();
+  const transition = useCardTransition(open, pagerStep);
   const [viewingDocument, setViewingDocument] = useState<DocumentRecord | null>(null);
   const [documentOpen, setDocumentOpen] = useState(false);
   // A LIVE proposal's invoiceId is a brain-core ledger id; fetch its invoice as a DocumentRecord
@@ -204,12 +212,12 @@ export function ProposalDetail({
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+          className={`fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px] ${transition.overlay}`}
           data-testid="proposal-detail-backdrop"
         />
         <DialogPrimitive.Content
           aria-describedby="proposal-detail-rationale"
-          className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[24px] w-[520px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
+          className={`fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[24px] w-[520px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none ${transition.card}`}
           data-testid="proposal-detail"
         >
           {/* Header: full agent name centered + close X */}
@@ -485,6 +493,7 @@ export function ProposalDetail({
             )}
 
             {/* ── Actions footer ────────────────────────────────────────────── */}
+            <CardActionDivider testId="divider-proposal-detail-actions" />
             <div className="flex flex-col gap-[16px] items-start w-full">
               {proposal.actions.verifyFirst && (
                 <button

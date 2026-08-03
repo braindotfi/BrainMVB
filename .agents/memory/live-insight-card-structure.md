@@ -30,9 +30,11 @@ lifecycle, no policy trace, no ranked signals, and no `available_decisions`.
   not of the agent**, so it is one shared sentence: nothing to approve, review
   and acknowledge. Never a per-agent recommendation — advice about money that
   nothing in the response supports is the worst available invention.
-- Row presentation is shared between Overview and the Inbox through one helper.
-  They list the same records from the same hooks, and each spelling its own pill
-  and second line out is how the same record came to read two different ways.
+- Row presentation is shared between Overview and the Inbox through one presenter
+  module covering ALL four live sources, not just insights. They list the same
+  records from the same hooks, and each spelling its own pill and second line out
+  is how the same record came to read two different ways. The insight row wears
+  the same amber agent pill as every other pending row.
 - The chart section is titled for **what it plots**, not for the shape of it:
   the cash-flow insight titles it "Cash Flow Details", not "Trend".
 - **Acknowledge is the exception to "no decision footer".** It writes to the

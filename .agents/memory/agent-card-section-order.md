@@ -119,9 +119,15 @@ rather than assuming it is absent.
   it 26px tall and too wide at both lengths. Measure a pill by its *width at two
   different label lengths* — height alone does not pin the type size.
 - **Row pill in Overview/Inbox** = the **agent name** that raised the row, for
-  every row including read-only insights. A mixed queue then reads as "who is
-  asking" rather than several vocabularies for "needs you"; the risk band is
-  stated in full on the card the row opens. Severity drives the pill COLOUR, so
-  the word it replaced survives as an `sr-only` suffix. Insight rows take the
-  grey "detected" palette, never amber — amber on a record you cannot action
-  reads as an unfinished task.
+  every pending row including read-only insights, in ONE colour (amber). A mixed
+  queue then reads as "who is asking" rather than several vocabularies for
+  "needs you". Severity and risk band are not encoded in the pill at all — they
+  are stated in full on the card the row opens — because a second pill colour in
+  that list gets read as a second *category* of record, not as a degree. The
+  word the agent name replaced survives as an `sr-only` suffix, so colour is
+  never the only carrier. (Insight rows were briefly grey on the theory that
+  amber implies an action; sharing one colour with everything else in the queue
+  turned out to matter more, and what the record cannot do is on its card.)
+- Settled rows are the boundary: `Approved by you`, `Rejected by you`,
+  `Auto-Approved`, `Acknowledged` and audit chips keep their outcome palettes.
+  Those name what HAPPENED, not who is asking, and they are Inbox-only.

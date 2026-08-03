@@ -44,6 +44,23 @@ Stepping closes whatever surface is open and then opens the neighbour's.
 - A row in a tier no section renders must be dropped from the pager too, not
   parked at the end. An entry for an invisible row is the same bug reversed.
 
+# A step is not an open
+
+Because the neighbour is often a different dialog component, close-before-open
+makes a step a real unmount + mount, and the new dialog replays its entrance
+animation. Stepping between two records of the SAME type only swaps content, so
+the odd one out looks like it was thrown up as a new card while the rest read as
+one card changing. A surface opened by a pager step must skip its entrance
+animation (keep the exit — the outgoing card fading under the incoming one is
+what makes the swap read as continuous).
+
+**How to apply:** the page owns the "this open came from a step" flag, sets it
+before stepping and clears it when nothing is open; the surface freezes the flag
+at the moment it mounts. Do not toggle the animation classes while a card is
+open — that either cancels the animation mid-flight or starts it late. And the
+flag must be declared as a prop on every surface: it travels in the same spread
+as the pager props, so a surface that forgets it keeps animating in silence.
+
 # The regression a type-check cannot catch
 
 Props are spread into these modals, so a modal that still accepts only the old

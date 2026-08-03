@@ -20,13 +20,18 @@ import {
   type LiveInsight,
 } from "@/lib/brainAgentSurfaces";
 import { LiveInsightModal } from "@/components/LiveInsightModal";
-import { insightRowBadge, insightRowDetail } from "@/lib/insightRow";
+import {
+  sessionIntentRow,
+  queueIntentRow,
+  liveProposalRow,
+  insightRow,
+  type RecordRowPresentation,
+} from "@/lib/recordRows";
 import { useBrainProposals, useDecideProposal, isNeedsReview, agentKeyForProposalType, type BrainProposal } from "@/lib/brainProposals";
 import {
   isDecidableProposal,
   buildDecisionButtons,
   buildProposalHeaderCopy,
-  PAYMENT_AGENT_PILL,
   type DecisionButton,
 } from "@/lib/proposalCards";
 import { LiveProposalModal, AGENT_DISPLAY_NAME } from "@/components/AgentProposalModal";
@@ -193,6 +198,12 @@ type InboxItem = DecisionFacets & {
   /* "Why:" line — only real recorded reasoning; omitted (honest omission) when
      the source record carries no rationale. */
   why?: string;
+  /** Title, pill and second line as rendered, from the shared presenters in
+   *  recordRows.ts. Set on every LIVE record, because Overview renders the same
+   *  four sources and the two screens must read identically. Settled history
+   *  (auto-approved, decided, audit, acknowledged) is Inbox-only and keeps the
+   *  outcome pills composed below. */
+  presentation?: RecordRowPresentation;
   /* "proposal" items are decidable (Approve/Reject); "detection" items are
      ledger-derived observations — nothing is proposed, no decision buttons. */
   kind: "proposal" | "detection";
@@ -216,7 +227,6 @@ type InboxItem = DecisionFacets & {
   acknowledgeOnly?: boolean;
 };
 
-const TAG_NEEDS_YOU = "bg-[#4a2300] text-[#ff9500] border-[rgba(255,149,0,0.2)]";
 const TAG_AUTO = "bg-[#1d2132] text-[#a8b9f4] border-[rgba(168,185,244,0.2)]";
 const TAG_APPROVED_BY_YOU = "bg-[#240757] text-[#a88afa] border-[rgba(168,138,250,0.2)]";
 const TAG_REJECTED = "bg-[#350011] text-[#d20344] border-[rgba(210,3,68,0.2)]";
@@ -411,6 +421,8 @@ export function InboxPage() {
      below hold five unrelated record types, so the row id is the only handle
      the shared pager can compare across them. */
   const [openItemId, setOpenItemId] = useState<string | null>(null);
+  /** The open surface arrived via Previous/Next rather than a row tap. */
+  const [steppedViaPager, setSteppedViaPager] = useState(false);
 
   const liveReviews = intents
     .filter((i) => i.outcome === "confirm" && !i.declined && i.approvalState !== "approved")
@@ -606,6 +618,7 @@ export function InboxPage() {
 
   /* ── Build the unified item list ───────────────────────────────────────── */
   const items: InboxItem[] = useMemo(() => {
+    const fmt = { format, formatText };
     const out: InboxItem[] = [];
     const seen = new Set<string>();
     const push = (it: InboxItem) => {
@@ -616,6 +629,7 @@ export function InboxPage() {
 
     /* Needs you: session-scoped §6-gated intents (decidable). */
     for (const item of liveReviews) {
+      const sessionPresentation = sessionIntentRow(item, fmt);
       push({
         id: String(item.id),
         kind: "proposal",
@@ -624,13 +638,12 @@ export function InboxPage() {
         type: "payment",
         search: buildSearchText(item.title, item.vendor, item.due, item.amount),
         title: item.title,
-        /* Every decision row is pilled with the AGENT that raised it, so a mixed
-           list reads as "who is asking" rather than several vocabularies for
-           "needs you". The record's own risk band is stated in full on the card
-           the row opens. */
-        tag: PAYMENT_AGENT_PILL,
-        tagClass: TAG_NEEDS_YOU,
-        tagSr: "needs approval",
+        /* Every live row's wording and pill come from recordRows.ts, which
+           Overview renders too — see the note on InboxItem.presentation. */
+        presentation: sessionPresentation,
+        tag: sessionPresentation.badge.label,
+        tagClass: sessionPresentation.badge.className,
+        tagSr: sessionPresentation.badge.srLabel,
         desc: item.vendor ? `${item.vendor} · ${item.due}` : item.due,
         time: item.dueBy ?? "",
         why: item.description,
@@ -642,6 +655,7 @@ export function InboxPage() {
 
     /* Needs you: durable brain-core review queue (decidable). */
     for (const p of queue) {
+      const queuePresentation = queueIntentRow(p, fmt);
       push({
         id: p.id,
         kind: "proposal",
@@ -650,10 +664,10 @@ export function InboxPage() {
         type: "payment",
         search: buildSearchText(p.title, p.rowSubtitle, p.amountDisplay),
         title: p.title,
-        /* Agent name, as above. Severity still drives the colour. */
-        tag: PAYMENT_AGENT_PILL,
-        tagClass: p.severity === "danger" ? TAG_REJECTED : TAG_NEEDS_YOU,
-        tagSr: p.severity === "danger" ? "high risk" : p.severity === "warning" ? "elevated" : "needs review",
+        presentation: queuePresentation,
+        tag: queuePresentation.badge.label,
+        tagClass: queuePresentation.badge.className,
+        tagSr: queuePresentation.badge.srLabel,
         desc: p.rowSubtitle,
         time: p.dueLabel ?? "",
         why: p.rationale,
@@ -675,6 +689,7 @@ export function InboxPage() {
       const pillName = isPaymentAgent ? "Payment" : agentName;
         const decisions = buildDecisionButtons(p.available_decisions, p.presentation?.actions);
       const headerCopy = buildProposalHeaderCopy(p, agentName, formatText);
+      const proposalPresentation = liveProposalRow(headerCopy, pillName);
       push({
         id: p.id,
         kind: "proposal",
@@ -686,8 +701,10 @@ export function InboxPage() {
         type: p.type ?? "payment",
         search: buildSearchText(headerCopy.title, headerCopy.text, agentName, p.type),
         title: headerCopy.title,
-        tag: pillName,
-        tagClass: TAG_NEEDS_YOU,
+        presentation: proposalPresentation,
+        tag: proposalPresentation.badge.label,
+        tagClass: proposalPresentation.badge.className,
+        tagSr: proposalPresentation.badge.srLabel,
         desc: headerCopy.text,
         time: "",
         /* Approve/Decline only when core actually offers them. */
@@ -703,7 +720,7 @@ export function InboxPage() {
     /* Needs you: read-only live ledger facts Brain detected (not decidable —
        there is nothing to approve; "Ask Brain why" opens the insight). */
     for (const i of visibleLiveInsights) {
-      const insightBadge = insightRowBadge(i);
+      const insightPresentation = insightRow(i, fmt);
       push({
         id: i.id,
         kind: "detection",
@@ -712,14 +729,15 @@ export function InboxPage() {
         type: i.kind,
         search: buildSearchText(i.title, i.subtitle, i.badge, i.explanation),
         title: i.title,
-        /* Badge and second line come from the shared helper Overview uses, so
-           the same record cannot read differently on the two screens. The
+        /* Badge and second line come from the shared presenter Overview uses,
+           so the same record cannot read differently on the two screens. The
            reasoning stays on the card (its "Why Brain Suggested This") rather
            than being promoted into the row here and nowhere else. */
-        tag: insightBadge.label,
-        tagClass: insightBadge.className,
-        tagSr: insightBadge.srLabel,
-        desc: insightRowDetail(i),
+        presentation: insightPresentation,
+        tag: insightPresentation.badge.label,
+        tagClass: insightPresentation.badge.className,
+        tagSr: insightPresentation.badge.srLabel,
+        desc: insightPresentation.subtitle ?? "",
         time: "",
         actionable: false,
         insight: i,
@@ -1073,13 +1091,32 @@ export function InboxPage() {
     setSelectedProposal(null);
     setActiveRecord(null);
   };
-  const stepItem = (delta: 1 | -1) => stepPager(pagerEntries, openItemId, delta, closeOpenSurface);
+  const stepItem = (delta: 1 | -1) => {
+    /* Stepping closes one dialog and opens another; the surface that opens must
+       know it is a step, not a fresh open, so it can skip the entrance
+       animation. Cleared below once nothing is open. */
+    setSteppedViaPager(true);
+    stepPager(pagerEntries, openItemId, delta, closeOpenSurface);
+  };
+  /* Reset off the SURFACES, not off openItemId: an action that closes a card
+     (approve, acknowledge, follow a link out) does not always clear the open item
+     id, and a flag left set would silence the next card the user opens by hand. */
+  const anySurfaceOpen =
+    active !== null ||
+    activeLive !== null ||
+    selectedInsight !== null ||
+    selectedProposal !== null ||
+    activeRecord !== null;
+  useEffect(() => {
+    if (!anySurfaceOpen) setSteppedViaPager(false);
+  }, [anySurfaceOpen]);
   /* Every surface below shares these, so the pager reads the same everywhere. */
   const pagerProps = {
     onPrev: () => stepItem(-1),
     onNext: () => stepItem(1),
     hasPrev: pager.hasPrev,
     hasNext: pager.hasNext,
+    pagerStep: steppedViaPager,
   };
 
   /* One timeline row from a unified item.
@@ -1141,13 +1178,23 @@ export function InboxPage() {
     const candidate = candidateById.get(item.id);
     const blocked = candidate ? isBlockedByType(candidate, selection.type) : false;
 
+    /* Live records read exactly as they do on Overview, because both screens
+       render the SAME presenter output. Settled history has no counterpart
+       there, so it keeps the composition above. */
+    const presentation: RecordRowPresentation = item.presentation ?? {
+      title: formatText(item.title),
+      badge: { label: item.tag, className: item.tagClass, srLabel: item.tagSr },
+      subtitle: [item.amountDisplay, detail].filter(Boolean).join(" · ") || undefined,
+      note: item.time || undefined,
+    };
+
     return {
       id: item.id,
       tier: item.tier,
-      title: formatText(item.title),
-      badge: item.tag ? { label: item.tag, className: item.tagClass, srLabel: item.tagSr } : undefined,
-      subtitle: [item.amountDisplay, detail].filter(Boolean).join(" · ") || undefined,
-      note: item.time || undefined,
+      title: presentation.title,
+      badge: item.tag ? presentation.badge : undefined,
+      subtitle: presentation.subtitle,
+      note: presentation.note,
       actions,
       select: candidate
         ? {

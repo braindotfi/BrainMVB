@@ -2,10 +2,12 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import type { LiveInsight } from "@/lib/brainAgentSurfaces";
 import { useCurrency } from "@/lib/useCurrency";
+import { useCardTransition } from "@/lib/cardTransition";
 import { capitalCase } from "@/lib/displayLabels";
 import {
   ActionButton,
   ActionRow,
+  CardActionDivider,
   CardBody,
   CardSection,
   CardText,
@@ -35,6 +37,7 @@ export function LiveInsightModal({
   pagerDisabled = false,
   hasPrev,
   hasNext,
+  pagerStep,
   onAcknowledge,
   acknowledged = false,
 }: {
@@ -50,6 +53,10 @@ export function LiveInsightModal({
    *  that still page within one uniform queue. */
   hasPrev?: boolean;
   hasNext?: boolean;
+  /** True when this surface was opened by a Previous/Next step rather than by
+   *  the user picking a record. Skips the entrance animation — see
+   *  useCardTransition. */
+  pagerStep?: boolean;
   /** Files the observation to the audit trail and clears it from the queue.
    *  Omit on surfaces with no acknowledgement store and the control is hidden
    *  rather than shown dead. */
@@ -59,6 +66,7 @@ export function LiveInsightModal({
   acknowledged?: boolean;
 }) {
   const { formatText } = useCurrency();
+  const transition = useCardTransition(open, pagerStep);
   if (!insight) return null;
   const confidencePct = typeof insight.confidence === "number" ? Math.round(insight.confidence * 100) : null;
   const hasPager = Boolean(onPrev && onNext);
@@ -76,12 +84,12 @@ export function LiveInsightModal({
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+          className={`fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px] ${transition.overlay}`}
           data-testid="live-insight-backdrop"
         />
         <DialogPrimitive.Content
           aria-describedby={insight.explanation ? "live-insight-description" : undefined}
-          className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[24px] w-[480px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
+          className={`fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[24px] w-[480px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none ${transition.card}`}
           data-testid="live-insight-modal"
         >
           <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-[#1d2132] border-solid h-[56px] shrink-0 w-full flex items-center justify-center px-[16px]">
@@ -224,6 +232,8 @@ export function LiveInsightModal({
                   it from the queue. Nothing is approved and no money moves, so
                   it is the only control here — never Approve/Reject. */}
               {onAcknowledge && (
+                <>
+                <CardActionDivider testId="divider-live-insight-actions" />
                 <ActionRow testId="actions-live-insight">
                   <ActionButton
                     label={acknowledged ? "Acknowledged" : "Acknowledge"}
@@ -233,6 +243,7 @@ export function LiveInsightModal({
                     testId="button-live-insight-acknowledge"
                   />
                 </ActionRow>
+                </>
               )}
 
             </CardBody>

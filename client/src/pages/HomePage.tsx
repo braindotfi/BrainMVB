@@ -21,7 +21,7 @@ import {
   type LiveInsight,
 } from "@/lib/brainAgentSurfaces";
 import { LiveInsightModal } from "@/components/LiveInsightModal";
-import { insightRowBadge, insightRowDetail } from "@/lib/insightRow";
+import { sessionIntentRow, queueIntentRow, liveProposalRow, insightRow } from "@/lib/recordRows";
 import { orderRowsForDisplay } from "@/lib/tierRowOrder";
 import { pagerState, stepPager, type PagerEntry } from "@/lib/unifiedPager";
 import {
@@ -41,7 +41,7 @@ import {
   TIER_ORDER,
 } from "@/lib/proposalTiers";
 import { TierSections, type TierRowAction, type TierRowModel } from "@/components/TierRowList";
-import { buildProposalHeaderCopy, buildDecisionButtons, PAYMENT_AGENT_PILL } from "@/lib/proposalCards";
+import { buildProposalHeaderCopy, buildDecisionButtons } from "@/lib/proposalCards";
 import { liabilitiesTotal, type ApInvoiceLike } from "@/lib/liabilities";
 import { apiRequest } from "@/lib/queryClient";
 import { mapApprovalRejection, parseCoreError, type ApprovalRejection } from "@/lib/approvalRejections";
@@ -580,6 +580,8 @@ export function HomePage() {
      hold four unrelated record types, so the row id is the only handle the
      shared pager can compare across them. */
   const [openRowId, setOpenRowId] = useState<string | null>(null);
+  /** The open surface arrived via Previous/Next rather than a row tap. */
+  const [steppedViaPager, setSteppedViaPager] = useState(false);
   const acknowledgedRecords = useAcknowledgedRecords();
   const acknowledgedInsightIds = useMemo(
     () => new Set(acknowledgedRecords.map((record) => record.id.replace("local-acknowledged-", ""))),
@@ -684,14 +686,12 @@ export function HomePage() {
     disputeError ||
     cashFlowError;
 
-  /* Status tag pill classes — mirrors InboxPage's TAG_* constants so Overview
-     rows carry the same visual language as the Inbox timeline. */
-  const TAG_NEEDS_YOU = "bg-[#4a2300] text-[#ff9500] border-[rgba(255,149,0,0.2)]";
-  const TAG_DETECTED  = "bg-[#222737] text-[#6c779d] border-[rgba(108,119,157,0.2)]";
-  const TAG_REJECTED  = "bg-[#350011] text-[#d20344] border-[rgba(210,3,68,0.2)]";
-
   const overviewRows: TierRowModel[] = useMemo(() => {
     const testIdPrefix = "row-overview";
+    /* Title, pill and second line for every row below come from recordRows.ts,
+       which the Inbox uses too. Overview decides what a row can DO; it does not
+       get its own opinion about what the record SAYS. */
+    const fmt = { format, formatText };
 
     // Session-scoped intents — title is specific; description is the "Why:".
     const sessionRows: TierRowModel[] = sessionReviews.map((r) => {
@@ -702,10 +702,7 @@ export function HomePage() {
            space and one test-id namespace in this list. */
         id: `session-${String(r.intentId ?? r.id)}`,
         tier: tierForPaymentIntent(),
-        title: formatText(r.title),
-        badge: { label: PAYMENT_AGENT_PILL, className: TAG_NEEDS_YOU, srLabel: "needs approval" },
-        /* Match InboxPage toRow: amount · vendor · due */
-        subtitle: [r.amount, r.vendor ? `${r.vendor} · ${r.due}` : r.due].filter(Boolean).join(" · ") || undefined,
+        ...sessionIntentRow(r, fmt),
         /* Session payment intents do not carry the policy category and threshold
            fields required by the shared bulk-approval guard, matching Inbox. */
         select: undefined,
@@ -741,18 +738,7 @@ export function HomePage() {
     const queueRows: TierRowModel[] = liveNeedsReview.map((p) => ({
       id: `queue-${p.id}`,
       tier: tierForPaymentIntent(),
-      title: formatText(p.title),
-      /* Every decision row is pilled with the AGENT that raised it, so a mixed
-         list reads as "who is asking" rather than four different vocabularies
-         for "needs you". Severity still drives the colour, and the record's own
-         risk band is stated in full on the card the row opens. */
-      badge: {
-        label: PAYMENT_AGENT_PILL,
-        className: p.severity === "danger" ? TAG_REJECTED : TAG_NEEDS_YOU,
-        srLabel: p.severity === "danger" ? "high risk" : p.severity === "warning" ? "elevated" : "needs review",
-      },
-      /* Match InboxPage toRow: amount · rowSubtitle */
-      subtitle: [typeof p.amount === "number" ? format(p.amount) : undefined, p.rowSubtitle].filter(Boolean).join(" · ") || undefined,
+      ...queueIntentRow(p, fmt),
       /* Durable payment-intent rows do not carry a policy category in this
          surface, so they are not bulk-selectable, matching Inbox. */
       select: undefined,
@@ -772,11 +758,7 @@ export function HomePage() {
       return {
         id: `insight-${i.id}`,
         tier: tierForReadOnlyInsight(),
-        title: formatText(i.title),
-        /* Badge and second line come from the shared helper the Inbox uses, so
-           the same record cannot read differently on the two screens. */
-        badge: insightRowBadge(i),
-        subtitle: formatText(insightRowDetail(i)),
+        ...insightRow(i, fmt),
         testIdPrefix,
         onOpenDetail: () => setSelectedInsight(i),
         actions: [
@@ -830,10 +812,7 @@ export function HomePage() {
       return [{
         id: rowId,
         tier,
-        title: headerCopy.title,
-        badge: { label: pillName, className: TAG_NEEDS_YOU },
-        /* Match InboxPage toRow: narrative text as subtitle */
-        subtitle: headerCopy.text || undefined,
+        ...liveProposalRow(headerCopy, pillName),
         /* Vendor risk doesn't require a human approval decision — no checkbox */
         select: candidate && p.type !== "vendor_risk"
           ? {
@@ -911,13 +890,28 @@ export function HomePage() {
     setSelectedLiveIntent(null);
     setLiveRejection(null);
   };
-  const stepRow = (delta: 1 | -1) => stepPager(pagerEntries, openRowId, delta, closeOpenSurface);
+  const stepRow = (delta: 1 | -1) => {
+    /* Stepping closes one dialog and opens another; the surface that opens must
+       know it is a step, not a fresh open, so it can skip the entrance
+       animation. Cleared below once nothing is open. */
+    setSteppedViaPager(true);
+    stepPager(pagerEntries, openRowId, delta, closeOpenSurface);
+  };
+  /* Reset off the SURFACES, not off openRowId: an action that closes a card
+     (approve, acknowledge, follow a link out) does not always clear the open row
+     id, and a flag left set would silence the next card the user opens by hand. */
+  const anySurfaceOpen =
+    selectedInsight !== null || selectedProposal !== null || selectedReview !== null || selectedLiveIntent !== null;
+  useEffect(() => {
+    if (!anySurfaceOpen) setSteppedViaPager(false);
+  }, [anySurfaceOpen]);
   /* Every surface below shares these, so the pager reads the same everywhere. */
   const pagerProps = {
     onPrev: () => stepRow(-1),
     onNext: () => stepRow(1),
     hasPrev: pager.hasPrev,
     hasNext: pager.hasNext,
+    pagerStep: steppedViaPager,
   };
 
   const overviewProposalByRowId = useMemo<Map<string, BrainProposal>>(

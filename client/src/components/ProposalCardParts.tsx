@@ -85,6 +85,24 @@ export const CardSection = ({
   </section>
 );
 
+/**
+ * Edge-to-edge rule inside a 24px-padded card column.
+ *
+ * The frames close every record card with a full-width line above its action
+ * buttons — the same rule the header, the hero and the pager footer use, so the
+ * buttons read as the card's footer rather than as one more section. A line
+ * drawn inside the padding would stop short at both ends and read as a section
+ * divider instead, hence the negative margin: it assumes a parent with 24px of
+ * horizontal padding, which every card column here has.
+ */
+export const CardActionDivider = ({ testId }: { testId?: string }) => (
+  <div
+    className="h-px shrink-0 self-stretch -mx-[24px] bg-[#1d2132]"
+    data-testid={testId}
+    aria-hidden="true"
+  />
+);
+
 /** The frame's 32px section rhythm. */
 export const CardBody = ({ children }: { children: ReactNode }) => (
   <div className="flex flex-col gap-[32px] items-start p-[24px] w-full">{children}</div>
