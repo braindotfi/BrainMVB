@@ -537,7 +537,7 @@ export function VendorDetailPopup({
                     className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]"
                     data-testid="text-acknowledged-note"
                   >
-                    You dismissed this {noun} without granting trust. You can still grant trust now if you've changed your mind.
+                    You reviewed this {noun} and took no action. You can still grant trust now if you've changed your mind.
                   </p>
                   <TrustButton
                     label={grantLabel}
@@ -579,7 +579,7 @@ export function VendorDetailPopup({
                     testId="button-flag-counterparty"
                   />
                   <TrustButton
-                    label="Dismiss"
+                    label="No action"
                     onClick={() => onAcknowledge?.(vendor.id)}
                     busy={trustBusy}
                     color="#6c779d"
@@ -610,7 +610,7 @@ export function VendorDetailPopup({
                       testId="button-restore-trust"
                     />
                     <TrustButton
-                      label="Dismiss"
+                      label="No action"
                       onClick={() => onAcknowledge?.(vendor.id)}
                       busy={trustBusy}
                       color="#6c779d"
@@ -632,7 +632,7 @@ export function VendorDetailPopup({
                       testId="button-grant-trust"
                     />
                     <TrustButton
-                      label="Dismiss"
+                      label="No action"
                       onClick={() => onAcknowledge?.(vendor.id)}
                       busy={trustBusy}
                       color="#6c779d"
@@ -667,7 +667,7 @@ export function VendorDetailPopup({
                     testId="button-flag-counterparty"
                   />
                   <TrustButton
-                    label="Dismiss"
+                    label="No action"
                     onClick={() => onAcknowledge?.(vendor.id)}
                     busy={trustBusy}
                     color="#6c779d"
