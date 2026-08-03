@@ -16,6 +16,7 @@ import { useCurrency } from "@/lib/useCurrency";
 import { useAuth } from "@/lib/authContext";
 import { queryClient } from "@/lib/queryClient";
 import { openMemberDetail } from "@/lib/membersStore";
+import { useAssistantQuestions, resolveSuggestionChips } from "@/lib/brainAssistantQuestions";
 import { resolveVendor, openVendorDetail } from "@/lib/openVendorDetail";
 import brainLogo from "@assets/Brain_1_1783374797129.png";
 import timeIcon from "@assets/Time_1781821466642.png";
@@ -77,12 +78,20 @@ function sessionGroup(createdAt: number): string {
   return date.toLocaleDateString("en-US", { month: "short", year: "numeric" });
 }
 
-const SUGGESTED_QUESTIONS = [
+/** Stand-in chips, used ONLY when brain-core returns nothing eligible for this
+ *  tenant or the read fails. Deliberately the four strings this component
+ *  already shipped — each was vetted against a real backend capability (note
+ *  "Show recent cash flow", chosen over "Forecast cash flow" because
+ *  /ledger/cash_flows is trailing-actuals only). No new suggestion copy may be
+ *  added here: a hand-authored chip is exactly the failure mode the live
+ *  endpoint exists to remove. Anything tenant-specific must come from
+ *  useAssistantQuestions(). */
+const FALLBACK_QUESTIONS = [
   "Show recent cash flow",
   "Anything change overnight?",
   "What needs attention?",
   "Show last 10 transactions",
-];
+] as const;
 
 /** Extra chips shown ONLY while a Developers subpage is active — they submit
  *  real prompts through the same assistant pipe as any typed message. */
@@ -371,6 +380,27 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
   const onDevelopersPage =
     location.startsWith("/settings") && new URLSearchParams(devSearch).get("section") === "developers";
   const { user, isLoading: authLoading } = useAuth();
+
+  /* Suggestion chips come from brain-core (GET /assistant/questions), ranked in
+     the order it returns them. The fallback below is only reached when this
+     tenant has nothing eligible or the read fails — see brainAssistantQuestions.ts. */
+  const {
+    questions: tenantQuestions,
+    isLoading: questionsLoading,
+    isError: questionsError,
+  } = useAssistantQuestions();
+
+  const suggestionChips = useMemo(
+    () =>
+      resolveSuggestionChips({
+        questions: tenantQuestions,
+        isLoading: questionsLoading,
+        isError: questionsError,
+        fallback: FALLBACK_QUESTIONS,
+      }),
+    [tenantQuestions, questionsLoading, questionsError],
+  );
+
   const storageKey = `brain.chat.${user?.id ?? "anon"}`;
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
@@ -1066,7 +1096,10 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
 
       {/* Suggested questions */}
       <div className="flex items-center gap-[8px] px-[7px] pt-[12px] pb-[8px] overflow-x-auto">
-        {(onDevelopersPage ? [...DEVELOPER_QUESTIONS, ...SUGGESTED_QUESTIONS] : SUGGESTED_QUESTIONS).map((q) => (
+        {(onDevelopersPage
+          ? [...DEVELOPER_QUESTIONS, ...suggestionChips.chips]
+          : suggestionChips.chips
+        ).map((q) => (
           <button
             key={q}
             data-testid={`button-suggested-${q.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`}
