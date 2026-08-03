@@ -33,3 +33,20 @@ Related: GitHub retargets a child PR's base to `main` on its own once the parent
 merges, but only for the immediate child — retarget the rest through the API
 before merging, and re-check `base.ref` and `head.sha` in the same call that
 merges.
+
+When a child branch already accumulated a long pre-parent history and the
+parent was squash-merged, the safest repair is to preserve the old head under a
+local backup ref, reset the working branch to the current `origin/main`, and
+cherry-pick only the child commits plus any independently verified child
+changes. Update the remote with `--force-with-lease` only after the reduced
+diff and full test suite are clean.
+
+**Why:** a merge commit can be conflict-free while silently restoring the
+pre-squash implementation of files whose old commit IDs are absent from
+`main`. Comparing the final tree and the diff against `origin/main` catches
+that history/content mismatch.
+
+**How to apply:** treat `origin/main..branch` as a tree diff only after
+rebuilding the branch; verify the diff contains no already-landed parent
+feature, then run typecheck, tests, whitespace/conflict checks, and CI before
+the force-with-lease update.
