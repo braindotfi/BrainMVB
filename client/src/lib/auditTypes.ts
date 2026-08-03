@@ -111,6 +111,11 @@ export interface AuditRecord {
      dedup between brain-core events and locally-recorded fallback rows can
      use the raw text, independent of truncation or lifecycle-step formatting. */
   rawQuestion?: string;
+  /* Display name of the originating agent / surface (e.g. "Cash Forecasting",
+     "Payment Agent").  Absent on brain-core records where the actor field
+     already carries the approver identity; present on locally-synthesised
+     records that originate from a LiveInsight (acknowledged items). */
+  agentLabel?: string;
 }
 
 /* Filter tabs for the Audit Log page */

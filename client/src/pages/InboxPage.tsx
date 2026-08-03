@@ -35,6 +35,8 @@ import {
   type DecisionButton,
 } from "@/lib/proposalCards";
 import { LiveProposalModal, AGENT_DISPLAY_NAME } from "@/components/AgentProposalModal";
+import type { AgentKey } from "@/lib/agentProposals";
+import { capitalCase } from "@/lib/displayLabels";
 import { useBrainAuditRecords } from "@/lib/brainAudit";
 import { inboxTapTarget } from "@/lib/inboxTap";
 import { pagerState, stepPager, type PagerEntry } from "@/lib/unifiedPager";
@@ -816,6 +818,7 @@ export function InboxPage() {
 
     /* Auto-approved: live brain-core intents that cleared §6 automatically. */
     for (const p of liveAutoApproved) {
+      const autoAgentLabel = AGENT_DISPLAY_NAME[p.agent as AgentKey] ?? capitalCase(String(p.agent).replace(/_/g, " "));
       push({
         id: p.id,
         kind: "proposal",
@@ -824,8 +827,8 @@ export function InboxPage() {
         type: "payment",
         search: buildSearchText(p.title, p.rowSubtitle, p.amountDisplay),
         title: p.title,
-        tag: p.agent ?? "",
-        tagClass: p.agent ? TAG_AGENT : "",
+        tag: autoAgentLabel,
+        tagClass: TAG_AGENT,
         desc: p.rowSubtitle,
         time: p.settledMeta ? "" : p.dueLabel ?? "",
         why: p.rationale,
@@ -862,8 +865,10 @@ export function InboxPage() {
         title: p.title,
         /* Postponed keeps a small badge (no status pill); decided rows show agent
            name in the badge so the pill stands alone as the outcome. */
-        tag: sessionPill ? (p.agent ?? "") : (status === "postponed" ? "Postponed" : ""),
-        tagClass: sessionPill ? (p.agent ? TAG_AGENT : "") : (status === "postponed" ? TAG_DETECTED : ""),
+        tag: sessionPill
+          ? (AGENT_DISPLAY_NAME[p.agent as AgentKey] ?? capitalCase(String(p.agent).replace(/_/g, " ")))
+          : (status === "postponed" ? "Postponed" : ""),
+        tagClass: sessionPill ? TAG_AGENT : (status === "postponed" ? TAG_DETECTED : ""),
         desc: p.rowSubtitle,
         time: "Just now",
         why: p.rationale,
@@ -927,8 +932,8 @@ export function InboxPage() {
         type: "payment",
         search: buildSearchText(r.summary, r.rowSubtitle, humanReadableActor(r.actor), r.occurredAtLabel),
         title: r.summary,
-        tag: "",
-        tagClass: "",
+        tag: r.agentLabel ?? "",
+        tagClass: r.agentLabel ? TAG_AGENT : "",
         desc: r.rowSubtitle ?? "",
         time: r.occurredAtLabel,
         why: auditWhy(r),

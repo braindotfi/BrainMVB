@@ -46,6 +46,7 @@ function insightToRecord(insight: LiveInsight): AuditRecord {
     linked: [],
     anchor: { status: "pending_next_batch", auditId: `local-acknowledged-${insight.id}` },
     rowSubtitle: "Acknowledged from the Inbox; no payment was initiated.",
+    agentLabel: insight.badge,
   };
 }
 
