@@ -111,8 +111,22 @@ describe("type options come from the data, not a hardcoded list", () => {
   });
 
   it("uses friendly names for the types we know", () => {
-    expect(decisionTypeLabel("fraud_anomaly")).toBe("Fraud");
-    expect(decisionTypeLabel("cash_forecast")).toBe("Cash forecast");
+    expect(decisionTypeLabel("fraud_anomaly")).toBe("Fraud and Anomaly");
+    expect(decisionTypeLabel("cash_forecast")).toBe("Cash Forecasting");
+    expect(decisionTypeLabel("revenue_intel")).toBe("Revenue Intelligence");
+  });
+
+  it("normalizes internal insight kinds to the owning agent category", () => {
+    const opts = typeOptions([
+      row({ type: "cashflow" }),
+      row({ type: "cash_flow" }),
+      row({ type: "cash_forecast" }),
+      row({ type: "fraud" }),
+    ]);
+    expect(opts).toEqual([
+      { value: "cash_forecast", label: "Cash Forecasting" },
+      { value: "fraud_anomaly", label: "Fraud and Anomaly" },
+    ]);
   });
 
   it("is stable under reordering of the input", () => {
