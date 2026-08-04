@@ -14,6 +14,25 @@ import { evictBrainSession } from "./brain/auth";
 
 const scryptAsync = promisify(scrypt);
 
+// ─── Session helper ───
+/**
+ * Switch the authenticated principal on a session.
+ *
+ * When an existing, different user is already bound to the session, regenerate
+ * it first — this issues a new session ID and cookie, preventing session
+ * fixation (a prior principal's cookie cannot be used to access the new one).
+ * After regeneration (or immediately if the session was anonymous), the new
+ * userId is written and express-session saves it on response.
+ */
+async function switchSession(req: Request, newUserId: string): Promise<void> {
+  if (req.session.userId && req.session.userId !== newUserId) {
+    await new Promise<void>((resolve, reject) => {
+      req.session.regenerate((err) => (err ? reject(err) : resolve()));
+    });
+  }
+  req.session.userId = newUserId;
+}
+
 // ─── Session typing ───
 declare module "express-session" {
   interface SessionData {
@@ -163,7 +182,7 @@ export function setupAuth(app: Express) {
       name: name ?? null,
     });
 
-    req.session.userId = user.id;
+    await switchSession(req, user.id);
     return res.status(201).json({ user: publicUser(user) });
   });
 
@@ -186,7 +205,7 @@ export function setupAuth(app: Express) {
       return res.status(401).json({ error: "Invalid username/email or password" });
     }
 
-    req.session.userId = user.id;
+    await switchSession(req, user.id);
     return res.json({ user: publicUser(user) });
   });
 
@@ -207,7 +226,7 @@ export function setupAuth(app: Express) {
         name: "ACME Inc.",
       });
     }
-    req.session.userId = user.id;
+    await switchSession(req, user.id);
     return res.json({ user: publicUser(user) });
   });
 
@@ -224,17 +243,7 @@ export function setupAuth(app: Express) {
       password: null,
       name: "Demo Business",
     });
-    // If a real user is already signed in, regenerate the session before
-    // writing the new userId. Without this the same session cookie carries
-    // forward with a different principal (session fixation). Regenerate()
-    // creates a fresh session id while keeping the new userId we assign below.
-    // The new Set-Cookie in the response replaces the old cookie in the browser.
-    if (req.session.userId && req.session.userId !== user.id) {
-      await new Promise<void>((resolve, reject) => {
-        req.session.regenerate((err) => (err ? reject(err) : resolve()));
-      });
-    }
-    req.session.userId = user.id;
+    await switchSession(req, user.id);
 
     // Lazy cleanup: on each new provision, purge demo-fresh users older than the TTL.
     // Fire-and-forget — login is never blocked on this.
@@ -360,7 +369,7 @@ export function setupAuth(app: Express) {
         });
       }
 
-      req.session.userId = user.id;
+      await switchSession(req, user.id);
       return res.redirect("/");
     } catch (err) {
       console.error("[Google OAuth] callback error:", err);

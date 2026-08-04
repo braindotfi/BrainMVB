@@ -100,6 +100,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data?.error || "Login failed");
+    // Clear any stale queries from a prior session (e.g. demo → real user switch)
+    // before applying the new user identity, so no cached data from the previous
+    // principal leaks into this session's renders. Same pattern as loginDemoFresh.
+    queryClient.clear();
+    clearMembers();
     setUser(data.user);
   }, []);
 
@@ -113,6 +118,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "Registration failed");
+      // Same cache-clear as loginWithPassword — guards against any prior session data.
+      queryClient.clear();
+      clearMembers();
       setUser(data.user);
     },
     [],
