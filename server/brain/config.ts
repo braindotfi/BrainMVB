@@ -2,10 +2,17 @@
  * brain-core integration config (BFF side).
  *
  * Central place that reads every BRAIN_* env var the Backend-for-Frontend uses to
- * talk to the brain-core protocol (live target: https://api.brain.fi/v1).
+ * talk to the brain-core protocol.
+ *
+ * Two base URLs are now resolved at startup:
+ *   DEMO_BRAIN_API_BASE_URL  — demo / "Continue with Demo" users hit this target.
+ *                              Defaults to https://staging-api.brain.fi/v1 (staging).
+ *   PROD_BRAIN_API_BASE_URL  — signed-in / sign-up users hit this target.
+ *                              Defaults to https://api.brain.fi/v1 (production).
+ *   (Legacy BRAIN_API_BASE_URL is still honoured as the prod URL when the new var is unset.)
  *
  * Token source (see auth.ts / brainTokenMode), in priority order:
- *   - "staging-demo-token" (staging environment only) - when BRAIN_API_BASE_URL points at
+ *   - "staging-demo-token" (staging environment only) - when the demo URL points at
  *     https://staging-api.brain.fi/v1, the BFF calls the key-free POST /v1/demo/token
  *     (empty JSON body, no auth header) and uses the single 24h token it returns for every
  *     call (staging has no member/agent token split). Per the staging integration guide.
@@ -38,11 +45,31 @@ function env(name: string): string | undefined {
   return v !== undefined && v.trim() !== "" ? v.trim() : undefined;
 }
 
+/**
+ * Base URL for PRODUCTION brain-core (signed-in / sign-up users).
+ * Read from PROD_BRAIN_API_BASE_URL (preferred) or the legacy BRAIN_API_BASE_URL,
+ * defaulting to https://api.brain.fi/v1.
+ */
+export function prodBrainBaseUrl(): string {
+  return (env("PROD_BRAIN_API_BASE_URL") ?? env("BRAIN_API_BASE_URL") ?? "https://api.brain.fi/v1").replace(/\/+$/, "");
+}
+
+/**
+ * Base URL for DEMO brain-core ("Continue with Demo" users).
+ * Read from DEMO_BRAIN_API_BASE_URL, defaulting to https://staging-api.brain.fi/v1.
+ */
+export function demoBrainBaseUrl(): string {
+  return (env("DEMO_BRAIN_API_BASE_URL") ?? "https://staging-api.brain.fi/v1").replace(/\/+$/, "");
+}
+
 export interface BrainConfig {
-  /** Base URL incl. the /v1 prefix, e.g. https://api.brain.fi/v1 */
+  /** Base URL for PRODUCTION / real-user calls (prodBrainBaseUrl()). */
   baseUrl: string;
+  /** Base URL for DEMO / "Continue with Demo" calls (demoBrainBaseUrl()). */
+  demoBaseUrl: string;
   /** PREFERRED (key-free): shared secret for the fenced POST /v1/demo/provision-run.
-   *  Sent as the X-Demo-Provision-Auth header. */
+   *  Sent as the X-Demo-Provision-Auth header.
+   *  Accepts BRAIN_DEMO_PROVISION_SECRET or the older BRAIN_PROVISION_SECRET alias. */
   demoProvisionSecret: string | undefined;
   /** PRODUCTION TENANCY: platform service credential for POST /v1/tenants,
    *  POST /v1/sessions and POST /v1/invites/consume. Sent as X-Platform-Service-Auth. */
@@ -61,8 +88,10 @@ export interface BrainConfig {
 }
 
 export const brainConfig: BrainConfig = {
-  baseUrl: (env("BRAIN_API_BASE_URL") ?? "https://api.brain.fi/v1").replace(/\/+$/, ""),
-  demoProvisionSecret: env("BRAIN_DEMO_PROVISION_SECRET"),
+  baseUrl: prodBrainBaseUrl(),
+  demoBaseUrl: demoBrainBaseUrl(),
+  // Accept BRAIN_PROVISION_SECRET as an alias (legacy env var name from initial setup).
+  demoProvisionSecret: env("BRAIN_DEMO_PROVISION_SECRET") ?? env("BRAIN_PROVISION_SECRET"),
   platformServiceSecret: env("BRAIN_PLATFORM_SERVICE_SECRET"),
   signKeyJson: env("BRAIN_AUTH_SIGN_KEY"),
   hs256Secret: env("BRAIN_AUTH_JWT_SECRET"),
@@ -76,9 +105,9 @@ export const brainConfig: BrainConfig = {
 /** How the BFF obtains brain-core tokens. */
 export type BrainTokenMode = "staging-demo-token" | "demo-provision" | "local-key" | "unconfigured";
 
-/** True when BRAIN_API_BASE_URL points at the staging box (per the staging integration guide). */
+/** True when the DEMO brain target points at the staging box. */
 export function isStagingBrainTarget(): boolean {
-  return brainConfig.baseUrl.includes("staging-api.brain.fi");
+  return brainConfig.demoBaseUrl.includes("staging-api.brain.fi");
 }
 
 export function brainTokenMode(): BrainTokenMode {
@@ -144,3 +173,23 @@ export function brainDurableTenancy(): boolean {
 export function platformServiceConfigured(): boolean {
   return brainConfig.platformServiceSecret !== undefined;
 }
+
+// ── Startup readiness log ────────────────────────────────────────────────────
+// Printed once at module load so every server restart shows which targets and
+// token strategies are live. Not sensitive: only URLs and mode names, never
+// secrets or tokens.
+(function logBrainConfig() {
+  const mode = brainTenancyMode();
+  const demoMode = brainConfig.demoBaseUrl.includes("staging-api.brain.fi")
+    ? "staging-demo-token"
+    : brainConfig.demoProvisionSecret
+      ? "demo-provision"
+      : "unconfigured";
+  const realMode = mode === "production" ? "production" : mode === "durable" ? "durable" : "demo-fallback";
+  console.log(
+    `[brain-config] demo target: ${brainConfig.demoBaseUrl} (token: ${demoMode}) | ` +
+    `prod target: ${brainConfig.baseUrl} (tenancy: ${realMode}) | ` +
+    `platform-service: ${brainConfig.platformServiceSecret ? "✓" : "✗"} | ` +
+    `demo-provision-secret: ${brainConfig.demoProvisionSecret ? "✓" : "✗"}`,
+  );
+})();
