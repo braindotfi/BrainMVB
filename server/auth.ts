@@ -224,6 +224,16 @@ export function setupAuth(app: Express) {
       password: null,
       name: "Demo Business",
     });
+    // If a real user is already signed in, regenerate the session before
+    // writing the new userId. Without this the same session cookie carries
+    // forward with a different principal (session fixation). Regenerate()
+    // creates a fresh session id while keeping the new userId we assign below.
+    // The new Set-Cookie in the response replaces the old cookie in the browser.
+    if (req.session.userId && req.session.userId !== user.id) {
+      await new Promise<void>((resolve, reject) => {
+        req.session.regenerate((err) => (err ? reject(err) : resolve()));
+      });
+    }
     req.session.userId = user.id;
 
     // Lazy cleanup: on each new provision, purge demo-fresh users older than the TTL.

@@ -39,6 +39,20 @@ function getSnapshot() {
 
 let hydrated = false;
 
+/**
+ * Clear the in-memory email and phone overrides on every auth transition.
+ * Called from applyUserScopedResets (authContext.tsx) so stale contact info
+ * from a real user's session can never bleed into a subsequent demo session.
+ * Does NOT touch localStorage — those values belong to the authenticated user
+ * who set them and will be reloaded on their next login via the hydration block.
+ */
+export function resetUserContact() {
+  emailOverride = null;
+  phoneOverride = null;
+  hydrated = false; // allow the next useUserContact() call to rehydrate from localStorage
+  emit();
+}
+
 export function useUserContact() {
   const { user } = useAuth();
   // One-time global rehydration from localStorage
