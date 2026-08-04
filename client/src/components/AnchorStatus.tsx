@@ -64,7 +64,11 @@ export function AnchorStatus({
       ? "Recorded and verifiable. On-chain anchor pending."
       : "Proof incomplete. This record hasn't been anchored on-chain yet.";
 
-  const statusColor = isAnchored ? "text-[#42bf23]" : isRecorded ? "text-[#f59e0b]" : "text-[#a8b9f4]";
+  /* All non-anchored states share the clock icon (#a8b9f4 baby blue), so the
+     status label matches it regardless of whether we're recorded-pending or
+     just waiting for the next batch. Using amber for "recorded" was visually
+     inconsistent: the icon didn't change but the text did. */
+  const statusColor = isAnchored ? "text-[#42bf23]" : "text-[#a8b9f4]";
 
   /* The on-chain-immutability claim is ONLY made when a real, linkable tx
      exists. The recorded state claims exactly what is true: sealed in the
