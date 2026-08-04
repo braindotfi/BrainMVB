@@ -304,6 +304,7 @@ function InboxDropdown({
   onOpenChange: (open: boolean) => void;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
+  const closeTimerRef = useRef<number | null>(null);
   const allOption = options[0];
   const selected = options.filter((option) => values.includes(option.value));
   const triggerLabel =
@@ -312,6 +313,15 @@ function InboxDropdown({
       : selected.length === 1
         ? selected[0].label
         : `${selected.length} selected`;
+
+  useEffect(() => {
+    return () => {
+      if (closeTimerRef.current !== null) {
+        window.clearTimeout(closeTimerRef.current);
+        closeTimerRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -329,8 +339,30 @@ function InboxDropdown({
     };
   }, [open, onOpenChange]);
 
+  const cancelClose = () => {
+    if (closeTimerRef.current !== null) {
+      window.clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+  };
+
+  const scheduleClose = () => {
+    cancelClose();
+    closeTimerRef.current = window.setTimeout(() => {
+      closeTimerRef.current = null;
+      onOpenChange(false);
+    }, 120);
+  };
+
   return (
-    <div ref={rootRef} className="relative w-[120px] shrink-0">
+    <div
+      ref={rootRef}
+      className="relative w-[120px] shrink-0"
+      onPointerEnter={cancelClose}
+      onPointerLeave={() => {
+        if (open) scheduleClose();
+      }}
+    >
       <button
         type="button"
         aria-haspopup="true"
