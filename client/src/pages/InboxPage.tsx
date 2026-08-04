@@ -471,7 +471,7 @@ export function InboxPage() {
     .filter((i) => i.outcome === "confirm" && !i.declined && i.approvalState !== "approved")
     .map((r) => intentToReview(r, format));
 
-  const { records: auditRecords, isError: auditError } = useBrainAuditRecords();
+  const { records: auditRecords, isError: auditError } = useBrainAuditRecords(needsReviewProposals);
 
   /* ── Live approve / reject (durable brain-core queue rows) ─────────────── */
   const queryClient = useQueryClient();

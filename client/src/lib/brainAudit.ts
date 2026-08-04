@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { AuditRecord, AuditEventType, AnchorProof, LifecycleStep } from "./auditTypes";
 import { isAssistantActivity, humanReadableActor } from "./auditTypes";
@@ -484,6 +484,11 @@ export function mapAuditEventToRecord(
   event: BrainAuditEvent,
   latestAnchor: BrainAnchor | undefined,
   resolvedActors?: Record<string, string | null>,
+  /** Live proposal type map: proposalId → ProposalType string.
+   *  Built from the needsReview proposals feed and accumulated over time so
+   *  the type key is available even after a proposal is decided and removed
+   *  from the feed. Takes priority over the module-level session cache. */
+  proposalTypeMap?: Map<string, string>,
 ): AuditRecord {
   const { eventType, summary } = classify(event);
   const createdMs = new Date(event.created_at).getTime();
@@ -592,17 +597,22 @@ export function mapAuditEventToRecord(
     proposingAgent: (() => {
       const raw = proposalSummary?.proposing_agent;
       if (!raw) return undefined;
+      // Priority 1: live proposal type map (reactive, never stale)
+      const fromMap = proposalTypeMap?.get(proposalId ?? "");
+      if (fromMap) return fromMap;
+      // Priority 2: session cache (module-level, set at render time)
       const cached = cachedProposalAgentKey(proposalId);
       if (cached) return cached;
       return raw; // may be a type key or a ULID
     })(),
     /* proposingAgentDisplay: only populated when proposingAgent is a ULID
        (not a known type key). Provides a fallback display name from the
-       execution-agent registry for decisions made before the session cache
+       execution-agent registry for decisions made before the map/cache
        was populated (e.g. historical records from previous sessions). */
     proposingAgentDisplay: (() => {
-      const cached = cachedProposalAgentKey(proposalId);
-      if (cached) return undefined; // cache hit → use type key, skip display name
+      const fromMap = proposalTypeMap?.get(proposalId ?? "");
+      const cached = fromMap ?? cachedProposalAgentKey(proposalId);
+      if (cached) return undefined; // type key hit → skip display name
       const pa = proposalSummary?.proposing_agent;
       if (!pa || /^[a-z_]+$/.test(pa)) return undefined; // type key, already handled
       return resolvedActors?.[`/v1/agents/${pa}`] ?? undefined;
@@ -648,7 +658,24 @@ function localQuestionToRecord(q: AssistantQuestion): AuditRecord {
  *  Surfaces that show a total must say so — see `atEventLimit` below. */
 export const AUDIT_EVENTS_LIMIT = 100;
 
-export function useBrainAuditRecords() {
+/** Minimal proposal shape needed to recover the agent type key for decided records. */
+export interface ProposalForTracking {
+  id: string;
+  type: string;
+}
+
+export function useBrainAuditRecords(proposals?: ProposalForTracking[]) {
+  /* Accumulate proposalId → ProposalType mappings using a ref so entries
+     persist after a proposal is decided and removed from the live feed.
+     Populated INLINE — synchronously, before any useMemo in this call — so
+     the map is always current when mapAuditEventToRecord reads it during
+     the same render cycle. This guarantees the correct agent type key is
+     available even if proposals and audit events arrive in the same render. */
+  const proposalTypeMapRef = useRef(new Map<string, string>());
+  for (const p of proposals ?? []) {
+    if (p.id && p.type) proposalTypeMapRef.current.set(p.id, p.type);
+  }
+
   const events = useQuery<AuditEventsResponse>({
     queryKey: [`/api/brain/audit/events?limit=${AUDIT_EVENTS_LIMIT}`],
     retry: false,
@@ -714,7 +741,7 @@ export function useBrainAuditRecords() {
      The local id prefix `local-question-` ensures no collision with brain-core ids. */
   const records = useMemo(() => {
     const brainRecords = (events.data?.events ?? [])
-      .map((e) => mapAuditEventToRecord(e, anchor.data, actorLookups.data));
+      .map((e) => mapAuditEventToRecord(e, anchor.data, actorLookups.data, proposalTypeMapRef.current));
     /* Map: normalized question text → Set of timestamps from brain-core wiki.question events */
     const wikiTsByQuestion = new Map<string, Set<number>>();
     for (const r of brainRecords) {
