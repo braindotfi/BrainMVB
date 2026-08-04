@@ -460,6 +460,26 @@ async function fetchActorName(lookup: string): Promise<string | null> {
   }
 }
 
+/** Session-level cache: maps brain-core proposal_id → client AgentKey string.
+ *  Populated by the proposals surface when live proposals load — BEFORE any
+ *  decision is made — so that the `proposal.decided` audit record can recover
+ *  the correct agent category even when brain-core's `proposing_agent` field
+ *  carries an opaque execution-agent ULID rather than a human-readable type
+ *  key. Module-level so it survives re-renders and persists until the tab is
+ *  closed (intentional: audit history must be consistent within a session). */
+const _proposalAgentKeyCache = new Map<string, string>();
+
+/** Record the agent type key for a live proposal before it is decided.
+ *  Call this whenever needsReview proposals are iterated in the UI. */
+export function registerProposalAgentKey(proposalId: string, agentKey: string): void {
+  if (proposalId && agentKey) _proposalAgentKeyCache.set(proposalId, agentKey);
+}
+
+/** Retrieve the cached agent type key for a proposal (set before decision). */
+export function cachedProposalAgentKey(proposalId: string | undefined): string | undefined {
+  return proposalId ? _proposalAgentKeyCache.get(proposalId) : undefined;
+}
+
 export function mapAuditEventToRecord(
   event: BrainAuditEvent,
   latestAnchor: BrainAnchor | undefined,
@@ -562,15 +582,29 @@ export function mapAuditEventToRecord(
     anchor: anchorFor(event, latestAnchor),
     rawQuestion: fullQuestion,
     agentLabel,
-    proposingAgent: proposalSummary?.proposing_agent,
-    /* Resolved display name for agent ULIDs — undefined for type-key strings
-       (those use AGENT_DISPLAY_NAME directly). The lookup path mirrors how
-       actor_ref.lookup entries are resolved: /v1/agents/{id} is re-pointed by
-       bffPathForActorLookup to /execution/agents/{id} which returns the
-       display_name for runtime agent instances. */
+    /* proposingAgent: canonical agent type key for the proposing agent.
+       Priority:
+       1. Session cache hit (populated when the live proposal was still visible
+          in the feed — the only reliable source of the functional agent type).
+       2. brain-core's raw proposing_agent when it's already a type key
+          (all-lowercase + underscores, e.g. "vendor_risk").
+       3. Raw value as fallback (ULID — badge will try registry display name). */
+    proposingAgent: (() => {
+      const raw = proposalSummary?.proposing_agent;
+      if (!raw) return undefined;
+      const cached = cachedProposalAgentKey(proposalId);
+      if (cached) return cached;
+      return raw; // may be a type key or a ULID
+    })(),
+    /* proposingAgentDisplay: only populated when proposingAgent is a ULID
+       (not a known type key). Provides a fallback display name from the
+       execution-agent registry for decisions made before the session cache
+       was populated (e.g. historical records from previous sessions). */
     proposingAgentDisplay: (() => {
+      const cached = cachedProposalAgentKey(proposalId);
+      if (cached) return undefined; // cache hit → use type key, skip display name
       const pa = proposalSummary?.proposing_agent;
-      if (!pa || /^[a-z_]+$/.test(pa)) return undefined; // type key, not a ULID
+      if (!pa || /^[a-z_]+$/.test(pa)) return undefined; // type key, already handled
       return resolvedActors?.[`/v1/agents/${pa}`] ?? undefined;
     })(),
   };

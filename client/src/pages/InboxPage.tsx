@@ -38,7 +38,7 @@ import { LiveProposalModal, AGENT_DISPLAY_NAME } from "@/components/AgentProposa
 import type { AgentKey } from "@/lib/agentProposals";
 import { agentBadgeLabel } from "@/lib/agentProposals";
 import { capitalCase } from "@/lib/displayLabels";
-import { useBrainAuditRecords } from "@/lib/brainAudit";
+import { useBrainAuditRecords, registerProposalAgentKey } from "@/lib/brainAudit";
 import { inboxTapTarget } from "@/lib/inboxTap";
 import { pagerState, stepPager, type PagerEntry } from "@/lib/unifiedPager";
 import { AuditRecordPopup } from "@/components/AuditRecordPopup";
@@ -760,6 +760,10 @@ export function InboxPage() {
          pending row and the settled audit row render for the same invoice. */
       if (decidedProposalIds.has(p.id)) continue;
       const agentKey = agentKeyForProposalType(p.type);
+      // Cache the agent key so audit records produced by this proposal's
+      // decision can recover the correct category (brain-core's proposing_agent
+      // in the audit snapshot is the execution agent ULID, not the type key).
+      registerProposalAgentKey(p.id, agentKey);
       const agentName = p.agent?.display_name || AGENT_DISPLAY_NAME[agentKey];
       const pillName = agentBadgeLabel(agentKey);
         const decisions = buildDecisionButtons(p.available_decisions, p.presentation?.actions);
@@ -921,12 +925,17 @@ export function InboxPage() {
            than falling back to the actor — an empty badge is honest; an actor
            name in an agent-coloured pill is not. */
         tag: aPill
-          ? (r.proposingAgentDisplay
-              /* Resolved ULID agent: strip trailing " Agent" then re-add it so
-                 "Collections Agent" → "Collections Agent" (idempotent) and
-                 "Collections" → "Collections Agent". */
-              ? r.proposingAgentDisplay.replace(/\s+Agent\s*$/i, "").trim() + " Agent"
-              : r.proposingAgent ? agentBadgeLabel(r.proposingAgent) : "")
+          ? (() => {
+              // Priority: (1) known type-key proposingAgent (from cache or
+              // brain-core direct), (2) resolved display name for ULID agents,
+              // (3) raw ULID fallback.
+              if (r.proposingAgent && /^[a-z_]+$/.test(r.proposingAgent))
+                return agentBadgeLabel(r.proposingAgent);
+              if (r.proposingAgentDisplay)
+                return r.proposingAgentDisplay.replace(/\s+Agent\s*$/i, "").trim() + " Agent";
+              if (r.proposingAgent) return agentBadgeLabel(r.proposingAgent);
+              return "";
+            })()
           : auditEventLabel(r.eventType),
         tagClass: aPill
           ? (r.proposingAgent ? TAG_AGENT : "")
@@ -957,7 +966,7 @@ export function InboxPage() {
         type: "payment",
         search: buildSearchText(r.summary, r.rowSubtitle, humanReadableActor(r.actor), r.occurredAtLabel),
         title: r.summary,
-        tag: r.agentLabel ?? "",
+        tag: r.agentLabel ? agentBadgeLabel(r.agentLabel) : "",
         tagClass: r.agentLabel ? TAG_AGENT : "",
         desc: r.rowSubtitle ?? "",
         time: r.occurredAtLabel,

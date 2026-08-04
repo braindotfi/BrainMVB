@@ -189,31 +189,34 @@ export function auditEventLabel(type: AuditEventType): string {
 export function auditRecordAgentName(record: AuditRecord): string | undefined {
   const label = record.agentLabel?.trim();
   if (label) return label;
-  /* proposingAgentDisplay is the resolved display name for ULID-type proposing
-     agents (e.g. "Collections Agent" from brain-core's registry). Strip the
-     " Agent" suffix so the title reads "Collections Audit Record" not
-     "Collections Agent Audit Record". */
-  if (record.proposingAgentDisplay) {
-    return record.proposingAgentDisplay.replace(/\s+Agent\s*$/i, "").trim();
-  }
   if (record.proposingAgent) {
-    // AGENT_DISPLAY_NAME is the canonical base name (no "Agent" suffix) — the
-    // title format is "<Display Name> Audit Record", e.g. "Cash Forecasting
-    // Audit Record", never "Cash Forecasting Agent Audit Record".
-    const displayNames: Record<string, string> = {
-      vendor_risk: "Vendor Risk", payment: "Payment", collections: "Collections",
-      treasury: "Treasury", cash_forecast: "Cash Forecasting", dispute: "Dispute",
-      compliance: "Compliance", revenue_intel: "Revenue Intelligence",
-      reconciliation: "Reconciliation", subscription: "Subscription",
-      fraud_anomaly: "Fraud and Anomaly", bill_management: "Bill Management",
-      debt_optimization: "Debt Optimization", financial_health: "Financial Health",
-      personal_budget: "Personal Budget", purchase_advisor: "Purchase Advisor",
-      savings: "Savings", tax_prep: "Tax Prep", travel_finance: "Travel Finance",
-    };
-    const name = displayNames[record.proposingAgent];
-    if (name) return name;
-    // Unknown key: best-effort capitalisation.
-    return record.proposingAgent.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+    /* Type-key path (all-lowercase + underscores, e.g. "collections"): use the
+       display-name table directly. Covers both direct type keys from brain-core
+       AND keys recovered from the session cache (which always wins over the raw
+       registry display string, so the canonical category name is shown). */
+    if (/^[a-z_]+$/.test(record.proposingAgent)) {
+      // Titles use the base name without "Agent" suffix: "Collections Audit Record".
+      const displayNames: Record<string, string> = {
+        vendor_risk: "Vendor Risk", payment: "Payment", collections: "Collections",
+        treasury: "Treasury", cash_forecast: "Cash Forecasting", dispute: "Dispute",
+        compliance: "Compliance", revenue_intel: "Revenue Intelligence",
+        reconciliation: "Reconciliation", subscription: "Subscription",
+        fraud_anomaly: "Fraud and Anomaly", bill_management: "Bill Management",
+        debt_optimization: "Debt Optimization", financial_health: "Financial Health",
+        personal_budget: "Personal Budget", purchase_advisor: "Purchase Advisor",
+        savings: "Savings", tax_prep: "Tax Prep", travel_finance: "Travel Finance",
+      };
+      const name = displayNames[record.proposingAgent];
+      if (name) return name;
+      return record.proposingAgent.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+    }
+    /* ULID path: proposingAgent is an opaque execution-agent ID. Fall back to
+       the registry display name (strip " Agent" suffix for titles) if available.
+       Omit rather than expose the raw ULID. */
+    if (record.proposingAgentDisplay) {
+      return record.proposingAgentDisplay.replace(/\s+Agent\s*$/i, "").trim();
+    }
+    return undefined;
   }
   if (isAssistantActivity(record)) return "Assistant";
   if (isSystemActivity(record)) return "System";
