@@ -957,14 +957,17 @@ export function RulesPanel() {
                 compiles to {builderPolicy}
               </p>
 
-              <div className="h-px w-full bg-[#1d2132]" />
+              {/* Full-bleed rule: the builder box is padded p-[16px], so the
+                  separator is pulled out by that padding on both sides to span
+                  the card edge-to-edge. */}
+              <div className="h-px -mx-[16px] w-[calc(100%+32px)] bg-[#1d2132]" />
 
               <div className="flex gap-[10px] items-stretch w-full">
                 <button
                   type="button"
                   onClick={resetBuilder}
                   data-testid="button-builder-cancel"
-                  className="flex-1 px-[12px] py-[10px] rounded-[100px] bg-[#222737] hover:bg-[#2b3145] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#6c779d]"
+                  className="flex-1 px-[12px] py-[8px] rounded-[100px] bg-[#222737] hover:bg-[#2b3145] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[16px] text-[#6c779d]"
                 >
                   Cancel
                 </button>
@@ -973,7 +976,7 @@ export function RulesPanel() {
                   disabled={!builderValid}
                   onClick={() => setPendingCreate(buildDraft())}
                   data-testid="button-builder-create"
-                  className="flex-1 px-[12px] py-[10px] rounded-[100px] bg-[#4a2300] hover:bg-[#5a2d00] disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#ff9500]"
+                  className="flex-1 px-[12px] py-[8px] rounded-[100px] bg-[#4a2300] hover:bg-[#5a2d00] disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[16px] text-[#ff9500]"
                 >
                   Add Rule
                 </button>

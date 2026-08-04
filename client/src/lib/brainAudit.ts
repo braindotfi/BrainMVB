@@ -436,6 +436,15 @@ export function bffPathForActorLookup(lookup: string): string {
   return `/api/brain${agent ? `/execution/agents/${agent[1]}` : path}`;
 }
 
+/** True when an actor_ref.lookup points at the AGENT registry rather than the
+ *  member directory — i.e. this event was performed by an agent, not a person.
+ *  The distinction is not recoverable from the resolved name alone (both come
+ *  back as a bare display string), so it has to be read off the lookup path.
+ *  Exported for tests. */
+export function isAgentLookup(lookup: string): boolean {
+  return /^\/agents\/[^/]+\/?$/.test(lookup.replace(/^\/v1/, ""));
+}
+
 /** Resolve an actor_ref.lookup path (/v1/members/{id} or /v1/agents/{id})
  *  through the BFF's generic GET passthrough (same route /audit/events uses,
  *  member/session token). Returns null on any failure — callers then fall back
@@ -481,6 +490,14 @@ export function mapAuditEventToRecord(
     (ref?.lookup ? resolvedActors?.[ref.lookup] ?? undefined : undefined) ??
     undefined;
   const displayActor = resolvedName ?? event.actor;
+
+  /* Agent identity, kept DISTINCT from the actor. `actor` is whoever performed
+     the event — often a human approver — so it cannot be used as an agent
+     name. Only a name resolved through the AGENT registry is one, and only
+     that is carried here; surfaces titled "<Agent Name> …" must omit the
+     prefix rather than fall back to a person's email. */
+  const agentLabel =
+    ref?.lookup && isAgentLookup(ref.lookup) ? resolvedName : undefined;
 
   /* Full, untruncated question for wiki.question records: carried on the
      lifecycle step's note so the popup can show the whole thing while list
@@ -544,6 +561,7 @@ export function mapAuditEventToRecord(
       : [],
     anchor: anchorFor(event, latestAnchor),
     rawQuestion: fullQuestion,
+    agentLabel,
   };
 }
 

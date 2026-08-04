@@ -16,7 +16,7 @@ import { useCurrency } from "@/lib/useCurrency";
 import { useAuth } from "@/lib/authContext";
 import { queryClient } from "@/lib/queryClient";
 import { openMemberDetail } from "@/lib/membersStore";
-import { useAssistantQuestions, resolveSuggestionChips } from "@/lib/brainAssistantQuestions";
+import { useSuggestedQuestions, resolveSuggestionChips } from "@/lib/brainSuggestedQuestions";
 import { resolveVendor, openVendorDetail } from "@/lib/openVendorDetail";
 import brainLogo from "@assets/Brain_1_1783374797129.png";
 import timeIcon from "@assets/Time_1781821466642.png";
@@ -85,7 +85,7 @@ function sessionGroup(createdAt: number): string {
  *  /ledger/cash_flows is trailing-actuals only). No new suggestion copy may be
  *  added here: a hand-authored chip is exactly the failure mode the live
  *  endpoint exists to remove. Anything tenant-specific must come from
- *  useAssistantQuestions(). */
+ *  useSuggestedQuestions(). */
 const FALLBACK_QUESTIONS = [
   "Show recent cash flow",
   "Anything change overnight?",
@@ -381,14 +381,16 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
     location.startsWith("/settings") && new URLSearchParams(devSearch).get("section") === "developers";
   const { user, isLoading: authLoading } = useAuth();
 
-  /* Suggestion chips come from brain-core (GET /assistant/questions), ranked in
-     the order it returns them. The fallback below is only reached when this
-     tenant has nothing eligible or the read fails — see brainAssistantQuestions.ts. */
+  /* Suggestion chips come from brain-core (GET /wiki/suggested-questions),
+     already filtered and ranked upstream, rendered in the order it returns
+     them. NOT /assistant/questions — that legacy route is always empty; see
+     brainSuggestedQuestions.ts. The fallback below is only reached when this
+     tenant has nothing eligible or the read fails. */
   const {
     questions: tenantQuestions,
     isLoading: questionsLoading,
     isError: questionsError,
-  } = useAssistantQuestions();
+  } = useSuggestedQuestions();
 
   const suggestionChips = useMemo(
     () =>

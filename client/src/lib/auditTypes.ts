@@ -158,6 +158,29 @@ export function auditEventLabel(type: AuditEventType): string {
   }
 }
 
+/** Display name of the AGENT a record originated from, when one is known.
+ *
+ *  Only two things count: a label carried on the record (set from a
+ *  LiveInsight's surface, or resolved through brain-core's agent registry —
+ *  see isAgentLookup in brainAudit), and the Assistant. `record.actor`
+ *  deliberately does NOT count: on a human-approved decision it holds the
+ *  approver's email, and titling that record "sarah@meridian Audit Record"
+ *  would name the wrong party. Returns undefined when no agent is known so
+ *  callers omit the prefix instead of guessing one. */
+export function auditRecordAgentName(record: AuditRecord): string | undefined {
+  const label = record.agentLabel?.trim();
+  if (label) return label;
+  if (isAssistantActivity(record)) return "Assistant";
+  return undefined;
+}
+
+/** Title for a record's detail surface: "<Agent Name> Audit Record" when the
+ *  originating agent is known, otherwise the bare "Audit Record". */
+export function auditRecordTitle(record: AuditRecord): string {
+  const agent = auditRecordAgentName(record);
+  return agent ? `${agent} Audit Record` : "Audit Record";
+}
+
 export function auditEventChipClass(type: AuditEventType): string {
   switch (type) {
     case "approved":

@@ -1,5 +1,5 @@
 import clockIcon from "@assets/clock_1784932797624.png";
-import anchoredIcon from "@assets/anchored_1783385308122.png";
+import anchoredIcon from "@assets/anchored_1785799770049.png";
 import type { AnchorProof } from "@/lib/auditTypes";
 
 /* ── Shared AnchorStatus component ───────────────────────────────────────────────────────────
@@ -11,12 +11,10 @@ function HashRow({
   label,
   value,
   first = false,
-  valueDim = false,
 }: {
   label: string;
   value: string | undefined;
   first?: boolean;
-  valueDim?: boolean;
 }) {
   return (
     <div className={`content-stretch flex items-start relative shrink-0 w-full${first ? "" : " border-t border-[#1d2132]"}`}>
@@ -26,9 +24,13 @@ function HashRow({
           {label}
         </p>
       </div>
-      {/* Value column — Gilroy Medium 13px #a8b9f4 (or #6c779d when dim) */}
+      {/* Value column — Gilroy Medium 13px #a8b9f4 (Figma 5734:71784). Every
+          value row is the same weight and colour, timestamps included: the
+          frame dims none of them, and a dimmed date read as less trustworthy
+          than the hash above it. `break-all` (the frame's values are elided,
+          real merkle roots and tx hashes are not) keeps them inside the cell. */}
       <div className="content-stretch flex flex-[1_0_0] flex-col items-start justify-center min-w-px px-[12px] py-[8px]">
-        <p className={`[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[13px] break-all ${valueDim ? "text-[#6c779d]" : "text-[#a8b9f4]"}`}>
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[13px] break-all text-[#a8b9f4]">
           {value ?? "-"}
         </p>
       </div>
@@ -56,7 +58,7 @@ export function AnchorStatus({
   const pending = !isAnchored;
 
   const statusLabel = isAnchored
-    ? "Anchored · tamper-evident"
+    ? "Anchored · Tamper-Evident"
     : isRecorded
       ? "Recorded and verifiable. On-chain anchor pending."
       : "Proof incomplete. This record hasn't been anchored on-chain yet.";
@@ -76,11 +78,11 @@ export function AnchorStatus({
     <div className="flex flex-col gap-[16px] w-full">
 
       {/* Status line: icon + label */}
-      <div className="content-stretch flex gap-[8px] items-start relative shrink-0 w-full">
+      <div className="content-stretch flex gap-[4px] items-center relative shrink-0 w-full">
         {pending ? (
           <img src={clockIcon} alt="Pending" className="size-[16px] shrink-0 object-contain" />
         ) : (
-          <img src={anchoredIcon} alt="Anchored" className="size-[16px] shrink-0 mt-[2px]" />
+          <img src={anchoredIcon} alt="Anchored" className="size-[16px] shrink-0" />
         )}
         <p className={`[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[16px] flex-[1_0_0] min-w-px ${statusColor}`}>
           {statusLabel}
@@ -99,39 +101,44 @@ export function AnchorStatus({
         <div className="bg-[#0a0c10] border border-[#1d2132] border-solid content-stretch flex flex-col items-start relative rounded-[12px] shrink-0 w-full overflow-hidden">
           <HashRow first label="Audit ID" value={anchor.auditId} />
           {(isAnchored || isRecorded) && (
-            <HashRow label="Merkle root" value={anchor.merkleRoot} />
+            <HashRow label="Merkle Root" value={anchor.merkleRoot} />
           )}
           {isAnchored && (
             <>
-              <HashRow label="Base tx" value={anchor.baseTx} />
+              <HashRow label="Base TX" value={anchor.baseTx} />
               <HashRow label="Block" value={anchor.block?.toLocaleString()} />
-              <HashRow label="Anchored at" value={anchor.anchoredAtLabel} valueDim />
+              <HashRow label="Anchored On" value={anchor.anchoredAtLabel} />
             </>
           )}
           {isRecorded && (
-            <HashRow label="Recorded at" value={anchor.recordedAtLabel} valueDim />
+            <HashRow label="Recorded On" value={anchor.recordedAtLabel} />
           )}
         </div>
       )}
 
       {/* Action row */}
       {mode === "proof" ? (
-        <div className="flex flex-col gap-[12px] w-full mt-[4px]">
-          {/* Verify On-Chain is CONDITIONALLY RENDERED, never a dead/disabled
-              link — it only exists when a confirmed tx hash backs it. */}
-          {isAnchored && (
-            <button
-              type="button"
-              onClick={onVerify}
-              data-testid="button-verify-on-chain"
-              className="flex items-center justify-center gap-[6px] px-[20px] py-[10px] rounded-[100px] transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[16px] w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-              style={{ background: "#240757", color: "#7631ee" }}
-            >
-              Verify On-Chain
-            </button>
-          )}
+        <div className="flex flex-col gap-[12px] w-full">
+          {/* Verify On-Chain — Figma 5734:71827 for the active state.
+              The button is ALWAYS present in proof mode and is DISABLED until a
+              confirmed tx hash backs it, so the section keeps the same shape as
+              a record anchors instead of growing a control. Disabled it is
+              visibly inert and the caption below says why, which beats both a
+              live-looking dead link and a control that silently isn't there. */}
+          <button
+            type="button"
+            onClick={onVerify}
+            disabled={!isAnchored}
+            aria-describedby={pending ? "verify-pending-caption" : undefined}
+            title={isAnchored ? undefined : "On-chain verification opens once this record is anchored."}
+            data-testid="button-verify-on-chain"
+            className="flex items-center justify-center gap-[6px] px-[20px] py-[10px] rounded-[100px] transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] w-full disabled:opacity-40 disabled:cursor-not-allowed enabled:hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+            style={{ background: "#240757", color: "#7631ee" }}
+          >
+            Verify On-Chain
+          </button>
           {pending && (
-            <p data-testid="text-verify-pending-caption" className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-[#6c779d]">
+            <p id="verify-pending-caption" data-testid="text-verify-pending-caption" className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-[#6c779d]">
               On-chain verification opens once anchored.
             </p>
           )}

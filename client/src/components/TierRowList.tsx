@@ -21,6 +21,7 @@ import type { RowTier } from "@/lib/decisionFilters";
 import { Divider } from "@/components/LedgerWidgets";
 import { UnavailableDataBox } from "@/components/Callout";
 import { capitalCase } from "@/lib/displayLabels";
+import type { TierRowStatusPill } from "@/lib/decisionPills";
 
 /* Tier accents. Red = Urgent, amber = Waiting on you, periwinkle = Insights —
    the palette already used for Inbox status tags, not the prototype's colours. */
@@ -75,21 +76,10 @@ export interface TierRowSelect {
   onChange: () => void;
 }
 
-/** Right-side outcome pill for settled / decided rows.
- *
- *  When this is set the row renders the pill instead of action buttons — the
- *  outcome is final so there is nothing to act on. The three icon variants map
- *  to the three semantic outcomes (done-positive, done-negative, in-progress).
- */
-export interface TierRowStatusPill {
-  label: string;
-  /** Background of the pill capsule, e.g. "#123509" or "rgba(255,255,255,0.3)". */
-  bg: string;
-  /** Text + icon stroke colour. */
-  textColor: string;
-  /** Semantic shape: checkmark (approved/acknowledged), X (rejected), clock (pending). */
-  icon: "check" | "x" | "pending";
-}
+/* The outcome-pill shape lives in lib/decisionPills so the audit record popup
+   can render the identical pill for the same decision. Re-exported here for
+   the existing callers that import it from this module. */
+export type { TierRowStatusPill };
 
 export interface TierRowModel {
   id: string;
@@ -146,7 +136,9 @@ function PillClockIcon({ color }: { color: string }) {
   );
 }
 
-function DecisionPill({ pill }: { pill: TierRowStatusPill }) {
+/** The settled-outcome capsule. Exported so the audit record popup's hero can
+ *  render the SAME pill as the Resolved row the user opened it from. */
+export function DecisionPill({ pill }: { pill: TierRowStatusPill }) {
   const Icon =
     pill.icon === "check" ? PillCheckIcon : pill.icon === "x" ? PillXIcon : PillClockIcon;
   return (

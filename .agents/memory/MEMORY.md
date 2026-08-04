@@ -64,4 +64,6 @@
 - [Vendor Suggested tier gate](vendor-suggested-tier-gate.md) — no provenance value means "suggested"; Suggested chip stays hidden; trust wiring green-lit and shipped.
 - [Overlay menus in clipped surfaces](overlay-menus-in-clipped-surfaces.md) — in-card dropdowns need a fixed portal (not less overflow); fixed owns its own clamp/flip, and never claim listbox without arrow keys.
 - [Post-merge branch tip audit](post-merge-branch-tip-audit.md) — a merged PR contains only its merge-time snapshot; branch tips can add product work that never reaches main or production.
-- [Assistant suggestion chips](assistant-suggested-questions.md) — briefed /wiki/suggested-questions 404s; real route /assistant/questions has no rank field, so returned order IS the ranking.
+- [Assistant suggestion chips](assistant-suggested-questions.md) — chips come from /wiki/suggested-questions; /assistant/questions is an always-empty legacy twin; anon 401 never proves a route exists.
+- [Figma pill specs](figma-pill-specs.md) — `text-[14px]` sets no line-height, so pills need explicit `leading-`; 32px = py-8+leading-16; grep for a sibling impl before overriding a frame colour.
+- [Agent identity vs actor](agent-identity-vs-actor.md) — `actor` is often the human approver; agent-ness survives only in the actor_ref lookup PATH, so classify at map time or omit the prefix.

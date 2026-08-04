@@ -6,7 +6,9 @@ import closeIcon from "@assets/Close_1783293571882.png";
 import checkIcon from "@assets/check_1784935340999.png";
 import warningIcon from "@assets/warning_1783385196939.png";
 import type { AuditRecord, LinkedEntity } from "@/lib/auditTypes";
-import { auditRecordLabel, isAssistantActivity, linkedRelationship, humanReadableActor } from "@/lib/auditTypes";
+import { auditRecordLabel, auditRecordTitle, auditEventChipClass, isAssistantActivity, linkedRelationship, humanReadableActor } from "@/lib/auditTypes";
+import { auditStatusPill } from "@/lib/decisionPills";
+import { DecisionPill } from "./TierRowList";
 import { resolveActorRole, actorIdentityTokens } from "@/lib/actors";
 import { resolveMemberByTokens, openMemberDetail, useMembersCache } from "@/lib/membersStore";
 import { AnchorStatus } from "./AnchorStatus";
@@ -124,16 +126,41 @@ export function AuditRecordPopup({
     }
   };
 
+  /* Hero status pill — the SAME capsule the Inbox's Resolved tab renders for
+     this decision. Palette and icon set come from lib/decisionPills and it is
+     drawn by the shared DecisionPill, so opening a resolved row can never
+     restyle its own outcome (Figma 6214-69xxx).
+
+     The LABEL stays the record's own. The Inbox mapping folds `flagged` and
+     `trust_revoked` into a generic "Rejected" pill, which reads fine in a list
+     of mixed outcomes but would misstate the record in its own audit detail —
+     a flagged payment was not rejected.
+
+     Records that are not a settled decision (rule changes, trust grants,
+     system / assistant activity) have no outcome pill upstream, so they keep
+     the neutral event chip rather than borrowing an outcome's colour.
+     auditEventChipClass supplies a border COLOUR only and no `border
+     border-solid` is added, so that chip stays borderless (chip-border
+     convention). */
   const statusPill = () => {
     const label = auditRecordLabel(record);
+    const assistant = isAssistantActivity(record);
+    const decision = assistant ? undefined : auditStatusPill(record.eventType);
+    if (decision) {
+      return (
+        <div data-testid="status-audit-record" className="shrink-0">
+          <DecisionPill pill={{ ...decision, label }} />
+        </div>
+      );
+    }
     return (
       <div
-        className="border border-solid rounded-[22px] px-[8px] py-[2px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-center whitespace-nowrap shrink-0 bg-[#222737] border-[rgba(108,119,157,0.2)]"
+        data-testid="status-audit-record"
+        className={`content-stretch flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] shrink-0 ${
+          assistant ? "bg-[#222737] text-[#6c779d]" : auditEventChipClass(record.eventType)
+        }`}
       >
-        <p
-          className="whitespace-nowrap"
-          style={{ color: "#6c779d" }}
-        >
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-center whitespace-nowrap">
           {capitalCase(label)}
         </p>
       </div>
@@ -161,7 +188,7 @@ export function AuditRecordPopup({
             {/* Header - close button right, title centred */}
             <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-[#1d2132] border-b border-solid h-[56px] relative shrink-0 w-full">
               <p className="-translate-x-1/2 [font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#a8b9f4] text-[20px] text-center whitespace-nowrap absolute left-1/2 top-[calc(50%-12px)]">
-                Audit Record
+                {auditRecordTitle(record)}
               </p>
               <DialogPrimitive.Close
                 className="absolute right-[11px] top-[11px] size-[32px] p-0 hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
@@ -172,14 +199,17 @@ export function AuditRecordPopup({
             </div>
 
             {/* Summary — the status pill follows the title like Inbox decision rows. */}
-            <div className="border-[#1d2132] border-b border-solid content-stretch flex flex-col items-start p-[24px] relative shrink-0 w-full">
-              <div className="content-stretch flex items-center gap-[8px] relative shrink-0 w-full min-w-0">
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-[#a8b9f4] text-[20px] min-w-0 max-w-full basis-auto grow-0 shrink truncate">
+            <div className="border-[#1d2132] border-b border-solid content-stretch flex flex-col gap-[8px] items-start p-[24px] relative shrink-0 w-full">
+              {/* Figma 5734:71725 — the summary WRAPS beside a shrink-0 pill
+                  (top-aligned), it does not truncate: an audit record's own
+                  headline is the one string this surface must never clip. */}
+              <div className="content-stretch flex items-start gap-[8px] relative shrink-0 w-full">
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-[#a8b9f4] text-[20px] flex-[1_0_0] min-w-px [word-break:break-word]">
                   {formatText(record.summary)}
                 </p>
                 {statusPill()}
               </div>
-              <div className="flex flex-col gap-[8px] items-start relative shrink-0 w-full mt-[8px]">
+              <div className="content-stretch flex items-center relative shrink-0 w-full">
                 <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
                   {record.occurredAtLabel}
                 </p>
@@ -215,7 +245,7 @@ export function AuditRecordPopup({
                                     <div className="mt-[4px] mb-[4px] w-[2px] flex-1 bg-[#1d2132]" />
                                   )}
                                 </div>
-                                <div className="[word-break:break-word] content-stretch flex flex-[1_0_0] flex-col font-['Gilroy',sans-serif] font-medium gap-[12px] items-start justify-center leading-[16px] min-w-px not-italic relative text-[14px]">
+                                <div className="[word-break:break-word] content-stretch flex flex-[1_0_0] flex-col font-['Gilroy',sans-serif] font-medium gap-[8px] items-start justify-center leading-[16px] min-w-px not-italic relative text-[14px]">
                                   <p className="relative shrink-0 text-[#a8b9f4] w-full">
                                     {actorMember ? (
                                       <button
@@ -323,11 +353,11 @@ export function AuditRecordPopup({
                             >
                               <div className="content-stretch flex flex-[1_0_0] gap-[16px] items-center min-w-px relative">
                                 <div className="bg-[#222737] border border-[rgba(108,119,157,0.2)] border-solid content-stretch flex items-center justify-center px-[8px] py-[3px] relative rounded-[22px] shrink-0">
-                                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#6c779d] text-[12px] text-center whitespace-nowrap uppercase">
-                                    {chipLabel}
+                                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#6c779d] text-[12px] text-center whitespace-nowrap">
+                                    {capitalCase(chipLabel)}
                                   </p>
                                 </div>
-                                <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
+                                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[16px] text-[#6c779d]">
                                   {formatText(link.label)}
                                 </p>
                               </div>
@@ -350,11 +380,11 @@ export function AuditRecordPopup({
                           >
                             <div className="content-stretch flex flex-[1_0_0] gap-[16px] items-center min-w-px relative">
                               <div className="bg-[#222737] border border-[rgba(108,119,157,0.2)] border-solid content-stretch flex items-center justify-center px-[8px] py-[3px] relative rounded-[22px] shrink-0">
-                                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#6c779d] text-[12px] text-center whitespace-nowrap uppercase">
-                                  {chipLabel}
+                                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#6c779d] text-[12px] text-center whitespace-nowrap">
+                                  {capitalCase(chipLabel)}
                                 </p>
                               </div>
-                              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#a8b9f4]">
+                              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[16px] text-[#a8b9f4]">
                                 {formatText(link.label)}
                               </p>
                             </div>
