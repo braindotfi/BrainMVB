@@ -250,17 +250,18 @@ function AlwaysOnRow({ rule }: { rule: AutoRule }) {
    quorum, approval requirements), NOT the app's mock/user rule cards.
    Mutations (pause/edit threshold) need policy:sign scope the token lacks;
    that's Phase 2b. See client/src/lib/brainPolicy.ts for the mapping. */
-function PolicySection() {
-  const { isLoading, isError, rules, version, quorum } = useBrainPolicy();
-
+function PolicySection({
+  isLoading,
+  isError,
+  rules,
+}: {
+  isLoading: boolean;
+  isError: boolean;
+  rules: ReturnType<typeof useBrainPolicy>["rules"];
+}) {
   return (
     <div className="bg-[#0a0c10] border border-solid border-[#1d2132] flex flex-col items-start overflow-clip relative rounded-[16px] shrink-0 w-full">
       <div className="flex flex-col items-start relative shrink-0 w-full">
-        {!isLoading && !isError && version !== undefined && (
-          <p className="px-[16px] pt-[12px] [font-family:'JetBrains_Mono',monospace] text-[12px] text-[#6c779d] whitespace-nowrap">
-            v{version} · quorum {quorum}
-          </p>
-        )}
         {isLoading && (
           <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
             <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
@@ -519,7 +520,13 @@ export function RulesPanel() {
 
   // Lift policy rules to this level so the Default badge tracks the same count
   // PolicySection renders (brain-core policy rules), not the user-created rules.
-  const { rules: policyRules, isLoading: policyLoading, isError: policyError } = useBrainPolicy();
+  const {
+    rules: policyRules,
+    isLoading: policyLoading,
+    isError: policyError,
+    version: policyVersion,
+    quorum: policyQuorum,
+  } = useBrainPolicy();
   const rulesHydration = useRulesHydration();
   const automations = rules.filter((r) => (r.kind ?? "automation") === "automation");
   const guardrails = rules.filter((r) => r.kind === "guardrail");
@@ -993,13 +1000,22 @@ export function RulesPanel() {
         <div className="bg-[#6c779d] flex items-center justify-center min-w-[18px] px-[5px] py-[1px] rounded-[4px] shrink-0">
           <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#0a0c10] text-[11px] text-center whitespace-nowrap">{activeCount}</p>
         </div>
+        {activeTab === "Default" && !policyLoading && !policyError && policyVersion !== undefined && (
+          <p className="ml-auto [font-family:'JetBrains_Mono',monospace] text-[12px] text-[#6c779d] whitespace-nowrap">
+            v{policyVersion} · quorum {policyQuorum}
+          </p>
+        )}
       </div>
 
       <div className="w-full flex flex-col gap-[16px]">
 
         {activeTab === "Default" && (
           <>
-            <PolicySection />
+            <PolicySection
+              isLoading={policyLoading}
+              isError={policyError}
+              rules={policyRules}
+            />
             {/* Default-specific purple info banner */}
             {!policyLoading && !policyError && (
             <div
