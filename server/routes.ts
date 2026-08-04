@@ -7,6 +7,7 @@ import { z } from "zod";
 import { verifyMessage } from "viem";
 import { createBrainProxyRouter } from "./brain/proxy";
 import { getBrainSession, getBrainSessionProvisionedAt, getBrainSessionExpiresAt } from "./brain/auth";
+import { withBrainBaseUrl, withKeyAuthedBrainCall } from "./brain/baseUrl";
 import { brainTenancyMode } from "./brain/config";
 import {
   listLedgerAccounts,
@@ -248,8 +249,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     res.status(500).json({ error: `Failed to ${action}` });
   }
 
-  /** Member session (token + tenantId) or an honest 503 if unconfigured. */
-  async function requireBrainMemberSession(req: Request, res: Response): Promise<{ token: string; tenantId: string } | null> {
+  /** Member session (token + tenantId + baseUrl) or an honest 503 if unconfigured. */
+  async function requireBrainMemberSession(req: Request, res: Response): Promise<{ token: string; tenantId: string; baseUrl: string } | null> {
     if (!brainAuthConfigured()) {
       res.status(503).json({
         error: "brain_unconfigured",
@@ -265,7 +266,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       const session = await requireBrainMemberSession(req, res);
       if (!session) return;
-      const { keys } = await listTenantKeys(session.token, session.tenantId);
+      const { keys } = await withBrainBaseUrl(session.baseUrl, () =>
+        listTenantKeys(session.token, session.tenantId),
+      );
       return res.json({ keys: (keys ?? []).map(toDevKey) });
     } catch (error) {
       return sendKeyApiError(res, error, "list keys");
@@ -292,7 +295,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
       const session = await requireBrainMemberSession(req, res);
       if (!session) return;
-      const issued = await issueTenantKey(session.token, session.tenantId, { name, environment, scopes });
+      const issued = await withBrainBaseUrl(session.baseUrl, () =>
+        issueTenantKey(session.token, session.tenantId, { name, environment, scopes }),
+      );
       const plaintext = issuedPlaintext(issued);
       if (!issued.key || !plaintext) {
         console.error("Issue key: unexpected brain-core response shape", Object.keys(issued ?? {}));
@@ -310,7 +315,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       const session = await requireBrainMemberSession(req, res);
       if (!session) return;
-      const issued = await rotateTenantKey(session.token, String(req.params.id));
+      const issued = await withBrainBaseUrl(session.baseUrl, () =>
+        rotateTenantKey(session.token, String(req.params.id)),
+      );
       const plaintext = issuedPlaintext(issued);
       if (!issued.key || !plaintext) {
         console.error("Rotate key: unexpected brain-core response shape", Object.keys(issued ?? {}));
@@ -328,7 +335,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       const session = await requireBrainMemberSession(req, res);
       if (!session) return;
-      await revokeTenantKey(session.token, String(req.params.id));
+      await withBrainBaseUrl(session.baseUrl, () => revokeTenantKey(session.token, String(req.params.id)));
       return res.status(204).end();
     } catch (error) {
       return sendKeyApiError(res, error, "revoke key");
@@ -344,11 +351,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       const session = await requireBrainMemberSession(req, res);
       if (!session) return;
-      const usage = await getTenantKeyUsage(session.token, session.tenantId, {
-        window: "30d",
-        environment: envParsed.data,
-        key_id: typeof req.query.keyId === "string" ? req.query.keyId : undefined,
-      });
+      const usage = await withBrainBaseUrl(session.baseUrl, () =>
+        getTenantKeyUsage(session.token, session.tenantId, {
+          window: "30d",
+          environment: envParsed.data,
+          key_id: typeof req.query.keyId === "string" ? req.query.keyId : undefined,
+        }),
+      );
       return res.json({
         window: usage.window ?? "30d",
         totalEvents: usage.total_events ?? 0,
@@ -467,22 +476,25 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       });
     }
     try {
-      const { token } = await getBrainSession(req.session.userId!);
+      const { token, baseUrl } = await getBrainSession(req.session.userId!);
       // Page through audit events (bounded: 5 pages × 200 = 1000 events max —
       // plenty for a 90-day demo/POC window; older events fall out of the window).
-      const events: UsageAuditEvent[] = [];
-      let after: string | undefined = undefined;
-      for (let page = 0; page < 5; page++) {
-        const batch = await listAuditEvents(token, { limit: 200, after });
-        events.push(...batch.events.map((e) => ({
-          id: e.id,
-          layer: e.layer,
-          action: e.action,
-          created_at: e.created_at,
-        })));
-        if (!batch.next_cursor || batch.events.length === 0) break;
-        after = batch.next_cursor;
-      }
+      const events = await withBrainBaseUrl(baseUrl, async () => {
+        const evts: UsageAuditEvent[] = [];
+        let after: string | undefined = undefined;
+        for (let page = 0; page < 5; page++) {
+          const batch = await listAuditEvents(token, { limit: 200, after });
+          evts.push(...batch.events.map((e) => ({
+            id: e.id,
+            layer: e.layer,
+            action: e.action,
+            created_at: e.created_at,
+          })));
+          if (!batch.next_cursor || batch.events.length === 0) break;
+          after = batch.next_cursor;
+        }
+        return evts;
+      });
       return res.json({ ...aggregateUsage(events, windowDays), environment });
     } catch (error: any) {
       console.error("Developers usage error:", error);
@@ -572,7 +584,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const auth = extractApiKeyBearer(req);
       if (!auth.ok) return res.status(auth.status).json({ error: auth.error, message: auth.message });
       try {
-        return res.json(await fetcher(auth.key, req));
+        // withKeyAuthedBrainCall marks this call tree as intentionally context-free
+        // (no session URL needed; always production). Without it, currentBrainBaseUrl()
+        // would emit a "[brain-url] WARNING" for every key-authed request.
+        return res.json(await withKeyAuthedBrainCall(() => fetcher(auth.key, req)));
       } catch (error) {
         return sendKeyAuthedError(res, error, path);
       }
@@ -677,8 +692,8 @@ Rules:
     // recommendation never breaks on the integration.
     let grounding = "";
     try {
-      const { token } = await getBrainSession(req.session.userId!);
-      const { accounts } = await listLedgerAccounts(token, { limit: 50 });
+      const { token, baseUrl: goalBaseUrl } = await getBrainSession(req.session.userId!);
+      const { accounts } = await withBrainBaseUrl(goalBaseUrl, () => listLedgerAccounts(token, { limit: 50 }));
       if (accounts.length > 0) {
         const lines = accounts.map(
           (a) => `- ${a.name} (${a.account_type}): ${a.current_balance ?? "?"} ${a.currency}`,
@@ -970,8 +985,8 @@ When you mention a money amount, always reproduce it exactly as the grounding da
     // single question, so multi-turn follow-up context (earlier messages) is
     // dropped here; revisit if users complain about lost follow-ups. ───
     try {
-      const { token } = await getBrainSession(req.session.userId!);
-      const wiki = await askWikiQuestion(token, lastUserContent);
+      const { token, baseUrl: wikiBaseUrl } = await getBrainSession(req.session.userId!);
+      const wiki = await withBrainBaseUrl(wikiBaseUrl, () => askWikiQuestion(token, lastUserContent));
       if (wiki.raw.trim().length > 0 && wiki.answered !== false) {
         /* Only return the wiki result when it explicitly answered, or when a
            legacy response has non-refusal prose. A non-empty refusal is not an
@@ -1011,8 +1026,8 @@ When you mention a money amount, always reproduce it exactly as the grounding da
     let sources: WikiEvidence[] = [];
     let dataAvailable = false;
     try {
-      const { token, tenantId } = await getBrainSession(req.session.userId!);
-      const built = await buildGrounding(token, tenantId, lastUserContent);
+      const { token, tenantId, baseUrl: groundingBaseUrl } = await getBrainSession(req.session.userId!);
+      const built = await withBrainBaseUrl(groundingBaseUrl, () => buildGrounding(token, tenantId, lastUserContent));
       grounding = built.text;
       sources = built.sources;
       dataAvailable = built.available;
@@ -1392,8 +1407,9 @@ When you mention a money amount, always reproduce it exactly as the grounding da
       .slice(0, SETTLE_MAX_PER_REQUEST);
     if (pending.length === 0) return;
     let agentToken: string;
+    let settleBaseUrl: string;
     try {
-      ({ agentToken } = await getBrainSession(userId));
+      ({ agentToken, baseUrl: settleBaseUrl } = await getBrainSession(userId));
     } catch {
       return;
     }
@@ -1404,7 +1420,7 @@ When you mention a money amount, always reproduce it exactly as the grounding da
 
         if (needsExtractSettle(d, now)) {
           try {
-            const extract = await extractRawDocument(agentToken, d.rawId!);
+            const extract = await withBrainBaseUrl(settleBaseUrl, () => extractRawDocument(agentToken, d.rawId!));
             const next = extractStatusForJob(extract);
             if (next !== "extracting") {
               // still running -> leave it alone; anything else is final and worth writing
@@ -1434,7 +1450,7 @@ When you mention a money amount, always reproduce it exactly as the grounding da
         // at NULL; that is a supported state, not an error worth failing the request over.
         if (extractStatus === "extracted" && !isTerminalProjectionStatus(d.projectionStatus)) {
           try {
-            const artifact = await getRawArtifact(agentToken, d.rawId!);
+            const artifact = await withBrainBaseUrl(settleBaseUrl, () => getRawArtifact(agentToken, d.rawId!));
             const projection = projectionStatusFrom(artifact.projection_status);
             if (projection !== null && projection !== d.projectionStatus) {
               patch.projectionStatus = projection;
@@ -1540,13 +1556,15 @@ When you mention a money amount, always reproduce it exactly as the grounding da
         // Raw ingest/extract need the raw:write scope. In demo mode agentToken === the
         // member token; in durable/production mode only the AGENT token holds raw:write
         // (verified live 2026-07-24: member → 403 auth_scope_insufficient, agent → 201).
-        const { agentToken } = await getBrainSession(userId);
-        const ingest = await ingestRawDocument(agentToken, {
-          sourceType: sourceType as RawSourceType,
-          bytes: new Uint8Array(bytes),
-          filename,
-          mimeType,
-        });
+        const { agentToken, baseUrl: ingestBase } = await getBrainSession(userId);
+        const ingest = await withBrainBaseUrl(ingestBase, () =>
+          ingestRawDocument(agentToken, {
+            sourceType: sourceType as RawSourceType,
+            bytes: new Uint8Array(bytes),
+            filename,
+            mimeType,
+          }),
+        );
         rawId = ingest.raw_id;
         await storage.updateSourceDocumentExtraction(userId, doc.id, {
           rawId: ingest.raw_id,
@@ -1582,8 +1600,8 @@ When you mention a money amount, always reproduce it exactly as the grounding da
       let parsedId: string | null = null;
       let confidence: string | null = null;
       try {
-        const { agentToken } = await getBrainSession(userId);
-        const extract = await extractRawDocument(agentToken, rawId);
+        const { agentToken, baseUrl: extractBase } = await getBrainSession(userId);
+        const extract = await withBrainBaseUrl(extractBase, () => extractRawDocument(agentToken, rawId));
         extractStatus = extractStatusForJob(extract);
         parsedId = extract.parsed_id;
         confidence = extract.confidence !== null ? String(extract.confidence) : null;
@@ -1725,12 +1743,14 @@ Return ONLY a JSON array (no markdown, no prose), 0-3 items, each shaped exactly
 Evidence rows must cite the actual vendor names, amounts, and counts you saw in the data — no placeholders.`;
 
   app.get("/api/rules/suggestions", requireAuth, async (req, res) => {
-    let tenantId: string;
-    let token: string;
+    let tenantId = "";
+    let token = "";
+    let ruleBaseUrl = "";
     try {
       const session = await getBrainSession(req.session.userId!);
       token = session.token;
       tenantId = session.tenantId;
+      ruleBaseUrl = session.baseUrl;
     } catch (e) {
       console.warn("[RuleSuggestions] brain session unavailable:", (e as Error)?.message);
       return res.json({ suggestions: [], reason: "no_data" });
@@ -1745,7 +1765,9 @@ Evidence rows must cite the actual vendor names, amounts, and counts you saw in 
       return res.json({ suggestions: [], reason: "unconfigured" });
     }
 
-    const built = await buildGrounding(token, tenantId, "").catch(() => ({ text: "", sources: [], available: false }));
+    const built = await withBrainBaseUrl(ruleBaseUrl, () =>
+      buildGrounding(token, tenantId, ""),
+    ).catch(() => ({ text: "", sources: [], available: false }));
     if (!built.available) {
       return res.json({ suggestions: [], reason: "no_data" });
     }

@@ -57,11 +57,36 @@ in `server/vite.ts` serves the SPA `index.html` for every non-API path. Serving 
 scratch HTML entry would mean editing `server/vite.ts`. Don't; the node test
 covers the mechanism.
 
-## Known remaining gap
+## loginDemoFresh must also clear the query cache
 
-`membersStore.clearMembers()` is still called from `logout()` only, so the members
-cache has the same leak shape on account→account switches. Left alone
-deliberately (out of scope at the time), not because it's correct.
+`loginDemoFresh` can be triggered while a real user is already authenticated (the
+"Continue with Demo" button is reachable without logging out first). Unlike every
+other destructive auth path (`logout`, `deleteAccount`), the original code did NOT
+call `queryClient.clear()` or `clearMembers()`. Result: all React Query caches from
+the real user persisted — Settings showed the real company name, email, tenancy
+figures — until each stale timer fired.
+
+**Fix (2026-08-04):** `loginDemoFresh` now calls `queryClient.clear()` and
+`clearMembers()` before `setUser(u)`, matching the pattern used by `logout`.
+
+**Why the email leaked separately:** `userContact.ts` stores an `emailOverride`
+module-level variable (set by the Edit Email flow). This was not in
+`applyUserScopedResets`, so `d@damonnam.com` persisted even after `setUser(demoUser)`
+was called. Fix: `resetUserContact()` exported from `userContact.ts` and added to
+`applyUserScopedResets`. Note: resets in-memory override only; localStorage values
+are NOT wiped so the real user's edits survive their next login.
+
+**Server-side:** `POST /api/auth/demo-fresh` now calls `req.session.regenerate()`
+when there is an existing authenticated session, issuing a new cookie. Without this,
+the same session-ID carries forward with a different principal (session fixation).
+
+**Rule reinforcement:** any new auth path that switches the active user (not just
+logging in from null) must call `queryClient.clear()` + `clearMembers()` in addition
+to `setUser()`.
+
+## Known remaining gap (pre-2026-08-04)
+
+`membersStore.clearMembers()` was called from `logout()` only (resolved above).
 
 ## Persisted stores: key by user, do NOT clear in the funnel
 

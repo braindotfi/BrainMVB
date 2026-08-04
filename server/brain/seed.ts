@@ -22,6 +22,8 @@ import { storage } from "../storage";
 import { ingestRawDocument, pollRawExtraction, BrainApiError } from "./client";
 import { extractStatusForJob } from "./extractStatus";
 import { getSeedDocuments } from "./demo-seed/documents";
+import { withBrainBaseUrl } from "./baseUrl";
+import { brainConfig } from "./config";
 import type { ExtractStatus } from "../storage";
 
 export { SEED_MANIFEST } from "./demo-seed/documents";
@@ -34,8 +36,8 @@ export type { SeedDocument, SeedManifestEntry } from "./demo-seed/documents";
  * predictable ordering in the documents list and no burst against /raw/ingest. Each
  * file is independent — one failure does not stop the others.
  */
-export async function seedTenantDocuments(appUserId: string, ingestToken: string): Promise<void> {
-  const run = runSeed(appUserId, ingestToken);
+export async function seedTenantDocuments(appUserId: string, ingestToken: string, baseUrl?: string): Promise<void> {
+  const run = withBrainBaseUrl(baseUrl ?? brainConfig.baseUrl, () => runSeed(appUserId, ingestToken));
   inFlightSeeds.add(run);
   try {
     await run;

@@ -56,10 +56,15 @@ const FILTER_OPTIONS: { id: TypeFilter; label: string }[] = [
 type Category = "decision" | "assistant" | "system";
 
 const CATEGORY_BADGE: Record<Category, { label: string; bg: string; color: string; border: string }> = {
-  decision:  { label: "Decision",        bg: "#222737", color: "#6c779d", border: "1px solid rgba(108,119,157,0.2)" },
-  assistant: { label: "Assistant",       bg: "#222737", color: "#6c779d", border: "1px solid rgba(108,119,157,0.2)" },
-  system:    { label: "System",          bg: "#222737", color: "#6c779d", border: "1px solid rgba(108,119,157,0.2)" },
+  decision:  { label: "Decision",  bg: "#4a2300", color: "#ff9400", border: "1px solid rgba(255,149,0,0.2)" },
+  assistant: { label: "Assistant", bg: "#4a2300", color: "#ff9400", border: "1px solid rgba(255,149,0,0.2)" },
+  system:    { label: "Systems",   bg: "#4a2300", color: "#ff9400", border: "1px solid rgba(255,149,0,0.2)" },
 };
+
+const RECORD_STATUS_BADGE = {
+  pending: { label: "Pending", bg: "#222737", color: "#6c779d", border: "1px solid rgba(108,119,157,0.2)" },
+  anchored: { label: "Anchored", bg: "#123509", color: "#42bf23", border: "1px solid rgba(66,191,35,0.2)" },
+} as const;
 
 function categorise(record: AuditRecord, systemIds: ReadonlySet<string>): Category {
   if (systemIds.has(record.id)) return "system";
@@ -390,7 +395,15 @@ export function AuditLogSection() {
         ) : (
           visible.map((record, i) => {
             const category = categorise(record, systemIds);
-            const badge = CATEGORY_BADGE[category];
+            const categoryBadge = CATEGORY_BADGE[category];
+            /* A record is only Anchored when brain-core has confirmed an
+               on-chain transaction. Records with no Merkle proof yet and
+               records sealed in the audit chain while the transaction is
+               still pending both use the honest Pending pill. */
+            const statusBadge =
+              record.anchor.status === "anchored"
+                ? RECORD_STATUS_BADGE.anchored
+                : RECORD_STATUS_BADGE.pending;
             const actor = humanReadableActor(record.actor);
             return (
               <div key={record.id}>
@@ -408,10 +421,10 @@ export function AuditLogSection() {
                       </span>
                       <span
                         data-testid={`badge-audit-category-${record.id}`}
-                        className="border border-solid rounded-[22px] px-[8px] py-[2px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-center whitespace-nowrap shrink-0"
-                        style={{ background: badge.bg, color: badge.color, border: badge.border }}
+                        className="border border-solid rounded-[22px] px-[8px] py-[3px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-center whitespace-nowrap shrink-0"
+                        style={{ background: categoryBadge.bg, color: categoryBadge.color, border: categoryBadge.border }}
                       >
-                        {capitalCase(badge.label)}
+                        {capitalCase(categoryBadge.label)}
                       </span>
                     </div>
                     <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[18px]">
@@ -420,6 +433,13 @@ export function AuditLogSection() {
                         .join(" · ")}
                     </p>
                   </div>
+                  <span
+                    data-testid={`badge-audit-status-${record.id}`}
+                    className="border border-solid rounded-[22px] px-[10px] py-[4px] [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[16px] text-center whitespace-nowrap shrink-0"
+                    style={{ background: statusBadge.bg, color: statusBadge.color, border: statusBadge.border }}
+                  >
+                    {statusBadge.label}
+                  </span>
                 </button>
               </div>
             );

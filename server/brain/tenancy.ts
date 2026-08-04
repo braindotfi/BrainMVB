@@ -17,6 +17,7 @@
  */
 
 import { brainConfig } from "./config";
+import { currentBrainBaseUrl } from "./baseUrl";
 
 export interface BrainMemberShape {
   id: string;
@@ -70,7 +71,7 @@ function requireServiceSecret(): string {
 }
 
 async function serviceCall<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${brainConfig.baseUrl}${path}`, {
+  const res = await fetch(`${currentBrainBaseUrl(brainConfig.baseUrl)}${path}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

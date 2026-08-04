@@ -145,6 +145,7 @@ await ctx.route("**/api/assistant/questions**", (route) =>
 
 const ROWS = '[data-testid^="row-audit-"]';
 const BADGES = '[data-testid^="badge-audit-category-"]';
+const STATUS_BADGES = '[data-testid^="badge-audit-status-"]';
 const EMPTY = '[data-testid="text-audit-empty"]';
 const FILTER = '[data-testid="button-audit-type-filter"]';
 const COUNT_BADGE = '[data-testid="badge-audit-count"]';
@@ -184,9 +185,10 @@ check(
 );
 check("the filter starts on All types", (await textOf(FILTER)) === "All types", await textOf(FILTER));
 check("every row is badged with its category", (await page.locator(BADGES).count()) === SYSTEM_COUNT);
+check("every row is badged with its anchor status", (await page.locator(STATUS_BADGES).count()) === SYSTEM_COUNT);
 check(
-  "pipeline events are badged as System",
-  (await badgeKinds()).size === 1 && (await badgeKinds()).has("system"),
+  "pipeline events are badged as Systems",
+  (await badgeKinds()).size === 1 && (await badgeKinds()).has("systems"),
   [...(await badgeKinds())].join(", "),
 );
 
@@ -215,7 +217,7 @@ check(
 const mixedKinds = await badgeKinds();
 check(
   "all three categories are represented",
-  ["decision", "assistant", "system"].every((k) => mixedKinds.has(k)),
+  ["decision", "assistant", "systems"].every((k) => mixedKinds.has(k)),
   [...mixedKinds].join(", "),
 );
 
@@ -238,8 +240,8 @@ check(
   `${await rowCount()} rows, expected ${MIXED_SYSTEM_COUNT}`,
 );
 check(
-  "…and every remaining row is badged System",
-  (await badgeKinds()).size === 1 && (await badgeKinds()).has("system"),
+  "…and every remaining row is badged Systems",
+  (await badgeKinds()).size === 1 && (await badgeKinds()).has("systems"),
   [...(await badgeKinds())].join(", "),
 );
 await pick("all");

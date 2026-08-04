@@ -19,6 +19,7 @@ import { Router, type Request, type Response } from "express";
 import { requireAuth } from "../auth";
 import { brainAuthConfigured, brainTenancyMode, platformServiceConfigured } from "./config";
 import { getBrainSession, registerBrainSession, NoTenantError } from "./auth";
+import { withBrainBaseUrl } from "./baseUrl";
 import { createTenant, consumeInvite, TenancyApiError } from "./tenancy";
 import { storage } from "../storage";
 import {
@@ -68,36 +69,41 @@ export function createBrainProxyRouter(): Router {
       return res.status(400).json({ error: "invalid_request", message: "invoice_id is required" });
     }
     try {
-      const { token, agentToken, tenantId } = await getBrainSession(req.session.userId!);
+      const { token, agentToken, tenantId, baseUrl } = await getBrainSession(req.session.userId!);
 
-      // Look up the invoice server-side so the evaluate action mirrors what the
-      // propose actually pays (truthful trace, not client-asserted amounts).
-      const { invoices } = await listLedgerInvoices(token, { limit: 100 });
-      const invoice = invoices.find((i) => i.id === invoiceId);
+      const { invoice, decision, intent } = await withBrainBaseUrl(baseUrl, async () => {
+        // Look up the invoice server-side so the evaluate action mirrors what the
+        // propose actually pays (truthful trace, not client-asserted amounts).
+        const { invoices } = await listLedgerInvoices(token, { limit: 100 });
+        const inv = invoices.find((i) => i.id === invoiceId);
+        if (inv === undefined) return { invoice: undefined, decision: null, intent: undefined };
+
+        // Best-effort policy trace (the propose itself is authoritative for status).
+        let policyDecision = null;
+        try {
+          const action: PolicyAction = {
+            kind: "outbound_payment",
+            counterparty_id: inv.counterparty_id,
+            amount: { currency: inv.currency, value: inv.amount_due },
+          };
+          policyDecision = await evaluatePolicy(token, tenantId, action);
+        } catch (err) {
+          console.warn(
+            "[brain-proxy] policy evaluate failed (continuing without trace):",
+            err instanceof Error ? err.message : String(err),
+          );
+        }
+
+        // Authoritative: create the §6-gated PaymentIntent (no execution). Propose is an AGENT
+        // action - the member/session token has no payment_intent:propose scope, so this MUST
+        // use the agent token (agents propose, humans approve).
+        const pi = await proposeInvoicePayment(agentToken, invoiceId);
+        return { invoice: inv, decision: policyDecision, intent: pi };
+      });
+
       if (invoice === undefined) {
         return res.status(404).json({ error: "invoice_not_found", message: "no such invoice" });
       }
-
-      // Best-effort policy trace (the propose itself is authoritative for status).
-      let decision = null;
-      try {
-        const action: PolicyAction = {
-          kind: "outbound_payment",
-          counterparty_id: invoice.counterparty_id,
-          amount: { currency: invoice.currency, value: invoice.amount_due },
-        };
-        decision = await evaluatePolicy(token, tenantId, action);
-      } catch (err) {
-        console.warn(
-          "[brain-proxy] policy evaluate failed (continuing without trace):",
-          err instanceof Error ? err.message : String(err),
-        );
-      }
-
-      // Authoritative: create the §6-gated PaymentIntent (no execution). Propose is an AGENT
-      // action - the member/session token has no payment_intent:propose scope, so this MUST
-      // use the agent token (agents propose, humans approve).
-      const intent = await proposeInvoicePayment(agentToken, invoiceId);
       return res.json({ intent, decision });
     } catch (err) {
       return relayError(res, err);
@@ -126,8 +132,8 @@ export function createBrainProxyRouter(): Router {
     }
     const reason = typeof body?.reason === "string" ? body.reason : undefined;
     try {
-      const { token } = await getBrainSession(req.session.userId!);
-      const intent = await rejectPaymentIntent(token, intentId, reason);
+      const { token, baseUrl } = await getBrainSession(req.session.userId!);
+      const intent = await withBrainBaseUrl(baseUrl, () => rejectPaymentIntent(token, intentId, reason));
       return res.json({ intent });
     } catch (err) {
       return relayError(res, err);
@@ -154,7 +160,7 @@ export function createBrainProxyRouter(): Router {
       return res.json({}); // not configured → caller uses its static fallback
     }
     try {
-      const { token, tenantId } = await getBrainSession(req.session.userId!);
+      const { token, tenantId, baseUrl } = await getBrainSession(req.session.userId!);
       const cacheKey = tenantId ?? req.session.userId!;
       const cached = recommendationCache.get(cacheKey);
       if (cached && cached.expiresAt > Date.now()) {
@@ -167,7 +173,7 @@ export function createBrainProxyRouter(): Router {
       for (const [key, entry] of recommendationCache) {
         if (entry.expiresAt <= now) recommendationCache.delete(key);
       }
-      const answer = await askWikiQuestion(token, RECOMMENDATION_PROMPT);
+      const answer = await withBrainBaseUrl(baseUrl, () => askWikiQuestion(token, RECOMMENDATION_PROMPT));
       recommendationCache.set(cacheKey, {
         text: answer.raw,
         evidenceIds: answer.evidenceIds,
@@ -193,8 +199,8 @@ export function createBrainProxyRouter(): Router {
       return res.status(400).json({ error: "invalid_request", message: "question is required" });
     }
     try {
-      const { token } = await getBrainSession(req.session.userId!);
-      const answer = await askWikiQuestion(token, question.trim());
+      const { token, baseUrl } = await getBrainSession(req.session.userId!);
+      const answer = await withBrainBaseUrl(baseUrl, () => askWikiQuestion(token, question.trim()));
       return res.json(answer);
     } catch (err) {
       return relayError(res, err);
@@ -349,12 +355,14 @@ export function createBrainProxyRouter(): Router {
   router.post("/members/:id/invites", async (req: Request, res: Response) => {
     if (!brainAuthConfigured()) return unconfigured(res);
     try {
-      const { token } = await getBrainSession(req.session.userId!);
-      const data = await brainRequest<unknown>(`/members/${encodeURIComponent(String(req.params.id))}/invites`, {
-        method: "POST",
-        token,
-        body: {},
-      });
+      const { token, baseUrl } = await getBrainSession(req.session.userId!);
+      const data = await withBrainBaseUrl(baseUrl, () =>
+        brainRequest<unknown>(`/members/${encodeURIComponent(String(req.params.id))}/invites`, {
+          method: "POST",
+          token,
+          body: {},
+        }),
+      );
       return res.json(data);
     } catch (err) {
       return relayError(res, err);
@@ -365,11 +373,13 @@ export function createBrainProxyRouter(): Router {
   router.delete("/members/:id/invites", async (req: Request, res: Response) => {
     if (!brainAuthConfigured()) return unconfigured(res);
     try {
-      const { token } = await getBrainSession(req.session.userId!);
-      const data = await brainRequest<unknown>(`/members/${encodeURIComponent(String(req.params.id))}/invites`, {
-        method: "DELETE",
-        token,
-      });
+      const { token, baseUrl } = await getBrainSession(req.session.userId!);
+      const data = await withBrainBaseUrl(baseUrl, () =>
+        brainRequest<unknown>(`/members/${encodeURIComponent(String(req.params.id))}/invites`, {
+          method: "DELETE",
+          token,
+        }),
+      );
       return res.json(data);
     } catch (err) {
       return relayError(res, err);
@@ -387,8 +397,8 @@ export function createBrainProxyRouter(): Router {
   router.post("/members", async (req: Request, res: Response) => {
     if (!brainAuthConfigured()) return unconfigured(res);
     try {
-      const { token } = await getBrainSession(req.session.userId!);
-      const result = await createMember(token, req.body);
+      const { token, baseUrl } = await getBrainSession(req.session.userId!);
+      const result = await withBrainBaseUrl(baseUrl, () => createMember(token, req.body));
       return res.json(result);
     } catch (err) {
       return relayError(res, err);
@@ -399,8 +409,8 @@ export function createBrainProxyRouter(): Router {
   router.patch("/members/:id", async (req: Request, res: Response) => {
     if (!brainAuthConfigured()) return unconfigured(res);
     try {
-      const { token } = await getBrainSession(req.session.userId!);
-      const result = await updateMember(token, String(req.params.id), req.body);
+      const { token, baseUrl } = await getBrainSession(req.session.userId!);
+      const result = await withBrainBaseUrl(baseUrl, () => updateMember(token, String(req.params.id), req.body));
       return res.json(result);
     } catch (err) {
       return relayError(res, err);
@@ -411,8 +421,8 @@ export function createBrainProxyRouter(): Router {
   router.delete("/members/:id", async (req: Request, res: Response) => {
     if (!brainAuthConfigured()) return unconfigured(res);
     try {
-      const { token } = await getBrainSession(req.session.userId!);
-      const result = await deactivateMember(token, String(req.params.id));
+      const { token, baseUrl } = await getBrainSession(req.session.userId!);
+      const result = await withBrainBaseUrl(baseUrl, () => deactivateMember(token, String(req.params.id)));
       return res.json(result);
     } catch (err) {
       return relayError(res, err);
@@ -435,11 +445,14 @@ export function createBrainProxyRouter(): Router {
       return res.status(400).json({ error: "invalid_request", message: "payment_intent id (pi_…) required" });
     }
     try {
-      const { token, secondApproverToken } = await getBrainSession(req.session.userId!);
-      let intent = await approvePaymentIntent(token, id);
-      if (intent.status === "awaiting_second_approval" && secondApproverToken) {
-        intent = await approvePaymentIntent(secondApproverToken, id);
-      }
+      const { token, secondApproverToken, baseUrl } = await getBrainSession(req.session.userId!);
+      const intent = await withBrainBaseUrl(baseUrl, async () => {
+        let result = await approvePaymentIntent(token, id);
+        if (result.status === "awaiting_second_approval" && secondApproverToken) {
+          result = await approvePaymentIntent(secondApproverToken, id);
+        }
+        return result;
+      });
       return res.json({ intent });
     } catch (err) {
       return relayError(res, err);
@@ -451,8 +464,8 @@ export function createBrainProxyRouter(): Router {
   router.get("/approval-policy", async (req: Request, res: Response) => {
     if (!brainAuthConfigured()) return unconfigured(res);
     try {
-      const { token, tenantId } = await getBrainSession(req.session.userId!);
-      const facts = await getApprovalPolicyFacts(token, tenantId);
+      const { token, tenantId, baseUrl } = await getBrainSession(req.session.userId!);
+      const facts = await withBrainBaseUrl(baseUrl, () => getApprovalPolicyFacts(token, tenantId));
       return res.json(facts);
     } catch (err) {
       return relayError(res, err);
@@ -484,8 +497,8 @@ export function createBrainProxyRouter(): Router {
       if (aliases.length > 0) body.aliases = aliases;
     }
     try {
-      const { token } = await getBrainSession(req.session.userId!);
-      const result = await createCounterparty(token, body);
+      const { token, baseUrl } = await getBrainSession(req.session.userId!);
+      const result = await withBrainBaseUrl(baseUrl, () => createCounterparty(token, body));
       return res.status(result.created ? 201 : 200).json(result);
     } catch (err) {
       return relayError(res, err);
@@ -511,12 +524,14 @@ export function createBrainProxyRouter(): Router {
     }
     const body = { decision };
     try {
-      const { token } = await getBrainSession(req.session.userId!);
-      const result = await brainRequest<unknown>(`/proposals/${encodeURIComponent(id)}/decide`, {
-        token,
-        method: "POST",
-        body,
-      });
+      const { token, baseUrl } = await getBrainSession(req.session.userId!);
+      const result = await withBrainBaseUrl(baseUrl, () =>
+        brainRequest<unknown>(`/proposals/${encodeURIComponent(id)}/decide`, {
+          token,
+          method: "POST",
+          body,
+        }),
+      );
       return res.json(result);
     } catch (err) {
       return relayError(res, err);
@@ -534,16 +549,19 @@ export function createBrainProxyRouter(): Router {
   router.get("/proposals", async (req: Request, res: Response) => {
     if (!brainAuthConfigured()) return unconfigured(res);
     try {
-      const { token } = await getBrainSession(req.session.userId!);
+      const { token, baseUrl } = await getBrainSession(req.session.userId!);
       const query: Record<string, string> = {};
       for (const [k, v] of Object.entries(req.query)) {
         if (typeof v === "string") query[k] = v;
       }
-      const page = await brainRequest<Record<string, unknown>>("/proposals", { token, query });
+      const page = await withBrainBaseUrl(baseUrl, () =>
+        brainRequest<Record<string, unknown>>("/proposals", { token, query }),
+      );
       const rows = Array.isArray(page?.proposals) ? (page.proposals as Record<string, unknown>[]) : null;
       if (!rows) return res.json(page); // Unexpected shape - relay verbatim rather than guess.
       try {
-        return res.json({ ...page, proposals: await enrichProposals(token, rows) });
+        const enriched = await withBrainBaseUrl(baseUrl, () => enrichProposals(token, rows));
+        return res.json({ ...page, proposals: enriched });
       } catch (enrichErr) {
         // Never let a reference-data outage take down the review queue: an
         // un-enriched card still lists and still decides.
@@ -670,11 +688,13 @@ export function createBrainProxyRouter(): Router {
           req.body && typeof req.body === "object" && Object.keys(req.body as object).length > 0
             ? req.body
             : {};
-        const data = await brainRequest<unknown>(route.upstream(params, session.tenantId), {
-          method: route.method.toUpperCase(),
-          token,
-          body,
-        });
+        const data = await withBrainBaseUrl(session.baseUrl, () =>
+          brainRequest<unknown>(route.upstream(params, session.tenantId), {
+            method: route.method.toUpperCase(),
+            token,
+            body,
+          }),
+        );
         return res.json(data);
       } catch (err) {
         return relayError(res, err);
@@ -691,13 +711,13 @@ export function createBrainProxyRouter(): Router {
       });
     }
     try {
-      const { token } = await getBrainSession(req.session.userId!);
+      const { token, baseUrl } = await getBrainSession(req.session.userId!);
       // req.path here is the sub-path after the /api/brain mount, e.g. "/ledger/accounts".
       const query: Record<string, string> = {};
       for (const [k, v] of Object.entries(req.query)) {
         if (typeof v === "string") query[k] = v;
       }
-      const data = await brainRequest<unknown>(req.path, { token, query });
+      const data = await withBrainBaseUrl(baseUrl, () => brainRequest<unknown>(req.path, { token, query }));
       return res.json(data);
     } catch (err) {
       return relayError(res, err);

@@ -1,3 +1,4 @@
+- [Brain URL split (demo vs production)](brain-url-split.md) — demo → staging, real users → prod; per-request AsyncLocalStorage; every new proxy handler must wrap with withBrainBaseUrl(baseUrl, …).
 - [Add Source ingestion wizard](add-source-wizard.md) — source-agnostic connector modal; docs persist metadata only; route-ordering + screen-stack constraints.
 - [Source-to-account resolution](source-account-resolution.md) — source rows open Account Details only after a real upstream ledger-account link is validated.
 - [Linked references contract](linked-references-contract.md) — rules/vendors/invoices resolve by id via one helper+store; unified dev guard; non-vendor parties (employee/protocol/ledger) are never kind:"vendor".
@@ -68,3 +69,4 @@
 - [Figma pill specs](figma-pill-specs.md) — `text-[14px]` sets no line-height, so pills need explicit `leading-`; 32px = py-8+leading-16; grep for a sibling impl before overriding a frame colour.
 - [Agent identity vs actor](agent-identity-vs-actor.md) — `actor` is often the human approver; agent-ness survives only in the actor_ref lookup PATH, so classify at map time or omit the prefix.
 - [Brain agent type resolution](brain-agent-type-resolution.md) — `proposing_agent` ULID ≠ analysis agent type; pass proposals into useBrainAuditRecords via inline useRef map (not module-level cache).
+- [brain-core extraction and obligations fixes](brain-core-extraction-fixes.md) — upload loop fix (fail terminally, not retry) + obligations `?direction=payable` filter; BFF proxy still needs direction param.

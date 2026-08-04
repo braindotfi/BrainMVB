@@ -19,6 +19,7 @@
 import { SignJWT, importJWK, type JWK } from "jose";
 import { randomUUID } from "node:crypto";
 import { brainConfig, brainTokenMode, brainTenancyMode, brainDurableTenancy } from "./config";
+import { withBrainBaseUrl, currentBrainBaseUrl } from "./baseUrl";
 import { brainUserSubject } from "./ids";
 import { exchangeSession, refreshSession, mintAgentToken, createTenant, TenancyApiError, type TenantSessionShape } from "./tenancy";
 import { storage } from "../storage";
@@ -64,6 +65,13 @@ export interface BrainSession {
    */
   secondApproverToken?: string;
   tenantId: string;
+  /**
+   * The brain-core base URL this session targets. Demo users hit the staging/demo target
+   * (brainConfig.demoBaseUrl); real sign-up/sign-in users hit the production target
+   * (brainConfig.baseUrl). Proxy handlers pass this to withBrainBaseUrl() so all
+   * brain API calls in the request automatically reach the correct upstream.
+   */
+  baseUrl: string;
 }
 
 interface CachedSession extends BrainSession {
@@ -86,6 +94,11 @@ const cache = new Map<string, CachedSession>();
  * invoice's counterparty_id vs the counterparties list) silently mismatch.
  */
 const inflight = new Map<string, Promise<CachedSession>>();
+/**
+ * Per-user brain-core base URL: staging for demo accounts, production for real users.
+ * Set alongside the token cache so getBrainSession() can return it without a DB hit.
+ */
+const sessionBaseUrl = new Map<string, string>();
 /** Refresh this many seconds before the token actually expires. */
 const REFRESH_SKEW = 60;
 
@@ -97,14 +110,26 @@ export async function getBrainSession(appUserId: string): Promise<BrainSession> 
   const now = Math.floor(Date.now() / 1000);
   const cached = cache.get(appUserId);
   if (cached && cached.exp - REFRESH_SKEW > now) {
-    return { token: cached.token, agentToken: cached.agentToken, secondApproverToken: cached.secondApproverToken, tenantId: cached.tenantId };
+    return {
+      token: cached.token,
+      agentToken: cached.agentToken,
+      secondApproverToken: cached.secondApproverToken,
+      tenantId: cached.tenantId,
+      baseUrl: sessionBaseUrl.get(appUserId) ?? brainConfig.baseUrl,
+    };
   }
 
   // Coalesce: if a session is already being created for this user, await it.
   const pending = inflight.get(appUserId);
   if (pending) {
     const session = await pending;
-    return { token: session.token, agentToken: session.agentToken, secondApproverToken: session.secondApproverToken, tenantId: session.tenantId };
+    return {
+      token: session.token,
+      agentToken: session.agentToken,
+      secondApproverToken: session.secondApproverToken,
+      tenantId: session.tenantId,
+      baseUrl: sessionBaseUrl.get(appUserId) ?? brainConfig.baseUrl,
+    };
   }
 
   const create = createSession(appUserId, now, cached);
@@ -118,7 +143,13 @@ export async function getBrainSession(appUserId: string): Promise<BrainSession> 
         ? cached.provisionedAt
         : Date.now();
     cache.set(appUserId, session);
-    return { token: session.token, agentToken: session.agentToken, secondApproverToken: session.secondApproverToken, tenantId: session.tenantId };
+    return {
+      token: session.token,
+      agentToken: session.agentToken,
+      secondApproverToken: session.secondApproverToken,
+      tenantId: session.tenantId,
+      baseUrl: sessionBaseUrl.get(appUserId) ?? brainConfig.baseUrl,
+    };
   } finally {
     inflight.delete(appUserId);
   }
@@ -143,32 +174,153 @@ export function getBrainSessionExpiresAt(appUserId: string): number | null {
   return exp ? exp * 1000 : null;
 }
 
-/** Mint a new session via the configured token source. */
-function createSession(appUserId: string, now: number, prior?: CachedSession): Promise<CachedSession> {
-  // PRODUCTION TENANCY (Phase 2): real shared tenants, selected by BRAIN_TENANCY_MODE.
-  // The demo strategies below are untouched - the playground build never enters here.
-  if (brainTenancyMode() === "production") {
-    return createProductionSession(appUserId, prior);
+/**
+ * Mint a new session via the configured token source.
+ *
+ * Routing decision (per-user, made ONCE at session-create time):
+ *   • isDemoEmail → demo/staging path  (brainConfig.demoBaseUrl)
+ *   • real user  → production / durable path  (brainConfig.baseUrl)
+ *
+ * The resolved base URL is stored in sessionBaseUrl so every getBrainSession()
+ * call can return it without an extra DB lookup, and withBrainBaseUrl() is set
+ * around the actual provision calls so client.ts/tenancy.ts use the right URL.
+ */
+async function createSession(appUserId: string, now: number, prior?: CachedSession): Promise<CachedSession> {
+  // Determine per-user base URL. Single DB lookup; result passed to createDurableSession
+  // to avoid a second round-trip.
+  const user = await storage.getUser(appUserId);
+  const isDemo = isDemoEmail(user?.email);
+  const baseUrl = isDemo ? brainConfig.demoBaseUrl : brainConfig.baseUrl;
+
+  // Record the base URL for this user so getBrainSession() can return it instantly.
+  sessionBaseUrl.set(appUserId, baseUrl);
+
+  console.log(`[brain-auth] createSession user=${appUserId} isDemo=${isDemo} target=${baseUrl}`);
+
+  return withBrainBaseUrl(baseUrl, async () => {
+    if (isDemo) {
+      // Demo accounts: ephemeral session on the demo/staging target.
+      // Pass the already-fetched user to avoid a second DB round-trip.
+      return createDemoSession(appUserId, now, user);
+    }
+    // Real users: PRODUCTION TENANCY (Phase 2).
+    if (brainTenancyMode() === "production") {
+      return createProductionSession(appUserId, prior);
+    }
+    // DURABLE tenancy: one persistent production tenant per app user.
+    if (brainDurableTenancy()) {
+      return createDurableSession(appUserId, prior, user);
+    }
+    // No platform service credential configured: fall back to demo token strategies
+    // on the production URL (preserves pre-split behaviour in dev / unconfigured envs).
+    const mode = brainTokenMode();
+    if (mode === "staging-demo-token") return provisionStagingDemoToken();
+    if (mode === "demo-provision") return provisionSession();
+    if (mode === "local-key") return mintLocalSession(appUserId, now);
+    throw new Error(
+      "brain-core token source not configured: set BRAIN_PLATFORM_SERVICE_SECRET + " +
+        "BRAIN_TENANCY_MODE=durable for production tenancy, or BRAIN_DEMO_PROVISION_SECRET " +
+        "for the demo fence, or BRAIN_AUTH_SIGN_KEY for a local brain-core.",
+    );
+  });
+}
+
+/**
+ * Demo path: ephemeral token on the demo/staging brain-core target.
+ * Called ONLY for isDemoEmail accounts. The AsyncLocalStorage context is already
+ * set to brainConfig.demoBaseUrl by createSession(), so all brain API calls below
+ * automatically reach the right URL via currentBrainBaseUrl().
+ *
+ * Token strategy priority:
+ *  1. Platform service credential (BRAIN_PLATFORM_SERVICE_SECRET) → POST /tenants
+ *     { demo_seed: true } + X-Platform-Service-Auth. Codex-confirmed supported path;
+ *     works on both staging and production. Staging's /demo/token requires
+ *     BRAIN_DEMO_MODE=true which is intentionally off on staging.
+ *  2. Demo provision secret (BRAIN_DEMO_PROVISION_SECRET) → fenced POST /demo/provision-run.
+ *  3. Staging /demo/token legacy (only works when staging enables BRAIN_DEMO_MODE=true).
+ *  4. Local-key in-process mint (dev only).
+ */
+async function createDemoSession(
+  appUserId: string,
+  now: number,
+  preloadedUser?: Awaited<ReturnType<typeof storage.getUser>>,
+): Promise<CachedSession> {
+  if (brainConfig.platformServiceSecret !== undefined) {
+    return provisionDemoTenant(appUserId, preloadedUser);
   }
-  // DURABLE tenancy: one persistent production tenant per app user, auto-created on
-  // first use (see createDurableSession). Data survives logouts/restarts/redeploys.
-  if (brainDurableTenancy()) {
-    return createDurableSession(appUserId, prior);
-  }
-  const mode = brainTokenMode();
-  if (mode === "staging-demo-token") {
-    return provisionStagingDemoToken();
-  }
-  if (mode === "demo-provision") {
+  if (brainConfig.demoProvisionSecret !== undefined) {
     return provisionSession();
   }
-  if (mode === "local-key") {
+  if (brainConfig.demoBaseUrl.includes("staging-api.brain.fi")) {
+    return provisionStagingDemoToken();
+  }
+  if (brainConfig.signKeyJson !== undefined || brainConfig.hs256Secret !== undefined) {
     return mintLocalSession(appUserId, now);
   }
   throw new Error(
-    "brain-core token source not configured: set BRAIN_DEMO_PROVISION_SECRET (preferred - the box " +
-      "provisions a tenant and returns a token) or, for a local brain-core only, BRAIN_AUTH_SIGN_KEY.",
+    "brain-core demo token source not configured. " +
+      "Set BRAIN_PLATFORM_SERVICE_SECRET + X-Platform-Service-Auth (preferred), " +
+      "or BRAIN_DEMO_PROVISION_SECRET for the demo fence, " +
+      "or point DEMO_BRAIN_API_BASE_URL at a staging box that has BRAIN_DEMO_MODE=true.",
   );
+}
+
+/**
+ * Provision an ephemeral demo tenant via POST /tenants { demo_seed: true }.
+ *
+ * Uses the platform service credential (X-Platform-Service-Auth). The ALS context
+ * is already set to brainConfig.demoBaseUrl by createSession(), so createTenant()
+ * reaches the staging (or demo) brain-core, not production.
+ *
+ * The tenant is ephemeral from the app's perspective: no brain_identities row is
+ * written, so each demo login gets a fresh tenant. Brain-core's own demo_seed seeder
+ * populates ledger / sources / policy / agents / proposals. The BFF's seedTenantDocuments
+ * adds the raw uploadable fixture documents on top via /raw/ingest.
+ */
+async function provisionDemoTenant(
+  appUserId: string,
+  preloadedUser?: Awaited<ReturnType<typeof storage.getUser>>,
+): Promise<CachedSession> {
+  const user = preloadedUser ?? await storage.getUser(appUserId);
+  const displayName = user?.name || user?.username || "Demo User";
+  const founderEmail = user?.email || `${appUserId}@users.brainmvb.invalid`;
+
+  const result = await createTenant({
+    companyName: `${displayName}'s Demo`,
+    founderEmail,
+    founderDisplayName: displayName,
+    founderExternalRef: appUserId,
+    demoSeed: true,
+  });
+
+  if (result.demo_seed) {
+    console.log(`[brain-auth] demo tenant ${result.tenant_id} seeded by core:`, JSON.stringify(result.demo_seed));
+  } else {
+    console.warn(
+      `[brain-auth] demo tenant ${result.tenant_id} created with demo_seed:true but core returned ` +
+        `no summary — core may predate the flag. Ledger/sources/policy may be empty.`,
+    );
+  }
+
+  // Raw document seed: brain-core's demo_seed covers ledger/sources/policy/agents/proposals;
+  // this layer adds the raw uploadable fixture files (PDFs/XLSXs) via /raw/ingest.
+  // agent token holds raw:write scope (member token does not — verified live 2026-07-24).
+  const ingestToken = result.agent?.token ?? result.session.token;
+  const seedBaseUrl = currentBrainBaseUrl(brainConfig.demoBaseUrl);
+  console.log(`[brain-auth] demo tenant ${result.tenant_id} created for user ${appUserId} — seeding raw docs on ${seedBaseUrl}`);
+  void seedTenantDocuments(appUserId, ingestToken, seedBaseUrl).catch((err) =>
+    console.error(`[brain-seed] demo tenant ${result.tenant_id} raw seed failed:`, (err as Error).message),
+  );
+
+  if (!result.session.token) throw new Error("demo tenant creation (POST /tenants) returned no session token");
+  const exp = Math.floor(Date.now() / 1000) + (result.session.expires_in ?? 900);
+  return {
+    token: result.session.token,
+    agentToken: result.agent?.token ?? result.session.token,
+    tenantId: result.tenant_id,
+    exp,
+    baseUrl: currentBrainBaseUrl(brainConfig.demoBaseUrl),
+  };
 }
 
 /**
@@ -247,7 +399,11 @@ async function createProductionSession(appUserId: string, prior?: CachedSession)
  */
 const PENDING_TENANT_SENTINEL = "pending:create";
 
-async function createDurableSession(appUserId: string, prior?: CachedSession): Promise<CachedSession> {
+async function createDurableSession(
+  appUserId: string,
+  prior?: CachedSession,
+  preloadedUser?: Awaited<ReturnType<typeof storage.getUser>>,
+): Promise<CachedSession> {
   const identity = await storage.getBrainIdentity(appUserId);
   if (identity?.tenantId === PENDING_TENANT_SENTINEL) {
     // A create attempt was started and never finalized - refuse to re-create (upstream
@@ -263,15 +419,15 @@ async function createDurableSession(appUserId: string, prior?: CachedSession): P
     return createProductionSession(appUserId, prior);
   }
 
-  const user = await storage.getUser(appUserId);
+  // Use the preloaded user from createSession() to avoid a second DB lookup.
+  const user = preloadedUser ?? await storage.getUser(appUserId);
   const displayName = user?.name || user?.username || "Workspace Owner";
   // brain-core requires a founder email; some app accounts (e.g. the shared demo login)
   // have none, so synthesize a stable, clearly-non-routable one from the user id.
   const founderEmail = user?.email || `${appUserId}@users.brainmvb.invalid`;
   const companyName = `${displayName}'s Workspace`;
-  // The ONE gate for every demo-only behaviour below: the "Continue with Demo" accounts
-  // (demo@brain.fi / demo-fresh-*). A real signup must never trip any of it. Resolved once
-  // here so the upstream demo_seed flag and the local starter seed can never disagree.
+  // NOTE: demo users are routed to createDemoSession() by createSession() and never reach
+  // here. The isDemo flag is kept as a belt-and-suspenders guard (e.g. direct calls).
   const isDemo = isDemoEmail(user?.email);
 
   // Anti-retry guard for the NON-idempotent upstream create: persist a tombstone row
@@ -333,6 +489,9 @@ async function createDurableSession(appUserId: string, prior?: CachedSession): P
   // hold (verified live 2026-07-24: member /raw/ingest → 403 auth_scope_insufficient,
   // agent token → 201). Fall back to the member token only if no agent token exists,
   // so the failure surfaces as an honest 403 in the document status.
+  //
+  // NOTE: demo users are now routed to createDemoSession() and do NOT create durable
+  // tenants, so this branch is belt-and-suspenders (isDemo guard stays as a safety net).
   if (isDemo) {
     // Confirmation that core's own seeder ran. Absent means the core predates the flag (or
     // ignored it) - the tenant will have no fake-connected sources, so say so plainly rather
@@ -346,8 +505,11 @@ async function createDurableSession(appUserId: string, prior?: CachedSession): P
           `(no fake-connected sources, empty ledger); the local document seed below still runs.`,
       );
     }
-    console.log(`[brain-auth] durable tenant ${result.tenant_id} created for DEMO user ${appUserId} - seeding starter documents`);
-    void seedTenantDocuments(appUserId, result.agent?.token ?? result.session.token).catch((err) =>
+    // Capture the current base URL from AsyncLocalStorage before the fire-and-forget so
+    // seed calls reach the same brain-core target as the session that triggered them.
+    const seedBaseUrl = currentBrainBaseUrl(brainConfig.baseUrl);
+    console.log(`[brain-auth] durable tenant ${result.tenant_id} created for DEMO user ${appUserId} - seeding starter documents on ${seedBaseUrl}`);
+    void seedTenantDocuments(appUserId, result.agent?.token ?? result.session.token, seedBaseUrl).catch((err) =>
       console.error(`[brain-seed] seeding for tenant ${result.tenant_id} failed:`, (err as Error).message),
     );
   } else {
@@ -405,6 +567,8 @@ function toProductionCached(session: TenantSessionShape, fallbackTenantId: strin
     tenantId: session.member?.tenantId ?? fallbackTenantId,
     refreshToken: session.refresh_token,
     exp: Math.floor(Date.now() / 1000) + (session.expires_in ?? 900),
+    // Capture the URL context so the cache entry carries it for getBrainSession() returns.
+    baseUrl: currentBrainBaseUrl(brainConfig.baseUrl),
   };
 }
 
@@ -412,6 +576,7 @@ function toProductionCached(session: TenantSessionShape, fallbackTenantId: strin
  * Seed the session cache with a session brain-core just returned out-of-band (tenant
  * creation at signup, invite consume). Saves an immediate round-trip and makes the very
  * first authenticated page load work without a second /sessions call.
+ * These explicit registrations are always for real (non-demo) production users.
  */
 export async function registerBrainSession(
   appUserId: string,
@@ -423,6 +588,9 @@ export async function registerBrainSession(
   // response) resolves the tenant's stored token - minting it idempotently if missing.
   const agent = agentToken ?? (await getProductionAgentToken(tenantId));
   cache.set(appUserId, toProductionCached(session, tenantId, agent));
+  // Explicit registrations come from the tenant-create / invite-consume routes which
+  // are always for real users on the production target.
+  sessionBaseUrl.set(appUserId, brainConfig.baseUrl);
 }
 
 /**
@@ -432,7 +600,8 @@ export async function registerBrainSession(
  * member/agent token split, so it doubles as both here.
  */
 async function provisionStagingDemoToken(): Promise<CachedSession> {
-  const res = await fetch(`${brainConfig.baseUrl}/demo/token`, {
+  const baseUrl = currentBrainBaseUrl(brainConfig.baseUrl);
+  const res = await fetch(`${baseUrl}/demo/token`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: "{}",
@@ -452,12 +621,13 @@ async function provisionStagingDemoToken(): Promise<CachedSession> {
   const exp = json.expires_at
     ? Math.floor(new Date(json.expires_at).getTime() / 1000)
     : Math.floor(Date.now() / 1000) + STAGING_DEMO_TOKEN_TTL_SECONDS;
-  return { token: json.token, agentToken: json.token, tenantId: json.tenant_id, exp };
+  return { token: json.token, agentToken: json.token, tenantId: json.tenant_id, exp, baseUrl: currentBrainBaseUrl(brainConfig.baseUrl) };
 }
 
 /** Ask the live demo fence to provision a tenant and hand back a scoped token. */
 async function provisionSession(): Promise<CachedSession> {
-  const res = await fetch(`${brainConfig.baseUrl}/demo/provision-run`, {
+  const baseUrl = currentBrainBaseUrl(brainConfig.baseUrl);
+  const res = await fetch(`${baseUrl}/demo/provision-run`, {
     method: "POST",
     headers: { "X-Demo-Provision-Auth": brainConfig.demoProvisionSecret! },
   });
@@ -497,7 +667,7 @@ async function provisionSession(): Promise<CachedSession> {
     );
   }
   const exp = Math.floor(Date.now() / 1000) + (json.expires_in ?? 30 * 60);
-  return { token: memberToken, agentToken, secondApproverToken, tenantId: json.tenant_id, exp };
+  return { token: memberToken, agentToken, secondApproverToken, tenantId: json.tenant_id, exp, baseUrl: currentBrainBaseUrl(brainConfig.baseUrl) };
 }
 
 /** Local in-process minting - dev fallback only. Mirrors brain-core tools/dev-token. */
@@ -531,17 +701,19 @@ async function mintLocalSession(appUserId: string, now: number): Promise<CachedS
   }
   // Local dev mints one user-principal token; it doubles as the agent token here since a
   // self-controlled brain-core accepts it for both read/approve and propose scopes.
-  return { token, agentToken: token, tenantId: brainConfig.devTenantId, exp };
+  return { token, agentToken: token, tenantId: brainConfig.devTenantId, exp, baseUrl: currentBrainBaseUrl(brainConfig.baseUrl) };
 }
 
 /** Test/maintenance hook - drop all cached sessions. */
 export function clearBrainTokenCache(): void {
   cache.clear();
   inflight.clear();
+  sessionBaseUrl.clear();
 }
 
 /** Evict the cached session for a single user (used by demo cleanup). */
 export function evictBrainSession(appUserId: string): void {
   cache.delete(appUserId);
   inflight.delete(appUserId);
+  sessionBaseUrl.delete(appUserId);
 }

@@ -13,6 +13,7 @@
 
 import { randomUUID } from "node:crypto";
 import { brainConfig } from "./config";
+import { currentBrainBaseUrl } from "./baseUrl";
 import { hasMeaningfulScalar } from "../wikiAnswerGuard";
 
 export class BrainApiError extends Error {
@@ -55,7 +56,7 @@ const WRITE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 /** Issue a request to `${baseUrl}${path}` and return parsed JSON (or throw). */
 export async function brainRequest<T>(path: string, opts: BrainRequestOptions): Promise<T> {
   const method = (opts.method ?? "GET").toUpperCase();
-  const url = new URL(brainConfig.baseUrl + path);
+  const url = new URL(currentBrainBaseUrl(brainConfig.baseUrl) + path);
   if (opts.query) {
     for (const [k, v] of Object.entries(opts.query)) {
       if (v !== undefined) url.searchParams.set(k, String(v));
@@ -646,7 +647,11 @@ export async function ingestRawDocument(
   token: string,
   input: { sourceType: RawSourceType; bytes: Uint8Array; filename: string; mimeType: string },
 ): Promise<RawIngestResult> {
-  const url = new URL(brainConfig.baseUrl + "/raw/ingest");
+  // Must use currentBrainBaseUrl() — NOT brainConfig.baseUrl directly — so the
+  // per-user routing (staging for demo, prod for real accounts) from withBrainBaseUrl()
+  // in the caller is respected. This function bypasses brainRequest() (multipart, not JSON)
+  // so it must explicitly honour the AsyncLocalStorage context.
+  const url = new URL(currentBrainBaseUrl(brainConfig.baseUrl) + "/raw/ingest");
   const form = new FormData();
   form.set("source_type", input.sourceType);
   form.set("mime_type", input.mimeType);

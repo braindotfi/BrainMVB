@@ -14,6 +14,25 @@ import { evictBrainSession } from "./brain/auth";
 
 const scryptAsync = promisify(scrypt);
 
+// ─── Session helper ───
+/**
+ * Switch the authenticated principal on a session.
+ *
+ * When an existing, different user is already bound to the session, regenerate
+ * it first — this issues a new session ID and cookie, preventing session
+ * fixation (a prior principal's cookie cannot be used to access the new one).
+ * After regeneration (or immediately if the session was anonymous), the new
+ * userId is written and express-session saves it on response.
+ */
+async function switchSession(req: Request, newUserId: string): Promise<void> {
+  if (req.session.userId && req.session.userId !== newUserId) {
+    await new Promise<void>((resolve, reject) => {
+      req.session.regenerate((err) => (err ? reject(err) : resolve()));
+    });
+  }
+  req.session.userId = newUserId;
+}
+
 // ─── Session typing ───
 declare module "express-session" {
   interface SessionData {
@@ -133,6 +152,12 @@ export function setupAuth(app: Express) {
       return res.status(400).json({ error: parsed.error.errors[0]?.message ?? "Invalid input" });
     }
     const email = parsed.data.email.toLowerCase().trim();
+    // Block @brain.fi registrations: that domain is used exclusively for system-generated
+    // demo accounts (demo@brain.fi, demo-fresh-*@brain.fi). Allowing real users to register
+    // with it would spoof isDemoEmail() routing and land them on the staging brain target.
+    if (email.endsWith("@brain.fi")) {
+      return res.status(400).json({ error: "That email domain is not available for registration" });
+    }
     const { password, name } = parsed.data;
     const username = parsed.data.username?.trim() || email;
 
@@ -157,7 +182,7 @@ export function setupAuth(app: Express) {
       name: name ?? null,
     });
 
-    req.session.userId = user.id;
+    await switchSession(req, user.id);
     return res.status(201).json({ user: publicUser(user) });
   });
 
@@ -180,7 +205,7 @@ export function setupAuth(app: Express) {
       return res.status(401).json({ error: "Invalid username/email or password" });
     }
 
-    req.session.userId = user.id;
+    await switchSession(req, user.id);
     return res.json({ user: publicUser(user) });
   });
 
@@ -201,7 +226,7 @@ export function setupAuth(app: Express) {
         name: "ACME Inc.",
       });
     }
-    req.session.userId = user.id;
+    await switchSession(req, user.id);
     return res.json({ user: publicUser(user) });
   });
 
@@ -218,7 +243,7 @@ export function setupAuth(app: Express) {
       password: null,
       name: "Demo Business",
     });
-    req.session.userId = user.id;
+    await switchSession(req, user.id);
 
     // Lazy cleanup: on each new provision, purge demo-fresh users older than the TTL.
     // Fire-and-forget — login is never blocked on this.
@@ -344,7 +369,7 @@ export function setupAuth(app: Express) {
         });
       }
 
-      req.session.userId = user.id;
+      await switchSession(req, user.id);
       return res.redirect("/");
     } catch (err) {
       console.error("[Google OAuth] callback error:", err);

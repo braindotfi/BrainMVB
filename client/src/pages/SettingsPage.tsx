@@ -28,7 +28,6 @@ import { SourcesSection } from "@/components/settings/SourcesSection";
 import { DevelopersSection } from "@/components/settings/DevelopersSection";
 import { AuditLogSection } from "@/components/settings/AuditLogSection";
 import { useNav } from "@/lib/navContext";
-import { useBrainPolicy, autoApproveLimitFromPolicy, groupPolicyAmount } from "@/lib/brainPolicy";
 import SecurityFigma from "@/components/settings/figma/SecuritySection";
 import NotificationsFigma from "@/components/settings/figma/NotificationsSection";
 import TeamFigma from "@/components/settings/figma/TeamSection";
@@ -189,7 +188,6 @@ const AuditNavIcon = ({ active }: { active: boolean }) => (
    at the widths this shell actually renders (see the item-7 notes). */
 const NAV_ITEMS: { id: Section; label: string; Icon: ComponentType<{ active: boolean }> }[] = [
   { id: "profile",       label: "Profile",           Icon: ProfileNavIcon  },
-  { id: "notifications", label: "Notifications",     Icon: NotifNavIcon    },
   { id: "team",          label: "Team",              Icon: TeamNavIcon     },
   { id: "billing",       label: "Billing",           Icon: BillingNavIcon  },
   { id: "sources",       label: "Sources",           Icon: SourcesNavIcon  },
@@ -389,7 +387,7 @@ function ProfileSection() {
   const alert = useAppAlert();
   const { user } = useAuth();
   const navigate = useLocation()[1];
-  const { email, phone } = useUserContact();
+  const { email, phone } = useUserContact(user?.email);
   // Real company name from the tenancy link, falling back to the user's own display name.
   // A locally-saved override (from the "Edit" button below) always wins once set.
   const { data: tenancy } = useQuery<{ mode: string; linked: boolean; tenantId?: string; companyName?: string }>({
@@ -397,8 +395,19 @@ function ProfileSection() {
   });
   const liveName = tenancy?.companyName || user?.name || "";
   const [nameOverride, setNameOverride] = useState<string | null>(() => {
+    // Demo users must never inherit a prior real user's saved display name.
+    if (user?.isDemo) return null;
     try { return localStorage.getItem("brain_profile_name"); } catch { return null; }
   });
+  // Re-sync nameOverride when the user identity changes (auth transitions don't
+  // remount this component, so useState initializer above only runs on first mount).
+  useEffect(() => {
+    if (user?.isDemo) {
+      setNameOverride(null);
+    } else if (user?.id) {
+      try { setNameOverride(localStorage.getItem("brain_profile_name")); } catch { setNameOverride(null); }
+    }
+  }, [user?.id, user?.isDemo]);
   const name = nameOverride ?? liveName;
   const setName = setNameOverride;
   const [editing, setEditing] = useState(false);
@@ -433,13 +442,6 @@ function ProfileSection() {
   const { currency, setCurrency } = useCurrency();
   const [currencyOpen, setCurrencyOpen] = useState(false);
   const currencyRef = useRef<HTMLDivElement>(null);
-
-  /* Auto-approve limit. This is a money-authorization figure, so the three
-     states below are kept apart on purpose: an unreachable policy must never
-     render as "no limit configured", which reads as "nothing is automated" and
-     is the most dangerous thing this row could get wrong. */
-  const policy = useBrainPolicy();
-  const autoLimit = autoApproveLimitFromPolicy(policy.facts);
 
   useEffect(() => {
     if (!currencyOpen) return;
@@ -624,7 +626,7 @@ function ProfileSection() {
               </div>
             }
             label="Default Currency"
-            sublabel="Used for balance display"
+            sublabel="Fallback for accounts that don't specify their own display currency"
             right={
               <div ref={currencyRef} className="relative shrink-0 w-[80px]">
                 <SettingsDropdown
@@ -642,74 +644,6 @@ function ProfileSection() {
             useCircleIcon
           />
         </div>
-      </div>
-
-      {/* Approvals — read from the live policy, and read-only.
-          Changing it needs `policy/compose` + `policy/sign`, scopes this app's
-          token does not hold, so there is no control here pretending otherwise. */}
-      <div className="flex flex-col gap-[4px]">
-        <SectionLabel>Approvals</SectionLabel>
-        <Card noBorder>
-          <SettingRow
-            icon={
-              <RowIcon>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path d="M12 3.5l7 3v5c0 4.2-2.9 7.6-7 9-4.1-1.4-7-4.8-7-9v-5l7-3z" stroke="#a8b9f4" strokeWidth="1.5" strokeLinejoin="round" />
-                  <path d="M9 12l2.2 2.2L15.5 10" stroke="#a8b9f4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </RowIcon>
-            }
-            label="Auto-Approve Limit"
-            sublabel={
-              policy.isLoading
-                ? "Reading your approval policy…"
-                : policy.isError
-                  ? "Brain could not read your approval policy. This limit is unknown, not absent."
-                  : autoLimit === null
-                    ? "No approval policy is active on this tenant yet."
-                    : autoLimit.kind === "limit"
-                      ? "Payments at or below this run without waiting for a person."
-                      : autoLimit.kind === "conditional"
-                        ? "Automatic approval applies only under specific conditions, not a flat amount."
-                        : "Nothing runs automatically. Every payment waits for an approver."
-            }
-            testId="setting-row-auto-approve-limit"
-            right={
-              <div
-                className="shrink-0 rounded-[8px] px-[12px] py-[8px]"
-                style={{
-                  background: policy.isError ? "rgba(255,149,0,0.1)" : "#222737",
-                  border: policy.isError ? "1px solid rgba(255,149,0,0.3)" : "1px solid transparent",
-                }}
-                data-testid="text-auto-approve-limit"
-              >
-                <p
-                  className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] whitespace-nowrap"
-                  style={{ color: policy.isError ? "#ff9500" : policy.isLoading ? "#6c779d" : "#ffffff" }}
-                >
-                  {policy.isLoading
-                    ? "Checking…"
-                    : policy.isError
-                      ? "Unknown"
-                      : autoLimit === null
-                        ? "No policy"
-                        : autoLimit.kind === "limit"
-                          ? `${groupPolicyAmount(autoLimit.value)} ${autoLimit.currency}`
-                          : autoLimit.kind === "conditional"
-                            ? "Conditional"
-                            : "None"}
-                </p>
-              </div>
-            }
-          />
-        </Card>
-        <p
-          className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] leading-[18px] px-1"
-          data-testid="text-auto-approve-readonly"
-        >
-          Shown as your Brain policy has it. Editing an approval limit requires a signed
-          policy change, which cannot be made from this screen yet.
-        </p>
       </div>
 
       {/* Replay the first-run walkthrough. Clearing the flag and returning Home

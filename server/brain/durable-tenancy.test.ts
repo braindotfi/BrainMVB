@@ -110,7 +110,12 @@ let sessionUserId = "durable-signup-user";
 beforeAll(async () => {
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-    if (!url.startsWith("https://api.brain.fi")) return realFetch(input as never, init);
+    if (
+      !url.startsWith("https://api.brain.fi") &&
+      !url.startsWith("https://staging-api.brain.fi")
+    ) {
+      return realFetch(input as never, init);
+    }
     const method = init?.method ?? "GET";
     const headers = new Headers(init?.headers);
     let body: unknown;
@@ -178,7 +183,7 @@ describe("durable tenancy invariants", () => {
     return u.id;
   }
 
-  it("A+E: first DEMO use auto-creates ONE tenant, persists the mapping, and seeds documents once", async () => {
+  it("A+E: first DEMO use creates ONE seeded tenant without a durable mapping", async () => {
     const userId = await createDemoAppUser();
     const session = await getBrainSession(userId);
     expect(session.tenantId).toBe(TENANT_ID);
@@ -194,8 +199,10 @@ describe("durable tenancy invariants", () => {
     expect((tenantCalls[0].body as { demo_seed?: unknown }).demo_seed).toBe(true);
 
     const identity = await storage.getBrainIdentity(userId);
-    expect(identity?.tenantId).toBe(TENANT_ID);
-    expect(identity?.externalRef).toBe(userId);
+    // Demo sessions are intentionally ephemeral from the app's perspective:
+    // they use the seeded tenant for this session but do not enter durable
+    // identity reattachment on the next login.
+    expect(identity).toBeUndefined();
 
     // The one-time seed streams every bundled document with the AGENT token -
     // the durable member token lacks the raw:write scope (verified live 2026-07-24).
@@ -219,8 +226,14 @@ describe("durable tenancy invariants", () => {
     }
   });
 
-  it("B+C+E: later sessions re-attach via /sessions - never /tenants, never the demo fence, never re-seed", async () => {
-    const userId = await createDemoAppUser();
+  it("B+C+E: later REAL sessions re-attach via /sessions - never /tenants, never re-seed", async () => {
+    const real = await storage.createUser({
+      username: "durable-reconnect@realco.com",
+      email: "durable-reconnect@realco.com",
+      password: "x.x",
+      name: "Durable Reconnect",
+    });
+    const userId = real.id;
     await getBrainSession(userId);
     await whenSeedsSettle();
     clearBrainTokenCache(); // simulate restart/redeploy: cache gone, identity row remains
