@@ -608,7 +608,14 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
         body: JSON.stringify({ messages: history }),
       });
       const data = await res.json().catch(() => null);
-      const reply = (data?.reply as string)?.trim() || CANNED_REPLY;
+      // Only use a reply when the server responded successfully. A non-OK
+      // response (e.g. 401 {"error":"Not authenticated"} or a 400/500) has no
+      // `reply` field, so falling back to CANNED_REPLY would show a misleading
+      // "coming soon" message instead of an honest error.
+      const reply = res.ok
+        ? (data?.reply as string)?.trim() || CANNED_REPLY
+        : (data?.error as string)?.trim() ||
+          "Something went wrong reaching the assistant. Please try again.";
       const isUngrounded = data?.ungrounded === true;
       const answerStatus =
         data?.answerError === true
