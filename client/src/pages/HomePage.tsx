@@ -33,6 +33,7 @@ import {
   type ProposalDecision,
 } from "@/lib/brainProposals";
 import { LiveProposalModal, AGENT_DISPLAY_NAME } from "@/components/AgentProposalModal";
+import { agentBadgeLabel } from "@/lib/agentProposals";
 import {
   deriveProposalTier,
   thresholdsFromRules,
@@ -804,8 +805,7 @@ export function HomePage() {
       }));
       /* Badge = agent name pill (same as InboxPage pillName logic) */
       const agentKey = agentKeyForProposalType(p.type);
-      const isPaymentAgent = agentKey === "payment" || /^(?:demo\s+)?payment agent$/i.test(agentName.trim());
-      const pillName = isPaymentAgent ? "Payment" : agentName;
+      const pillName = agentBadgeLabel(agentKey);
       const rowId = `proposal-${p.id}`;
       const candidate = overviewCandidateById.get(rowId);
       const blocked = candidate ? isBlockedByType(candidate, overviewSelection.type) : false;

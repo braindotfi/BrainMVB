@@ -168,16 +168,42 @@ export function auditEventLabel(type: AuditEventType): string {
 
 /** Display name of the AGENT a record originated from, when one is known.
  *
- *  Only two things count: a label carried on the record (set from a
- *  LiveInsight's surface, or resolved through brain-core's agent registry —
- *  see isAgentLookup in brainAudit), and the Assistant. `record.actor`
- *  deliberately does NOT count: on a human-approved decision it holds the
- *  approver's email, and titling that record "sarah@meridian Audit Record"
- *  would name the wrong party. Returns undefined when no agent is known so
- *  callers omit the prefix instead of guessing one. */
+ *  Priority order:
+ *  1. `agentLabel` — set from a LiveInsight's surface or brain-core's agent
+ *     registry (see isAgentLookup in brainAudit). This is the agent that
+ *     *acted* (auto-approve, system event).
+ *  2. `proposingAgent` — for proposal.decided events where a human approved,
+ *     the actor is the human, not the proposing agent. We fall back to the
+ *     proposing agent's display name so the popup title reads
+ *     "Cash Forecasting Audit Record" rather than bare "Audit Record".
+ *  3. Assistant / System activity special cases.
+ *
+ *  `record.actor` deliberately does NOT count: on a human-approved decision it
+ *  holds the approver's email/display name, and titling that record
+ *  "sarah@meridian Audit Record" would name the wrong party. Returns undefined
+ *  when no agent is known so callers omit the prefix rather than guessing. */
 export function auditRecordAgentName(record: AuditRecord): string | undefined {
   const label = record.agentLabel?.trim();
   if (label) return label;
+  if (record.proposingAgent) {
+    // AGENT_DISPLAY_NAME is the canonical base name (no "Agent" suffix) — the
+    // title format is "<Display Name> Audit Record", e.g. "Cash Forecasting
+    // Audit Record", never "Cash Forecasting Agent Audit Record".
+    const displayNames: Record<string, string> = {
+      vendor_risk: "Vendor Risk", payment: "Payment", collections: "Collections",
+      treasury: "Treasury", cash_forecast: "Cash Forecasting", dispute: "Dispute",
+      compliance: "Compliance", revenue_intel: "Revenue Intelligence",
+      reconciliation: "Reconciliation", subscription: "Subscription",
+      fraud_anomaly: "Fraud and Anomaly", bill_management: "Bill Management",
+      debt_optimization: "Debt Optimization", financial_health: "Financial Health",
+      personal_budget: "Personal Budget", purchase_advisor: "Purchase Advisor",
+      savings: "Savings", tax_prep: "Tax Prep", travel_finance: "Travel Finance",
+    };
+    const name = displayNames[record.proposingAgent];
+    if (name) return name;
+    // Unknown key: best-effort capitalisation.
+    return record.proposingAgent.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  }
   if (isAssistantActivity(record)) return "Assistant";
   if (isSystemActivity(record)) return "System";
   return undefined;

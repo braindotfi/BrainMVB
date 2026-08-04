@@ -140,6 +140,43 @@ const ls = (type: LinkedSourceType, id: string): LinkedSource => ({
   deepLink: `brain://${type}/${id}`,
 });
 
+/* ── Display name map and badge helper ──────────────────────────────────── */
+
+/** Base display name per agent key — used in titles and wherever the raw name
+ *  is needed without a suffix.  For row badge chips use `agentBadgeLabel`. */
+export const AGENT_DISPLAY_NAME: Record<AgentKey, string> = {
+  vendor_risk:       "Vendor Risk",
+  payment:           "Payment",
+  collections:       "Collections",
+  treasury:          "Treasury",
+  cash_forecast:     "Cash Forecasting",
+  dispute:           "Dispute",
+  compliance:        "Compliance",
+  revenue_intel:     "Revenue Intelligence",
+  reconciliation:    "Reconciliation",
+  subscription:      "Subscription",
+  fraud_anomaly:     "Fraud and Anomaly",
+  bill_management:   "Bill Management",
+  debt_optimization: "Debt Optimization",
+  financial_health:  "Financial Health",
+  personal_budget:   "Personal Budget",
+  purchase_advisor:  "Purchase Advisor",
+  savings:           "Savings",
+  tax_prep:          "Tax Prep",
+  travel_finance:    "Travel Finance",
+};
+
+/** Label for an agent badge chip/pill: "<Display Name> Agent"
+ *  e.g. "Payment Agent", "Treasury Agent", "Dispute Agent".
+ *  Use for every row-level tag.  Audit record TITLES omit the suffix —
+ *  use AGENT_DISPLAY_NAME directly for those. */
+export function agentBadgeLabel(key: AgentKey | string): string {
+  const display = AGENT_DISPLAY_NAME[key as AgentKey];
+  if (display) return `${display} Agent`;
+  // Unknown key: best-effort capitalisation without an extra import.
+  return key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) + " Agent";
+}
+
 /* ── The 11 records ─────────────────────────────────────────────────────── */
 
 export const AGENT_PROPOSALS: AgentProposal[] = [
