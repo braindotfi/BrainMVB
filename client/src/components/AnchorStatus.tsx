@@ -7,28 +7,29 @@ import type { AnchorProof } from "@/lib/auditTypes";
    mode="status" means quiet status line for operational surfaces
    mode="proof" means full merkle/tx/block block for the canonical audit record */
 
+/* Figma 5734:71784 — two-column row in the hash evidence table.
+   Each row except the LAST gets border-b (matching the frame which puts the
+   divider on the bottom of each non-terminal row, not the top of the next). */
 function HashRow({
   label,
   value,
-  first = false,
+  last = false,
 }: {
   label: string;
   value: string | undefined;
-  first?: boolean;
+  last?: boolean;
 }) {
   return (
-    <div className={`content-stretch flex items-start relative shrink-0 w-full${first ? "" : " border-t border-[#1d2132]"}`}>
-      {/* Label column — fixed 140px, Gilroy SemiBold 12px #6c779d */}
+    <div className={`content-stretch flex items-start relative shrink-0 w-full${last ? "" : " border-b border-[#1d2132]"}`}>
+      {/* Label column — fixed 140px, Gilroy SemiBold 12px/20 #6c779d */}
       <div className="content-stretch flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[140px]">
         <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[12px] whitespace-nowrap">
           {label}
         </p>
       </div>
-      {/* Value column — Gilroy Medium 13px #a8b9f4 (Figma 5734:71784). Every
-          value row is the same weight and colour, timestamps included: the
-          frame dims none of them, and a dimmed date read as less trustworthy
-          than the hash above it. `break-all` (the frame's values are elided,
-          real merkle roots and tx hashes are not) keeps them inside the cell. */}
+      {/* Value column — Gilroy Medium 13px/20 #a8b9f4.
+          `break-all` keeps real merkle roots / tx hashes inside the cell;
+          the Figma sample values are pre-truncated, real ones are not. */}
       <div className="content-stretch flex flex-[1_0_0] flex-col items-start justify-center min-w-px px-[12px] py-[8px]">
         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[13px] break-all text-[#a8b9f4]">
           {value ?? "-"}
@@ -96,54 +97,36 @@ export function AnchorStatus({
         </p>
       </div>
 
-      {/* Hash table — proof mode only; two-column label/value rows */}
+      {/* Hash table — proof mode only; two-column label/value rows (Figma 5734:71798).
+          Border-b on all rows except the last so the table's own outer border
+          closes cleanly without a double-line at the bottom. */}
       {mode === "proof" && (
         <div className="bg-[#0a0c10] border border-[#1d2132] border-solid content-stretch flex flex-col items-start relative rounded-[12px] shrink-0 w-full overflow-hidden">
-          <HashRow first label="Audit ID" value={anchor.auditId} />
-          {(isAnchored || isRecorded) && (
-            <HashRow label="Merkle Root" value={anchor.merkleRoot} />
-          )}
-          {isAnchored && (
+          {isAnchored ? (
             <>
-              <HashRow label="Base TX" value={anchor.baseTx} />
-              <HashRow label="Block" value={anchor.block?.toLocaleString()} />
-              <HashRow label="Anchored On" value={anchor.anchoredAtLabel} />
+              <HashRow label="Audit ID"    value={anchor.auditId} />
+              <HashRow label="Merkle Root" value={anchor.merkleRoot} />
+              <HashRow label="Base TX"     value={anchor.baseTx} />
+              <HashRow label="Block"       value={anchor.block?.toLocaleString()} />
+              <HashRow label="Anchored On" value={anchor.anchoredAtLabel} last />
             </>
-          )}
-          {isRecorded && (
-            <HashRow label="Recorded On" value={anchor.recordedAtLabel} />
+          ) : isRecorded ? (
+            <>
+              <HashRow label="Audit ID"    value={anchor.auditId} />
+              <HashRow label="Merkle Root" value={anchor.merkleRoot} />
+              <HashRow label="Recorded On" value={anchor.recordedAtLabel} last />
+            </>
+          ) : (
+            <HashRow label="Audit ID" value={anchor.auditId} last />
           )}
         </div>
       )}
 
-      {/* Action row */}
-      {mode === "proof" ? (
-        <div className="flex flex-col gap-[12px] w-full">
-          {/* Verify On-Chain — Figma 5734:71827 for the active state.
-              The button is ALWAYS present in proof mode and is DISABLED until a
-              confirmed tx hash backs it, so the section keeps the same shape as
-              a record anchors instead of growing a control. Disabled it is
-              visibly inert and the caption below says why, which beats both a
-              live-looking dead link and a control that silently isn't there. */}
-          <button
-            type="button"
-            onClick={onVerify}
-            disabled={!isAnchored}
-            aria-describedby={pending ? "verify-pending-caption" : undefined}
-            title={isAnchored ? undefined : "On-chain verification opens once this record is anchored."}
-            data-testid="button-verify-on-chain"
-            className="flex items-center justify-center gap-[6px] px-[20px] py-[10px] rounded-[100px] transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] w-full disabled:opacity-40 disabled:cursor-not-allowed enabled:hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-            style={{ background: "#240757", color: "#7631ee" }}
-          >
-            Verify On-Chain
-          </button>
-          {pending && (
-            <p id="verify-pending-caption" data-testid="text-verify-pending-caption" className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-[#6c779d]">
-              On-chain verification opens once anchored.
-            </p>
-          )}
-        </div>
-      ) : (
+      {/* mode="status" action row — inline Verify / pending caption / view-record link.
+          mode="proof" no longer renders a button here: the Verify On-Chain CTA
+          belongs in a dedicated footer in the popup (Figma 5734:71827) separated
+          by a border-t, not inside the scrollable content area. */}
+      {mode !== "proof" && (
         <div className="flex gap-[12px] items-center w-full">
           {pending ? (
             <span
