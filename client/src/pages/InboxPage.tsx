@@ -376,7 +376,7 @@ function InboxDropdown({
                         : [...values, option.value],
                     );
                   }}
-                  className="size-[16px] shrink-0 accent-[#7631EE] cursor-pointer"
+                  className="decision-checkbox size-[16px] shrink-0 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
                   data-testid={`${testId}-checkbox-${option.value}`}
                 />
                 {titleCaseDropdownLabel(option.label)}
