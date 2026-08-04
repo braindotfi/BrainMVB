@@ -18,7 +18,8 @@ function titleCase(label: string): string {
  * overflow:hidden / overflow:clip containers — e.g. the Card wrapper in
  * SourcesSection. Coordinates are computed from the trigger's
  * getBoundingClientRect() on open and recalculated on scroll/resize so the
- * menu follows the button if the page moves under it.
+ * menu follows the button if the page moves under it. The right edge is
+ * aligned with the trigger, placing the menu directly beneath its arrow.
  */
 export function SettingsDropdown({
   value,
@@ -43,14 +44,19 @@ export function SettingsDropdown({
   const btnRef = useRef<HTMLButtonElement>(null);
   const selected = options.find((option) => option.value === value) ?? options[0];
 
-  // Fixed-position anchor: top-left of the menu, in viewport coords.
-  const [menuAnchor, setMenuAnchor] = useState<{ top: number; left: number; width: number } | null>(null);
+  // Fixed-position anchor in viewport coords. The menu is right-aligned with
+  // the trigger so its right edge sits beneath the dropdown arrow.
+  const [menuAnchor, setMenuAnchor] = useState<{ top: number; right: number; width: number } | null>(null);
 
   /** Recompute anchor from the trigger button's current bounding rect. */
   const reanchor = () => {
     if (!btnRef.current) return;
     const r = btnRef.current.getBoundingClientRect();
-    setMenuAnchor({ top: r.bottom + 4, left: r.left, width: r.width });
+    setMenuAnchor({
+      top: r.bottom + 4,
+      right: Math.max(8, window.innerWidth - r.right),
+      width: r.width,
+    });
   };
 
   // Reanchor whenever the menu opens or the page scrolls/resizes under it.
@@ -110,7 +116,7 @@ export function SettingsDropdown({
           style={{
             position: "fixed",
             top: menuAnchor.top,
-            left: menuAnchor.left,
+            right: menuAnchor.right,
             width: menuWidth,
             zIndex: 9999,
           }}
