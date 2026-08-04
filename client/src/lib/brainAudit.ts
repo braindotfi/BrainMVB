@@ -465,14 +465,35 @@ async function fetchActorName(lookup: string): Promise<string | null> {
  *  decision is made — so that the `proposal.decided` audit record can recover
  *  the correct agent category even when brain-core's `proposing_agent` field
  *  carries an opaque execution-agent ULID rather than a human-readable type
- *  key. Module-level so it survives re-renders and persists until the tab is
- *  closed (intentional: audit history must be consistent within a session). */
-const _proposalAgentKeyCache = new Map<string, string>();
+ *  key.
+ *
+ *  Backed by sessionStorage so entries survive page reloads within the same
+ *  browser tab. After a reload, proposals that have already been decided are
+ *  no longer in the needsReview feed, so without persistence the cache would
+ *  always be empty when audit records are first rendered. */
+const _STORAGE_KEY = "brain_proposal_agent_keys";
+function _restoreCache(): Map<string, string> {
+  try {
+    const raw = sessionStorage.getItem(_STORAGE_KEY);
+    if (raw) return new Map(JSON.parse(raw) as [string, string][]);
+  } catch {
+    // sessionStorage unavailable or corrupted — start empty
+  }
+  return new Map();
+}
+const _proposalAgentKeyCache = _restoreCache();
 
 /** Record the agent type key for a live proposal before it is decided.
- *  Call this whenever needsReview proposals are iterated in the UI. */
+ *  Persists to sessionStorage so the mapping survives page reloads. */
 export function registerProposalAgentKey(proposalId: string, agentKey: string): void {
-  if (proposalId && agentKey) _proposalAgentKeyCache.set(proposalId, agentKey);
+  if (!proposalId || !agentKey) return;
+  if (_proposalAgentKeyCache.get(proposalId) === agentKey) return; // already stored, skip I/O
+  _proposalAgentKeyCache.set(proposalId, agentKey);
+  try {
+    sessionStorage.setItem(_STORAGE_KEY, JSON.stringify([..._proposalAgentKeyCache]));
+  } catch {
+    // sessionStorage full or unavailable — in-memory fallback is still set
+  }
 }
 
 /** Retrieve the cached agent type key for a proposal (set before decision). */
@@ -673,7 +694,13 @@ export function useBrainAuditRecords(proposals?: ProposalForTracking[]) {
      available even if proposals and audit events arrive in the same render. */
   const proposalTypeMapRef = useRef(new Map<string, string>());
   for (const p of proposals ?? []) {
-    if (p.id && p.type) proposalTypeMapRef.current.set(p.id, p.type);
+    if (p.id && p.type) {
+      proposalTypeMapRef.current.set(p.id, p.type);
+      // Also persist to sessionStorage-backed module cache so the mapping
+      // survives page reloads (registerProposalAgentKey is a no-op when the
+      // entry already exists, so repeated renders are cheap).
+      registerProposalAgentKey(p.id, p.type);
+    }
   }
 
   const events = useQuery<AuditEventsResponse>({
