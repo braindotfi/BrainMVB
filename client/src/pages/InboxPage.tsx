@@ -910,10 +910,23 @@ export function InboxPage() {
         type: auditDecisionType(r),
         search: buildSearchText(r.summary, r.rowSubtitle, humanReadableActor(r.actor), r.occurredAtLabel),
         title: r.summary,
-        /* Decided rows show the actor as a badge so the status pill stands alone. */
-        tag: aPill ? (humanReadableActor(r.actor) ?? "") : auditEventLabel(r.eventType),
+        /* Decided rows: badge shows the PROPOSING agent (consistent with the
+           row before the decision was made), never the human actor. The actor
+           is shown in the detail popup; putting it on the badge here changes a
+           recognisable "Payment" label to the approver's display name and makes
+           the row look like a different record.
+           `proposingAgent` comes from brain-core's proposal_summary snapshot
+           (present on events after brain-core started attaching it). When
+           absent (older events, non-proposal records) the badge is empty rather
+           than falling back to the actor — an empty badge is honest; an actor
+           name in an agent-coloured pill is not. */
+        tag: aPill
+          ? (r.proposingAgent
+              ? (AGENT_DISPLAY_NAME[r.proposingAgent as AgentKey] ?? capitalCase(r.proposingAgent.replace(/_/g, " ")))
+              : "")
+          : auditEventLabel(r.eventType),
         tagClass: aPill
-          ? (humanReadableActor(r.actor) ? TAG_AGENT : "")
+          ? (r.proposingAgent ? TAG_AGENT : "")
           : auditEventChipClass(r.eventType),
         desc: r.rowSubtitle ?? [typeof r.amount === "number" ? format(r.amount) : "", humanReadableActor(r.actor) ?? ""].filter(Boolean).join(" · "),
         time: r.occurredAtLabel,

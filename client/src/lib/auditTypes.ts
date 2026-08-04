@@ -116,6 +116,14 @@ export interface AuditRecord {
      already carries the approver identity; present on locally-synthesised
      records that originate from a LiveInsight (acknowledged items). */
   agentLabel?: string;
+  /** For `proposal.decided` events: the type key of the agent that *created*
+   *  the proposal (e.g. `"payment"`, `"collections"`). Distinct from `actor`,
+   *  which is the human who approved/rejected it. Sourced from brain-core's
+   *  `outputs.proposal_summary.proposing_agent`; absent on older events and on
+   *  non-proposal records. Used to keep the row badge consistent: the badge
+   *  shows the proposing agent before AND after the decision, never the
+   *  approver's identity (which would change the badge on the same record). */
+  proposingAgent?: string;
 }
 
 /* Filter tabs for the Audit Log page */
