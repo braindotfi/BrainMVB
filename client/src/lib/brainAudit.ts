@@ -687,7 +687,9 @@ export interface ProposalForTracking {
 
 export function useBrainAuditRecords(proposals?: ProposalForTracking[]) {
   /* Accumulate proposalId → ProposalType mappings using a ref so entries
-     persist after a proposal is decided and removed from the live feed.
+     persist after a proposal is decided and through reloads. The caller passes
+     the complete live proposal feed, including decided rows, because brain-core
+     retains those rows in GET /proposals.
      Populated INLINE — synchronously, before any useMemo in this call — so
      the map is always current when mapAuditEventToRecord reads it during
      the same render cycle. This guarantees the correct agent type key is

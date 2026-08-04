@@ -472,7 +472,12 @@ export function InboxPage() {
     .filter((i) => i.outcome === "confirm" && !i.declined && i.approvalState !== "approved")
     .map((r) => intentToReview(r, format));
 
-  const { records: auditRecords, isError: auditError } = useBrainAuditRecords(needsReviewProposals);
+  /* Track every live proposal, not only the unresolved subset. Brain-core keeps
+     decided proposals in GET /proposals, and those rows are the authoritative
+     source of the functional agent type after the audit event is written.
+     Passing only needsReviewProposals made a reload lose "collections" and
+     fall back to the generic execution-agent name ("Demo Payment Agent"). */
+  const { records: auditRecords, isError: auditError } = useBrainAuditRecords(liveProposals);
 
   /* ── Live approve / reject (durable brain-core queue rows) ─────────────── */
   const queryClient = useQueryClient();
