@@ -287,7 +287,7 @@ function titleCaseDropdownLabel(label: string): string {
 }
 
 function InboxDropdown({
-  value,
+  values,
   options,
   onChange,
   label,
@@ -295,16 +295,23 @@ function InboxDropdown({
   open,
   onOpenChange,
 }: {
-  value: string;
+  values: readonly string[];
   options: readonly InboxDropdownOption[];
-  onChange: (value: string) => void;
+  onChange: (values: string[]) => void;
   label: string;
   testId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
-  const selected = options.find((option) => option.value === value) ?? options[0];
+  const allOption = options[0];
+  const selected = options.filter((option) => values.includes(option.value));
+  const triggerLabel =
+    selected.length === 0
+      ? allOption?.label ?? ""
+      : selected.length === 1
+        ? selected[0].label
+        : `${selected.length} selected`;
 
   useEffect(() => {
     if (!open) return;
@@ -326,7 +333,7 @@ function InboxDropdown({
     <div ref={rootRef} className="relative w-[120px] shrink-0">
       <button
         type="button"
-        aria-haspopup="listbox"
+        aria-haspopup="true"
         aria-expanded={open}
         aria-label={label}
         data-testid={testId}
@@ -334,35 +341,46 @@ function InboxDropdown({
         className="bg-[#222737] rounded-[8px] p-[8px] flex items-center gap-[8px] w-full text-left outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
       >
         <span className="flex-1 min-w-0 [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[14px] leading-[20px] whitespace-nowrap truncate">
-          {titleCaseDropdownLabel(selected?.label ?? "")}
+          {titleCaseDropdownLabel(triggerLabel)}
         </span>
         <img src={chevronDownIcon} alt="" aria-hidden="true" className="shrink-0 h-[7px] w-auto" />
       </button>
 
       {open && (
         <div
-          role="listbox"
+          role="group"
           aria-label={label}
           className="absolute left-0 top-[calc(100%+4px)] z-50 bg-[#0a0c10] border border-[#1d2132] border-solid flex flex-col items-start p-[8px] rounded-[12px] w-[208px] shadow-[0px_68px_13.5px_rgba(0,0,0,0.06),0px_38px_11.5px_rgba(0,0,0,0.2),0px_17px_8.5px_rgba(0,0,0,0.34),0px_4px_4.5px_rgba(0,0,0,0.39)]"
           data-testid={`${testId}-menu`}
         >
           {options.map((option) => {
-            const selectedOption = option.value === value;
+            const isAll = option.value === "all";
+            const selectedOption = isAll ? values.length === 0 : values.includes(option.value);
             return (
-              <button
+              <label
                 key={option.value}
-                type="button"
-                role="option"
-                aria-selected={selectedOption}
-                onClick={() => {
-                  onChange(option.value);
-                  onOpenChange(false);
-                }}
-                className="flex items-center p-[8px] rounded-[8px] shrink-0 w-full text-left [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[14px] whitespace-nowrap outline-none hover:bg-[#222737] focus-visible:bg-[#222737]"
+                className="flex items-center gap-[8px] p-[8px] rounded-[8px] shrink-0 w-full text-left [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[14px] whitespace-nowrap outline-none hover:bg-[#222737] focus-within:bg-[#222737] cursor-pointer"
                 data-testid={`${testId}-option-${option.value}`}
               >
+                <input
+                  type="checkbox"
+                  checked={selectedOption}
+                  onChange={() => {
+                    if (isAll) {
+                      onChange([]);
+                      return;
+                    }
+                    onChange(
+                      selectedOption
+                        ? values.filter((value) => value !== option.value)
+                        : [...values, option.value],
+                    );
+                  }}
+                  className="size-[16px] shrink-0 accent-[#7631EE] cursor-pointer"
+                  data-testid={`${testId}-checkbox-${option.value}`}
+                />
                 {titleCaseDropdownLabel(option.label)}
-              </button>
+              </label>
             );
           })}
         </div>
@@ -1397,31 +1415,31 @@ export function InboxPage() {
         <div className="flex flex-row gap-[24px]">
           {([
             {
-              value: filters.priority,
-              onChange: (v: string) => setFilter("priority", v as DecisionFilterState["priority"]),
+              values: filters.priority,
+              onChange: (v: string[]) => setFilter("priority", v as DecisionFilterState["priority"]),
               label: "Filter by priority",
               testId: "filter-priority",
               options: [{ value: "all", label: "All Priorities" }, ...PRIORITY_OPTIONS],
             },
             {
-              value: filters.status,
-              onChange: (v: string) => setFilter("status", v as DecisionFilterState["status"]),
+              values: filters.status,
+              onChange: (v: string[]) => setFilter("status", v as DecisionFilterState["status"]),
               label: "Filter by status",
               testId: "filter-status",
               options: [{ value: "all", label: "All Status" }, ...STATUS_OPTIONS],
             },
             {
-              value: filters.type,
-              onChange: (v: string) => setFilter("type", v),
+              values: filters.type,
+              onChange: (v: string[]) => setFilter("type", v),
               label: "Filter by type",
               testId: "filter-type",
               /* Types from rows present so the filter is never vacuously empty. */
               options: [{ value: "all", label: "All Types" }, ...availableTypes],
             },
-          ] as const).map(({ value, onChange, label, testId, options }) => (
+          ] as const).map(({ values, onChange, label, testId, options }) => (
             <InboxDropdown
               key={testId}
-              value={value}
+              values={values}
               onChange={onChange}
               label={label}
               testId={testId}
