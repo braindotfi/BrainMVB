@@ -115,21 +115,24 @@ export interface DecisionFacets {
 }
 
 export interface DecisionFilterState {
-  priority: RowTier | "all";
-  status: DecisionStatus | "all";
-  type: string | "all";
+  /** Empty means "all priorities". Multiple selected values use OR semantics. */
+  priority: readonly RowTier[];
+  /** Empty means "all statuses". Multiple selected values use OR semantics. */
+  status: readonly DecisionStatus[];
+  /** Empty means "all types". Multiple selected values use OR semantics. */
+  type: readonly string[];
   query: string;
 }
 
 export const EMPTY_FILTERS: DecisionFilterState = {
-  priority: "all",
-  status: "all",
-  type: "all",
+  priority: [],
+  status: [],
+  type: [],
   query: "",
 };
 
 export function hasActiveFilter(f: DecisionFilterState): boolean {
-  return f.priority !== "all" || f.status !== "all" || f.type !== "all" || f.query.trim() !== "";
+  return f.priority.length > 0 || f.status.length > 0 || f.type.length > 0 || f.query.trim() !== "";
 }
 
 /** Build the search haystack once, at row-build time. */
@@ -148,9 +151,12 @@ export function matchesQuery(search: string, query: string): boolean {
 }
 
 export function matchesFilters(row: DecisionFacets, f: DecisionFilterState): boolean {
-  if (f.priority !== "all" && row.tier !== f.priority) return false;
-  if (f.status !== "all" && row.status !== f.status) return false;
-  if (f.type !== "all" && canonicalDecisionType(row.type) !== canonicalDecisionType(f.type)) return false;
+  if (f.priority.length > 0 && !f.priority.includes(row.tier)) return false;
+  if (f.status.length > 0 && !f.status.includes(row.status)) return false;
+  if (
+    f.type.length > 0 &&
+    !f.type.some((type) => canonicalDecisionType(row.type) === canonicalDecisionType(type))
+  ) return false;
   return matchesQuery(row.search, f.query);
 }
 

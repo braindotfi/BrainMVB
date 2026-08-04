@@ -33,19 +33,28 @@ describe("filter facets are independent", () => {
   });
 
   it("combines facets with AND", () => {
-    const out = applyDecisionFilters(rows, { ...EMPTY_FILTERS, status: "approved", type: "collections" });
+    const out = applyDecisionFilters(rows, { ...EMPTY_FILTERS, status: ["approved"], type: ["collections"] });
     expect(out).toHaveLength(1);
     expect(out[0].search).toBe("riverside co");
   });
 
+  it("matches any selected value within a facet while combining facets with AND", () => {
+    const out = applyDecisionFilters(rows, {
+      ...EMPTY_FILTERS,
+      status: ["pending", "approved"],
+      type: ["collections", "fraud_anomaly"],
+    });
+    expect(out.map((r) => r.search)).toEqual(["quick pay duplicate", "midmarket solutions", "riverside co"]);
+  });
+
   it("reaches a combination the old tabs could not — approved collections", () => {
     // Under tabs, "Approved" and a type were mutually exclusive views.
-    const out = applyDecisionFilters(rows, { ...EMPTY_FILTERS, type: "collections" });
+    const out = applyDecisionFilters(rows, { ...EMPTY_FILTERS, type: ["collections"] });
     expect(out.map((r) => r.status)).toEqual(["pending", "approved"]);
   });
 
   it("an empty result is empty, not unfiltered", () => {
-    expect(applyDecisionFilters(rows, { ...EMPTY_FILTERS, type: "treasury" })).toHaveLength(0);
+    expect(applyDecisionFilters(rows, { ...EMPTY_FILTERS, type: ["treasury"] })).toHaveLength(0);
   });
 });
 
@@ -146,14 +155,14 @@ describe("hasActiveFilter drives the empty-state wording", () => {
   });
 
   it("is true once any facet is set", () => {
-    expect(hasActiveFilter({ ...EMPTY_FILTERS, priority: "urgent" })).toBe(true);
+    expect(hasActiveFilter({ ...EMPTY_FILTERS, priority: ["urgent"] })).toBe(true);
     expect(hasActiveFilter({ ...EMPTY_FILTERS, query: "acme" })).toBe(true);
   });
 });
 
 describe("matchesFilters", () => {
   it("matches on tier alone", () => {
-    expect(matchesFilters(row({ tier: "urgent" }), { ...EMPTY_FILTERS, priority: "urgent" })).toBe(true);
-    expect(matchesFilters(row({ tier: "waiting" }), { ...EMPTY_FILTERS, priority: "urgent" })).toBe(false);
+    expect(matchesFilters(row({ tier: "urgent" }), { ...EMPTY_FILTERS, priority: ["urgent"] })).toBe(true);
+    expect(matchesFilters(row({ tier: "waiting" }), { ...EMPTY_FILTERS, priority: ["urgent"] })).toBe(false);
   });
 });
