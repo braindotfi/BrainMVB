@@ -102,8 +102,16 @@ export const brainConfig: BrainConfig = {
   scopes: env("BRAIN_DEFAULT_SCOPES")?.split(",").map((s) => s.trim()).filter(Boolean) ?? DEFAULT_SCOPES,
 };
 
-/** How the BFF obtains brain-core tokens. */
-export type BrainTokenMode = "staging-demo-token" | "demo-provision" | "local-key" | "unconfigured";
+/**
+ * How the BFF obtains brain-core tokens for DEMO ("Continue with Demo") users.
+ * Priority mirrors createDemoSession() in auth.ts — keep them in sync.
+ */
+export type BrainTokenMode =
+  | "platform-service-demo" // POST /tenants {demo_seed:true} + X-Platform-Service-Auth (preferred)
+  | "staging-demo-token"    // POST /demo/token — legacy, requires BRAIN_DEMO_MODE=true on staging
+  | "demo-provision"        // POST /demo/provision-run + X-Demo-Provision-Auth
+  | "local-key"             // in-process JWT mint (dev only)
+  | "unconfigured";
 
 /** True when the DEMO brain target points at the staging box. */
 export function isStagingBrainTarget(): boolean {
@@ -111,10 +119,12 @@ export function isStagingBrainTarget(): boolean {
 }
 
 export function brainTokenMode(): BrainTokenMode {
-  // Staging takes priority when explicitly targeted: it has its own key-free demo-token
-  // route (POST /demo/token) distinct from the live box's fenced /demo/provision-run.
-  if (isStagingBrainTarget()) return "staging-demo-token";
+  // Platform service credential takes priority: POST /tenants {demo_seed:true}
+  // is the Codex-confirmed supported path (staging's /demo/token requires
+  // BRAIN_DEMO_MODE=true which is intentionally off on staging).
+  if (brainConfig.platformServiceSecret !== undefined) return "platform-service-demo";
   if (brainConfig.demoProvisionSecret !== undefined) return "demo-provision";
+  if (isStagingBrainTarget()) return "staging-demo-token";
   if (brainConfig.signKeyJson !== undefined || brainConfig.hs256Secret !== undefined) return "local-key";
   return "unconfigured";
 }
@@ -180,11 +190,7 @@ export function platformServiceConfigured(): boolean {
 // secrets or tokens.
 (function logBrainConfig() {
   const mode = brainTenancyMode();
-  const demoMode = brainConfig.demoBaseUrl.includes("staging-api.brain.fi")
-    ? "staging-demo-token"
-    : brainConfig.demoProvisionSecret
-      ? "demo-provision"
-      : "unconfigured";
+  const demoMode = brainTokenMode(); // mirrors createDemoSession() priority
   const realMode = mode === "production" ? "production" : mode === "durable" ? "durable" : "demo-fallback";
   console.log(
     `[brain-config] demo target: ${brainConfig.demoBaseUrl} (token: ${demoMode}) | ` +

@@ -200,7 +200,8 @@ async function createSession(appUserId: string, now: number, prior?: CachedSessi
   return withBrainBaseUrl(baseUrl, async () => {
     if (isDemo) {
       // Demo accounts: ephemeral session on the demo/staging target.
-      return createDemoSession(appUserId, now);
+      // Pass the already-fetched user to avoid a second DB round-trip.
+      return createDemoSession(appUserId, now, user);
     }
     // Real users: PRODUCTION TENANCY (Phase 2).
     if (brainTenancyMode() === "production") {
@@ -227,28 +228,99 @@ async function createSession(appUserId: string, now: number, prior?: CachedSessi
 /**
  * Demo path: ephemeral token on the demo/staging brain-core target.
  * Called ONLY for isDemoEmail accounts. The AsyncLocalStorage context is already
- * set to brainConfig.demoBaseUrl by createSession(), so all fetch() calls below
- * automatically use the right URL via currentBrainBaseUrl().
+ * set to brainConfig.demoBaseUrl by createSession(), so all brain API calls below
+ * automatically reach the right URL via currentBrainBaseUrl().
+ *
+ * Token strategy priority:
+ *  1. Platform service credential (BRAIN_PLATFORM_SERVICE_SECRET) → POST /tenants
+ *     { demo_seed: true } + X-Platform-Service-Auth. Codex-confirmed supported path;
+ *     works on both staging and production. Staging's /demo/token requires
+ *     BRAIN_DEMO_MODE=true which is intentionally off on staging.
+ *  2. Demo provision secret (BRAIN_DEMO_PROVISION_SECRET) → fenced POST /demo/provision-run.
+ *  3. Staging /demo/token legacy (only works when staging enables BRAIN_DEMO_MODE=true).
+ *  4. Local-key in-process mint (dev only).
  */
-async function createDemoSession(appUserId: string, now: number): Promise<CachedSession> {
-  // Token strategy selection for the demo target:
-  //   staging URL → key-free POST /demo/token (staging integration guide).
-  //   prod-like URL + demo provision secret → fenced POST /demo/provision-run.
-  //   local-key fallback → in-process JWT mint (dev only).
-  if (brainConfig.demoBaseUrl.includes("staging-api.brain.fi")) {
-    return provisionStagingDemoToken();
+async function createDemoSession(
+  appUserId: string,
+  now: number,
+  preloadedUser?: Awaited<ReturnType<typeof storage.getUser>>,
+): Promise<CachedSession> {
+  if (brainConfig.platformServiceSecret !== undefined) {
+    return provisionDemoTenant(appUserId, preloadedUser);
   }
   if (brainConfig.demoProvisionSecret !== undefined) {
     return provisionSession();
+  }
+  if (brainConfig.demoBaseUrl.includes("staging-api.brain.fi")) {
+    return provisionStagingDemoToken();
   }
   if (brainConfig.signKeyJson !== undefined || brainConfig.hs256Secret !== undefined) {
     return mintLocalSession(appUserId, now);
   }
   throw new Error(
     "brain-core demo token source not configured. " +
-      "DEMO_BRAIN_API_BASE_URL defaults to https://staging-api.brain.fi/v1 (staging key-free token route), " +
-      "or set BRAIN_DEMO_PROVISION_SECRET to use the live demo fence.",
+      "Set BRAIN_PLATFORM_SERVICE_SECRET + X-Platform-Service-Auth (preferred), " +
+      "or BRAIN_DEMO_PROVISION_SECRET for the demo fence, " +
+      "or point DEMO_BRAIN_API_BASE_URL at a staging box that has BRAIN_DEMO_MODE=true.",
   );
+}
+
+/**
+ * Provision an ephemeral demo tenant via POST /tenants { demo_seed: true }.
+ *
+ * Uses the platform service credential (X-Platform-Service-Auth). The ALS context
+ * is already set to brainConfig.demoBaseUrl by createSession(), so createTenant()
+ * reaches the staging (or demo) brain-core, not production.
+ *
+ * The tenant is ephemeral from the app's perspective: no brain_identities row is
+ * written, so each demo login gets a fresh tenant. Brain-core's own demo_seed seeder
+ * populates ledger / sources / policy / agents / proposals. The BFF's seedTenantDocuments
+ * adds the raw uploadable fixture documents on top via /raw/ingest.
+ */
+async function provisionDemoTenant(
+  appUserId: string,
+  preloadedUser?: Awaited<ReturnType<typeof storage.getUser>>,
+): Promise<CachedSession> {
+  const user = preloadedUser ?? await storage.getUser(appUserId);
+  const displayName = user?.name || user?.username || "Demo User";
+  const founderEmail = user?.email || `${appUserId}@users.brainmvb.invalid`;
+
+  const result = await createTenant({
+    companyName: `${displayName}'s Demo`,
+    founderEmail,
+    founderDisplayName: displayName,
+    founderExternalRef: appUserId,
+    demoSeed: true,
+  });
+
+  if (result.demo_seed) {
+    console.log(`[brain-auth] demo tenant ${result.tenant_id} seeded by core:`, JSON.stringify(result.demo_seed));
+  } else {
+    console.warn(
+      `[brain-auth] demo tenant ${result.tenant_id} created with demo_seed:true but core returned ` +
+        `no summary — core may predate the flag. Ledger/sources/policy may be empty.`,
+    );
+  }
+
+  // Raw document seed: brain-core's demo_seed covers ledger/sources/policy/agents/proposals;
+  // this layer adds the raw uploadable fixture files (PDFs/XLSXs) via /raw/ingest.
+  // agent token holds raw:write scope (member token does not — verified live 2026-07-24).
+  const ingestToken = result.agent?.token ?? result.session.token;
+  const seedBaseUrl = currentBrainBaseUrl(brainConfig.demoBaseUrl);
+  console.log(`[brain-auth] demo tenant ${result.tenant_id} created for user ${appUserId} — seeding raw docs on ${seedBaseUrl}`);
+  void seedTenantDocuments(appUserId, ingestToken, seedBaseUrl).catch((err) =>
+    console.error(`[brain-seed] demo tenant ${result.tenant_id} raw seed failed:`, (err as Error).message),
+  );
+
+  if (!result.session.token) throw new Error("demo tenant creation (POST /tenants) returned no session token");
+  const exp = Math.floor(Date.now() / 1000) + (result.session.expires_in ?? 900);
+  return {
+    token: result.session.token,
+    agentToken: result.agent?.token ?? result.session.token,
+    tenantId: result.tenant_id,
+    exp,
+    baseUrl: currentBrainBaseUrl(brainConfig.demoBaseUrl),
+  };
 }
 
 /**
