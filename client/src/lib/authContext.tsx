@@ -55,9 +55,9 @@ export function applyUserScopedResets(u: AuthUser | null): void {
   setBackupApproverScope(u?.id ?? null);
   /* Clear the in-memory email/phone overrides so contact info from a previous
      real-user session cannot bleed into a subsequent demo session (or vice versa).
-     localStorage values are preserved — the user's real edits are not deleted,
-     they rehydrate on the next login for that account. */
-  resetUserContact();
+     Pass isDemo so resetUserContact knows whether to permit a localStorage reload:
+     demo sessions must not rehydrate from the prior real user's stored values. */
+  resetUserContact(!!u?.isDemo);
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {

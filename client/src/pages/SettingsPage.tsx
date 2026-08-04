@@ -389,7 +389,7 @@ function ProfileSection() {
   const alert = useAppAlert();
   const { user } = useAuth();
   const navigate = useLocation()[1];
-  const { email, phone } = useUserContact();
+  const { email, phone } = useUserContact(user?.email);
   // Real company name from the tenancy link, falling back to the user's own display name.
   // A locally-saved override (from the "Edit" button below) always wins once set.
   const { data: tenancy } = useQuery<{ mode: string; linked: boolean; tenantId?: string; companyName?: string }>({
@@ -397,8 +397,19 @@ function ProfileSection() {
   });
   const liveName = tenancy?.companyName || user?.name || "";
   const [nameOverride, setNameOverride] = useState<string | null>(() => {
+    // Demo users must never inherit a prior real user's saved display name.
+    if (user?.isDemo) return null;
     try { return localStorage.getItem("brain_profile_name"); } catch { return null; }
   });
+  // Re-sync nameOverride when the user identity changes (auth transitions don't
+  // remount this component, so useState initializer above only runs on first mount).
+  useEffect(() => {
+    if (user?.isDemo) {
+      setNameOverride(null);
+    } else if (user?.id) {
+      try { setNameOverride(localStorage.getItem("brain_profile_name")); } catch { setNameOverride(null); }
+    }
+  }, [user?.id, user?.isDemo]);
   const name = nameOverride ?? liveName;
   const setName = setNameOverride;
   const [editing, setEditing] = useState(false);

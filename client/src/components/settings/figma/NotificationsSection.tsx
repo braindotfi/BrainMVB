@@ -1,4 +1,5 @@
 import { useUserContact } from "@/lib/userContact";
+import { useAuth } from "@/lib/authContext";
 import { Switch } from "./FigmaPrimitives";
 import { AlertCallout, MutedCallout } from "@/components/Callout";
 
@@ -40,7 +41,8 @@ const CHANNELS: { id: string; title: string; detail: string }[] = [
 ];
 
 export default function NotificationsSection() {
-  const { email, phone } = useUserContact();
+  const { user } = useAuth();
+  const { email, phone } = useUserContact(user?.email);
 
   return (
     <div className="flex flex-col gap-[20px] w-full">
