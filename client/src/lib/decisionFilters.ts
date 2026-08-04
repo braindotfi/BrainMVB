@@ -58,19 +58,22 @@ export const STATUS_OPTIONS: readonly { value: DecisionStatus; label: string }[]
  * unknown key shows up as itself instead of silently vanishing.
  */
 const TYPE_LABELS: Readonly<Record<string, string>> = {
-  payment: "Payments",
+  /* Keep these labels aligned with AGENT_DISPLAY_NAME in agentProposals.ts.
+     The filter values remain the raw agent keys; only their display names are
+     canonicalized here so internal record kinds never leak into the dropdown. */
+  payment: "Payment",
   collections: "Collections",
   treasury: "Treasury",
-  fraud_anomaly: "Fraud",
-  fraud: "Fraud",
-  vendor_risk: "Vendor risk",
-  cash_forecast: "Cash forecast",
-  cash_flow: "Cash forecast",
-  reconciliation: "Close / reconciliation",
+  fraud_anomaly: "Fraud and Anomaly",
+  fraud: "Fraud and Anomaly",
+  vendor_risk: "Vendor Risk",
+  cash_forecast: "Cash Forecasting",
+  cash_flow: "Cash Forecasting",
+  reconciliation: "Reconciliation",
   compliance: "Compliance",
-  subscription: "Subscriptions",
-  dispute: "Disputes",
-  revenue_intel: "Revenue",
+  subscription: "Subscription",
+  dispute: "Dispute",
+  revenue_intel: "Revenue Intelligence",
   rule: "Rule changes",
 };
 
@@ -80,6 +83,25 @@ export function decisionTypeLabel(type: string): string {
   const cleaned = type.replace(/[_-]+/g, " ").trim();
   if (!cleaned) return "Other";
   return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+}
+
+/** Canonical agent category used by the type facet.
+ *
+ * Some rows come from read-only ledger surfaces and historically used their
+ * internal kind (`cashflow`/`cash_flow`) rather than the Brain agent that owns
+ * the surface. Normalize those aliases before building or applying the filter
+ * so the dropdown can only expose real categories.
+ */
+export function canonicalDecisionType(type: string): string {
+  switch (type) {
+    case "cashflow":
+    case "cash_flow":
+      return "cash_forecast";
+    case "fraud":
+      return "fraud_anomaly";
+    default:
+      return type;
+  }
 }
 
 /** The facets every timeline row carries. */
@@ -128,7 +150,7 @@ export function matchesQuery(search: string, query: string): boolean {
 export function matchesFilters(row: DecisionFacets, f: DecisionFilterState): boolean {
   if (f.priority !== "all" && row.tier !== f.priority) return false;
   if (f.status !== "all" && row.status !== f.status) return false;
-  if (f.type !== "all" && row.type !== f.type) return false;
+  if (f.type !== "all" && canonicalDecisionType(row.type) !== canonicalDecisionType(f.type)) return false;
   return matchesQuery(row.search, f.query);
 }
 
@@ -148,7 +170,7 @@ export function applyDecisionFilters<T extends DecisionFacets>(rows: readonly T[
  */
 export function typeOptions(rows: readonly DecisionFacets[]): { value: string; label: string }[] {
   const seen = new Set<string>();
-  for (const r of rows) if (r.type) seen.add(r.type);
+  for (const r of rows) if (r.type) seen.add(canonicalDecisionType(r.type));
   return [...seen]
     .map((value) => ({ value, label: decisionTypeLabel(value) }))
     .sort((a, b) => a.label.localeCompare(b.label));

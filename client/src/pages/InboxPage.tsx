@@ -69,6 +69,7 @@ import { FilterChipRow } from "@/components/FilterChipRow";
 import {
   applyDecisionFilters,
   buildSearchText,
+  canonicalDecisionType,
   decisionTypeLabel,
   hasActiveFilter,
   typeOptions,
@@ -805,7 +806,11 @@ export function InboxPage() {
         kind: "detection",
         tier: tierForReadOnlyInsight(),
         status: "informational",
-        type: i.kind,
+        /* Filter by the owning Brain agent, not the internal insight kind.
+           In particular, trailing cash flow is a Cash Forecasting insight;
+           "cashflow" is not an agent category and must not become a dropdown
+           option. */
+        type: canonicalDecisionType(i.kind),
         search: buildSearchText(i.title, i.subtitle, i.badge, i.explanation),
         title: i.title,
         /* Badge and second line come from the shared presenter Overview uses,
