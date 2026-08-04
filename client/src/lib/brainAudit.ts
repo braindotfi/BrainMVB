@@ -562,6 +562,7 @@ export function mapAuditEventToRecord(
     anchor: anchorFor(event, latestAnchor),
     rawQuestion: fullQuestion,
     agentLabel,
+    proposingAgent: proposalSummary?.proposing_agent,
   };
 }
 
