@@ -844,11 +844,17 @@ export function InboxPage() {
       });
     }
 
-    /* In-session decisions made on this surface (before core's audit catches up). */
+    /* In-session decisions made on this surface (before core's audit catches up).
+       Once brain-core creates an audit record for a finished decision, suppress
+       the local session row — the audit record is the authoritative version, and
+       the two rows have different IDs (prop_id--status vs evt_…) so the seen
+       guard cannot catch the pair by itself. "executing" is still in-flight so
+       it must keep showing even when a proposal_id match exists. */
     for (const [id, status] of Object.entries(statuses)) {
       if (status !== "executing" && status !== "executed" && status !== "rejected" && status !== "postponed") continue;
       const p = resolveProposal(id);
       if (!p) continue;
+      if ((status === "executed" || status === "rejected") && decidedProposalIds.has(id)) continue;
       const approved = status === "executing" || status === "executed";
       /* "executing" = brain is processing — still in-flight → Pending pill.
          "executed"  = confirmed done → Approved pill. */
