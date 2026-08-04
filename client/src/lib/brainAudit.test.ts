@@ -77,6 +77,27 @@ describe("mapAuditEventToRecord", () => {
     ]);
   });
 
+  it("prefers the retained proposal type over the generic execution-agent name", () => {
+    const r = mapAuditEventToRecord(
+      ev({
+        action: "proposal.decided",
+        inputs: { proposal_id: "prop_collections", decision: "reject" },
+        outputs: {
+          proposal_summary: {
+            summary: "Review collections outreach for Midmarket Solutions",
+            narrative: "Midmarket Solutions is overdue.",
+            proposing_agent: "agent_demo_payment",
+          },
+        },
+      }),
+      anchor(),
+      { "/v1/agents/agent_demo_payment": "Demo Payment Agent" },
+      new Map([["prop_collections", "collections"]]),
+    );
+    expect(r.proposingAgent).toBe("collections");
+    expect(r.proposingAgentDisplay).toBeUndefined();
+  });
+
   it("falls back to the opaque id-only summary for proposal.decided events predating the snapshot", () => {
     const r = mapAuditEventToRecord(
       ev({
