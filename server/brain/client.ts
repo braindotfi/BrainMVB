@@ -647,7 +647,11 @@ export async function ingestRawDocument(
   token: string,
   input: { sourceType: RawSourceType; bytes: Uint8Array; filename: string; mimeType: string },
 ): Promise<RawIngestResult> {
-  const url = new URL(brainConfig.baseUrl + "/raw/ingest");
+  // Must use currentBrainBaseUrl() — NOT brainConfig.baseUrl directly — so the
+  // per-user routing (staging for demo, prod for real accounts) from withBrainBaseUrl()
+  // in the caller is respected. This function bypasses brainRequest() (multipart, not JSON)
+  // so it must explicitly honour the AsyncLocalStorage context.
+  const url = new URL(currentBrainBaseUrl(brainConfig.baseUrl) + "/raw/ingest");
   const form = new FormData();
   form.set("source_type", input.sourceType);
   form.set("mime_type", input.mimeType);

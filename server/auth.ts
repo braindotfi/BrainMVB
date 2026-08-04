@@ -133,6 +133,12 @@ export function setupAuth(app: Express) {
       return res.status(400).json({ error: parsed.error.errors[0]?.message ?? "Invalid input" });
     }
     const email = parsed.data.email.toLowerCase().trim();
+    // Block @brain.fi registrations: that domain is used exclusively for system-generated
+    // demo accounts (demo@brain.fi, demo-fresh-*@brain.fi). Allowing real users to register
+    // with it would spoof isDemoEmail() routing and land them on the staging brain target.
+    if (email.endsWith("@brain.fi")) {
+      return res.status(400).json({ error: "That email domain is not available for registration" });
+    }
     const { password, name } = parsed.data;
     const username = parsed.data.username?.trim() || email;
 
