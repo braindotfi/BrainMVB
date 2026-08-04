@@ -171,6 +171,7 @@ export function auditRecordAgentName(record: AuditRecord): string | undefined {
   const label = record.agentLabel?.trim();
   if (label) return label;
   if (isAssistantActivity(record)) return "Assistant";
+  if (isSystemActivity(record)) return "System";
   return undefined;
 }
 

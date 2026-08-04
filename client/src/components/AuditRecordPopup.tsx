@@ -120,6 +120,8 @@ export function AuditRecordPopup({
     }
   };
 
+  const isAnchored = anchor.status === "anchored" && !!anchor.baseTx;
+
   const handleVerify = () => {
     if (anchor.verifyHref) {
       window.open(anchor.verifyHref, "_blank", "noopener,noreferrer");
@@ -397,14 +399,40 @@ export function AuditRecordPopup({
                 </div>
               )}
 
-              {/* Anchor Proof */}
+              {/* Anchor Proof — hash table + status lines only; no button here.
+                  The Verify On-Chain CTA lives in its own footer below (Figma 5734:71827)
+                  so the border-t separator is always visible at the bottom of the card,
+                  not buried inside the scrollable content. */}
               <div className="relative shrink-0 w-full">
                 <div className="bg-clip-padding border-0 border-[transparent] border-solid content-stretch flex flex-col gap-[16px] items-start relative size-full">
                   <SectionHeader>Anchor Proof</SectionHeader>
-                  <AnchorStatus anchor={anchor} mode="proof" onVerify={handleVerify} />
+                  <AnchorStatus anchor={anchor} mode="proof" />
                 </div>
               </div>
 
+            </div>
+
+            {/* Verify On-Chain footer — Figma 5734:71827.
+                Always present so the popup has a fixed bottom shape regardless of
+                anchor state. Disabled (not hidden) until a real tx hash backs it;
+                the caption explains why. Sits above the pager when both exist. */}
+            <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-[#1d2132] border-t border-solid flex flex-col gap-[12px] items-start p-[24px] shrink-0 w-full">
+              <button
+                type="button"
+                onClick={handleVerify}
+                disabled={!isAnchored}
+                title={isAnchored ? undefined : "On-chain verification opens once this record is anchored."}
+                data-testid="button-verify-on-chain"
+                className="flex items-center justify-center gap-[6px] px-[20px] py-[10px] rounded-[100px] transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] w-full disabled:opacity-40 disabled:cursor-not-allowed enabled:hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                style={{ background: "#240757", color: "#7631ee" }}
+              >
+                Verify On-Chain
+              </button>
+              {!isAnchored && (
+                <p data-testid="text-verify-pending-caption" className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-[#6c779d]">
+                  On-chain verification opens once anchored.
+                </p>
+              )}
             </div>
 
             {/* Bottom pager footer - Figma 5573:97391 - two full-width pill buttons */}
