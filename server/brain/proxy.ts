@@ -18,7 +18,8 @@
 import { Router, type Request, type Response } from "express";
 import { requireAuth } from "../auth";
 import { brainAuthConfigured, brainTenancyMode, platformServiceConfigured } from "./config";
-import { getBrainSession, registerBrainSession, NoTenantError } from "./auth";
+import { isDemoEmail } from "../demoUsers";
+import { getBrainSession, getCachedBrainTenantId, registerBrainSession, NoTenantError } from "./auth";
 import { withBrainBaseUrl } from "./baseUrl";
 import { createTenant, consumeInvite, TenancyApiError } from "./tenancy";
 import { storage } from "../storage";
@@ -214,11 +215,29 @@ export function createBrainProxyRouter(): Router {
   // invite link" gate after login). Cheap: one local DB read, no brain-core call.
   router.get("/tenancy", async (req: Request, res: Response) => {
     const mode = brainTenancyMode();
-    // Demo is the only genuinely ephemeral mode. Production and durable both back
-    // the user with a real, persistent brain-core tenant recorded in brain_identities,
-    // so both report that tenant honestly instead of a bare linked:true.
+    const userId = req.session.userId!;
+
+    // Demo global mode: always ephemeral, no brain_identities row ever written.
     if (mode === "demo") return res.json({ mode, linked: true });
-    const identity = await storage.getBrainIdentity(req.session.userId!);
+
+    // Durable/production mode: demo-fresh users (isDemoEmail) are routed through
+    // provisionDemoTenant() which intentionally never writes a brain_identities row
+    // (ephemeral session-scoped tenant, fresh per demo-fresh login). For them the
+    // tenantId lives only in the in-memory session cache, not in the DB.
+    //
+    // Without this check, getBrainIdentity() returns null for demo-fresh users in
+    // a durable deployment and the response is {mode:"durable",linked:false} — the
+    // client never learns the session tenantId and the demo experience breaks.
+    //
+    // The user lookup is one DB read (same cost as the getBrainIdentity() below);
+    // we short-circuit to the demo-style response so no brain_identities read fires.
+    const user = await storage.getUser(userId);
+    if (isDemoEmail(user?.email)) {
+      const tenantId = getCachedBrainTenantId(userId) ?? undefined;
+      return res.json({ mode: "demo", linked: true, tenantId });
+    }
+
+    const identity = await storage.getBrainIdentity(userId);
     return res.json({
       mode,
       // Durable auto-creates the tenant on first brain-core use, so an unlinked

@@ -25,6 +25,12 @@ process.env.ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || "test-dummy-key
 // Force MemStorage + in-memory session store and the demo tenancy path.
 delete process.env.DATABASE_URL;
 delete process.env.BRAIN_TENANCY_MODE;
+// BRAIN_PLATFORM_SERVICE_SECRET must also be removed: when set, brainTokenMode()
+// returns "platform-service-demo" regardless of BRAIN_DEMO_PROVISION_SECRET, which
+// routes non-demo users into the uncovered throw in createSession's fallback block.
+// This test targets the demo-provision path so the platform-service credential must
+// be absent at module-eval time (brainConfig is frozen at import).
+delete process.env.BRAIN_PLATFORM_SERVICE_SECRET;
 // Ensure the local-key path can't be selected.
 delete process.env.BRAIN_AUTH_SIGN_KEY;
 delete process.env.BRAIN_AUTH_JWT_SECRET;

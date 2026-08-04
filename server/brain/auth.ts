@@ -164,6 +164,16 @@ export function getBrainSessionProvisionedAt(appUserId: string): number | null {
 }
 
 /**
+ * The tenantId from the current cached brain session for `appUserId`, or null
+ * if no session has been provisioned yet. Pure cache read — does NOT trigger a
+ * new provision. Intended for informational endpoints (e.g. GET /api/brain/tenancy)
+ * that need to surface the demo tenantId without the side-effect of creating one.
+ */
+export function getCachedBrainTenantId(appUserId: string): string | null {
+  return cache.get(appUserId)?.tenantId ?? null;
+}
+
+/**
  * When the given user's CURRENT cached demo session token expires (epoch ms),
  * or null if there is no live cached session. On the demo-provision path a
  * token refresh provisions a fresh tenant, so this is effectively when the
