@@ -6,7 +6,9 @@ import closeIcon from "@assets/Close_1783293571882.png";
 import checkIcon from "@assets/check_1784935340999.png";
 import warningIcon from "@assets/warning_1783385196939.png";
 import type { AuditRecord, LinkedEntity } from "@/lib/auditTypes";
-import { auditRecordLabel, auditEventChipClass, isAssistantActivity, linkedRelationship, humanReadableActor } from "@/lib/auditTypes";
+import { auditRecordLabel, auditRecordTitle, auditEventChipClass, isAssistantActivity, linkedRelationship, humanReadableActor } from "@/lib/auditTypes";
+import { auditStatusPill } from "@/lib/decisionPills";
+import { DecisionPill } from "./TierRowList";
 import { resolveActorRole, actorIdentityTokens } from "@/lib/actors";
 import { resolveMemberByTokens, openMemberDetail, useMembersCache } from "@/lib/membersStore";
 import { AnchorStatus } from "./AnchorStatus";
@@ -23,21 +25,6 @@ import { RecordPager } from "./RecordPager";
 import { matchCannedPrompt } from "@shared/cannedPrompts";
 import { anchorFromInclusionProof, type BrainAuditEventDetail } from "@/lib/brainAudit";
 import { capitalCase } from "@/lib/displayLabels";
-
-/* Outcome families for the status pill's glyph. The Figma frame only
-   specifies the approved case, so the split reuses this component's existing
-   check/alert vocabulary rather than inventing new artwork: a positive
-   outcome gets the check, a negative one the alert triangle, and everything
-   that is merely informational (postponed, system/assistant activity) stays
-   glyphless rather than implying an outcome it doesn't have. */
-const POSITIVE_EVENTS: ReadonlyArray<string> = [
-  "approved",
-  "auto_approved",
-  "acknowledged",
-  "trust_granted",
-  "rule_change",
-];
-const NEGATIVE_EVENTS: ReadonlyArray<string> = ["flagged", "rejected", "trust_revoked"];
 
 export function AuditRecordPopup({
   record,
@@ -139,33 +126,40 @@ export function AuditRecordPopup({
     }
   };
 
-  /* Status pill — Figma 6216:69517. The frame's geometry (pill, 4px gap, 16px
-     glyph, 12px SemiBold label) is taken verbatim. The COLOUR comes from the
-     shared auditEventChipClass mapping rather than the frame's single
-     "Approved" swatch, so a rejected record can never render in approving
-     green. Assistant activity stays neutral, matching auditRecordLabel.
+  /* Hero status pill — the SAME capsule the Inbox's Resolved tab renders for
+     this decision. Palette and icon set come from lib/decisionPills and it is
+     drawn by the shared DecisionPill, so opening a resolved row can never
+     restyle its own outcome (Figma 6214-69xxx).
+
+     The LABEL stays the record's own. The Inbox mapping folds `flagged` and
+     `trust_revoked` into a generic "Rejected" pill, which reads fine in a list
+     of mixed outcomes but would misstate the record in its own audit detail —
+     a flagged payment was not rejected.
+
+     Records that are not a settled decision (rule changes, trust grants,
+     system / assistant activity) have no outcome pill upstream, so they keep
+     the neutral event chip rather than borrowing an outcome's colour.
      auditEventChipClass supplies a border COLOUR only and no `border
-     border-solid` is added, so the pill renders borderless as the frame
-     specifies (see the chip-border convention). */
+     border-solid` is added, so that chip stays borderless (chip-border
+     convention). */
   const statusPill = () => {
     const label = auditRecordLabel(record);
     const assistant = isAssistantActivity(record);
-    const chipClass = assistant
-      ? "bg-[#222737] text-[#6c779d]"
-      : auditEventChipClass(record.eventType);
-    const glyph = assistant
-      ? null
-      : POSITIVE_EVENTS.includes(record.eventType)
-        ? checkIcon
-        : NEGATIVE_EVENTS.includes(record.eventType)
-          ? warningIcon
-          : null;
+    const decision = assistant ? undefined : auditStatusPill(record.eventType);
+    if (decision) {
+      return (
+        <div data-testid="status-audit-record" className="shrink-0">
+          <DecisionPill pill={{ ...decision, label }} />
+        </div>
+      );
+    }
     return (
       <div
         data-testid="status-audit-record"
-        className={`content-stretch flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] shrink-0 ${chipClass}`}
+        className={`content-stretch flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] shrink-0 ${
+          assistant ? "bg-[#222737] text-[#6c779d]" : auditEventChipClass(record.eventType)
+        }`}
       >
-        {glyph && <img src={glyph} alt="" className="size-[16px] shrink-0" />}
         <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-center whitespace-nowrap">
           {capitalCase(label)}
         </p>
@@ -194,7 +188,7 @@ export function AuditRecordPopup({
             {/* Header - close button right, title centred */}
             <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-[#1d2132] border-b border-solid h-[56px] relative shrink-0 w-full">
               <p className="-translate-x-1/2 [font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#a8b9f4] text-[20px] text-center whitespace-nowrap absolute left-1/2 top-[calc(50%-12px)]">
-                Audit Record
+                {auditRecordTitle(record)}
               </p>
               <DialogPrimitive.Close
                 className="absolute right-[11px] top-[11px] size-[32px] p-0 hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"

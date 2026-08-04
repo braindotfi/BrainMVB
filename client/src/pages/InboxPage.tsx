@@ -56,6 +56,14 @@ import {
 import { useReviewStatuses, setReviewStatus } from "@/lib/reviewStatusStore";
 import { acknowledgeInsight, useAcknowledgedRecords } from "@/lib/acknowledgedStore";
 import { TierRow, type TierRowModel, type TierRowAction, type TierRowStatusPill } from "@/components/TierRowList";
+import {
+  auditStatusPill,
+  PILL_APPROVED,
+  PILL_AUTO,
+  PILL_REJECTED,
+  PILL_ACKED,
+  PILL_PENDING,
+} from "@/lib/decisionPills";
 import { FilterChipRow } from "@/components/FilterChipRow";
 import {
   applyDecisionFilters,
@@ -245,36 +253,14 @@ const TAG_DETECTED = "bg-[#222737] text-[#6c779d] border-[rgba(108,119,157,0.2)]
    settled history reads consistently with the queue above it. */
 const TAG_AGENT = "bg-[#4a2300] text-[#ff9400] border-[rgba(255,149,0,0.2)]";
 
-/* ── Decision outcome pills (right-side, Figma nodes 6214-69xxx) ─────────────
-   Five states: Approved, Auto-Approved (both green), Rejected (red),
-   Acknowledged (green), Pending (frosted-white). Container backgrounds:
-   user-decided outcomes → purple tint; automated/in-flight → base dark. */
-/* Figma nodes 6214-69210 / 69233 / 69246 / 69258 / 69270.
-   All settled pills use 60 % opacity on both bg and text so the purple-tinted
-   row shows through; Pending uses a lighter frosted-white with 40 % text. */
-const PILL_APPROVED: TierRowStatusPill = { label: "Approved",      bg: "rgba(18,53,9,0.6)",       textColor: "rgba(66,191,35,0.6)",   icon: "check"   };
-const PILL_AUTO:     TierRowStatusPill = { label: "Auto-Approved", bg: "rgba(18,53,9,0.6)",       textColor: "rgba(66,191,35,0.6)",   icon: "check"   };
-const PILL_REJECTED: TierRowStatusPill = { label: "Rejected",      bg: "rgba(53,0,17,0.6)",       textColor: "rgba(210,3,68,0.6)",    icon: "x"       };
-const PILL_ACKED:    TierRowStatusPill = { label: "Acknowledged",  bg: "rgba(18,53,9,0.6)",       textColor: "rgba(66,191,35,0.6)",   icon: "check"   };
-const PILL_PENDING:  TierRowStatusPill = { label: "Pending",       bg: "rgba(255,255,255,0.15)",  textColor: "rgba(255,255,255,0.4)", icon: "pending" };
+/* The decision outcome pills (Approved / Auto-Approved / Rejected /
+   Acknowledged / Pending) and their event-type mapping now live in
+   lib/decisionPills, shared with the audit record popup so the pill on a
+   Resolved row and the pill in that record's popup cannot drift apart. */
 
 /** Background applied to the row container for settled records. */
 const ROW_BG_DECIDED = "#12032d"; // purple tint — user was involved in this outcome
 const ROW_BG_BASE    = "#0a0c10"; // no tint — automated / in-flight
-
-/** Map a brain-core audit event type to its right-side outcome pill. */
-function auditStatusPill(eventType: AuditEventType): TierRowStatusPill | undefined {
-  switch (eventType) {
-    case "approved":      return PILL_APPROVED;
-    case "auto_approved": return PILL_AUTO;
-    case "rejected":
-    case "flagged":
-    case "trust_revoked": return PILL_REJECTED;
-    case "acknowledged":  return PILL_ACKED;
-    case "postponed":     return PILL_PENDING;
-    default:              return undefined;
-  }
-}
 
 /** Row container background for settled audit-event records. */
 function auditRowBg(eventType: AuditEventType): string {

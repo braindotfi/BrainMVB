@@ -26,18 +26,32 @@ heights from their classes first. The surface named as "wrong" is often already
 correct and the *reference* is the outlier — say so with the arithmetic rather
 than editing the named surface.
 
-## Figma alpha is often an artboard state, not a token
+## Before deviating from a frame's colour, look for a sibling implementation
 
-Frames routinely carry opacity that encodes a *state* rather than a colour:
-a disabled button exported as `opacity-50`, an approved pill exported as
-`bg-[rgba(18,53,9,0.6)] text-[rgba(66,191,35,0.6)]` where the design system's
-real token is the solid `#123509` / `#42bf23`.
+Frames sometimes carry opacity that encodes a *state* rather than a colour, so
+an alpha value can look like an export artifact. It often isn't.
 
-**Why:** copying that alpha into a status pill is actively wrong when the pill
-must serve a whole event-type union. The frame only ever shows one state, so a
-60%-alpha "Approved" ends up dimmer than a full-strength "Rejected" — the
-opposite of the intended emphasis.
+A settled-outcome pill exported as `bg-[rgba(18,53,9,0.6)]
+text-[rgba(66,191,35,0.6)]` was read as a 60%-alpha artifact of the "Approved"
+artboard and replaced with the solid `#123509` / `#42bf23` chip mapping. Those
+alphas were the real token: another surface already rendered the identical pill
+with exactly those rgba values, deliberately, so a purple-tinted row shows
+through. The "deviation" silently forked one component into two looks.
 
-**How to apply:** take geometry, typography and glyphs from the frame verbatim;
-take *semantic colour* from the shared mapping helper that covers every state.
-Flag the deviation rather than silently picking one.
+**Why:** a frame shows one state, so reasoning from the frame alone cannot tell
+a state-artifact from a token. The codebase can: if any surface already renders
+this element, its values settle the question.
+
+**How to apply:** before overriding a frame's colour, grep for an existing
+implementation of the same element (by label text, by the rgba values
+themselves, or by the Figma node id in comments). If one exists, reuse its
+component and palette rather than re-deriving them — extract to a shared module
+if it is currently private to a page. Only when nothing implements it yet
+should you fall back to the shared semantic mapping, and then say so.
+
+**Still true:** take *semantic colour* from a mapping that covers every state
+rather than from the single state the frame happens to show — a pill serving a
+whole union must not inherit one member's swatch. And when a list groups
+several outcomes under one generic pill label, a detail surface for a single
+record should keep that record's own label; the grouping is a list affordance,
+not a fact about the record.
