@@ -13,7 +13,7 @@ The only reliable source of the agent type key is the live proposal's `p.type` f
 
 ## The Correct Fix
 
-Pass `needsReviewProposals` from InboxPage directly into `useBrainAuditRecords`. Inside the hook, use a `useRef` accumulating map that's populated **inline** (synchronously, before any `useMemo` in the same hook call):
+Pass the **complete live proposal feed, including already-decided rows**, from InboxPage into `useBrainAuditRecords`. Brain-core retains decided proposals in `GET /proposals`; passing only `needsReviewProposals` loses the functional type immediately after a decision and causes the generic execution-agent name to return. Inside the hook, use a `useRef` accumulating map that's populated **inline** (synchronously, before any `useMemo` in the same hook call):
 
 ```typescript
 export function useBrainAuditRecords(proposals?: ProposalForTracking[]) {
@@ -62,6 +62,6 @@ The three-layer lookup hierarchy in `mapAuditEventToRecord`:
 
 ## How to Apply
 
-- Any time `useBrainAuditRecords` is called and needs proposal context, pass the proposals array
+- Any time `useBrainAuditRecords` is called and needs proposal context, pass the complete live proposals array, not only unresolved rows
 - `mapAuditEventToRecord` accepts an optional `Map<string, string>` as 4th arg — this takes priority over the module-level cache
 - Module-level `_proposalAgentKeyCache` remains as tertiary fallback for edge cases
