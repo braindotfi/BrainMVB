@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import chevronDownIcon from "@/assets/chevron_down_dropdown.png";
 
 export interface SettingsDropdownOption {
@@ -13,6 +13,12 @@ function titleCase(label: string): string {
 /**
  * Settings uses the same compact filter language as Inbox: 14px Gilroy
  * medium, a8b9f4 text, 20px line height, and the same dark menu surface.
+ *
+ * The menu uses `position: fixed` (not absolute) so it escapes ancestor
+ * overflow:hidden / overflow:clip containers — e.g. the Card wrapper in
+ * SourcesSection. Coordinates are computed from the trigger's
+ * getBoundingClientRect() on open and recalculated on scroll/resize so the
+ * menu follows the button if the page moves under it.
  */
 export function SettingsDropdown({
   value,
@@ -34,8 +40,33 @@ export function SettingsDropdown({
   matchMenuWidth?: boolean;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
   const selected = options.find((option) => option.value === value) ?? options[0];
 
+  // Fixed-position anchor: top-left of the menu, in viewport coords.
+  const [menuAnchor, setMenuAnchor] = useState<{ top: number; left: number; width: number } | null>(null);
+
+  /** Recompute anchor from the trigger button's current bounding rect. */
+  const reanchor = () => {
+    if (!btnRef.current) return;
+    const r = btnRef.current.getBoundingClientRect();
+    setMenuAnchor({ top: r.bottom + 4, left: r.left, width: r.width });
+  };
+
+  // Reanchor whenever the menu opens or the page scrolls/resizes under it.
+  useEffect(() => {
+    if (!open) { setMenuAnchor(null); return; }
+    reanchor();
+    window.addEventListener("scroll", reanchor, { passive: true, capture: true });
+    window.addEventListener("resize", reanchor, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", reanchor, { capture: true });
+      window.removeEventListener("resize", reanchor);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  // Close on outside pointer-down or Escape.
   useEffect(() => {
     if (!open) return;
     const onPointerDown = (event: PointerEvent) => {
@@ -52,9 +83,12 @@ export function SettingsDropdown({
     };
   }, [open, onOpenChange]);
 
+  const menuWidth = matchMenuWidth && menuAnchor ? menuAnchor.width : 208;
+
   return (
     <div ref={rootRef} className="relative w-full shrink-0">
       <button
+        ref={btnRef}
         type="button"
         aria-haspopup="listbox"
         aria-expanded={open}
@@ -68,11 +102,19 @@ export function SettingsDropdown({
         </span>
         <img src={chevronDownIcon} alt="" aria-hidden="true" className="shrink-0 h-[7px] w-auto" />
       </button>
-      {open && (
+
+      {open && menuAnchor && (
         <div
           role="listbox"
           aria-label={ariaLabel}
-          className={`absolute right-0 top-[calc(100%+4px)] z-50 bg-[#0a0c10] border border-[#1d2132] border-solid flex flex-col items-start p-[8px] rounded-[12px] ${matchMenuWidth ? "w-full" : "w-[208px]"} shadow-[0px_68px_13.5px_rgba(0,0,0,0.06),0px_38px_11.5px_rgba(0,0,0,0.2),0px_17px_8.5px_rgba(0,0,0,0.34),0px_4px_4.5px_rgba(0,0,0,0.39)]`}
+          style={{
+            position: "fixed",
+            top: menuAnchor.top,
+            left: menuAnchor.left,
+            width: menuWidth,
+            zIndex: 9999,
+          }}
+          className="bg-[#0a0c10] border border-[#1d2132] border-solid flex flex-col items-start p-[8px] rounded-[12px] shadow-[0px_68px_13.5px_rgba(0,0,0,0.06),0px_38px_11.5px_rgba(0,0,0,0.2),0px_17px_8.5px_rgba(0,0,0,0.34),0px_4px_4.5px_rgba(0,0,0,0.39)]"
         >
           {options.map((option) => (
             <button
