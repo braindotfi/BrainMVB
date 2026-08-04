@@ -2,16 +2,12 @@
  * Settings degraded-state QA.
  *
  * Settings is where an operator goes to answer "what is Brain allowed to do
- * without me?". Three of the answers on this screen are dangerous when they are
+ * without me?". Two answers on this screen are dangerous when they are
  * confidently wrong:
  *
- *   1. Auto-approve limit. If the approval policy cannot be read and the row
- *      renders "None", the screen has told a finance lead that nothing is
- *      automated — on the exact surface they would check before leaving for the
- *      weekend. Unknown must read as unknown.
- *   2. Connected sources. If a sources feed fails and the list renders "No
+ *   1. Connected sources. If a sources feed fails and the list renders "No
  *      sources yet", the screen says a bank is disconnected when it is not.
- *   3. Notifications and escalation. Neither has a backend. Controls that look
+ *   2. Notifications and escalation. Neither has a backend. Controls that look
  *      live imply Brain will chase an unapproved payment. It will not.
  *
  * Every check below is about what the screen SAYS, not whether it threw.
@@ -69,8 +65,6 @@ const go = async (section, settle = 2200) => {
 const count = async (sel) => await page.locator(sel).count();
 const text = async (sel) => (await page.locator(sel).first().textContent().catch(() => "")) ?? "";
 
-const LIMIT = '[data-testid="text-auto-approve-limit"]';
-const LIMIT_ROW = '[data-testid="setting-row-auto-approve-limit"]';
 const SOURCES_NOTICE = '[data-testid="notice-sources-unavailable"]';
 const SOURCES_EMPTY = '[data-testid="empty-connected-sources"]';
 
@@ -97,33 +91,6 @@ check(
   (await count('[data-testid="text-escalation-unavailable"]')) === 1,
   await text('[data-testid="text-escalation-unavailable"]'),
 );
-
-/* ── auto-approve limit: the money-authorization row ─────────────────────── */
-await go("profile");
-const healthyLimit = (await text(LIMIT)).trim();
-check(
-  "policy reachable: the limit row states a real answer",
-  healthyLimit.length > 0 && healthyLimit !== "Unknown" && healthyLimit !== "Checking…",
-  healthyLimit,
-);
-check("…and says it is read-only rather than offering a dead control",
-  (await count('[data-testid="text-auto-approve-readonly"]')) === 1);
-check("…and exposes no editable input for the limit",
-  (await page.locator(`${LIMIT_ROW} input, ${LIMIT_ROW} select`).count()) === 0);
-
-await breakFeed("policy");
-await go("profile");
-const brokenLimit = (await text(LIMIT)).trim();
-check(
-  "policy 503: the limit reads Unknown, NOT None",
-  brokenLimit === "Unknown",
-  brokenLimit,
-);
-check(
-  "…and the sublabel says the limit is unknown rather than absent",
-  /unknown, not absent/i.test(await text(LIMIT_ROW)),
-);
-await healAll();
 
 /* ── connected sources: a failed read is not a disconnection ─────────────── */
 for (const feed of ["banks", "tools", "docs", "brainSources"]) {

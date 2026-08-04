@@ -993,6 +993,11 @@ Demo mode (default) is byte-identical to before — `/api/brain/tenancy` returns
   no edit path) was cut from the Profile section. `useBrainPolicy`, `autoApproveLimitFromPolicy`,
   and `groupPolicyAmount` are no longer imported by `SettingsPage.tsx`. Revisit once policy editing
   has a real home.
+  - **QA impact**: `scripts/qa-policy-read-states.mjs` was the dedicated script verifying the four
+    policy-read states (200 / 404-no-policy / 401-403 refused / 5xx broken) via the now-removed
+    card. It has been **deleted**. `scripts/qa-settings-degraded-states.mjs` had six assertions on
+    `setting-row-auto-approve-limit` and `text-auto-approve-limit`; those are also **removed**.
+    If a new surface re-exposes policy-read states, add new QA coverage — do not assume it exists.
 - **Notifications hidden from nav**: The "Notifications" entry was removed from `NAV_ITEMS`.
   The section itself (`NotificationsFigma`) and its entry in `VALID_SECTIONS` remain intact so
   a direct `?section=notifications` deep-link still resolves rather than 404ing.
