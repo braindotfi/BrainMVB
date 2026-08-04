@@ -391,7 +391,7 @@ function InboxDropdown({
             return (
               <label
                 key={option.value}
-                className="flex items-center gap-[8px] p-[8px] rounded-[8px] shrink-0 w-full text-left [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[14px] whitespace-nowrap outline-none hover:bg-[#222737] focus-within:bg-[#222737] cursor-pointer"
+                className="flex items-center gap-[8px] p-[8px] rounded-[8px] shrink-0 w-full text-left [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[14px] whitespace-nowrap outline-none hover:bg-[#222737] cursor-pointer"
                 data-testid={`${testId}-option-${option.value}`}
               >
                 <input
