@@ -47,6 +47,19 @@ In InboxPage audit records loop, badge priority:
 
 In `auditRecordAgentName` (popup title): use type key for "Collections Audit Record", NOT "Collections Agent Audit Record".
 
+## Page Reload Trap
+
+After a page reload, `needsReviewProposals` is empty (proposals already decided → filtered out of the live feed). The `useRef` accumulating map starts fresh and is never populated. The fix: back `_proposalAgentKeyCache` with `sessionStorage`.
+
+- `_restoreCache()` is called at module init → cache is pre-populated before any React render
+- `registerProposalAgentKey()` writes through to sessionStorage on each new entry (no-op when already stored, so repeated renders are cheap)
+- The inline loop in `useBrainAuditRecords` calls `registerProposalAgentKey` in addition to updating the useRef
+
+The three-layer lookup hierarchy in `mapAuditEventToRecord`:
+1. `proposalTypeMap` (useRef — same render, same session)
+2. `_proposalAgentKeyCache` (sessionStorage — survives page reloads)
+3. `resolvedActors` display name (registry ULID — historical fallback)
+
 ## How to Apply
 
 - Any time `useBrainAuditRecords` is called and needs proposal context, pass the proposals array
