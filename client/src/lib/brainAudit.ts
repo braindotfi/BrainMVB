@@ -563,6 +563,16 @@ export function mapAuditEventToRecord(
     rawQuestion: fullQuestion,
     agentLabel,
     proposingAgent: proposalSummary?.proposing_agent,
+    /* Resolved display name for agent ULIDs — undefined for type-key strings
+       (those use AGENT_DISPLAY_NAME directly). The lookup path mirrors how
+       actor_ref.lookup entries are resolved: /v1/agents/{id} is re-pointed by
+       bffPathForActorLookup to /execution/agents/{id} which returns the
+       display_name for runtime agent instances. */
+    proposingAgentDisplay: (() => {
+      const pa = proposalSummary?.proposing_agent;
+      if (!pa || /^[a-z_]+$/.test(pa)) return undefined; // type key, not a ULID
+      return resolvedActors?.[`/v1/agents/${pa}`] ?? undefined;
+    })(),
   };
 }
 
@@ -618,14 +628,32 @@ export function useBrainAuditRecords() {
     retry: false,
   });
 
-  /* Distinct actor_ref.lookup paths that still need resolution (no inline
-     display_name/email). Deduped + sorted so the query key is stable and each
-     actor is fetched once per session, not per record or per render. */
+  /* Distinct lookup paths that still need resolution. Includes:
+     a) actor_ref.lookup paths (actors without inline display_name/email), and
+     b) proposing_agent IDs from proposal.decided events — brain-core's
+        proposal_summary carries the runtime agent ULID when the proposing agent
+        is a tenant-registered instance (not a static type key like "vendor_risk").
+        Those ULIDs are resolved via the same /execution/agents/{id} path that
+        bffPathForActorLookup already handles. Type-key strings ("vendor_risk",
+        "payment", …) are all-lowercase-with-underscores and are resolved client-
+        side via AGENT_DISPLAY_NAME, so they are deliberately excluded here.
+     Deduped + sorted so the query key is stable and each path is fetched once. */
   const lookups = useMemo(() => {
     const set = new Set<string>();
     for (const e of events.data?.events ?? []) {
       const ref = e.actor_ref;
       if (ref?.lookup && !inlineActorDisplay(ref)) set.add(ref.lookup);
+      // proposing_agent resolution for proposal.decided events
+      if (e.action === "proposal.decided") {
+        const raw = e.outputs?.["proposal_summary"];
+        const pa = raw !== null && typeof raw === "object"
+          ? (raw as Record<string, unknown>)["proposing_agent"]
+          : undefined;
+        // Only ULID/ID values need async resolution; type keys are all-lowercase+underscores
+        if (typeof pa === "string" && pa && !/^[a-z_]+$/.test(pa)) {
+          set.add(`/v1/agents/${pa}`);
+        }
+      }
     }
     return Array.from(set).sort();
   }, [events.data]);

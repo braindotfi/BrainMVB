@@ -921,7 +921,12 @@ export function InboxPage() {
            than falling back to the actor — an empty badge is honest; an actor
            name in an agent-coloured pill is not. */
         tag: aPill
-          ? (r.proposingAgent ? agentBadgeLabel(r.proposingAgent) : "")
+          ? (r.proposingAgentDisplay
+              /* Resolved ULID agent: strip trailing " Agent" then re-add it so
+                 "Collections Agent" → "Collections Agent" (idempotent) and
+                 "Collections" → "Collections Agent". */
+              ? r.proposingAgentDisplay.replace(/\s+Agent\s*$/i, "").trim() + " Agent"
+              : r.proposingAgent ? agentBadgeLabel(r.proposingAgent) : "")
           : auditEventLabel(r.eventType),
         tagClass: aPill
           ? (r.proposingAgent ? TAG_AGENT : "")

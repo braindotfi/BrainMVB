@@ -116,14 +116,18 @@ export interface AuditRecord {
      already carries the approver identity; present on locally-synthesised
      records that originate from a LiveInsight (acknowledged items). */
   agentLabel?: string;
-  /** For `proposal.decided` events: the type key of the agent that *created*
-   *  the proposal (e.g. `"payment"`, `"collections"`). Distinct from `actor`,
-   *  which is the human who approved/rejected it. Sourced from brain-core's
-   *  `outputs.proposal_summary.proposing_agent`; absent on older events and on
-   *  non-proposal records. Used to keep the row badge consistent: the badge
-   *  shows the proposing agent before AND after the decision, never the
-   *  approver's identity (which would change the badge on the same record). */
+  /** For `proposal.decided` events: the raw `proposing_agent` value from
+   *  brain-core's `outputs.proposal_summary`. May be an AgentKey type string
+   *  (e.g. `"vendor_risk"`) OR a runtime agent ULID (e.g.
+   *  `"agent_01KZ537WW1TZ70STRQ9TFT9Z4R"`). Absent on older events and on
+   *  non-proposal records. Prefer `proposingAgentDisplay` for UI rendering. */
   proposingAgent?: string;
+  /** Resolved display name for the proposing agent — populated whenever
+   *  `proposingAgent` is a runtime ULID that was resolved via the BFF's
+   *  execution-agent registry (e.g. `"Collections Agent"`). Undefined when the
+   *  raw value is an AgentKey type string (those are rendered via
+   *  AGENT_DISPLAY_NAME directly) or when resolution hasn't completed yet. */
+  proposingAgentDisplay?: string;
 }
 
 /* Filter tabs for the Audit Log page */
@@ -185,6 +189,13 @@ export function auditEventLabel(type: AuditEventType): string {
 export function auditRecordAgentName(record: AuditRecord): string | undefined {
   const label = record.agentLabel?.trim();
   if (label) return label;
+  /* proposingAgentDisplay is the resolved display name for ULID-type proposing
+     agents (e.g. "Collections Agent" from brain-core's registry). Strip the
+     " Agent" suffix so the title reads "Collections Audit Record" not
+     "Collections Agent Audit Record". */
+  if (record.proposingAgentDisplay) {
+    return record.proposingAgentDisplay.replace(/\s+Agent\s*$/i, "").trim();
+  }
   if (record.proposingAgent) {
     // AGENT_DISPLAY_NAME is the canonical base name (no "Agent" suffix) — the
     // title format is "<Display Name> Audit Record", e.g. "Cash Forecasting
