@@ -188,6 +188,25 @@ export function LiveProposalModal({
   const decisions = buildDecisionButtons(proposal.available_decisions, presentation?.actions);
   const consequences = buildConsequences(presentation?.consequences, decisions);
 
+  /* Acknowledge-only proposals: when brain-core didn't supply consequence text,
+     the "What Happens Next" section would otherwise be invisible — no rows, no
+     section. The screenshot spec shows a single green-checkmark row explaining
+     what clicking Acknowledge does, so we inject that fallback here rather than
+     leaving the card with no outcome information at all.
+     Condition: exactly one decision, it's "acknowledge", and core sent nothing. */
+  const _acknowledgeOnlyNoText =
+    decisions.length === 1 &&
+    decisions[0].id === "acknowledge" &&
+    consequences.next.length === 0 &&
+    consequences.ifWrong.length === 0;
+  if (_acknowledgeOnlyNoText) {
+    consequences.next.push({
+      decisionId: "acknowledge",
+      label: decisions[0].label,
+      text: "The finding is marked acknowledged. Any original blocked action remains blocked.",
+    });
+  }
+
   // `evidence` is defensive: this record can arrive from any cached /proposals
   // read, and the enriching route is not the only way one reaches this modal.
   const evidence = proposal.evidence ?? [];
