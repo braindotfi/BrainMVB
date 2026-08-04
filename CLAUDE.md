@@ -984,3 +984,19 @@ Demo mode (default) is byte-identical to before — `/api/brain/tenancy` returns
   failure hands the error to `CompanySetupPage` via sessionStorage so it is never dropped.
 - **Team UI**: production shows "Invited — awaiting signup" pill + Resend/Revoke; add-member
   sends `invite:true`.
+
+## Settings — August 2026 cleanup
+- **Profile / Currency**: sublabel updated to "Fallback for accounts that don't specify their own
+  display currency". `useCurrency()` continues to drive the dropdown; scoping to individual ledger
+  accounts is deferred until those accounts expose a currency preference upstream.
+- **Profile / Auto-Approve Limit removed**: The "Approvals" card (read-only "Conditional" display,
+  no edit path) was cut from the Profile section. `useBrainPolicy`, `autoApproveLimitFromPolicy`,
+  and `groupPolicyAmount` are no longer imported by `SettingsPage.tsx`. Revisit once policy editing
+  has a real home.
+- **Notifications hidden from nav**: The "Notifications" entry was removed from `NAV_ITEMS`.
+  The section itself (`NotificationsFigma`) and its entry in `VALID_SECTIONS` remain intact so
+  a direct `?section=notifications` deep-link still resolves rather than 404ing.
+- **Team / Escalation removed**: The Escalation sub-section (timer rows + MutedCallout banner)
+  was removed from `TeamSection.tsx`. `MutedCallout` import dropped accordingly.
+- **Billing buttons confirmed live**: "Choose A Plan" opens `ChangePlanModal`; "Add Card" opens
+  `UpdateCardModal`. Both were already wired; no UI change needed.
