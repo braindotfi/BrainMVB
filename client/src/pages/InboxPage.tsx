@@ -36,6 +36,7 @@ import {
 } from "@/lib/proposalCards";
 import { LiveProposalModal, AGENT_DISPLAY_NAME } from "@/components/AgentProposalModal";
 import type { AgentKey } from "@/lib/agentProposals";
+import { agentBadgeLabel } from "@/lib/agentProposals";
 import { capitalCase } from "@/lib/displayLabels";
 import { useBrainAuditRecords } from "@/lib/brainAudit";
 import { inboxTapTarget } from "@/lib/inboxTap";
@@ -760,8 +761,7 @@ export function InboxPage() {
       if (decidedProposalIds.has(p.id)) continue;
       const agentKey = agentKeyForProposalType(p.type);
       const agentName = p.agent?.display_name || AGENT_DISPLAY_NAME[agentKey];
-      const isPaymentAgent = agentKey === "payment" || /^(?:demo\s+)?payment agent$/i.test(agentName.trim());
-      const pillName = isPaymentAgent ? "Payment" : agentName;
+      const pillName = agentBadgeLabel(agentKey);
         const decisions = buildDecisionButtons(p.available_decisions, p.presentation?.actions);
       const headerCopy = buildProposalHeaderCopy(p, agentName, formatText);
       const proposalPresentation = liveProposalRow(headerCopy, pillName);
@@ -821,7 +821,7 @@ export function InboxPage() {
 
     /* Auto-approved: live brain-core intents that cleared §6 automatically. */
     for (const p of liveAutoApproved) {
-      const autoAgentLabel = AGENT_DISPLAY_NAME[p.agent as AgentKey] ?? capitalCase(String(p.agent).replace(/_/g, " "));
+      const autoAgentLabel = agentBadgeLabel(p.agent as AgentKey);
       push({
         id: p.id,
         kind: "proposal",
@@ -875,7 +875,7 @@ export function InboxPage() {
         /* Postponed keeps a small badge (no status pill); decided rows show agent
            name in the badge so the pill stands alone as the outcome. */
         tag: sessionPill
-          ? (AGENT_DISPLAY_NAME[p.agent as AgentKey] ?? capitalCase(String(p.agent).replace(/_/g, " ")))
+          ? agentBadgeLabel(p.agent as AgentKey)
           : (status === "postponed" ? "Postponed" : ""),
         tagClass: sessionPill ? TAG_AGENT : (status === "postponed" ? TAG_DETECTED : ""),
         desc: p.rowSubtitle,
@@ -921,9 +921,7 @@ export function InboxPage() {
            than falling back to the actor — an empty badge is honest; an actor
            name in an agent-coloured pill is not. */
         tag: aPill
-          ? (r.proposingAgent
-              ? (AGENT_DISPLAY_NAME[r.proposingAgent as AgentKey] ?? capitalCase(r.proposingAgent.replace(/_/g, " ")))
-              : "")
+          ? (r.proposingAgent ? agentBadgeLabel(r.proposingAgent) : "")
           : auditEventLabel(r.eventType),
         tagClass: aPill
           ? (r.proposingAgent ? TAG_AGENT : "")

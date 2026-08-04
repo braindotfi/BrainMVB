@@ -79,6 +79,8 @@ import {
 export type AgentModalAction = "approve" | "reject" | "acknowledge" | "undo";
 
 import type { AgentModalEditPayload } from "@/lib/agentProposals";
+import { AGENT_DISPLAY_NAME } from "@/lib/agentProposals";
+export { AGENT_DISPLAY_NAME };
 import { InfoIcon } from "@/components/Callout";
 import { capitalCase } from "@/lib/displayLabels";
 export type { AgentModalEditPayload };
@@ -97,33 +99,9 @@ export type { AgentModalEditPayload };
    no Edit flow. Mirrors LiveInsightModal's conditional rendering for
    brainAgentSurfaces.ts's LiveInsight. */
 
-/** Display name per agent, matching the copy already used per-record in
- *  agentProposals.ts's AGENT_PROPOSALS (client-owned presentation, not brain-core data). */
 /** Agents whose approved action sends a message to someone outside the company
  *  (today: the dunning reminder Collections mails to a customer). */
 const SENDS_OUTBOUND_MESSAGE = new Set<AgentKey>(["collections"]);
-
-export const AGENT_DISPLAY_NAME: Record<AgentKey, string> = {
-  vendor_risk: "Vendor Risk",
-  payment: "Payment",
-  collections: "Collections",
-  treasury: "Treasury",
-  cash_forecast: "Cash Forecasting",
-  dispute: "Dispute",
-  compliance: "Compliance",
-  revenue_intel: "Revenue Intelligence",
-  reconciliation: "Reconciliation",
-  subscription: "Subscription",
-  fraud_anomaly: "Fraud and Anomaly",
-  bill_management: "Bill Management",
-  debt_optimization: "Debt Optimization",
-  financial_health: "Financial Health",
-  personal_budget: "Personal Budget",
-  purchase_advisor: "Purchase Advisor",
-  savings: "Savings",
-  tax_prep: "Tax Prep",
-  travel_finance: "Travel Finance",
-};
 
 /** Footer button for one entry of `available_decisions`.
  *
