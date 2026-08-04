@@ -7,7 +7,7 @@ import { z } from "zod";
 import { verifyMessage } from "viem";
 import { createBrainProxyRouter } from "./brain/proxy";
 import { getBrainSession, getBrainSessionProvisionedAt, getBrainSessionExpiresAt } from "./brain/auth";
-import { withBrainBaseUrl } from "./brain/baseUrl";
+import { withBrainBaseUrl, withKeyAuthedBrainCall } from "./brain/baseUrl";
 import { brainTenancyMode } from "./brain/config";
 import {
   listLedgerAccounts,
@@ -584,7 +584,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const auth = extractApiKeyBearer(req);
       if (!auth.ok) return res.status(auth.status).json({ error: auth.error, message: auth.message });
       try {
-        return res.json(await fetcher(auth.key, req));
+        // withKeyAuthedBrainCall marks this call tree as intentionally context-free
+        // (no session URL needed; always production). Without it, currentBrainBaseUrl()
+        // would emit a "[brain-url] WARNING" for every key-authed request.
+        return res.json(await withKeyAuthedBrainCall(() => fetcher(auth.key, req)));
       } catch (error) {
         return sendKeyAuthedError(res, error, path);
       }
