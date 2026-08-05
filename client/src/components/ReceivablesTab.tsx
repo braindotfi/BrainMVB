@@ -22,6 +22,7 @@ import { UnavailableDataBox } from "@/components/Callout";
 import { ReceivableDetailPopup } from "@/components/ReceivableDetailPopup";
 import { RecordPill } from "@/components/RecordPill";
 import { fetchAllPages } from "@/lib/brainPagination";
+import { usePagedLedgerRead, ledgerFigureCaption } from "@/lib/ledgerRead";
 import { receivablesView, type RawInvoice, type Receivable } from "@/lib/receivables";
 import { dueLabel, statusColors } from "@/lib/obligationRows";
 import { capitalCase } from "@/lib/displayLabels";
@@ -53,14 +54,10 @@ const StatusBadge = ({ status }: { status: string }) => {
 /* ── the tab ──────────────────────────────────────────────────────────────── */
 
 export function ReceivablesTab({ format }: { format: Format }): JSX.Element {
-  const arQ = useQuery({
-    /* Keyed under the plain endpoint path so the existing invalidations after an
-       upload/ingest (which invalidate that prefix) refresh this too. */
-    queryKey: ["/api/brain/ledger/invoices", "all-pages"],
-    queryFn: ({ signal }) =>
-      fetchAllPages<RawInvoice>("/api/brain/ledger/invoices", "invoices", { signal }),
-    retry: false,
-  });
+  /* Keyed under the plain endpoint path so the existing invalidations after an
+     upload/ingest (which invalidate that prefix) refresh this too, and polled, because
+     brain-core lands invoices in waves — see lib/ledgerRead.ts. */
+  const arQ = usePagedLedgerRead<RawInvoice>("/api/brain/ledger/invoices", "invoices");
   const cpQ = useQuery({
     queryKey: ["/api/brain/ledger/counterparties", "all-pages"],
     queryFn: ({ signal }) =>
@@ -75,15 +72,20 @@ export function ReceivablesTab({ format }: { format: Format }): JSX.Element {
      anything. `receivablesView` owns the branch order (lib/receivables.ts) so the
      awkward case — zero rows because the read was cut short — is decided by tested
      code rather than by the order of ternaries in this file. */
-  const { kind, rows, total, truncated } = receivablesView({
-    failed: arQ.isError,
-    read: arQ.data ?? null,
+  const { kind, rows, total, truncated, mayGrow } = receivablesView({
+    failed: arQ.failed,
+    read: arQ.read,
+    ingesting: arQ.ingesting,
   });
 
   /* Counterparty names live on a different endpoint; invoices carry only the id. An
      unresolved id is shown as such rather than replaced with a plausible name. */
   const nameOf = (id: string | null): string | null =>
     (id && cpQ.data?.rows.find((c) => c.id === id)?.name) || null;
+
+  /* One wording for "this figure is not final", shared with Payables and the two
+     metric cards, so the same caveat never reads two different ways. */
+  const totalCaption = ledgerFigureCaption({ truncated, mayGrow }, "Across everything you're still owed");
 
   return (
     <>
@@ -110,6 +112,18 @@ export function ReceivablesTab({ format }: { format: Format }): JSX.Element {
             Only part of your invoice history could be read, so nothing can be shown here yet.
             It isn't a sign that nobody owes you anything.
           </UnavailableDataBox>
+        ) : kind === "arriving" ? (
+          /* Zero rows, read fine — but documents are still being turned into ledger
+             records, and those records arrive in waves. "Nobody owes you anything"
+             would be a conclusion drawn from an import that has not finished. */
+          <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative shrink-0 w-full bg-[#0a0c10]">
+            <p
+              className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[16px] text-[#6c779d]"
+              data-testid="text-receivables-arriving"
+            >
+              Still reading your documents. Anything you're owed will appear here as it lands.
+            </p>
+          </div>
         ) : kind === "empty" ? (
           <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative shrink-0 w-full bg-[#0a0c10]">
             <p
@@ -187,12 +201,14 @@ export function ReceivablesTab({ format }: { format: Format }): JSX.Element {
                 <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">
                   Receivable Totals
                 </p>
-                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px]">
-                  {/* Names what the figure is, or why there isn't one. A dash with no
-                      explanation would read as "zero" on a list that plainly has rows. */}
-                  {truncated
-                    ? "Part of your invoice history couldn't be read, so a total would understate this."
-                    : "Across everything you're still owed"}
+                <p
+                  className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px]"
+                  data-testid="text-receivable-total-caption"
+                >
+                  {/* Names what the figure is, or why it isn't final. A dash with no
+                      explanation would read as "zero" on a list that plainly has rows,
+                      and a figure that is still growing looks just like a settled one. */}
+                  {totalCaption}
                 </p>
               </div>
               <div className="flex flex-col items-end justify-center relative shrink-0">

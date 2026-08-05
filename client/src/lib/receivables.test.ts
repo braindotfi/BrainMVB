@@ -172,13 +172,13 @@ describe("an incomplete read never renders as \"nobody owes you anything\"", () 
     /* The quiet failure this exists to stop: the walk was cut short before it reached
        any AR row, so the tab has seen part of the invoice history and knows nothing
        about the rest — but "empty" would state, calmly, that nothing is outstanding. */
-    const v = receivablesView({ failed: false, read: { rows: [], complete: false } });
+    const v = receivablesView({ failed: false, read: { rows: [], complete: false }, ingesting: false });
     expect(v.kind).toBe("unreadable");
     expect(v.total).toBeNull();
   });
 
   it("zero rows on a FINISHED read is a real empty", () => {
-    expect(receivablesView({ failed: false, read: { rows: [], complete: true } }).kind).toBe("empty");
+    expect(receivablesView({ failed: false, read: { rows: [], complete: true }, ingesting: false }).kind).toBe("empty");
   });
 
   it("an AP-only first page that was cut short is still unreadable", () => {
@@ -186,26 +186,27 @@ describe("an incomplete read never renders as \"nobody owes you anything\"", () 
     const v = receivablesView({
       failed: false,
       read: { rows: [inv({ scenario: "ap" }), inv({ scenario: "ap" })], complete: false },
+      ingesting: false,
     });
     expect(v.kind).toBe("unreadable");
   });
 
   it("distinguishes failed from loading", () => {
-    expect(receivablesView({ failed: true, read: null }).kind).toBe("failed");
-    expect(receivablesView({ failed: false, read: null }).kind).toBe("loading");
+    expect(receivablesView({ failed: true, read: null, ingesting: false }).kind).toBe("failed");
+    expect(receivablesView({ failed: false, read: null, ingesting: false }).kind).toBe("loading");
     // A failure must not borrow a stale read to look answered.
-    expect(receivablesView({ failed: true, read: { rows: ar, complete: true } }).rows).toHaveLength(0);
+    expect(receivablesView({ failed: true, read: { rows: ar, complete: true }, ingesting: false }).rows).toHaveLength(0);
   });
 
   it("shows rows from a truncated read but withholds the total", () => {
-    const v = receivablesView({ failed: false, read: { rows: ar, complete: false } });
+    const v = receivablesView({ failed: false, read: { rows: ar, complete: false }, ingesting: false });
     expect(v.kind).toBe("rows");
     expect(v.truncated).toBe(true);
     expect(v.total).toBeNull();
   });
 
   it("a complete read with rows is neither truncated nor total-less", () => {
-    const v = receivablesView({ failed: false, read: { rows: ar, complete: true } });
+    const v = receivablesView({ failed: false, read: { rows: ar, complete: true }, ingesting: false });
     expect(v).toMatchObject({ kind: "rows", truncated: false, total: 100 });
   });
 
@@ -312,5 +313,37 @@ describe("the tab is reachable", () => {
 
   it("renders the tab body", () => {
     expect(page).toContain("<ReceivablesTab");
+  });
+});
+
+/* ── rows that have not landed yet ────────────────────────────────────────────
+   A complete read is not a finished one. brain-core projects each ingested document
+   into the ledger asynchronously, so invoices appear in waves: every intermediate
+   read is internally consistent, plausible, and short. Nothing in the response says
+   so, which is why the view takes the ingest state from outside. */
+
+describe("an unfinished import never renders as \"nobody owes you anything\"", () => {
+  const ar = [inv({ id: "a", amount_due: "100" })];
+
+  it("zero rows while documents are still being read is \"arriving\", not \"empty\"", () => {
+    const v = receivablesView({ failed: false, read: { rows: [], complete: true }, ingesting: true });
+    expect(v.kind).toBe("arriving");
+  });
+
+  it("a cut-short read outranks an unfinished import — the stronger caveat wins", () => {
+    const v = receivablesView({ failed: false, read: { rows: [], complete: false }, ingesting: true });
+    expect(v.kind).toBe("unreadable");
+  });
+
+  it("keeps showing the rows and total it has, marked as a floor", () => {
+    /* Deliberately NOT blanked. The figure is true as of now, and blanking a real
+       number every time a document is being read would be its own dishonesty — so it
+       stays, and `mayGrow` makes the caption say it may rise. */
+    const v = receivablesView({ failed: false, read: { rows: ar, complete: true }, ingesting: true });
+    expect(v).toMatchObject({ kind: "rows", total: 100, mayGrow: true });
+  });
+
+  it("a settled read is not marked as growing", () => {
+    expect(receivablesView({ failed: false, read: { rows: ar, complete: true }, ingesting: false }).mayGrow).toBe(false);
   });
 });

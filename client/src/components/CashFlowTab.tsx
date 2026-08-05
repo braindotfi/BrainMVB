@@ -15,6 +15,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { unpaidApInvoices, payableObligations } from "@/lib/liabilities";
+import { usePagedLedgerRead, ledgerFigureCaption } from "@/lib/ledgerRead";
 import type { RawObligation } from "@/lib/brainObligations";
 import {
   buildCashFlowRows,
@@ -228,7 +229,7 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
   /* Liabilities read obligations, not invoices: the invoice feed carries no payroll,
      so the old figure understated what was owed and disagreed with the Payables
      tab. Invoices are still read above — they supply the dated bill ROWS below. */
-  const obQ = useQuery<{ obligations?: RawObligation[] }>({ queryKey: ["/api/brain/ledger/obligations"], retry: false });
+  const obQ = usePagedLedgerRead<RawObligation>("/api/brain/ledger/obligations", "obligations");
 
   /* Three states, not two. `data === undefined` covers both "still loading" and
      "the request failed", and collapsing them is precisely how a failed read ends
@@ -238,8 +239,8 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
   const invs = invQ.data?.invoices ?? null;
   const txFailed = txQ.isError || (txQ.data != null && txQ.data.transactions == null);
   const invFailed = invQ.isError || (invQ.data != null && invQ.data.invoices == null);
-  const obs = obQ.data?.obligations ?? null;
-  const obFailed = obQ.isError || (obQ.data != null && obQ.data.obligations == null);
+  const obs = obQ.read?.rows ?? null;
+  const obFailed = obQ.failed;
   const txPending = txs == null && !txFailed;
   const invPending = invs == null && !invFailed;
   const settling = txPending || invPending;
@@ -247,8 +248,11 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
   const nameOf = (id: string | null | undefined) =>
     (id && cpQ.data?.counterparties.find((c) => c.id === id)?.name) || null;
 
+  /* Rows may be listed from a partial read — a row that exists is a real debt. The
+     TOTAL may not: `cashFlowTotals` is handed the whole read so it can withhold a
+     figure it could not finish summing. */
   const rows = buildCashFlowRows({ transactions: txs, invoices: invs, obligations: obs, nameOf });
-  const totals = cashFlowTotals({ transactions: txs, invoices: invs, obligations: obs });
+  const totals = cashFlowTotals({ transactions: txs, invoices: invs, obligations: obQ.read });
   const period = cashFlowPeriodLabel(totals.periodStart, totals.periodEnd);
 
   /* The period the figures actually cover, named. The mock labels these "(30d)";
@@ -288,6 +292,13 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
   const liabilitiesCaption = (() => {
     if (obFailed) return "Source unavailable";
     if (obs == null) return "Loading…";
+    /* Not final yet, and the number above cannot show that by itself: a truncated
+       read has no total at all, and one taken mid-import is a floor that looks like
+       a settled figure. Shared wording, so the same caveat reads identically here,
+       on Overview, and at the foot of the Payables list. */
+    if (obQ.read && (!obQ.read.complete || obQ.ingesting)) {
+      return ledgerFigureCaption({ truncated: !obQ.read.complete, mayGrow: obQ.ingesting }, "");
+    }
     if (obRows.length === 0) return "Nothing outstanding";
     // payableObligations sorts by due date, so the first non-overdue row is the next due.
     const next = obRows.find((o) => o.status !== "overdue");

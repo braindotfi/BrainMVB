@@ -43,7 +43,8 @@ import {
 } from "@/lib/proposalTiers";
 import { TierSections, type TierRowAction, type TierRowModel } from "@/components/TierRowList";
 import { buildProposalHeaderCopy, buildDecisionButtons } from "@/lib/proposalCards";
-import { liabilitiesTotal } from "@/lib/liabilities";
+import { payablesView } from "@/lib/liabilities";
+import { usePagedLedgerRead, ledgerFigureCaption } from "@/lib/ledgerRead";
 import type { RawObligation } from "@/lib/brainObligations";
 import { apiRequest } from "@/lib/queryClient";
 import { mapApprovalRejection, parseCoreError, type ApprovalRejection } from "@/lib/approvalRejections";
@@ -1023,13 +1024,16 @@ export function HomePage() {
      figure, same source, same module (lib/liabilities.ts) as the Cash Flow metric
      and the itemized list this card links to, so the three can't drift. Reads the
      obligations feed rather than invoices: invoices carry no payroll records, which
-     silently understated this number. null, rendered "-", when nothing is reachable:
-     zero would be a claim that nothing is owed. */
-  const { data: brainObligations } = useQuery<{ obligations?: RawObligation[] }>({
-    queryKey: ["/api/brain/ledger/obligations"],
-    retry: false,
+     silently understated this number. null, rendered "-", when nothing is reachable
+     OR when only part of the ledger could be read: zero would be a claim that nothing
+     is owed, and a partial sum is a smaller number that looks just as settled. */
+  const obligationsRead = usePagedLedgerRead<RawObligation>("/api/brain/ledger/obligations", "obligations");
+  const payables = payablesView({
+    failed: obligationsRead.failed,
+    read: obligationsRead.read,
+    ingesting: obligationsRead.ingesting,
   });
-  const liabilities = liabilitiesTotal(brainObligations?.obligations ?? null);
+  const liabilities = payables.total;
   const liabilitiesFormatted = liabilities !== null ? format(liabilities) : "-";
   const liabParts = liabilitiesFormatted.match(/^(.+)\.(\d{2})$/);
   const liabWhole = liabParts ? liabParts[1] : liabilitiesFormatted;
@@ -1122,7 +1126,7 @@ export function HomePage() {
                 label="Liabilities"
                 whole={liabWhole}
                 cents={liabCents}
-                caption="Everything you still owe."
+                caption={ledgerFigureCaption(payables, "Everything you still owe.")}
                 onClick={() => navigate("/ledger?tab=payables")}
                 testId="card-metric-liabilities"
               />

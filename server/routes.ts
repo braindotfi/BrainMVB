@@ -40,6 +40,16 @@ import type { ExtractStatus, SourceDocumentExtractionPatch } from "./storage";
 import { extractStatusForJob } from "./brain/extractStatus";
 import { projectionStatusFrom, isTerminalProjectionStatus } from "./brain/projectionStatus";
 import { shouldSettle, needsExtractSettle } from "./brain/settleTargets";
+import { isSeedInFlight, seedStillExpected } from "./brain/seed";
+import { isDemoEmail } from "./demoUsers";
+
+/**
+ * How long after a demo account is created its starter documents are still expected.
+ * A seed takes about a minute end to end; this is generous enough to cover a slow
+ * brain-core and short enough that a half-deleted starter set stops being reported as
+ * an import in progress.
+ */
+const SEED_EXPECTED_WITHIN_MS = 10 * 60_000;
 import { generateNonce } from "./nonce";
 import { brainAuthConfigured, platformServiceConfigured, brainDurableTenancy } from "./brain/config";
 import {
@@ -1465,6 +1475,62 @@ When you mention a money amount, always reproduce it exactly as the grounding da
       }),
     );
   }
+
+  /**
+   * Is this user's tenant still being filled in?
+   *
+   * The client cannot tell from the document list: a seed ingests one file at a time,
+   * so for the first seconds of a new tenant there are no documents and no ledger rows
+   * — identical, from the browser, to a tenant that genuinely has nothing. That gap is
+   * exactly how a fresh account once showed a settled-looking $211,200.00 owed when the
+   * real figure was $287,223.39. The server started the seed; it answers.
+   *
+   * Separate from the documents route rather than a field on it: that route returns a
+   * bare array, and the surfaces that need this signal are not the ones that need the
+   * documents.
+   */
+  app.get("/api/integrations/ingest-status", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      // The run itself, while this process is doing it.
+      if (isSeedInFlight(userId)) return res.json({ seeding: true });
+
+      /* ...and the stretches the in-flight flag cannot see. A demo tenant is
+         provisioned lazily on the session's first brain call, so between opening the
+         app and the seed starting there is nothing in flight and nothing on disk — the
+         window in which the old UI printed its confident, wrong total. The flag is also
+         per-process, so a restart mid-seed would forget.
+
+         Both are covered by a durable fact instead: a seeded demo tenant ends up with
+         the whole starter manifest, so a demo account that has fewer documents than
+         that has not finished being set up. Bounded to a young account, because a user
+         who later DELETES a starter document must not be told forever that their
+         ledger is still importing — the point of this flag is to caveat a figure while
+         it is genuinely provisional, not to add a permanent disclaimer. */
+      const user = await storage.getUser(userId);
+      const isDemo = isDemoEmail(user?.email);
+      // Only a young demo account can still be waiting on a seed, so the document read
+      // — the expensive part — is skipped for everyone else.
+      const documentCount =
+        isDemo && user?.createdAt != null ? (await storage.listSourceDocuments(userId)).length : 0;
+      res.json({
+        seeding: seedStillExpected({
+          inFlight: false,
+          isDemo,
+          createdAt: user?.createdAt,
+          documentCount,
+          expectedWithinMs: SEED_EXPECTED_WITHIN_MS,
+          now: Date.now(),
+        }),
+      });
+    } catch (err) {
+      /* Deliberately an error, not `{ seeding: false }`. A read that failed is not a
+         finished import, and answering "false" would let the UI drop the caveat on a
+         figure it has no evidence is final. The client treats an unreachable status as
+         no signal and falls back to the document-progress one. */
+      res.status(500).json({ error: (err as Error).message });
+    }
+  });
 
   app.get("/api/integrations/documents", requireAuth, async (req, res) => {
     try {

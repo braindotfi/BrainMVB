@@ -6,9 +6,13 @@ import {
   unpaidApInvoices,
   payableObligations,
   liabilitiesTotal,
+  payablesView,
   type ApInvoiceLike,
 } from "./liabilities";
 import type { RawObligation } from "./brainObligations";
+
+/** A read that walked the cursor to the end — the only state that may produce a total. */
+const DONE = { complete: true } as const;
 
 /**
  * The defect these tests exist for: an unreachable read rendered as
@@ -35,16 +39,16 @@ const ob = (over: Partial<Record<string, unknown>> = {}): RawObligation => ({
 
 describe("liabilitiesTotal — absence of data is not a zero balance", () => {
   it("returns null when obligations are unreachable, so callers cannot render a false all-clear", () => {
-    expect(liabilitiesTotal(null)).toBeNull();
-    expect(liabilitiesTotal(undefined)).toBeNull();
+    expect(liabilitiesTotal(null, DONE)).toBeNull();
+    expect(liabilitiesTotal(undefined, DONE)).toBeNull();
   });
 
   it("returns 0 — a real claim that nothing is owed — for an empty but present list", () => {
-    expect(liabilitiesTotal([])).toBe(0);
+    expect(liabilitiesTotal([], DONE)).toBe(0);
   });
 
   it("distinguishes the two cases, which is the whole point", () => {
-    expect(liabilitiesTotal(null)).not.toBe(liabilitiesTotal([]));
+    expect(liabilitiesTotal(null, DONE)).not.toBe(liabilitiesTotal([], DONE));
   });
 });
 
@@ -54,30 +58,30 @@ describe("payableObligations — money-out only", () => {
   it("counts payroll, the whole reason this moved off the invoice feed", () => {
     const rows = [ob({ type: "bill", amount_due: "211200.00" }), ob({ type: "payroll", amount_due: "67128.76" })];
     expect(payableObligations(rows)).toHaveLength(2);
-    expect(liabilitiesTotal(rows)).toBeCloseTo(278328.76, 2);
+    expect(liabilitiesTotal(rows, DONE)).toBeCloseTo(278328.76, 2);
   });
 
   it("excludes receivables, or liabilities would be inflated by what customers owe us", () => {
     const rows = [ob({ amount_due: "1000" }), ob({ direction: "receivable", amount_due: "9000000" })];
     expect(payableObligations(rows)).toHaveLength(1);
-    expect(liabilitiesTotal(rows)).toBe(1000);
+    expect(liabilitiesTotal(rows, DONE)).toBe(1000);
   });
 
   it("reads the receivable flag off `type` too, which is where brain-core actually puts it", () => {
     // `direction` is null on every row the live API returns; the hint rides on `type`.
-    expect(liabilitiesTotal([ob({ direction: undefined, type: "receivable", amount_due: "500" })])).toBe(0);
+    expect(liabilitiesTotal([ob({ direction: undefined, type: "receivable", amount_due: "500" })], DONE)).toBe(0);
   });
 
   it("excludes settled obligations", () => {
     const rows = [ob({ amount_due: "100" }), ob({ amount_due: "100", status: "paid" }), ob({ amount_due: "100", status: "VOID" })];
     expect(payableObligations(rows)).toHaveLength(1);
-    expect(liabilitiesTotal(rows)).toBe(100);
+    expect(liabilitiesTotal(rows, DONE)).toBe(100);
   });
 
   it("counts an UNRECOGNISED status as still owed, erring toward showing the debt", () => {
     // An unknown status inflating the total is visible and checkable; one silently
     // discharging a debt hides money the tenant actually owes.
-    expect(liabilitiesTotal([ob({ amount_due: "100", status: "in_dispute" })])).toBe(100);
+    expect(liabilitiesTotal([ob({ amount_due: "100", status: "in_dispute" })], DONE)).toBe(100);
   });
 });
 
@@ -85,16 +89,16 @@ describe("payableObligations — money-out only", () => {
 
 describe("amount parsing", () => {
   it("sums decimal strings as the API returns them", () => {
-    expect(liabilitiesTotal([ob({ amount_due: "4800.00000000" }), ob({ amount_due: "200.00" })])).toBe(5000);
+    expect(liabilitiesTotal([ob({ amount_due: "4800.00000000" }), ob({ amount_due: "200.00" })], DONE)).toBe(5000);
   });
 
   it("does not discard a numeric amount, which would silently zero a real debt", () => {
-    expect(liabilitiesTotal([ob({ amount_due: 300 })])).toBe(300);
+    expect(liabilitiesTotal([ob({ amount_due: 300 })], DONE)).toBe(300);
   });
 
   it("lets one unparseable row understate the total instead of blanking the card", () => {
-    expect(liabilitiesTotal([ob({ amount_due: "not-a-number" }), ob({ amount_due: "300" })])).toBe(300);
-    expect(liabilitiesTotal([ob({ amount_due: null }), ob({ amount_due: "300" })])).toBe(300);
+    expect(liabilitiesTotal([ob({ amount_due: "not-a-number" }), ob({ amount_due: "300" })], DONE)).toBe(300);
+    expect(liabilitiesTotal([ob({ amount_due: null }), ob({ amount_due: "300" })], DONE)).toBe(300);
   });
 });
 
@@ -142,6 +146,77 @@ describe("unpaidApInvoices — still the source for the Cash Flow bill ROWS", ()
   it("tolerates a null/undefined list without throwing", () => {
     expect(unpaidApInvoices(null)).toEqual([]);
     expect(unpaidApInvoices(undefined)).toEqual([]);
+  });
+});
+
+/* ── an incomplete read is not a zero balance ─────────────────────────────────
+   Two ways the obligations feed comes back short without saying so, both measured on
+   a live tenant: the list pages behind a cursor, and the rows behind an ingested
+   document land in waves. Every intermediate answer is complete, self-consistent and
+   wrong, so neither can be detected from the response itself. */
+
+describe("liabilitiesTotal — a partial read states no figure", () => {
+  it("returns null when the cursor walk did not finish, even though it has rows to sum", () => {
+    /* The tempting behaviour is to sum what came back: it produces a real number, and
+       nothing on screen says it is a fraction of the ledger. On "what you owe", a
+       confident understatement is worse than a dash. */
+    const rows = [ob({ amount_due: "211200.00" })];
+    expect(liabilitiesTotal(rows, { complete: false })).toBeNull();
+    expect(liabilitiesTotal(rows, DONE)).toBe(211200);
+  });
+});
+
+describe("payablesView — the branch order that stops a false all-clear", () => {
+  const rows = [ob({ amount_due: "100" })];
+
+  it("distinguishes failed from loading, and lets neither borrow a stale read", () => {
+    expect(payablesView({ failed: true, read: null, ingesting: false }).kind).toBe("failed");
+    expect(payablesView({ failed: false, read: null, ingesting: false }).kind).toBe("loading");
+    expect(payablesView({ failed: true, read: { rows, complete: true }, ingesting: false }).rows).toHaveLength(0);
+  });
+
+  it("zero rows on an UNFINISHED read is unreadable, not empty", () => {
+    const v = payablesView({ failed: false, read: { rows: [], complete: false }, ingesting: false });
+    expect(v.kind).toBe("unreadable");
+    expect(v.total).toBeNull();
+  });
+
+  it("zero rows while documents are still being read is \"arriving\", not empty", () => {
+    /* Timed on a fresh tenant: payables read $211,200.00 at 1s, $278,328.76 at 26s and
+       $287,223.39 at 56s. A tab that mounts before the first wave has landed sees a
+       clean, complete, empty read — and "you owe nothing" is a conclusion drawn from
+       an import that has not finished. */
+    expect(payablesView({ failed: false, read: { rows: [], complete: true }, ingesting: true }).kind).toBe("arriving");
+  });
+
+  it("a cut-short read outranks an unfinished import — the stronger caveat wins", () => {
+    expect(payablesView({ failed: false, read: { rows: [], complete: false }, ingesting: true }).kind).toBe("unreadable");
+  });
+
+  it("only a complete, settled, empty read may claim nothing is owed", () => {
+    const v = payablesView({ failed: false, read: { rows: [], complete: true }, ingesting: false });
+    expect(v).toMatchObject({ kind: "empty", total: 0, truncated: false, mayGrow: false });
+  });
+
+  it("lists rows from a truncated read but withholds the total", () => {
+    const v = payablesView({ failed: false, read: { rows, complete: false }, ingesting: false });
+    expect(v).toMatchObject({ kind: "rows", truncated: true, total: null });
+    expect(v.rows).toHaveLength(1);
+  });
+
+  it("keeps the figure during an import and marks it as a floor", () => {
+    /* Not blanked: the number is true as of now, and hiding a real total every time a
+       document is being read would be its own kind of lying. `mayGrow` is what the
+       caption hangs off. */
+    const v = payablesView({ failed: false, read: { rows, complete: true }, ingesting: true });
+    expect(v).toMatchObject({ kind: "rows", total: 100, mayGrow: true });
+  });
+
+  it("excludes receivables from the rows it hands the tab", () => {
+    const mixed = [ob({ amount_due: "100" }), ob({ type: "receivable", amount_due: "999999" })];
+    const v = payablesView({ failed: false, read: { rows: mixed, complete: true }, ingesting: false });
+    expect(v.rows).toHaveLength(1);
+    expect(v.total).toBe(100);
   });
 });
 

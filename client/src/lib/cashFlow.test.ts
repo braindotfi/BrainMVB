@@ -291,19 +291,38 @@ describe("cashFlowTotals", () => {
 
   it("returns null liabilities when the obligations feed is unreachable", () => {
     expect(cashFlowTotals({ transactions: [] }).liabilities).toBeNull();
-    expect(cashFlowTotals({ transactions: [], obligations: [] }).liabilities).toBe(0);
+    expect(cashFlowTotals({ transactions: [], obligations: { rows: [], complete: true } }).liabilities).toBe(0);
   });
 
   it("sums liabilities from payable obligations, payroll included", () => {
     const t = cashFlowTotals({
       transactions: [],
-      obligations: [
-        { id: "ob1", type: "bill", amount_due: "12000", status: "due" },
-        { id: "ob2", type: "payroll", amount_due: "6000", status: "upcoming" },
-        { id: "ob3", type: "receivable", amount_due: "999999", status: "due" },
-      ],
+      obligations: {
+        rows: [
+          { id: "ob1", type: "bill", amount_due: "12000", status: "due" },
+          { id: "ob2", type: "payroll", amount_due: "6000", status: "upcoming" },
+          { id: "ob3", type: "receivable", amount_due: "999999", status: "due" },
+        ],
+        complete: true,
+      },
     });
     expect(t.liabilities).toBe(18000);
+  });
+
+  it("states no liabilities figure when the obligations read was cut short", () => {
+    /* The obligations list pages behind a cursor, so a partial walk yields a real,
+       plausible, SMALLER number with nothing on screen to mark it as partial. A metric
+       card that quotes it is confidently wrong about what the tenant owes; "-" is not.
+       The rows from that partial read are still listed — a debt that came back is real
+       — so only the total is withheld. */
+    const t = cashFlowTotals({
+      transactions: [],
+      obligations: {
+        rows: [{ id: "ob1", type: "bill", amount_due: "12000", status: "due" }],
+        complete: false,
+      },
+    });
+    expect(t.liabilities).toBeNull();
   });
 
   it("names every feed that failed, so the user knows which figure to distrust", () => {

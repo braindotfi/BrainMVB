@@ -22,6 +22,23 @@
  * tenant owes nothing; absence of data is not that claim, and the callers render the
  * two differently ("—" vs a real zero). A false all-clear on money owed is the single
  * worst thing this module can produce.
+ *
+ * ## Two ways the feed is short WITHOUT saying so (both measured live)
+ *
+ * 1. **Truncation.** The list endpoint pages behind a cursor, so an unpaged read
+ *    returns some rows with HTTP 200 and no hint that more exist. `liabilitiesTotal`
+ *    therefore takes the read STATE, not just the rows, and refuses to state a figure
+ *    it cannot prove it summed in full — same contract as `receivablesTotal`.
+ *
+ * 2. **Rows that have not landed yet.** brain-core projects each ingested document
+ *    into the ledger asynchronously, so a tenant's obligations arrive in waves. On a
+ *    fresh demo tenant, timed: 3 bills at 1s ($211,200.00), 2 payroll at 26s
+ *    ($278,328.76), 1 tax at 56s ($287,223.39). Every intermediate read is complete,
+ *    internally consistent and wrong, and no property of the response distinguishes
+ *    it from the final one. What DOES distinguish it is out of band: documents are
+ *    still being read (`documentsInProgress` in lib/brainRefresh). That is why the
+ *    view below takes an `ingesting` flag — the total keeps rendering, because it is
+ *    a true floor, but it is captioned as one instead of as a settled figure.
  */
 
 import { normalizeObligation, isReceivable, type Obligation, type RawObligation } from "./brainObligations";
@@ -99,12 +116,96 @@ export function payableObligations(raw: readonly RawObligation[] | null | undefi
 }
 
 /**
- * Total outstanding AP, or `null` when there is no obligation data to read.
+ * Total outstanding AP, or `null` when no figure can honestly be stated.
+ *
+ * `null` covers BOTH "there was nothing to read" and "the read was truncated". The
+ * second is why this takes the read state rather than just the rows: a partial cursor
+ * walk produces a real, plausible, smaller number, and on a figure that says what the
+ * tenant owes that is worse than no number at all.
  *
  * An unparseable `amount_due` contributes 0 rather than aborting the sum: one bad
  * row should understate the total, not blank the whole figure.
  */
-export function liabilitiesTotal(raw: readonly RawObligation[] | null | undefined): number | null {
+export function liabilitiesTotal(
+  raw: readonly RawObligation[] | null | undefined,
+  read: { complete: boolean },
+): number | null {
   if (raw == null) return null;
+  if (!read.complete) return null;
   return payableObligations(raw).reduce((sum, o) => sum + (Number(o.amount_due) || 0), 0);
 }
+
+/* ── what the payables surfaces should show ───────────────────────────────── */
+
+export type PayablesViewKind =
+  | "failed"
+  /** No answer yet. */
+  | "loading"
+  /**
+   * Zero payables, but the read did not finish — so "nothing outstanding" is an
+   * unknown, not a fact. The easiest state to get wrong and the hardest to notice:
+   * the surface looks calm and says the tenant owes nothing, having seen only part
+   * of the ledger.
+   */
+  | "unreadable"
+  /**
+   * Zero payables on a complete read, while documents are still being read into the
+   * ledger. Also not "nothing outstanding" — just "not yet".
+   */
+  | "arriving"
+  /** Zero payables, complete read, nothing still landing. The only state that may
+   *  say the tenant owes nothing. */
+  | "empty"
+  | "rows";
+
+export interface PayablesView {
+  kind: PayablesViewKind;
+  rows: Obligation[];
+  /** Null whenever no honest figure exists — see `liabilitiesTotal`. */
+  total: number | null;
+  /** True when rows are shown but the read was cut short, so the list is partial. */
+  truncated: boolean;
+  /**
+   * True while brain-core is still projecting documents into the ledger. The figure
+   * on screen is then a floor, not a settled total, and must be captioned as one.
+   */
+  mayGrow: boolean;
+}
+
+/**
+ * Decide what a payables surface renders.
+ *
+ * Pure, and separate from the components, because all three surfaces that quote this
+ * figure have to agree — and because the interesting cases are exactly the ones a
+ * component test in this repo cannot reach (vitest runs in `node`, with no DOM).
+ * Keeping the branch order as data means "zero rows because the read was cut short"
+ * and "zero rows because nothing has landed yet" are pinned by real assertions
+ * instead of by a grep over JSX.
+ */
+export function payablesView(input: {
+  failed: boolean;
+  read: { rows: readonly RawObligation[]; complete: boolean } | null;
+  /** From `useIngestInProgress` — documents still being read into the ledger. */
+  ingesting: boolean;
+}): PayablesView {
+  const { failed, read, ingesting } = input;
+  const none = { rows: [] as Obligation[], total: null, truncated: false, mayGrow: ingesting };
+  if (failed) return { kind: "failed", ...none };
+  if (read == null) return { kind: "loading", ...none };
+
+  const rows = payableObligations(read.rows);
+  const total = liabilitiesTotal(read.rows, read);
+  const truncated = !read.complete;
+
+  if (rows.length === 0) {
+    // Order matters: a cut-short read outranks an unfinished ingest, and both
+    // outrank "empty". Only the last of the three may claim nothing is owed.
+    const kind: PayablesViewKind = truncated ? "unreadable" : ingesting ? "arriving" : "empty";
+    return { kind, rows, total, truncated, mayGrow: ingesting };
+  }
+  return { kind: "rows", rows, total, truncated, mayGrow: ingesting };
+}
+
+/* The caption under a payables figure lives in `lib/ledgerRead.ts` as
+   `ledgerFigureCaption` — the caveats it states are about the READ, not about
+   liabilities, and Receivables states them in the same words. */

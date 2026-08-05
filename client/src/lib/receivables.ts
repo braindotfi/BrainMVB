@@ -192,7 +192,13 @@ export type ReceivablesViewKind =
    * owed nothing, when really it only saw part of the invoice history.
    */
   | "unreadable"
-  /** Zero AR rows on a COMPLETE read. The only state that may say "nothing owed". */
+  /**
+   * Zero AR rows on a complete read, while documents are still being projected into
+   * the ledger. brain-core lands invoices in waves, so this is "not yet", not "none".
+   */
+  | "arriving"
+  /** Zero AR rows on a COMPLETE, settled read. The only state that may say "nothing
+   *  owed". */
   | "empty"
   | "rows";
 
@@ -203,6 +209,11 @@ export interface ReceivablesView {
   total: number | null;
   /** True when rows are shown but the read was cut short, so the list is partial. */
   truncated: boolean;
+  /**
+   * True while documents are still being read into the ledger, so more invoices are
+   * expected and the figure on screen is a floor. Mirrors `payablesView`.
+   */
+  mayGrow: boolean;
 }
 
 /**
@@ -216,18 +227,23 @@ export interface ReceivablesView {
 export function receivablesView(input: {
   failed: boolean;
   read: { rows: readonly RawInvoice[]; complete: boolean } | null;
+  /** From `useIngestInProgress` — documents still being read into the ledger. */
+  ingesting: boolean;
 }): ReceivablesView {
-  const { failed, read } = input;
-  if (failed) return { kind: "failed", rows: [], total: null, truncated: false };
-  if (read == null) return { kind: "loading", rows: [], total: null, truncated: false };
+  const { failed, read, ingesting } = input;
+  const none = { rows: [] as Receivable[], total: null, truncated: false, mayGrow: ingesting };
+  if (failed) return { kind: "failed", ...none };
+  if (read == null) return { kind: "loading", ...none };
 
   const rows = arReceivables(read.rows);
   const total = receivablesTotal(read.rows, read);
   const truncated = !read.complete;
 
-  // Order matters: incomplete is tested before empty, never after.
   if (rows.length === 0) {
-    return { kind: truncated ? "unreadable" : "empty", rows, total, truncated };
+    // Order matters: a cut-short read outranks an unfinished ingest, and both outrank
+    // "empty". Only the last of the three may claim nobody owes the tenant anything.
+    const kind: ReceivablesViewKind = truncated ? "unreadable" : ingesting ? "arriving" : "empty";
+    return { kind, rows, total, truncated, mayGrow: ingesting };
   }
-  return { kind: "rows", rows, total, truncated };
+  return { kind: "rows", rows, total, truncated, mayGrow: ingesting };
 }

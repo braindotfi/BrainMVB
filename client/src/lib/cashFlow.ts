@@ -243,7 +243,8 @@ export interface CashFlowTotals {
   /** `null` means the transaction feed could not be read — never render as 0. */
   income: number | null;
   expenses: number | null;
-  /** `null` means the obligations feed could not be read. */
+  /** `null` means the obligations feed could not be read, or was read only in part —
+   *  either way there is no figure to state. Never render it as 0. */
   liabilities: number | null;
   /** ISO bounds of the transactions actually counted, for an honest period label. */
   periodStart: string | null;
@@ -256,11 +257,18 @@ export function cashFlowTotals(input: {
   /* Liabilities come from obligations, NOT from `invoices`. The invoice feed carries
      no payroll, so deriving the figure from it understated what the tenant owed and
      disagreed with the Payables tab this metric sits beside. `invoices` is still
-     read above, for the dated bill ROWS — a different question from the total. */
-  obligations?: readonly RawObligation[] | null;
+     read above, for the dated bill ROWS — a different question from the total.
+
+     The whole READ, not just the rows: the obligations list pages behind a cursor, and
+     a total summed from a partial walk is a plausible smaller number with nothing to
+     mark it as partial. `complete: false` yields `null`, which this card already
+     renders as "—". Rows may still be listed from a partial read; only the total is
+     withheld. */
+  obligations?: { rows: readonly RawObligation[]; complete: boolean } | null;
 }): CashFlowTotals {
   const txs = input.transactions;
-  const liabilities = liabilitiesTotal(input.obligations ?? null);
+  const obligations = input.obligations ?? null;
+  const liabilities = obligations && liabilitiesTotal(obligations.rows, obligations);
 
   if (txs == null) {
     return { income: null, expenses: null, liabilities, periodStart: null, periodEnd: null };

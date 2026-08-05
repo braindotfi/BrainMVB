@@ -13,6 +13,12 @@
  * The running total comes from `lib/liabilities.ts`, the same module the two metric
  * cards read, so the figure at the bottom of this list is by construction the figure
  * on the cards that link here.
+ *
+ * The read walks brain-core's cursor to the end and refreshes itself (see
+ * `lib/ledgerRead.ts`). Both matter to what is printed at the bottom: a list endpoint
+ * pages silently, and the rows behind an ingested document land in waves, so this tab
+ * once showed a settled-looking $211,200.00 on a tenant that owed $287,223.39 — and
+ * kept showing it until the page was reloaded by hand.
  */
 
 import { useState } from "react";
@@ -21,7 +27,8 @@ import { WidgetCard, type CounterpartiesLiteResponse } from "@/components/Ledger
 import { UnavailableDataBox } from "@/components/Callout";
 import { BillDetailPopup, type BrainInvoiceDTO as BillDTO } from "@/components/BillDetailPopup";
 import { PayableDetailPopup } from "@/components/PayableDetailPopup";
-import { payableObligations, liabilitiesTotal } from "@/lib/liabilities";
+import { payablesView } from "@/lib/liabilities";
+import { usePagedLedgerRead, ledgerFigureCaption } from "@/lib/ledgerRead";
 import { matchObligationsToInvoices } from "@/lib/debtIdentity";
 import type { RawObligation, Obligation } from "@/lib/brainObligations";
 import { capitalCase } from "@/lib/displayLabels";
@@ -32,10 +39,6 @@ import { RecordPill } from "@/components/RecordPill";
 const IMG_DOT = ICONS.activity_dot;
 
 type Format = (a: string | number) => string;
-
-interface ObligationsResponse {
-  obligations?: RawObligation[];
-}
 
 interface InvoicesResponse {
   invoices?: BillDTO[];
@@ -62,10 +65,7 @@ const StatusBadge = ({ status }: { status: string }) => {
 /* ── the tab ──────────────────────────────────────────────────────────────── */
 
 export function PayablesTab({ format }: { format: Format }): JSX.Element {
-  const obQ = useQuery<ObligationsResponse>({
-    queryKey: ["/api/brain/ledger/obligations"],
-    retry: false,
-  });
+  const obQ = usePagedLedgerRead<RawObligation>("/api/brain/ledger/obligations", "obligations");
   const cpQ = useQuery<CounterpartiesLiteResponse>({
     queryKey: ["/api/brain/ledger/counterparties"],
     retry: false,
@@ -81,15 +81,17 @@ export function PayablesTab({ format }: { format: Format }): JSX.Element {
   const [openBill, setOpenBill] = useState<BillDTO | null>(null);
   const [openPayable, setOpenPayable] = useState<Obligation | null>(null);
 
-  /* Three states, not two. `data === undefined` covers both "still loading" and
-     "the request failed", and collapsing them is exactly how a failed read ends up
-     rendering as a confident empty list — here, as "you owe nothing". */
-  const raw = obQ.data?.obligations ?? null;
-  const failed = obQ.isError || (obQ.data != null && obQ.data.obligations == null);
-  const loading = raw == null && !failed;
-
-  const rows = payableObligations(raw);
-  const total = liabilitiesTotal(raw);
+  /* Six states, not two. Every collapse here has the same failure mode: a read that
+     did not happen, or did not finish, renders as the confident, calm claim that the
+     tenant owes nothing. `payablesView` owns the branch order (lib/liabilities.ts) so
+     the awkward cases — zero rows on a cut-short read, zero rows while documents are
+     still being projected — are decided by tested code rather than by the order of
+     ternaries in this file. */
+  const { kind, rows, total, truncated, mayGrow } = payablesView({
+    failed: obQ.failed,
+    read: obQ.read,
+    ingesting: obQ.ingesting,
+  });
 
   /* Counterparty names live on a different endpoint; obligations carry only the id.
      An unresolved id is shown as such rather than replaced with a plausible name —
@@ -110,13 +112,13 @@ export function PayablesTab({ format }: { format: Format }): JSX.Element {
   return (
     <>
 
-    <WidgetCard title="Payables" count={loading ? undefined : rows.length}>
-      {failed ? (
+    <WidgetCard title="Payables" count={kind === "loading" ? undefined : rows.length}>
+      {kind === "failed" ? (
         <UnavailableDataBox testId="text-obligations-unavailable">
           Your payables couldn't be loaded just now, so this list is empty for the wrong reason.
           It isn't a sign that you owe nothing.
         </UnavailableDataBox>
-      ) : loading ? (
+      ) : kind === "loading" ? (
         <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative shrink-0 w-full bg-[#0a0c10]">
           <p
             className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[16px] text-[#6c779d]"
@@ -125,7 +127,27 @@ export function PayablesTab({ format }: { format: Format }): JSX.Element {
             Loading what you owe from the ledger…
           </p>
         </div>
-      ) : rows.length === 0 ? (
+      ) : kind === "unreadable" ? (
+        /* Zero rows AND an unfinished read. Deliberately NOT the empty copy below:
+           the tab did not see the whole ledger, so it cannot say nothing is
+           outstanding — only that it does not know. */
+        <UnavailableDataBox testId="text-obligations-partial">
+          Only part of your ledger could be read, so nothing can be shown here yet. It isn't
+          a sign that you owe nothing.
+        </UnavailableDataBox>
+      ) : kind === "arriving" ? (
+        /* Zero rows, read fine — but documents are still being turned into ledger
+           records, and those records arrive in waves. "You owe nothing" would be a
+           conclusion drawn from an import that has not finished. */
+        <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative shrink-0 w-full bg-[#0a0c10]">
+          <p
+            className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[16px] text-[#6c779d]"
+            data-testid="text-obligations-arriving"
+          >
+            Still reading your documents. Anything you owe will appear here as it lands.
+          </p>
+        </div>
+      ) : kind === "empty" ? (
         <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative shrink-0 w-full bg-[#0a0c10]">
           <p
             className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[16px] text-[#6c779d]"
@@ -211,8 +233,14 @@ export function PayablesTab({ format }: { format: Format }): JSX.Element {
               <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">
                 Payable Totals
               </p>
-              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] whitespace-nowrap">
-                Across everything you still owe
+              <p
+                className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px]"
+                data-testid="text-obligation-total-caption"
+              >
+                {/* Names what the figure is, or why it isn't final. A total that is
+                    still growing looks exactly like a settled one, so the caption is
+                    the only thing standing between the two. */}
+                {ledgerFigureCaption({ truncated, mayGrow }, "Across everything you still owe")}
               </p>
             </div>
             <div className="flex flex-col items-end justify-center relative shrink-0">

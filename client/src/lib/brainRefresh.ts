@@ -52,7 +52,23 @@ const PROJECTION_TERMINAL: ReadonlyArray<DocumentProjectionStatus> = [
 ];
 
 const DOCUMENTS_KEY = "/api/integrations/documents";
+/** Server-side truth about a seed still running — see `useIngestInProgress`. */
+const INGEST_STATUS_KEY = "/api/integrations/ingest-status";
 const DOCUMENT_POLL_MS = 15_000;
+
+/**
+ * How often the document list is re-read when nothing is known to be in flight.
+ *
+ * Without this the list was fetched once and, under `staleTime: Infinity`, never
+ * again unless something already in progress was polling it — so a document that
+ * appeared AFTER mount could not be noticed. That is not hypothetical: a freshly
+ * created demo tenant is seeded server-side, document by document, and a page that
+ * mounts before the first record exists sees an empty list, concludes nothing is in
+ * flight, and stops looking. Everything downstream — the in-progress → done edge, the
+ * settle window, every ledger figure waiting on it — then never fires, which is
+ * exactly how a fresh tenant sat on a stale total until the user reloaded by hand.
+ */
+const DOCUMENT_IDLE_POLL_MS = 30_000;
 const SETTLE_INTERVAL_MS = 20_000;
 const SETTLE_WINDOW_MS = 3 * 60_000;
 
@@ -133,13 +149,55 @@ export function invalidateBrainNamespace(): void {
 }
 
 /**
+ * Is brain-core still reading documents into the ledger?
+ *
+ * The one out-of-band signal that a ledger figure is a floor rather than a total: the
+ * rows behind an ingested document appear only when its projection lands, and nothing
+ * in a ledger response says more are coming. Timed on a fresh demo tenant, some
+ * document was in progress across the whole window in which payables climbed from
+ * $211,200.00 to $287,223.39, and the last one turned terminal at the moment the
+ * figure stopped moving.
+ *
+ * Read-only, and shares the shell's query key and idle poll, so mounting it on several
+ * surfaces costs nothing extra.
+ */
+export function useIngestInProgress(): boolean {
+  /* The server half. A seed ingests its documents one at a time, so for the first
+     seconds of a new tenant there is no document to be in progress — the list is
+     empty, every ledger read is empty, and nothing in either says the tenant is still
+     filling up. Measured: the document signal alone left a fresh account showing a
+     settled-looking $211,200.00 for half a minute against a real $287,223.39. Only the
+     server knows it started a seed, so it is asked. */
+  const seeding = useQuery<{ seeding?: boolean }>({
+    queryKey: [INGEST_STATUS_KEY],
+    retry: false,
+    refetchInterval: (q) => (q.state.data?.seeding ? DOCUMENT_POLL_MS : DOCUMENT_IDLE_POLL_MS),
+  });
+  const { data } = useQuery<DocumentProgressLike[]>({
+    queryKey: [DOCUMENTS_KEY],
+    refetchInterval: DOCUMENT_IDLE_POLL_MS,
+  });
+  /* Either half is enough. They cover consecutive stretches of the same import — the
+     server's from tenant creation until the last file is handed over, the documents'
+     from the first extract until the last projection lands — and a figure is
+     provisional throughout both. An unreachable status read contributes nothing rather
+     than blocking the document signal. */
+  return seeding.data?.seeding === true || documentsInProgress(data ?? EMPTY_DOCS, Date.now());
+}
+
+/**
  * Watches document extraction and projection for the whole session and refreshes brain
  * data when they complete. Mount exactly once, inside the authenticated shell - it
  * deliberately outlives the Add Source modal and the onboarding flow so closing either
  * one early does not cancel the refresh.
  */
 export function useBrainProjectionRefresh(): void {
-  const docsQuery = useQuery<DocumentProgressLike[]>({ queryKey: [DOCUMENTS_KEY] });
+  const docsQuery = useQuery<DocumentProgressLike[]>({
+    queryKey: [DOCUMENTS_KEY],
+    // Idle re-read so a document that appears after mount is seen at all; the faster
+    // in-progress poll below takes over once one is known to be in flight.
+    refetchInterval: DOCUMENT_IDLE_POLL_MS,
+  });
   const docs = docsQuery.data ?? EMPTY_DOCS;
 
   // Re-evaluating the deadline needs a render, and a poll that returns identical data
