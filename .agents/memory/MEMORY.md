@@ -70,4 +70,5 @@
 - [Agent identity vs actor](agent-identity-vs-actor.md) — `actor` is often the human approver; agent-ness survives only in the actor_ref lookup PATH, so classify at map time or omit the prefix.
 - [Brain agent type resolution](brain-agent-type-resolution.md) — `proposing_agent` ULID ≠ analysis agent type; pass proposals into useBrainAuditRecords via inline useRef map (not module-level cache).
 - [brain-core extraction and obligations fixes](brain-core-extraction-fixes.md) — upload loop fix (fail terminally, not retry) + obligations `?direction=payable` filter; BFF proxy still needs direction param.
+- [Payable → invoice join](payable-invoice-join.md) — obligations carry no invoice ref; infer on counterparty+amount+due-day, counted one-for-one, unpaid AP only; unreadable feed ≠ "no invoice".
 - [Liabilities source contract](liabilities-source-contract.md) — "what we owe" = obligations feed, never invoices (no payroll/tax); payable filter fails open; RawObligation is permissive so TS can't catch a wrong source.

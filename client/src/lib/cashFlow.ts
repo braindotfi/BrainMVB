@@ -22,6 +22,7 @@
  */
 
 import { liabilitiesTotal, unpaidApInvoices, payableObligations, type ApInvoiceLike } from "./liabilities";
+import { isoDay, absAmount as num, debtKey } from "./debtIdentity";
 import type { RawObligation } from "./brainObligations";
 import { capitalCase } from "./displayLabels";
 
@@ -94,22 +95,10 @@ export const KIND_LABEL: Record<CashFlowKind, string> = {
   bill: "Bill",
 };
 
-function num(v: unknown): number {
-  const n = Number(v);
-  return Number.isFinite(n) ? Math.abs(n) : 0;
-}
-
-function isoDay(v: string | null | undefined): string {
-  if (typeof v !== "string" || !v.trim()) return "";
-  return v.slice(0, 10);
-}
-
-/** Identifies the DEBT a row describes, so an invoice and its obligation twin
- *  collapse to one row. Day-resolution on purpose: the two feeds carry the same
- *  instant with different precision. */
-function debtKey(counterpartyId: string | null | undefined, amount: number, isoDate: string): string {
-  return `${counterpartyId ?? ""}|${amount.toFixed(2)}|${isoDate}`;
-}
+/* Debt identity lives in its own module because Payables needs the same definition
+   to link an obligation row back to the invoice that billed it. If the two drifted,
+   a bill Cash Flow collapses into one row would be a payable Payables calls
+   uninvoiced. */
 
 /**
  * One ordered list of everything that moved or is owed.

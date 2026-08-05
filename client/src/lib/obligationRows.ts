@@ -10,6 +10,40 @@ import { capitalCase } from "./displayLabels";
 
 type Format = (a: string | number) => string;
 
+/* ── status presentation ──────────────────────────────────────────────────────
+   Shared by the Payables list badge and the detail popup's header chip.
+
+   These must come from ONE place. When the popup derived its own chip from the due
+   date while the list badge read brain-core's `status`, a tax payable dated in the
+   past but still marked `due` rendered as "Due" in the list and "Overdue" in the
+   popup you got by clicking it — the same record disagreeing with itself on one
+   screen. The date and the status are two different questions; the record's state is
+   the status, so that is what both surfaces show.
+
+   Colours are the three the rest of the Ledger already uses for these meanings
+   (#350011 red, #4a2300 amber, #222737 neutral), so "overdue" reads the same here as
+   it does on Cash Flow. Borders need an explicit `border border-solid` on the
+   element; a colour alone renders no stroke at all. */
+const STATUS_COLORS: Record<string, { bg: string; border: string; fg: string }> = {
+  overdue: { bg: "#350011", border: "rgba(210,3,68,0.25)", fg: "#d20344" },
+  due: { bg: "#4a2300", border: "rgba(255,148,0,0.25)", fg: "#ff9400" },
+  upcoming: { bg: "#222737", border: "#2c3247", fg: "#6c779d" },
+};
+const NEUTRAL = { bg: "#222737", border: "#2c3247", fg: "#6c779d" };
+
+/** An unrecognised status still gets colours — neutral ones. Never dropped. */
+export function statusColors(status: string): { bg: string; border: string; fg: string } {
+  return STATUS_COLORS[status.trim().toLowerCase()] ?? NEUTRAL;
+}
+
+/** The same badge, shaped for the detail popup's header chip. */
+export function statusChip(status: string): { text: string; color: string; bg: string; border: string } | null {
+  // No status at all gets no chip, rather than an empty pill.
+  if (!status || !status.trim()) return null;
+  const c = statusColors(status);
+  return { text: capitalCase(status), color: c.fg, bg: c.bg, border: c.border };
+}
+
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 /** "Due 12 Aug 2026", or an honest phrase when the record carries no usable date. */

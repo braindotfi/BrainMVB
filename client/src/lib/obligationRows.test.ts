@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { subLabel, dueLabel, amountLabel } from "./obligationRows";
+import { subLabel, dueLabel, amountLabel, statusColors, statusChip } from "./obligationRows";
 
 const fmt = (n: string | number) =>
   `$${Number(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -65,5 +65,48 @@ describe("dueLabel", () => {
   it("does not invent a date it does not have", () => {
     expect(dueLabel(null)).toBe("No due date recorded");
     expect(dueLabel("not-a-date")).toBe("No due date recorded");
+  });
+});
+
+/**
+ * The status badge's colours and the detail popup's header chip come from here for
+ * one reason: they used to be computed separately, and the list said "Due" for a
+ * record whose popup said "Overdue". One record, one screen, two answers.
+ */
+describe("payable status presentation", () => {
+  it("gives the popup chip the same colours the list badge uses", () => {
+    const c = statusColors("overdue");
+    expect(statusChip("overdue")).toEqual({
+      text: "Overdue",
+      color: c.fg,
+      bg: c.bg,
+      border: c.border,
+    });
+  });
+
+  it("reports the status brain-core sent, not one inferred from a date", () => {
+    // A payable dated in the past that brain-core still calls `due` is "Due" here.
+    // Whether that is right is brain-core's call; contradicting it on one surface
+    // while echoing it on another is not.
+    expect(statusChip("due")?.text).toBe("Due");
+    expect(statusChip("upcoming")?.text).toBe("Upcoming");
+  });
+
+  it("colours an unrecognised status neutrally rather than dropping it", () => {
+    // Verbatim apart from casing — the shared capitalCase leaves the underscore
+    // alone. Pinned as-is rather than prettified: an unknown status is brain-core's
+    // word, and reshaping it here would only make the two surfaces diverge again.
+    expect(statusChip("in_dispute")?.text).toBe("In_dispute");
+    expect(statusColors("in_dispute")).toEqual(statusColors("upcoming"));
+  });
+
+  it("renders no chip at all when there is no status", () => {
+    // An empty pill would read as a state.
+    expect(statusChip("")).toBeNull();
+    expect(statusChip("   ")).toBeNull();
+  });
+
+  it("is case- and whitespace-insensitive, like the badge lookup", () => {
+    expect(statusColors(" OVERDUE ")).toEqual(statusColors("overdue"));
   });
 });
