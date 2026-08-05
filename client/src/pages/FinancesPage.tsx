@@ -23,6 +23,7 @@ import { useLocation, useSearch } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useCurrency } from "@/lib/useCurrency";
 import { CashFlowTab } from "@/components/CashFlowTab";
+import { ObligationsTab } from "@/components/ObligationsTab";
 import { VendorsPanel } from "@/pages/VendorsPanel";
 import { RulesPanel } from "@/pages/RulesPanel";
 import { WidgetCard } from "@/components/LedgerWidgets";
@@ -53,8 +54,8 @@ function timeAgo(ts: number): string {
 
 // ─── tabs ────────────────────────────────────────────────────────────────────
 
-export type LedgerTab = "Accounts" | "Cash Flow" | "Counterparties" | "Rules";
-export const LEDGER_TABS: LedgerTab[] = ["Accounts", "Cash Flow", "Counterparties", "Rules"];
+export type LedgerTab = "Accounts" | "Cash Flow" | "Obligations" | "Counterparties" | "Rules";
+export const LEDGER_TABS: LedgerTab[] = ["Accounts", "Cash Flow", "Obligations", "Counterparties", "Rules"];
 
 export const ledgerTabSlug = (tab: LedgerTab): string => tab.toLowerCase().replace(/\s+/g, "-");
 
@@ -78,11 +79,15 @@ const TAB_BY_SLUG: Record<string, LedgerTab> = {
   // (assistant citations, global search, shared URLs) must keep working.
   vendors: "Counterparties",
   rules: "Rules",
+  obligations: "Obligations",
   recent: "Cash Flow",
   bills: "Cash Flow",
   income: "Cash Flow",
   expenses: "Cash Flow",
-  liabilities: "Cash Flow",
+  // Retired tab that now has a real home again. It pointed at Cash Flow only
+  // because no itemized liabilities view existed; Obligations IS that view, so
+  // every old ?tab=liabilities link lands on the list it originally meant.
+  liabilities: "Obligations",
 };
 
 export function resolveLedgerTab(param: string | null | undefined): LedgerTab | null {
@@ -99,6 +104,10 @@ const TAB_COPY: Record<LedgerTab, { heading: string; sub: string | null }> = {
   "Cash Flow": {
     heading: "Everywhere your money moved.",
     sub: "Income, expenses and the bills you still owe, in one list.",
+  },
+  Obligations: {
+    heading: "Everything you still owe.",
+    sub: "Every outstanding obligation, who it is owed to, and when it falls due.",
   },
   Counterparties: {
     heading: "The people and businesses you trade with.",
@@ -339,6 +348,8 @@ export function FinancesPage() {
         )}
 
         {activeTab === "Cash Flow" && <CashFlowTab format={format} onOpenTx={setOpenTxId} />}
+
+        {activeTab === "Obligations" && <ObligationsTab format={format} />}
 
         {activeTab === "Counterparties" && <VendorsPanel />}
 

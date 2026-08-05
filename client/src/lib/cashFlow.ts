@@ -22,6 +22,7 @@
  */
 
 import { liabilitiesTotal, unpaidApInvoices, type ApInvoiceLike } from "./liabilities";
+import type { RawObligation } from "./brainObligations";
 
 export interface CashFlowTxLike {
   id: string;
@@ -166,7 +167,7 @@ export interface CashFlowTotals {
   /** `null` means the transaction feed could not be read — never render as 0. */
   income: number | null;
   expenses: number | null;
-  /** `null` means the invoice feed could not be read. */
+  /** `null` means the obligations feed could not be read. */
   liabilities: number | null;
   /** ISO bounds of the transactions actually counted, for an honest period label. */
   periodStart: string | null;
@@ -176,9 +177,14 @@ export interface CashFlowTotals {
 export function cashFlowTotals(input: {
   transactions?: readonly CashFlowTxLike[] | null;
   invoices?: readonly CashFlowInvoiceLike[] | null;
+  /* Liabilities come from obligations, NOT from `invoices`. The invoice feed carries
+     no payroll, so deriving the figure from it understated what the tenant owed and
+     disagreed with the Obligations tab this metric sits beside. `invoices` is still
+     read above, for the dated bill ROWS — a different question from the total. */
+  obligations?: readonly RawObligation[] | null;
 }): CashFlowTotals {
   const txs = input.transactions;
-  const liabilities = liabilitiesTotal(input.invoices ?? null);
+  const liabilities = liabilitiesTotal(input.obligations ?? null);
 
   if (txs == null) {
     return { income: null, expenses: null, liabilities, periodStart: null, periodEnd: null };
@@ -207,6 +213,30 @@ export function cashFlowTotals(input: {
   }
 
   return { income, expenses, liabilities, periodStart: start, periodEnd: end };
+}
+
+/**
+ * The partial-failure notice above the metrics.
+ *
+ * Three independent reads back the Cash Flow tab, and they fail independently. A single
+ * generic "cash flow couldn't be loaded" overstates the damage when only one is down
+ * and — the real problem — never says WHICH figure on screen is now untrustworthy. A
+ * user cannot tell a $0 that means "nothing moved" from a $0 that means "we could not
+ * find out" unless the banner names the casualty.
+ *
+ * Ordered by how much a wrong reading costs: money owed first, then earnings, then rows.
+ */
+export function incompleteMessage(f: { tx: boolean; inv: boolean; ob: boolean }): string {
+  const lost: string[] = [];
+  if (f.ob) lost.push("liabilities");
+  if (f.tx) lost.push("income and expenses");
+  if (f.inv) lost.push("the bills listed below");
+  if (lost.length === 0) return "";
+  const list = lost.length === 1 ? lost[0] : `${lost.slice(0, -1).join(", ")} and ${lost[lost.length - 1]}`;
+  return (
+    `${list.charAt(0).toUpperCase()}${list.slice(1)} couldn't be loaded. That is not a statement ` +
+    `that nothing moved or that nothing is owed. Treat it as unknown, and refresh to see the real position.`
+  );
 }
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];

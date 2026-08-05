@@ -34,6 +34,35 @@ function stubFetch(status: number, body: unknown) {
 
 afterEach(() => vi.unstubAllGlobals());
 
+describe("normalizeObligation - kind", () => {
+  /* `kind` exists because `direction` folds `type` in as a payable/receivable fallback,
+     so it cannot be trusted to name the KIND of obligation. brain-core leaves `direction`
+     null today, which is the only reason reading it happened to render "Bill"/"Payroll" —
+     the day a real direction arrives, that row would read "Payable". */
+  it("carries the record's own type through as the kind", () => {
+    expect(normalizeObligation({ ...base, type: "bill" }).kind).toBe("bill");
+    expect(normalizeObligation({ ...base, type: "payroll" }).kind).toBe("payroll");
+    expect(normalizeObligation({ ...base, type: "tax" }).kind).toBe("tax");
+  });
+
+  it("is null when a direction word was put in `type`, which is not a kind", () => {
+    expect(normalizeObligation({ ...base, type: "payable" }).kind).toBeNull();
+    expect(normalizeObligation({ ...base, type: "RECEIVABLE" }).kind).toBeNull();
+  });
+
+  it("is null when the record carried no type at all", () => {
+    expect(normalizeObligation({ ...base, type: undefined }).kind).toBeNull();
+    expect(normalizeObligation({}).kind).toBeNull();
+  });
+
+  it("survives an explicit direction without losing the kind", () => {
+    // The exact future regression this field exists to prevent.
+    const o = normalizeObligation({ ...base, direction: "payable", type: "bill" });
+    expect(o.direction).toBe("payable");
+    expect(o.kind).toBe("bill");
+  });
+});
+
 describe("normalizeObligation - direction", () => {
   it("keeps an explicit direction", () => {
     expect(normalizeObligation({ ...base, direction: "receivable" }).direction).toBe("receivable");
@@ -63,6 +92,8 @@ describe("normalizeObligation - every other field", () => {
     expect(normalizeObligation(base)).toEqual({
       id: "obl_1",
       direction: "payable",
+      // `base` carries an explicit direction and no `type`, so there is no kind to report.
+      kind: null,
       counterparty_id: "cp_1",
       amount_due: "100.00",
       currency: "USD",

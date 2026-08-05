@@ -3,6 +3,7 @@ import {
   buildCashFlowRows,
   cashFlowTotals,
   cashFlowPeriodLabel,
+  incompleteMessage,
   type CashFlowTxLike,
   type CashFlowInvoiceLike,
 } from "./cashFlow";
@@ -166,21 +167,63 @@ describe("cashFlowTotals", () => {
     expect(t.expenses).toBe(0);
   });
 
-  it("returns null liabilities when the invoice feed is unreachable", () => {
+  it("returns null liabilities when the obligations feed is unreachable", () => {
     expect(cashFlowTotals({ transactions: [] }).liabilities).toBeNull();
-    expect(cashFlowTotals({ transactions: [], invoices: [] }).liabilities).toBe(0);
+    expect(cashFlowTotals({ transactions: [], obligations: [] }).liabilities).toBe(0);
   });
 
-  it("sums liabilities from unpaid AP only", () => {
+  it("sums liabilities from payable obligations, payroll included", () => {
     const t = cashFlowTotals({
       transactions: [],
-      invoices: [
-        INV({ id: "ap1", amount_due: "12000" }),
-        INV({ id: "ap2", amount_due: "6000" }),
-        INV({ id: "ar1", amount_due: "999999", metadata: { scenario: null } }),
+      obligations: [
+        { id: "ob1", type: "bill", amount_due: "12000", status: "due" },
+        { id: "ob2", type: "payroll", amount_due: "6000", status: "upcoming" },
+        { id: "ob3", type: "receivable", amount_due: "999999", status: "due" },
       ],
     });
     expect(t.liabilities).toBe(18000);
+  });
+
+  it("names every feed that failed, so the user knows which figure to distrust", () => {
+    const all = incompleteMessage({ tx: true, inv: true, ob: true });
+    expect(all).toContain("Liabilities, income and expenses and the bills listed below");
+
+    // One feed down must not claim the others are unreliable.
+    const obOnly = incompleteMessage({ tx: false, inv: false, ob: true });
+    expect(obOnly).toContain("Liabilities couldn't be loaded");
+    expect(obOnly).not.toContain("income");
+    expect(obOnly).not.toContain("bills listed below");
+
+    const txOnly = incompleteMessage({ tx: true, inv: false, ob: false });
+    expect(txOnly).toContain("Income and expenses couldn't be loaded");
+    expect(txOnly).not.toContain("iabilities");
+
+    const invOnly = incompleteMessage({ tx: false, inv: true, ob: false });
+    expect(invOnly).toContain("The bills listed below couldn't be loaded");
+    expect(invOnly).not.toContain("iabilities");
+  });
+
+  it("refuses to read as an all-clear, whichever feed is down", () => {
+    for (const f of [
+      { tx: true, inv: false, ob: false },
+      { tx: false, inv: true, ob: false },
+      { tx: false, inv: false, ob: true },
+      { tx: true, inv: true, ob: true },
+    ]) {
+      expect(incompleteMessage(f)).toContain("not a statement");
+    }
+  });
+
+  it("says nothing when nothing failed, so the banner cannot render empty", () => {
+    expect(incompleteMessage({ tx: false, inv: false, ob: false })).toBe("");
+  });
+
+  it("never derives liabilities from the invoice feed, which carries no payroll", () => {
+    /* Invoices still feed the dated bill ROWS below the metrics — that is a different
+       question from "what do we owe in total". Deriving the total from them understated
+       it and made the metric disagree with the Obligations tab beside it. */
+    const t = cashFlowTotals({ transactions: [], invoices: [INV({ id: "ap1", amount_due: "12000" })] });
+    expect(t.liabilities).toBeNull();
   });
 
   it("bounds the period by the transactions that actually fed the totals", () => {

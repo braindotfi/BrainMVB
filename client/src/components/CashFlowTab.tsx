@@ -14,11 +14,13 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { unpaidApInvoices } from "@/lib/liabilities";
+import { unpaidApInvoices, payableObligations } from "@/lib/liabilities";
+import type { RawObligation } from "@/lib/brainObligations";
 import {
   buildCashFlowRows,
   cashFlowTotals,
   cashFlowPeriodLabel,
+  incompleteMessage,
   KIND_LABEL,
   type CashFlowKind,
 } from "@/lib/cashFlow";
@@ -219,6 +221,10 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
   const txQ = useQuery<TxResponse>({ queryKey: ["/api/brain/ledger/transactions"], retry: false });
   const invQ = useQuery<InvoicesLiteResponse>({ queryKey: ["/api/brain/ledger/invoices"], retry: false });
   const cpQ = useQuery<CounterpartiesLiteResponse>({ queryKey: ["/api/brain/ledger/counterparties"], retry: false });
+  /* Liabilities read obligations, not invoices: the invoice feed carries no payroll,
+     so the old figure understated what was owed and disagreed with the Obligations
+     tab. Invoices are still read above — they supply the dated bill ROWS below. */
+  const obQ = useQuery<{ obligations?: RawObligation[] }>({ queryKey: ["/api/brain/ledger/obligations"], retry: false });
 
   /* Three states, not two. `data === undefined` covers both "still loading" and
      "the request failed", and collapsing them is precisely how a failed read ends
@@ -228,6 +234,8 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
   const invs = invQ.data?.invoices ?? null;
   const txFailed = txQ.isError || (txQ.data != null && txQ.data.transactions == null);
   const invFailed = invQ.isError || (invQ.data != null && invQ.data.invoices == null);
+  const obs = obQ.data?.obligations ?? null;
+  const obFailed = obQ.isError || (obQ.data != null && obQ.data.obligations == null);
   const txPending = txs == null && !txFailed;
   const invPending = invs == null && !invFailed;
   const settling = txPending || invPending;
@@ -236,7 +244,7 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
     (id && cpQ.data?.counterparties.find((c) => c.id === id)?.name) || null;
 
   const rows = buildCashFlowRows({ transactions: txs, invoices: invs, nameOf });
-  const totals = cashFlowTotals({ transactions: txs, invoices: invs });
+  const totals = cashFlowTotals({ transactions: txs, invoices: invs, obligations: obs });
   const period = cashFlowPeriodLabel(totals.periodStart, totals.periodEnd);
 
   /* The period the figures actually cover, named. The mock labels these "(30d)";
@@ -265,19 +273,22 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
   })();
 
   // Expenses: always make the scope explicit so $0 next to large bills doesn't read as a bug.
-  // Expenses = outflows already settled; unpaid AP bills are captured under Liabilities instead.
-  const expensesCaption = "Outflows settled and posted · unpaid bills are in Liabilities";
+  // Expenses = outflows already settled; what is still owed is captured under Liabilities.
+  const expensesCaption = "Outflows settled and posted · what you still owe is in Obligations";
 
-  // Liabilities: N bills, next vendor due — never restate the total
+  /* Liabilities: N obligations, next counterparty due — never restate the total.
+     Counts obligations rather than the bill rows listed below, because that is what
+     the figure above it now sums. Saying "N unpaid bills" here while the total also
+     included payroll would have made the caption contradict its own number. */
+  const obRows = payableObligations(obs);
   const liabilitiesCaption = (() => {
-    if (invFailed) return "Source unavailable";
-    if (invs == null) return "Loading…";
-    if (apBills.length === 0) return "No outstanding bills";
-    const next = [...apBills]
-      .sort((a, b) => new Date(a.due_date ?? 0).getTime() - new Date(b.due_date ?? 0).getTime())
-      .find((i) => i.status !== "overdue");
-    const nextVendor = next ? (nameOf(next.counterparty_id) ?? "a vendor") : null;
-    return `${apBills.length} unpaid bill${apBills.length === 1 ? "" : "s"}${nextVendor ? ` · next due ${nextVendor}` : ""}`;
+    if (obFailed) return "Source unavailable";
+    if (obs == null) return "Loading…";
+    if (obRows.length === 0) return "Nothing outstanding";
+    // payableObligations sorts by due date, so the first non-overdue row is the next due.
+    const next = obRows.find((o) => o.status !== "overdue");
+    const nextParty = next ? (nameOf(next.counterparty_id) ?? "a counterparty") : null;
+    return `${obRows.length} obligation${obRows.length === 1 ? "" : "s"}${nextParty ? ` · next due ${nextParty}` : ""}`;
   })();
 
   return (
@@ -287,13 +298,9 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
       {/* A source that failed must say so even though the rest of the tab still
           renders. Silence here is the difference between "no expenses" and
           "we could not find out". */}
-      {(txFailed || invFailed) && (
+      {(txFailed || invFailed || obFailed) && (
         <UnavailableDataBox testId="banner-cashflow-incomplete">
-          {txFailed && invFailed
-            ? "Cash flow couldn't be loaded. These figures are not a statement that nothing moved. Reconnect or refresh to see the real position."
-            : txFailed
-              ? "Transactions couldn't be loaded, so income and expenses are unavailable. Bills below are complete."
-              : "Bills couldn't be loaded, so liabilities are unavailable. Transactions below are complete."}
+          {incompleteMessage({ tx: txFailed, inv: invFailed, ob: obFailed })}
         </UnavailableDataBox>
       )}
 
