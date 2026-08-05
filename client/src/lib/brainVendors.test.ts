@@ -5,6 +5,7 @@ import {
   isReviewedOnly,
   isPayrollRegisterPlaceholder,
   supportsTrustActions,
+  informationalReasonLabel,
   reviewReasonLabel,
   vendorSegment,
   vendorTier,
@@ -174,7 +175,7 @@ describe("vendorTier", () => {
     ];
 
     const buckets: Record<VendorTier, Vendor[]> = {
-      needsReview: [], flagged: [], trusted: [], suggested: [],
+      needsReview: [], flagged: [], trusted: [], suggested: [], informational: [],
     };
     for (const row of rows) {
       const tier = vendorTier(row);
@@ -410,9 +411,33 @@ describe("payroll register placeholders render informational-only", () => {
     expect(v.eligibleForTrust).toBe(false);
   });
 
-  it("names the row in the review queue instead of calling it New", () => {
-    // "New" invites a review this row cannot receive.
-    expect(reviewReasonLabel(mapCounterpartyToVendor(payroll()))).toBe("Payroll register");
+  /* Placement. Needs Review is a work queue whose badge is the screen's single
+     attention signal, so a row that can never be actioned must not sit in it —
+     the count would never reach zero. The row still has to render somewhere,
+     hence its own tier rather than a filter that drops it. */
+  it("keeps the placeholder out of the Needs Review queue and its badge", () => {
+    const v = mapCounterpartyToVendor(payroll());
+    expect(isNeedsReview(v)).toBe(false);
+    expect(reviewReasonLabel(v)).toBeNull();
+  });
+
+  it("files the placeholder under its own tier so it still renders", () => {
+    expect(vendorTier(mapCounterpartyToVendor(payroll()))).toBe("informational");
+  });
+
+  it("names what the row is in its own list", () => {
+    expect(informationalReasonLabel(mapCounterpartyToVendor(payroll()))).toBe("Payroll register");
+    // Ordinary rows have nothing to say here.
+    expect(informationalReasonLabel(mapCounterpartyToVendor(cp()))).toBeNull();
+  });
+
+  it("does not let a risk signal drag the placeholder back into the work queue", () => {
+    // Risk normally outranks everything. It cannot here: there are no controls
+    // to review it with. The flag itself is still carried on the row.
+    const flagged = mapCounterpartyToVendor(payroll({ risk_level: "sanctioned" }));
+    expect(vendorTier(flagged)).toBe("informational");
+    expect(isNeedsReview(flagged)).toBe(false);
+    expect(flagged.flags).toHaveLength(1);
   });
 
   /* The four half-matches. Each one must keep its controls. */
@@ -456,6 +481,12 @@ describe("payroll register placeholders render informational-only", () => {
     const v = mapCounterpartyToVendor(payroll());
     expect(vendorSegment(v)).toBe("vendor");
     expect(vendorTier(v)).not.toBeNull();
+  });
+
+  it("shows the Informational chip only while it has rows, like Suggested", () => {
+    const src = require("fs").readFileSync("client/src/pages/VendorsPanel.tsx", "utf8");
+    expect(src).toContain("const showInformational = grouped.informational.length > 0;");
+    expect(src).toContain('...(showInformational ? [{ value: "Informational", label: "Informational" }] : []),');
   });
 });
 

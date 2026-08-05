@@ -225,9 +225,20 @@ export function mapCounterpartyToVendor(cp: BrainCounterparty): Vendor {
       marking a counterparty reviewed would be a trust-field write, which
       brain-core rejects outright. There is nowhere to persist it.
 
-   Risk always wins. A row someone flagged or dismissed is still risk-flagged,
-   and a risk-flagged row is never quietly settled by a click. */
+   Risk wins over every user action. A row someone flagged or dismissed is still
+   risk-flagged, and a risk-flagged row is never quietly settled by a click.
+
+   The one thing ahead of risk is a row that carries no controls at all (see
+   below): risk decides how urgently something needs reviewing, but it cannot
+   put work in a queue that has no way to carry it out. Such a row keeps its
+   flags rendered — it is moved, not silenced. */
 export function isNeedsReview(v: Vendor): boolean {
+  /* Informational rows carry no trust controls, so they are not work anyone can
+     finish. Counting them here would leave the Needs Review badge permanently
+     above zero with a row that cannot be cleared, which is what makes the badge
+     worth looking at. They are not dropped — vendorTier files them under their
+     own chip. */
+  if (v.informationalSource !== undefined) return false;
   if (v.riskLevel === "high" || v.riskLevel === "sanctioned") return true;
   if (v.trustState !== undefined) return v.trustState === "unreviewed";
   /* "known" is included here: a counterparty with payment history but no
@@ -249,6 +260,12 @@ export function isNeedsReview(v: Vendor): boolean {
    null so that a future regression is detectable in production telemetry
    rather than silently losing rows. */
 export function vendorTier(v: Vendor): VendorTier | null {
+  /* Informational rows first, ahead of the risk check, because tier order is a
+     statement about what the user can DO and the answer here is "nothing" in
+     every case. A risk signal on a placeholder is not lost by this: flags still
+     render on the row and in its detail popup. Filing it under Needs Review
+     instead would promise a review that has no controls to carry it out. */
+  if (v.informationalSource !== undefined) return "informational";
   /* Suggested slots in HERE, first, once brain-core confirms which provenance
      values (if any) mean "Brain inferred this, nobody has confirmed it". Order
      is the whole decision: a suggested row is also unreviewed, so whichever
@@ -284,14 +301,17 @@ export function isReviewedOnly(v: Vendor): boolean {
 /** Why a row sits in Needs Review. Risk outranks newness when both apply. */
 export function reviewReasonLabel(v: Vendor): string | null {
   if (!isNeedsReview(v)) return null;
-  /* Ahead of the risk and newness reasons on purpose: "New" would invite a
-     review the row cannot receive. Naming what it is explains why it has no
-     controls when the user opens it. */
-  if (v.informationalSource === "payroll_register") return "Payroll register";
   if (v.riskLevel === "sanctioned") return "Risk: sanctioned";
   if (v.riskLevel === "high") return "Risk: high";
   if (v.trustStatus === "under_review") return "Flagged for review";
   return "New";
+}
+
+/** What an informational row IS, for its row chip. Named rather than left blank
+ *  so the list explains itself: the tab says these rows are not actionable, this
+ *  says why this one is here. */
+export function informationalReasonLabel(v: Vendor): string | null {
+  return v.informationalSource === "payroll_register" ? "Payroll register" : null;
 }
 
 /** Mock fixtures predate the Vendors/Customers split; treat them as vendors. */

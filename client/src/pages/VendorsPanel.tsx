@@ -8,6 +8,7 @@ import {
   vendorTier,
   isReviewedOnly,
   reviewReasonLabel,
+  informationalReasonLabel,
   vendorSegment,
   supportsTrustActions,
 } from "@/lib/brainVendors";
@@ -29,7 +30,7 @@ import { RecordPill } from "@/components/RecordPill";
    Review chip counted only risk-flagged ones, so a warning pointed at rows the
    active filter refused to show. Newness is now a REASON inside Needs Review,
    not a competing filter. */
-type VendorTab = "Needs Review" | "Trusted" | "Flagged" | "Suggested";
+type VendorTab = "Needs Review" | "Trusted" | "Flagged" | "Suggested" | "Informational";
 
 /** Vendors (we pay them) vs Customers (they pay us). */
 type Segment = "vendor" | "customer";
@@ -44,6 +45,7 @@ const TAB_TIER: Record<VendorTab, VendorTier> = {
   Trusted: "trusted",
   Flagged: "flagged",
   Suggested: "suggested",
+  Informational: "informational",
 };
 
 const Divider = () => <div className="h-px shrink-0 w-full" style={{ background: "#1d2132" }} />;
@@ -535,6 +537,7 @@ export function VendorsPanel() {
       flagged: [],
       trusted: [],
       suggested: [],
+      informational: [],
     };
     for (const v of segmentVendors) {
       const tier = vendorTier(v);
@@ -583,12 +586,20 @@ export function VendorsPanel() {
   const showFlagged =
     !countsKnown || segment === "vendor" || grouped.flagged.length > 0;
   const showSuggested = grouped.suggested.length > 0;
+  /* Informational: same hidden-while-empty rule as Suggested, and for the same
+     reason — a chip for a tier the tenant has no rows in claims a distinction
+     that does not exist for them. Most tenants will never see it. It appears the
+     moment brain-core returns a placeholder row and disappears if they stop
+     coming, and the loading guard is likewise absent: the chip either has rows
+     or it doesn't. */
+  const showInformational = grouped.informational.length > 0;
 
   const tabVisible: Record<VendorTab, boolean> = {
     "Needs Review": true,
     Trusted: true,
     Flagged: showFlagged,
     Suggested: showSuggested,
+    Informational: showInformational,
   };
 
   /* A segment switch — or a bucket emptying out — can retire the chip that is
@@ -629,6 +640,8 @@ export function VendorsPanel() {
     { value: "Trusted", label: trustedLabel },
     ...(showFlagged ? [{ value: "Flagged", label: "Flagged" }] : []),
     ...(showSuggested ? [{ value: "Suggested", label: "Suggested" }] : []),
+    // No count: these rows are records, not a workload.
+    ...(showInformational ? [{ value: "Informational", label: "Informational" }] : []),
   ];
 
   const segmentFilters = [
@@ -935,9 +948,10 @@ export function VendorsPanel() {
                               ? "Trust a vendor from the Needs Review tab."
                               : "Confirm a customer from the Needs Review tab."
                           }`}
-                        {/* No Suggested copy: the chip is only rendered while its
-                            bucket has rows, so an empty Suggested list is
-                            unreachable. Restore a line here if that changes. */}
+                        {/* No Suggested or Informational copy: those chips are
+                            only rendered while their bucket has rows, so an
+                            empty list is unreachable for both. Restore a line
+                            here if that changes. */}
                         {effectiveTab === "Flagged" && `No flagged ${segmentNoun}.`}
                       </p>
                     </div>
@@ -950,7 +964,13 @@ export function VendorsPanel() {
                           format={format}
                           // Reason is shown only in the review queue — it answers
                           // "why is this here?", which is only a question there.
-                          reason={effectiveTab === "Needs Review" ? reviewReasonLabel(vendor) : null}
+                          reason={
+                            effectiveTab === "Needs Review"
+                              ? reviewReasonLabel(vendor)
+                              : effectiveTab === "Informational"
+                                ? informationalReasonLabel(vendor)
+                                : null
+                          }
                           reviewed={effectiveTab === "Trusted" && isReviewedOnly(vendor)}
                           onClick={() => handleOpenVendor(vendor)}
                         />

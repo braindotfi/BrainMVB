@@ -24,7 +24,7 @@ export type CounterpartySegment = "vendor" | "customer";
 /** The chip a row is filed under. Named by meaning, not by label: the Customers
  *  segment renders "trusted" as "Confirmed", and the label is the only thing
  *  that differs — same state, same endpoint. */
-export type VendorTier = "needsReview" | "flagged" | "trusted" | "suggested";
+export type VendorTier = "needsReview" | "flagged" | "trusted" | "suggested" | "informational";
 
 export type VendorFlagKind =
   | "bank_detail_change"
