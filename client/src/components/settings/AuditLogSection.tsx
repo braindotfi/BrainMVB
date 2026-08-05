@@ -375,7 +375,10 @@ export function AuditLogSection() {
       </div>
 
       {/* Records */}
-      <div className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10" }}>
+      <div
+        className="rounded-[16px] overflow-hidden border border-solid border-[#1d2132]"
+        style={{ background: "#0a0c10" }}
+      >
         {visible.length === 0 ? (
           <div className="p-[24px] flex flex-col items-center gap-[6px]" data-testid="text-audit-empty">
             <p
@@ -405,7 +408,7 @@ export function AuditLogSection() {
             const actor = humanReadableActor(record.actor);
             return (
               <div key={record.id}>
-                {i > 0 && <div className="h-px bg-[#1d2132] mx-4" />}
+                {i > 0 && <div className="h-px bg-[#1d2132] w-full" />}
                 <button
                   type="button"
                   data-testid={`row-audit-${record.id}`}
