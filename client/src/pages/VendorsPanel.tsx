@@ -469,7 +469,7 @@ export function VendorsPanel() {
         return;
       }
       await queryClient.invalidateQueries({ queryKey: ["/api/brain/ledger/counterparties"] });
-      alert.success("Success", `${vendorNameLabel} has been successfully deleted and removed.`);
+      alert.success("Vendor Successfully Deleted", `${vendorNameLabel} has been successfully deleted and removed.`);
       setActiveVendor(null);
       const params = new URLSearchParams(search);
       params.delete("vendor");
@@ -756,6 +756,7 @@ export function VendorsPanel() {
   const callTrustAction = async (
     vendorId: string,
     action: "grant" | "pause" | "acknowledge" | "restore",
+    successTitle: string,
     successText: string,
   ) => {
     setTrustBusy(true);
@@ -779,7 +780,7 @@ export function VendorsPanel() {
       params.delete("vendor");
       params.set("tab", "counterparties");
       navigate(`/ledger?${params.toString()}`, { replace: true });
-      alert.success("Success", successText);
+      alert.success(successTitle, successText);
     } catch {
       alert.error("Action failed", "Couldn't reach Brain core. Nothing was changed.");
     } finally {
@@ -789,21 +790,36 @@ export function VendorsPanel() {
 
   const handleGrant = (vendorId: string) => {
     const v = vendors.find((x) => x.id === vendorId);
-    return callTrustAction(vendorId, "grant", `${v?.name ?? "Vendor"} has been added as a trusted vendor.`);
+    return callTrustAction(
+      vendorId,
+      "grant",
+      "Vendor Successfully Trusted",
+      `${v?.name ?? "Vendor"} has been added as a trusted vendor.`,
+    );
   };
   const handleFlag = (vendorId: string) => {
     const v = vendors.find((x) => x.id === vendorId);
-    return callTrustAction(vendorId, "pause", `${v?.name ?? "Vendor"} has been added as a flagged vendor.`);
+    return callTrustAction(
+      vendorId,
+      "pause",
+      "Vendor Successfully Flagged",
+      `${v?.name ?? "Vendor"} has been added as a flagged vendor.`,
+    );
   };
   /* paused → trusted. Uses /trust/restore (not grant — grant is only valid from
      unreviewed/acknowledged; the matrix has no paused→trusted grant transition). */
   const handleRestore = (vendorId: string) => {
     const v = vendors.find((x) => x.id === vendorId);
-    return callTrustAction(vendorId, "restore", `${v?.name ?? "Vendor"} has been added as a trusted vendor.`);
+    return callTrustAction(
+      vendorId,
+      "restore",
+      "Vendor Successfully Trusted",
+      `${v?.name ?? "Vendor"} has been added as a trusted vendor.`,
+    );
   };
   const handleAcknowledge = (vendorId: string) => {
     const v = vendors.find((x) => x.id === vendorId);
-    return callTrustAction(vendorId, "acknowledge", `${v?.name ?? "Vendor"} has been reviewed but no action was taken.`);
+    return callTrustAction(vendorId, "acknowledge", "Vendor Successfully Mark with No Action", `${v?.name ?? "Vendor"} has been reviewed but no action was taken.`);
   };
 
   /* Bulk confirm — Customers segment only. N individual grant calls so each
