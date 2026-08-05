@@ -20,6 +20,7 @@ import { FilterChipRow } from "@/components/FilterChipRow";
 import { Plus, ChevronDown } from "lucide-react";
 import { AlertCallout, UnavailableDataBox } from "@/components/Callout";
 import closeIcon from "@assets/Close_1783293571882.png";
+import { CountPill } from "@/components/CountPill";
 
 /* "New" is deliberately NOT a top-level chip. It was one half of the bug this
    screen used to have: the banner counted new+unreviewed rows while the Needs
@@ -863,11 +864,7 @@ export function VendorsPanel() {
                       ? "Added Vendors"
                       : "Customers"}
                 </p>
-                <div className="bg-[#6c779d] flex items-center justify-center min-w-[18px] px-[5px] py-[1px] rounded-[4px] shrink-0">
-                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#0a0c10] text-[11px] text-center whitespace-nowrap">
-                    {tabVendors.length}
-                  </p>
-                </div>
+                <CountPill>{tabVendors.length}</CountPill>
               </div>
 
               {/* Bulk confirm: Customers segment, Needs Review tab, risk-free rows only.

@@ -10,6 +10,7 @@ import { useCurrency } from "@/lib/useCurrency";
 import { AuditRecordPopup } from "@/components/AuditRecordPopup";
 import { AlertCallout } from "@/components/Callout";
 import { capitalCase } from "@/lib/displayLabels";
+import { CountPill } from "@/components/CountPill";
 
 /* Settings → Audit Log.
  *
@@ -268,15 +269,11 @@ export function AuditLogSection() {
           {/* Suppressed while the feed is unreadable: a count next to a partial
               list reads as a total. */}
           {!isLoading && !feedUnavailable && records.length > 0 && (
-            <span
-              data-testid="badge-audit-count"
-              className="px-2 py-[2px] rounded-[22px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px]"
-              style={{ background: "#222737", color: "#6c779d", border: "1px solid rgba(108,119,157,0.2)" }}
-            >
+            <CountPill testId="badge-audit-count">
               {visible.length === records.length
                 ? `${records.length}${atEventLimit ? "+" : ""}`
                 : `${visible.length} of ${records.length}${atEventLimit ? "+" : ""}`}
-            </span>
+            </CountPill>
           )}
         </div>
 
@@ -427,7 +424,7 @@ export function AuditLogSection() {
                         {capitalCase(categoryBadge.label)}
                       </span>
                     </div>
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[18px]">
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[16px]">
                       {[actor, formatText(record.rowSubtitle ?? ""), record.occurredAtLabel]
                         .filter(Boolean)
                         .join(" · ")}

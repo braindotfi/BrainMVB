@@ -136,7 +136,8 @@ function SourceRow({
       className={`flex flex-col gap-[8px] px-[16px] py-[12px] ${last ? "" : "border-b border-[#1d2132]"} ${clickable ? "cursor-pointer transition-colors hover:bg-[#11141b] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631ee] focus-visible:ring-inset" : ""}`}
     >
       <div className="flex items-center gap-[12px]">
-        <div className="flex-1 min-w-0 flex flex-col gap-[2px]">
+        {/* 4px between title and subtext — the record spacing used everywhere else. */}
+        <div className="flex-1 min-w-0 flex flex-col gap-[4px]">
           <div className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] truncate">
             {title}
           </div>

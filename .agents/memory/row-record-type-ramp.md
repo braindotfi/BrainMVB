@@ -67,6 +67,32 @@ so raw bounding boxes read 65 vs 64 for rows that genuinely match.
 proposals GET because Overview/Inbox have none in the demo tenant — measuring an
 empty state would prove nothing about the rows it is meant to check.
 
+## The count badge is one component
+
+The "4" beside a section heading renders through a single shared pill component.
+The one allowed restatement of its geometry is a counter that must take its
+**host's** state colour as its fill (a counter inside a filter chip), because it
+cannot use a component that owns its own palette.
+
+**Why:** the same markup had been hand-copied into five surfaces and re-invented
+in a sixth, where it had drifted into a pill-shaped outline badge at a different
+size. Nobody spots that until two surfaces are seen side by side.
+
+**How to apply:** status badges (role, environment, state) are **not** count
+pills — they are deliberately a different shape. Making them match would conflate
+"how many" with "what kind".
+
+## A long-standing failure in the row-height check
+
+`scripts/qa-measure-row-heights.mjs` reports a **pre-existing** FAIL on the ledger
+cash flow surface: its shortest row measures 70/46 instead of 64/40, because that
+row's subtext line carries an inline chip. Confirm against a stashed tree before
+assuming a change of yours caused it.
+
+The harness also cannot launch Playwright's bundled headless shell in this
+container (missing `libglib`). Pass `PLAYWRIGHT=<npx-cache playwright index.mjs>`
+and `CHROMIUM=<nix chromium binary>`; both are read from the environment.
+
 ## What is deliberately NOT copied from Profile
 
 - **The 40px circle icon and chevron button.** Those are content and affordance,

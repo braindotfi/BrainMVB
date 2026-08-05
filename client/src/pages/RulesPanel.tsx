@@ -32,6 +32,7 @@ import { useCurrency } from "@/lib/useCurrency";
 import type { AutoRule, RuleSuggestion } from "@/lib/proposalTypes";
 import { AlertCallout, InfoIcon, UnavailableDataBox } from "@/components/Callout";
 import { AppAlertLink, useAppAlert } from "@/components/AppAlert";
+import { CountPill } from "@/components/CountPill";
 
 const ACTIVE = "#42bf23";
 
@@ -997,9 +998,7 @@ export function RulesPanel() {
       <div className="flex items-center gap-[8px] min-h-[16px] w-full">
         <div className="size-[6px] rounded-full shrink-0 bg-[#6c779d]" />
         <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[12px] uppercase tracking-[0.4px] whitespace-nowrap">Rules</p>
-        <div className="bg-[#6c779d] flex items-center justify-center min-w-[18px] px-[5px] py-[1px] rounded-[4px] shrink-0">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#0a0c10] text-[11px] text-center whitespace-nowrap">{activeCount}</p>
-        </div>
+        <CountPill>{activeCount}</CountPill>
         {activeTab === "Default" && !policyLoading && !policyError && policyVersion !== undefined && (
           <p className="ml-auto [font-family:'JetBrains_Mono',monospace] text-[12px] text-[#6c779d] whitespace-nowrap">
             v{policyVersion} · quorum {policyQuorum}

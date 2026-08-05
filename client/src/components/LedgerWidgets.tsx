@@ -6,6 +6,8 @@
  * copy would have drifted the moment one of them was restyled.
  */
 
+import { CountPill } from "@/components/CountPill";
+
 export const Divider = (): JSX.Element => (
   <div className="h-px shrink-0 w-full" style={{ background: "#1d2132" }} />
 );
@@ -14,11 +16,7 @@ export const WidgetHeader = ({ title, count }: { title: string; count?: number }
   <div className="flex items-center gap-[8px] min-h-[16px] w-full">
     <div className="size-[6px] rounded-full shrink-0 bg-[#6c779d]" />
     <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[12px] uppercase tracking-[0.4px] whitespace-nowrap">{title}</p>
-    {typeof count === "number" && (
-      <div className="bg-[#6c779d] flex items-center justify-center min-w-[18px] px-[5px] py-[1px] rounded-[4px] shrink-0">
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#0a0c10] text-[11px] text-center whitespace-nowrap">{count}</p>
-      </div>
-    )}
+    {typeof count === "number" && <CountPill>{count}</CountPill>}
   </div>
 );
 
