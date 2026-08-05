@@ -3,6 +3,7 @@ import {
   buildCashFlowRows,
   cashFlowTotals,
   cashFlowPeriodLabel,
+  detailLine,
   incompleteMessage,
   type CashFlowTxLike,
   type CashFlowInvoiceLike,
@@ -69,6 +70,127 @@ describe("buildCashFlowRows", () => {
     });
     expect(rows.map((r) => r.key)).toEqual(["inv:ap1"]);
     expect(rows[0]).toMatchObject({ kind: "bill", sign: "-", amount: 12000 });
+  });
+
+  /* ── obligations supply the rows invoices cannot ──────────────────────────
+     The Liabilities figure above this list sums obligations, so the list has to be
+     able to reach the same set or it can never add up to its own headline. */
+  const OBL = (over: Record<string, unknown> & { id: string }) => ({
+    counterparty_id: "cp_9",
+    amount_due: "500.00",
+    due_date: "2026-08-01",
+    status: "upcoming",
+    type: "payroll",
+    ...over,
+  });
+
+  it("adds payroll and tax rows, which the invoice feed does not carry at all", () => {
+    const rows = buildCashFlowRows({
+      obligations: [
+        OBL({ id: "o1", type: "payroll", amount_due: "33564.38" }),
+        OBL({ id: "o2", type: "tax", amount_due: "8894.63", due_date: "2026-04-15" }),
+      ],
+    });
+    expect(rows.map((r) => r.key).sort()).toEqual(["obl:o1", "obl:o2"]);
+    // Bill treatment (owed money, negative), but badged as what they actually are.
+    expect(rows.every((r) => r.kind === "bill" && r.sign === "-")).toBe(true);
+    expect(rows.map((r) => r.badgeLabel).sort()).toEqual(["Payroll", "Tax"]);
+  });
+
+  it("lists a debt once when the same bill arrives as both an invoice and an obligation", () => {
+    /* The two feeds carry the same three bills. Appending obligations blindly would
+       double every bill and make the list overstate what is owed — the exact failure
+       this list is meant to cure. */
+    const rows = buildCashFlowRows({
+      invoices: [INV({ id: "ap1", counterparty_id: "cp_1", amount_due: "4800.00", due_date: "2026-08-01T00:14:08.226Z" })],
+      obligations: [
+        OBL({ id: "twin", type: "bill", counterparty_id: "cp_1", amount_due: "4800.00000000", due_date: "2026-08-01T00:14:08.226Z" }),
+        OBL({ id: "pay", type: "payroll", amount_due: "6000" }),
+      ],
+    });
+    expect(rows.map((r) => r.key).sort()).toEqual(["inv:ap1", "obl:pay"]);
+    // The surviving bill row is the invoice one, so it keeps its click-through.
+    expect(rows.find((r) => r.key === "inv:ap1")?.invoiceId).toBe("ap1");
+  });
+
+  it("suppresses only ONE obligation per matching invoice, never a whole identity", () => {
+    /* A presence check would let a single invoice cancel every obligation sharing its
+       identity, so a tenant that genuinely owes the same counterparty the same amount
+       on the same day twice — one invoiced, one not — would lose the second debt from
+       the list entirely. Under-reporting money owed is the worst failure here. */
+    const same = { counterparty_id: "cp_1", amount_due: "4800.00", due_date: "2026-08-01" };
+    const rows = buildCashFlowRows({
+      invoices: [INV({ id: "ap1", ...same })],
+      obligations: [OBL({ id: "twin", type: "bill", ...same }), OBL({ id: "second", type: "bill", ...same })],
+    });
+    expect(rows).toHaveLength(2);
+    expect(rows.map((r) => r.key).sort()).toEqual(["inv:ap1", "obl:second"]);
+  });
+
+  it("cancels twins one-for-one when several invoices share an identity", () => {
+    const same = { counterparty_id: "cp_1", amount_due: "4800.00", due_date: "2026-08-01" };
+    const rows = buildCashFlowRows({
+      invoices: [INV({ id: "ap1", ...same }), INV({ id: "ap2", ...same })],
+      obligations: [OBL({ id: "t1", type: "bill", ...same }), OBL({ id: "t2", type: "bill", ...same })],
+    });
+    // Two invoices cancel exactly two obligations — no rows left over, none lost.
+    expect(rows.map((r) => r.key).sort()).toEqual(["inv:ap1", "inv:ap2"]);
+  });
+
+  it("keeps two distinct obligations that share an identity when no invoice matches", () => {
+    const same = { counterparty_id: "cp_9", amount_due: "33564.38", due_date: "2026-08-05" };
+    const rows = buildCashFlowRows({
+      obligations: [OBL({ id: "p1", ...same }), OBL({ id: "p2", ...same })],
+    });
+    expect(rows.map((r) => r.key).sort()).toEqual(["obl:p1", "obl:p2"]);
+  });
+
+  it("keeps a bill obligation that has no invoice behind it", () => {
+    /* Deduping by identity rather than by excluding type==="bill": a bill obligation
+       with no matching invoice is a real debt, and filtering it out by its name would
+       hide money owed. */
+    const rows = buildCashFlowRows({
+      invoices: [INV({ id: "ap1", counterparty_id: "cp_1", amount_due: "4800", due_date: "2026-08-01" })],
+      obligations: [OBL({ id: "lonely", type: "bill", counterparty_id: "cp_other", amount_due: "777", due_date: "2026-09-09" })],
+    });
+    expect(rows.map((r) => r.key).sort()).toEqual(["inv:ap1", "obl:lonely"]);
+  });
+
+  it("never counts a receivable obligation as money owed", () => {
+    const rows = buildCashFlowRows({
+      obligations: [OBL({ id: "ar", type: "receivable", amount_due: "999999" })],
+    });
+    expect(rows).toEqual([]);
+  });
+
+  it("excludes a settled obligation", () => {
+    const rows = buildCashFlowRows({ obligations: [OBL({ id: "done", status: "paid" })] });
+    expect(rows).toEqual([]);
+  });
+
+  it("survives an obligation with no kind rather than crashing on it", () => {
+    // `kind` is nullable: `type` is dropped when it only encodes a direction.
+    const rows = buildCashFlowRows({ obligations: [OBL({ id: "bare", type: null })] });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].badgeLabel).toBe("Owed");
+  });
+
+  it("contributes no obligation rows when that feed could not be read", () => {
+    // null = unreadable. It must not be confused with "nothing owed".
+    expect(buildCashFlowRows({ obligations: null })).toEqual([]);
+  });
+
+  it("does not print the due date twice on an owed row", () => {
+    /* The row renders sublabel and date together. Owed rows already state the day as
+       "due X", so appending it again produced "due 2026-08-12 · 2026-08-12". */
+    expect(detailLine("INV-CLOUDOPS-001 · due 2026-08-12", "2026-08-12")).toBe(
+      "INV-CLOUDOPS-001 · due 2026-08-12",
+    );
+    expect(detailLine("due 2026-08-05", "2026-08-05")).toBe("due 2026-08-05");
+    // A transaction's date is not in its sublabel, so it must still be shown.
+    expect(detailLine("monthly payment", "2026-06-26")).toBe("monthly payment · 2026-06-26");
+    expect(detailLine("", "2026-06-26")).toBe("2026-06-26");
+    expect(detailLine("", "")).toBe("");
   });
 
   it("excludes an AP invoice that has been paid", () => {
@@ -186,11 +308,13 @@ describe("cashFlowTotals", () => {
 
   it("names every feed that failed, so the user knows which figure to distrust", () => {
     const all = incompleteMessage({ tx: true, inv: true, ob: true });
-    expect(all).toContain("Liabilities, income and expenses and the bills listed below");
+    expect(all).toContain("Liabilities and some of the rows below, income and expenses and the bills listed below");
 
-    // One feed down must not claim the others are unreliable.
+    /* A failed obligations read now costs rows as well as the figure — payroll and
+       tax reach the list from nowhere else — so the notice has to admit the list is
+       short, not just that one number is missing. */
     const obOnly = incompleteMessage({ tx: false, inv: false, ob: true });
-    expect(obOnly).toContain("Liabilities couldn't be loaded");
+    expect(obOnly).toContain("Liabilities and some of the rows below couldn't be loaded");
     expect(obOnly).not.toContain("income");
     expect(obOnly).not.toContain("bills listed below");
 

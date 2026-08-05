@@ -45,6 +45,42 @@ Both are the false-all-clear pattern. Reject blank/absent explicitly; accept bot
 and numeric amounts. Amounts arrive as decimal strings with eight trailing places, so a
 row must format through `Number` or it renders "$4,800.00000000".
 
+## The two feeds carry the SAME bills — dedupe on identity, and count them
+
+Every AP invoice also exists as a `type: "bill"` obligation. A surface that lists both
+feeds double-counts every bill; one that sums both doubles the debt.
+
+**Why:** brain-core exposes **no invoice reference on an obligation** — `source_ids`
+point at the raw *document*, not the invoice — so there is no join key. The only usable
+match is the debt itself: counterparty + amount + due day (day resolution, because the
+two feeds carry the same instant at different precision).
+
+**How to apply:** match on debt identity, and hold a **count** per identity rather than a
+presence flag, so one invoice cancels exactly one obligation. With a set, a tenant owing
+the same counterparty the same amount on the same day twice — one invoiced, one not —
+loses the second debt from the list. Never dedupe by excluding `type === "bill"` instead:
+kinds are open-ended, and a bill obligation with no invoice behind it is a real debt.
+Prefer keeping the *invoice* row where they collide — it carries the invoice number and
+the detail popup; the obligation carries neither. A missed match over-reports (visible,
+safe); a wrong match hides money (silent, not safe).
+
+## Receivables have no endpoint, and "not AP" is not "AR"
+
+There is **no `/ledger/receivables`** — the api-surface artifact contains zero mentions of
+"receivable". AR invoices come back from `/ledger/invoices` mixed in with AP, and there is
+**no positive AR marker**: AP rows carry `metadata.scenario === "ap"` and AR rows carry no
+scenario at all, so AR is only reachable by negation.
+
+**Why:** negation makes every future metadata shape an AR row by default. The feed is
+already heterogeneous — seeded `AR-*` rows have empty metadata, extracted ones carry
+`metadata.document_upload.object_type: "ar_aging"`, and at least one row's
+`invoice_number` is a raw document id, a data-quality artifact.
+
+**How to apply:** an overdue *count* can tolerate the negative filter (it already does),
+but a **running total** labelled "receivables" cannot — it silently absorbs anything new
+that is not AP. Also note the invoice list caps at 20 rows by default with no cursor; pass
+an explicit high `limit` (the BFF forwards it) or a larger tenant's total will be short.
+
 ## Obligation kinds are open-ended
 
 Observed: `bill`, `payroll`, `tax` — and the set grew mid-session. Never allow-list kinds;

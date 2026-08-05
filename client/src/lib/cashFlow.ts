@@ -21,8 +21,9 @@
  *    the Overview metric and this view can never disagree.
  */
 
-import { liabilitiesTotal, unpaidApInvoices, type ApInvoiceLike } from "./liabilities";
+import { liabilitiesTotal, unpaidApInvoices, payableObligations, type ApInvoiceLike } from "./liabilities";
 import type { RawObligation } from "./brainObligations";
+import { capitalCase } from "./displayLabels";
 
 export interface CashFlowTxLike {
   id: string;
@@ -47,6 +48,15 @@ export type CashFlowKind = "income" | "expense" | "transfer" | "adjustment" | "b
 export interface CashFlowRow {
   key: string;
   kind: CashFlowKind;
+  /**
+   * Overrides the badge text without changing the row's styling or sign.
+   *
+   * Payroll and tax are owed exactly the way a bill is, so they take the `bill`
+   * treatment — but a payroll run badged "Bill" would be a lie about what it is,
+   * and the obligation kinds are open-ended (bill / payroll / tax so far, and the
+   * set has already grown once), so they cannot each become a `CashFlowKind`.
+   */
+  badgeLabel?: string;
   label: string;
   sublabel: string;
   /** ISO date used for ordering. Empty when the source carried none. */
@@ -94,6 +104,13 @@ function isoDay(v: string | null | undefined): string {
   return v.slice(0, 10);
 }
 
+/** Identifies the DEBT a row describes, so an invoice and its obligation twin
+ *  collapse to one row. Day-resolution on purpose: the two feeds carry the same
+ *  instant with different precision. */
+function debtKey(counterpartyId: string | null | undefined, amount: number, isoDate: string): string {
+  return `${counterpartyId ?? ""}|${amount.toFixed(2)}|${isoDate}`;
+}
+
 /**
  * One ordered list of everything that moved or is owed.
  *
@@ -105,6 +122,8 @@ function isoDay(v: string | null | undefined): string {
 export function buildCashFlowRows(input: {
   transactions?: readonly CashFlowTxLike[] | null;
   invoices?: readonly CashFlowInvoiceLike[] | null;
+  /** Obligations supply what the invoice feed cannot: payroll and tax. See below. */
+  obligations?: readonly RawObligation[] | null;
   nameOf?: (id: string | null | undefined) => string | null;
 }): CashFlowRow[] {
   const nameOf = input.nameOf ?? (() => null);
@@ -134,10 +153,22 @@ export function buildCashFlowRows(input: {
     });
   }
 
+  /* How many debts of each identity are already listed from invoices, so the
+     obligations pass below does not list the same debt twice.
+     
+     A COUNT, not a presence flag. With a plain set, one invoice would suppress every
+     obligation sharing its identity — so a tenant genuinely owing the same
+     counterparty the same amount on the same day twice (one invoiced, one not) would
+     see the second debt silently vanish. Under-reporting money owed is the worst
+     thing this list can do, so each invoice cancels exactly one obligation. */
+  const listedDebts = new Map<string, number>();
+
   for (const inv of unpaidApInvoices(input.invoices ?? [])) {
     if (!inv?.id) continue;
     const flags = inv.metadata?.flags ?? [];
     const due = isoDay(inv.due_date);
+    const key = debtKey(inv.counterparty_id, num(inv.amount_due), due);
+    listedDebts.set(key, (listedDebts.get(key) ?? 0) + 1);
     rows.push({
       key: `inv:${inv.id}`,
       kind: "bill",
@@ -153,6 +184,46 @@ export function buildCashFlowRows(input: {
     });
   }
 
+  /* ── obligations: the rows the invoice feed cannot supply ──────────────────
+     The Liabilities figure above this list sums obligations, so a list built only
+     from invoices could never add up to it: the invoice feed carries no payroll and
+     no tax. That mismatch is the same confusion the figure itself was just fixed
+     for — a total whose own list contradicts it reads as a bug in the data.
+
+     Bills are deliberately still sourced from invoices rather than replaced by their
+     obligation twins: the invoice row carries the invoice number and opens the bill
+     detail popup, and the obligation carries neither. brain-core exposes NO invoice
+     reference on an obligation (`source_ids` point at raw documents, not invoices),
+     so the two records are matched on the debt they describe — counterparty, amount
+     and due date, which align exactly on every bill.
+
+     Matching on identity rather than excluding `type === "bill"` matters: obligation
+     kinds are open-ended, and a bill obligation that has no invoice behind it is a
+     real debt that must still appear rather than being filtered out by its name. */
+  for (const o of payableObligations(input.obligations ?? null)) {
+    const due = isoDay(o.due_date);
+    const key = debtKey(o.counterparty_id, num(o.amount_due), due);
+    const alreadyListed = listedDebts.get(key) ?? 0;
+    if (alreadyListed > 0) {
+      listedDebts.set(key, alreadyListed - 1);
+      continue;
+    }
+    const kindWord = o.kind && o.kind.trim() ? capitalCase(o.kind.trim()) : "";
+    rows.push({
+      key: `obl:${o.id}`,
+      kind: "bill",
+      badgeLabel: kindWord || "Owed",
+      label: nameOf(o.counterparty_id) || kindWord || "Obligation",
+      sublabel: [due ? `due ${due}` : "", o.status.toLowerCase() === "overdue" ? "overdue" : ""]
+        .filter(Boolean)
+        .join(" · "),
+      date: due,
+      amount: num(o.amount_due),
+      sign: "-",
+      flagged: false,
+    });
+  }
+
   /* Newest first. Rows with no usable date sort last rather than to the top,
      where an empty string would otherwise put them. */
   return rows.sort((a, b) => {
@@ -161,6 +232,22 @@ export function buildCashFlowRows(input: {
     if (!b.date) return -1;
     return b.date.localeCompare(a.date);
   });
+}
+
+/**
+ * The secondary line under a row's label.
+ *
+ * Owed rows put the due date in their sublabel ("due 2026-08-12") because for a bill
+ * the date means something different than it does on a transaction — it is when the
+ * money is owed, not when it moved. The row then also renders `date` for ordering
+ * context, which printed the same day twice: "INV-CLOUDOPS-001 · due 2026-08-12 ·
+ * 2026-08-12". The word is worth keeping and the repeat is not, so the bare date is
+ * dropped when the sublabel already states it.
+ */
+export function detailLine(sublabel: string, date: string): string {
+  const parts = [sublabel];
+  if (date && !sublabel.includes(date)) parts.push(date);
+  return parts.filter(Boolean).join(" · ");
 }
 
 export interface CashFlowTotals {
@@ -228,7 +315,11 @@ export function cashFlowTotals(input: {
  */
 export function incompleteMessage(f: { tx: boolean; inv: boolean; ob: boolean }): string {
   const lost: string[] = [];
-  if (f.ob) lost.push("liabilities");
+  /* Obligations now supply rows as well as the figure: when that read fails the
+     payroll and tax rows disappear from the list too, and a list that looks complete
+     while quietly missing rows is worse than one that admits it. Named without
+     enumerating kinds, which are open-ended. */
+  if (f.ob) lost.push("liabilities and some of the rows below");
   if (f.tx) lost.push("income and expenses");
   if (f.inv) lost.push("the bills listed below");
   if (lost.length === 0) return "";

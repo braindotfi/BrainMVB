@@ -20,6 +20,7 @@ import {
   buildCashFlowRows,
   cashFlowTotals,
   cashFlowPeriodLabel,
+  detailLine,
   incompleteMessage,
   KIND_LABEL,
   type CashFlowKind,
@@ -71,14 +72,16 @@ const AMOUNT_COLOUR: Record<"+" | "-" | "", string> = {
   "": "#a8b9f4",
 };
 
-const KindBadge = ({ kind }: { kind: CashFlowKind }) => {
+/* `label` lets an owed row keep the bill treatment while naming what it actually is
+   (Payroll, Tax). The styling is the kind's; only the word changes. */
+const KindBadge = ({ kind, label }: { kind: CashFlowKind; label?: string }) => {
   const c = KIND_BADGE[kind];
   return (
     <span
       className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] px-[10px] py-[4px] rounded-[22px] border border-solid shrink-0"
       style={{ background: c.bg, borderColor: c.border, color: c.fg }}
     >
-      {capitalCase(KIND_LABEL[kind])}
+      {capitalCase(label || KIND_LABEL[kind])}
     </span>
   );
 };
@@ -243,7 +246,7 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
   const nameOf = (id: string | null | undefined) =>
     (id && cpQ.data?.counterparties.find((c) => c.id === id)?.name) || null;
 
-  const rows = buildCashFlowRows({ transactions: txs, invoices: invs, nameOf });
+  const rows = buildCashFlowRows({ transactions: txs, invoices: invs, obligations: obs, nameOf });
   const totals = cashFlowTotals({ transactions: txs, invoices: invs, obligations: obs });
   const period = cashFlowPeriodLabel(totals.periodStart, totals.periodEnd);
 
@@ -396,7 +399,7 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
                       <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px]">
                         {row.label}
                       </p>
-                      <KindBadge kind={row.kind} />
+                      <KindBadge kind={row.kind} label={row.badgeLabel} />
                       {row.flagged && (
                         <span className="flex items-center gap-[4px] bg-[#350011] border border-solid border-[rgba(210,3,68,0.2)] rounded-[22px] px-[10px] py-[4px]">
                           <img src={alertIcon} alt="" className="size-[12px]" />
@@ -406,9 +409,9 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
                         </span>
                       )}
                     </div>
-                    {(row.sublabel || row.date) && (
+                    {detailLine(row.sublabel, row.date) && (
                       <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px]">
-                        {[row.sublabel, row.date].filter(Boolean).join(" · ")}
+                        {detailLine(row.sublabel, row.date)}
                       </p>
                     )}
                   </div>
