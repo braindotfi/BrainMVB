@@ -73,4 +73,5 @@
 - [Payable → invoice join](payable-invoice-join.md) — obligations carry no invoice ref; infer on counterparty+amount+due-day, counted one-for-one, unpaid AP only; unreadable feed ≠ "no invoice".
 - [Liabilities source contract](liabilities-source-contract.md) — "what we owe" = obligations feed, never invoices (no payroll/tax); payable filter fails open; RawObligation is permissive so TS can't catch a wrong source.
 - [Ledger figures arrive in waves](ledger-figures-arrive-in-waves.md) — a complete, consistent ledger read can still be short (truncated / unprojected / pre-seed); gate totals, caption floors, poll.
+- [Deterministic assistant answers](deterministic-assistant-answers.md) — numeric questions skip the model; an ABSENT next_cursor field ≠ explicit null, and tolerant parsers must turn strict at any figure.
 - [Receivables source contract](receivables-source-contract.md) — AR = invoices with positive scenario==="ar"; the receivable obligations feed is an incomplete subset; totals need a finished cursor walk.

@@ -59,6 +59,7 @@ import {
 } from "./developers";
 import { ANTHROPIC_MODEL } from "./anthropicModel";
 import { isDegenerateWikiPayload } from "./wikiAnswerGuard";
+import { answerDeterministically } from "./brain/deterministicAnswers";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -988,6 +989,33 @@ When you mention a money amount, always reproduce it exactly as the grounding da
       });
     } catch (err) {
       console.warn("[Assistant] local question record failed (non-fatal):", (err as Error).message);
+    }
+
+    /* ─── STRUCTURED: exact answers computed from the ledger, no model in the loop ───
+       Runs BEFORE wiki/question and before the Anthropic fallback, because both of those
+       answer from a capped, prose-flattened snapshot. For "what do we owe X", "which
+       customer invoices are overdue" and "what is our payroll obligation" there is one
+       correct number, and a model narrating a truncated snapshot produces a confident
+       wrong one. A `null` here means the question was not one of those, so the normal
+       paths below run untouched. See server/brain/deterministicAnswers.ts. */
+    try {
+      const { token, baseUrl: exactBaseUrl } = await getBrainSession(req.session.userId!);
+      const exact = await withBrainBaseUrl(exactBaseUrl, () =>
+        answerDeterministically(token, lastUserContent),
+      );
+      if (exact) {
+        return res.json({
+          reply: exact.reply,
+          sources: exact.sources,
+          grounded: exact.grounded,
+          answered: exact.answered,
+          engine: exact.engine,
+        });
+      }
+    } catch (e) {
+      /* Only an unexpected failure lands here — the module turns unreachable and
+         truncated ledger reads into explicit refusals rather than throwing. */
+      console.warn("[Assistant] deterministic path errored, falling back:", (e as Error)?.message);
     }
 
     // ─── PRIMARY: brain-core wiki/question — per-answer cited evidence, grounded

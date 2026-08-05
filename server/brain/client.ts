@@ -284,6 +284,8 @@ export interface BrainInvoice {
   invoice_number: string;
   counterparty_id: string;
   amount_due: string;
+  /** Partial settlement. Absent on most rows; outstanding = amount_due - amount_paid. */
+  amount_paid?: string | number | null;
   currency: string;
   due_date?: string | null;
   status: string;
@@ -293,12 +295,15 @@ export interface BrainInvoice {
 
 export interface ListInvoicesResponse {
   invoices: BrainInvoice[];
+  /** Absent on this endpoint today; present in the type so a cursor walk can prove
+   *  it reached the end instead of assuming one capped page was everything. */
+  next_cursor?: string | null;
 }
 
 /** GET /ledger/invoices */
 export function listLedgerInvoices(
   token: string,
-  query?: { status?: string; limit?: number },
+  query?: { status?: string; limit?: number; cursor?: string },
   timeoutMs?: number,
 ): Promise<ListInvoicesResponse> {
   return brainRequest<ListInvoicesResponse>("/ledger/invoices", { token, query, timeoutMs });
@@ -793,6 +798,14 @@ export interface BrainObligation {
   id: string;
   /** payable = you owe; receivable = owed to you. Tolerate either field name. */
   direction: "payable" | "receivable" | string;
+  /**
+   * The record's own KIND — bill | payroll | tax | … — or null when the wire carried
+   * no kind. Must stay separate from `direction`, which folds `type` in as a fallback
+   * for the payable/receivable axis and is therefore not a trustworthy kind. Mirrors
+   * `normalizeObligation` in client/src/lib/brainObligations.ts; without it nothing
+   * server-side can tell a payroll obligation from a bill.
+   */
+  kind: string | null;
   counterparty_id: string | null;
   amount_due: string;
   currency: string;
@@ -805,30 +818,55 @@ export interface BrainObligation {
 export interface ListObligationsResponse {
   obligations: BrainObligation[];
   next_cursor: string | null;
+  /**
+   * True when the payload actually carried a list of obligations. The parse below is
+   * deliberately tolerant — it coerces anything unrecognised to `[]` so the assistant's
+   * prose grounding degrades instead of throwing — but "we could not parse this" and
+   * "the tenant owes nothing" are opposite claims. Callers that state a FIGURE must
+   * check this; callers that write prose can keep ignoring it.
+   */
+  well_formed: boolean;
+  /**
+   * True when the response carried a `next_cursor` field at all, even `null`. Absence is
+   * not the same as an explicit null: an endpoint that never mentions a cursor has made
+   * no promise that the page it returned was the whole list. See ledgerRead.ts.
+   */
+  cursor_declared: boolean;
 }
+
+/** Values of `type` that are really a direction, not a kind of obligation. */
+const DIRECTION_WORDS = new Set(["payable", "receivable"]);
 
 /** GET /ledger/obligations - obligations Brain derived for the tenant. */
 export async function listObligations(
   token: string,
-  query?: { status?: string; limit?: number },
+  query?: { status?: string; limit?: number; cursor?: string },
   timeoutMs?: number,
 ): Promise<ListObligationsResponse> {
   const resp = await brainRequest<Record<string, unknown>>("/ledger/obligations", {
     token,
-    query: { status: query?.status, limit: query?.limit },
+    query: { status: query?.status, limit: query?.limit, cursor: query?.cursor },
     timeoutMs,
   });
-  const rawList = Array.isArray((resp as any)?.obligations)
+  const envelopeList = Array.isArray((resp as any)?.obligations)
     ? ((resp as any).obligations as unknown[])
-    : Array.isArray(resp)
-      ? (resp as unknown[])
-      : [];
+    : null;
+  const bareList = Array.isArray(resp) ? (resp as unknown[]) : null;
+  const rawList = envelopeList ?? bareList ?? [];
+  const well_formed = envelopeList !== null || bareList !== null;
+  const cursor_declared =
+    !!resp && typeof resp === "object" && !Array.isArray(resp) && "next_cursor" in (resp as object);
   const obligations: BrainObligation[] = rawList.map((r) => {
     const o = (r ?? {}) as Record<string, unknown>;
     const s = (v: unknown): string | null => (typeof v === "string" && v ? v : null);
+    const rawType = s(o.type);
     return {
       id: s(o.id) ?? s(o.obligation_id) ?? randomUUID(),
-      direction: s(o.direction) ?? s(o.type) ?? "payable",
+      direction: s(o.direction) ?? rawType ?? "payable",
+      /* `type` carries EITHER a direction word or a real kind. Only the latter is a
+         kind — otherwise a row whose type is "payable" would read as a payroll/bill
+         kind of "payable". Same rule as the client normalizer. */
+      kind: rawType && !DIRECTION_WORDS.has(rawType.trim().toLowerCase()) ? rawType : null,
       counterparty_id: s(o.counterparty_id),
       amount_due: s(o.amount_due) ?? s(o.amount) ?? "0",
       currency: s(o.currency) ?? "USD",
@@ -838,7 +876,7 @@ export async function listObligations(
       confidence: typeof o.confidence === "number" ? o.confidence : null,
     };
   });
-  return { obligations, next_cursor: s2((resp as any)?.next_cursor) };
+  return { obligations, next_cursor: s2((resp as any)?.next_cursor), well_formed, cursor_declared };
 }
 
 function s2(v: unknown): string | null {
