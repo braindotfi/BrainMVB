@@ -771,7 +771,7 @@ export function VendorsPanel() {
           (body?.body?.error?.message as string | undefined) ??
           (body?.message as string | undefined) ??
           "Brain core rejected this action.";
-        toast({ title: "Action failed", description: msg, variant: "destructive" });
+        alert.error("Action failed", msg);
         return;
       }
       await queryClient.invalidateQueries({ queryKey: ["/api/brain/ledger/counterparties"] });
@@ -780,9 +780,9 @@ export function VendorsPanel() {
       params.delete("vendor");
       params.set("tab", "counterparties");
       navigate(`/ledger?${params.toString()}`, { replace: true });
-      toast({ title: successTitle, description: successDesc });
+      alert.success(successTitle, successDesc);
     } catch {
-      toast({ title: "Action failed", description: "Couldn't reach Brain core. Nothing was changed.", variant: "destructive" });
+      alert.error("Action failed", "Couldn't reach Brain core. Nothing was changed.");
     } finally {
       setTrustBusy(false);
     }
@@ -836,13 +836,12 @@ export function VendorsPanel() {
     }
     await queryClient.invalidateQueries({ queryKey: ["/api/brain/ledger/counterparties"] });
     if (failed === 0) {
-      toast({ title: "All confirmed", description: `${succeeded} customer${succeeded !== 1 ? "s" : ""} confirmed.` });
+      alert.success("All confirmed", `${succeeded} customer${succeeded !== 1 ? "s" : ""} confirmed.`);
     } else {
-      toast({
-        title: `${succeeded} confirmed, ${failed} failed`,
-        description: "Some customers couldn't be confirmed. Try those individually.",
-        variant: "destructive",
-      });
+      alert.error(
+        `${succeeded} confirmed, ${failed} failed`,
+        "Some customers couldn't be confirmed. Try those individually.",
+      );
     }
     setBulkBusy(false);
   };
