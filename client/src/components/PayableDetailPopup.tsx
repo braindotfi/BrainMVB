@@ -25,6 +25,7 @@ import {
   SectionLabel,
   fmtDue,
 } from "@/components/detailPopup";
+import { RecordPager } from "@/components/RecordPager";
 
 /**
  * How the record came to exist, in words.
@@ -48,6 +49,8 @@ function provenanceLabel(p: string | null): string | null {
 export function PayableDetailPopup({
   payable,
   counterpartyName,
+  payables,
+  onSelectPayable,
   invoicesUnknown,
   onClose,
 }: {
@@ -55,6 +58,8 @@ export function PayableDetailPopup({
   payable: Obligation | null;
   /** Resolved counterparty name, or null when the id did not resolve. */
   counterpartyName: string | null;
+  payables?: Obligation[];
+  onSelectPayable?: (payable: Obligation) => void;
   /**
    * True when the invoice feed could not be read, so "no invoice backs this" is an
    * unknown rather than a fact. Without this the popup would state a bill has no
@@ -68,6 +73,8 @@ export function PayableDetailPopup({
   const open = payable != null;
   const kind = payable?.kind?.trim() ? capitalCase(payable.kind) : null;
   const provenance = provenanceLabel(payable?.provenance ?? null);
+  const list = payables ?? [];
+  const currentIdx = payable ? list.findIndex((p) => p.id === payable.id) : -1;
 
   return (
     <DetailPopupShell
@@ -129,6 +136,15 @@ export function PayableDetailPopup({
               </p>
             </div>
           </DetailPopupBody>
+          <div className="border-t border-[#1d2132] border-solid flex items-center justify-between p-[16px] w-full">
+            <RecordPager
+              onPrev={() => currentIdx > 0 && onSelectPayable?.(list[currentIdx - 1])}
+              onNext={() => currentIdx >= 0 && currentIdx < list.length - 1 && onSelectPayable?.(list[currentIdx + 1])}
+              disabledPrev={currentIdx <= 0}
+              disabledNext={currentIdx < 0 || currentIdx >= list.length - 1}
+              testIdPrefix="payable"
+            />
+          </div>
         </>
       ) : null}
     </DetailPopupShell>

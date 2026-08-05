@@ -24,16 +24,21 @@ import {
   SectionLabel,
   fmtDue,
 } from "@/components/detailPopup";
+import { RecordPager } from "@/components/RecordPager";
 
 export function ReceivableDetailPopup({
   receivable,
   counterpartyName,
+  receivables,
+  onSelectReceivable,
   onClose,
 }: {
   /** `null` closes the popup, matching the other detail popups' contract. */
   receivable: Receivable | null;
   /** Resolved counterparty name, or null when the id did not resolve. */
   counterpartyName: string | null;
+  receivables?: Receivable[];
+  onSelectReceivable?: (receivable: Receivable) => void;
   onClose: () => void;
 }) {
   const { format } = useCurrency();
@@ -43,6 +48,8 @@ export function ReceivableDetailPopup({
      this row contributes to the running total. The full billed amount is listed
      below it, rather than being the headline, so the two can never be confused. */
   const partPaid = receivable != null && receivable.amount_paid > 0;
+  const list = receivables ?? [];
+  const currentIdx = receivable ? list.findIndex((r) => r.id === receivable.id) : -1;
 
   return (
     <DetailPopupShell
@@ -101,6 +108,15 @@ export function ReceivableDetailPopup({
               </p>
             </div>
           </DetailPopupBody>
+          <div className="border-t border-[#1d2132] border-solid flex items-center justify-between p-[16px] w-full">
+            <RecordPager
+              onPrev={() => currentIdx > 0 && onSelectReceivable?.(list[currentIdx - 1])}
+              onNext={() => currentIdx >= 0 && currentIdx < list.length - 1 && onSelectReceivable?.(list[currentIdx + 1])}
+              disabledPrev={currentIdx <= 0}
+              disabledNext={currentIdx < 0 || currentIdx >= list.length - 1}
+              testIdPrefix="receivable"
+            />
+          </div>
         </>
       ) : null}
     </DetailPopupShell>

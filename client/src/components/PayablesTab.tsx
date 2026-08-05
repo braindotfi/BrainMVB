@@ -34,7 +34,7 @@ import type { RawObligation, Obligation } from "@/lib/brainObligations";
 import { capitalCase } from "@/lib/displayLabels";
 import { dueLabel, amountLabel, subLabel, statusColors } from "@/lib/obligationRows";
 import { ICONS } from "@/assets/figma-icons";
-import { RecordPill } from "@/components/RecordPill";
+import { LedgerRecordRow } from "@/components/LedgerRecordRow";
 
 const IMG_DOT = ICONS.activity_dot;
 
@@ -43,24 +43,6 @@ type Format = (a: string | number) => string;
 interface InvoicesResponse {
   invoices?: BillDTO[];
 }
-
-/* ── status badge ─────────────────────────────────────────────────────────────
-   Colours come from lib/obligationRows so this badge and the detail popup's header
-   chip cannot drift apart — see the note there. */
-const StatusBadge = ({ status }: { status: string }) => {
-  // An unrecognised status still renders — neutral and verbatim. Dropping it would
-  // hide a state brain-core thinks is worth reporting.
-  const c = statusColors(status);
-  return (
-    <RecordPill
-      className=""
-      style={{ background: c.bg, borderColor: c.border, color: c.fg }}
-      testId={`badge-obligation-status-${status.trim().toLowerCase()}`}
-    >
-      {capitalCase(status)}
-    </RecordPill>
-  );
-};
 
 /* ── the tab ──────────────────────────────────────────────────────────────── */
 
@@ -170,36 +152,15 @@ export function PayablesTab({ format }: { format: Format }): JSX.Element {
             const bill = invoiceOf.get(o.id);
             const open = () => (bill ? setOpenBill(bill) : setOpenPayable(o));
             return (
-              <div
+              <LedgerRecordRow
                 key={o.id}
-                role="button"
-                tabIndex={0}
-                data-testid={`row-obligation-${idx}`}
-                onClick={open}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    open();
-                  }
-                }}
-                className="flex gap-[12px] items-center px-[16px] py-[12px] relative shrink-0 w-full bg-[#0a0c10] border-b border-solid border-[#1d2132] last:border-b-0 cursor-pointer transition-colors hover:bg-[#11141b] outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-              >
-                <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
-                  <div className="flex gap-[8px] items-center relative shrink-0 max-w-full">
-                    <p
-                      className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px] truncate"
-                      data-testid={`text-obligation-name-${idx}`}
-                    >
-                      {name ?? "Unidentified counterparty"}
-                    </p>
-                    <StatusBadge status={o.status} />
-                  </div>
-                  <div className="flex gap-[4px] items-center relative shrink-0 max-w-full">
+                name={name ?? "Unidentified counterparty"}
+                pill={{ label: capitalCase(o.status), ...statusColors(o.status), testId: `badge-obligation-status-${o.status.trim().toLowerCase()}` }}
+                secondary={
+                  <>
                     <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] whitespace-nowrap">
                       {dueLabel(o.due_date)}
                     </p>
-                    {/* Dot only when there is a second fact to separate — subLabel
-                        returns "" when the kind would merely restate the name. */}
                     {sub && (
                       <>
                         <div className="relative shrink-0 size-[4px]">
@@ -210,17 +171,22 @@ export function PayablesTab({ format }: { format: Format }): JSX.Element {
                         </p>
                       </>
                     )}
-                  </div>
-                </div>
-                <div className="flex flex-col items-end justify-center relative shrink-0">
-                  <p
-                    className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap"
-                    data-testid={`text-obligation-amount-${idx}`}
-                  >
-                    {amountLabel(o.amount_due, format)}
-                  </p>
-                </div>
-              </div>
+                  </>
+                }
+                amount={amountLabel(o.amount_due, format)}
+                sign="-"
+                amountColor="#d20344"
+                rowTestId={`row-obligation-${idx}`}
+                nameTestId={`text-obligation-name-${idx}`}
+                amountTestId={`text-obligation-amount-${idx}`}
+                onClick={open}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    open();
+                  }
+                }}
+              />
             );
           })}
 
@@ -263,12 +229,15 @@ export function PayablesTab({ format }: { format: Format }): JSX.Element {
       <BillDetailPopup
         bill={openBill}
         vendorName={openBill ? (nameOf(openBill.counterparty_id) ?? "Unknown vendor") : ""}
+        bills={((invoices ?? []).filter((invoice) => invoice.metadata?.scenario === "ap")) as BillDTO[]}
+        onSelectBill={setOpenBill}
         onClose={() => setOpenBill(null)}
-        hidePager
       />
       <PayableDetailPopup
         payable={openPayable}
         counterpartyName={openPayable ? nameOf(openPayable.counterparty_id) : null}
+        payables={rows}
+        onSelectPayable={setOpenPayable}
         invoicesUnknown={invoicesUnknown}
         onClose={() => setOpenPayable(null)}
       />

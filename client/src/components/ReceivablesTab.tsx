@@ -20,7 +20,7 @@ import { WidgetCard } from "@/components/LedgerWidgets";
 import type { CounterpartyLite } from "@/components/LedgerWidgets";
 import { UnavailableDataBox } from "@/components/Callout";
 import { ReceivableDetailPopup } from "@/components/ReceivableDetailPopup";
-import { RecordPill } from "@/components/RecordPill";
+import { LedgerRecordRow } from "@/components/LedgerRecordRow";
 import { fetchAllPages } from "@/lib/brainPagination";
 import { usePagedLedgerRead, ledgerFigureCaption } from "@/lib/ledgerRead";
 import { receivablesView, type RawInvoice, type Receivable } from "@/lib/receivables";
@@ -31,25 +31,6 @@ import { ICONS } from "@/assets/figma-icons";
 const IMG_DOT = ICONS.activity_dot;
 
 type Format = (a: string | number) => string;
-
-/* ── status badge ─────────────────────────────────────────────────────────────
-   Colours come from lib/obligationRows, the same module the Payables badge and the
-   detail popup header chip read, so a status reads identically in both directions
-   of the ledger and in the popup a row opens. */
-const StatusBadge = ({ status }: { status: string }) => {
-  // An unrecognised status still renders — neutral and verbatim. Dropping it would
-  // hide a state brain-core thinks is worth reporting.
-  const c = statusColors(status);
-  return (
-    <RecordPill
-      className=""
-      style={{ background: c.bg, borderColor: c.border, color: c.fg }}
-      testId={`badge-receivable-status-${status.trim().toLowerCase()}`}
-    >
-      {capitalCase(status)}
-    </RecordPill>
-  );
-};
 
 /* ── the tab ──────────────────────────────────────────────────────────────── */
 
@@ -139,35 +120,15 @@ export function ReceivablesTab({ format }: { format: Format }): JSX.Element {
               const name = nameOf(r.counterparty_id);
               const open = () => setOpenReceivable(r);
               return (
-                <div
+                <LedgerRecordRow
                   key={r.id}
-                  role="button"
-                  tabIndex={0}
-                  data-testid={`row-receivable-${idx}`}
-                  onClick={open}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      open();
-                    }
-                  }}
-                  className="flex gap-[12px] items-center px-[16px] py-[12px] relative shrink-0 w-full bg-[#0a0c10] border-b border-solid border-[#1d2132] last:border-b-0 cursor-pointer transition-colors hover:bg-[#11141b] outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-                >
-                  <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
-                    <div className="flex gap-[8px] items-center relative shrink-0 max-w-full">
-                      <p
-                        className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px] truncate"
-                        data-testid={`text-receivable-name-${idx}`}
-                      >
-                        {name ?? "Unidentified counterparty"}
-                      </p>
-                      <StatusBadge status={r.status} />
-                    </div>
-                    <div className="flex gap-[4px] items-center relative shrink-0 max-w-full">
+                  name={name ?? "Unidentified counterparty"}
+                  pill={{ label: capitalCase(r.status), ...statusColors(r.status), testId: `badge-receivable-status-${r.status.trim().toLowerCase()}` }}
+                  secondary={
+                    <>
                       <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] whitespace-nowrap">
                         {dueLabel(r.due_date)}
                       </p>
-                      {/* Dot only when there is a second fact to separate. */}
                       {r.invoice_number && (
                         <>
                           <div className="relative shrink-0 size-[4px]">
@@ -178,17 +139,22 @@ export function ReceivablesTab({ format }: { format: Format }): JSX.Element {
                           </p>
                         </>
                       )}
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-end justify-center relative shrink-0">
-                    <p
-                      className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap"
-                      data-testid={`text-receivable-amount-${idx}`}
-                    >
-                      {format(r.outstanding)}
-                    </p>
-                  </div>
-                </div>
+                    </>
+                  }
+                  amount={format(r.outstanding)}
+                  sign="+"
+                  amountColor="#42bf23"
+                  rowTestId={`row-receivable-${idx}`}
+                  nameTestId={`text-receivable-name-${idx}`}
+                  amountTestId={`text-receivable-amount-${idx}`}
+                  onClick={open}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      open();
+                    }
+                  }}
+                />
               );
             })}
 
@@ -227,6 +193,8 @@ export function ReceivablesTab({ format }: { format: Format }): JSX.Element {
       <ReceivableDetailPopup
         receivable={openReceivable}
         counterpartyName={openReceivable ? nameOf(openReceivable.counterparty_id) : null}
+        receivables={rows}
+        onSelectReceivable={setOpenReceivable}
         onClose={() => setOpenReceivable(null)}
       />
     </>

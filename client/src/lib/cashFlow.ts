@@ -22,7 +22,7 @@
  */
 
 import { liabilitiesTotal, unpaidApInvoices, payableObligations, type ApInvoiceLike } from "./liabilities";
-import { isoDay, absAmount as num, debtKey } from "./debtIdentity";
+import { isoDay, absAmount as num, debtKey, matchObligationsToInvoices } from "./debtIdentity";
 import type { RawObligation } from "./brainObligations";
 import { capitalCase } from "./displayLabels";
 
@@ -58,6 +58,8 @@ export interface CashFlowRow {
    * set has already grown once), so they cannot each become a `CashFlowKind`.
    */
   badgeLabel?: string;
+  /** Source status for debt-like rows; shared with Payables/Receivables pills. */
+  status?: string;
   label: string;
   sublabel: string;
   /** ISO date used for ordering. Empty when the source carried none. */
@@ -69,6 +71,8 @@ export interface CashFlowRow {
   txId?: string;
   /** Set on rows that open the bill detail popup. */
   invoiceId?: string;
+  /** Set on unmatched obligation rows that open the payable detail popup. */
+  obligationId?: string;
   flagged: boolean;
 }
 
@@ -151,6 +155,17 @@ export function buildCashFlowRows(input: {
      see the second debt silently vanish. Under-reporting money owed is the worst
      thing this list can do, so each invoice cancels exactly one obligation. */
   const listedDebts = new Map<string, number>();
+  /* The invoice and obligation twins can carry different lifecycle vocabulary
+     ("sent" versus "upcoming"). Payables established the obligation's status as
+     canonical for a debt row, so carry that status onto the invoice projection
+     Cash Flow renders for the same debt. */
+  const obligationByInvoice = new Map<string, RawObligation>();
+  const payableRows = payableObligations(input.obligations ?? null);
+  const obligationById = new Map(payableRows.map((o) => [o.id, o]));
+  for (const [obligationId, invoice] of matchObligationsToInvoices(payableRows, input.invoices ?? [])) {
+    const obligation = obligationById.get(obligationId);
+    if (obligation) obligationByInvoice.set(invoice.id, obligation);
+  }
 
   for (const inv of unpaidApInvoices(input.invoices ?? [])) {
     if (!inv?.id) continue;
@@ -161,6 +176,12 @@ export function buildCashFlowRows(input: {
     rows.push({
       key: `inv:${inv.id}`,
       kind: "bill",
+      status: (() => {
+        const obligationStatus = obligationByInvoice.get(inv.id)?.status;
+        return typeof obligationStatus === "string" && obligationStatus.trim()
+          ? obligationStatus
+          : inv.status ?? undefined;
+      })(),
       label: nameOf(inv.counterparty_id) ?? inv.invoice_number ?? "Bill",
       sublabel: [inv.invoice_number, due ? `due ${due}` : "", inv.status === "overdue" ? "overdue" : ""]
         .filter(Boolean)
@@ -189,7 +210,7 @@ export function buildCashFlowRows(input: {
      Matching on identity rather than excluding `type === "bill"` matters: obligation
      kinds are open-ended, and a bill obligation that has no invoice behind it is a
      real debt that must still appear rather than being filtered out by its name. */
-  for (const o of payableObligations(input.obligations ?? null)) {
+  for (const o of payableRows) {
     const due = isoDay(o.due_date);
     const key = debtKey(o.counterparty_id, num(o.amount_due), due);
     const alreadyListed = listedDebts.get(key) ?? 0;
@@ -202,6 +223,7 @@ export function buildCashFlowRows(input: {
       key: `obl:${o.id}`,
       kind: "bill",
       badgeLabel: kindWord || "Owed",
+      status: o.status,
       label: nameOf(o.counterparty_id) || kindWord || "Payable",
       sublabel: [due ? `due ${due}` : "", o.status.toLowerCase() === "overdue" ? "overdue" : ""]
         .filter(Boolean)
@@ -209,6 +231,7 @@ export function buildCashFlowRows(input: {
       date: due,
       amount: num(o.amount_due),
       sign: "-",
+      obligationId: o.id,
       flagged: false,
     });
   }

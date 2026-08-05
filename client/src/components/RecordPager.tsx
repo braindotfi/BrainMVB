@@ -9,35 +9,48 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 interface RecordPagerProps {
   onPrev: () => void;
   onNext: () => void;
-  disabled?: boolean;
+  disabledPrev?: boolean;
+  disabledNext?: boolean;
   testIdPrefix: string;
 }
 
 const BTN =
-  "size-[32px] rounded-full bg-[#222737] flex items-center justify-center hover:bg-[#2c3247] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] shrink-0 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[#222737]";
+  "bg-[#222737] flex flex-1 gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] hover:bg-[#2c3247] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] shrink-0 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[#222737]";
 
-export function RecordPager({ onPrev, onNext, disabled = false, testIdPrefix }: RecordPagerProps) {
+export function RecordPager({
+  onPrev,
+  onNext,
+  disabledPrev = false,
+  disabledNext = false,
+  testIdPrefix,
+}: RecordPagerProps) {
   return (
-    <div className="flex items-center gap-[4px] shrink-0">
+    <div className="flex gap-[16px] items-center w-full">
       <button
         type="button"
         onClick={onPrev}
-        disabled={disabled}
+        disabled={disabledPrev}
         aria-label="Previous record"
         data-testid={`button-${testIdPrefix}-prev`}
         className={BTN}
       >
-        <ChevronLeft size={14} className="text-[#a8b9f4]" />
+        <ChevronLeft size={16} className="text-[#6c779d]" />
+        <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">
+          Previous
+        </span>
       </button>
       <button
         type="button"
         onClick={onNext}
-        disabled={disabled}
+        disabled={disabledNext}
         aria-label="Next record"
         data-testid={`button-${testIdPrefix}-next`}
         className={BTN}
       >
-        <ChevronRight size={14} className="text-[#a8b9f4]" />
+        <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">
+          Next
+        </span>
+        <ChevronRight size={16} className="text-[#6c779d]" />
       </button>
     </div>
   );

@@ -113,6 +113,42 @@ describe("buildCashFlowRows", () => {
     expect(rows.find((r) => r.key === "inv:ap1")?.invoiceId).toBe("ap1");
   });
 
+  it("uses the obligation status on the invoice projection for a matched debt", () => {
+    /* CloudOps is the live example: the obligation and invoice have different IDs,
+       but the same counterparty, amount and due day. Cash Flow renders the invoice
+       because it has bill detail, while the Payables row renders the obligation. The
+       status pill must still describe the same debt, not whichever feed happened to
+       render the row. */
+    const rows = buildCashFlowRows({
+      invoices: [
+        INV({
+          id: "cloudops-invoice",
+          counterparty_id: "cp_cloudops",
+          amount_due: "19400.00",
+          due_date: "2026-08-12T11:30:05.422Z",
+          status: "sent",
+        }),
+      ],
+      obligations: [
+        OBL({
+          id: "cloudops-obligation",
+          counterparty_id: "cp_cloudops",
+          amount_due: "19400.00000000",
+          due_date: "2026-08-12T11:30:05.422Z",
+          status: "upcoming",
+          type: "bill",
+        }),
+      ],
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      key: "inv:cloudops-invoice",
+      status: "upcoming",
+      sign: "-",
+      amount: 19400,
+    });
+  });
+
   it("suppresses only ONE obligation per matching invoice, never a whole identity", () => {
     /* A presence check would let a single invoice cancel every obligation sharing its
        identity, so a tenant that genuinely owes the same counterparty the same amount

@@ -34,10 +34,14 @@ import {
   type CounterpartiesLiteResponse,
 } from "@/components/LedgerWidgets";
 import { BillDetailPopup, type BrainInvoiceDTO as BillDTO } from "@/components/BillDetailPopup";
+import { PayableDetailPopup } from "@/components/PayableDetailPopup";
 import alertIcon from "@assets/Icons_1783274957589.png";
 import { AlertCallout, UnavailableDataBox } from "@/components/Callout";
 import { capitalCase } from "@/lib/displayLabels";
 import { RecordPill } from "@/components/RecordPill";
+import { LedgerRecordRow } from "@/components/LedgerRecordRow";
+import { statusColors } from "@/lib/obligationRows";
+import type { Obligation } from "@/lib/brainObligations";
 
 interface TxDTO {
   id: string;
@@ -222,6 +226,7 @@ function summarizeIncome(txs: TxDTO[]): { monthly: number; count: number; topCpI
 
 export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (txId: string) => void }): JSX.Element {
   const [openBill, setOpenBill] = useState<BillDTO | null>(null);
+  const [openPayable, setOpenPayable] = useState<Obligation | null>(null);
 
   const txQ = useQuery<TxResponse>({ queryKey: ["/api/brain/ledger/transactions"], retry: false });
   const invQ = useQuery<InvoicesLiteResponse>({ queryKey: ["/api/brain/ledger/invoices"], retry: false });
@@ -267,6 +272,9 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
 
   const apBills = unpaidApInvoices(invs ?? []);
   const billById = new Map(apBills.map((b) => [b.id, b]));
+  const payableById = new Map(
+    payableObligations(obs).map((obligation) => [obligation.id, obligation]),
+  );
 
   /* ── per-card captions (short; headline number is already in the card) ── */
 
@@ -377,11 +385,56 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
         ) : (
           rows.map((row, idx) => {
             const bill = row.invoiceId ? billById.get(row.invoiceId) : undefined;
+            const payable = row.obligationId ? payableById.get(row.obligationId) : undefined;
             const open = row.txId
               ? () => onOpenTx(row.txId!)
               : bill
                 ? () => setOpenBill(bill as unknown as BillDTO)
+                : payable
+                  ? () => setOpenPayable(payable)
                 : undefined;
+            if (row.kind === "bill") {
+              const status = row.status ?? "upcoming";
+              return (
+                <LedgerRecordRow
+                  key={row.key}
+                  name={row.label}
+                  pill={{
+                    label: capitalCase(status),
+                    ...statusColors(status),
+                    testId: `badge-cashflow-status-${status.trim().toLowerCase()}`,
+                  }}
+                  secondary={detailLine(row.sublabel, row.date) ? (
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] truncate">
+                      {detailLine(row.sublabel, row.date)}
+                    </p>
+                  ) : undefined}
+                  additionalPill={row.flagged ? (
+                    <RecordPill
+                      className="bg-[#350011] text-[#d20344] border-[rgba(210,3,68,0.2)]"
+                      testId={`badge-cashflow-anomaly-${idx}`}
+                    >
+                      <img src={alertIcon} alt="" className="size-[12px]" />
+                      Anomaly
+                    </RecordPill>
+                  ) : undefined}
+                  amount={format(row.amount)}
+                  sign="-"
+                  amountColor="#d20344"
+                  rowTestId={`row-cashflow-${row.key}`}
+                  nameTestId={`text-cashflow-name-${idx}`}
+                  amountTestId={`text-cashflow-amount-${idx}`}
+                  onClick={open}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      open?.();
+                    }
+                  }}
+                />
+              );
+            }
+
             return (
               <div
                   key={row.key}
@@ -448,6 +501,14 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
         bills={apBills as unknown as BillDTO[]}
         onSelectBill={(b) => setOpenBill(b)}
         onClose={() => setOpenBill(null)}
+      />
+      <PayableDetailPopup
+        payable={openPayable}
+        counterpartyName={openPayable ? nameOf(openPayable.counterparty_id) : null}
+        payables={Array.from(payableById.values())}
+        onSelectPayable={setOpenPayable}
+        invoicesUnknown={invs == null}
+        onClose={() => setOpenPayable(null)}
       />
     </div>
   );

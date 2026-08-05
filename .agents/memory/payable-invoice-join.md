@@ -58,3 +58,18 @@ and "Overdue" in the popup you got by clicking it**.
 exported helper, not from two plausible computations. "Is it overdue by the calendar"
 and "what does the upstream call it" are different questions; pick the upstream status
 and show the date as its own field.
+
+## Shared presentation does not mean shared IDs
+
+The live CloudOps example confirms the obligation and invoice are distinct backend
+records: `obl_*` and `inv_*` have different IDs, while counterparty, amount, and due
+day match. Cash Flow safely renders the invoice twin because it has bill details, while
+Payables renders the obligation source.
+
+**Why:** users need to recognize one debt across surfaces without the UI claiming an
+invoice foreign key that brain-core does not provide.
+
+**How to apply:** share the row layout, status-pill vocabulary, signed amount styling,
+and popup component for the record type actually opened. For a matched invoice
+projection in Cash Flow, carry the obligation's status so the same debt does not show
+different lifecycle pills merely because a different source record was rendered.
