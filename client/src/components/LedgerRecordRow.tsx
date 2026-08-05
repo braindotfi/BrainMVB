@@ -35,7 +35,7 @@ export function LedgerRecordRow({
   pill?: LedgerRowPill;
   secondary?: ReactNode;
   amount: string;
-  sign: "+" | "-";
+  sign: "+" | "-" | "";
   amountColor: string;
   nameTestId?: string;
   amountTestId?: string;

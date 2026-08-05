@@ -25,6 +25,7 @@ import { liabilitiesTotal, unpaidApInvoices, payableObligations, type ApInvoiceL
 import { isoDay, absAmount as num, debtKey, matchObligationsToInvoices } from "./debtIdentity";
 import type { RawObligation } from "./brainObligations";
 import { capitalCase } from "./displayLabels";
+import { subLabel } from "./obligationRows";
 
 export interface CashFlowTxLike {
   id: string;
@@ -62,6 +63,8 @@ export interface CashFlowRow {
   status?: string;
   label: string;
   sublabel: string;
+  /** The kind/counterparty detail used by the canonical Payables row treatment. */
+  secondaryLabel?: string;
   /** ISO date used for ordering. Empty when the source carried none. */
   date: string;
   amount: number;
@@ -171,7 +174,14 @@ export function buildCashFlowRows(input: {
     if (!inv?.id) continue;
     const flags = inv.metadata?.flags ?? [];
     const due = isoDay(inv.due_date);
-    const key = debtKey(inv.counterparty_id, num(inv.amount_due), due);
+    const matchedObligation = obligationByInvoice.get(inv.id);
+    const counterpartyId = inv.counterparty_id ?? null;
+    const counterpartyName = nameOf(counterpartyId);
+    const matchedKind =
+      matchedObligation && typeof matchedObligation.kind === "string"
+        ? matchedObligation.kind
+        : null;
+    const key = debtKey(counterpartyId, num(inv.amount_due), due);
     listedDebts.set(key, (listedDebts.get(key) ?? 0) + 1);
     rows.push({
       key: `inv:${inv.id}`,
@@ -182,10 +192,11 @@ export function buildCashFlowRows(input: {
           ? obligationStatus
           : inv.status ?? undefined;
       })(),
-      label: nameOf(inv.counterparty_id) ?? inv.invoice_number ?? "Bill",
+      label: counterpartyName ?? inv.invoice_number ?? "Bill",
       sublabel: [inv.invoice_number, due ? `due ${due}` : "", inv.status === "overdue" ? "overdue" : ""]
         .filter(Boolean)
         .join(" · "),
+      secondaryLabel: subLabel(matchedKind, counterpartyName, counterpartyId),
       date: due,
       amount: num(inv.amount_due),
       sign: "-",
@@ -219,15 +230,17 @@ export function buildCashFlowRows(input: {
       continue;
     }
     const kindWord = o.kind && o.kind.trim() ? capitalCase(o.kind.trim()) : "";
+    const counterpartyName = nameOf(o.counterparty_id);
     rows.push({
       key: `obl:${o.id}`,
       kind: "bill",
       badgeLabel: kindWord || "Owed",
       status: o.status,
-      label: nameOf(o.counterparty_id) || kindWord || "Payable",
+      label: counterpartyName || "Unidentified counterparty",
       sublabel: [due ? `due ${due}` : "", o.status.toLowerCase() === "overdue" ? "overdue" : ""]
         .filter(Boolean)
         .join(" · "),
+      secondaryLabel: subLabel(o.kind, counterpartyName, o.counterparty_id),
       date: due,
       amount: num(o.amount_due),
       sign: "-",

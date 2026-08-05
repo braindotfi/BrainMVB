@@ -179,7 +179,8 @@ export function ReceivablesTab({ format }: { format: Format }): JSX.Element {
               </div>
               <div className="flex flex-col items-end justify-center relative shrink-0">
                 <p
-                  className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap"
+                  className="[font-family:'JetBrains_Mono',monospace] font-bold leading-[20px] text-[18px] text-right whitespace-nowrap"
+                  style={{ color: total === null ? "#414965" : "#d20344" }}
                   data-testid="text-receivable-total"
                 >
                   {total === null ? "-" : format(total)}

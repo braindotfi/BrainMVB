@@ -40,8 +40,9 @@ import { AlertCallout, UnavailableDataBox } from "@/components/Callout";
 import { capitalCase } from "@/lib/displayLabels";
 import { RecordPill } from "@/components/RecordPill";
 import { LedgerRecordRow } from "@/components/LedgerRecordRow";
-import { statusColors } from "@/lib/obligationRows";
+import { dueLabel, statusColors } from "@/lib/obligationRows";
 import type { Obligation } from "@/lib/brainObligations";
+import { ICONS } from "@/assets/figma-icons";
 
 interface TxDTO {
   id: string;
@@ -80,18 +81,6 @@ const AMOUNT_COLOUR: Record<"+" | "-" | "", string> = {
 
 /* `label` lets an owed row keep the bill treatment while naming what it actually is
    (Payroll, Tax). The styling is the kind's; only the word changes. */
-const KindBadge = ({ kind, label }: { kind: CashFlowKind; label?: string }) => {
-  const c = KIND_BADGE[kind];
-  return (
-    <RecordPill
-      className=""
-      style={{ background: c.bg, borderColor: c.border, color: c.fg }}
-    >
-      {capitalCase(label || KIND_LABEL[kind])}
-    </RecordPill>
-  );
-};
-
 /* ── metrics ─────────────────────────────────────────────────────────────── */
 
 const Metric = ({
@@ -393,103 +382,72 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
                 : payable
                   ? () => setOpenPayable(payable)
                 : undefined;
-            if (row.kind === "bill") {
-              const status = row.status ?? "upcoming";
-              return (
-                <LedgerRecordRow
-                  key={row.key}
-                  name={row.label}
-                  pill={{
-                    label: capitalCase(status),
-                    ...statusColors(status),
-                    testId: `badge-cashflow-status-${status.trim().toLowerCase()}`,
-                  }}
-                  secondary={detailLine(row.sublabel, row.date) ? (
+            const isBill = row.kind === "bill";
+            const status = row.status ?? "upcoming";
+            const secondary = isBill
+              ? (
+                  <>
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] whitespace-nowrap">
+                      {dueLabel(row.date || null)}
+                    </p>
+                    {row.secondaryLabel && (
+                      <>
+                        <div className="relative shrink-0 size-[4px]">
+                          <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.activity_dot} />
+                        </div>
+                        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] truncate">
+                          {row.secondaryLabel}
+                        </p>
+                      </>
+                    )}
+                  </>
+                )
+              : detailLine(row.sublabel, row.date)
+                ? (
                     <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] truncate">
                       {detailLine(row.sublabel, row.date)}
                     </p>
-                  ) : undefined}
-                  additionalPill={row.flagged ? (
-                    <RecordPill
-                      className="bg-[#350011] text-[#d20344] border-[rgba(210,3,68,0.2)]"
-                      testId={`badge-cashflow-anomaly-${idx}`}
-                    >
-                      <img src={alertIcon} alt="" className="size-[12px]" />
-                      Anomaly
-                    </RecordPill>
-                  ) : undefined}
-                  amount={format(row.amount)}
-                  sign="-"
-                  amountColor="#d20344"
-                  rowTestId={`row-cashflow-${row.key}`}
-                  nameTestId={`text-cashflow-name-${idx}`}
-                  amountTestId={`text-cashflow-amount-${idx}`}
-                  onClick={open}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      open?.();
-                    }
-                  }}
-                />
-              );
-            }
-
+                  )
+                : undefined;
             return (
-              <div
-                  key={row.key}
-                  role={open ? "button" : undefined}
-                  tabIndex={open ? 0 : undefined}
-                  data-testid={`row-cashflow-${row.key}`}
-                  onClick={open}
-                  onKeyDown={
-                    open
-                      ? (e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            open();
-                          }
-                        }
-                      : undefined
-                  }
-                  className={[
-                    "flex gap-[12px] items-center px-[16px] py-[12px] w-full bg-[#0a0c10] transition-colors",
-                    "outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]",
-                    "border-b border-solid border-[#1d2132] last:border-b-0",
-                    open ? "hover:bg-[#11141b] cursor-pointer" : "",
-                  ].join(" ")}
-                >
-                  <div className="flex flex-1 flex-col items-start justify-center min-w-px gap-[4px]">
-                    <div className="flex gap-[8px] items-center flex-wrap">
-                      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px]">
-                        {row.label}
-                      </p>
-                      <KindBadge kind={row.kind} label={row.badgeLabel} />
-                      {row.flagged && (
-                        <RecordPill
-                          className="bg-[#350011] text-[#d20344] border-[rgba(210,3,68,0.2)]"
-                          testId={`badge-cashflow-anomaly-${idx}`}
-                        >
-                          <img src={alertIcon} alt="" className="size-[12px]" />
-                          Anomaly
-                        </RecordPill>
-                      )}
-                    </div>
-                    {detailLine(row.sublabel, row.date) && (
-                      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px]">
-                        {detailLine(row.sublabel, row.date)}
-                      </p>
-                    )}
-                  </div>
-                  <p
-                    className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[18px] text-right whitespace-nowrap shrink-0"
-                    style={{ color: AMOUNT_COLOUR[row.sign] }}
+              <LedgerRecordRow
+                key={row.key}
+                name={row.label}
+                pill={isBill
+                  ? {
+                      label: capitalCase(status),
+                      ...statusColors(status),
+                      testId: `badge-cashflow-status-${status.trim().toLowerCase()}`,
+                    }
+                  : {
+                      label: capitalCase(row.badgeLabel || KIND_LABEL[row.kind]),
+                      ...KIND_BADGE[row.kind],
+                      testId: `badge-cashflow-kind-${row.kind}`,
+                    }}
+                secondary={secondary}
+                additionalPill={row.flagged ? (
+                  <RecordPill
+                    className="bg-[#350011] text-[#d20344] border-[rgba(210,3,68,0.2)]"
+                    testId={`badge-cashflow-anomaly-${idx}`}
                   >
-                    {row.sign}
-                    {format(row.amount)}
-                  </p>
-                </div>
-              
+                    <img src={alertIcon} alt="" className="size-[12px]" />
+                    Anomaly
+                  </RecordPill>
+                ) : undefined}
+                amount={format(row.amount)}
+                sign={row.sign}
+                amountColor={AMOUNT_COLOUR[row.sign]}
+                rowTestId={`row-cashflow-${row.key}`}
+                nameTestId={`text-cashflow-name-${idx}`}
+                amountTestId={`text-cashflow-amount-${idx}`}
+                onClick={open}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    open?.();
+                  }
+                }}
+              />
             );
           })
         )}
