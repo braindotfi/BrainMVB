@@ -469,7 +469,7 @@ export function VendorsPanel() {
         return;
       }
       await queryClient.invalidateQueries({ queryKey: ["/api/brain/ledger/counterparties"] });
-      toast({ title: "Vendor deleted", description: `${vendorNameLabel} has been removed.` });
+      alert.success("Success", `${vendorNameLabel} has been successfully deleted and removed.`);
       setActiveVendor(null);
       const params = new URLSearchParams(search);
       params.delete("vendor");
@@ -756,8 +756,7 @@ export function VendorsPanel() {
   const callTrustAction = async (
     vendorId: string,
     action: "grant" | "pause" | "acknowledge" | "restore",
-    successTitle: string,
-    successDesc: string,
+    successText: string,
   ) => {
     setTrustBusy(true);
     try {
@@ -780,7 +779,7 @@ export function VendorsPanel() {
       params.delete("vendor");
       params.set("tab", "counterparties");
       navigate(`/ledger?${params.toString()}`, { replace: true });
-      alert.success(successTitle, successDesc);
+      alert.success("Success", successText);
     } catch {
       alert.error("Action failed", "Couldn't reach Brain core. Nothing was changed.");
     } finally {
@@ -790,28 +789,22 @@ export function VendorsPanel() {
 
   const handleGrant = (vendorId: string) => {
     const v = vendors.find((x) => x.id === vendorId);
-    const isCustomer = v ? vendorSegment(v) === "customer" : false;
-    return callTrustAction(
-      vendorId, "grant",
-      isCustomer ? "Confirmed" : "Trusted",
-      isCustomer ? "Customer confirmed." : "Vendor trusted.",
-    );
+    return callTrustAction(vendorId, "grant", `${v?.name ?? "Vendor"} has been added as a trusted vendor.`);
   };
-  const handleFlag = (vendorId: string) =>
-    callTrustAction(vendorId, "pause", "Flagged", "Flagged for review.");
+  const handleFlag = (vendorId: string) => {
+    const v = vendors.find((x) => x.id === vendorId);
+    return callTrustAction(vendorId, "pause", `${v?.name ?? "Vendor"} has been added as a flagged vendor.`);
+  };
   /* paused → trusted. Uses /trust/restore (not grant — grant is only valid from
      unreviewed/acknowledged; the matrix has no paused→trusted grant transition). */
   const handleRestore = (vendorId: string) => {
     const v = vendors.find((x) => x.id === vendorId);
-    const isCustomer = v ? vendorSegment(v) === "customer" : false;
-    return callTrustAction(
-      vendorId, "restore",
-      isCustomer ? "Confirmation restored" : "Trust restored",
-      isCustomer ? "Confirmation has been restored." : "Trust has been restored.",
-    );
+    return callTrustAction(vendorId, "restore", `${v?.name ?? "Vendor"} has been added as a trusted vendor.`);
   };
-  const handleAcknowledge = (vendorId: string) =>
-    callTrustAction(vendorId, "acknowledge", "No action", "Marked reviewed with no action taken.");
+  const handleAcknowledge = (vendorId: string) => {
+    const v = vendors.find((x) => x.id === vendorId);
+    return callTrustAction(vendorId, "acknowledge", `${v?.name ?? "Vendor"} has been reviewed but no action was taken.`);
+  };
 
   /* Bulk confirm — Customers segment only. N individual grant calls so each
      row gets its own audit event. Risk-flagged rows (riskLevel set) cannot be
