@@ -9,6 +9,7 @@ import {
   isReviewedOnly,
   reviewReasonLabel,
   vendorSegment,
+  supportsTrustActions,
 } from "@/lib/brainVendors";
 import { useCurrency } from "@/lib/useCurrency";
 import { useToast } from "@/hooks/use-toast";
@@ -543,6 +544,16 @@ export function VendorsPanel() {
     return buckets;
   }, [segmentVendors]);
 
+  /* The exact rows "Confirm All" acts on. Derived once so the button's count,
+     its visibility and the loop it runs can never describe different sets. */
+  const bulkConfirmable = useMemo(
+    () =>
+      grouped.needsReview.filter(
+        (v) => vendorSegment(v) === "customer" && !v.riskLevel && supportsTrustActions(v),
+      ),
+    [grouped],
+  );
+
   const countsKnown = !isLoading && !isError;
 
   /* Customers say "Confirmed" where vendors say "Trusted". Same tier, same
@@ -767,6 +778,13 @@ export function VendorsPanel() {
     successTitle: string,
     successText: string,
   ) => {
+    /* Informational rows render no trust controls, so reaching here means a
+       caller bypassed the UI (a deep link, a stale popup, a future call site).
+       Guard at the mount point rather than trusting the absence of a button:
+       this is the only place trust writes originate, so it is the only place
+       that can promise none is ever recorded against a placeholder. */
+    const target = vendors.find((x) => x.id === vendorId);
+    if (target && !supportsTrustActions(target)) return;
     setTrustBusy(true);
     try {
       const res = await fetch(
@@ -839,9 +857,7 @@ export function VendorsPanel() {
      cleared here and stay in the per-item queue. */
   const handleBulkConfirm = async () => {
     if (bulkBusy) return;
-    const toConfirm = grouped.needsReview.filter(
-      (v) => vendorSegment(v) === "customer" && !v.riskLevel,
-    );
+    const toConfirm = bulkConfirmable;
     if (toConfirm.length === 0) return;
     setBulkBusy(true);
     let succeeded = 0;
@@ -883,9 +899,12 @@ export function VendorsPanel() {
               </div>
 
               {/* Bulk confirm: Customers segment, Needs Review tab, risk-free rows only.
-                  Risk-flagged rows need per-item review and are excluded here. */}
+                  Risk-flagged rows need per-item review and are excluded here, as
+                  are informational rows, which no confirmation applies to. The
+                  count comes from the SAME list the click confirms — a button
+                  offering to confirm more rows than it acts on is a lie. */}
               {segment === "customer" && effectiveTab === "Needs Review" &&
-               tabVendors.filter((v) => !v.riskLevel).length > 0 && (
+               bulkConfirmable.length > 0 && (
                 <button
                   type="button"
                   onClick={handleBulkConfirm}
@@ -896,7 +915,7 @@ export function VendorsPanel() {
                 >
                   {bulkBusy
                     ? "Confirming..."
-                    : `Confirm All ${tabVendors.filter((v) => !v.riskLevel).length} Customers`}
+                    : `Confirm All ${bulkConfirmable.length} Customers`}
                 </button>
               )}
 

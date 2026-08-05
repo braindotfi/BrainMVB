@@ -66,6 +66,13 @@ export interface Vendor {
   /** brain-core `risk_level`, kept only when it is review-worthy. Drives the
    *  short reason chip; absent on fixtures that carry hand-written flags. */
   riskLevel?: "high" | "sanctioned" | null;
+  /** Set when the row is a placeholder brain-core keeps for a source document
+   *  rather than a party anyone transacts with — today only the payroll
+   *  register (`type: "other"` + `metadata.source_kind === "payroll_register"`).
+   *  Such a row is informational: it renders read-only and carries no trust
+   *  controls, because no trust transition is meaningful on it. `undefined` is
+   *  the normal case and means the row behaves like any other counterparty. */
+  informationalSource?: "payroll_register";
   /** brain-core's canonical review state, when it reports one. `undefined`
    *  means the field was absent from the read — NOT "unreviewed". The two are
    *  kept apart on purpose: absent means we fall back to deriving the tier from

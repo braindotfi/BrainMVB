@@ -64,6 +64,45 @@ export interface BrainCounterparty {
    *  validated against the known set rather than cast — an unrecognised value
    *  is treated as "field not reported", never coerced into a review state. */
   trust_status?: string | null;
+  /** Free-form upstream metadata. Only `source_kind` is read (see the payroll
+   *  placeholder predicate below). Typed loosely because the BFF forwards this
+   *  read verbatim: what arrives is brain-core's shape, not ours. */
+  metadata?: Record<string, unknown> | null;
+}
+
+/** `metadata.source_kind` as a string, or undefined when the field is absent or
+ *  is not a string. Never dereferenced blind: `metadata` is proxied verbatim, so
+ *  a missing or differently-shaped object must read as "not reported" rather
+ *  than throw. */
+function readSourceKind(metadata: unknown): string | undefined {
+  if (typeof metadata !== "object" || metadata === null) return undefined;
+  const value = (metadata as { source_kind?: unknown }).source_kind;
+  return typeof value === "string" ? value : undefined;
+}
+
+/* ── Payroll register placeholders (brain-core #507) ──────────────────────────
+   Payroll runs are ingested against a PLACEHOLDER counterparty rather than
+   against each employee. It is a grouping row for a source document, not a
+   party anyone pays directly, so no trust transition means anything on it:
+   granting, pausing, restoring or acknowledging it would record a decision
+   about a bookkeeping artefact.
+
+   The predicate is deliberately BOTH halves. `type === "other"` alone is a
+   broad bucket that real counterparties land in, and those keep their full
+   trust controls — only the payroll placeholder is singled out. An absent or
+   unrecognised `source_kind` therefore leaves a row fully actionable, which is
+   the safe direction to fail: a normal row that keeps its controls is a
+   cosmetic miss, whereas hiding controls on a real counterparty would strand
+   it with no way to review it. */
+export function isPayrollRegisterPlaceholder(cp: BrainCounterparty): boolean {
+  return cp.type === "other" && readSourceKind(cp.metadata) === "payroll_register";
+}
+
+/** Whether trust transitions apply to this row at all. Informational rows are
+ *  read-only records, so every trust control is omitted rather than disabled —
+ *  there is no state in which they become available. */
+export function supportsTrustActions(v: Vendor): boolean {
+  return v.informationalSource === undefined;
 }
 
 const TRUST_STATES: readonly TrustState[] = ["unreviewed", "trusted", "paused", "acknowledged"];
@@ -120,6 +159,7 @@ export function mapCounterpartyToVendor(cp: BrainCounterparty): Vendor {
   const totalPaid = toAmount(cp.payment_total);
   const trustState = readTrustState(cp.trust_status);
   const trustStatus = deriveTrustStatus(cp, paymentCount, trustState);
+  const informationalSource = isPayrollRegisterPlaceholder(cp) ? ("payroll_register" as const) : undefined;
   const riskLevel =
     cp.risk_level === "sanctioned" || cp.risk_level === "high" ? cp.risk_level : null;
 
@@ -130,6 +170,7 @@ export function mapCounterpartyToVendor(cp: BrainCounterparty): Vendor {
     trustStatus,
     trustState,
     segment: cp.type === "customer" ? "customer" : "vendor",
+    informationalSource,
     riskLevel,
     // ponytail: brain-core's counterparty row carries no payout account
     // reference (that lives on payment rails, not the counterparty). "----"
@@ -158,8 +199,9 @@ export function mapCounterpartyToVendor(cp: BrainCounterparty): Vendor {
         ]
       : [],
     // Brain "suggests" trust from real payment history — the same signal that
-    // makes a counterparty "known". Never true for a risk-flagged row.
-    eligibleForTrust: trustStatus === "known",
+    // makes a counterparty "known". Never true for a risk-flagged row, and
+    // never for an informational row: there is no trust to suggest granting.
+    eligibleForTrust: informationalSource === undefined && trustStatus === "known",
     ruleIds: [],
   };
 }
@@ -242,6 +284,10 @@ export function isReviewedOnly(v: Vendor): boolean {
 /** Why a row sits in Needs Review. Risk outranks newness when both apply. */
 export function reviewReasonLabel(v: Vendor): string | null {
   if (!isNeedsReview(v)) return null;
+  /* Ahead of the risk and newness reasons on purpose: "New" would invite a
+     review the row cannot receive. Naming what it is explains why it has no
+     controls when the user opens it. */
+  if (v.informationalSource === "payroll_register") return "Payroll register";
   if (v.riskLevel === "sanctioned") return "Risk: sanctioned";
   if (v.riskLevel === "high") return "Risk: high";
   if (v.trustStatus === "under_review") return "Flagged for review";

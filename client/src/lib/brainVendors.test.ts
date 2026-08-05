@@ -3,6 +3,8 @@ import {
   mapCounterpartyToVendor,
   isNeedsReview,
   isReviewedOnly,
+  isPayrollRegisterPlaceholder,
+  supportsTrustActions,
   reviewReasonLabel,
   vendorSegment,
   vendorTier,
@@ -374,5 +376,108 @@ describe("acknowledged reads as \"No action\" without changing the wire value", 
     expect(src).toContain("You reviewed this {noun} and took no action.");
     // acknowledged → grant stays available on that row.
     expect(src).toContain('data-testid="text-acknowledged-note"');
+  });
+});
+
+/* ── Payroll register placeholders (brain-core #507) ──────────────────────────
+ * Payroll runs are ingested against a placeholder counterparty rather than
+ * against each employee. It is a grouping row for a source document, so no
+ * trust transition means anything on it and the UI must render it read-only.
+ *
+ * The predicate is BOTH halves — `type === "other"` AND
+ * `metadata.source_kind === "payroll_register"`. `other` on its own is a broad
+ * bucket that ordinary counterparties fall into, and stripping their controls
+ * would strand them with no way to be reviewed. Every case below that is only
+ * half a match must therefore stay fully actionable.
+ */
+describe("payroll register placeholders render informational-only", () => {
+  const payroll = (over: Partial<BrainCounterparty> = {}) =>
+    cp({ type: "other", metadata: { source_kind: "payroll_register" }, ...over });
+
+  it("recognises the placeholder on both halves of the predicate", () => {
+    expect(isPayrollRegisterPlaceholder(payroll())).toBe(true);
+  });
+
+  it("withholds every trust action from the placeholder", () => {
+    const v = mapCounterpartyToVendor(payroll());
+    expect(v.informationalSource).toBe("payroll_register");
+    expect(supportsTrustActions(v)).toBe(false);
+  });
+
+  it("never suggests trusting a placeholder, even with payment history", () => {
+    // payment_count > 0 is what normally makes a row "known" and eligible.
+    const v = mapCounterpartyToVendor(payroll({ payment_count: 9, payment_total: "9000" }));
+    expect(v.eligibleForTrust).toBe(false);
+  });
+
+  it("names the row in the review queue instead of calling it New", () => {
+    // "New" invites a review this row cannot receive.
+    expect(reviewReasonLabel(mapCounterpartyToVendor(payroll()))).toBe("Payroll register");
+  });
+
+  /* The four half-matches. Each one must keep its controls. */
+  it("leaves an other-typed counterparty with no metadata fully actionable", () => {
+    const v = mapCounterpartyToVendor(cp({ type: "other" }));
+    expect(isPayrollRegisterPlaceholder(cp({ type: "other" }))).toBe(false);
+    expect(supportsTrustActions(v)).toBe(true);
+    expect(v.informationalSource).toBeUndefined();
+  });
+
+  it("leaves an other-typed counterparty from a different source fully actionable", () => {
+    const other = cp({ type: "other", metadata: { source_kind: "bank_statement" } });
+    expect(isPayrollRegisterPlaceholder(other)).toBe(false);
+    expect(supportsTrustActions(mapCounterpartyToVendor(other))).toBe(true);
+  });
+
+  it("does not strip controls from a real counterparty carrying the payroll source kind", () => {
+    // type is the other half: a vendor row is a vendor row whatever it was
+    // ingested from.
+    const vendorRow = cp({ type: "vendor", metadata: { source_kind: "payroll_register" } });
+    expect(isPayrollRegisterPlaceholder(vendorRow)).toBe(false);
+    expect(supportsTrustActions(mapCounterpartyToVendor(vendorRow))).toBe(true);
+
+    const customerRow = cp({ type: "customer", metadata: { source_kind: "payroll_register" } });
+    expect(isPayrollRegisterPlaceholder(customerRow)).toBe(false);
+    expect(supportsTrustActions(mapCounterpartyToVendor(customerRow))).toBe(true);
+  });
+
+  it("treats an unreadable metadata field as 'not reported' rather than throwing", () => {
+    // The read is proxied verbatim, so the shape is brain-core's, not ours.
+    for (const metadata of [null, undefined, {}, { source_kind: null }, { source_kind: 7 }]) {
+      const row = cp({ type: "other", metadata: metadata as never });
+      expect(() => isPayrollRegisterPlaceholder(row)).not.toThrow();
+      expect(isPayrollRegisterPlaceholder(row)).toBe(false);
+    }
+  });
+
+  it("still files the placeholder in a segment, so it never vanishes from the screen", () => {
+    // type "other" is not "customer", so it belongs to the vendor segment, and
+    // it must still reach a tier — an unrendered row is worse than a read-only one.
+    const v = mapCounterpartyToVendor(payroll());
+    expect(vendorSegment(v)).toBe("vendor");
+    expect(vendorTier(v)).not.toBeNull();
+  });
+});
+
+/* Structural guards: the controls are omitted in the popup and no trust write
+ * can originate for one of these rows. Both are formatting-sensitive on
+ * purpose — they fail loudly if the wiring is refactored away. */
+describe("informational rows are wired read-only end to end", () => {
+  const read = (p: string) => require("fs").readFileSync(p, "utf8");
+
+  it("omits the trust controls in the popup rather than disabling them", () => {
+    const src = read("client/src/components/VendorDetailPopup.tsx");
+    expect(src).toContain("const trustActionsAvailable = supportsTrustActions(vendor);");
+    // The whole action block is behind the check, and the note replaces it.
+    expect(src).toContain("{!trustActionsAvailable ? (");
+    expect(src).toContain('data-testid="text-informational-only"');
+  });
+
+  it("guards the single trust-write mount point against a bypassed UI", () => {
+    const src = read("client/src/pages/VendorsPanel.tsx");
+    expect(src).toContain("if (target && !supportsTrustActions(target)) return;");
+    // Bulk confirm acts on the same filtered list it counts.
+    expect(src).toContain("supportsTrustActions(v),");
+    expect(src).toContain("const toConfirm = bulkConfirmable;");
   });
 });

@@ -21,7 +21,7 @@ import {
 import { useLocation } from "wouter";
 import { useCurrency } from "@/lib/useCurrency";
 import type { Vendor, TrustStatus } from "@/lib/vendorTypes";
-import { vendorSegment, isReviewedOnly } from "@/lib/brainVendors";
+import { vendorSegment, isReviewedOnly, supportsTrustActions } from "@/lib/brainVendors";
 import { openRuleDetail, resolveRule } from "@/lib/openRuleDetail";
 import closeIcon from "@assets/Close_1783293571882.png";
 import { AlertCallout, InfoIcon } from "@/components/Callout";
@@ -199,8 +199,17 @@ export function VendorDetailPopup({
   const grantLabel = isCustomer ? `Confirm ${nounTitle}` : `Trust ${nounTitle}`;
   const restoreLabel = isCustomer ? "Restore Confirmation" : "Restore Trust";
 
-  const chipLabel =
-    vendor.trustStatus === "under_review"
+  /* Informational rows (today: the payroll register placeholder) carry no trust
+     controls. The derived trustStatus still says "new"/"known" — that is a tier
+     derivation over payment history and it does not know the row is a
+     bookkeeping artefact — so the status chip and the heading are overridden
+     too. Leaving them would label the row "New Vendor" and invite exactly the
+     review that is being withheld. */
+  const trustActionsAvailable = supportsTrustActions(vendor);
+
+  const chipLabel = !trustActionsAvailable
+    ? "Informational"
+    : vendor.trustStatus === "under_review"
       ? "Paused"
       : vendor.trustStatus === "trusted"
         ? trustedWord
@@ -215,11 +224,13 @@ export function VendorDetailPopup({
           <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-[#1d2132] border-solid h-[56px] relative shrink-0 w-full">
             <DialogPrimitive.Title asChild>
               <p className="-translate-x-1/2 absolute font-['Gilroy',sans-serif] font-semibold leading-[24px] left-1/2 not-italic text-[#a8b9f4] text-[20px] text-center top-[calc(50%-12px)] whitespace-nowrap">
-                {vendor.trustStatus === "new"
-                  ? `New ${nounTitle}`
-                  : vendor.trustStatus === "trusted"
-                    ? `${trustedWord} ${nounTitle}`
-                    : `Review ${nounTitle}`}
+                {!trustActionsAvailable
+                  ? "Payroll Register"
+                  : vendor.trustStatus === "new"
+                    ? `New ${nounTitle}`
+                    : vendor.trustStatus === "trusted"
+                      ? `${trustedWord} ${nounTitle}`
+                      : `Review ${nounTitle}`}
               </p>
             </DialogPrimitive.Title>
             <DialogPrimitive.Close
@@ -244,28 +255,34 @@ export function VendorDetailPopup({
                 <div
                   className="flex items-center justify-center px-[10px] py-[4px] rounded-[22px] shrink-0 border border-solid"
                   style={{
-                    background: vendor.trustStatus === "under_review"
-                      ? "#350011"
-                      : vendor.trustStatus === "trusted"
-                        ? "#123509"
-                        : meta.chipBg,
-                    borderColor: vendor.trustStatus === "under_review"
-                      ? "rgba(210,3,68,0.2)"
-                      : vendor.trustStatus === "new"
-                        ? "rgba(255,149,0,0.2)"
+                    background: !trustActionsAvailable
+                      ? "#1a1e2b"
+                      : vendor.trustStatus === "under_review"
+                        ? "#350011"
                         : vendor.trustStatus === "trusted"
-                          ? "rgba(66,191,35,0.2)"
-                          : "transparent",
+                          ? "#123509"
+                          : meta.chipBg,
+                    borderColor: !trustActionsAvailable
+                      ? "rgba(108,119,157,0.2)"
+                      : vendor.trustStatus === "under_review"
+                        ? "rgba(210,3,68,0.2)"
+                        : vendor.trustStatus === "new"
+                          ? "rgba(255,149,0,0.2)"
+                          : vendor.trustStatus === "trusted"
+                            ? "rgba(66,191,35,0.2)"
+                            : "transparent",
                   }}
                 >
                   <p
                     className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] text-center whitespace-nowrap"
                     style={{
-                      color: vendor.trustStatus === "under_review"
-                        ? "#d20344"
-                        : vendor.trustStatus === "trusted"
-                          ? "#42bf23"
-                          : meta.chipText,
+                      color: !trustActionsAvailable
+                        ? "#6c779d"
+                        : vendor.trustStatus === "under_review"
+                          ? "#d20344"
+                          : vendor.trustStatus === "trusted"
+                            ? "#42bf23"
+                            : meta.chipText,
                     }}
                   >
                     {chipLabel}
@@ -464,8 +481,29 @@ export function VendorDetailPopup({
               </div>
             )}
 
-            {/* Action buttons — wired to VendorsPanel mount-point handlers */}
+            {/* Action buttons — wired to VendorsPanel mount-point handlers.
+                Informational rows get none of them: every control below records
+                a trust decision, and there is no decision to record about a
+                placeholder. They are omitted rather than disabled because no
+                sequence of events makes them available. */}
             <div className="flex flex-col gap-[12px] w-full">
+              {!trustActionsAvailable ? (
+                <div
+                  className="border border-[#1d2132] border-solid rounded-[12px] w-full"
+                  data-testid="text-informational-only"
+                >
+                  <div className="flex items-center p-[8px] w-full">
+                    <div className="flex flex-1 gap-[8px] items-start min-w-px">
+                      <InfoIcon color="#6c779d" className="mt-[2px]" />
+                      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] flex-1 min-w-px">
+                        Brain keeps this row to group entries from a payroll register. It is not a{" "}
+                        {noun} you pay directly, so there is nothing here to trust, flag, or dismiss.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <>
               {/* Trusted → Revoke + Delete */}
               {vendor.trustStatus === "trusted" && (
                 <div className="flex flex-col gap-[12px] w-full">
@@ -675,6 +713,8 @@ export function VendorDetailPopup({
                     testId="button-acknowledge-counterparty"
                   />
                 </div>
+              )}
+                </>
               )}
             </div>
           </div>
