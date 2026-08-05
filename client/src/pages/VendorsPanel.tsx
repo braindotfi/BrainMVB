@@ -457,8 +457,10 @@ export function VendorsPanel() {
     }
   };
 
-  /* ── Delete vendor handler ── */
+  /* ── Delete counterparty handler ── */
   const handleDeleteVendor = async (vendorId: string, vendorNameLabel: string) => {
+    const deletedVendor = vendors.find((v) => v.id === vendorId);
+    const isCustomer = deletedVendor ? vendorSegment(deletedVendor) === "customer" : false;
     try {
       const res = await fetch(`/api/brain/ledger/counterparties/${vendorId}`, {
         method: "DELETE",
@@ -469,7 +471,10 @@ export function VendorsPanel() {
         return;
       }
       await queryClient.invalidateQueries({ queryKey: ["/api/brain/ledger/counterparties"] });
-      alert.success("Vendor Successfully Deleted", `${vendorNameLabel} has been successfully deleted and removed.`);
+      alert.success(
+        isCustomer ? "Customers Successfully Deleted" : "Vendor Successfully Deleted",
+        `${vendorNameLabel} has been successfully deleted and removed.`,
+      );
       setActiveVendor(null);
       const params = new URLSearchParams(search);
       params.delete("vendor");
@@ -790,36 +795,40 @@ export function VendorsPanel() {
 
   const handleGrant = (vendorId: string) => {
     const v = vendors.find((x) => x.id === vendorId);
+    const isCustomer = v ? vendorSegment(v) === "customer" : false;
     return callTrustAction(
       vendorId,
       "grant",
-      "Vendor Successfully Trusted",
-      `${v?.name ?? "Vendor"} has been added as a trusted vendor.`,
+      isCustomer ? "Customers Successfully Trusted" : "Vendor Successfully Trusted",
+      `${v?.name ?? (isCustomer ? "Customer" : "Vendor")} has been added as a trusted ${isCustomer ? "customer" : "vendor"}.`,
     );
   };
   const handleFlag = (vendorId: string) => {
     const v = vendors.find((x) => x.id === vendorId);
+    const isCustomer = v ? vendorSegment(v) === "customer" : false;
     return callTrustAction(
       vendorId,
       "pause",
-      "Vendor Successfully Flagged",
-      `${v?.name ?? "Vendor"} has been added as a flagged vendor.`,
+      isCustomer ? "Customers Successfully Flagged" : "Vendor Successfully Flagged",
+      `${v?.name ?? (isCustomer ? "Customer" : "Vendor")} has been added as a flagged ${isCustomer ? "customer" : "vendor"}.`,
     );
   };
   /* paused → trusted. Uses /trust/restore (not grant — grant is only valid from
      unreviewed/acknowledged; the matrix has no paused→trusted grant transition). */
   const handleRestore = (vendorId: string) => {
     const v = vendors.find((x) => x.id === vendorId);
+    const isCustomer = v ? vendorSegment(v) === "customer" : false;
     return callTrustAction(
       vendorId,
       "restore",
-      "Vendor Successfully Trusted",
-      `${v?.name ?? "Vendor"} has been added as a trusted vendor.`,
+      isCustomer ? "Customers Successfully Trusted" : "Vendor Successfully Trusted",
+      `${v?.name ?? (isCustomer ? "Customer" : "Vendor")} has been added as a trusted ${isCustomer ? "customer" : "vendor"}.`,
     );
   };
   const handleAcknowledge = (vendorId: string) => {
     const v = vendors.find((x) => x.id === vendorId);
-    return callTrustAction(vendorId, "acknowledge", "Vendor Successfully Mark with No Action", `${v?.name ?? "Vendor"} has been reviewed but no action was taken.`);
+    const isCustomer = v ? vendorSegment(v) === "customer" : false;
+    return callTrustAction(vendorId, "acknowledge", isCustomer ? "Customers Successfully Marked with No Action" : "Vendor Successfully Mark with No Action", `${v?.name ?? (isCustomer ? "Customer" : "Vendor")} has been reviewed but no action was taken.`);
   };
 
   /* Bulk confirm — Customers segment only. N individual grant calls so each
@@ -845,7 +854,7 @@ export function VendorsPanel() {
     }
     await queryClient.invalidateQueries({ queryKey: ["/api/brain/ledger/counterparties"] });
     if (failed === 0) {
-      alert.success("All confirmed", `${succeeded} customer${succeeded !== 1 ? "s" : ""} confirmed.`);
+      alert.success("All Customers Successfully Added", "All customers have been added as trusted customers.");
     } else {
       alert.error(
         `${succeeded} confirmed, ${failed} failed`,
