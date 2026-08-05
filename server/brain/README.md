@@ -90,9 +90,12 @@ not match an explicit route return 405.
   `DELETE /api/brain/members/:id` use the member token; brain-core enforces admin authority.
 - `POST /api/brain/members/:id/invites` and `DELETE /api/brain/members/:id/invites` use the
   member token; brain-core gates invite issue, reissue, and revoke.
-- `POST /api/brain/ledger/counterparties` uses the member token to add a vendor counterparty. The
+- `POST /api/brain/ledger/counterparties` uses the member token to add a counterparty. The
   BFF forwards identity fields only and never accepts payment, bank, trust, or actor fields from
-  the client.
+  the client. `type` IS an identity field: brain-core requires it explicitly, persists it
+  unchanged, and keys its upsert on it, so the client's value is forwarded (validated against
+  core's enum) and `vendor` is only a default for a request that names no type. The BFF must
+  never substitute its own type — doing so previously filed every new customer as a vendor.
 
 ### Explicit platform-service writes
 - `POST /api/brain/tenants` uses `BRAIN_PLATFORM_SERVICE_SECRET` through

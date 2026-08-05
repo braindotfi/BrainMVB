@@ -45,6 +45,20 @@ import {
 import { enrichProposals } from "./proposalEnrichment";
 import { RECOMMENDATION_PROMPT } from "@shared/cannedPrompts";
 
+/* brain-core's counterparty `type` enum. Kept here because this is the only
+   write path that sets one, and core requires the field explicitly on create. */
+const COUNTERPARTY_TYPES: readonly string[] = [
+  "merchant",
+  "vendor",
+  "customer",
+  "employer",
+  "bank",
+  "wallet",
+  "exchange",
+  "tax_authority",
+  "other",
+];
+
 export function createBrainProxyRouter(): Router {
   const router = Router();
 
@@ -517,13 +531,21 @@ export function createBrainProxyRouter(): Router {
     }
   });
 
-  // POST /api/brain/ledger/counterparties - manually add a vendor (counterparty).
+  // POST /api/brain/ledger/counterparties - manually add a counterparty.
   //
   // MEMBER token (a ledger write, not an agent action). Only identity fields are
   // forwarded - never an `actor` (core derives it from the token) and never a
   // payment/bank/trust field (core rejects those; we don't even accept them from
   // the client). Upsert: core returns 201 (created) or 200 (merged into an
   // existing counterparty) - relayed verbatim.
+  //
+  // `type` IS an identity field and must be forwarded. Core requires it
+  // explicitly, accepts "customer", and persists what it is given - its upsert
+  // key includes the type, so there is no server-side coercion to fall back on.
+  // This route used to hardcode "vendor", which silently filed every customer
+  // the Add Customer box created as a vendor and put the row in the wrong
+  // segment. The client's value now wins; "vendor" is only the default for a
+  // request that names no type (the Add Vendor box sends none).
   router.post("/ledger/counterparties", async (req: Request, res: Response) => {
     if (!brainAuthConfigured()) return unconfigured(res);
     const raw = req.body as Record<string, unknown> | undefined;
@@ -531,7 +553,17 @@ export function createBrainProxyRouter(): Router {
     if (!name) {
       return res.status(400).json({ error: "invalid_request", message: "name is required" });
     }
-    const body: CreateCounterpartyBody = { name, type: "vendor" };
+    // Validated against core's enum rather than relayed blind: an unknown type
+    // is a client bug, and rejecting it here beats creating a row under a type
+    // no segment renders, where the user could never find it again.
+    const rawType = typeof raw?.type === "string" ? raw.type.trim() : "";
+    if (rawType.length > 0 && !COUNTERPARTY_TYPES.includes(rawType)) {
+      return res.status(400).json({
+        error: "invalid_request",
+        message: `type must be one of: ${COUNTERPARTY_TYPES.join(", ")}`,
+      });
+    }
+    const body: CreateCounterpartyBody = { name, type: rawType || "vendor" };
     const optionalStrings = ["display_name", "category", "contact_email", "country", "tax_id"] as const;
     for (const key of optionalStrings) {
       const v = raw?.[key];

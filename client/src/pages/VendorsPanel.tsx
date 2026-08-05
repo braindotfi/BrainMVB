@@ -412,10 +412,13 @@ export function VendorsPanel() {
         body: JSON.stringify({
           name: vendorName.trim(),
           category: category.trim() || undefined,
-          /* The create route accepts `type: "customer"`, so the add box has to
-             follow the active segment. Vendors send no type and keep
-             brain-core's default — changing that is a separate decision. */
-          ...(segment === "customer" ? { type: "customer" } : {}),
+          /* The type decides which segment the row comes back in, so it has to
+             follow the active segment — brain-core persists what it is sent and
+             its upsert key includes the type, so a wrong value here is not
+             recoverable by the read side. Sent explicitly for BOTH segments:
+             omitting it left the BFF to supply a default, which is exactly how
+             customers used to be filed as vendors. */
+          type: segment === "customer" ? "customer" : "vendor",
         }),
       });
       const body = await res.json().catch(() => undefined);

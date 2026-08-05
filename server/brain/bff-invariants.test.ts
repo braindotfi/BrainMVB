@@ -360,6 +360,40 @@ describe("Invariant 1 - token routing (agent vs member)", () => {
     expect(calls.some((c) => c.auth === `Bearer ${AGENT_TOKEN}`)).toBe(false);
   });
 
+  /* This route hardcoded type:"vendor" and threw the client's value away, so
+     every row the Add Customer box created came back as a vendor and landed in
+     the wrong segment. brain-core's upsert key includes the type and it does not
+     coerce, so nothing downstream can repair a wrong value — the assertion has
+     to be on what leaves the BFF. */
+  it("counterparty create forwards the requested type instead of forcing vendor", async () => {
+    const { status } = await post("/api/brain/ledger/counterparties", {
+      name: "Northwind Ltd",
+      type: "customer",
+    });
+    expect(status).toBe(201);
+    const cpCalls = callsEndingWith("/ledger/counterparties");
+    expect(cpCalls).toHaveLength(1);
+    expect((cpCalls[0].body as { type?: unknown }).type).toBe("customer");
+  });
+
+  it("counterparty create still defaults to vendor when the client names no type", async () => {
+    await post("/api/brain/ledger/counterparties", { name: "Acme Supplies" });
+    const cpCalls = callsEndingWith("/ledger/counterparties");
+    expect(cpCalls).toHaveLength(1);
+    expect((cpCalls[0].body as { type?: unknown }).type).toBe("vendor");
+  });
+
+  /* An unknown type would create a row under a type no segment renders, which
+     the user could never find again — reject before the write, not after. */
+  it("counterparty create rejects a type outside brain-core's enum without calling core", async () => {
+    const { status } = await post("/api/brain/ledger/counterparties", {
+      name: "Mystery Co",
+      type: "not_a_real_type",
+    });
+    expect(status).toBe(400);
+    expect(callsEndingWith("/ledger/counterparties")).toHaveLength(0);
+  });
+
   it("proposal decide uses the MEMBER token and forwards only {decision}", async () => {
     const { status } = await post("/api/brain/proposals/prop_1/decide", {
       decision: "approve",
