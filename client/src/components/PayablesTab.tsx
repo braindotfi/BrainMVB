@@ -34,7 +34,9 @@ import type { RawObligation, Obligation } from "@/lib/brainObligations";
 import { capitalCase } from "@/lib/displayLabels";
 import { dueLabel, amountLabel, subLabel, statusColors } from "@/lib/obligationRows";
 import { ICONS } from "@/assets/figma-icons";
+import { RecordPill } from "@/components/RecordPill";
 import { LedgerRecordRow } from "@/components/LedgerRecordRow";
+import alertIcon from "@assets/Icons_1783274957589.png";
 
 const IMG_DOT = ICONS.activity_dot;
 
@@ -151,11 +153,26 @@ export function PayablesTab({ format }: { format: Format }): JSX.Element {
                fields it actually has. Nothing is left inert. */
             const bill = invoiceOf.get(o.id);
             const open = () => (bill ? setOpenBill(bill) : setOpenPayable(o));
+            /* Anomaly flags live on the invoice record, not the obligation. The
+               Payables row renders the obligation, so without this lookup the flag
+               is silently invisible here even though Cash Flow shows it on the same
+               debt's invoice projection. Carrying it through the match keeps the
+               signal consistent: a user who only checks Payables still sees it. */
+            const flagged = (bill?.metadata?.flags?.length ?? 0) > 0;
             return (
               <LedgerRecordRow
                 key={o.id}
                 name={name ?? "Unidentified counterparty"}
                 pill={{ label: capitalCase(o.status), ...statusColors(o.status), testId: `badge-obligation-status-${o.status.trim().toLowerCase()}` }}
+                additionalPill={flagged ? (
+                  <RecordPill
+                    className="bg-[#350011] text-[#d20344] border-[rgba(210,3,68,0.2)]"
+                    testId={`badge-obligation-anomaly-${idx}`}
+                  >
+                    <img src={alertIcon} alt="" className="size-[12px]" />
+                    Anomaly
+                  </RecordPill>
+                ) : undefined}
                 secondary={
                   <>
                     <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] whitespace-nowrap">
