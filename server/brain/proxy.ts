@@ -36,6 +36,7 @@ import {
   deactivateMember,
   getApprovalPolicyFacts,
   askWikiQuestion,
+  isKnownWikiRefusal,
   createCounterparty,
   type PolicyAction,
   type CreateCounterpartyBody,
@@ -175,6 +176,31 @@ export function createBrainProxyRouter(): Router {
         if (entry.expiresAt <= now) recommendationCache.delete(key);
       }
       const answer = await withBrainBaseUrl(baseUrl, () => askWikiQuestion(token, RECOMMENDATION_PROMPT));
+      /* A refusal is not an insight. When Wiki Q&A cannot ground an answer it still
+         returns 200 with prose — "I couldn't produce a grounded answer from the
+         available evidence." — and passing that through rendered it on the dashboard
+         as the tenant's spending insight, unprompted and with no question in sight.
+         `answered` folds together explicit `answered:false`, empty content, and — for
+         legacy responses that omit the field — known refusal wording.
+
+         The phrase check is repeated here rather than left to `answered` because
+         `answered` only consults the wording when the field is ABSENT: an upstream that
+         sets `answered:true` and returns a refusal anyway would sail straight through.
+         Chat can afford to trust the flag, since it labels a no-answer as such. This
+         card cannot: it renders bare prose as the tenant's own insight, and there is no
+         reading under which "I couldn't produce a grounded answer" is one.
+
+         Treated as a failure, and failures are never cached: caching would pin the
+         refusal on the dashboard for the full 15 minutes even after brain-core
+         recovered. `{}` is the same shape the unconfigured and error paths return, so
+         the caller falls back to its own neutral line. */
+      if (
+        answer.answered === false ||
+        answer.raw.trim().length === 0 ||
+        isKnownWikiRefusal(answer.raw)
+      ) {
+        return res.json({});
+      }
       recommendationCache.set(cacheKey, {
         text: answer.raw,
         evidenceIds: answer.evidenceIds,
