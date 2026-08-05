@@ -27,6 +27,7 @@ import type { RawObligation, Obligation } from "@/lib/brainObligations";
 import { capitalCase } from "@/lib/displayLabels";
 import { dueLabel, amountLabel, subLabel, statusColors } from "@/lib/obligationRows";
 import { ICONS } from "@/assets/figma-icons";
+import { RecordPill } from "@/components/RecordPill";
 
 const IMG_DOT = ICONS.activity_dot;
 
@@ -48,13 +49,13 @@ const StatusBadge = ({ status }: { status: string }) => {
   // hide a state brain-core thinks is worth reporting.
   const c = statusColors(status);
   return (
-    <span
-      className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] px-[10px] py-[4px] rounded-[22px] border border-solid shrink-0"
+    <RecordPill
+      className=""
       style={{ background: c.bg, borderColor: c.border, color: c.fg }}
-      data-testid={`badge-obligation-status-${status.trim().toLowerCase()}`}
+      testId={`badge-obligation-status-${status.trim().toLowerCase()}`}
     >
       {capitalCase(status)}
-    </span>
+    </RecordPill>
   );
 };
 

@@ -21,6 +21,7 @@ import { Plus, ChevronDown } from "lucide-react";
 import { AlertCallout, UnavailableDataBox } from "@/components/Callout";
 import closeIcon from "@assets/Close_1783293571882.png";
 import { CountPill } from "@/components/CountPill";
+import { RecordPill } from "@/components/RecordPill";
 
 /* "New" is deliberately NOT a top-level chip. It was one half of the bug this
    screen used to have: the banner counted new+unreviewed rows while the Needs
@@ -68,17 +69,12 @@ const VENDOR_CATEGORIES = [
 function ReasonChip({ label }: { label: string }) {
   const danger = label.startsWith("Risk:") || label === "Flagged for review";
   return (
-    <span
-      data-testid="chip-review-reason"
-      className="shrink-0 rounded-[4px] px-[6px] py-[1px] [font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[11px] whitespace-nowrap"
-      style={
-        danger
-          ? { background: "#350011", color: "#d20344" }
-          : { background: "#4a2300", color: "#ff9400" }
-      }
+    <RecordPill
+      className={danger ? "bg-[#350011] text-[#d20344] border-[rgba(210,3,68,0.2)]" : "bg-[#4a2300] text-[#ff9400] border-[rgba(255,149,0,0.2)]"}
+      testId="chip-review-reason"
     >
       {label}
-    </span>
+    </RecordPill>
   );
 }
 
@@ -91,14 +87,13 @@ function ReasonChip({ label }: { label: string }) {
  *  what a human sees; nothing about the API changed. */
 function ReviewedChip() {
   return (
-    <span
-      data-testid="chip-reviewed"
+    <RecordPill
+      className="bg-[#222737] text-[#6c779d] border-[rgba(108,119,157,0.2)]"
+      testId="chip-reviewed"
       title="Reviewed — no action taken"
-      className="shrink-0 rounded-[4px] px-[6px] py-[1px] [font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[11px] whitespace-nowrap"
-      style={{ background: "#222737", color: "#6c779d" }}
     >
       No action
-    </span>
+    </RecordPill>
   );
 }
 

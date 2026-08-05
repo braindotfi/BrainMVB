@@ -82,6 +82,19 @@ size. Nobody spots that until two surfaces are seen side by side.
 pills — they are deliberately a different shape. Making them match would conflate
 "how many" with "what kind".
 
+## Record pills use the Inbox geometry
+
+Pills embedded in record rows use the compact Inbox badge geometry: 22px radius,
+8px horizontal / 2px vertical padding, and Gilroy 12px/14px semibold text with
+flex-centred contents. Keep section count pills separate from these record pills.
+
+**Why:** the Ledger tabs had independently grown 12px/16px pills with 10px/4px
+padding, making equivalent record metadata look heavier than the Inbox reference.
+
+**How to apply:** route record-row badges through the shared `RecordPill`; keep
+status meaning and colours in the caller. Audit Log's right-side status pill must
+also be vertically centred against the full record row.
+
 ## A long-standing failure in the row-height check
 
 `scripts/qa-measure-row-heights.mjs` reports a **pre-existing** FAIL on the ledger

@@ -36,6 +36,7 @@ import { BillDetailPopup, type BrainInvoiceDTO as BillDTO } from "@/components/B
 import alertIcon from "@assets/Icons_1783274957589.png";
 import { AlertCallout, UnavailableDataBox } from "@/components/Callout";
 import { capitalCase } from "@/lib/displayLabels";
+import { RecordPill } from "@/components/RecordPill";
 
 interface TxDTO {
   id: string;
@@ -77,12 +78,12 @@ const AMOUNT_COLOUR: Record<"+" | "-" | "", string> = {
 const KindBadge = ({ kind, label }: { kind: CashFlowKind; label?: string }) => {
   const c = KIND_BADGE[kind];
   return (
-    <span
-      className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] px-[10px] py-[4px] rounded-[22px] border border-solid shrink-0"
+    <RecordPill
+      className=""
       style={{ background: c.bg, borderColor: c.border, color: c.fg }}
     >
       {capitalCase(label || KIND_LABEL[kind])}
-    </span>
+    </RecordPill>
   );
 };
 
@@ -401,12 +402,13 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
                       </p>
                       <KindBadge kind={row.kind} label={row.badgeLabel} />
                       {row.flagged && (
-                        <span className="flex items-center gap-[4px] bg-[#350011] border border-solid border-[rgba(210,3,68,0.2)] rounded-[22px] px-[10px] py-[4px]">
+                        <RecordPill
+                          className="bg-[#350011] text-[#d20344] border-[rgba(210,3,68,0.2)]"
+                          testId={`badge-cashflow-anomaly-${idx}`}
+                        >
                           <img src={alertIcon} alt="" className="size-[12px]" />
-                          <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#d20344] text-[12px]">
-                            Anomaly
-                          </span>
-                        </span>
+                          Anomaly
+                        </RecordPill>
                       )}
                     </div>
                     {detailLine(row.sublabel, row.date) && (

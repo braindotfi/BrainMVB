@@ -23,6 +23,7 @@ import { UnavailableDataBox } from "@/components/Callout";
 import { capitalCase } from "@/lib/displayLabels";
 import type { TierRowStatusPill } from "@/lib/decisionPills";
 import { CountPill } from "@/components/CountPill";
+import { RecordPill } from "@/components/RecordPill";
 
 /* Tier accents. Red = Urgent, amber = Waiting on you, periwinkle = Insights —
    the palette already used for Inbox status tags, not the prototype's colours. */
@@ -220,13 +221,13 @@ export const TierRow = ({ row }: { row: TierRowModel }) => {
             {row.title}
           </p>
           {row.badge && (
-            <span
-              className={`${row.badge.className} border border-solid rounded-[22px] px-[8px] py-[2px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-center whitespace-nowrap shrink-0`}
-              data-testid={`${row.testIdPrefix}-${row.id}-badge`}
+            <RecordPill
+              className={row.badge.className}
+              testId={`${row.testIdPrefix}-${row.id}-badge`}
             >
               {capitalCase(row.badge.label)}
               {row.badge.srLabel && <span className="sr-only">{`, ${row.badge.srLabel}`}</span>}
-            </span>
+            </RecordPill>
           )}
         </div>
         {row.subtitle && (
