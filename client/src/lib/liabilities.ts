@@ -61,8 +61,13 @@ export function unpaidApInvoices<T extends ApInvoiceLike>(invoices: readonly T[]
  * currently emits `upcoming` / `due` / `overdue` on the reference tenant, none of
  * which are settled, so this set exists to be defensive about statuses we have not
  * seen rather than to describe ones we have.
+ *
+ * Exported because Receivables applies the identical test to AR invoices. "This
+ * debt is discharged" must mean the same thing in both directions of the ledger;
+ * two copies of this set would drift the first time one of them learned a new
+ * status.
  */
-const SETTLED_STATUSES = new Set(["paid", "settled", "cancelled", "canceled", "void", "voided", "written_off"]);
+export const SETTLED_STATUSES = new Set(["paid", "settled", "cancelled", "canceled", "void", "voided", "written_off"]);
 
 /**
  * Payable (AP) obligations the tenant still owes, normalized and sorted by due date.

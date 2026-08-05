@@ -24,6 +24,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useCurrency } from "@/lib/useCurrency";
 import { CashFlowTab } from "@/components/CashFlowTab";
 import { PayablesTab } from "@/components/PayablesTab";
+import { ReceivablesTab } from "@/components/ReceivablesTab";
 import { VendorsPanel } from "@/pages/VendorsPanel";
 import { RulesPanel } from "@/pages/RulesPanel";
 import { WidgetCard } from "@/components/LedgerWidgets";
@@ -54,8 +55,10 @@ function timeAgo(ts: number): string {
 
 // ─── tabs ────────────────────────────────────────────────────────────────────
 
-export type LedgerTab = "Accounts" | "Cash Flow" | "Payables" | "Counterparties" | "Rules";
-export const LEDGER_TABS: LedgerTab[] = ["Accounts", "Cash Flow", "Payables", "Counterparties", "Rules"];
+export type LedgerTab = "Accounts" | "Cash Flow" | "Payables" | "Receivables" | "Counterparties" | "Rules";
+/* Receivables sits directly after Payables: they are the two directions of the same
+   question, and reading one straight after the other is the point. */
+export const LEDGER_TABS: LedgerTab[] = ["Accounts", "Cash Flow", "Payables", "Receivables", "Counterparties", "Rules"];
 
 export const ledgerTabSlug = (tab: LedgerTab): string => tab.toLowerCase().replace(/\s+/g, "-");
 
@@ -80,6 +83,10 @@ const TAB_BY_SLUG: Record<string, LedgerTab> = {
   vendors: "Counterparties",
   rules: "Rules",
   payables: "Payables",
+  receivables: "Receivables",
+  // "ar" is what brain-core calls this money on the wire (metadata.scenario), so it
+  // is the alias most likely to show up in an assistant citation or a shared link.
+  ar: "Receivables",
   // Shipped working name for the same tab, renamed to pair with Receivables.
   // Short-lived, but it reached the Overview card's drill-down link and any URL
   // a user copied from it, so it keeps resolving.
@@ -112,6 +119,10 @@ const TAB_COPY: Record<LedgerTab, { heading: string; sub: string | null }> = {
   Payables: {
     heading: "Everything you still owe.",
     sub: "Every outstanding payable, who it is owed to, and when it falls due.",
+  },
+  Receivables: {
+    heading: "Everything you're still owed.",
+    sub: "Every unpaid customer invoice, who owes it, and when it falls due.",
   },
   Counterparties: {
     heading: "The people and businesses you trade with.",
@@ -354,6 +365,8 @@ export function FinancesPage() {
         {activeTab === "Cash Flow" && <CashFlowTab format={format} onOpenTx={setOpenTxId} />}
 
         {activeTab === "Payables" && <PayablesTab format={format} />}
+
+        {activeTab === "Receivables" && <ReceivablesTab format={format} />}
 
         {activeTab === "Counterparties" && <VendorsPanel />}
 
