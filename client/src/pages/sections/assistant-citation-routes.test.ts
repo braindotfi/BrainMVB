@@ -62,16 +62,19 @@ describe("Brain Assistant citation links", () => {
     }
   });
 
-  it("routes obligation citations to the tab that actually renders bills", () => {
+  it("routes obligation citations to the itemized list of what is owed", () => {
     const src = readFileSync(ASSISTANT, "utf8");
     const line = src
       .split("\n")
       .find((l) => l.includes('resolvedType === "obligation"') && l.includes("navigate("));
     expect(line, 'no navigate() for resolvedType === "obligation"').toBeDefined();
-    // Bills stopped being a tab of its own when the five money tabs collapsed;
-    // unpaid AP now renders as `bill` rows inside Cash Flow.
-    expect(line).toContain("/ledger?tab=cash-flow");
-    expect(readFileSync(LEDGER, "utf8")).toContain('activeTab === "Cash Flow"');
+    /* Payables renders one row per outstanding obligation, so a citation about a
+       specific one lands among its peers. It pointed at Cash Flow while no such list
+       existed — there, an obligation was at best a `bill` row and payroll and tax were
+       not shown at all. */
+    expect(line).toContain("/ledger?tab=payables");
+    // The target tab must still exist, or the link silently falls back to Accounts.
+    expect(readFileSync(LEDGER, "utf8")).toContain('activeTab === "Payables"');
   });
 });
 

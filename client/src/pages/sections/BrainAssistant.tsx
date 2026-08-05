@@ -1090,9 +1090,11 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                                 else if (resolvedType === "member") openMemberDetail(s.entityId);
                                 else if (resolvedType === "counterparty") openVendorDetail(s.entityId, navigate);
                                 else if (resolvedType === "audit_event") navigate(`/audit-log?record=${s.entityId}`);
-                                /* Obligations surface in the Finances "Bills" tab; there is no
-                                   /bills route (navigating there hit the NotFound catch-all). */
-                                else if (resolvedType === "obligation") navigate("/ledger?tab=cash-flow");
+                                /* Payables is the itemized "what we owe" list, so a citation
+                                   about one obligation lands beside the rest of them. It went to
+                                   Cash Flow only because that list did not exist yet — there is
+                                   still no /bills route (navigating there hit NotFound). */
+                                else if (resolvedType === "obligation") navigate("/ledger?tab=payables");
                                 else if (resolvedType === "payment_intent") navigate("/review");
                                 else if (resolvedType === "wiki.question") navigate(`/audit-log?record=${s.entityId}`);
                               }}
