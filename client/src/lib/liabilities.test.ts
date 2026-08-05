@@ -157,11 +157,11 @@ const read = (p: string) => readFileSync(resolve(here, p), "utf8");
 const LIABILITY_SURFACES = [
   "../pages/HomePage.tsx",
   "../components/CashFlowTab.tsx",
-  "../components/ObligationsTab.tsx",
+  "../components/PayablesTab.tsx",
 ];
 
 describe("the three liabilities surfaces agree by construction", () => {
-  it("Overview, Cash Flow and the Obligations tab all read /ledger/obligations", () => {
+  it("Overview, Cash Flow and the Payables tab all read /ledger/obligations", () => {
     for (const f of LIABILITY_SURFACES) {
       expect(read(f), `${f} must read the obligations feed`).toContain("/api/brain/ledger/obligations");
     }
@@ -178,7 +178,20 @@ describe("the three liabilities surfaces agree by construction", () => {
 
   it("Overview links to the itemized list that backs its number", () => {
     // A metric that drills into a DIFFERENT figure is the exact bug this change fixed.
-    expect(read("../pages/HomePage.tsx")).toContain("/ledger?tab=obligations");
+    expect(read("../pages/HomePage.tsx")).toContain("/ledger?tab=payables");
+  });
+
+  it("keeps every URL that has ever pointed at this tab working", () => {
+    /* The tab shipped as "Obligations" and was renamed to "Payables" to pair with
+       Receivables. Wouter has no 404 for an unknown ?tab= value — it falls back to
+       Accounts — so a dropped alias does not error, it silently lands the user on a
+       list of bank balances. `liabilities` predates both names. */
+    const src = read("../pages/FinancesPage.tsx");
+    for (const slug of ["payables", "obligations", "liabilities"]) {
+      expect(src, `?tab=${slug} must still resolve to the Payables tab`).toMatch(
+        new RegExp(`\\b${slug}:\\s*"Payables"`),
+      );
+    }
   });
 
   it("no surface coerces an unreachable liabilities figure into a zero", () => {

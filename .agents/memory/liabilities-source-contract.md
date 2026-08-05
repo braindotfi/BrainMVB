@@ -15,6 +15,11 @@ enumerated loan and line_of_credit *accounts* as the only other candidates and n
 considered obligations. Accrued payroll and tax are genuine current liabilities, so
 including them makes the figure more correct, not less.
 
+The user-facing name for this is **Payables** (paired with a planned Receivables tab); it
+shipped briefly as "Obligations". The data layer deliberately keeps brain-core's
+`obligation` vocabulary — endpoint, `RawObligation`, `payableObligations` — so the code
+still says which feed it reads. Don't "finish" the rename into the data layer.
+
 **How to apply:** every surface quoting a "liabilities" / "what you owe" total must read
 the obligations feed through the one shared module. If you find a new surface summing
 invoices to get a total owed, that is the bug, not a variant.

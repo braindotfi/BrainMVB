@@ -213,7 +213,7 @@ export function buildCashFlowRows(input: {
       key: `obl:${o.id}`,
       kind: "bill",
       badgeLabel: kindWord || "Owed",
-      label: nameOf(o.counterparty_id) || kindWord || "Obligation",
+      label: nameOf(o.counterparty_id) || kindWord || "Payable",
       sublabel: [due ? `due ${due}` : "", o.status.toLowerCase() === "overdue" ? "overdue" : ""]
         .filter(Boolean)
         .join(" · "),
@@ -266,7 +266,7 @@ export function cashFlowTotals(input: {
   invoices?: readonly CashFlowInvoiceLike[] | null;
   /* Liabilities come from obligations, NOT from `invoices`. The invoice feed carries
      no payroll, so deriving the figure from it understated what the tenant owed and
-     disagreed with the Obligations tab this metric sits beside. `invoices` is still
+     disagreed with the Payables tab this metric sits beside. `invoices` is still
      read above, for the dated bill ROWS — a different question from the total. */
   obligations?: readonly RawObligation[] | null;
 }): CashFlowTotals {

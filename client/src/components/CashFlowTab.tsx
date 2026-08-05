@@ -225,7 +225,7 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
   const invQ = useQuery<InvoicesLiteResponse>({ queryKey: ["/api/brain/ledger/invoices"], retry: false });
   const cpQ = useQuery<CounterpartiesLiteResponse>({ queryKey: ["/api/brain/ledger/counterparties"], retry: false });
   /* Liabilities read obligations, not invoices: the invoice feed carries no payroll,
-     so the old figure understated what was owed and disagreed with the Obligations
+     so the old figure understated what was owed and disagreed with the Payables
      tab. Invoices are still read above — they supply the dated bill ROWS below. */
   const obQ = useQuery<{ obligations?: RawObligation[] }>({ queryKey: ["/api/brain/ledger/obligations"], retry: false });
 
@@ -277,7 +277,7 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
 
   // Expenses: always make the scope explicit so $0 next to large bills doesn't read as a bug.
   // Expenses = outflows already settled; what is still owed is captured under Liabilities.
-  const expensesCaption = "Outflows settled and posted · what you still owe is in Obligations";
+  const expensesCaption = "Outflows settled and posted · what you still owe is in Payables";
 
   /* Liabilities: N obligations, next counterparty due — never restate the total.
      Counts obligations rather than the bill rows listed below, because that is what
@@ -291,7 +291,7 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
     // payableObligations sorts by due date, so the first non-overdue row is the next due.
     const next = obRows.find((o) => o.status !== "overdue");
     const nextParty = next ? (nameOf(next.counterparty_id) ?? "a counterparty") : null;
-    return `${obRows.length} obligation${obRows.length === 1 ? "" : "s"}${nextParty ? ` · next due ${nextParty}` : ""}`;
+    return `${obRows.length} payable${obRows.length === 1 ? "" : "s"}${nextParty ? ` · next due ${nextParty}` : ""}`;
   })();
 
   return (

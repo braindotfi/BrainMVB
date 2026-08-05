@@ -1,5 +1,10 @@
 /**
- * Obligations — the itemized "what we owe", one row per outstanding obligation.
+ * Payables — the itemized "what we owe", one row per outstanding payable.
+ *
+ * Named to pair with Receivables. The underlying feed is still `/ledger/obligations`,
+ * so the data-layer names below (RawObligation, payableObligations, the `obligations`
+ * response field) deliberately keep brain-core's vocabulary: renaming those would only
+ * hide which endpoint this reads.
  *
  * The totals were already on two surfaces (the Overview metric card and the Cash Flow
  * metric) but the list behind them was reachable only through the API, so nobody using
@@ -56,7 +61,7 @@ const StatusBadge = ({ status }: { status: string }) => {
 
 /* ── the tab ──────────────────────────────────────────────────────────────── */
 
-export function ObligationsTab({ format }: { format: Format }): JSX.Element {
+export function PayablesTab({ format }: { format: Format }): JSX.Element {
   const obQ = useQuery<ObligationsResponse>({
     queryKey: ["/api/brain/ledger/obligations"],
     retry: false,
@@ -85,10 +90,10 @@ export function ObligationsTab({ format }: { format: Format }): JSX.Element {
     (id && cpQ.data?.counterparties.find((c) => c.id === id)?.name) || null;
 
   return (
-    <WidgetCard title="Obligations" count={loading ? undefined : rows.length}>
+    <WidgetCard title="Payables" count={loading ? undefined : rows.length}>
       {failed ? (
         <UnavailableDataBox testId="text-obligations-unavailable">
-          Your obligations couldn't be loaded just now, so this list is empty for the wrong reason.
+          Your payables couldn't be loaded just now, so this list is empty for the wrong reason.
           It isn't a sign that you owe nothing.
         </UnavailableDataBox>
       ) : loading ? (
@@ -169,7 +174,7 @@ export function ObligationsTab({ format }: { format: Format }): JSX.Element {
           >
             <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
               <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">
-                Obligation Totals
+                Payable Totals
               </p>
               <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] whitespace-nowrap">
                 Across everything you still owe

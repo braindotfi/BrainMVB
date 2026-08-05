@@ -1123,7 +1123,7 @@ export function HomePage() {
                 whole={liabWhole}
                 cents={liabCents}
                 caption="Everything you still owe."
-                onClick={() => navigate("/ledger?tab=obligations")}
+                onClick={() => navigate("/ledger?tab=payables")}
                 testId="card-metric-liabilities"
               />
             </div>

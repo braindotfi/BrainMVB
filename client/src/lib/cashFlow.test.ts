@@ -345,7 +345,7 @@ describe("cashFlowTotals", () => {
   it("never derives liabilities from the invoice feed, which carries no payroll", () => {
     /* Invoices still feed the dated bill ROWS below the metrics — that is a different
        question from "what do we owe in total". Deriving the total from them understated
-       it and made the metric disagree with the Obligations tab beside it. */
+       it and made the metric disagree with the Payables tab beside it. */
     const t = cashFlowTotals({ transactions: [], invoices: [INV({ id: "ap1", amount_due: "12000" })] });
     expect(t.liabilities).toBeNull();
   });

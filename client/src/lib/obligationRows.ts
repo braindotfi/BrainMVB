@@ -1,7 +1,7 @@
 /**
  * Presentation helpers for an obligation row.
  *
- * These live here rather than in `components/ObligationsTab.tsx` for the same reason
+ * These live here rather than in `components/PayablesTab.tsx` for the same reason
  * ordering and totals live in `lib/cashFlow.ts`: they are the part worth testing, and
  * the component imports SVG assets that a DOM-less test runner cannot resolve.
  */

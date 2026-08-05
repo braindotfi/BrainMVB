@@ -12,7 +12,7 @@
  *
  * `/ledger/obligations` carries both bills and payroll, so it is the honest source.
  * Three surfaces quote this number — the Overview metric card, the Cash Flow metric,
- * and the Ledger's Obligations tab — and a metric that disagreed with the list it
+ * and the Ledger's Payables tab — and a metric that disagreed with the list it
  * links to reads as a bug in the data, not in the UI. One module owns it so they
  * cannot drift.
  *

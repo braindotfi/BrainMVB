@@ -23,7 +23,7 @@ import { useLocation, useSearch } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useCurrency } from "@/lib/useCurrency";
 import { CashFlowTab } from "@/components/CashFlowTab";
-import { ObligationsTab } from "@/components/ObligationsTab";
+import { PayablesTab } from "@/components/PayablesTab";
 import { VendorsPanel } from "@/pages/VendorsPanel";
 import { RulesPanel } from "@/pages/RulesPanel";
 import { WidgetCard } from "@/components/LedgerWidgets";
@@ -54,8 +54,8 @@ function timeAgo(ts: number): string {
 
 // ─── tabs ────────────────────────────────────────────────────────────────────
 
-export type LedgerTab = "Accounts" | "Cash Flow" | "Obligations" | "Counterparties" | "Rules";
-export const LEDGER_TABS: LedgerTab[] = ["Accounts", "Cash Flow", "Obligations", "Counterparties", "Rules"];
+export type LedgerTab = "Accounts" | "Cash Flow" | "Payables" | "Counterparties" | "Rules";
+export const LEDGER_TABS: LedgerTab[] = ["Accounts", "Cash Flow", "Payables", "Counterparties", "Rules"];
 
 export const ledgerTabSlug = (tab: LedgerTab): string => tab.toLowerCase().replace(/\s+/g, "-");
 
@@ -79,15 +79,19 @@ const TAB_BY_SLUG: Record<string, LedgerTab> = {
   // (assistant citations, global search, shared URLs) must keep working.
   vendors: "Counterparties",
   rules: "Rules",
-  obligations: "Obligations",
+  payables: "Payables",
+  // Shipped working name for the same tab, renamed to pair with Receivables.
+  // Short-lived, but it reached the Overview card's drill-down link and any URL
+  // a user copied from it, so it keeps resolving.
+  obligations: "Payables",
   recent: "Cash Flow",
   bills: "Cash Flow",
   income: "Cash Flow",
   expenses: "Cash Flow",
   // Retired tab that now has a real home again. It pointed at Cash Flow only
-  // because no itemized liabilities view existed; Obligations IS that view, so
+  // because no itemized liabilities view existed; Payables IS that view, so
   // every old ?tab=liabilities link lands on the list it originally meant.
-  liabilities: "Obligations",
+  liabilities: "Payables",
 };
 
 export function resolveLedgerTab(param: string | null | undefined): LedgerTab | null {
@@ -105,9 +109,9 @@ const TAB_COPY: Record<LedgerTab, { heading: string; sub: string | null }> = {
     heading: "Everywhere your money moved.",
     sub: "Income, expenses and the bills you still owe, in one list.",
   },
-  Obligations: {
+  Payables: {
     heading: "Everything you still owe.",
-    sub: "Every outstanding obligation, who it is owed to, and when it falls due.",
+    sub: "Every outstanding payable, who it is owed to, and when it falls due.",
   },
   Counterparties: {
     heading: "The people and businesses you trade with.",
@@ -349,7 +353,7 @@ export function FinancesPage() {
 
         {activeTab === "Cash Flow" && <CashFlowTab format={format} onOpenTx={setOpenTxId} />}
 
-        {activeTab === "Obligations" && <ObligationsTab format={format} />}
+        {activeTab === "Payables" && <PayablesTab format={format} />}
 
         {activeTab === "Counterparties" && <VendorsPanel />}
 
