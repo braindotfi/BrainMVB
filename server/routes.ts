@@ -1,7 +1,7 @@
 import express, { type Express, type Request, type Response } from "express";
 import { createServer, type Server } from "http";
 import Anthropic from "@anthropic-ai/sdk";
-import { setupAuth, googleEnabled, requireAuth } from "./auth";
+import { setupAuth, googleEnabled, requireAuth, requireNonDemo } from "./auth";
 import { storage } from "./storage";
 import { z } from "zod";
 import { verifyMessage } from "viem";
@@ -1314,7 +1314,12 @@ When you mention a money amount, always reproduce it exactly as the grounding da
     }
   });
 
-  app.post("/api/integrations/plaid/link-token", requireAuth, async (req, res) => {
+  /* link-token and exchange are gated with requireNonDemo: they reach Plaid for real and,
+     in exchange's case, persist a live access token on the account. Demo sessions are handed
+     out unauthenticated, so requireAuth alone does not gate them. Reads (/status,
+     /connections) and /disconnect stay open to demo accounts — with no way to create a
+     connection they list nothing, and disconnect only ever removes. */
+  app.post("/api/integrations/plaid/link-token", requireAuth, requireNonDemo, async (req, res) => {
     try {
       const { getPlaidClient, PLAID_PRODUCTS, PLAID_COUNTRIES } = await import("./plaid");
       const client = getPlaidClient();
@@ -1336,7 +1341,7 @@ When you mention a money amount, always reproduce it exactly as the grounding da
     }
   });
 
-  app.post("/api/integrations/plaid/exchange", requireAuth, async (req, res) => {
+  app.post("/api/integrations/plaid/exchange", requireAuth, requireNonDemo, async (req, res) => {
     try {
       const schema = z.object({
         public_token: z.string().min(1),

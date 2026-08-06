@@ -77,4 +77,5 @@
 - [Counterparty create type](counterparty-create-type.md) — core keys its upsert on `type` and never coerces; a literal field in a BFF sanitiser silently discards the client's value.
 - [Informational counterparty rows](informational-counterparty-rows.md) — non-actionable rows need both-halves predicates that fail open, and their own hidden-while-empty tier, never a work queue.
 - [Receivables source contract](receivables-source-contract.md) — AR = invoices with positive scenario==="ar"; the receivable obligations feed is an incomplete subset; totals need a finished cursor walk.
+- [Auth test harness env](auth-test-harness-env.md) — the PG session store loses a race to an immediate follow-up request (looks like flake); load-time env reads force a dynamic import.
 - [API 404 vs SPA catch-all](api-404-vs-spa-catchall.md) — unmatched /api paths get 200+HTML from the SPA catch-all; keep the JSON-404 last in registerRoutes or removal tests go false-green.

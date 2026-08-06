@@ -340,10 +340,24 @@ export function setupAuth(app: Express) {
         name?: string;
       };
 
+      /* Demo accounts are NEVER reachable through OAuth. They hold shared, synthetic data
+         and have no real owner, so adopting one by email match would hand the caller the
+         demo tenant — the same exposure as the deleted shared demo login (see the note in
+         the demo section above), just through a different door. This is deliberately
+         narrower than /api/auth/register's blanket @brain.fi block: real brain.fi staff
+         must still be able to sign in with Google, they just cannot land on a demo row. */
+      const profileEmail = profile.email?.toLowerCase() ?? null;
+      if (isDemoEmail(profileEmail)) {
+        return res.redirect("/?auth_error=google_demo_account");
+      }
+
       let user = await storage.getUserByGoogleId(profile.sub);
-      if (!user && profile.email) {
-        const email = profile.email.toLowerCase();
-        const byEmail = await storage.getUserByEmail(email);
+      // Covers a demo row that already carries a googleId from before this guard existed.
+      if (isDemoEmail(user?.email)) {
+        return res.redirect("/?auth_error=google_demo_account");
+      }
+      if (!user && profileEmail) {
+        const byEmail = await storage.getUserByEmail(profileEmail);
         if (byEmail) {
           if (profile.email_verified !== true) {
             return res.redirect("/?auth_error=google_unverified_email");
@@ -374,5 +388,40 @@ export function setupAuth(app: Express) {
 // ─── Route guard helper ───
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
   if (!req.session.userId) return res.status(401).json({ error: "Not authenticated" });
+  next();
+}
+
+/**
+ * Blocks demo accounts from routes that reach a real third party or persist a real
+ * credential on the account.
+ *
+ * Demo sessions are handed out unauthenticated (POST /api/auth/demo-fresh), so any route
+ * behind `requireAuth` alone is effectively public. That is fine for reading seeded data,
+ * but not for linking a live bank: the credential would outlive the visitor's session on an
+ * account nobody owns. `PLAID_ENV` being unset (so Plaid resolves to sandbox) is a real
+ * mitigation but a fragile one — it is one environment variable away from being wrong, and
+ * it lives outside the code. This guard does not depend on it.
+ *
+ * Fails CLOSED: if the account type cannot be determined, the route is refused rather than
+ * allowed, because the failure mode of guessing wrong is a real credential on a demo row.
+ */
+export async function requireNonDemo(req: Request, res: Response, next: NextFunction) {
+  if (!req.session.userId) return res.status(401).json({ error: "Not authenticated" });
+  let user: User | undefined;
+  try {
+    user = await storage.getUser(req.session.userId);
+  } catch (err) {
+    console.error("[auth] requireNonDemo could not load the session user:", err);
+    return res.status(503).json({
+      error: "account_check_unavailable",
+      message: "Could not verify this account right now. Please try again.",
+    });
+  }
+  if (!user || isDemoEmail(user.email)) {
+    return res.status(403).json({
+      error: "demo_account_not_permitted",
+      message: "Demo accounts can't connect a real account. Sign up to link your own.",
+    });
+  }
   next();
 }

@@ -20,7 +20,8 @@ import payrollIcon from "@assets/payroll_1783619257499.png";
 import taxIcon from "@assets/tax_1783619257500.png";
 import paymentsIcon from "@assets/payments_1783619257499.png";
 import docsIcon from "@assets/docs_1783621224017.png";
-import { AlertCallout, InfoIcon } from "@/components/Callout";
+import { AlertCallout, MutedCallout, InfoIcon } from "@/components/Callout";
+import { useAuth } from "@/lib/authContext";
 
 /* ──────────────────────────────────────────────────────────────────────────
  *  Source connect screens - the mechanisms for attaching a data source to Brain.
@@ -118,6 +119,13 @@ const CATEGORY_ICON_SRC: Record<CategoryId, string> = {
 export function BankConnect({ onDone }: { onDone: () => void }) {
   const [error, setError] = useState<string | null>(null);
 
+  /* Demo accounts cannot link a real bank — the server refuses link-token and exchange
+     (requireNonDemo). Reflected here so the button is not offered and then rejected: the
+     link-token request stays unsent, and the reason is stated plainly rather than surfacing
+     as a failed connection attempt. */
+  const { user } = useAuth();
+  const isDemoAccount = !!user?.isDemo;
+
   const statusQuery = useQuery<{ configured: boolean; env: string }>({
     queryKey: ["/api/integrations/plaid/status"],
   });
@@ -134,7 +142,7 @@ export function BankConnect({ onDone }: { onDone: () => void }) {
       const res = await apiRequest("POST", "/api/integrations/plaid/link-token");
       return res.json();
     },
-    enabled: isConfigured,
+    enabled: isConfigured && !isDemoAccount,
     retry: false,
     staleTime: 25 * 60 * 1000,
   });
@@ -161,7 +169,12 @@ export function BankConnect({ onDone }: { onDone: () => void }) {
         <AlertCallout testId="alert-bank-error">{error}</AlertCallout>
       )}
 
-      {statusQuery.isSuccess && !isConfigured ? (
+      {isDemoAccount ? (
+        <MutedCallout testId="alert-bank-demo-account">
+          Connecting a bank isn't available on a demo account. Sign up with your own email to
+          link one.
+        </MutedCallout>
+      ) : statusQuery.isSuccess && !isConfigured ? (
         <div
           data-testid="alert-plaid-not-configured"
           className="rounded-[12px] px-[14px] py-[12px] [font-family:'Gilroy',sans-serif] text-[13px] leading-[18px]"
