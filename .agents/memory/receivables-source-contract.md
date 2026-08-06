@@ -7,6 +7,13 @@ description: Why AR reads the invoice feed by a positive marker, why the receiva
 
 AR = rows in the **invoice** feed where `metadata.scenario === "ar"`. Nothing else.
 
+The marker is **nested under `metadata`**. There is no top-level `scenario` field, so
+`row.scenario` is `undefined` on every row and a filter written against it matches nothing
+and reports a clean zero — a total of 0.00 with no error, on a tenant holding six figures of
+AR. Cross-checked on a live tenant: `metadata.scenario === "ar"` agrees with the row's
+counterparty being `type === "customer"` on 15 of 15 rows, so the counterparty join is a
+sound audit of the marker, but the marker stays the contract.
+
 **Why:** this is the mirror-image of the liabilities contract, and the mirror flips the
 source. AP is authoritative on *obligations* because payroll and tax are owed without an
 invoice ever existing. AR is authoritative on *invoices* because the obligations feed only

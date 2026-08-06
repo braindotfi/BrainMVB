@@ -44,22 +44,37 @@ tolerance renders as a calm "you owe nothing" — a parse failure wearing the co
 answer. Any caller that states a figure has to re-impose strictness and treat an
 unparseable shape as a failed read.
 
-## Core's Wiki Q&A is payables-only too — routing to it fixes nothing
+## One phrasing is not a capability test
 
-The obvious reaction to "why do two systems answer this question" is to retire the local
-tier and let core answer. Probed live before acting: core answers "what do we owe
-&lt;vendor&gt;" with exact figures, but for a **customer** it replies "No open payable
-obligations were found for X" — the same blind spot, because both sides read the
-payables feed and receivables live in invoices. Retiring the local tier would change the
-wording and lose nothing else.
+Core's Wiki Q&A **can** read receivables from the invoice feed and answer "how much does
+&lt;customer&gt; owe us" with an exact figure, citing the AR invoice. But asked the
+direction-ambiguous "what do we owe &lt;customer&gt;", it answers "No open payable
+obligations were found" — confidently, with no hint that a large balance runs the other
+way. Same counterparty, same tenant, same minute.
 
-**Why:** the duplication is real and worth a design conversation, but it is not the cause
-of a customer-side wrong answer, and swapping tiers as a "fix" would leave the bug in
-place while looking decisive.
+A single ambiguous phrasing therefore produced the flatly wrong conclusion "core is
+payables-only too, so routing there fixes nothing". The real shape is an intent-matching
+gap: the data is reachable, the question routing is what fails.
 
-**How to apply:** before proposing that either system defer to the other, ask each the
-same question against the same tenant and compare. Core being right about vendors says
-nothing about customers.
+Measured shape of core's receivables support, so nobody has to re-probe:
+
+- **Per-counterparty AR works and is robust** — every direction-explicit phrasing tried,
+  across several customers, returned the exact open balance citing the AR invoice.
+- **Direction-ambiguous "what do we owe &lt;customer&gt;" is answered confidently and
+  payables-only** — a true statement about payables presented as if it settled the
+  relationship. This is the actual defect.
+- **Aggregate AR is unsupported** — "total accounts receivable" style questions decline.
+
+**Why:** capability probes double as the evidence base for retire-vs-keep decisions. A
+false negative here argues for keeping a redundant local system, or for not fixing an
+upstream bug that is cheap to fix — an expensive mistake in the direction that looks
+conservative.
+
+**How to apply:** probe any Q&A capability with at least three phrasings — one
+direction-explicit, one ambiguous, one differently-worded synonym — before concluding it
+cannot do something. Report per-phrasing results, never a single verdict. Note that
+retrieval can also attach evidence from an entirely different counterparty while
+declining to answer, so evidence presence is not evidence of relevance.
 
 ## Name resolution must not imply a direction
 
