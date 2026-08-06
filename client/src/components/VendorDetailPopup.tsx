@@ -21,7 +21,7 @@ import {
 import { useLocation } from "wouter";
 import { useCurrency } from "@/lib/useCurrency";
 import type { Vendor, TrustStatus } from "@/lib/vendorTypes";
-import { vendorSegment, isReviewedOnly, supportsTrustActions } from "@/lib/brainVendors";
+import { vendorSegment, isReviewedOnly, supportsTrustActions, isNeedsReview, trustChipKind } from "@/lib/brainVendors";
 import { openRuleDetail, resolveRule } from "@/lib/openRuleDetail";
 import closeIcon from "@assets/Close_1783293571882.png";
 import { AlertCallout, InfoIcon } from "@/components/Callout";
@@ -145,7 +145,7 @@ export function VendorDetailPopup({
   pagerDisabled,
   onDeleteVendor,
   onGrant,
-  onFlag,
+  onPause,
   onRestore,
   onAcknowledge,
   trustBusy,
@@ -160,7 +160,7 @@ export function VendorDetailPopup({
   /** Grant trust / confirm. Valid from unreviewed or acknowledged states. */
   onGrant?: (vendorId: string) => void;
   /** Pause / flag. Moves trusted → paused via /trust/pause. */
-  onFlag?: (vendorId: string) => void;
+  onPause?: (vendorId: string) => void;
   /** Restore paused vendor to trusted via /trust/restore. paused → trusted only. */
   onRestore?: (vendorId: string) => void;
   /** Acknowledge without granting — dismiss from review queue. */
@@ -207,13 +207,29 @@ export function VendorDetailPopup({
      review that is being withheld. */
   const trustActionsAvailable = supportsTrustActions(vendor);
 
-  const chipLabel = !trustActionsAvailable
-    ? "Informational"
-    : vendor.trustStatus === "under_review"
-      ? "Paused"
-      : vendor.trustStatus === "trusted"
-        ? trustedWord
-        : meta.label;
+  /* Which status this row is in is decided by trustChipKind, next to vendorTier
+     and in the same branch order, so the chip cannot disagree with the tab the row
+     is filed under. Deciding it here from trustStatus is what produced a run of
+     false badges: that field reports `under_review` for a pause AND for a server
+     risk mark, and reports `trusted` before it looks at risk at all.
+
+     This component owns only the words, because those are segment-dependent —
+     customers are "Confirmed", vendors "Trusted". "Paused" rather than "Flagged"
+     for the /trust/pause state: this app already spends "flag" on the per-
+     counterparty anomaly signals rendered further down this same popup ("Active
+     Flags", "Flags Raised"), and two meanings for one word on one screen is worse
+     than the naming drift it replaced. */
+  const chipLabel = {
+    informational: "Informational",
+    needsReview: "Needs Review",
+    paused: "Paused",
+    /* Dismissed, not granted. It shares the Trusted tab, and the row list draws
+       the same distinction with its Reviewed badge. */
+    reviewed: "Reviewed",
+    trusted: trustedWord,
+    /* No tier claims this row, so the chip must not claim anything either. */
+    unclassified: meta.label,
+  }[trustChipKind(vendor)];
 
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
@@ -540,16 +556,26 @@ export function VendorDetailPopup({
                     </div>
                   ) : (
                     <>
-                      {/* trusted → paused via /trust/pause.
-                          "Flag" matches the Flagged chip the row lands under.
-                          The paused → trusted path uses /trust/restore (in the Flagged tab popup). */}
+                      {/* A granted row can be risk-marked upstream afterwards. The chip
+                          and the tab both say Needs Review in that case, so the body has
+                          to give the reason — otherwise the popup shows a review demand
+                          with nothing on it explaining what changed. */}
+                      {isNeedsReview(vendor) && (
+                        <AlertCallout testId="text-trusted-risk-note">
+                          Brain marked this {noun} as risky since trust was granted. Verify the
+                          account, or pause trust while you check.
+                        </AlertCallout>
+                      )}
+                      {/* trusted → paused via /trust/pause. The button, the tab and the
+                          chip all read "Pause"/"Paused" so one state has one name.
+                          The paused → trusted path uses /trust/restore (in the Paused tab popup). */}
                       <TrustButton
-                        label="Flag"
-                        onClick={() => onFlag?.(vendor.id)}
+                        label="Pause"
+                        onClick={() => onPause?.(vendor.id)}
                         busy={trustBusy}
                         color="#ff9400"
                         background="#4a2300"
-                        testId="button-flag-trust"
+                        testId="button-pause-trust"
                       />
                       <button
                         type="button"
@@ -586,12 +612,12 @@ export function VendorDetailPopup({
                     testId="button-grant-trust"
                   />
                   <TrustButton
-                    label="Flag"
-                    onClick={() => onFlag?.(vendor.id)}
+                    label="Pause"
+                    onClick={() => onPause?.(vendor.id)}
                     busy={trustBusy}
                     color="#ff9400"
                     background="#4a2300"
-                    testId="button-flag-counterparty"
+                    testId="button-pause-counterparty"
                   />
                 </div>
               )}
@@ -609,12 +635,12 @@ export function VendorDetailPopup({
                     testId="button-grant-trust"
                   />
                   <TrustButton
-                    label="Flag"
-                    onClick={() => onFlag?.(vendor.id)}
+                    label="Pause"
+                    onClick={() => onPause?.(vendor.id)}
                     busy={trustBusy}
                     color="#ff9400"
                     background="#4a2300"
-                    testId="button-flag-counterparty"
+                    testId="button-pause-counterparty"
                   />
                   <TrustButton
                     label="No action"
@@ -628,7 +654,7 @@ export function VendorDetailPopup({
               )}
 
               {/* under_review covers two distinct states with different valid transitions:
-                    trustState === "paused"  → user previously flagged this row;
+                    trustState === "paused"  → user previously paused this row;
                                                only /trust/restore returns it to trusted
                                                (grant is invalid here per the transition matrix)
                     trustState !== "paused"  → unreviewed + high/sanctioned risk_level;
@@ -637,7 +663,7 @@ export function VendorDetailPopup({
                 vendor.trustState === "paused" ? (
                   <div className="flex flex-col gap-[14px] w-full">
                     <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
-                      Trust is paused. Verify the {noun} account directly before restoring.
+                      You paused trust for this {noun}. Verify the account directly before restoring it.
                     </p>
                     <TrustButton
                       label={restoreLabel}
@@ -659,7 +685,7 @@ export function VendorDetailPopup({
                 ) : (
                   <div className="flex flex-col gap-[14px] w-full">
                     <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
-                      This {noun} carries a risk flag. Verify the account before granting trust.
+                      Brain marked this {noun} as risky. Verify the account before granting trust.
                     </p>
                     <TrustButton
                       label={grantLabel}
@@ -697,12 +723,12 @@ export function VendorDetailPopup({
                     testId="button-grant-trust"
                   />
                   <TrustButton
-                    label="Flag"
-                    onClick={() => onFlag?.(vendor.id)}
+                    label="Pause"
+                    onClick={() => onPause?.(vendor.id)}
                     busy={trustBusy}
                     color="#ff9400"
                     background="#4a2300"
-                    testId="button-flag-counterparty"
+                    testId="button-pause-counterparty"
                   />
                   <TrustButton
                     label="No action"

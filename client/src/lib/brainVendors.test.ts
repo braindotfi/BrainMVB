@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   mapCounterpartyToVendor,
   isNeedsReview,
@@ -9,6 +9,8 @@ import {
   reviewReasonLabel,
   vendorSegment,
   vendorTier,
+  trustChipKind,
+  CHIP_KIND_TIER,
   type BrainCounterparty,
 } from "./brainVendors";
 import type { Vendor, VendorTier } from "./vendorTypes";
@@ -175,7 +177,7 @@ describe("vendorTier", () => {
     ];
 
     const buckets: Record<VendorTier, Vendor[]> = {
-      needsReview: [], flagged: [], trusted: [], suggested: [], informational: [],
+      needsReview: [], paused: [], trusted: [], suggested: [], informational: [],
     };
     for (const row of rows) {
       const tier = vendorTier(row);
@@ -203,11 +205,11 @@ describe("vendorTier", () => {
     expect(vendorTier(v({ trustStatus: "known", trustState: "unreviewed" }))).toBe("needsReview");
   });
 
-  it("keeps a risk-flagged, paused row in Needs Review rather than Flagged", () => {
+  it("keeps a risk-flagged, paused row in Needs Review rather than Paused", () => {
     // Both chips have a claim on it. Needs Review wins, so its count and list
     // stay in step and the row is not quietly parked.
     expect(vendorTier(v({ riskLevel: "high", trustState: "paused" }))).toBe("needsReview");
-    expect(vendorTier(v({ trustStatus: "under_review", trustState: "paused" }))).toBe("flagged");
+    expect(vendorTier(v({ trustStatus: "under_review", trustState: "paused" }))).toBe("paused");
   });
 
   it("keeps a dismissed row findable in the trusted list, badged as reviewed", () => {
@@ -260,7 +262,7 @@ describe("reading brain-core's trust_status", () => {
     expect(withHistory.trustStatus).toBe("known");
   });
 
-  it("keeps risk above a pause, so a sanctioned row cannot be flagged out of the queue", () => {
+  it("keeps risk above a pause, so a sanctioned row cannot be paused out of the queue", () => {
     const v = mapCounterpartyToVendor(cp({ trust_status: "paused", risk_level: "sanctioned" }));
     expect(v.trustStatus).toBe("under_review");
     expect(isNeedsReview(v)).toBe(true);
@@ -546,5 +548,156 @@ describe("the counterparty read stays fresh on its own", () => {
     expect(read("client/src/lib/brainVendors.ts")).toContain(
       'queryKey: ["/api/brain/ledger/counterparties"],',
     );
+  });
+});
+
+/**
+ * One state, one name, and the name is the backend verb.
+ *
+ * The button, the tab and the detail chip were showing "Flag" / "Flagged" / "Paused"
+ * for a single stored value (`trustState === "paused"`, written by `/trust/pause`).
+ * "Paused" wins: this app already uses "flag" for an unrelated concept — the
+ * per-vendor anomaly signals rendered as "Active Flags" / "Flags Raised" in the very
+ * same popup — so reusing the word for a trust state would put two meanings for it on
+ * one screen, which is worse than the drift it replaced.
+ *
+ * The sharper half is that the chip cannot be keyed on `trustStatus` at all.
+ * `deriveTrustStatus` maps BOTH a pause and a high/sanctioned `risk_level` to
+ * `under_review`, and it returns `trusted` before it ever looks at risk — while
+ * `isNeedsReview` gives risk precedence over both. Both halves are pinned here, the
+ * rendered copy AND the predicate behind it, so a future rename cannot move only one.
+ */
+describe("the paused state has one name, and risk outranks it everywhere", () => {
+  const v = (over: Partial<Vendor>): Vendor => ({ ...mapCounterpartyToVendor(cp()), ...over });
+  const chipExpr = (): string => {
+    const src: string = require("fs").readFileSync("client/src/components/VendorDetailPopup.tsx", "utf8");
+    const start = src.indexOf("const chipLabel");
+    expect(start).toBeGreaterThan(-1);
+    return src.slice(start, src.indexOf(";", start));
+  };
+
+  it("names a paused row after the button and tab that produced it", () => {
+    expect(chipExpr()).toContain('"Paused"');
+    // The word that belongs to anomaly flags, not to a trust state.
+    expect(chipExpr()).not.toContain('"Flagged"');
+  });
+
+  it("does not spend the word 'flag' on a trust action, so anomaly flags keep it", () => {
+    /* The collision this rename exists to prevent: the popup renders per-vendor
+       anomaly flags a few hundred lines below the trust buttons. If a trust control
+       ever goes back to being labelled "Flag", one screen carries two unrelated
+       meanings of the word and neither can be read with confidence. */
+    const src: string = require("fs").readFileSync("client/src/components/VendorDetailPopup.tsx", "utf8");
+    expect(src).toContain('label="Pause"');
+    expect(src).not.toContain('label="Flag"');
+    // The other concept is still here — this is a disambiguation, not a purge.
+    expect(src).toMatch(/"Active Flag"|Active Flags/);
+    expect(src).toContain("flagCount");
+  });
+
+  it("decides the status from the tier predicate, not from trustStatus", () => {
+    /* The popup may own the WORDS (segment vocabulary: Trusted vs Confirmed), but
+       it must not own the decision — that is what drifted from the tier. */
+    expect(chipExpr()).toContain("trustChipKind(vendor)");
+    expect(chipExpr()).toContain('"Needs Review"');
+    expect(chipExpr()).toContain('"Reviewed"');
+  });
+
+  it("agrees with the tier for every combination of status, state, risk and source", () => {
+    /* The real invariant, checked exhaustively rather than asserted in a comment.
+       Every earlier version of this chip passed the cases someone happened to think
+       of and failed one nobody did: risk-marked read as paused, then granted-then-
+       sanctioned read as trusted, then acknowledged read as paused. Walking the
+       whole product space is the only version of this test that keeps finding them. */
+    const STATUSES = ["new", "known", "trusted", "under_review"] as const;
+    const STATES = [undefined, "unreviewed", "trusted", "paused", "acknowledged"] as const;
+    const RISKS = [undefined, null, "high", "sanctioned"] as const;
+    const SOURCES = [undefined, "payroll_register"] as const;
+
+    /* vendorTier warns unconditionally on its unclassifiable branch, which this
+       matrix reaches on purpose. */
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      let checked = 0;
+      for (const trustStatus of STATUSES) {
+        for (const trustState of STATES) {
+          for (const riskLevel of RISKS) {
+            for (const informationalSource of SOURCES) {
+              const row = v({ trustStatus, trustState, riskLevel, informationalSource });
+              const kind = trustChipKind(row);
+              expect(
+                CHIP_KIND_TIER[kind],
+                `chip "${kind}" vs tier "${vendorTier(row)}" for ${JSON.stringify({
+                  trustStatus,
+                  trustState,
+                  riskLevel,
+                  informationalSource,
+                })}`,
+              ).toBe(vendorTier(row));
+              checked += 1;
+            }
+          }
+        }
+      }
+      // A silently-empty loop would make this test pass while checking nothing.
+      expect(checked).toBe(STATUSES.length * STATES.length * RISKS.length * SOURCES.length);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("keeps a granted row that later turns risky out of the Trusted label", () => {
+    const grantedThenRisky = v({ trustStatus: "trusted", trustState: "trusted", riskLevel: "sanctioned" });
+    expect(isNeedsReview(grantedThenRisky)).toBe(true);
+    expect(vendorTier(grantedThenRisky)).toBe("needsReview");
+    expect(trustChipKind(grantedThenRisky)).toBe("needsReview");
+  });
+
+  it("calls a dismissed row Reviewed — it shares the Trusted tab but is not a grant", () => {
+    const dismissed = v({ trustStatus: "known", trustState: "acknowledged" });
+    expect(vendorTier(dismissed)).toBe("trusted");
+    expect(isReviewedOnly(dismissed)).toBe(true);
+    expect(trustChipKind(dismissed)).toBe("reviewed");
+
+    /* The combination that read "Paused": dismissed, but with a status that
+       collapses to under_review. Nobody paused this row. */
+    const dismissedUnderReview = v({ trustStatus: "under_review", trustState: "acknowledged" });
+    expect(vendorTier(dismissedUnderReview)).toBe("trusted");
+    expect(trustChipKind(dismissedUnderReview)).toBe("reviewed");
+  });
+
+  it("explains the demotion in the body, not just the chip", () => {
+    /* Chip and tab both say Needs Review for that row, but its action block is the
+       trusted one — without a reason the popup demands a review and says nothing
+       about what changed. */
+    const src: string = require("fs").readFileSync("client/src/components/VendorDetailPopup.tsx", "utf8");
+    expect(src).toContain('testId="text-trusted-risk-note"');
+  });
+
+  it("splits the chip on the same predicate as the tier, so chip and tab agree", () => {
+    const riskOnly = v({ trustStatus: "under_review", riskLevel: "high" });
+    expect(isNeedsReview(riskOnly)).toBe(true);
+    expect(vendorTier(riskOnly)).toBe("needsReview");
+
+    const pausedOnly = v({ trustStatus: "under_review", trustState: "paused" });
+    expect(isNeedsReview(pausedOnly)).toBe(false);
+    expect(vendorTier(pausedOnly)).toBe("paused");
+  });
+
+  it("keeps risk outranking the pause on the overlap row, in chip and tier alike", () => {
+    /* Risk-marked AND paused: the chip reads the same predicate the tier does, so both
+       say Needs Review. If these ever disagree the popup contradicts the tab. */
+    const both = v({ trustStatus: "under_review", trustState: "paused", riskLevel: "high" });
+    expect(isNeedsReview(both)).toBe(true);
+    expect(vendorTier(both)).toBe("needsReview");
+  });
+
+  it("changes display copy only — the wire verb is untouched", () => {
+    /* The route is built as `/trust/${action}`, so a copy sweep over the word "pause"
+       could silently rewrite it into a 404 that only shows up live. */
+    const panel: string = require("fs").readFileSync("client/src/pages/VendorsPanel.tsx", "utf8");
+    expect(panel).toContain('"grant" | "pause" | "acknowledge" | "restore"');
+    expect(panel).toContain("/trust/${action}");
+    expect(panel).toContain('"pause",');
   });
 });

@@ -253,7 +253,7 @@ export function isNeedsReview(v: Vendor): boolean {
    Exactly one tier per row, first match wins. This is the same invariant the
    needs-review predicate exists to protect, extended to the whole chip row: a
    row shown under two chips would let two counts disagree about the same work.
-   Needs Review therefore outranks Flagged — a risk-flagged row that someone
+   Needs Review therefore outranks Paused — a risk-flagged row that someone
    also paused is unfinished business, not parked business.
 
    Returns null when no tier fits. Every combination that is reachable from
@@ -279,7 +279,7 @@ export function vendorTier(v: Vendor): VendorTier | null {
      substitute a locally-invented predicate; a tier the user can act on has to
      mean something upstream can vouch for. */
   if (isNeedsReview(v)) return "needsReview";
-  if (v.trustState === "paused") return "flagged";
+  if (v.trustState === "paused") return "paused";
   /* Dismissed rows live here too, badged "Reviewed". They are not a trust grant,
      but they have been dealt with, and a row a user acted on must stay findable
      somewhere — otherwise dismissing looks like deleting. */
@@ -300,12 +300,61 @@ export function isReviewedOnly(v: Vendor): boolean {
   return v.trustState === "acknowledged" && v.trustStatus !== "trusted";
 }
 
+/* ── Detail-popup status chip ─────────────────────────────────────────────────
+   Deliberately a mirror of vendorTier's branch order, and deliberately NOT a read
+   of trustStatus. That field collapses causes: it reports `under_review` for both
+   a pause the user performed and a risk level brain-core assigned, and it reports
+   `trusted` before it looks at risk at all. Every chip keyed on it has therefore
+   ended up asserting a decision nobody made — a risk-marked row badged as paused,
+   an acknowledged row badged as paused, a granted-then-sanctioned row badged as
+   trusted while sitting in the review queue.
+
+   Living next to vendorTier in the same order is what makes "the chip names the
+   tab the row is filed under" a checkable claim rather than an aspiration:
+   CHIP_KIND_TIER below states the correspondence and a test walks every
+   combination of status, state, risk and informational source against it.
+
+   One deliberate refinement over the tier: a dismissed row shares the Trusted
+   tier but is not a trust grant, so it gets its own kind rather than being
+   labelled Trusted — the same distinction the row list draws with its Reviewed
+   badge. Widening it to "Trusted" would manufacture a grant out of a dismissal. */
+export type TrustChipKind =
+  | "informational"
+  | "needsReview"
+  | "paused"
+  | "reviewed"
+  | "trusted"
+  | "unclassified";
+
+export function trustChipKind(v: Vendor): TrustChipKind {
+  if (v.informationalSource !== undefined) return "informational";
+  if (isNeedsReview(v)) return "needsReview";
+  if (v.trustState === "paused") return "paused";
+  if (isReviewedOnly(v)) return "reviewed";
+  if (v.trustStatus === "trusted") return "trusted";
+  /* Mirrors vendorTier's own unreachable branch. The row does not render in any
+     list, but the popup is reachable by deep link, so the chip still needs an
+     answer — and it must not be a confident one. */
+  return "unclassified";
+}
+
+/** The tier each chip kind must resolve to. The popup and the list disagreeing
+ *  about a row is the failure this exists to make impossible. */
+export const CHIP_KIND_TIER: Record<TrustChipKind, VendorTier | null> = {
+  informational: "informational",
+  needsReview: "needsReview",
+  paused: "paused",
+  reviewed: "trusted",
+  trusted: "trusted",
+  unclassified: null,
+};
+
 /** Why a row sits in Needs Review. Risk outranks newness when both apply. */
 export function reviewReasonLabel(v: Vendor): string | null {
   if (!isNeedsReview(v)) return null;
   if (v.riskLevel === "sanctioned") return "Risk: sanctioned";
   if (v.riskLevel === "high") return "Risk: high";
-  if (v.trustStatus === "under_review") return "Flagged for review";
+  if (v.trustStatus === "under_review") return "Paused for review";
   return "New";
 }
 

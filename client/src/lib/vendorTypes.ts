@@ -12,8 +12,8 @@ export type TrustStatus = "new" | "known" | "trusted" | "under_review";
  *  derivation. See brainVendors.ts for the predicate and the mapping rules.
  *    unreviewed   — nobody has acted on it (default)
  *    trusted      — user granted trust ("Confirmed" on the Customers segment)
- *    paused       — user flagged it
- *    acknowledged — user dismissed it without granting or flagging */
+ *    paused       — user paused trust for it
+ *    acknowledged — user dismissed it without granting or pausing */
 export type TrustState = "unreviewed" | "trusted" | "paused" | "acknowledged";
 
 /** Which segment of the Counterparties screen a row belongs to. brain-core's
@@ -24,7 +24,7 @@ export type CounterpartySegment = "vendor" | "customer";
 /** The chip a row is filed under. Named by meaning, not by label: the Customers
  *  segment renders "trusted" as "Confirmed", and the label is the only thing
  *  that differs — same state, same endpoint. */
-export type VendorTier = "needsReview" | "flagged" | "trusted" | "suggested" | "informational";
+export type VendorTier = "needsReview" | "paused" | "trusted" | "suggested" | "informational";
 
 export type VendorFlagKind =
   | "bank_detail_change"

@@ -30,7 +30,7 @@ import { RecordPill } from "@/components/RecordPill";
    Review chip counted only risk-flagged ones, so a warning pointed at rows the
    active filter refused to show. Newness is now a REASON inside Needs Review,
    not a competing filter. */
-type VendorTab = "Needs Review" | "Trusted" | "Flagged" | "Suggested" | "Informational";
+type VendorTab = "Needs Review" | "Trusted" | "Paused" | "Suggested" | "Informational";
 
 /** Vendors (we pay them) vs Customers (they pay us). */
 type Segment = "vendor" | "customer";
@@ -43,7 +43,7 @@ type Segment = "vendor" | "customer";
 const TAB_TIER: Record<VendorTab, VendorTier> = {
   "Needs Review": "needsReview",
   Trusted: "trusted",
-  Flagged: "flagged",
+  Paused: "paused",
   Suggested: "suggested",
   Informational: "informational",
 };
@@ -70,7 +70,7 @@ const VENDOR_CATEGORIES = [
 /** Why a row is in the review queue. Risk reads as danger, newness as amber —
  *  the same two tones the rest of the app uses for those meanings. */
 function ReasonChip({ label }: { label: string }) {
-  const danger = label.startsWith("Risk:") || label === "Flagged for review";
+  const danger = label.startsWith("Risk:") || label === "Paused for review";
   return (
     <RecordPill
       className={danger ? "bg-[#350011] text-[#d20344] border-[rgba(210,3,68,0.2)]" : "bg-[#4a2300] text-[#ff9400] border-[rgba(255,149,0,0.2)]"}
@@ -534,7 +534,7 @@ export function VendorsPanel() {
   const grouped = useMemo(() => {
     const buckets: Record<VendorTier, Vendor[]> = {
       needsReview: [],
-      flagged: [],
+      paused: [],
       trusted: [],
       suggested: [],
       informational: [],
@@ -570,11 +570,13 @@ export function VendorsPanel() {
      reasoning as the Needs Review count, which is omitted rather than zeroed
      until the read lands.
 
-     Flagged: always visible on both Vendors and Customers. For Customers,
-     the tab groups every customer whose trust state has been set to paused
-     (i.e. manually flagged for review). Hiding it while empty would remove
-     the tab during normal operations, making it look like a feature that
-     isn't there; keeping it visible makes flagging a discoverable action.
+     Paused: always visible on both Vendors and Customers. The tab groups every
+     counterparty whose trust state has been set to paused — the state written by
+     /trust/pause, named after the verb rather than "flagged" because this app
+     already uses flags for the unrelated per-vendor anomaly signals. Hiding it
+     while empty would remove the tab during normal operations, making it look
+     like a feature that isn't there; keeping it visible makes pausing a
+     discoverable action.
      Suggested: nothing can currently reach the tier on either segment — brain-
      core's provenance enum has no value meaning "Brain-suggested, not yet
      confirmed". The chip is hidden until vendorTier() returns "suggested" for
@@ -586,7 +588,7 @@ export function VendorsPanel() {
 
      Informational hides only WHILE empty — hiding a chip that has rows would
      hide the rows, which is the failure this screen exists to prevent. */
-  const showFlagged = true;
+  const showPaused = true;
   const showSuggested = grouped.suggested.length > 0;
   /* Informational: same hidden-while-empty rule as Suggested, and for the same
      reason — a chip for a tier the tenant has no rows in claims a distinction
@@ -599,7 +601,7 @@ export function VendorsPanel() {
   const tabVisible: Record<VendorTab, boolean> = {
     "Needs Review": true,
     Trusted: true,
-    Flagged: showFlagged,
+    Paused: showPaused,
     Suggested: showSuggested,
     Informational: showInformational,
   };
@@ -640,7 +642,7 @@ export function VendorsPanel() {
     },
     // The settled tiers stay clean — their counts carry no action signal.
     { value: "Trusted", label: trustedLabel },
-    ...(showFlagged ? [{ value: "Flagged", label: "Flagged" }] : []),
+    ...(showPaused ? [{ value: "Paused", label: "Paused" }] : []),
     ...(showSuggested ? [{ value: "Suggested", label: "Suggested" }] : []),
     // No count: these rows are records, not a workload.
     ...(showInformational ? [{ value: "Informational", label: "Informational" }] : []),
@@ -839,14 +841,14 @@ export function VendorsPanel() {
       `${v?.name ?? (isCustomer ? "Customer" : "Vendor")} has been added as a trusted ${isCustomer ? "customer" : "vendor"}.`,
     );
   };
-  const handleFlag = (vendorId: string) => {
+  const handlePause = (vendorId: string) => {
     const v = vendors.find((x) => x.id === vendorId);
     const isCustomer = v ? vendorSegment(v) === "customer" : false;
     return callTrustAction(
       vendorId,
       "pause",
-      isCustomer ? "Customers Successfully Flagged" : "Vendor Successfully Flagged",
-      `${v?.name ?? (isCustomer ? "Customer" : "Vendor")} has been added as a flagged ${isCustomer ? "customer" : "vendor"}.`,
+      isCustomer ? "Customer Trust Paused" : "Vendor Trust Paused",
+      `Trust for ${v?.name ?? (isCustomer ? "this customer" : "this vendor")} is paused. Restore it once you've verified the account.`,
     );
   };
   /* paused → trusted. Uses /trust/restore (not grant — grant is only valid from
@@ -904,8 +906,8 @@ export function VendorsPanel() {
               <div className="flex items-center gap-[8px] min-h-[16px] w-full">
                 <div className="size-[6px] rounded-full shrink-0 bg-[#6c779d]" />
                 <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[12px] uppercase tracking-[0.4px] whitespace-nowrap">
-                  {effectiveTab === "Flagged"
-                    ? "Flagged"
+                  {effectiveTab === "Paused"
+                    ? "Paused"
                     : segment === "vendor"
                       ? "Added Vendors"
                       : "Customers"}
@@ -954,7 +956,7 @@ export function VendorsPanel() {
                             only rendered while their bucket has rows, so an
                             empty list is unreachable for both. Restore a line
                             here if that changes. */}
-                        {effectiveTab === "Flagged" && `No flagged ${segmentNoun}.`}
+                        {effectiveTab === "Paused" && `No paused ${segmentNoun}.`}
                       </p>
                     </div>
                   ) : (
@@ -1047,7 +1049,7 @@ export function VendorsPanel() {
         pagerDisabled={vendorPagerDisabled}
         onDeleteVendor={(id, name) => handleDeleteVendor(id, name)}
         onGrant={handleGrant}
-        onFlag={handleFlag}
+        onPause={handlePause}
         onRestore={handleRestore}
         onAcknowledge={handleAcknowledge}
         trustBusy={trustBusy}

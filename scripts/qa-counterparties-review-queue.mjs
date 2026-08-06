@@ -213,21 +213,24 @@ check(
   `label=${await chipLabel("tab-vendor-trusted")}`,
 );
 
-/* Flagging a customer is rare enough that an always-empty chip is noise there.
-   Hiding a chip that HAS rows would hide the rows, so this allows either an
-   absent chip or a present one — never an empty one taking up the row. */
+/* The Paused tab is now always visible on BOTH segments (showPaused is an
+   unconditional true). Customers can be paused exactly like vendors, and hiding
+   the tab while empty made pausing look like a vendors-only feature during the
+   normal case where nothing is paused. This assertion used to require the chip
+   to be ABSENT on Customers; it outlived that policy and would now fail on every
+   run, so it is inverted to match. */
 await clickChip("tab-vendor-needs-review");
-const flaggedOnCustomers = await count('[data-testid="tab-vendor-flagged"]');
+const pausedOnCustomers = await count('[data-testid="tab-vendor-paused"]');
 check(
-  "the Flagged chip is hidden on Customers while it has nothing to show",
-  flaggedOnCustomers === 0,
-  `flagged chips on customers=${flaggedOnCustomers}`,
+  "the Paused chip is present on Customers, empty or not",
+  pausedOnCustomers === 1,
+  `paused chips on customers=${pausedOnCustomers}`,
 );
 
 await clickChip("segment-vendor");
 check(
-  "the Flagged chip is present on Vendors",
-  (await count('[data-testid="tab-vendor-flagged"]')) === 1,
+  "the Paused chip is present on Vendors",
+  (await count('[data-testid="tab-vendor-paused"]')) === 1,
 );
 
 /* Suggested is hidden on BOTH segments while nothing can reach the tier —
@@ -253,7 +256,7 @@ for (const segment of ["vendor", "customer"]) {
 /* Selecting a chip the other segment does not offer must not leave the list
    showing a tier no chip is highlighting. */
 await clickChip("segment-vendor");
-await clickChip("tab-vendor-flagged");
+await clickChip("tab-vendor-paused");
 await clickChip("segment-customer");
 const pressedChips = await page
   .locator('[data-testid^="tab-vendor-"][aria-pressed="true"]')
@@ -291,11 +294,11 @@ check(
 
 const POPUP = '[data-testid="vendor-detail-popup-content"]';
 /* Trust actions that may render in the Needs Review popup (unreviewed rows only).
-   paused rows live in the Flagged tab — their restore button is checked separately.
+   paused rows live in the Paused tab — their restore button is checked separately.
    trusted rows live in the Trusted tab — their flag button is not checked here. */
 const TRUST_ACTIONS = [
   "button-grant-trust",
-  "button-flag-counterparty",
+  "button-pause-counterparty",
   "button-acknowledge-counterparty",
 ];
 
@@ -343,12 +346,16 @@ for (const segment of ["vendor", "customer"]) {
 
   const popupText = await page.locator(POPUP).innerText();
 
-  /* One word per state. "Reject" was a second name for the paused state the
-     list now calls Flagged, and two words for one state is how a queue starts
-     disagreeing with itself. */
+  /* One word per state. "Reject" and "Flag" were both second names for the paused
+     state, and two words for one state is how a queue starts disagreeing with
+     itself. The state is now named after the verb that writes it (/trust/pause),
+     which also frees "flag" for the per-counterparty anomaly signals that already
+     own the word further down this same popup. */
   check(
-    `${segment}s: the popup says Flag, never Reject`,
-    !/reject/i.test(popupText) && (await count('[data-testid="button-reject-vendor"]')) === 0,
+    `${segment}s: the popup says Pause — never Reject, never Flag`,
+    !/reject/i.test(popupText) &&
+      (await count('[data-testid="button-reject-vendor"]')) === 0 &&
+      (await count('[data-testid="button-pause-trust"], [data-testid="button-pause-counterparty"]')) > 0,
     popupText.replace(/\n+/g, " | ").slice(0, 200),
   );
 
@@ -408,14 +415,14 @@ for (const [segment, expected] of [
   await closePopup();
 }
 
-/* ── Flagged tab: the restore path must be live, not a placeholder ───────────
+/* ── Paused tab: the restore path must be live, not a placeholder ───────────
    paused → trusted via /trust/restore is the only transition that requires a
    row to have been actioned once already, so it is the likeliest to silently
-   rot. This is a read-only inspection (no write): open the first Flagged row
+   rot. This is a read-only inspection (no write): open the first Paused row
    and prove the restore button is rendered AND enabled, with no stale
    "unavailable" disclaimer left over from the pre-trust-routes era.
 
-   The Flagged chip is hidden while its bucket is empty (asserted earlier), so
+   The Paused chip is hidden while its bucket is empty (asserted earlier), so
    an absent chip here means "no paused rows on this tenant" — recorded as an
    explicit SKIP, never a false pass. */
 
@@ -423,33 +430,33 @@ for (const segment of ["vendor", "customer"]) {
   await go("/ledger?tab=counterparties");
   await clickChip(`segment-${segment}`);
 
-  if ((await count('[data-testid="tab-vendor-flagged"]')) === 0) {
+  if ((await count('[data-testid="tab-vendor-paused"]')) === 0) {
     console.log(
-      `SKIP  ${segment}s: Flagged tab restore-path check — no Flagged chip (no paused rows on this tenant)`,
+      `SKIP  ${segment}s: Paused tab restore-path check — no Paused chip (no paused rows on this tenant)`,
     );
     continue;
   }
 
-  await clickChip("tab-vendor-flagged");
-  const flaggedRows = await count(ROWS);
-  if (flaggedRows === 0) {
-    /* Vendors keep the Flagged chip visible even when empty (asserted above),
+  await clickChip("tab-vendor-paused");
+  const pausedRows = await count(ROWS);
+  if (pausedRows === 0) {
+    /* Vendors keep the Paused chip visible even when empty (asserted above),
        so an empty list here just means no paused rows exist yet — a skip. */
     console.log(
-      `SKIP  ${segment}s: Flagged tab restore-path check — Flagged list is empty (no paused rows on this tenant)`,
+      `SKIP  ${segment}s: Paused tab restore-path check — Paused list is empty (no paused rows on this tenant)`,
     );
     continue;
   }
 
   if (!(await openFirstRow())) {
-    check(`${segment}s: a flagged row opens its detail popup`, false, "popup did not open");
+    check(`${segment}s: a paused row opens its detail popup`, false, "popup did not open");
     continue;
   }
 
   const restoreBtn = page.locator('[data-testid="button-restore-trust"]');
   const restorePresent = (await restoreBtn.count()) === 1;
   check(
-    `${segment}s: the Flagged popup renders the restore action`,
+    `${segment}s: the Paused popup renders the restore action`,
     restorePresent,
   );
 
@@ -464,12 +471,12 @@ for (const segment of ["vendor", "customer"]) {
 
   /* The disabled-placeholder era shipped an "unavailable" note alongside the
      dead buttons. Both the test-id'd note and its copy must be gone. */
-  const flaggedPopupText = await page.locator(POPUP).innerText();
+  const pausedPopupText = await page.locator(POPUP).innerText();
   check(
-    `${segment}s: the Flagged popup has no unavailability disclaimer`,
+    `${segment}s: the Paused popup has no unavailability disclaimer`,
     (await count('[data-testid="text-review-actions-unavailable"]')) === 0 &&
-      !/isn't available yet|unavailable/i.test(flaggedPopupText),
-    flaggedPopupText.replace(/\n+/g, " | ").slice(0, 200),
+      !/isn't available yet|unavailable/i.test(pausedPopupText),
+    pausedPopupText.replace(/\n+/g, " | ").slice(0, 200),
   );
 
   await closePopup();
@@ -482,8 +489,8 @@ for (const segment of ["vendor", "customer"]) {
 
    Sequence:
      1. unreviewed → trusted    via /trust/grant       (Needs Review → Trusted tab)
-     2. trusted    → paused     via /trust/pause        (Trusted → Flagged tab)
-     3. paused     → trusted    via /trust/restore      (Flagged → Trusted tab)
+     2. trusted    → paused     via /trust/pause        (Trusted → Paused tab)
+     3. paused     → trusted    via /trust/restore      (Paused → Trusted tab)
      4. any        → acknowledged  via /trust/acknowledge (Needs Review → gone)
 
    If the Needs Review queue is empty the whole block is skipped with a clear
@@ -553,8 +560,8 @@ if (needsReviewCount === 0) {
         await page.locator(ROWS).first().click();
         await page.waitForTimeout(600);
 
-        const flagBtn = page.locator('[data-testid="button-flag-trust"]');
-        const flagExists = (await flagBtn.count()) === 1;
+        const pauseBtn = page.locator('[data-testid="button-pause-trust"]');
+        const flagExists = (await pauseBtn.count()) === 1;
         check(
           "trust-transition 2/4: flag button is present in Trusted popup",
           flagExists,
@@ -565,7 +572,7 @@ if (needsReviewCount === 0) {
             /\/trust\/pause/,
             "step 2: trusted → paused",
             async () => {
-              await flagBtn.click();
+              await pauseBtn.click();
               await page.waitForTimeout(2000);
             },
           );
@@ -579,27 +586,27 @@ if (needsReviewCount === 0) {
             `before=${trustedCount} after=${trustedAfterFlag}`,
           );
 
-          /* Flagged chip may only appear while there are flagged rows. */
-          const flaggedChipExists = (await count('[data-testid="tab-vendor-flagged"]')) === 1;
-          if (flaggedChipExists) {
-            await clickChip("tab-vendor-flagged");
+          /* Paused chip may only appear while there are paused rows. */
+          const pausedChipExists = (await count('[data-testid="tab-vendor-paused"]')) === 1;
+          if (pausedChipExists) {
+            await clickChip("tab-vendor-paused");
             await page.waitForTimeout(400);
-            const flaggedCount = await count(ROWS);
+            const pausedCount = await count(ROWS);
             check(
-              "trust-transition 2/4: trusted → paused (flag) — row appears in Flagged tab",
-              flaggedCount > 0,
-              `flagged-tab rows: ${flaggedCount}`,
+              "trust-transition 2/4: trusted → paused (flag) — row appears in Paused tab",
+              pausedCount > 0,
+              `paused-tab rows: ${pausedCount}`,
             );
 
             /* ── Step 3: paused → trusted (restore) ──────────────────── */
-            if (flaggedCount > 0) {
+            if (pausedCount > 0) {
               await page.locator(ROWS).first().click();
               await page.waitForTimeout(600);
 
               const restoreBtn = page.locator('[data-testid="button-restore-trust"]');
               const restoreExists = (await restoreBtn.count()) === 1;
               check(
-                "trust-transition 3/4: restore button is present in Flagged popup",
+                "trust-transition 3/4: restore button is present in Paused popup",
                 restoreExists,
               );
 
@@ -620,16 +627,16 @@ if (needsReviewCount === 0) {
                     },
                   );
 
-                  const flaggedChipGone = (await count('[data-testid="tab-vendor-flagged"]')) === 0;
-                  const flaggedAfterRestore = flaggedChipGone ? 0 : await (async () => {
-                    await clickChip("tab-vendor-flagged");
+                  const pausedChipGone = (await count('[data-testid="tab-vendor-paused"]')) === 0;
+                  const pausedAfterRestore = pausedChipGone ? 0 : await (async () => {
+                    await clickChip("tab-vendor-paused");
                     await page.waitForTimeout(400);
                     return count(ROWS);
                   })();
                   check(
-                    "trust-transition 3/4: paused → trusted (restore) — row left Flagged tab",
-                    flaggedAfterRestore < flaggedCount,
-                    `before=${flaggedCount} after=${flaggedAfterRestore}`,
+                    "trust-transition 3/4: paused → trusted (restore) — row left Paused tab",
+                    pausedAfterRestore < pausedCount,
+                    `before=${pausedCount} after=${pausedAfterRestore}`,
                   );
 
                   await clickChip("tab-vendor-trusted");
@@ -645,9 +652,9 @@ if (needsReviewCount === 0) {
             }
           } else {
             check(
-              "trust-transition 2/4: trusted → paused (flag) — Flagged chip appeared",
+              "trust-transition 2/4: trusted → paused — Paused chip appeared",
               false,
-              "Flagged chip not visible after pause — row may not have moved",
+              "Paused chip not visible after pause — row may not have moved",
             );
           }
         }
