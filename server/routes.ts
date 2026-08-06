@@ -1907,5 +1907,14 @@ Evidence rows must cite the actual vendor names, amounts, and counts you saw in 
     }
   });
 
+  /* Unmatched /api/* → JSON 404. Registered LAST: after every real API route, and before
+     the SPA catch-all that server/vite.ts (dev) and server/static.ts (prod) install. Without
+     it those catch-alls answer an unknown API path with 200 + the index.html shell, so a
+     deleted or mistyped endpoint still looks alive — callers get HTML where they expect JSON,
+     and a removal like the shared demo login is unobservable from outside the process. */
+  app.use("/api/{*path}", (req: Request, res: Response) => {
+    res.status(404).json({ error: "Not found", path: req.originalUrl.split("?")[0] });
+  });
+
   return httpServer;
 }

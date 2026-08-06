@@ -26,7 +26,6 @@ interface AuthContextType {
   isTransitioning: boolean;
   loginWithPassword: (identifier: string, password: string) => Promise<void>;
   register: (params: { email: string; username?: string; password: string; name?: string }) => Promise<void>;
-  loginDemo: () => Promise<void>;
   loginDemoFresh: (opts?: { skipOnboarding?: boolean }) => Promise<void>;
   loginWithGoogle: () => void;
   logout: () => Promise<void>;
@@ -42,8 +41,8 @@ const AuthContext = createContext<AuthContextType | null>(null);
     remount these modules, so anything left here silently carries over and renders
     on the next account as activity it never had.
 
-    Runs on EVERY transition — `loginWithPassword`, `register`, `loginDemo`,
-    `loginDemoFresh`, session bootstrap, and `logout` (via `setUser(null)`) — not
+    Runs on EVERY transition — `loginWithPassword`, `register`, `loginDemoFresh`,
+    session bootstrap, and `logout` (via `setUser(null)`) — not
     just the paths that happen to call `logout()`. Exported so tests can pin the
     funnel without mounting the provider. Add new user-scoped stores HERE, not to
     an individual caller. */
@@ -138,24 +137,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     [],
   );
-
-  const loginDemo = useCallback(async () => {
-    setIsTransitioning(true);
-    try {
-      const res = await fetch("/api/auth/demo", {
-        method: "POST",
-        credentials: "include",
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || "Demo login failed");
-      const u = data.user;
-      // Shared demo login always skips the onboarding flow.
-      markOnboardingComplete(u.id);
-      setUser(u);
-    } finally {
-      setIsTransitioning(false);
-    }
-  }, []);
 
   /**
    * Fresh demo identity: a brand-new demo-fresh-<id>@brain.fi user, which durable tenancy
@@ -258,7 +239,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isTransitioning,
       loginWithPassword,
       register,
-      loginDemo,
       loginDemoFresh,
       loginWithGoogle,
       logout,

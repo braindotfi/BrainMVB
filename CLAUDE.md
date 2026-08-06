@@ -166,9 +166,13 @@ ingestion, zero ledger, no disguised mock data. Only the demo accounts may ever 
 seeded/synthetic data.
 
 - **Who is demo:** decided ONLY by `server/demoUsers.ts` (`isDemoEmail`) —
-  `demo@brain.fi` (shared, `POST /api/auth/demo`) and `demo-fresh-*@brain.fi`
-  (`POST /api/auth/demo-fresh`). `publicUser` (server/auth.ts) exposes it to the
-  client as `user.isDemo`; never re-derive it anywhere else.
+  `demo-fresh-*@brain.fi` (`POST /api/auth/demo-fresh`) and `demo@brain.fi`, whose
+  shared `POST /api/auth/demo` route was DELETED. That route logged every visitor
+  into one account and one tenant, so each inherited the last one's data; the
+  address stays classified as demo only so any surviving row is never mistaken for
+  a real signup. Do not reintroduce the route — `server/auth-security.test.ts` pins
+  it as 404. `publicUser` (server/auth.ts) exposes demo-ness to the client as
+  `user.isDemo`; never re-derive it anywhere else.
 - **Server fence:** the one-time starter seed (`server/brain/seed.ts`, durable-mode
   create-tenant branch in `server/brain/auth.ts`) runs ONLY when the app user's email
   is a demo address. A real user's tenant is created with NO `/raw/ingest` calls.
@@ -194,7 +198,7 @@ another account's activity as its own.
 
 `applyUserScopedResets(u)` in `client/src/lib/authContext.tsx` is the single funnel.
 `setUser` calls it and nothing else re-implements it, so it covers every path —
-`loginWithPassword`, `register`, `loginDemo`, `loginDemoFresh`, session bootstrap,
+`loginWithPassword`, `register`, `loginDemoFresh`, session bootstrap,
 and `logout` (via `setUser(null)`).
 
 Currently resets:

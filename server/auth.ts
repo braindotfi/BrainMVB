@@ -9,7 +9,7 @@ import { z } from "zod";
 import { storage } from "./storage";
 import type { User } from "@shared/schema";
 import { brainTenancyMode } from "./brain/config";
-import { isDemoEmail, SHARED_DEMO_EMAIL } from "./demoUsers";
+import { isDemoEmail } from "./demoUsers";
 import { evictBrainSession } from "./brain/auth";
 
 const scryptAsync = promisify(scrypt);
@@ -209,26 +209,19 @@ export function setupAuth(app: Express) {
     return res.json({ user: publicUser(user) });
   });
 
-  // ─── Demo login (no credentials) - explore the app with a shared demo account ───
-  app.post("/api/auth/demo", async (req, res) => {
-    // No shared demo account in production tenancy - real tenants/agents live there,
-    // and there is no honest "explore with someone else's data" story. 404, not a
-    // gated 403, so the route reads as not existing rather than merely locked.
-    if (brainTenancyMode() === "production") {
-      return res.status(404).json({ error: "Not found" });
-    }
-    let user = await storage.getUserByEmail(SHARED_DEMO_EMAIL);
-    if (!user) {
-      user = await storage.createUser({
-        username: SHARED_DEMO_EMAIL,
-        email: SHARED_DEMO_EMAIL,
-        password: null,
-        name: "ACME Inc.",
-      });
-    }
-    await switchSession(req, user.id);
-    return res.json({ user: publicUser(user) });
-  });
+  /* ── REMOVED: POST /api/auth/demo (shared demo@brain.fi login) ──────────────
+     Deleted deliberately; do not reintroduce. It was unauthenticated and logged
+     every caller into ONE app user backed by ONE persistent tenant, so each
+     visitor could read and mutate whatever the previous visitor left behind:
+     ledger rows, counterparties, trust decisions, audit entries, document
+     metadata, tenant API keys, and any linked Plaid connection (institution,
+     account names, last-4 masks) which they could also disconnect. The
+     production-mode 404 above did not cover it in practice, because this
+     deployment runs BRAIN_TENANCY_MODE=durable.
+
+     Isolated demo access is /api/auth/demo-fresh, which mints a new user and a
+     new seeded tenant per visitor. Any "explore the app" entry point must use
+     that route. server/auth-security.test.ts pins this route as 404. */
 
   // ─── Demo fresh user (no credentials) - creates a NEW account each time ───
   app.post("/api/auth/demo-fresh", async (req, res) => {

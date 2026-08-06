@@ -112,6 +112,36 @@ describe("auth boundary hardening", () => {
     expect(res.status).toBe(401);
     expect(res.json).toEqual({ error: "Not authenticated" });
   });
+
+  /* The shared demo login (POST /api/auth/demo) was deleted: unauthenticated, it logged
+     every caller into ONE app user backed by ONE persistent tenant, so each visitor could
+     read and mutate what the previous visitor left behind. Isolated demo access is
+     /api/auth/demo-fresh. This pins the removal — reintroducing the route, or adding any
+     other unauthenticated path that hands out a session, fails here.
+
+     The 404 comes from the /api/* fallback at the end of registerRoutes, so this harness
+     exercises the same handler the real server uses. That matters: the running app mounts a
+     SPA catch-all after the API routes, and before that fallback existed an unknown /api path
+     answered 200 with the HTML shell — this test would have passed while the deployed server
+     still returned 200 for the deleted route. */
+  it("no longer exposes the shared demo login, and mints no session for it", async () => {
+    const client = new SessionClient(baseUrl);
+    const res = await client.request<{ error: string }>("POST", "/api/auth/demo");
+    expect(res.status).toBe(404);
+    expect(res.json.error).toBe("Not found");
+
+    // The decisive assertion: a 404 that still issued a cookie would mean some other
+    // handler had claimed the path and logged the caller in anyway.
+    const after = await client.request("GET", "/api/auth/user");
+    expect(after.status).toBe(401);
+  });
+
+  it("answers unknown /api paths with JSON, not the SPA shell", async () => {
+    const res = await fetch(`${baseUrl}/api/definitely-not-a-route`, { method: "POST" });
+    expect(res.status).toBe(404);
+    expect(res.headers.get("content-type")).toMatch(/application\/json/);
+    expect(await res.json()).toMatchObject({ error: "Not found" });
+  });
 });
 
 describe("account deletion hygiene", () => {

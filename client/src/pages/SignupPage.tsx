@@ -157,8 +157,8 @@ export function SignupPage() {
     try {
       // Fresh, ISOLATED demo tenant per visitor - never the shared demo@brain.fi identity.
       // A shared tenant accumulates whatever the previous visitor did, which is exactly
-      // what makes an investor walkthrough untrustworthy. /api/auth/demo remains available
-      // for internal/debug use, just not behind this button.
+      // what makes an investor walkthrough untrustworthy. The shared /api/auth/demo route
+      // has been DELETED (see server/auth.ts) - this is the only demo entry point.
       await loginDemoFresh({ skipOnboarding: true });
       navigate("/");
     } catch (err) {
