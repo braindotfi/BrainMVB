@@ -275,6 +275,85 @@ async function createDemoSession(
   );
 }
 
+/** The tenant id core reports in a `tenant_identity_already_linked` conflict.
+ *  Read defensively: it is an error payload, not a typed success body, so a
+ *  core that stops sending `details` must degrade rather than throw here. */
+function linkedTenantIdFrom(err: TenancyApiError): string | undefined {
+  const body = err.body as { error?: { details?: { tenant_id?: unknown } } } | undefined;
+  const id = body?.error?.details?.tenant_id;
+  return typeof id === "string" && id.length > 0 ? id : undefined;
+}
+
+/**
+ * Adopt the tenant a demo user is already linked to, after POST /tenants told us
+ * it exists. Same shape the production path uses for an existing tenant: exchange
+ * a session on the founder's external_ref (which IS the app user id — that is what
+ * provisionDemoTenant sends as founder_external_ref) rather than creating anything.
+ *
+ * Deliberately does NOT re-run seedTenantDocuments: the tenant it is adopting was
+ * seeded when it was created, and the raw ingest is not idempotent, so re-seeding
+ * would duplicate every fixture document on each cache miss.
+ */
+async function adoptLinkedDemoTenant(
+  appUserId: string,
+  conflict: TenancyApiError,
+): Promise<CachedSession> {
+  const conflictTenantId = linkedTenantIdFrom(conflict);
+  const session = await exchangeSession(appUserId);
+  if (!session.token) {
+    throw new Error("demo tenant adoption (POST /sessions) returned no session token");
+  }
+  /* Two independent statements about which tenant this external_ref owns: the
+     one core refused to duplicate, and the one it just issued a session for.
+     They must agree. If they diverge, something upstream is wrong and the safe
+     move is to cache nothing — a mismatch here would attribute a live member
+     token (and a freshly minted agent token) to the wrong tenant, which is a
+     cross-tenant data leak, not a degraded session. Fail closed and loud. */
+  const sessionTenantId = session.member?.tenantId;
+  if (sessionTenantId && conflictTenantId && sessionTenantId !== conflictTenantId) {
+    throw new Error(
+      "demo tenant adoption: brain-core reported conflicting tenant ids for the same " +
+        `external_ref (conflict=${conflictTenantId}, session=${sessionTenantId}) — refusing ` +
+        "to attribute this session to either",
+    );
+  }
+  /* Falling back to the conflict id when the session omits `member` is sound
+     because both answers describe the SAME external_ref in the same exchange:
+     core has just told us that ref is linked to exactly this tenant. It is the
+     same fallback shape the production path uses. Neither present means we hold
+     a token with no tenant to attribute it to — also fatal. */
+  const tenantId = sessionTenantId ?? conflictTenantId;
+  if (!tenantId) {
+    throw new Error(
+      "demo tenant adoption: core reported an existing link but neither the conflict " +
+        "payload nor the session response named a tenant id",
+    );
+  }
+
+  /* Fresh agent token for raw:write. Not fatal if core refuses: mirroring the
+     member token keeps reads working and lets propose 403 honestly, which is the
+     same degradation the production path accepts. */
+  let agentToken: string | null = null;
+  try {
+    agentToken = (await mintAgentToken(tenantId))?.token ?? null;
+  } catch (err) {
+    const reason = err instanceof TenancyApiError ? (err.reason ?? `HTTP ${err.status}`) : String(err);
+    console.warn(`[brain-auth] demo agent-token mint for ${tenantId} failed (${reason}) — using member token`);
+  }
+
+  console.log(`[brain-auth] demo tenant ${tenantId} adopted for user ${appUserId} (already linked; not re-seeded)`);
+
+  return {
+    token: session.token,
+    agentToken: agentToken ?? session.token,
+    tenantId,
+    /* No refreshToken: the demo branch of createSession never consults one, so
+       carrying it would imply a refresh path that does not run here. */
+    exp: Math.floor(Date.now() / 1000) + (session.expires_in ?? 900),
+    baseUrl: currentBrainBaseUrl(brainConfig.demoBaseUrl),
+  };
+}
+
 /**
  * Provision an ephemeral demo tenant via POST /tenants { demo_seed: true }.
  *
@@ -295,13 +374,35 @@ async function provisionDemoTenant(
   const displayName = user?.name || user?.username || "Demo User";
   const founderEmail = user?.email || `${appUserId}@users.brainmvb.invalid`;
 
-  const result = await createTenant({
-    companyName: `${displayName}'s Demo`,
-    founderEmail,
-    founderDisplayName: displayName,
-    founderExternalRef: appUserId,
-    demoSeed: true,
-  });
+  let result: Awaited<ReturnType<typeof createTenant>>;
+  try {
+    result = await createTenant({
+      companyName: `${displayName}'s Demo`,
+      founderEmail,
+      founderDisplayName: displayName,
+      founderExternalRef: appUserId,
+      demoSeed: true,
+    });
+  } catch (err) {
+    /* The tenant already exists for this external_ref. POST /tenants is not
+       idempotent and the demo path stores no brain_identities row, so the ONLY
+       record that a demo user has a tenant is the in-memory session cache —
+       which does not survive a restart or a cache eviction. Every demo user
+       therefore lands here on their second session creation.
+
+       Core hands back the tenant it conflicted with, so this is recoverable:
+       adopt it instead of failing the session. Before this, a demo visitor's
+       app went dead on the first cache miss with no way back except a brand
+       new identity. */
+    if (
+      err instanceof TenancyApiError &&
+      err.status === 409 &&
+      err.reason === "tenant_identity_already_linked"
+    ) {
+      return adoptLinkedDemoTenant(appUserId, err);
+    }
+    throw err;
+  }
 
   if (result.demo_seed) {
     console.log(`[brain-auth] demo tenant ${result.tenant_id} seeded by core:`, JSON.stringify(result.demo_seed));

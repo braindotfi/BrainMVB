@@ -9,6 +9,25 @@ description: Constraints learned building BRAIN_TENANCY_MODE=durable (auto-creat
   guard creation with a persisted `pending:create` tombstone written BEFORE the POST.
   **Why:** verified live 2026-07-24 by deleting the local row and re-logging-in.
   **How to apply:** never delete brain_identities rows; recover from server logs instead.
+  **Update (2026-08-05):** re-creating for an already-linked *external_ref* is now a typed
+  409 `tenant_identity_already_linked` carrying `details.tenant_id`, so that case is
+  recoverable — adopt the named tenant via POST /sessions on the same external_ref instead
+  of failing. Reconcile the conflict's id against the issued session's `member.tenantId`
+  and refuse both if they disagree: adopting the wrong one attributes a live member token
+  (and a freshly minted agent token) to another tenant. The opaque-500 email-collision case
+  above is a different conflict and is still not recoverable.
+- **An in-memory session cache is not a record that a tenant exists.** The demo path
+  deliberately writes no `brain_identities` row, so the cache was the only trace that a
+  demo user already had a tenant; a restart or eviction sent every demo user back through
+  tenant creation and their app went dead on the conflict. A "fresh identity" appears to
+  fix it because a new identity creates successfully — exactly once.
+  **Why:** this presented as "staging is returning 409s" and looked like an upstream
+  outage; it was a local restart dropping the cache. Cost real time chasing the wrong
+  system.
+  **How to apply:** when a create-once/cache-thereafter path exists, ask what happens on
+  the SECOND creation attempt and test it by clearing the cache, not by making a new
+  account. Any adoption path must skip the create-time seed — raw ingest is not
+  idempotent, so re-seeding on every cache miss duplicates every fixture document.
 - The durable/production MEMBER token lacks the `raw:write` scope (403 on /raw/ingest);
   the AGENT token holds it (201 verified live). Despite the "agent token is propose-only"
   contract note, raw ingest/extract must use the agent token. In demo mode agentToken ===
