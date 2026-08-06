@@ -11,6 +11,8 @@ import {
   vendorTier,
   trustChipKind,
   CHIP_KIND_TIER,
+  trustTitleKind,
+  TITLE_KIND_TIER,
   type BrainCounterparty,
 } from "./brainVendors";
 import type { Vendor, VendorTier } from "./vendorTypes";
@@ -624,15 +626,24 @@ describe("the paused state has one name, and risk outranks it everywhere", () =>
           for (const riskLevel of RISKS) {
             for (const informationalSource of SOURCES) {
               const row = v({ trustStatus, trustState, riskLevel, informationalSource });
+              const where = JSON.stringify({
+                trustStatus,
+                trustState,
+                riskLevel,
+                informationalSource,
+              });
               const kind = trustChipKind(row);
               expect(
                 CHIP_KIND_TIER[kind],
-                `chip "${kind}" vs tier "${vendorTier(row)}" for ${JSON.stringify({
-                  trustStatus,
-                  trustState,
-                  riskLevel,
-                  informationalSource,
-                })}`,
+                `chip "${kind}" vs tier "${vendorTier(row)}" for ${where}`,
+              ).toBe(vendorTier(row));
+              /* The heading sits directly above the chip, so it is held to the same
+                 standard — it used to read "Trusted Vendor" over a "Needs Review"
+                 chip on a sanctioned row. */
+              const title = trustTitleKind(row);
+              expect(
+                TITLE_KIND_TIER[title],
+                `title "${title}" vs tier "${vendorTier(row)}" for ${where}`,
               ).toBe(vendorTier(row));
               checked += 1;
             }
@@ -651,6 +662,28 @@ describe("the paused state has one name, and risk outranks it everywhere", () =>
     expect(isNeedsReview(grantedThenRisky)).toBe(true);
     expect(vendorTier(grantedThenRisky)).toBe("needsReview");
     expect(trustChipKind(grantedThenRisky)).toBe("needsReview");
+    // The heading is the biggest text on the popup; it was the last thing still lying.
+    expect(trustTitleKind(grantedThenRisky)).toBe("needsReview");
+  });
+
+  it("still says New for a first-seen row, but never for a risky one", () => {
+    /* The heading is deliberately finer than the chip in exactly one place. That
+       refinement is also the one way a "Trusted"-style claim could sneak back in,
+       so it is pinned from both sides. */
+    const firstSeen = v({ trustStatus: "new", trustState: "unreviewed" });
+    expect(trustTitleKind(firstSeen)).toBe("new");
+    expect(TITLE_KIND_TIER.new).toBe(vendorTier(firstSeen));
+
+    const newAndRisky = v({ trustStatus: "new", trustState: "unreviewed", riskLevel: "high" });
+    expect(trustTitleKind(newAndRisky)).toBe("needsReview");
+  });
+
+  it("derives the heading from the chip kind, not from trustStatus", () => {
+    const src: string = require("fs").readFileSync("client/src/components/VendorDetailPopup.tsx", "utf8");
+    const start = src.indexOf("DialogPrimitive.Title");
+    const titleBlock = src.slice(start, start + 1200);
+    expect(titleBlock).toContain("trustTitleKind(vendor)");
+    expect(titleBlock).not.toContain("vendor.trustStatus");
   });
 
   it("calls a dismissed row Reviewed — it shares the Trusted tab but is not a grant", () => {

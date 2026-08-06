@@ -21,7 +21,14 @@ import {
 import { useLocation } from "wouter";
 import { useCurrency } from "@/lib/useCurrency";
 import type { Vendor, TrustStatus } from "@/lib/vendorTypes";
-import { vendorSegment, isReviewedOnly, supportsTrustActions, isNeedsReview, trustChipKind } from "@/lib/brainVendors";
+import {
+  vendorSegment,
+  isReviewedOnly,
+  supportsTrustActions,
+  isNeedsReview,
+  trustChipKind,
+  trustTitleKind,
+} from "@/lib/brainVendors";
 import { openRuleDetail, resolveRule } from "@/lib/openRuleDetail";
 import closeIcon from "@assets/Close_1783293571882.png";
 import { AlertCallout, InfoIcon } from "@/components/Callout";
@@ -239,14 +246,24 @@ export function VendorDetailPopup({
           {/* Title and Controls */}
           <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-[#1d2132] border-solid h-[56px] relative shrink-0 w-full">
             <DialogPrimitive.Title asChild>
-              <p className="-translate-x-1/2 absolute font-['Gilroy',sans-serif] font-semibold leading-[24px] left-1/2 not-italic text-[#a8b9f4] text-[20px] text-center top-[calc(50%-12px)] whitespace-nowrap">
-                {!trustActionsAvailable
-                  ? "Payroll Register"
-                  : vendor.trustStatus === "new"
-                    ? `New ${nounTitle}`
-                    : vendor.trustStatus === "trusted"
-                      ? `${trustedWord} ${nounTitle}`
-                      : `Review ${nounTitle}`}
+              <p
+                data-testid="text-vendor-popup-title"
+                className="-translate-x-1/2 absolute font-['Gilroy',sans-serif] font-semibold leading-[24px] left-1/2 not-italic text-[#a8b9f4] text-[20px] text-center top-[calc(50%-12px)] whitespace-nowrap"
+              >
+                {/* Derived from the chip kind, not from trustStatus. Read directly,
+                    that field made this heading claim "Trusted Vendor" for a row
+                    brain-core had marked sanctioned — in the largest text on the
+                    popup, directly above a chip reading "Needs Review". */}
+                {{
+                  informational: "Payroll Register",
+                  needsReview: `Review ${nounTitle}`,
+                  new: `New ${nounTitle}`,
+                  paused: `Paused ${nounTitle}`,
+                  reviewed: `Reviewed ${nounTitle}`,
+                  trusted: `${trustedWord} ${nounTitle}`,
+                  /* No tier claims the row; ask for a look rather than assert a state. */
+                  unclassified: `Review ${nounTitle}`,
+                }[trustTitleKind(vendor)]}
               </p>
             </DialogPrimitive.Title>
             <DialogPrimitive.Close

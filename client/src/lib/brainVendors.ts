@@ -349,6 +349,30 @@ export const CHIP_KIND_TIER: Record<TrustChipKind, VendorTier | null> = {
   unclassified: null,
 };
 
+/* The popup's heading sat directly above that chip and derived itself from
+   trustStatus, which is how it came to read "Trusted Vendor" — in the largest
+   text on the surface — for a granted counterparty brain-core had since marked
+   sanctioned, while the chip beneath it correctly read "Needs Review". Deriving
+   it from the chip kind instead makes that disagreement unrepresentable. */
+export type TrustTitleKind = TrustChipKind | "new";
+
+export function trustTitleKind(v: Vendor): TrustTitleKind {
+  const kind = trustChipKind(v);
+  /* The single place the heading is deliberately finer than the chip: a
+     first-seen counterparty does need review, but "New Vendor" says why in a way
+     "Review Vendor" does not. Risk-marked rows are excluded from this refinement
+     — a sanctioned row must read as review no matter how new it is. */
+  if (kind === "needsReview" && v.trustStatus === "new" && !v.riskLevel) return "new";
+  return kind;
+}
+
+/** As CHIP_KIND_TIER, for the heading. Both are walked over the full input space
+ *  in the tests — the heading, the chip and the tab must name one state. */
+export const TITLE_KIND_TIER: Record<TrustTitleKind, VendorTier | null> = {
+  ...CHIP_KIND_TIER,
+  new: "needsReview",
+};
+
 /** Why a row sits in Needs Review. Risk outranks newness when both apply. */
 export function reviewReasonLabel(v: Vendor): string | null {
   if (!isNeedsReview(v)) return null;
