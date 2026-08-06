@@ -24,8 +24,30 @@ Take the interval from the shared helper rather than a local constant, so the fe
 sitting next to each other on screen cannot drift onto different schedules.
 
 **Watch out:** hooks that fan out (a list query whose ids spawn a per-id detail query
-each) multiply every poll by the number of rows. Those need the cost thought through
-before they get an interval — focus refetch alone may be the right treatment.
+each) multiply every *interval tick* by the number of rows, so they usually want focus
+refetch without an interval — one bounded burst per focus, not a standing multiplier.
+
+## On a fan-out hook, refresh whichever query holds the filter
+
+Refreshing the list is the intuitive fix and can be worth nothing. What matters is
+where the predicate that removes a settled row lives:
+
+- If the list's id-selection has **no status predicate** (it selects on "has a linked
+  record" or similar), a settled row keeps its id on the refreshed list. The detail
+  record is what carries `status`, so leaving the details on infinite stale time means
+  the refreshed list re-renders exactly the same stale rows. The list refetch is pure
+  cost.
+- The fan-out therefore needs the focus refetch **too** — and it is the half that
+  actually fixes the bug.
+
+**Why:** the list/detail split hides which query is authoritative for the thing the
+user is looking at. "The queue refreshed" is not the same claim as "the queue is
+correct" when the filter reads a different query's cache.
+
+**How to apply:** before adding refetch options to a fan-out hook, find the predicate
+that drops a decided/settled row and follow it to the query that supplies its input.
+Give that query the refetch, then decide whether the list needs one as well. A guard
+that asserts only the list refetches will pass while the surface stays broken.
 
 # Refreshing /api/brain/* after an upload
 
