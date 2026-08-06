@@ -570,8 +570,11 @@ export function VendorsPanel() {
      reasoning as the Needs Review count, which is omitted rather than zeroed
      until the read lands.
 
-     Flagged: rare enough on Customers that a permanently-empty chip is just
-     noise there, but it stays on Vendors, where flagging is the point.
+     Flagged: always visible on both Vendors and Customers. For Customers,
+     the tab groups every customer whose trust state has been set to paused
+     (i.e. manually flagged for review). Hiding it while empty would remove
+     the tab during normal operations, making it look like a feature that
+     isn't there; keeping it visible makes flagging a discoverable action.
      Suggested: nothing can currently reach the tier on either segment — brain-
      core's provenance enum has no value meaning "Brain-suggested, not yet
      confirmed". The chip is hidden until vendorTier() returns "suggested" for
@@ -581,10 +584,9 @@ export function VendorsPanel() {
      during load and hiding it once the read lands would assert "this tier exists
      here" on stale data. The chip either has rows or it doesn't.
 
-     Both hide only WHILE empty — hiding a chip that has rows would hide the
-     rows, which is the failure this screen exists to prevent. */
-  const showFlagged =
-    !countsKnown || segment === "vendor" || grouped.flagged.length > 0;
+     Informational hides only WHILE empty — hiding a chip that has rows would
+     hide the rows, which is the failure this screen exists to prevent. */
+  const showFlagged = true;
   const showSuggested = grouped.suggested.length > 0;
   /* Informational: same hidden-while-empty rule as Suggested, and for the same
      reason — a chip for a tier the tenant has no rows in claims a distinction
