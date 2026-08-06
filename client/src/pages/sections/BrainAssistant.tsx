@@ -416,6 +416,20 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
   const [openBillId, setOpenBillId] = useState<string | null>(null);
   const chatAbortRef = useRef<AbortController | null>(null);
   const chatGenerationRef = useRef(0);
+  const assistantInputRef = useRef<HTMLTextAreaElement | null>(null);
+
+  // Grow the composer as its text wraps, while keeping very long drafts from
+  // pushing the rest of the assistant panel off-screen.
+  useLayoutEffect(() => {
+    const input = assistantInputRef.current;
+    if (!input) return;
+
+    input.style.height = "auto";
+    const maxHeight = 120;
+    const nextHeight = Math.min(input.scrollHeight, maxHeight);
+    input.style.height = `${nextHeight}px`;
+    input.style.overflowY = input.scrollHeight > maxHeight ? "auto" : "hidden";
+  }, [draft]);
 
   // Demo-fresh rotates the session cookie. Stop any request that started under
   // the previous principal, and ignore its result even if the server already
@@ -1145,8 +1159,10 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
 
       {/* Input field */}
       <div className="mx-[7px] mb-[7px] rounded-[12px] bg-[#0a0c10] p-[8px] flex flex-col gap-[10px]">
-        <input
+        <textarea
+          ref={assistantInputRef}
           data-testid="input-assistant-message"
+          rows={1}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => {
@@ -1156,7 +1172,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
             }
           }}
           placeholder="Ask me a question..."
-          className="w-full bg-transparent outline-none px-[8px] pt-[6px] [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] placeholder:text-[#6c779d] text-[16px] leading-[20px]"
+          className="w-full resize-none bg-transparent outline-none px-[8px] pt-[6px] [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] placeholder:text-[#6c779d] text-[16px] leading-[20px] overflow-x-hidden"
         />
         <div className="flex items-center justify-between">
           <input
