@@ -1,7 +1,31 @@
 ---
 name: Refreshing brain data after document upload
-description: Why uploads don't refresh Home/Finances/Inbox on their own, and what a correct fix has to survive.
+description: Why uploads don't refresh Home/Finances/Inbox on their own, what a correct fix has to survive, and why invalidation alone never fixes a second tab.
 ---
+
+# Invalidation only reaches the tab that acted
+
+`invalidateQueries` after a write repaints every consumer **in that browser tab** —
+they share a query key and a cache, so one grant updates the panel, the pickers and
+search together. It does nothing for a second tab on the same account, or a teammate
+on the same tenant: that tab holds its own cache and, under this app's defaults, is
+never told anything changed.
+
+So "the write invalidates" is not the same claim as "the UI is fresh", and a bug
+report saying *changes don't show up without a manual refresh* is usually about the
+second tab, not a missing invalidation. `refetchOnWindowFocus: true` is the fix that
+actually addresses it — returning to a backgrounded tab is precisely when its stale
+rows are about to be read and acted on. A slow interval is the backstop for a tab
+left open and focused.
+
+**How to apply:** any read that a user can act on from more than one place wants the
+shared ledger interval plus focus refetch, not just invalidation at its write sites.
+Take the interval from the shared helper rather than a local constant, so the feeds
+sitting next to each other on screen cannot drift onto different schedules.
+
+**Watch out:** hooks that fan out (a list query whose ids spawn a per-id detail query
+each) multiply every poll by the number of rows. Those need the cost thought through
+before they get an interval — focus refetch alone may be the right treatment.
 
 # Refreshing /api/brain/* after an upload
 

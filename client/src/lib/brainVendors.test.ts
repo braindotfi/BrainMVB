@@ -512,3 +512,39 @@ describe("informational rows are wired read-only end to end", () => {
     expect(src).toContain("const toConfirm = bulkConfirmable;");
   });
 });
+
+/**
+ * The counterparty list must never be permanently stale.
+ *
+ * Invalidation after a trust action only reaches the tab that performed it. A second
+ * browser tab on the same account — or a teammate on the same tenant — kept showing the
+ * pre-decision state forever, because this app's query defaults are `staleTime: Infinity`
+ * with no interval and no refetch on focus. Same defect the Payables/Receivables figures
+ * had, so it gets the same shared interval rather than a local constant.
+ */
+describe("the counterparty read stays fresh on its own", () => {
+  const read = (p: string) => require("fs").readFileSync(p, "utf8");
+
+  it("polls on the shared ledger interval instead of a hand-rolled one", () => {
+    const src = read("client/src/lib/brainVendors.ts");
+    expect(src).toContain("refetchInterval: ledgerPollMs(ingesting)");
+    expect(src).toContain("const ingesting = useIngestInProgress();");
+    // A local number here would drift from the money feeds it sits beside.
+    expect(src).not.toMatch(/refetchInterval:\s*\d/);
+  });
+
+  it("refetches when the tab regains focus", () => {
+    /* The decisive half for the cross-tab case: returning to a backgrounded tab is
+       exactly when its stale trust rows are about to be read and acted on. */
+    expect(read("client/src/lib/brainVendors.ts")).toContain("refetchOnWindowFocus: true");
+  });
+
+  it("keys the cache under the plain endpoint path", () => {
+    /* Trust actions invalidate ["/api/brain/ledger/counterparties"], and the post-upload
+       invalidation matches on the "/api/brain/" prefix. A decorated key would silently
+       opt out of both while still looking correct. */
+    expect(read("client/src/lib/brainVendors.ts")).toContain(
+      'queryKey: ["/api/brain/ledger/counterparties"],',
+    );
+  });
+});

@@ -1,5 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { Vendor, TrustStatus, TrustState, VendorTier } from "./vendorTypes";
+import { ledgerPollMs } from "./ledgerRead";
+import { useIngestInProgress } from "./brainRefresh";
 
 /* ── Live brain-core counterparties → Vendor cards ────────────────────────────
    Replaces MOCK_VENDORS as the VendorsPage/VendorDetailPopup data source with
@@ -319,10 +321,36 @@ export function vendorSegment(v: Vendor): "vendor" | "customer" {
   return v.segment ?? "vendor";
 }
 
+/**
+ * The counterparty list, kept fresh the same way the Ledger money feeds are.
+ *
+ * Two things go stale here, and the app's query defaults (`staleTime: Infinity`,
+ * no refetch) meant both stayed stale until the user reloaded by hand:
+ *
+ *   1. **Trust decisions made somewhere else.** The in-tab case is already covered —
+ *      every trust action invalidates this key, and all five consumers share it, so
+ *      one grant repaints the panel, the rules picker and global search together.
+ *      What was NOT covered is the same account open in a SECOND browser tab, or a
+ *      teammate acting on the same tenant: that tab kept showing the pre-decision
+ *      state indefinitely. `refetchOnWindowFocus` is the real fix for that, since
+ *      returning to a tab is exactly when its stale rows are about to be read.
+ *
+ *   2. **Rows that have not landed yet.** Counterparties are projected from ingested
+ *      documents in the same asynchronous waves as obligations and invoices — a
+ *      payroll register deposits its rows well after the upload returns — so the
+ *      list is a floor while an import is running, not a total.
+ *
+ * Hence the shared interval rather than a local constant: fast while documents are
+ * still being projected, slow otherwise. Polling pauses when the window is not
+ * focused, so a backgrounded tab costs nothing.
+ */
 export function useBrainVendors() {
+  const ingesting = useIngestInProgress();
   const query = useQuery<ListCounterpartiesResponse>({
     queryKey: ["/api/brain/ledger/counterparties"],
     retry: false,
+    refetchInterval: ledgerPollMs(ingesting),
+    refetchOnWindowFocus: true,
   });
   return {
     isLoading: query.isLoading,
