@@ -34,6 +34,7 @@
 - [brain-core sources registry](brain-sources-registry.md) — /v1/sources is a 4th source surface (empty upstream today); demo rows hide disconnect; type-keyed rows must not inherit per-record restrictions.
 - [Client route integrity](client-route-integrity.md) — wouter sends unregistered navigate() targets to NotFound silently; deep-link params need a consuming effect, not a mount-only initializer.
 - [Proposal evidence refs](brain-proposal-evidence-refs.md) — refs come bare AND as `wiki:` URIs; wiki refs are context not subject; `pd_`/`evt_` never resolve; probe live, don't trust mocks.
+- [Assistant tier order](assistant-tier-order.md) — the local deterministic tier answers before core's wiki route, so core-side audit traces legitimately show zero wiki.question events.
 - [Assistant answer status](assistant-answer-status.md) — refusals arrive as HTTP 200 prose; non-chat surfaces must check answered AND wording, never cache one; evidence ≠ answer.
 - [Guarding generated fixtures](generated-fixture-guards.md) — generated PDF/XLSX can't be hash-pinned (random /ID, zip mtimes); read facts back via PDF /Keywords; avoid tautological asserts.
 - [Proposal presentation contract](brain-proposal-presentation-contract.md) — doc's action table is aspirational: bind to available_decisions; policy_id null; core puts raw ids in prose; band ≠ pct.

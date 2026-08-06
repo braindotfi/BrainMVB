@@ -100,8 +100,10 @@ function undeclaredPage(field: "obligations" | "invoices", rows: unknown[]): unk
 
 const run = (q: string) => withBrainBaseUrl(BASE, () => answerDeterministically(TOKEN, q, NOW));
 
-const CLOUDOPS = { id: "cp_cloudops", name: "CloudOps" };
-const ACME = { id: "cp_acme", name: "Acme Industrial" };
+const CLOUDOPS = { id: "cp_cloudops", name: "CloudOps", type: "vendor" };
+const ACME = { id: "cp_acme", name: "Acme Industrial", type: "vendor" };
+/** Resolves by name exactly like a vendor, but sits on the other side of the ledger. */
+const ENTERPRISE = { id: "cp_enterprise", name: "Enterprise Holdings", type: "customer" };
 
 /** Obligation rows as brain-core sends them: kind on `type`, direction absent. */
 const ob = (o: Record<string, unknown>) => ({
@@ -245,6 +247,53 @@ describe("payable by counterparty", () => {
     });
     const out = await run("how much do we owe CloudOps?");
     expect(out?.answered).toBe(true);
+    expect(out?.reply).toContain("nothing outstanding");
+  });
+
+  it("names the category instead of implying zero when the match is a customer", async () => {
+    install({
+      counterparties: [ENTERPRISE],
+      obligationPages: [onePage("obligations", [])],
+    });
+    const out = await run("What do we owe Enterprise Holdings?");
+    expect(out?.answered).toBe(true);
+    /* The bug this pins: a customer carrying a large unpaid invoice was told
+       "nothing outstanding", which reads as reassurance about the exact
+       relationship the user asked about. The payables sweep genuinely finds
+       nothing — the fault is presenting a category error as a settled account. */
+    expect(out?.reply).not.toContain("nothing outstanding");
+    expect(out?.reply).toContain("customer");
+    expect(out?.reply).toContain("Receivables");
+    /* This path never reads the invoice feed, so it must not quote or imply a figure. */
+    expect(out?.reply).not.toMatch(/\d[\d,]*\.\d{2}/);
+  });
+
+  it("scopes the answer to payables when the counterparty type is unknown", async () => {
+    install({
+      counterparties: [{ id: "cp_x", name: "Mystery Co" }],
+      obligationPages: [onePage("obligations", [])],
+    });
+    const out = await run("how much do we owe Mystery Co?");
+    /* An absent type is an unknown side of the ledger, NOT evidence of a vendor.
+       Falling back to the vendor sentence would reproduce the original bug for every
+       customer whose payload omits a type: "nothing outstanding" is a claim about the
+       relationship, and this path only ever read payables. The genuinely weaker claim
+       is the one scoped to what was computed. */
+    expect(out?.reply).not.toContain("nothing outstanding");
+    expect(out?.reply).toContain("no unpaid payable obligations");
+    expect(out?.reply).not.toContain("is recorded as a customer");
+    /* No receivables steer for a party that may have no receivable meaning at all. */
+    expect(out?.reply).not.toContain("Receivables");
+  });
+
+  it("keeps the relationship-level wording for a counterparty known to be a vendor", async () => {
+    install({
+      counterparties: [{ id: "cp_v", name: "Known Vendor Co", type: "vendor" }],
+      obligationPages: [onePage("obligations", [])],
+    });
+    const out = await run("how much do we owe Known Vendor Co?");
+    /* Confirmed to be somebody we pay, so a payables sweep does cover the whole
+       relationship and is allowed to say so. */
     expect(out?.reply).toContain("nothing outstanding");
   });
 

@@ -164,6 +164,10 @@ export function listLedgerTransactions(
 export interface CounterpartyLite {
   id: string;
   name: string;
+  /** "vendor" | "customer" | other core-defined kinds. Optional because it is not
+   *  guaranteed on every payload; callers must treat an absent type as unknown
+   *  rather than assuming either side of the ledger. */
+  type?: string;
 }
 
 export interface ListCounterpartiesResponse {

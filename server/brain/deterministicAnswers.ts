@@ -287,8 +287,29 @@ async function answerPayableByCounterparty(
 
   const rows = openPayables(read.rows).filter((o) => o.counterparty_id === target.id);
   if (rows.length === 0) {
+    /* A customer resolves by name exactly like a vendor, and the payables sweep then
+       truthfully finds nothing — but the reason is not "you are square with them", it is
+       "this is not somebody you pay". Receivables live in the invoice feed, which this
+       path never reads, so a flat "nothing outstanding" reads as reassurance about a
+       relationship that may carry a large balance the other way. Name the category and
+       point at the surface that holds the figure instead of implying a zero.
+
+       Absent type is deliberately NOT treated as a customer: an unknown side of the
+       ledger keeps the vendor wording, which is the weaker claim. */
+    const kind = (target.type ?? "").trim().toLowerCase();
     return {
-      reply: `You have nothing outstanding to ${target.name}. I checked every obligation in the ledger and none of them are unpaid amounts owed to them.`,
+      reply:
+        kind === "customer"
+          ? `${target.name} is recorded as a customer, not a vendor, so there's nothing here that you owe them. If you meant what they owe you, open Ledger › Receivables — I don't total receivables on this path.`
+          : kind === "vendor"
+            ? /* Known to be somebody we pay, so the payables sweep covers the whole
+                 relationship and may speak about it. */
+              `You have nothing outstanding to ${target.name}. I checked every obligation in the ledger and none of them are unpaid amounts owed to them.`
+            : /* Unknown or opaque side of the ledger — an absent type is not evidence of
+                 a vendor, and employee/protocol/ledger parties have no receivable meaning
+                 worth steering to. State only what was actually computed and make the
+                 scope explicit, rather than implying a settled relationship. */
+              `I found no unpaid payable obligations to ${target.name}. This path only totals what you owe, so that's a statement about payables — not about the relationship overall.`,
       sources: [],
       answered: true,
       grounded: true,

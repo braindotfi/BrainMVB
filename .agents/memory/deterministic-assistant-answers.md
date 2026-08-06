@@ -44,6 +44,37 @@ tolerance renders as a calm "you owe nothing" — a parse failure wearing the co
 answer. Any caller that states a figure has to re-impose strictness and treat an
 unparseable shape as a failed read.
 
+## Core's Wiki Q&A is payables-only too — routing to it fixes nothing
+
+The obvious reaction to "why do two systems answer this question" is to retire the local
+tier and let core answer. Probed live before acting: core answers "what do we owe
+&lt;vendor&gt;" with exact figures, but for a **customer** it replies "No open payable
+obligations were found for X" — the same blind spot, because both sides read the
+payables feed and receivables live in invoices. Retiring the local tier would change the
+wording and lose nothing else.
+
+**Why:** the duplication is real and worth a design conversation, but it is not the cause
+of a customer-side wrong answer, and swapping tiers as a "fix" would leave the bug in
+place while looking decisive.
+
+**How to apply:** before proposing that either system defer to the other, ask each the
+same question against the same tenant and compare. Core being right about vendors says
+nothing about customers.
+
+## Name resolution must not imply a direction
+
+Counterparty payloads are not guaranteed to carry a `type`, so a resolver that matches on
+name alone cannot tell a vendor from a customer — it will happily resolve a customer and
+then report, truthfully, that no payables exist. A flat "nothing outstanding" then reads
+as reassurance about a relationship that may carry a large balance the other way.
+
+**Why:** every step is individually correct, so nothing looks broken; the error is that a
+category mismatch is presented as a settled account.
+
+**How to apply:** when a payables-only sweep returns zero, say which side of the ledger
+the counterparty is on before saying the amount is zero, and treat an *absent* type as
+unknown — keep the weaker claim rather than guessing a side.
+
 ## Naming a category is not naming a vendor
 
 "Do we owe taxes?" and "how much do we owe in rent?" name a kind of liability. Refusing
