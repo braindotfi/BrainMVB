@@ -1157,15 +1157,15 @@ export function HomePage() {
               )}
               {overviewSelection.count >= 2 && overviewSelection.limit && (
                 <div
-                  className="bg-[#0a0c10] flex flex-col overflow-hidden rounded-[16px] shrink-0 w-full mb-[12px]"
+                  className="bg-[#12032d] flex flex-col overflow-hidden rounded-[16px] shrink-0 w-full mb-[12px]"
                   data-testid="bulk-bar"
                 >
                   {/* Body — count metric + Brain Observed sentence */}
                   <div className="flex flex-col items-start p-[16px] w-full">
-                    <div className="bg-[#0a0c10] flex gap-[26px] items-start overflow-hidden p-[16px] rounded-[16px] w-full">
+                    <div className="bg-[#240757] flex gap-[26px] items-start overflow-hidden px-[32px] py-[16px] rounded-[16px] w-full">
                       {/* Left: Number Selected */}
                       <div className="flex flex-col gap-[4px] items-start justify-center shrink-0 w-[128px]">
-                        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px]">
+                        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#7631ee] text-[16px]">
                           Number Selected
                         </p>
                         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[48px] text-[40px] text-white" data-testid="bulk-bar-count">
@@ -1175,12 +1175,12 @@ export function HomePage() {
                       {/* Hairline vertical divider */}
                       <div className="w-px self-stretch shrink-0 bg-[#1d2132]" />
                       {/* Right: Brain Observed */}
-                      <div className="flex flex-1 flex-col gap-[4px] items-start justify-center min-w-px">
-                        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px]">
+                      <div className="flex flex-col gap-[4px] items-start justify-center shrink-0 w-[450px]">
+                        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#7631ee] text-[16px]">
                           Brain Observed
                         </p>
                         <p
-                          className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[16px] text-white"
+                          className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[16px] text-white w-[456px]"
                           data-testid="bulk-bar-summary"
                         >
                           {`All ${overviewSelection.type ? decisionTypeLabel(overviewSelection.type).toLowerCase() : ""}, each under ${format(overviewSelection.limit.value)} `}
@@ -1192,7 +1192,7 @@ export function HomePage() {
                     </div>
                   </div>
                   {/* Footer — Cancel / Approve Selected */}
-                  <div className="border-t border-[#1d2132] bg-[#0a0c10] flex flex-col items-start p-[16px] w-full">
+                  <div className="border-t border-[#240757] bg-[#12032d] flex flex-col items-start p-[16px] w-full">
                     <div className="flex gap-[16px] items-center w-full">
                       <button
                         type="button"

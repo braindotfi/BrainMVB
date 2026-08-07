@@ -426,7 +426,7 @@ function Chip({
       type="button"
       onClick={onClick}
       data-testid={testId}
-      className="inline-flex items-center gap-[8px] p-[8px] rounded-[8px] transition-colors [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+      className="inline-flex items-center justify-between gap-[8px] p-[8px] rounded-[8px] transition-colors [font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] h-[40px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
       style={{
         background: hasValue ? "#240757" : "#222737",
         color: hasValue ? "#ffffff" : "#6c779d",
@@ -434,7 +434,7 @@ function Chip({
     >
       <span className="whitespace-nowrap">{value ?? placeholder}</span>
       <ChevronDown
-        size={20}
+        size={24}
         className={`shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
         style={{ color: hasValue ? "#ffffff" : "#6c779d" }}
       />
@@ -783,9 +783,10 @@ export function RulesPanel() {
               </div>
             </button>
           ) : (
-            <div className="w-full rounded-[16px] bg-[#0a0c10] p-[16px] flex flex-col gap-[12px]" data-testid="panel-builder">
-              {/* One continuous wrapping sentence, matches Figma 5734:70625 */}
-              <div className="flex flex-wrap gap-[16px] items-center w-full [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[14px] leading-[20px]">
+             <div className="w-full rounded-[16px] bg-[#12032d] overflow-hidden flex flex-col" data-testid="panel-builder">
+               <div className="w-full p-[16px]">
+               {/* One continuous wrapping sentence, matches the updated Figma rule builder frame */}
+               <div className="flex flex-wrap gap-[16px] items-center w-full [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[24px]">
                 {/* "When a [kind]" */}
                 <div className="flex gap-[16px] items-center shrink-0">
                   <span className="whitespace-nowrap">When a</span>
@@ -908,13 +909,13 @@ export function RulesPanel() {
                 {/* "is under [amount]" */}
                 <div className="flex gap-[16px] items-center shrink-0">
                   <span className="whitespace-nowrap">is {isAuto ? "under" : "over"}</span>
-                  <input
+                     <input
                     value={builder.amount}
                     inputMode="numeric"
                     placeholder="$0"
                     onChange={(e) => setBuilder((b) => ({ ...b, amount: e.target.value }))}
                     data-testid="input-builder-amount"
-                     className="w-[160px] rounded-[8px] bg-[#222737] px-[8px] py-[10px] [font-family:'JetBrains_Mono',monospace] text-[14px] leading-[20px] text-white placeholder:text-[#6c779d] focus:outline-none"
+                     className="w-[48px] h-[40px] rounded-[8px] bg-[#222737] px-[8px] py-[10px] [font-family:'Gilroy',sans-serif] text-[16px] leading-[20px] text-white placeholder:text-[#6c779d] focus:outline-none"
                   />
                 </div>
 
@@ -958,24 +959,15 @@ export function RulesPanel() {
                     )}
                   </div>
                 </div>
-              </div>
-
-              {/* Compile line: what the sentence becomes */}
-              <p className="[font-family:'JetBrains_Mono',monospace] text-[12px] leading-[16px] text-[#7631ee]" data-testid="text-compile-line">
-                compiles to {builderPolicy}
-              </p>
-
-              {/* Full-bleed rule: the builder box is padded p-[16px], so the
-                  separator is pulled out by that padding on both sides to span
-                  the card edge-to-edge. */}
-              <div className="h-px -mx-[16px] w-[calc(100%+32px)] bg-[#1d2132]" />
-
-              <div className="flex gap-[10px] items-stretch w-full">
+                </div>
+                </div>
+               <div className="backdrop-blur-[10px] border-t border-[#1d2132] border-solid flex flex-col items-start p-[16px] w-full">
+                 <div className="flex gap-[16px] items-center w-full">
                 <button
                   type="button"
                   onClick={resetBuilder}
                   data-testid="button-builder-cancel"
-                  className="flex-1 px-[12px] py-[8px] rounded-[100px] bg-[#222737] hover:bg-[#2b3145] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[16px] text-[#6c779d]"
+                   className="flex-1 px-[12px] py-[8px] rounded-[100px] bg-[#222737] hover:bg-[#2b3145] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-[#6c779d]"
                 >
                   Cancel
                 </button>
@@ -984,10 +976,11 @@ export function RulesPanel() {
                   disabled={!builderValid}
                   onClick={() => setPendingCreate(buildDraft())}
                   data-testid="button-builder-create"
-                  className="flex-1 px-[12px] py-[8px] rounded-[100px] bg-[#4a2300] hover:bg-[#5a2d00] disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[16px] text-[#ff9500]"
+                   className="flex-1 px-[12px] py-[8px] rounded-[100px] bg-[#4a2300] hover:bg-[#5a2d00] disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-[#ff9400]"
                 >
-                  Add Rule
+                   Create Rule
                 </button>
+                 </div>
               </div>
             </div>
           ))}
