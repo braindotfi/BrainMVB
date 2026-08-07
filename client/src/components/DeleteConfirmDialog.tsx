@@ -53,10 +53,10 @@ export function DeleteConfirmDialog({
         {/* Overlay — same spec as VendorDetailPopup */}
         <DialogPrimitive.Overlay className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
 
-        {/* Card — compact Figma frame: 360px wide, 18px radius, 0.75px border. */}
+        {/* Card — compact Figma frame: 300px wide, 18px radius, 0.75px border. */}
         <DialogPrimitive.Content
           aria-describedby={undefined}
-          className="fixed left-[50%] top-[50%] z-[60] translate-x-[-50%] translate-y-[-50%] bg-[#0a0c10] border-[0.75px] border-solid border-[#1d2132] flex flex-col items-start overflow-hidden rounded-[18px] w-[360px] max-w-[calc(100vw-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
+          className="fixed left-[50%] top-[50%] z-[60] translate-x-[-50%] translate-y-[-50%] bg-[#0a0c10] border-[0.75px] border-solid border-[#1d2132] flex flex-col items-start overflow-hidden rounded-[18px] w-[300px] max-w-[calc(100vw-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
         >
           {/* ── Title and Controls — h-[42px], border-b ── */}
           <div className="bg-[#0a0c10] border-b-[0.75px] border-solid border-[#1d2132] h-[42px] relative shrink-0 w-full">
