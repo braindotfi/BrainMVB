@@ -92,7 +92,7 @@ export function AnchorStatus({
     <div className="flex flex-col gap-[16px] w-full">
 
       {/* Status line: icon + label */}
-      <div className="content-stretch flex gap-[4px] items-center relative shrink-0 w-full">
+      <div className="content-stretch flex gap-[8px] items-center relative shrink-0 w-full">
         {pending ? (
           <img src={clockIcon} alt={isNotRecorded ? "Not recorded" : "Pending"} className="size-[16px] shrink-0 object-contain" />
         ) : (

@@ -22,6 +22,7 @@ import {
 } from "@/lib/sourceRows";
 import { ExtractStatusBadge } from "@/components/sources/ExtractStatusBadge";
 import { AlertCallout } from "@/components/Callout";
+import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import { AccountDetailPopup } from "@/components/AccountDetailPopup";
 import { TransactionDetailPopup } from "@/components/TransactionDetailPopup";
 import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
@@ -170,38 +171,22 @@ function SourceRow({
         )}
       </div>
 
-      {confirming && (
-        <div className="flex flex-col gap-[8px] rounded-[12px] px-[12px] py-[10px]" style={{ background: "#350011" }}>
-          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[12px] leading-[16px]">
-            Remove this source? Brain stops reading it. Decisions you already confirmed from it are not undone.
-          </p>
-          <div className="flex items-center gap-[8px]">
-            <button
-              type="button"
-              disabled={removing}
-              onClick={(e) => {
-                e.stopPropagation();
-                onRemove?.();
-                setConfirming(false);
-              }}
-              data-testid={removeTestId ? `${removeTestId}-confirm` : undefined}
-              className="rounded-full px-[14px] py-[6px] bg-[#d20344] hover:opacity-90 transition-opacity disabled:opacity-40 [font-family:'Gilroy',sans-serif] font-semibold text-white text-[12px] leading-[16px]"
-            >
-              {removing ? "Removing…" : "Remove"}
-            </button>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setConfirming(false);
-              }}
-              className="rounded-full px-[14px] py-[6px] bg-[#222737] hover:bg-[#2c3247] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[16px]"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
+      <DeleteConfirmDialog
+        open={confirming}
+        onOpenChange={(open) => { if (!open) setConfirming(false); }}
+        title="Remove Source"
+        body="Are you sure you want to remove this source? Decisions you already confirmed from it are not undone."
+        cancelLabel="Cancel"
+        confirmLabel="Remove"
+        onCancel={() => setConfirming(false)}
+        onConfirm={() => {
+          onRemove?.();
+          setConfirming(false);
+        }}
+        busy={removing}
+        cancelTestId={removeTestId ? `${removeTestId}-cancel` : undefined}
+        confirmTestId={removeTestId ? `${removeTestId}-confirm` : undefined}
+      />
     </div>
   );
 }

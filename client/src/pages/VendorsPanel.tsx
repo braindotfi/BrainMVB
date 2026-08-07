@@ -13,7 +13,6 @@ import {
   supportsTrustActions,
 } from "@/lib/brainVendors";
 import { useCurrency } from "@/lib/useCurrency";
-import { useToast } from "@/hooks/use-toast";
 import { AppAlertLink, useAppAlert } from "@/components/AppAlert";
 import { queryClient } from "@/lib/queryClient";
 import type { Vendor, VendorTier } from "@/lib/vendorTypes";
@@ -312,17 +311,17 @@ function CategoryDropdown({
         onClick={() => setOpen((p) => !p)}
         data-testid="button-vendor-category-dropdown"
         aria-expanded={open}
-        className="flex gap-[8px] items-center p-[8px] rounded-[8px] shrink-0 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+        className="flex gap-[8px] items-center justify-between p-[8px] rounded-[8px] shrink-0 w-[116px] h-[40px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
         style={{ background: selected ? "#240757" : "#222737" }}
       >
         <span
-          className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[14px] whitespace-nowrap"
+          className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[16px] whitespace-nowrap"
           style={{ color: selected ? "#ffffff" : "#6c779d" }}
         >
           {value || "category"}
         </span>
         <ChevronDown
-          size={20}
+          size={24}
           className="shrink-0 transition-transform"
           style={{ color: selected ? "#ffffff" : "#6c779d", transform: open ? "rotate(180deg)" : "none" }}
         />
@@ -375,7 +374,6 @@ export function VendorsPanel() {
   const [, navigate] = useLocation();
   const search = useSearch();
   const { vendors, isLoading, isError } = useBrainVendors();
-  const { toast } = useToast();
   const alert = useAppAlert();
   const [activeVendor, setActiveVendor] = useState<Vendor | null>(null);
   const detailVendor = useBrainVendorDetail(activeVendor);
@@ -473,7 +471,7 @@ export function VendorsPanel() {
         credentials: "include",
       });
       if (!res.ok && res.status !== 404) {
-        toast({ title: "Couldn't delete vendor", description: "Brain core rejected the request. The vendor was not removed.", variant: "destructive" });
+        alert.error("Protocol Error", "Brain rejected the request. The vendor was not removed.");
         return;
       }
       await queryClient.invalidateQueries({ queryKey: ["/api/brain/ledger/counterparties"] });
@@ -487,7 +485,7 @@ export function VendorsPanel() {
       params.set("tab", "counterparties");
       navigate(`/ledger?${params.toString()}`, { replace: true });
     } catch {
-      toast({ title: "Couldn't delete vendor", description: "Couldn't reach Brain core. Nothing was changed.", variant: "destructive" });
+      alert.error("Protocol Error", "Couldn't reach Brain core. Nothing was changed.");
     }
   };
 
@@ -694,19 +692,20 @@ export function VendorsPanel() {
               ) : (
                 /* Expanded: sentence-style form — matches Figma 6199:70745 exactly */
                 <div
-                  className="w-full rounded-[16px] p-[16px] flex flex-col gap-[12px]"
-                  style={{ background: "#0a0c10" }}
+                  className="w-full rounded-[16px] overflow-hidden flex flex-col"
+                  style={{ background: "#12032d" }}
                   data-testid="panel-add-vendor"
                 >
+                  <div className="w-full p-[16px] flex flex-col gap-[12px]">
                     {/* Three groups in a wrapping row, gap-[16px] between groups */}
-                    <div className="flex flex-wrap gap-[16px] items-center w-full">
+                     <div className="flex flex-wrap gap-[16px] items-center w-full">
                       {/* Group 1: "Add vendor" + name input */}
                       <div className="flex gap-[16px] items-center shrink-0">
-                        <span className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[14px] whitespace-nowrap">
+                         <span className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[#a8b9f4] text-[16px] whitespace-nowrap">
                           Add {segmentNounSingular}
                         </span>
                         <div
-                          className="flex items-center px-[8px] py-[10px] rounded-[8px] shrink-0"
+                           className="flex items-center px-[8px] py-[10px] rounded-[8px] shrink-0 w-[116px] h-[40px]"
                           style={{ background: "#222737" }}
                         >
                           <input
@@ -717,8 +716,7 @@ export function VendorsPanel() {
                             value={vendorName}
                             onChange={(e) => setVendorName(e.target.value)}
                             autoFocus
-                            className="bg-transparent [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[14px] leading-[20px] placeholder:text-[#6c779d] outline-none"
-                            style={{ minWidth: "140px" }}
+                             className="bg-transparent [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] placeholder:text-[#6c779d] outline-none w-full min-w-0"
                             onKeyDown={(e) => { if (e.key === "Enter" && vendorName.trim()) setConfirmSubmit(true); }}
                           />
                         </div>
@@ -726,7 +724,7 @@ export function VendorsPanel() {
 
                       {/* Group 2: "as a" + category dropdown */}
                       <div className="flex gap-[16px] items-center shrink-0">
-                        <span className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[14px] whitespace-nowrap">
+                         <span className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[#a8b9f4] text-[16px] whitespace-nowrap">
                           as a
                         </span>
                         <CategoryDropdown value={category} onChange={setCategory} />
@@ -734,7 +732,7 @@ export function VendorsPanel() {
 
                       {/* Group 3: "for review." */}
                       <div className="flex items-center shrink-0">
-                        <span className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[14px] whitespace-nowrap">
+                         <span className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[#a8b9f4] text-[16px] whitespace-nowrap">
                           for review.
                         </span>
                       </div>
@@ -744,33 +742,31 @@ export function VendorsPanel() {
                       <AlertCallout testId="text-add-vendor-error">{error}</AlertCallout>
                     )}
 
-                  {/* Full-bleed separator + buttons — same shape as the rules
-                      builder box. The box is padded p-[16px], so the rule is
-                      pulled out by that padding to span the card edge-to-edge. */}
-                  <div className="h-px -mx-[16px] w-[calc(100%+32px)] bg-[#1d2132]" />
-
-                  <div className="flex gap-[10px] items-stretch w-full">
-                    <button
-                      type="button"
-                      onClick={resetAddVendor}
-                      data-testid="button-add-vendor-cancel"
-                      className="flex-1 px-[12px] py-[8px] rounded-[100px] bg-[#222737] hover:bg-[#2b3145] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[16px] text-[#6c779d]"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!vendorName.trim()) { setError(`${segmentNounTitle} name is required.`); return; }
-                        setError(null);
-                        setConfirmSubmit(true);
-                      }}
-                      disabled={!vendorName.trim()}
-                      data-testid="button-submit-vendor"
-                      className="flex-1 px-[12px] py-[8px] rounded-[100px] bg-[#4a2300] hover:bg-[#5a2d00] disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[16px] text-[#ff9500]"
-                    >
-                      Submit for Verification
-                    </button>
+                  </div>
+                  <div className="backdrop-blur-[10px] border-t border-[#1d2132] border-solid flex flex-col items-start p-[16px] w-full">
+                    <div className="flex gap-[16px] items-center w-full">
+                      <button
+                        type="button"
+                        onClick={resetAddVendor}
+                        data-testid="button-add-vendor-cancel"
+                        className="flex-1 h-[36px] px-[12px] rounded-[100px] bg-[#222737] hover:bg-[#2b3145] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[16px] text-[#6c779d]"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!vendorName.trim()) { setError(`${segmentNounTitle} name is required.`); return; }
+                          setError(null);
+                          setConfirmSubmit(true);
+                        }}
+                        disabled={!vendorName.trim()}
+                        data-testid="button-submit-vendor"
+                        className="flex-1 h-[36px] px-[12px] rounded-[100px] bg-[#4a2300] hover:bg-[#5a2d00] disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[16px] text-[#ff9400]"
+                      >
+                        Submit for Verification
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}

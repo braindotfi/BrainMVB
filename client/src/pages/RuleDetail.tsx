@@ -27,7 +27,7 @@ import {
   ChevronUp,
   Shield,
 } from "lucide-react";
-import { useRule, pauseRule, resumeRule, removeVendor, lowerCap, setThreshold, deleteRule } from "@/lib/rulesStore";
+import { useRule, pauseRule, resumeRule, lowerCap, setThreshold, deleteRule } from "@/lib/rulesStore";
 import { usePolicyRule, APPLIES_TO_LABEL, EXECUTE_LABEL, describeWhen } from "@/lib/brainPolicy";
 import type { PolicyContentRule } from "@/lib/brainPolicy";
 import { useCurrency } from "@/lib/useCurrency";
@@ -47,7 +47,7 @@ const ALERT = "#d20344";
 export function RuleDetail() {
   const [, params] = useRoute("/rules/:id");
   const [, navigate] = useLocation();
-  const { format } = useCurrency();
+  const { format, symbol } = useCurrency();
   const rule = useRule(params?.id);
   const { rule: policyRule, isLoading: policyLoading, isError: policyError } = usePolicyRule(params?.id);
   const isPolicy = params?.id?.startsWith("policy-") ?? false;
@@ -73,7 +73,7 @@ export function RuleDetail() {
           data-testid="button-back-to-rules"
           className="flex items-center justify-center gap-[8px] px-[16px] py-[10px] rounded-[100px] bg-[#240757] border border-[rgba(118,49,238,0.35)] hover:bg-[#2e0a6b] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#7631ee]"
         >
-          <ArrowLeft size={16} /> Back to rules
+          <ArrowLeft size={16} /> Back
         </button>
       </div>
     );
@@ -98,7 +98,7 @@ export function RuleDetail() {
           data-testid="button-back-to-rules"
           className="flex items-center justify-center gap-[8px] px-[16px] py-[10px] rounded-[100px] bg-[#240757] border border-[rgba(118,49,238,0.35)] hover:bg-[#2e0a6b] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#7631ee]"
         >
-          <ArrowLeft size={16} /> Back to rules
+          <ArrowLeft size={16} /> Back
         </button>
       </div>
     );
@@ -163,7 +163,7 @@ export function RuleDetail() {
               data-testid="button-back-to-rules"
               className="flex items-center justify-center gap-[4px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#6c779d] hover:text-[#a8b9f4] bg-[#222737] hover:bg-[#2a3040] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965] rounded-[100px] px-[12px] py-[8px]"
             >
-              <ArrowLeft size={16} /> Back to Rules
+              <ArrowLeft size={16} /> Back
             </button>
           )}
 
@@ -322,7 +322,7 @@ export function RuleDetail() {
             </DialogPrimitive.Portal>
           </DialogPrimitive.Root>
 
-          {/* Delete-rule confirmation: popup modal matching Figma node 5577:65171. */}
+          {/* Delete-rule confirmation: matches Figma node 6252:69510. */}
           <DialogPrimitive.Root open={confirmingDelete} onOpenChange={setConfirmingDelete}>
             <DialogPrimitive.Portal>
               <DialogPrimitive.Overlay
@@ -330,45 +330,45 @@ export function RuleDetail() {
                 data-testid="delete-rule-backdrop"
               />
               <DialogPrimitive.Content
-                className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#0a0c10] border border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[24px] w-[440px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
+                className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#0a0c10] border-[0.938px] border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[22.5px] w-[375px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
                 data-testid="delete-rule-modal"
               >
                 {/* Title bar */}
-                <div className="bg-[#0a0c10] border-b border-[#1d2132] border-solid h-[56px] relative shrink-0 w-full flex items-center justify-center">
-                  <DialogPrimitive.Title className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#a8b9f4] text-[20px] text-center whitespace-nowrap">
+                <div className="bg-[#0a0c10] border-b border-[#1d2132] border-solid h-[52.5px] relative shrink-0 w-full flex items-center justify-center">
+                  <DialogPrimitive.Title className="[font-family:'Gilroy',sans-serif] font-semibold leading-[22.5px] text-[#a8b9f4] text-[18.75px] text-center whitespace-nowrap">
                     Delete Rule
                   </DialogPrimitive.Title>
                   <DialogPrimitive.Close
                     data-testid="button-delete-modal-close"
                     aria-label="Close"
-                    className="absolute right-[11px] top-[11px] size-[32px] p-0 hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                    className="absolute right-[10.94px] top-[11.25px] size-[30px] p-0 hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
                   >
-                    <img src={closeIcon} alt="" className="size-[32px] rounded-full" />
+                    <img src={closeIcon} alt="" className="size-[30px] rounded-full" />
                   </DialogPrimitive.Close>
                 </div>
 
                 {/* Body */}
-                <div className="flex flex-col gap-[24px] items-start p-[40px] w-full overflow-y-auto">
+                <div className="flex flex-col gap-[20px] items-start p-[30px] w-full overflow-y-auto">
                   <DialogPrimitive.Description
-                    className="[font-family:'Gilroy',sans-serif] font-medium leading-[28px] text-[#414965] text-[22px]"
+                    className="[font-family:'Gilroy',sans-serif] font-medium leading-[26.25px] text-[#414965] text-[20.625px] w-full"
                   >
-                    Deleting removes this rule entirely. Are you sure you want to delete this rule? This can’t be undone.
+                    Are you sure you want to delete this rule? Deleting removes this rule entirely. This can’t be undone.
                   </DialogPrimitive.Description>
 
-                  <div className="flex gap-[16px] items-center w-full">
+                  <div className="flex gap-[15px] items-center w-full">
                     <button
                       type="button"
                       onClick={() => setConfirmingDelete(false)}
                       data-testid="button-delete-cancel"
-                      className="flex-1 px-[24px] py-[12px] rounded-[100px] bg-[#222737] hover:bg-[#2a3040] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[18px] text-[#6c779d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965]"
+                      className="w-[150px] h-[45px] shrink-0 px-[22.5px] rounded-[100px] bg-[#222737] hover:bg-[#2a3040] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold leading-[22.5px] text-[16.88px] text-[#6c779d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965]"
                     >
-                      Edit
+                      Cancel
                     </button>
                     <button
                       type="button"
                       onClick={onDelete}
                       data-testid="button-delete-confirm"
-                      className="flex-1 px-[24px] py-[12px] rounded-[100px] bg-[#350011] hover:bg-[#4a0018] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[18px] text-[#d20344] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d20344]"
+                      className="w-[150px] h-[45px] shrink-0 px-[22.5px] rounded-[100px] bg-[#350011] hover:bg-[#4a0018] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold leading-[22.5px] text-[16.88px] text-[#d20344] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d20344]"
                     >
                       Delete
                     </button>
@@ -385,9 +385,6 @@ export function RuleDetail() {
                 <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[20px]">
                   Trusted Vendors
                 </p>
-                <span className="min-w-[16px] p-[2px] rounded-[4px] bg-[#414965] flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold leading-[12px] text-[#a8b9f4] text-[12px]">
-                  {rule.allowlist.length}
-                </span>
               </div>
               <div className="flex flex-col gap-[8px] p-[8px]">
                 {rule.allowlist.map((vendor, i) => (
@@ -400,15 +397,6 @@ export function RuleDetail() {
                       <span className="flex-1 [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#a8b9f4] truncate">
                         {vendor}
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => removeVendor(rule.id, vendor)}
-                        data-testid={`button-remove-vendor-${vendor.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`}
-                        className="w-[80px] flex items-center justify-center px-[12px] py-[8px] rounded-[100px] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] focus:outline-none focus-visible:ring-2"
-                        style={{ backgroundColor: "#350011", color: ALERT, ["--tw-ring-color" as string]: ALERT }}
-                      >
-                        Remove
-                      </button>
                     </div>
                   </div>
                 ))}
@@ -429,6 +417,7 @@ export function RuleDetail() {
                   <AmountRow
                     value={rule.threshold}
                     format={format}
+                    symbol={symbol}
                     editing={showAmountEditor}
                     draft={amountDraft}
                     onDraftChange={setAmountDraft}
@@ -449,6 +438,7 @@ export function RuleDetail() {
                   <AmountRow
                     value={rule.cap}
                     format={format}
+                    symbol={symbol}
                     editing={showCapEditor}
                     draft={capDraft}
                     onDraftChange={setCapDraft}
@@ -623,6 +613,7 @@ function HistoryRow({ event }: { event: RuleHistoryEvent }) {
 function AmountRow({
   value,
   format,
+  symbol,
   editing,
   draft,
   onDraftChange,
@@ -637,6 +628,7 @@ function AmountRow({
 }: {
   value: number;
   format: (n: number) => string;
+  symbol: string;
   editing: boolean;
   draft: string;
   onDraftChange: (v: string) => void;
@@ -672,18 +664,22 @@ function AmountRow({
   return (
     <div className="flex gap-[16px] items-center p-[8px] rounded-[8px]">
       <div className="flex-1 min-w-px flex flex-col justify-center">
-        <input
-          value={draft}
-          autoFocus
-          inputMode="numeric"
-          onChange={(e) => onDraftChange(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") onSave();
-            if (e.key === "Escape") onCancel();
-          }}
-          data-testid={testIdInput}
-          className="w-full h-[32px] flex items-center rounded-[8px] bg-[#222737] px-[12px] py-[8px] [font-family:'Gilroy',sans-serif] font-medium text-[15px] text-white focus:outline-none"
-        />
+        <div className="w-full h-[32px] flex items-center rounded-[8px] bg-[#222737] px-[12px] [font-family:'Gilroy',sans-serif] font-medium text-[15px] text-white">
+          <span aria-hidden="true" className="shrink-0">{symbol}</span>
+          <input
+            value={draft}
+            autoFocus
+            inputMode="numeric"
+            onChange={(e) => onDraftChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") onSave();
+              if (e.key === "Escape") onCancel();
+            }}
+            data-testid={testIdInput}
+            aria-label={`Amount in ${symbol}`}
+            className="min-w-0 flex-1 h-full bg-transparent pl-[4px] focus:outline-none"
+          />
+        </div>
       </div>
       <div className="flex gap-[8px] items-center shrink-0">
         <button
@@ -728,7 +724,7 @@ function PolicyDetailHeader({ rule }: { rule: PolicyContentRule }) {
         data-testid="button-back-to-rules"
         className="flex items-center justify-center gap-[4px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#6c779d] hover:text-[#a8b9f4] bg-[#222737] hover:bg-[#2a3040] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965] rounded-[100px] px-[12px] py-[8px]"
       >
-        <ArrowLeft size={16} /> Back to Rules
+        <ArrowLeft size={16} /> Back
       </button>
 
       {/* Title + Read-Only tag + subtitle + policy-id. Same spacing/format as automations/guardrails/suggested */}
