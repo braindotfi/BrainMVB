@@ -16,7 +16,7 @@ export type AuditEventType =
      nothing to approve/reject, Audit Log only, neutral chip. */
   | "system_activity";
 
-/* Three honest anchor states, gated on brain-core's actual signals:
+/* Four honest anchor states, gated on brain-core's actual signals:
    - "anchored"                → a confirmed on-chain anchor tx exists (anchor_tx_hash
                                  non-null). Only this state may claim on-chain immutability
                                  or render a Verify link.
@@ -24,8 +24,19 @@ export type AuditEventType =
                                  audit chain, cryptographically verifiable) but the on-chain
                                  anchor() tx has NOT mined yet. No Verify link, no
                                  immutability claim.
-   - "pending_next_batch"      → no proof material yet (no Merkle root covers this record). */
-export type AnchorStatus = "pending_next_batch" | "recorded_pending_anchor" | "anchored";
+   - "pending_next_batch"      → no proof material yet (no Merkle root covers this record),
+                                 but the record IS in brain-core's audit log, so a later
+                                 anchor window can still cover it.
+   - "not_recorded"            → the record exists only locally in this app and was never
+                                 written to brain-core's audit log, so no anchor will ever
+                                 cover it. Assistant questions that fell back to the direct
+                                 Anthropic path are the case this exists for. Rendering them
+                                 as "pending" promised an anchor that cannot arrive. */
+export type AnchorStatus =
+  | "not_recorded"
+  | "pending_next_batch"
+  | "recorded_pending_anchor"
+  | "anchored";
 
 export interface AnchorProof {
   status: AnchorStatus;
