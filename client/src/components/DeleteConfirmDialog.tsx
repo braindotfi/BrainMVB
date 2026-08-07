@@ -80,13 +80,13 @@ export function DeleteConfirmDialog({
               {body}
             </p>
 
-            {/* Buttons — fixed 114.75px width, gap-[12px], 13.5px/18px semibold. */}
+            {/* Buttons — fixed 120px width, gap-[12px], 13.5px/18px semibold. */}
             <div className="flex gap-[12px] items-center w-full">
               <button
                 type="button"
                 onClick={onCancel}
                 data-testid={cancelTestId}
-                className="flex shrink-0 items-center justify-center px-[18px] py-[9px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[13.5px] leading-[18px] w-[114.75px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                className="flex shrink-0 items-center justify-center px-[18px] py-[9px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[13.5px] leading-[18px] w-[120px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
                 style={{ background: "#222737" }}
               >
                 {cancelLabel}
@@ -96,7 +96,7 @@ export function DeleteConfirmDialog({
                 disabled={busy}
                 onClick={onConfirm}
                 data-testid={confirmTestId}
-                className="flex shrink-0 items-center justify-center px-[18px] py-[9px] rounded-[100px] hover:opacity-80 disabled:opacity-40 disabled:cursor-wait transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[#d20344] text-[13.5px] leading-[18px] w-[114.75px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d20344]"
+                className="flex shrink-0 items-center justify-center px-[18px] py-[9px] rounded-[100px] hover:opacity-80 disabled:opacity-40 disabled:cursor-wait transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[#d20344] text-[13.5px] leading-[18px] w-[120px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d20344]"
                 style={{ background: "#350011" }}
               >
                 {busy ? "Working…" : confirmLabel}
