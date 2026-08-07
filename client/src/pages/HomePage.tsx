@@ -1175,12 +1175,12 @@ export function HomePage() {
                       {/* Hairline vertical divider */}
                       <div className="w-px self-stretch shrink-0 bg-[#240757]" />
                       {/* Right: Brain Observed */}
-                      <div className="flex flex-col gap-[4px] items-start justify-center shrink-0 w-[450px]">
+                      <div className="flex min-w-0 flex-1 flex-col gap-[4px] items-start justify-center">
                         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#7631ee] text-[16px]">
                           Brain Observed
                         </p>
                         <p
-                          className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[16px] text-white w-[456px]"
+                          className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[16px] text-white w-full min-w-0"
                           data-testid="bulk-bar-summary"
                         >
                           {`All ${overviewSelection.type ? decisionTypeLabel(overviewSelection.type).toLowerCase() : ""}, each under ${format(overviewSelection.limit.value)} `}
@@ -1209,7 +1209,7 @@ export function HomePage() {
                         data-testid="button-bulk-approve"
                         className="bg-[#4a2300] flex flex-1 h-[36px] items-center justify-center min-w-px px-[12px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#ff9400] text-[16px] whitespace-nowrap hover:bg-[#5a2d00] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] disabled:opacity-50"
                       >
-                        {overviewBulkRunning ? "Approving…" : "Approve Selected"}
+                        {overviewBulkRunning ? "Approving…" : "Approve"}
                       </button>
                     </div>
                   </div>
