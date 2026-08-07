@@ -23,8 +23,10 @@
 import {
   listObligations,
   listLedgerInvoices,
+  listLedgerCounterparties,
   type BrainObligation,
   type BrainInvoice,
+  type CounterpartyLite,
 } from "./client";
 
 /** The result of a cursor walk. `complete` is the part that matters. */
@@ -180,6 +182,38 @@ export function readAllInvoices(
        brain-core starts sending the field, the explicit contract takes over automatically. */
     return {
       rows: page.invoices,
+      next: page.next_cursor ?? null,
+      cursorDeclared: page != null && typeof page === "object" && "next_cursor" in page,
+    };
+  }, opts);
+}
+
+/**
+ * Every counterparty for the tenant, with proof the walk finished.
+ *
+ * brain-core caps `/ledger/counterparties` at 20 rows per page regardless of the
+ * requested `limit` (measured; see `proposalEnrichment.ts`'s doc comment), so a vendor
+ * lookup that reads only page one can silently resolve "Acme" when the tenant also has
+ * an unread "Acme Corp Ltd" — a wrong, confident answer rather than a missing one. This
+ * walks to the end like the other two readers so a caller can refuse instead of guessing
+ * when it cannot.
+ */
+export function readAllCounterparties(
+  token: string,
+  opts: ReadAllOptions = {},
+): Promise<PagedRead<CounterpartyLite>> {
+  const timeoutMs = opts.timeoutMs ?? PAGE_TIMEOUT_MS;
+  return walk<CounterpartyLite>(async (cursor, limit) => {
+    const page = await listLedgerCounterparties(
+      token,
+      { limit, cursor: cursor ?? undefined },
+      timeoutMs,
+    );
+    if (!Array.isArray(page?.counterparties)) {
+      throw new Error('/ledger/counterparties: response carried no "counterparties" array');
+    }
+    return {
+      rows: page.counterparties,
       next: page.next_cursor ?? null,
       cursorDeclared: page != null && typeof page === "object" && "next_cursor" in page,
     };

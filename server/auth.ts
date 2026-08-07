@@ -352,10 +352,6 @@ export function setupAuth(app: Express) {
       }
 
       let user = await storage.getUserByGoogleId(profile.sub);
-      // Covers a demo row that already carries a googleId from before this guard existed.
-      if (isDemoEmail(user?.email)) {
-        return res.redirect("/?auth_error=google_demo_account");
-      }
       if (!user && profileEmail) {
         const byEmail = await storage.getUserByEmail(profileEmail);
         if (byEmail) {
@@ -364,6 +360,12 @@ export function setupAuth(app: Express) {
           }
           user = byEmail;
         }
+      }
+      /* Covers a demo row reached either by an existing googleId or by the by-email
+         adoption just above — checked AFTER both resolve `user`, not only after the
+         googleId lookup, so a demo row reached via email adoption is still caught. */
+      if (isDemoEmail(user?.email)) {
+        return res.redirect("/?auth_error=google_demo_account");
       }
       if (!user) {
         const email = profile.email_verified === true ? profile.email?.toLowerCase() : undefined;

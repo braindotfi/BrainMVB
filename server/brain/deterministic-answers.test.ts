@@ -29,6 +29,9 @@ let requested: string[] = [];
 
 interface Fixture {
   counterparties?: unknown;
+  /** Pages returned in order; the walk stops when a page has `next_cursor: null`.
+   *  Takes priority over `counterparties` when set. */
+  counterpartyPages?: unknown[];
   /** Pages returned in order; the walk stops when a page has `next_cursor: null`. */
   obligationPages?: unknown[];
   invoicePages?: unknown[];
@@ -50,7 +53,7 @@ function install(fx: Fixture): void {
 
       const body = (() => {
         if (path.endsWith("/ledger/counterparties")) {
-          return { counterparties: fx.counterparties ?? [] };
+          return fx.counterpartyPages ? page(fx.counterpartyPages, url) : { counterparties: fx.counterparties ?? [] };
         }
         if (path.endsWith("/ledger/obligations")) {
           return page(fx.obligationPages, url);
@@ -347,6 +350,55 @@ describe("payable by counterparty", () => {
   });
 });
 
+/* ── the counterparty list itself must be read in full ──────────────────────
+   brain-core caps /ledger/counterparties at 20 rows per page regardless of the
+   requested limit. A resolver that reads only page one can match a shorter name
+   ("Acme") while a longer, more specific one ("Acme Corp Ltd") sits unread past the
+   cap — a wrong, confident total attributed to the wrong counterparty rather than a
+   missing one. */
+describe("the counterparty list is walked, not read as one page", () => {
+  const cpPage = (rows: unknown[], next: string | null) => ({ counterparties: rows, next_cursor: next });
+
+  it("resolves a vendor that only appears on the second page", async () => {
+    const page0 = Array.from({ length: 20 }, (_, n) => ({ id: `cp_filler_${n}`, name: `Filler ${n}`, type: "vendor" }));
+    install({
+      counterpartyPages: [cpPage(page0, "p1"), cpPage([CLOUDOPS], null)],
+      obligationPages: [onePage("obligations", [ob({ amount_due: "1200.00" })])],
+    });
+    const out = await run("how much do we owe CloudOps?");
+    expect(out?.answered).toBe(true);
+    expect(out?.reply).toContain("USD 1,200.00");
+  });
+
+  it("refuses instead of resolving a shorter substring match when the counterparty list could not be walked in full", async () => {
+    /* No `next_cursor` field at all, at exactly the known page cap — the walk cannot
+       prove it saw everything, so it must not trust that "Acme" is the only match: a
+       more specific "Acme Corp Ltd" could be sitting on an unread page. */
+    const rows = [
+      ...Array.from({ length: 19 }, (_, n) => ({ id: `cp_filler_${n}`, name: `Filler ${n}`, type: "vendor" })),
+      ACME,
+    ];
+    install({
+      counterpartyPages: [{ counterparties: rows }],
+      obligationPages: [onePage("obligations", [ob({ counterparty_id: ACME.id, amount_due: "500.00" })])],
+    });
+    const out = await run(`how much do we owe ${ACME.name}?`);
+    expect(out?.answered).toBe(false);
+    expect(out?.reply).toContain("only read part of your counterparty list");
+    expect(out?.reply).not.toMatch(/\d[\d,]*\.\d{2}/);
+  });
+
+  it("refuses rather than declaring a named vendor missing when the counterparty list could not be walked in full", async () => {
+    const rows = Array.from({ length: 20 }, (_, n) => ({ id: `cp_filler_${n}`, name: `Filler ${n}`, type: "vendor" }));
+    install({ counterpartyPages: [{ counterparties: rows }] });
+    const out = await run("how much do we owe Globex?");
+    expect(out?.answered).toBe(false);
+    expect(out?.reply).toContain("only read part of your counterparty list");
+    // Must not claim the vendor does not exist — the read never proved that.
+    expect(out?.reply).not.toContain("couldn't find a counterparty");
+  });
+});
+
 /* ── payroll ─────────────────────────────────────────────────────────────── */
 
 describe("payroll obligations", () => {
@@ -382,7 +434,9 @@ describe("payroll obligations", () => {
     });
     const out = await run("what is our total payroll obligation?");
     expect(out?.answered).toBe(true);
-    expect(out?.reply).toContain("no outstanding payroll");
+    // Scoped to what was actually checked, not to whether payroll exists at all under
+    // some other kind spelling brain-core might use.
+    expect(out?.reply).toContain('no obligations typed "payroll"');
   });
 
   it("refuses on a truncated read", async () => {

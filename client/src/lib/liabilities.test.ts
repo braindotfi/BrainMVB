@@ -139,8 +139,28 @@ describe("unpaidApInvoices — still the source for the Cash Flow bill ROWS", ()
     expect(unpaidApInvoices([ap(1000), ar(9_000_000), ap(200), ap(100, "paid")])).toHaveLength(2);
   });
 
-  it("treats a missing scenario as not-AP rather than guessing", () => {
-    expect(unpaidApInvoices([{ status: "open", amount_due: 500 }, { status: "open", amount_due: 500, metadata: null }])).toHaveLength(0);
+  it("excludes a settled bill of any settled status, not just 'paid'", () => {
+    // Matches SETTLED_STATUSES, the same set the rest of the module uses for AP/AR
+    // agreement — a "void" bill must not be excluded from the total but still listed.
+    expect(unpaidApInvoices([ap(100, "void"), ap(100, "cancelled"), ap(100, "open")])).toHaveLength(1);
+  });
+
+  it("treats a missing scenario as AP by complement — real tenants never mark it 'ap'", () => {
+    /* AP is never positively marked on a real tenant (only the demo seeder writes
+       "ap"); AR is. So "not AR" is what makes a row payable, and an invoice with no
+       metadata at all — exactly what a real tenant's invoice looks like — must count. */
+    expect(
+      unpaidApInvoices([
+        { status: "open", amount_due: 500 },
+        { status: "open", amount_due: 500, metadata: null },
+      ]),
+    ).toHaveLength(2);
+  });
+
+  it("still excludes a demo-seeded AR row and still includes a demo-seeded AP row", () => {
+    // Both tenant kinds must classify the same way: AR positively marked is excluded,
+    // AP (marked or unmarked) is included.
+    expect(unpaidApInvoices([ar(500), ap(500)]).map((i) => i.metadata?.scenario)).toEqual(["ap"]);
   });
 
   it("tolerates a null/undefined list without throwing", () => {

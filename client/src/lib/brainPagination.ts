@@ -22,6 +22,18 @@ export interface PagedRead<T> {
 const PAGE_SIZE = 100;
 
 /**
+ * The smallest page cap brain-core has been measured to silently apply (20 rows, no
+ * `next_cursor` field at all). Mirrors `SMALLEST_KNOWN_CAP` in `server/brain/ledgerRead.ts`
+ * — see that file's comment for the full reasoning. Duplicated rather than imported: this
+ * is client code and must not import the server module.
+ *
+ * Used only when the response never declared a cursor at all (absent, not explicit null) —
+ * an endpoint that has made no promise about pagination cannot be trusted to mean "done"
+ * just because it stopped.
+ */
+const SMALLEST_KNOWN_CAP = 20;
+
+/**
  * Hard stop. A cursor that never terminates would otherwise spin forever and hang
  * the tab; bailing out reports `complete: false`, which suppresses the total rather
  * than showing a partial one.
@@ -84,6 +96,9 @@ export async function fetchAllPages<T>(
     }
     const raw = (body as Record<string, unknown> | null)?.next_cursor;
     const next = typeof raw === "string" && raw.trim() ? raw : null;
+    /* Distinguishes "the server said null" from "the server never mentioned a cursor at
+       all" — see SMALLEST_KNOWN_CAP above. */
+    const cursorDeclared = !!body && typeof body === "object" && "next_cursor" in body;
 
     /* Checked BEFORE the batch is taken. A cursor we have already followed means the
        server is replaying a page we have already counted, so appending it here would
@@ -92,7 +107,13 @@ export async function fetchAllPages<T>(
 
     rows.push(...(batch as T[]));
 
-    if (!next) return { rows, complete: true };
+    if (!next) {
+      /* An explicit `next_cursor: null` is proof there is no further page. Silence is
+         not: brain-core's list endpoints are known to cap without ever mentioning a
+         cursor, so fall back to the only evidence available — whether the batch was
+         small enough that it cannot have been capped. */
+      return { rows, complete: cursorDeclared ? true : batch.length < SMALLEST_KNOWN_CAP };
+    }
     followed.add(next);
     cursor = next;
   }

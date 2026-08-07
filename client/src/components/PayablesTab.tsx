@@ -27,7 +27,7 @@ import { WidgetCard, type CounterpartiesLiteResponse } from "@/components/Ledger
 import { UnavailableDataBox } from "@/components/Callout";
 import { BillDetailPopup, type BrainInvoiceDTO as BillDTO } from "@/components/BillDetailPopup";
 import { PayableDetailPopup } from "@/components/PayableDetailPopup";
-import { payablesView } from "@/lib/liabilities";
+import { payablesView, unpaidApInvoices } from "@/lib/liabilities";
 import { usePagedLedgerRead, ledgerFigureCaption } from "@/lib/ledgerRead";
 import { matchObligationsToInvoices } from "@/lib/debtIdentity";
 import type { RawObligation, Obligation } from "@/lib/brainObligations";
@@ -247,7 +247,7 @@ export function PayablesTab({ format }: { format: Format }): JSX.Element {
       <BillDetailPopup
         bill={openBill}
         vendorName={openBill ? (nameOf(openBill.counterparty_id) ?? "Unknown vendor") : ""}
-        bills={((invoices ?? []).filter((invoice) => invoice.metadata?.scenario === "ap")) as BillDTO[]}
+        bills={unpaidApInvoices(invoices ?? []) as BillDTO[]}
         onSelectBill={setOpenBill}
         onClose={() => setOpenBill(null)}
       />

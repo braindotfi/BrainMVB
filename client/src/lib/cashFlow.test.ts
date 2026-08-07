@@ -64,12 +64,24 @@ describe("buildCashFlowRows", () => {
     const rows = buildCashFlowRows({
       invoices: [
         INV({ id: "ap1", amount_due: "12000" }),
-        INV({ id: "ar1", metadata: { scenario: null } }),
-        INV({ id: "ar2", metadata: null }),
+        INV({ id: "ar1", metadata: { scenario: "ar" } }),
       ],
     });
     expect(rows.map((r) => r.key)).toEqual(["inv:ap1"]);
     expect(rows[0]).toMatchObject({ kind: "bill", sign: "-", amount: 12000 });
+  });
+
+  it("treats an unmarked invoice as AP (the real-tenant shape), never as AR by default", () => {
+    // AP is never positively marked on a real tenant — only the demo seeder writes
+    // "ap". A row with no scenario at all, or an explicit null, is still a bill.
+    const rows = buildCashFlowRows({
+      invoices: [
+        INV({ id: "unmarked", amount_due: "500", metadata: { scenario: null } }),
+        INV({ id: "nometa", amount_due: "300", metadata: null }),
+      ],
+    });
+    expect(rows.map((r) => r.key).sort()).toEqual(["inv:nometa", "inv:unmarked"]);
+    expect(rows.every((r) => r.kind === "bill")).toBe(true);
   });
 
   /* ── obligations supply the rows invoices cannot ──────────────────────────
@@ -380,6 +392,18 @@ describe("cashFlowTotals", () => {
     const invOnly = incompleteMessage({ tx: false, inv: true, ob: false });
     expect(invOnly).toContain("The bills listed below couldn't be loaded");
     expect(invOnly).not.toContain("iabilities");
+  });
+
+  it("names a truncated (not failed) invoice read too, so a short bill list is never silent", () => {
+    /* The invoice list caps silently — a cut-short walk still leaves real bills
+       unlisted, exactly like a failed read, just without the failure flag. */
+    const truncated = incompleteMessage({ tx: false, inv: false, ob: false, invTruncated: true });
+    expect(truncated).toContain("Some of the bills listed below");
+
+    // A failed read already says enough; it must not ALSO claim a truncation.
+    const failed = incompleteMessage({ tx: false, inv: true, ob: false, invTruncated: true });
+    expect(failed).toContain("The bills listed below couldn't be loaded");
+    expect(failed).not.toContain("some of the bills listed below");
   });
 
   it("refuses to read as an all-clear, whichever feed is down", () => {

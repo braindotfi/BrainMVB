@@ -29,8 +29,8 @@
  * through to its normal behaviour; that is the only non-answer that is not a refusal.
  */
 
-import { listLedgerCounterparties, type BrainObligation, type BrainInvoice, type WikiEvidence, type CounterpartyLite } from "./client";
-import { readAllObligations, readAllInvoices, type PagedRead } from "./ledgerRead";
+import { type BrainObligation, type BrainInvoice, type WikiEvidence, type CounterpartyLite } from "./client";
+import { readAllObligations, readAllInvoices, readAllCounterparties, type PagedRead } from "./ledgerRead";
 
 /** Which structured question was recognised. Surfaced for tests and logs. */
 export type DeterministicPath = "payable-by-counterparty" | "overdue-ar" | "payroll-total";
@@ -123,6 +123,20 @@ function refuseUnreachable(path: DeterministicPath, subject: string): Determinis
   return refuse(
     path,
     `I couldn't reach the ledger to work out ${subject}. That's a connection problem rather than an empty ledger, so I'd rather not quote a number. Try again in a moment.`,
+  );
+}
+
+/**
+ * The counterparty list itself was only partially read. Neither "this vendor does not
+ * exist" nor "this is the vendor you mean" can be trusted from a partial list: a more
+ * specific name (e.g. "Acme Corp Ltd" behind a matched "Acme") may simply not have been
+ * fetched yet. Refusing here is what stops that from becoming a confident, wrong total
+ * attributed to the wrong counterparty.
+ */
+function refuseUnverifiedCounterparty(path: DeterministicPath, term: string): DeterministicAnswer {
+  return refuse(
+    path,
+    `I could only read part of your counterparty list just now, so I can't be sure "${term}" is the vendor you mean — a more specific match might exist beyond what I read. Try again in a moment, or open Ledger › Payables to check the name.`,
   );
 }
 
@@ -250,18 +264,24 @@ async function answerPayableByCounterparty(
 ): Promise<DeterministicAnswer | null> {
   const path: DeterministicPath = "payable-by-counterparty";
 
-  let counterparties: CounterpartyLite[];
+  let cpRead: PagedRead<CounterpartyLite>;
   try {
-    counterparties = (await listLedgerCounterparties(token, 10_000)).counterparties ?? [];
+    /* Walked to the end rather than one page: brain-core caps this list at 20 rows
+       regardless of the requested size, so an unwalked read can resolve a shorter
+       name ("Acme") while a longer, more specific one ("Acme Corp Ltd") sits unread
+       past the cap — a wrong, confident total attributed to the wrong vendor. */
+    cpRead = await readAllCounterparties(token);
   } catch {
     /* Without the counterparty list we cannot tell "vendor does not exist" from "vendor
        exists but we could not look it up", and those need different answers. */
     return refuseUnreachable(path, "what you owe that vendor");
   }
+  const counterparties = cpRead.rows;
 
   const resolution = resolveCounterparty(question, counterparties);
   if (resolution.kind === "none") return null; // a general question — not ours.
   if (resolution.kind === "unresolved") {
+    if (!cpRead.complete) return refuseUnverifiedCounterparty(path, resolution.term);
     return refuse(
       path,
       `I couldn't find a counterparty called "${resolution.term}" in your ledger, so I can't total what you owe them. Check the spelling, or open Ledger › Payables to see the vendors Brain knows about.`,
@@ -274,6 +294,9 @@ async function answerPayableByCounterparty(
       `That could mean more than one counterparty — ${names}. Ask me again naming just one and I'll total it exactly.`,
     );
   }
+
+  // resolution.kind === "resolved" from here — but not yet safe to trust on a partial list.
+  if (!cpRead.complete) return refuseUnverifiedCounterparty(path, resolution.counterparty.name);
 
   const target = resolution.counterparty;
 
@@ -354,9 +377,13 @@ async function answerPayrollTotal(token: string): Promise<DeterministicAnswer> {
   const rows = openPayables(read.rows).filter((o) => (o.kind ?? "").trim().toLowerCase() === "payroll");
 
   if (rows.length === 0) {
+    /* Scoped to what was actually tested, not to what exists: this only checked rows
+       whose `kind` is literally "payroll". Nothing in this repo pins brain-core's full
+       obligation-kind vocabulary, so a "payroll_run"/"wages"-kinded row would silently
+       produce a false "none" if this claimed to have checked payroll generally. */
     return {
       reply:
-        "You have no outstanding payroll obligations. I read every obligation in the ledger and none of them are unpaid payroll.",
+        "You have no obligations typed \"payroll\". I checked every obligation in the ledger for that exact kind and found none unpaid.",
       sources: [],
       answered: true,
       grounded: true,

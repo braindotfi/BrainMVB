@@ -49,11 +49,17 @@ param filtered just because the response was 200 and plausible.
 
 # A total is only honest if the cursor walk finished
 
-Ledger list endpoints cap their page and return `next_cursor`. A single unpaged read gives
-some rows with no indication any are missing, so the sum is quietly short.
+Ledger list endpoints cap their page. Some (obligations, counterparties) declare
+`next_cursor` explicitly, even when it is `null`. Others cap silently — as of writing,
+`/ledger/invoices` never sends a `next_cursor` field at all, HTTP 200, no indication any
+rows are missing (see `ledgerRead.ts:177-180`). A single unpaged read gives some rows
+either way, so the sum is quietly short.
 
 **How to apply:** the total function takes the *read state*, not just the rows, and returns
-`null` when the walk did not complete. Gating it structurally is what stops a partial sum
+`null` when the walk did not complete. On an endpoint that never declares a cursor, "did the
+walk finish" falls back to a page-cap heuristic (`SMALLEST_KNOWN_CAP` in
+`server/brain/ledgerRead.ts` / `client/src/lib/brainPagination.ts`) rather than trusting an
+absent cursor as proof of completion. Gating it structurally is what stops a partial sum
 being rendered as a total — a smaller plausible number is worse than a dash.
 
 # Demo tenant projection is staged — do not measure a total too early

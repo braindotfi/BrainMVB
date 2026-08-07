@@ -276,6 +276,32 @@ describe("the cursor walk reports whether it actually finished", () => {
     expect(out).toEqual({ rows: [1, 1, 1], complete: false });
   });
 
+  it("reports incomplete on an undeclared page at the known page-cap size", async () => {
+    /* No `next_cursor` field at all, at exactly the smallest cap brain-core is known to
+       apply silently. Reading that silence as "done" is the defect this pins: a client
+       walker that stopped here used to call a capped, cursorless page complete. */
+    const rows = Array.from({ length: 20 }, (_, n) => n);
+    const out = await fetchAllPages<number>("/x", "invoices", {
+      fetchImpl: async () => ({ ok: true, json: async () => ({ invoices: rows }) }) as unknown as Response,
+    });
+    expect(out.complete).toBe(false);
+  });
+
+  it("accepts an undeclared page too small to have been capped", async () => {
+    const out = await fetchAllPages<number>("/x", "invoices", {
+      fetchImpl: async () => ({ ok: true, json: async () => ({ invoices: [1, 2, 3] }) }) as unknown as Response,
+    });
+    expect(out).toEqual({ rows: [1, 2, 3], complete: true });
+  });
+
+  it("an explicit next_cursor:null is proof, even on a large page", async () => {
+    // Mirrors the server twin's identical case: an explicit null outranks the cap
+    // heuristic, which exists only for endpoints that never declare a cursor at all.
+    const rows = Array.from({ length: 25 }, (_, n) => n);
+    const out = await fetchAllPages<number>("/x", "invoices", { fetchImpl: async () => page(rows, null) });
+    expect(out).toEqual({ rows, complete: true });
+  });
+
   it("throws on a 200 whose shape carries no rows array", async () => {
     /* Not an empty list — a response we do not understand. Returning [] here is how
        a shape change becomes "you are owed nothing". */

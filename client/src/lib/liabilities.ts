@@ -60,11 +60,18 @@ export interface ApInvoiceLike {
 
 /** Unpaid accounts-payable invoices, i.e. billed money the tenant still owes.
  *
- *  `scenario === "ap"` is what separates money-out from money-in: the same
- *  endpoint carries AR invoices (what customers owe the tenant), and summing
- *  those into liabilities would invert the sign of the whole card. */
+ *  AP is the COMPLEMENT of AR, never a marker of its own: `metadata.scenario === "ap"`
+ *  is written only by the demo seeder (`services/api/src/demo/brainsaas-seed.ts` in
+ *  brain-core) — no real tenant's invoice is ever marked "ap". AR, by contrast, IS
+ *  positively and reliably marked `"ar"` on every tenant (real or demo) by brain-core's
+ *  production write path (`projectionMetadata()`). So "is this a payable" is answered by
+ *  "is this NOT a receivable" — `scenario !== "ar"` — which is true for a demo-seeded
+ *  `"ap"` row and equally true for a real tenant's unmarked row. Testing for `"ap"`
+ *  literally, as this used to, silently returned nothing for every real tenant. */
 export function unpaidApInvoices<T extends ApInvoiceLike>(invoices: readonly T[] | null | undefined): T[] {
-  return (invoices ?? []).filter((i) => i?.metadata?.scenario === "ap" && i.status !== "paid");
+  return (invoices ?? []).filter(
+    (i) => i?.metadata?.scenario !== "ar" && !SETTLED_STATUSES.has((i.status ?? "").trim().toLowerCase()),
+  );
 }
 
 /* ── obligations: the authoritative "what we owe" ─────────────────────────── */

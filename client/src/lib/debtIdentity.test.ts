@@ -99,12 +99,19 @@ describe("matching payables to the invoice that billed them", () => {
 
   it("never backs a payable with a receivable invoice", () => {
     // An AR invoice is money owed TO the tenant. Presenting one as the bill behind a
-    // payable would invert who owes whom.
+    // payable would invert who owes whom. AR is a POSITIVE marker (see lib/liabilities.ts)
+    // — an invoice only counts as receivable when `scenario` is literally "ar".
     const m = matchObligationsToInvoices(
       [OBL({ id: "obl_1" })],
-      [INV({ id: "inv_ar", metadata: { scenario: undefined } })],
+      [INV({ id: "inv_ar", metadata: { scenario: "ar" } })],
     );
     expect(m.has("obl_1")).toBe(false);
+  });
+
+  it("still backs a payable with an unmarked invoice — AP is never positively marked on a real tenant", () => {
+    const inv = INV({ id: "inv_1", metadata: null });
+    const m = matchObligationsToInvoices([OBL({ id: "obl_1" })], [inv]);
+    expect(m.get("obl_1")).toBe(inv);
   });
 
   it("never backs an outstanding payable with an already-paid invoice", () => {

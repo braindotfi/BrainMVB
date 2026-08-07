@@ -172,10 +172,20 @@ export interface CounterpartyLite {
 
 export interface ListCounterpartiesResponse {
   counterparties: CounterpartyLite[];
+  /** brain-core's spec declares this on every response (even `null`), so a cursor walk
+   *  can prove it reached the end rather than assuming one capped page was everything. */
+  next_cursor?: string | null;
 }
 
-export function listLedgerCounterparties(token: string, timeoutMs?: number): Promise<ListCounterpartiesResponse> {
-  return brainRequest<ListCounterpartiesResponse>("/ledger/counterparties", { token, timeoutMs });
+/** GET /ledger/counterparties. brain-core caps this at 20 rows per page regardless of
+ *  `limit`, so any caller needing the full list must walk the cursor (see
+ *  `readAllCounterparties` in ledgerRead.ts) rather than raising `limit`. */
+export function listLedgerCounterparties(
+  token: string,
+  query?: { limit?: number; cursor?: string },
+  timeoutMs?: number,
+): Promise<ListCounterpartiesResponse> {
+  return brainRequest<ListCounterpartiesResponse>("/ledger/counterparties", { token, query, timeoutMs });
 }
 
 // ─── Counterparty create (manual "Add vendor"; MEMBER token) ─────────────────

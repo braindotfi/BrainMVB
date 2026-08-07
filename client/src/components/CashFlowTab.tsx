@@ -30,7 +30,6 @@ import {
   Divider,
   WidgetCard,
   type InvoiceLite,
-  type InvoicesLiteResponse,
   type CounterpartiesLiteResponse,
 } from "@/components/LedgerWidgets";
 import { BillDetailPopup, type BrainInvoiceDTO as BillDTO } from "@/components/BillDetailPopup";
@@ -158,8 +157,12 @@ const OverdueInvoicesBanner = ({
       "The invoice feed is unavailable. That is not the same as nothing being overdue. Treat this as unknown, not clear.";
   } else {
     if (invoices == null) return null; // still loading; the parent shows the settling state
+    /* Positive test, same as everywhere else AR is picked out: `scenario === "ar"` is
+       the only reliable marker (see lib/liabilities.ts). A negation (`!== "ap"`) would
+       count every real tenant's payables as overdue receivables, since a real tenant's
+       AP invoices carry no "ap" marker at all. */
     const overdue = invoices.filter(
-      (i) => i.status === "overdue" && i.metadata?.scenario !== "ap",
+      (i) => i.status === "overdue" && i.metadata?.scenario === "ar",
     );
     if (overdue.length === 0) return null;
     /* "Customer" is doing real work here. This counts receivables — money owed TO
@@ -218,7 +221,10 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
   const [openPayable, setOpenPayable] = useState<Obligation | null>(null);
 
   const txQ = useQuery<TxResponse>({ queryKey: ["/api/brain/ledger/transactions"], retry: false });
-  const invQ = useQuery<InvoicesLiteResponse>({ queryKey: ["/api/brain/ledger/invoices"], retry: false });
+  /* Walked like obligations, not a bare one-page query: an unpaged read caps silently
+     and the bills below vanish past the cap with nothing on screen saying so, while the
+     Liabilities total above (sourced from obligations) keeps including all of them. */
+  const invQ = usePagedLedgerRead<InvoiceLite>("/api/brain/ledger/invoices", "invoices");
   const cpQ = useQuery<CounterpartiesLiteResponse>({ queryKey: ["/api/brain/ledger/counterparties"], retry: false });
   /* Liabilities read obligations, not invoices: the invoice feed carries no payroll,
      so the old figure understated what was owed and disagreed with the Payables
@@ -230,9 +236,13 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
      up rendering as a confident empty list. Derived without isPending/isLoading so
      it does not depend on which react-query major is installed. */
   const txs = txQ.data?.transactions ?? null;
-  const invs = invQ.data?.invoices ?? null;
+  const invs = invQ.read?.rows ?? null;
   const txFailed = txQ.isError || (txQ.data != null && txQ.data.transactions == null);
-  const invFailed = invQ.isError || (invQ.data != null && invQ.data.invoices == null);
+  const invFailed = invQ.failed;
+  /* Rows may still be listed from a partial invoice walk — a bill that came back is a
+     real bill — but the shortfall must be visible rather than rendering as a short,
+     confident list. */
+  const invTruncated = !invFailed && !!invQ.read && !invQ.read.complete;
   const obs = obQ.read?.rows ?? null;
   const obFailed = obQ.failed;
   const txPending = txs == null && !txFailed;
@@ -310,9 +320,9 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
       {/* A source that failed must say so even though the rest of the tab still
           renders. Silence here is the difference between "no expenses" and
           "we could not find out". */}
-      {(txFailed || invFailed || obFailed) && (
+      {(txFailed || invFailed || obFailed || invTruncated) && (
         <UnavailableDataBox testId="banner-cashflow-incomplete">
-          {incompleteMessage({ tx: txFailed, inv: invFailed, ob: obFailed })}
+          {incompleteMessage({ tx: txFailed, inv: invFailed, ob: obFailed, invTruncated })}
         </UnavailableDataBox>
       )}
 

@@ -346,7 +346,7 @@ export function cashFlowTotals(input: {
  *
  * Ordered by how much a wrong reading costs: money owed first, then earnings, then rows.
  */
-export function incompleteMessage(f: { tx: boolean; inv: boolean; ob: boolean }): string {
+export function incompleteMessage(f: { tx: boolean; inv: boolean; ob: boolean; invTruncated?: boolean }): string {
   const lost: string[] = [];
   /* Obligations now supply rows as well as the figure: when that read fails the
      payroll and tax rows disappear from the list too, and a list that looks complete
@@ -355,6 +355,9 @@ export function incompleteMessage(f: { tx: boolean; inv: boolean; ob: boolean })
   if (f.ob) lost.push("liabilities and some of the rows below");
   if (f.tx) lost.push("income and expenses");
   if (f.inv) lost.push("the bills listed below");
+  /* A cut-short (not failed) invoice walk still owes the same caveat: bills past the
+     cap are just as invisible as bills from a read that failed outright. */
+  else if (f.invTruncated) lost.push("some of the bills listed below");
   if (lost.length === 0) return "";
   const list = lost.length === 1 ? lost[0] : `${lost.slice(0, -1).join(", ")} and ${lost[lost.length - 1]}`;
   return (

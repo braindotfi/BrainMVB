@@ -253,7 +253,7 @@ function transactionEntity(t: RawTransaction, cpName: string | undefined, now: D
 export async function buildEntityIndex(token: string, now: Date = new Date()): Promise<EntityIndex> {
   const [accounts, cps, invoices, obligations, members, transactions] = await Promise.allSettled([
     listLedgerAccounts(token, { limit: 100 }, BULK_TIMEOUT_MS),
-    listLedgerCounterparties(token, BULK_TIMEOUT_MS),
+    listLedgerCounterparties(token, undefined, BULK_TIMEOUT_MS),
     listLedgerInvoices(token, { limit: 100 }, BULK_TIMEOUT_MS),
     listObligations(token, { limit: 100 }, BULK_TIMEOUT_MS),
     listMembers(token, undefined, BULK_TIMEOUT_MS),
