@@ -32,6 +32,7 @@ import {
 import { openRuleDetail, resolveRule } from "@/lib/openRuleDetail";
 import closeIcon from "@assets/Close_1783293571882.png";
 import { AlertCallout, InfoIcon } from "@/components/Callout";
+import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 
 const ALERT = "#d20344";
 const ACTIVE = "#42bf23";
@@ -239,6 +240,7 @@ export function VendorDetailPopup({
   }[trustChipKind(vendor)];
 
   return (
+    <>
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
@@ -540,74 +542,37 @@ export function VendorDetailPopup({
               {/* Trusted → Revoke + Delete */}
               {vendor.trustStatus === "trusted" && (
                 <div className="flex flex-col gap-[12px] w-full">
-                  {confirmingDelete ? (
-                    /* ── Delete confirmation ── */
-                    <div className="flex flex-col gap-[24px] items-start w-full">
-                      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px] w-full">
-                        Deleting removes this {noun} entirely. Are you sure you want to delete this {noun}? This can't be undone.
-                      </p>
-                      <div className="border-t border-solid border-[#1d2132] -mx-[24px] px-[24px] pt-[24px] w-[calc(100%+48px)]">
-                        <div className="flex gap-[8px] items-center w-full">
-                        <button
-                          type="button"
-                          onClick={() => setConfirmingDelete(false)}
-                          className="flex flex-1 min-w-px items-center justify-center px-[20px] py-[10px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[16px] leading-[20px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-                          style={{ background: "#222737" }}
-                          data-testid="button-delete-vendor-cancel"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setConfirmingDelete(false);
-                            onOpenChange(false);
-                            onDeleteVendor?.(vendor.id, vendor.name);
-                          }}
-                          className="flex flex-1 min-w-px items-center justify-center px-[20px] py-[10px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[#d20344] text-[16px] leading-[20px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d20344]"
-                          style={{ background: "#350011" }}
-                          data-testid="button-confirm-delete-vendor"
-                        >
-                          Delete
-                        </button>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      {/* A granted row can be risk-marked upstream afterwards. The chip
-                          and the tab both say Needs Review in that case, so the body has
-                          to give the reason — otherwise the popup shows a review demand
-                          with nothing on it explaining what changed. */}
-                      {isNeedsReview(vendor) && (
-                        <AlertCallout testId="text-trusted-risk-note">
-                          Brain marked this {noun} as risky since trust was granted. Verify the
-                          account, or pause trust while you check.
-                        </AlertCallout>
-                      )}
-                      {/* trusted → paused via /trust/pause. The button, the tab and the
-                          chip all read "Pause"/"Paused" so one state has one name.
-                          The paused → trusted path uses /trust/restore (in the Paused tab popup). */}
-                      <TrustButton
-                        label="Pause"
-                        onClick={() => onPause?.(vendor.id)}
-                        busy={trustBusy}
-                        color="#ff9400"
-                        background="#4a2300"
-                        testId="button-pause-trust"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setConfirmingDelete(true)}
-                        disabled={trustBusy}
-                        className="flex items-center justify-center px-[20px] py-[8px] rounded-[100px] hover:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#6c779d] w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-                        style={{ background: "#1d2132" }}
-                        data-testid="button-delete-vendor"
-                      >
-                        Delete {nounTitle}
-                      </button>
-                    </>
+                  {/* A granted row can be risk-marked upstream afterwards. The chip
+                      and the tab both say Needs Review in that case, so the body has
+                      to give the reason — otherwise the popup shows a review demand
+                      with nothing on it explaining what changed. */}
+                  {isNeedsReview(vendor) && (
+                    <AlertCallout testId="text-trusted-risk-note">
+                      Brain marked this {noun} as risky since trust was granted. Verify the
+                      account, or pause trust while you check.
+                    </AlertCallout>
                   )}
+                  {/* trusted → paused via /trust/pause. The button, the tab and the
+                      chip all read "Pause"/"Paused" so one state has one name.
+                      The paused → trusted path uses /trust/restore (in the Paused tab popup). */}
+                  <TrustButton
+                    label="Pause"
+                    onClick={() => onPause?.(vendor.id)}
+                    busy={trustBusy}
+                    color="#ff9400"
+                    background="#4a2300"
+                    testId="button-pause-trust"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setConfirmingDelete(true)}
+                    disabled={trustBusy}
+                    className="flex items-center justify-center px-[20px] py-[8px] rounded-[100px] hover:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#6c779d] w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                    style={{ background: "#1d2132" }}
+                    data-testid="button-delete-vendor"
+                  >
+                    Delete {nounTitle}
+                  </button>
                 </div>
               )}
 
@@ -797,5 +762,25 @@ export function VendorDetailPopup({
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
+
+    {/* Delete confirmation — rendered as its own floating dialog so it
+        sits on top of the vendor detail popup, not inline inside it. */}
+    <DeleteConfirmDialog
+      open={confirmingDelete}
+      onOpenChange={(open) => { if (!open) setConfirmingDelete(false); }}
+      title={`Delete ${nounTitle}`}
+      body={`Are you sure you want to delete this ${noun}? Deleting removes this ${noun} entirely. This can't be undone.`}
+      cancelLabel="Edit"
+      confirmLabel="Delete"
+      onCancel={() => setConfirmingDelete(false)}
+      onConfirm={() => {
+        setConfirmingDelete(false);
+        onOpenChange(false);
+        onDeleteVendor?.(vendor.id, vendor.name);
+      }}
+      cancelTestId="button-delete-vendor-cancel"
+      confirmTestId="button-confirm-delete-vendor"
+    />
+  </>
   );
 }
