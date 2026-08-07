@@ -322,7 +322,7 @@ export function RuleDetail() {
             </DialogPrimitive.Portal>
           </DialogPrimitive.Root>
 
-          {/* Delete-rule confirmation: popup modal matching Figma node 5577:65171. */}
+          {/* Delete-rule confirmation: matches Figma node 6252:69510. */}
           <DialogPrimitive.Root open={confirmingDelete} onOpenChange={setConfirmingDelete}>
             <DialogPrimitive.Portal>
               <DialogPrimitive.Overlay
@@ -330,45 +330,45 @@ export function RuleDetail() {
                 data-testid="delete-rule-backdrop"
               />
               <DialogPrimitive.Content
-                className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#0a0c10] border border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[24px] w-[440px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
+                className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#0a0c10] border-[0.75px] border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[18px] w-[300px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
                 data-testid="delete-rule-modal"
               >
                 {/* Title bar */}
-                <div className="bg-[#0a0c10] border-b border-[#1d2132] border-solid h-[56px] relative shrink-0 w-full flex items-center justify-center">
-                  <DialogPrimitive.Title className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#a8b9f4] text-[20px] text-center whitespace-nowrap">
+                <div className="bg-[#0a0c10] border-b border-[#1d2132] border-solid h-[42px] relative shrink-0 w-full flex items-center justify-center">
+                  <DialogPrimitive.Title className="[font-family:'Gilroy',sans-serif] font-semibold leading-[18px] text-[#a8b9f4] text-[15px] text-center whitespace-nowrap">
                     Delete Rule
                   </DialogPrimitive.Title>
                   <DialogPrimitive.Close
                     data-testid="button-delete-modal-close"
                     aria-label="Close"
-                    className="absolute right-[11px] top-[11px] size-[32px] p-0 hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                    className="absolute right-[8px] top-[9px] size-[24px] p-0 hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
                   >
-                    <img src={closeIcon} alt="" className="size-[32px] rounded-full" />
+                    <img src={closeIcon} alt="" className="size-[24px] rounded-full" />
                   </DialogPrimitive.Close>
                 </div>
 
                 {/* Body */}
-                <div className="flex flex-col gap-[24px] items-start p-[40px] w-full overflow-y-auto">
+                <div className="flex flex-col gap-[16px] items-start p-[24px] w-full overflow-y-auto">
                   <DialogPrimitive.Description
-                    className="[font-family:'Gilroy',sans-serif] font-medium leading-[28px] text-[#414965] text-[22px]"
+                    className="[font-family:'Gilroy',sans-serif] font-medium leading-[21px] text-[#414965] text-[16.5px] w-full"
                   >
-                    Deleting removes this rule entirely. Are you sure you want to delete this rule? This can’t be undone.
+                    Are you sure you want to delete this rule? Deleting removes this rule entirely. This can’t be undone.
                   </DialogPrimitive.Description>
 
-                  <div className="flex gap-[16px] items-center w-full">
+                  <div className="flex gap-[12px] items-center w-full">
                     <button
                       type="button"
                       onClick={() => setConfirmingDelete(false)}
                       data-testid="button-delete-cancel"
-                      className="flex-1 px-[24px] py-[12px] rounded-[100px] bg-[#222737] hover:bg-[#2a3040] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[18px] text-[#6c779d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965]"
+                      className="w-[120px] h-[36px] shrink-0 px-[18px] rounded-[100px] bg-[#222737] hover:bg-[#2a3040] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold leading-[18px] text-[13.5px] text-[#6c779d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965]"
                     >
-                      Edit
+                      Cancel
                     </button>
                     <button
                       type="button"
                       onClick={onDelete}
                       data-testid="button-delete-confirm"
-                      className="flex-1 px-[24px] py-[12px] rounded-[100px] bg-[#350011] hover:bg-[#4a0018] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[18px] text-[#d20344] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d20344]"
+                      className="w-[120px] h-[36px] shrink-0 px-[18px] rounded-[100px] bg-[#350011] hover:bg-[#4a0018] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold leading-[18px] text-[13.5px] text-[#d20344] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d20344]"
                     >
                       Delete
                     </button>
