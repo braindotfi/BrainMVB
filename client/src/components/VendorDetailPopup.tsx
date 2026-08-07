@@ -543,14 +543,15 @@ export function VendorDetailPopup({
                   {confirmingDelete ? (
                     /* ── Delete confirmation ── */
                     <div className="flex flex-col gap-[24px] items-start w-full">
-                      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[28px] text-[#414965] text-[22px] w-full">
+                      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px] w-full">
                         Deleting removes this {noun} entirely. Are you sure you want to delete this {noun}? This can't be undone.
                       </p>
-                      <div className="flex gap-[16px] items-center w-full">
+                      <div className="border-t border-solid border-[#1d2132] -mx-[24px] px-[24px] pt-[24px] w-[calc(100%+48px)]">
+                        <div className="flex gap-[8px] items-center w-full">
                         <button
                           type="button"
                           onClick={() => setConfirmingDelete(false)}
-                          className="flex flex-1 items-center justify-center px-[24px] py-[12px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[18px] leading-[24px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                          className="flex flex-1 min-w-px items-center justify-center px-[20px] py-[10px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[16px] leading-[20px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
                           style={{ background: "#222737" }}
                           data-testid="button-delete-vendor-cancel"
                         >
@@ -563,12 +564,13 @@ export function VendorDetailPopup({
                             onOpenChange(false);
                             onDeleteVendor?.(vendor.id, vendor.name);
                           }}
-                          className="flex flex-1 items-center justify-center px-[24px] py-[12px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[#d20344] text-[18px] leading-[24px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d20344]"
+                          className="flex flex-1 min-w-px items-center justify-center px-[20px] py-[10px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[#d20344] text-[16px] leading-[20px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d20344]"
                           style={{ background: "#350011" }}
                           data-testid="button-confirm-delete-vendor"
                         >
                           Delete
                         </button>
+                        </div>
                       </div>
                     </div>
                   ) : (
