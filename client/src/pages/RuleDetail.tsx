@@ -73,7 +73,7 @@ export function RuleDetail() {
           data-testid="button-back-to-rules"
           className="flex items-center justify-center gap-[8px] px-[16px] py-[10px] rounded-[100px] bg-[#240757] border border-[rgba(118,49,238,0.35)] hover:bg-[#2e0a6b] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#7631ee]"
         >
-          <ArrowLeft size={16} /> Back to rules
+          <ArrowLeft size={16} /> Back
         </button>
       </div>
     );
@@ -98,7 +98,7 @@ export function RuleDetail() {
           data-testid="button-back-to-rules"
           className="flex items-center justify-center gap-[8px] px-[16px] py-[10px] rounded-[100px] bg-[#240757] border border-[rgba(118,49,238,0.35)] hover:bg-[#2e0a6b] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#7631ee]"
         >
-          <ArrowLeft size={16} /> Back to rules
+          <ArrowLeft size={16} /> Back
         </button>
       </div>
     );
@@ -163,7 +163,7 @@ export function RuleDetail() {
               data-testid="button-back-to-rules"
               className="flex items-center justify-center gap-[4px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#6c779d] hover:text-[#a8b9f4] bg-[#222737] hover:bg-[#2a3040] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965] rounded-[100px] px-[12px] py-[8px]"
             >
-              <ArrowLeft size={16} /> Back to Rules
+              <ArrowLeft size={16} /> Back
             </button>
           )}
 
@@ -330,37 +330,37 @@ export function RuleDetail() {
                 data-testid="delete-rule-backdrop"
               />
               <DialogPrimitive.Content
-                className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#0a0c10] border-[0.75px] border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[18px] w-[300px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
+                className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#0a0c10] border-[0.938px] border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[22.5px] w-[375px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
                 data-testid="delete-rule-modal"
               >
                 {/* Title bar */}
-                <div className="bg-[#0a0c10] border-b border-[#1d2132] border-solid h-[42px] relative shrink-0 w-full flex items-center justify-center">
-                  <DialogPrimitive.Title className="[font-family:'Gilroy',sans-serif] font-semibold leading-[18px] text-[#a8b9f4] text-[15px] text-center whitespace-nowrap">
+                <div className="bg-[#0a0c10] border-b border-[#1d2132] border-solid h-[52.5px] relative shrink-0 w-full flex items-center justify-center">
+                  <DialogPrimitive.Title className="[font-family:'Gilroy',sans-serif] font-semibold leading-[22.5px] text-[#a8b9f4] text-[18.75px] text-center whitespace-nowrap">
                     Delete Rule
                   </DialogPrimitive.Title>
                   <DialogPrimitive.Close
                     data-testid="button-delete-modal-close"
                     aria-label="Close"
-                    className="absolute right-[8px] top-[9px] size-[24px] p-0 hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                    className="absolute right-[10.94px] top-[11.25px] size-[30px] p-0 hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
                   >
-                    <img src={closeIcon} alt="" className="size-[24px] rounded-full" />
+                    <img src={closeIcon} alt="" className="size-[30px] rounded-full" />
                   </DialogPrimitive.Close>
                 </div>
 
                 {/* Body */}
-                <div className="flex flex-col gap-[16px] items-start p-[24px] w-full overflow-y-auto">
+                <div className="flex flex-col gap-[20px] items-start p-[30px] w-full overflow-y-auto">
                   <DialogPrimitive.Description
-                    className="[font-family:'Gilroy',sans-serif] font-medium leading-[21px] text-[#414965] text-[16.5px] w-full"
+                    className="[font-family:'Gilroy',sans-serif] font-medium leading-[26.25px] text-[#414965] text-[20.625px] w-full"
                   >
                     Are you sure you want to delete this rule? Deleting removes this rule entirely. This can’t be undone.
                   </DialogPrimitive.Description>
 
-                  <div className="flex gap-[12px] items-center w-full">
+                  <div className="flex gap-[15px] items-center w-full">
                     <button
                       type="button"
                       onClick={() => setConfirmingDelete(false)}
                       data-testid="button-delete-cancel"
-                      className="w-[120px] h-[36px] shrink-0 px-[18px] rounded-[100px] bg-[#222737] hover:bg-[#2a3040] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold leading-[18px] text-[13.5px] text-[#6c779d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965]"
+                      className="w-[150px] h-[45px] shrink-0 px-[22.5px] rounded-[100px] bg-[#222737] hover:bg-[#2a3040] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold leading-[22.5px] text-[16.88px] text-[#6c779d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965]"
                     >
                       Cancel
                     </button>
@@ -368,7 +368,7 @@ export function RuleDetail() {
                       type="button"
                       onClick={onDelete}
                       data-testid="button-delete-confirm"
-                      className="w-[120px] h-[36px] shrink-0 px-[18px] rounded-[100px] bg-[#350011] hover:bg-[#4a0018] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold leading-[18px] text-[13.5px] text-[#d20344] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d20344]"
+                      className="w-[150px] h-[45px] shrink-0 px-[22.5px] rounded-[100px] bg-[#350011] hover:bg-[#4a0018] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold leading-[22.5px] text-[16.88px] text-[#d20344] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d20344]"
                     >
                       Delete
                     </button>
@@ -728,7 +728,7 @@ function PolicyDetailHeader({ rule }: { rule: PolicyContentRule }) {
         data-testid="button-back-to-rules"
         className="flex items-center justify-center gap-[4px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-[#6c779d] hover:text-[#a8b9f4] bg-[#222737] hover:bg-[#2a3040] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965] rounded-[100px] px-[12px] py-[8px]"
       >
-        <ArrowLeft size={16} /> Back to Rules
+        <ArrowLeft size={16} /> Back
       </button>
 
       {/* Title + Read-Only tag + subtitle + policy-id. Same spacing/format as automations/guardrails/suggested */}

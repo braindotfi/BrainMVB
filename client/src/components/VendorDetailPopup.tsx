@@ -770,7 +770,7 @@ export function VendorDetailPopup({
       onOpenChange={(open) => { if (!open) setConfirmingDelete(false); }}
       title={`Delete ${nounTitle}`}
       body={`Are you sure you want to delete this ${noun}? Deleting removes this ${noun} entirely. This can't be undone.`}
-      cancelLabel="Edit"
+      cancelLabel="Cancel"
       confirmLabel="Delete"
       onCancel={() => setConfirmingDelete(false)}
       onConfirm={() => {

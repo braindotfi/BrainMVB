@@ -14,7 +14,7 @@ import closeIcon from "@assets/Close_1783293571882.png";
  * onOpenChange  — called when Radix wants to close (Esc / overlay click)
  * title         — centered header text
  * body          — description paragraph (muted tone)
- * cancelLabel   — left neutral button ("Edit", "Cancel", etc.)
+ * cancelLabel   — left neutral button ("Cancel", etc.)
  * confirmLabel  — right destructive button ("Delete", "Remove", etc.)
  * onCancel      — fires when the cancel button is clicked
  * onConfirm     — fires when the destructive button is clicked
@@ -53,40 +53,40 @@ export function DeleteConfirmDialog({
         {/* Overlay — same spec as VendorDetailPopup */}
         <DialogPrimitive.Overlay className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
 
-        {/* Card — compact Figma frame: 300px wide, 18px radius, 0.75px border. */}
+        {/* Card — updated Figma frame: 375px wide, 22.5px radius, 0.938px border. */}
         <DialogPrimitive.Content
           aria-describedby={undefined}
-          className="fixed left-[50%] top-[50%] z-[60] translate-x-[-50%] translate-y-[-50%] bg-[#0a0c10] border-[0.75px] border-solid border-[#1d2132] flex flex-col items-start overflow-hidden rounded-[18px] w-[300px] max-w-[calc(100vw-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
+          className="fixed left-[50%] top-[50%] z-[60] translate-x-[-50%] translate-y-[-50%] bg-[#0a0c10] border-[0.938px] border-solid border-[#1d2132] flex flex-col items-start overflow-hidden rounded-[22.5px] w-[375px] max-w-[calc(100vw-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
         >
-          {/* ── Title and Controls — h-[42px], border-b ── */}
-          <div className="bg-[#0a0c10] border-b-[0.75px] border-solid border-[#1d2132] h-[42px] relative shrink-0 w-full">
+          {/* ── Title and Controls — h-[52.5px], border-b ── */}
+          <div className="bg-[#0a0c10] border-b-[0.938px] border-solid border-[#1d2132] h-[52.5px] relative shrink-0 w-full">
             <DialogPrimitive.Title asChild>
-              <p className="-translate-x-1/2 absolute [font-family:'Gilroy',sans-serif] font-semibold leading-[18px] left-1/2 text-[#a8b9f4] text-[15px] text-center top-[calc(50%-9px)] whitespace-nowrap">
+              <p className="-translate-x-1/2 absolute [font-family:'Gilroy',sans-serif] font-semibold leading-[22.5px] left-1/2 text-[#a8b9f4] text-[18.75px] text-center top-[calc(50%-11.25px)] whitespace-nowrap">
                 {title}
               </p>
             </DialogPrimitive.Title>
             <DialogPrimitive.Close
-              className="absolute right-[8.75px] top-1/2 -translate-y-1/2 size-[24px] p-0 rounded-[100px] hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+              className="absolute right-[10.94px] top-1/2 -translate-y-1/2 size-[30px] p-0 rounded-[100px] hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
               data-testid="button-close-delete-confirm-dialog"
             >
-              <img src={closeIcon} alt="" className="size-[24px] rounded-full" />
+              <img src={closeIcon} alt="" className="size-[30px] rounded-full" />
             </DialogPrimitive.Close>
           </div>
 
-          {/* ── Body — p-[24px], gap-[16px] ── */}
-          <div className="flex flex-col gap-[16px] items-start p-[24px] w-full">
-            {/* Figma: font-medium, 16.5px/21px, #414965 */}
-            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[21px] text-[#414965] text-[16.5px] w-full">
+          {/* ── Body — p-[30px], gap-[20px] ── */}
+          <div className="flex flex-col gap-[20px] items-start p-[30px] w-full">
+            {/* Figma: font-medium, 20.625px/26.25px, #414965 */}
+            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[26.25px] text-[#414965] text-[20.625px] w-full">
               {body}
             </p>
 
-            {/* Buttons — fixed 120px width, gap-[12px], 13.5px/18px semibold. */}
-            <div className="flex gap-[12px] items-center w-full">
+            {/* Buttons — fixed 150px width, gap-[15px], 16.88px/22.5px semibold. */}
+            <div className="flex gap-[15px] items-center w-full">
               <button
                 type="button"
                 onClick={onCancel}
                 data-testid={cancelTestId}
-                className="flex shrink-0 items-center justify-center px-[18px] py-[9px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[13.5px] leading-[18px] w-[120px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                className="flex shrink-0 h-[45px] items-center justify-center px-[22.5px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[16.88px] leading-[22.5px] w-[150px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
                 style={{ background: "#222737" }}
               >
                 {cancelLabel}
@@ -96,7 +96,7 @@ export function DeleteConfirmDialog({
                 disabled={busy}
                 onClick={onConfirm}
                 data-testid={confirmTestId}
-                className="flex shrink-0 items-center justify-center px-[18px] py-[9px] rounded-[100px] hover:opacity-80 disabled:opacity-40 disabled:cursor-wait transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[#d20344] text-[13.5px] leading-[18px] w-[120px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d20344]"
+                className="flex shrink-0 h-[45px] items-center justify-center px-[22.5px] rounded-[100px] hover:opacity-80 disabled:opacity-40 disabled:cursor-wait transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[#d20344] text-[16.88px] leading-[22.5px] w-[150px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d20344]"
                 style={{ background: "#350011" }}
               >
                 {busy ? "Working…" : confirmLabel}
