@@ -33,6 +33,12 @@ describe("acknowledgedStore", () => {
     ]);
   });
 
+  it("marks an acknowledged insight not_recorded — nothing is written to brain-core's audit log", () => {
+    acknowledgeInsight(insight("cashflow-usd", "Trailing cash flow (USD)"));
+
+    expect(acknowledgedRecordsSnapshot()[0]?.anchor.status).toBe("not_recorded");
+  });
+
   it("clears every record on reset", () => {
     acknowledgeInsight(insight("cashflow-usd", "Trailing cash flow (USD)"));
     acknowledgeInsight(insight("recon-1", "Unmatched payment"));
