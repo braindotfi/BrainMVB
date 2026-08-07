@@ -471,4 +471,14 @@ describe("localQuestionToRecord", () => {
     expect(anchor.baseTx).toBeUndefined();
     expect(anchor.verifyHref).toBeUndefined();
   });
+
+  it("does not mark a wiki-engine question not_recorded — it DID reach brain-core", () => {
+    const wikiQ = { ...q, engine: "wiki" };
+    expect(localQuestionToRecord(wikiQ).anchor.status).toBe("pending_next_batch");
+  });
+
+  it("does not mark an unknown (null) engine not_recorded — that would assert a false negative", () => {
+    const unknownQ = { ...q, engine: null };
+    expect(localQuestionToRecord(unknownQ).anchor.status).toBe("pending_next_batch");
+  });
 });

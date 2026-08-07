@@ -1,6 +1,6 @@
 import { useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
-import type { AuditRecord, AuditEventType, AnchorProof, LifecycleStep } from "./auditTypes";
+import type { AuditRecord, AuditEventType, AnchorProof, AnchorStatus, LifecycleStep } from "./auditTypes";
 import { isAssistantActivity, humanReadableActor } from "./auditTypes";
 import { matchCannedPrompt } from "@shared/cannedPrompts";
 import { explorerTxUrl, normalizeTxHash } from "./explorer";
@@ -657,6 +657,18 @@ export function localQuestionToRecord(q: AssistantQuestion): AuditRecord {
     kind: "ok",
     note: question !== summary ? question : undefined,
   };
+  /* engine gates the anchor claim:
+     - "wiki" reached brain-core's wiki/question endpoint, so the question IS in
+       brain-core's audit log (pending_next_batch until a Merkle window covers it).
+     - "anthropic" / "grounding-fallback" never touched brain-core at all — the
+       direct-Anthropic fallback (or its offline/refusal siblings) this record type
+       exists for. not_recorded: no anchor window will ever cover it.
+     - null/undefined engine is UNKNOWN (rows written before this column existed,
+       or a crash between the insert and the engine update) — never assert
+       not_recorded on an unknown engine, that would be a false claim. Fall back to
+       pending_next_batch, which is merely incomplete, not false. */
+  const reachedBrainCore = q.engine === "wiki";
+  const status: AnchorStatus = q.engine == null || reachedBrainCore ? "pending_next_batch" : "not_recorded";
   return {
     id: `local-question-${q.id}`,
     eventType: "system_activity",
@@ -668,11 +680,7 @@ export function localQuestionToRecord(q: AssistantQuestion): AuditRecord {
     occurredAtMs: createdMs,
     lifecycle: [step],
     linked: [],
-    /* not_recorded, NOT pending_next_batch: this question missed brain-core's
-       audit log entirely (the direct-Anthropic fallback above), so it is in no
-       anchor window and never will be. "Pending" promised an anchor that cannot
-       arrive. */
-    anchor: { status: "not_recorded", auditId: `local-question-${q.id}` },
+    anchor: { status, auditId: `local-question-${q.id}` },
     rawQuestion: question,
   };
 }

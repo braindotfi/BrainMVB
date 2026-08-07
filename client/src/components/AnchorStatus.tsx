@@ -94,7 +94,7 @@ export function AnchorStatus({
       {/* Status line: icon + label */}
       <div className="content-stretch flex gap-[4px] items-center relative shrink-0 w-full">
         {pending ? (
-          <img src={clockIcon} alt="Pending" className="size-[16px] shrink-0 object-contain" />
+          <img src={clockIcon} alt={isNotRecorded ? "Not recorded" : "Pending"} className="size-[16px] shrink-0 object-contain" />
         ) : (
           <img src={anchoredIcon} alt="Anchored" className="size-[16px] shrink-0" />
         )}
@@ -141,7 +141,14 @@ export function AnchorStatus({
           by a border-t, not inside the scrollable content area. */}
       {mode !== "proof" && (
         <div className="flex gap-[12px] items-center w-full">
-          {pending ? (
+          {isNotRecorded ? (
+            <span
+              data-testid="text-not-recorded-caption"
+              className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-[#414965]"
+            >
+              No on-chain proof. This activity was never recorded in Brain's audit log.
+            </span>
+          ) : pending ? (
             <span
               data-testid="text-verify-pending-caption"
               className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-[#414965]"

@@ -114,6 +114,10 @@ export interface IStorage {
 
   // Assistant question audit trail (local — guarantees every question is recorded)
   recordAssistantQuestion(q: InsertAssistantQuestion): Promise<AssistantQuestion>;
+  /** Best-effort follow-up write: fills in `engine` once it is known (the
+   *  initial insert happens before the engine is chosen). Callers must not
+   *  let a failure here break the assistant response. */
+  setAssistantQuestionEngine(id: string, engine: string): Promise<void>;
   listAssistantQuestions(userId: string, limit?: number): Promise<AssistantQuestion[]>;
 
   /** Delete all demo-fresh users whose createdAt is older than ttlMs milliseconds.
@@ -798,6 +802,15 @@ export class MemStorage implements IStorage {
     list.unshift(row);
     this.assistantQuestionsStore.set(q.userId, list);
     return row;
+  }
+  async setAssistantQuestionEngine(id: string, engine: string): Promise<void> {
+    for (const list of this.assistantQuestionsStore.values()) {
+      const row = list.find((r) => r.id === id);
+      if (row) {
+        row.engine = engine;
+        return;
+      }
+    }
   }
   async listAssistantQuestions(userId: string, limit = 100): Promise<AssistantQuestion[]> {
     return (this.assistantQuestionsStore.get(userId) ?? []).slice(0, limit);
@@ -1486,6 +1499,12 @@ export class DatabaseStorage implements IStorage {
       .values({ ...q, engine: q.engine ?? null })
       .returning();
     return row;
+  }
+  async setAssistantQuestionEngine(id: string, engine: string): Promise<void> {
+    await db
+      .update(assistantQuestionsTable)
+      .set({ engine })
+      .where(eq(assistantQuestionsTable.id, id));
   }
   async listAssistantQuestions(userId: string, limit = 100): Promise<AssistantQuestion[]> {
     return db

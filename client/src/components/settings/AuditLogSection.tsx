@@ -64,6 +64,10 @@ const CATEGORY_BADGE: Record<Category, { label: string; bg: string; color: strin
 const RECORD_STATUS_BADGE = {
   pending: { label: "Pending", bg: "#222737", color: "#6c779d", border: "1px solid rgba(108,119,157,0.2)" },
   anchored: { label: "Anchored", bg: "#123509", color: "#42bf23", border: "1px solid rgba(66,191,35,0.2)" },
+  /* not_recorded never reached brain-core's audit log, so "Pending" (which
+     implies a future anchor) would be false. Distinct, honest styling — no
+     "waiting" connotation. */
+  notRecorded: { label: "Not recorded", bg: "#3a1414", color: "#e5484d", border: "1px solid rgba(229,72,77,0.2)" },
 } as const;
 
 function categorise(record: AuditRecord, systemIds: ReadonlySet<string>): Category {
@@ -399,11 +403,15 @@ export function AuditLogSection() {
             /* A record is only Anchored when brain-core has confirmed an
                on-chain transaction. Records with no Merkle proof yet and
                records sealed in the audit chain while the transaction is
-               still pending both use the honest Pending pill. */
+               still pending both use the honest Pending pill. not_recorded
+               never reached brain-core's audit log at all, so it gets its
+               own pill rather than being folded into "Pending". */
             const statusBadge =
               record.anchor.status === "anchored"
                 ? RECORD_STATUS_BADGE.anchored
-                : RECORD_STATUS_BADGE.pending;
+                : record.anchor.status === "not_recorded"
+                  ? RECORD_STATUS_BADGE.notRecorded
+                  : RECORD_STATUS_BADGE.pending;
             const actor = humanReadableActor(record.actor);
             return (
               <div key={record.id}>

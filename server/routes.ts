@@ -971,13 +971,27 @@ When you mention a money amount, always reproduce it exactly as the grounding da
     // Record every question locally so the audit trail is complete even when
     // the Anthropic fallback (no brain-core interaction) is taken.
     // Best-effort: a local write failure must never break the assistant.
+    // The row is inserted here, before an engine is chosen, so a throw below
+    // never loses it; `engine` is filled in afterwards via recordEngine().
+    let questionId: string | undefined;
     try {
-      await storage.recordAssistantQuestion({
+      const row = await storage.recordAssistantQuestion({
         userId: req.session.userId!,
         question: lastUserContent,
       });
+      questionId = row.id;
     } catch (err) {
       console.warn("[Assistant] local question record failed (non-fatal):", (err as Error).message);
+    }
+
+    // Best-effort follow-up: never let a failure here break the response.
+    async function recordEngine(engine: string) {
+      if (!questionId) return;
+      try {
+        await storage.setAssistantQuestionEngine(questionId, engine);
+      } catch (err) {
+        console.warn("[Assistant] local question engine update failed (non-fatal):", (err as Error).message);
+      }
     }
 
     // ─── PRIMARY: brain-core wiki/question — per-answer cited evidence, grounded
@@ -993,6 +1007,7 @@ When you mention a money amount, always reproduce it exactly as the grounding da
            answer, even when brain-core attached evidence records to it. */
         const reply = await humanizeWikiAnswer(wiki.raw, lastUserContent);
         if (reply.trim().length > 0) {
+          await recordEngine("wiki");
           return res.json({
             reply,
             sources: wiki.evidence,
@@ -1009,6 +1024,7 @@ When you mention a money amount, always reproduce it exactly as the grounding da
          brain-core has already decided that this question was not answerable
          from the evidence it selected. */
       if (wiki.answered === false) {
+        await recordEngine("wiki");
         return res.json({
           reply: wiki.raw.trim() || "I couldn't produce a grounded answer from the available evidence.",
           sources: wiki.evidence,
@@ -1044,6 +1060,7 @@ When you mention a money amount, always reproduce it exactly as the grounding da
 
     if (!process.env.ANTHROPIC_API_KEY) {
       if (grounding) {
+        await recordEngine("grounding-fallback");
         return res.json({
           reply: `Assistant is offline (no API key configured), so here is your live data snapshot instead:\n\n${grounding}`,
           sources,
@@ -1065,6 +1082,7 @@ When you mention a money amount, always reproduce it exactly as the grounding da
 
     // ─── Data-specific question plus no data means refuse. Do not hallucinate ───
     if (dataUnavailable) {
+      await recordEngine("grounding-fallback");
       return res.json({
         reply: "I can't access your live account data right now. This usually means your brain-core session is still initializing or the connection is warming up. Try again in a moment, or check your Finances page to confirm your accounts are connected.",
         sources: [],
@@ -1086,6 +1104,7 @@ When you mention a money amount, always reproduce it exactly as the grounding da
         | Anthropic.TextBlock
         | undefined)?.text?.trim();
       const generatedReply = Boolean(reply);
+      await recordEngine("anthropic");
       return res.json({
         reply: reply || "Sorry, I couldn't generate a response. Please try again.",
         sources,
@@ -1104,6 +1123,7 @@ When you mention a money amount, always reproduce it exactly as the grounding da
       const apiMsg =
         e?.error?.error?.message ?? e?.error?.message ?? e?.message ?? "";
       if (status === 400 && /credit balance/i.test(apiMsg)) {
+        await recordEngine("anthropic");
         return res.status(402).json({
           error: "assistant_no_credit",
           reply:
@@ -1113,6 +1133,7 @@ When you mention a money amount, always reproduce it exactly as the grounding da
         answerError: true,
         });
       }
+      await recordEngine("anthropic");
       return res.status(500).json({
         error: "assistant_failed",
         reply: "Something went wrong reaching the assistant. Please try again.",
