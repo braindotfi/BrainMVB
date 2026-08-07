@@ -62,7 +62,7 @@ export function AnchorStatus({
     ? "Anchored · Tamper-Evident"
     : isRecorded
       ? "Recorded and verifiable. On-chain anchor pending."
-      : "Proof incomplete. This record hasn't been anchored on-chain yet.";
+      : "Proof incomplete. This record hasn't been anchored yet.";
 
   /* All non-anchored states share the clock icon (#a8b9f4 baby blue), so the
      status label matches it regardless of whether we're recorded-pending or
@@ -83,7 +83,7 @@ export function AnchorStatus({
     <div className="flex flex-col gap-[16px] w-full">
 
       {/* Status line: icon + label */}
-      <div className="content-stretch flex gap-[4px] items-center relative shrink-0 w-full">
+      <div className="content-stretch flex gap-[8px] items-center relative shrink-0 w-full">
         {pending ? (
           <img src={clockIcon} alt="Pending" className="size-[16px] shrink-0 object-contain" />
         ) : (
