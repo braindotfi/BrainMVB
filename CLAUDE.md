@@ -1093,25 +1093,58 @@ disabled:opacity-60 disabled:cursor-not-allowed
 Nothing else. The app previously mixed `opacity-40`, `opacity-50`, `cursor-wait`, `cursor-default`
 and "no disabled styling at all".
 
-Measured, not estimated. `opacity` fades the *whole* control — label **and** fill — toward the
-`#0a0c10` card behind it, so both sides of the ratio move together:
+#### The measurement model
+`opacity` fades the *whole* control — label **and** fill — toward whatever is painted behind it, so
+**both sides of the ratio move together**. Comparing a faded label against an unfaded fill is the
+intuitive model, and it is wrong in the optimistic direction. Every figure below is computed
+against the `#0a0c10` card surface, not estimated:
 
-| State | Effective label vs effective fill |
-| --- | --- |
-| enabled `#6c779d` on `#222737` | **3.37:1** |
-| `disabled:opacity-40` (old) | **1.51:1** |
-| `disabled:opacity-60` (current) | **2.00:1** |
+| Pairing | Where | enabled | `.40` (old) | `.60` (now) |
+| --- | --- | --- | --- | --- |
+| `#7631ee` on `#240757` | secondary purple — "Review rule", Developers pill | 2.77:1 | 1.36:1 | **1.72:1** ← worst |
+| `#d20344` on `#350011` | destructive / reject | 3.31:1 | 1.38:1 | **1.83:1** |
+| `#6c779d` on `#222737` | neutral pager / postpone — most common, 8 sites | 3.37:1 | 1.51:1 | **2.00:1** |
+| `#42bf23` on `#123509` | approve | 5.66:1 | 1.95:1 | **2.94:1** |
+| `#ff9400` on `#4a2300` | amber secondary | 6.19:1 | 2.05:1 | **3.15:1** |
+| `#a8b9f4` on `#1d2132` | pause rule | 8.29:1 | 2.34:1 | **3.81:1** |
+| `#ffffff` on `#7631ee` | primary CTA | 6.10:1 | 2.69:1 | **3.98:1** |
+| `#a8b9f4` on `#131828` | light on panel | 9.18:1 | 2.41:1 | **4.01:1** ← best |
 
-That is a 32% relative improvement, and it is the reason for the change. It is **not** WCAG AA for
-normal text, and it *cannot be*: 3.37:1 is the ceiling, so no opacity value reaches 4.5:1 — the
-enabled state already fails it. Getting disabled text to AA means changing the muted token itself,
-which changes every enabled control too, and is therefore not a disabled-state fix.
+Every pairing improved; none regressed.
 
-This is permitted rather than merely tolerated. WCAG 2.2 SC 1.4.3 (Contrast Minimum) exempts
-"text ... that is part of an inactive user interface component", and SC 1.4.11 (Non-text Contrast)
-carries the same exemption. A disabled control has no contrast requirement by definition. The
-dimness *is* the affordance: a disabled control rendered at full enabled contrast stops reading as
-disabled.
+**There is a hard ceiling.** Fading both sides can only move *down* from the enabled ratio, so no
+opacity value reaches AA's 4.5:1 — the worst enabled pairing is already 2.77:1, and even the
+common neutral one is only 3.37:1. Raising the disabled state to AA means changing the *token*,
+which changes every enabled control too. That is a design decision, not a disabled-state fix.
+
+#### Why this is compliant, not merely tolerated
+**Do not "fix" these ratios back up without reading this first — it was decided deliberately.**
+
+WCAG 2.2 **SC 1.4.3 Contrast (Minimum)**, "Incidental" exception, verbatim:
+
+> Text or images of text that are part of an inactive user interface component, that are pure
+> decoration, that are not visible to anyone, or that are part of a picture that contains
+> significant other visual content, have no contrast requirement.
+
+**SC 1.4.11 Non-text Contrast** carries the same carve-out in its normative text — it applies
+"except for inactive components" — and its Understanding page states:
+
+> User Interface Components that are not available for user interaction (e.g., a disabled control
+> in HTML) are not required to meet contrast requirements. An inactive user interface component is
+> visible but not currently operable.
+
+Every control here uses the native `disabled` attribute, so it is not operable and meets that
+definition exactly. The dimness *is* the affordance: rendered at full enabled contrast, a disabled
+control stops reading as disabled. W3C notes the exemption was a deliberate decision, not an
+oversight — no one-size-fits-all disabled presentation has been established.
+
+**Known soft spot — transient disabling.** 31 of the ~57 disabled controls are disabled only while
+an operation runs (`disabled={busy}`, `{isDeleting}`, `{submitting}`, `{isPending}`, `{signing}`),
+and many swap their label to a status message — "Working…", "Deleting…", "Rotating…", "Submitting…".
+They are genuinely inoperable, so the exemption holds *literally*, but it fits awkwardly: this dims
+text the user is actually meant to read. The exemption is about controls you cannot use, not about
+progress text. If this is revisited, the right fix is to exempt the **idle** disabled state and give
+the **busy** state full contrast — not to raise every disabled control uniformly.
 
 - Never use `disabled:cursor-wait`. A pending control is still a disabled control; "wait" implied a
   distinction the app does not actually make, and it read as a hang.
