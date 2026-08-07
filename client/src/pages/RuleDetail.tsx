@@ -27,7 +27,7 @@ import {
   ChevronUp,
   Shield,
 } from "lucide-react";
-import { useRule, pauseRule, resumeRule, removeVendor, lowerCap, setThreshold, deleteRule } from "@/lib/rulesStore";
+import { useRule, pauseRule, resumeRule, lowerCap, setThreshold, deleteRule } from "@/lib/rulesStore";
 import { usePolicyRule, APPLIES_TO_LABEL, EXECUTE_LABEL, describeWhen } from "@/lib/brainPolicy";
 import type { PolicyContentRule } from "@/lib/brainPolicy";
 import { useCurrency } from "@/lib/useCurrency";
@@ -400,15 +400,6 @@ export function RuleDetail() {
                       <span className="flex-1 [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#a8b9f4] truncate">
                         {vendor}
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => removeVendor(rule.id, vendor)}
-                        data-testid={`button-remove-vendor-${vendor.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`}
-                        className="w-[80px] flex items-center justify-center px-[12px] py-[8px] rounded-[100px] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] focus:outline-none focus-visible:ring-2"
-                        style={{ backgroundColor: "#350011", color: ALERT, ["--tw-ring-color" as string]: ALERT }}
-                      >
-                        Remove
-                      </button>
                     </div>
                   </div>
                 ))}
