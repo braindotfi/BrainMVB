@@ -36,6 +36,26 @@ Note that tab-switching needs explicit clicks — most list screens default to a
 tab that is empty even when the other tabs are full, so a single screenshot per route will
 under-report the data that exists.
 
+## Mint a session instead of provisioning a tenant
+
+`QA_COOKIE` does not have to come from a fresh login. Logging in via "Continue with Demo"
+provisions a whole production tenant (non-idempotent, founder-email-unique) just to look at a
+screen, and the new tenant then seeds asynchronously so the first pass under-reports.
+
+Reuse an existing demo user instead: insert a row into `user_sessions` (connect-pg-simple,
+`sess` is JSON holding `{cookie:{...}, userId}`), then build the cookie value the way
+express-session does — the raw sid alone gets you `{"error":"Not authenticated"}`:
+
+```
+s:<sid>.<base64 HMAC-SHA256 of sid keyed by SESSION_SECRET, trailing '=' stripped>
+```
+
+**Why:** an unsigned cookie is silently ignored rather than rejected, so it reads as an auth bug
+rather than a formatting one.
+
+**How to apply:** write the cookie to a file and pass it as `QA_COOKIE="$(cat …)"`. Never echo it
+— it is a live credential. Give the row a short `expire` and delete it when the run is done.
+
 ## A freshly provisioned demo tenant seeds asynchronously
 
 `POST /api/auth/demo-fresh` returns 200 long before the tenant's records exist. A
