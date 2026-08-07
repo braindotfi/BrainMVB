@@ -568,7 +568,7 @@ export function VendorDetailPopup({
                     onClick={() => setConfirmingDelete(true)}
                     disabled={trustBusy}
                     className="flex items-center justify-center px-[20px] py-[8px] rounded-[100px] hover:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#6c779d] w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
-                    style={{ background: "#1d2132" }}
+                    style={{ background: "#350011", color: "#d20344" }}
                     data-testid="button-delete-vendor"
                   >
                     Delete {nounTitle}
