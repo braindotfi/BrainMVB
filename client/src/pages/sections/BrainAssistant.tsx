@@ -1190,7 +1190,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
             data-testid="button-assistant-attach"
             onClick={() => fileInputRef.current?.click()}
             disabled={uploadDoc.isPending}
-            className="size-[32px] rounded-full bg-[#222737] flex items-center justify-center transition-colors hover:bg-[#2a3145] disabled:opacity-50"
+            className="size-[32px] rounded-full bg-[#222737] flex items-center justify-center transition-colors hover:bg-[#2a3145] disabled:opacity-60 disabled:cursor-not-allowed"
             title="Attach a document"
           >
             <Plus className="size-[18px]" color="#a8b9f4" strokeWidth={2} />
@@ -1200,7 +1200,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
               data-testid="button-assistant-send"
               onClick={() => sendMessage(draft)}
               disabled={!draft.trim() || sending || authLoading || isTransitioning || !user}
-              className="size-[32px] rounded-full bg-[#7631ee] flex items-center justify-center transition-opacity disabled:opacity-40 hover:opacity-90"
+              className="size-[32px] rounded-full bg-[#7631ee] flex items-center justify-center transition-opacity disabled:opacity-60 disabled:cursor-not-allowed hover:opacity-90"
               title="Send"
             >
               <ArrowUp className="size-[18px]" color="#ffffff" strokeWidth={2.4} />

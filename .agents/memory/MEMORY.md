@@ -81,3 +81,4 @@
 - [Receivables source contract](receivables-source-contract.md) — AR = invoices with positive scenario==="ar"; the receivable obligations feed is an incomplete subset; totals need a finished cursor walk.
 - [Auth test harness env](auth-test-harness-env.md) — the PG session store loses a race to an immediate follow-up request (looks like flake); load-time env reads force a dynamic import.
 - [API 404 vs SPA catch-all](api-404-vs-spa-catchall.md) — unmatched /api paths get 200+HTML from the SPA catch-all; keep the JSON-404 last in registerRoutes or removal tests go false-green.
+- [Tailwind class verification](tailwind-class-verification.md) — a variant never implies its base class; grep the served CSS (escaping lies), and client/public is outside the content globs.

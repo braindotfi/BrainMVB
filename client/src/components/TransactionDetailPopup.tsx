@@ -197,7 +197,7 @@ export function TransactionDetailPopup({
                       disabled={!prevTx}
                       data-testid="button-transaction-previous"
                       onClick={() => prevTx && onSelectTransaction?.(prevTx.id)}
-                      className="bg-[#222737] flex flex-1 gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
+                      className="bg-[#222737] flex flex-1 gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] disabled:opacity-60 disabled:cursor-not-allowed transition-opacity"
                     >
                       <img src={arrowIcon} alt="" className="size-[16px] rotate-180" />
                       <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">
@@ -209,7 +209,7 @@ export function TransactionDetailPopup({
                       disabled={!nextTx}
                       data-testid="button-transaction-next"
                       onClick={() => nextTx && onSelectTransaction?.(nextTx.id)}
-                      className="bg-[#222737] flex flex-1 gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
+                      className="bg-[#222737] flex flex-1 gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] disabled:opacity-60 disabled:cursor-not-allowed transition-opacity"
                     >
                       <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">
                         Next

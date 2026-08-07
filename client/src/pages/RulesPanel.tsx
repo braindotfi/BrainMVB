@@ -93,7 +93,7 @@ function RuleConfirmSentence({ rule }: { rule: AutoRule }) {
       : "pay it automatically";
 
   return (
-    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[22px] leading-[28px] w-full">
+    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[22px] leading-[28px] w-full">
       <span>When a </span>
       <span className="[font-family:'Gilroy',sans-serif] font-semibold underline [text-underline-position:from-font] decoration-from-font decoration-solid">{category}</span>
       {vendor && (
@@ -879,11 +879,11 @@ export function RulesPanel() {
                           );
                         })}
                         <div className="mx-[8px] my-[6px] h-px bg-[#1d2132]" />
-                        <p className="px-[8px] pt-[2px] pb-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] uppercase text-[#414965]">
+                        <p className="px-[8px] pt-[2px] pb-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] uppercase text-[#6c779d]">
                           Not Trusted Yet
                         </p>
                         {untrustedVendors.length === 0 ? (
-                          <p className="px-[8px] pb-[4px] [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-[#414965]">
+                          <p className="px-[8px] pb-[4px] [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-[#6c779d]">
                             Brain doesn't track an untrusted-vendor list yet.
                           </p>
                         ) : (
@@ -892,7 +892,7 @@ export function RulesPanel() {
                               key={v}
                               className="w-full flex items-center justify-between gap-[8px] rounded-[8px] p-[8px]"
                             >
-                               <span className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[14px] text-[#414965]">
+                               <span className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[14px] text-[#6c779d]">
                                 {v}
                               </span>
                               <span className="shrink-0 px-[8px] py-[2px] rounded-[100px] bg-[#350011] text-[#d20344] [font-family:'Gilroy',sans-serif] font-semibold text-[10px] uppercase tracking-[0.04em]">
@@ -976,7 +976,7 @@ export function RulesPanel() {
                   disabled={!builderValid}
                   onClick={() => setPendingCreate(buildDraft())}
                   data-testid="button-builder-create"
-                   className="flex-1 h-[36px] px-[12px] rounded-[100px] bg-[#4a2300] hover:bg-[#5a2d00] disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[16px] text-[#ff9400]"
+                   className="flex-1 h-[36px] px-[12px] rounded-[100px] bg-[#4a2300] hover:bg-[#5a2d00] disabled:opacity-60 disabled:cursor-not-allowed transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[16px] text-[#ff9400]"
                 >
                    Create Rule
                 </button>

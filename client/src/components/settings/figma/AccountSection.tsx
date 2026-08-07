@@ -42,12 +42,12 @@ const POPUP_BUTTON_ROW = "flex gap-[8px] items-start p-[8px] w-full";
 
 const POPUP_BUTTON_NEUTRAL =
   "flex-1 min-w-px flex items-center justify-center px-[12px] py-[8px] rounded-[100px] " +
-  "bg-[#222737] disabled:opacity-50 disabled:cursor-not-allowed " +
+  "bg-[#222737] disabled:opacity-60 disabled:cursor-not-allowed " +
   "font-['Gilroy',sans-serif] font-semibold text-[#6c779d] text-[14px] leading-[20px] whitespace-nowrap";
 
 const POPUP_BUTTON_DESTRUCTIVE =
   "flex-1 min-w-px flex items-center justify-center px-[12px] py-[8px] rounded-[100px] " +
-  "bg-[#350011] disabled:opacity-60 disabled:cursor-not-allowed " +
+  "bg-[#350011] hover:bg-[#4a0018] transition-colors disabled:opacity-60 disabled:cursor-not-allowed " +
   "font-['Gilroy',sans-serif] font-semibold text-[#d20344] text-[14px] leading-[20px] whitespace-nowrap";
 
 function ConfirmCloseModal({ onCancel, onConfirm, isDeleting }: { onCancel: () => void; onConfirm: () => void; isDeleting: boolean }) {

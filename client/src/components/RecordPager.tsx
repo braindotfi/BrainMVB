@@ -15,7 +15,7 @@ interface RecordPagerProps {
 }
 
 const BTN =
-  "bg-[#222737] flex flex-1 gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] hover:bg-[#2c3247] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] shrink-0 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[#222737]";
+  "bg-[#222737] flex flex-1 gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] hover:bg-[#2c3247] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] shrink-0 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-[#222737]";
 
 export function RecordPager({
   onPrev,

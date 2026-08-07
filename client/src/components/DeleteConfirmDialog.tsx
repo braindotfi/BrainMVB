@@ -96,7 +96,7 @@ export function DeleteConfirmDialog({
                 disabled={busy}
                 onClick={onConfirm}
                 data-testid={confirmTestId}
-                className="flex shrink-0 h-[45px] items-center justify-center px-[22.5px] rounded-[100px] hover:opacity-80 disabled:opacity-40 disabled:cursor-wait transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[#d20344] text-[16.88px] leading-[22.5px] w-[150px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d20344]"
+                className="flex shrink-0 h-[45px] items-center justify-center px-[22.5px] rounded-[100px] hover:opacity-80 disabled:opacity-60 disabled:cursor-not-allowed transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[#d20344] text-[16.88px] leading-[22.5px] w-[150px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d20344]"
                 style={{ background: "#350011" }}
               >
                 {busy ? "Working…" : confirmLabel}

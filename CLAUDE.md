@@ -1076,3 +1076,67 @@ Demo mode (default) is byte-identical to before — `/api/brain/tenancy` returns
   was removed from `TeamSection.tsx`. `MutedCallout` import dropped accordingly.
 - **Billing buttons confirmed live**: "Choose A Plan" opens `ChangePlanModal`; "Add Card" opens
   `UpdateCardModal`. Both were already wired; no UI change needed.
+
+## Disabled controls, muted text, and destructive hover
+
+Three rules that a design-consistency audit found broken across most surfaces. They are cheap to
+re-break, because each one is expressed as a literal utility string on ~50 hand-rolled buttons
+rather than in a shared primitive.
+
+### One disabled treatment, everywhere
+Every disabled-capable control uses exactly:
+
+```
+disabled:opacity-60 disabled:cursor-not-allowed
+```
+
+Nothing else. The app previously mixed `opacity-40`, `opacity-50`, `cursor-wait`, `cursor-default`
+and "no disabled styling at all". `opacity-40` over `#6c779d` on `#222737` lands around **1.6:1** —
+the label is legible only if you already know what it says. At `opacity-60` the same label is
+~2.1:1, visibly dimmer than its enabled state but still readable, which is the point of a disabled
+control.
+
+- Never use `disabled:cursor-wait`. A pending control is still a disabled control; "wait" implied a
+  distinction the app does not actually make, and it read as a hang.
+- Never pair `disabled:pointer-events-none` with `disabled:cursor-not-allowed` — `pointer-events:
+  none` suppresses the cursor, so the two together silently cancel out. `ui/button.tsx` had exactly
+  this bug. Native `disabled` buttons don't fire click, so dropping `pointer-events-none` is safe.
+- **Known exception:** the vendored shadcn primitives under `client/src/components/ui/` (input,
+  select, checkbox, switch, textarea, …) still carry upstream's `disabled:opacity-50`. No app code
+  imports them — they are only referenced by other `ui/` files — so they were deliberately left on
+  the upstream default rather than forked. If one of them ever gets adopted by a real surface,
+  bring it onto the rule above at that point.
+
+### Colour roles — `#414965` is not a text colour
+| Colour | Role |
+| --- | --- |
+| `#414965` | Borders, strokes, focus rings, badge fills. **Never text.** |
+| `#6c779d` | Secondary / muted copy: labels, metadata, IDs, timestamps, placeholders. |
+| `#a8b9f4` | Copy that has to be read: modal body text, headline sentences, values. |
+
+`#414965` on the `#0a0c10` card surface is **2.2:1** — below the 3:1 floor even for large text. It
+had leaked into policy IDs and 22px modal descriptions, where it read as greyed-out/disabled copy.
+`#6c779d` on the same surface is 4.4:1.
+
+Note this is only *enforced* on the surfaces the fix touched (`RuleDetail`, `RulesPanel`).
+`#414965` is still used as a text colour for Settings section labels
+(`SecuritySection`, `LegalSection`, `NotificationsSection`, `TeamSection`, `AuditLogSection`),
+`CashFlowTab` captions, `AddGoalModal` and `CompanySetupPage`. Those were left alone deliberately —
+converting them is a visible restyle of Settings, not a contrast fix. Don't add new ones.
+
+### Destructive buttons share one hover
+Destructive = `#d20344` text on a `#350011` background. The hover is **always** `#4a0018`, with
+`transition-colors`. Not `hover:opacity-80`, not "no hover at all" (which is what Delete Rule
+shipped with).
+
+The trap: several destructive buttons set their background through an **inline `style`**, and an
+inline `background` always outranks a `hover:bg-*` utility — so adding the hover class appears to
+do nothing. Either move the background into a class, or, where the colour comes from a tone
+palette, pass it as a CSS custom property and let the class consume it:
+
+```tsx
+style={{ ["--action-bg" as string]: palette.background, color: palette.color }}
+className="bg-[var(--action-bg)] hover:bg-[#4a0018] transition-colors"
+```
+
+`ProposalCardParts.ActionButton` and `DevelopersSection.PillButton` both use this pattern.

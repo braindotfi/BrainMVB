@@ -184,7 +184,7 @@ export function RuleDetail() {
                 <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px]">
                   {rule.summary}
                 </p>
-                <p className="[font-family:'JetBrains_Mono',monospace] leading-[18px] text-[#414965] text-[12px]" data-testid="text-rule-policy-id">
+                <p className="[font-family:'JetBrains_Mono',monospace] leading-[18px] text-[#6c779d] text-[12px]" data-testid="text-rule-policy-id">
                   {rule.policyId} · {rule.createdLabel}
                 </p>
               </div>
@@ -249,8 +249,8 @@ export function RuleDetail() {
                   type="button"
                   onClick={() => setConfirmingDelete(true)}
                   data-testid="button-delete-rule"
-                  className="flex items-center justify-center gap-[4px] px-[12px] py-[8px] rounded-[100px] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] focus:outline-none focus-visible:ring-2"
-                  style={{ backgroundColor: "#350011", color: ALERT, ["--tw-ring-color" as string]: ALERT }}
+                  className="flex items-center justify-center gap-[4px] px-[12px] py-[8px] rounded-[100px] bg-[#350011] hover:bg-[#4a0018] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] focus:outline-none focus-visible:ring-2"
+                  style={{ color: ALERT, ["--tw-ring-color" as string]: ALERT }}
                 >
                   <img src={deleteIcon} alt="" className="shrink-0 size-[16px]" /> Delete Rule
                 </button>
@@ -294,7 +294,7 @@ export function RuleDetail() {
                 {/* Body */}
                 <div className="flex flex-col gap-[24px] items-start p-[40px] w-full overflow-y-auto">
                   <DialogPrimitive.Description
-                    className="[font-family:'Gilroy',sans-serif] font-medium leading-[28px] text-[#414965] text-[22px]"
+                    className="[font-family:'Gilroy',sans-serif] font-medium leading-[28px] text-[#a8b9f4] text-[22px]"
                   >
                     Resuming lets this rule auto-clear {titleCase(rule.scopeSummary ?? "matching payments")} again automatically. Make sure you’ve resolved what you reported first.
                   </DialogPrimitive.Description>
@@ -350,7 +350,7 @@ export function RuleDetail() {
                 {/* Body */}
                 <div className="flex flex-col gap-[20px] items-start p-[30px] w-full overflow-y-auto">
                   <DialogPrimitive.Description
-                    className="[font-family:'Gilroy',sans-serif] font-medium leading-[26.25px] text-[#414965] text-[20.625px] w-full"
+                    className="[font-family:'Gilroy',sans-serif] font-medium leading-[26.25px] text-[#a8b9f4] text-[20.625px] w-full"
                   >
                     Are you sure you want to delete this rule? Deleting removes this rule entirely. This can’t be undone.
                   </DialogPrimitive.Description>
@@ -747,7 +747,7 @@ function PolicyDetailHeader({ rule }: { rule: PolicyContentRule }) {
           <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px]">
             {titleCase(appliesTo)} · {titleCase(executeLabel)}
           </p>
-          <p className="[font-family:'JetBrains_Mono',monospace] leading-[18px] text-[#414965] text-[12px]">
+          <p className="[font-family:'JetBrains_Mono',monospace] leading-[18px] text-[#6c779d] text-[12px]">
             {rule.id} · From your active Brain policy
           </p>
         </div>
