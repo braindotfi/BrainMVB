@@ -84,3 +84,4 @@
 - [Tailwind class verification](tailwind-class-verification.md) — a variant never implies its base class; grep the served CSS (escaping lies), and client/public is outside the content globs.
 - [Branching off stale main](branching-off-stale-main.md) — origin/main lags the real UI work; check `git branch -vv` for [ahead N] before cutting a task branch, or the preview silently rolls back.
 - [Opacity contrast model](opacity-contrast-model.md) — opacity fades label AND fill, so the enabled ratio is a hard ceiling; disabled controls are WCAG-exempt (1.4.3/1.4.11).
+- [Radius token clamping](radius-token-clamping.md) — a literal→pill swap is neutral only while min(W,H) ≤ 2r; computed styles report the specified radius, so assert on geometry.
