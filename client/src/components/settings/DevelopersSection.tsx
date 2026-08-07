@@ -26,7 +26,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAppAlert } from "@/components/AppAlert";
 import { usePlanId, PLAN_RATE_LIMITS } from "@/lib/planStore";
-import { AlertCallout, InfoIcon } from "@/components/Callout";
+import { AlertCallout, PolicyCallout } from "@/components/Callout";
 import stepOneIcon from "@assets/1_1785602525964.png";
 import stepTwoIcon from "@assets/2_1785602525965.png";
 import stepThreeIcon from "@assets/3_1785602525965.png";
@@ -326,7 +326,7 @@ const PopupShell = ({ title, onClose, children, footer, testId }: {
             data-testid="button-close-popup"
             onClick={onClose}
             aria-label="Close"
-            className="absolute right-[11px] top-[11px] size-[32px] rounded-full bg-[#222737] flex items-center justify-center hover:bg-[#2a3046] transition-colors text-[#6c779d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+            className="absolute right-[11px] top-[11px] size-[32px] rounded-full bg-[#222737] flex items-center justify-center hover:bg-[#2c3247] transition-colors text-[#6c779d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
               <path d="M2 2L10 10M10 2L2 10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
@@ -389,7 +389,7 @@ const PlaintextKeyModal = ({ plaintext, onClose }: { plaintext: string; onClose:
             data-testid="button-close-popup"
             onClick={onClose}
             aria-label="Close"
-            className="absolute right-[11px] top-[11px] size-[32px] rounded-full bg-[#222737] flex items-center justify-center hover:bg-[#2a3046] transition-colors text-[#6c779d] focus:outline-none"
+            className="absolute right-[11px] top-[11px] size-[32px] rounded-full bg-[#222737] flex items-center justify-center hover:bg-[#2c3247] transition-colors text-[#6c779d] focus:outline-none"
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
               <path d="M2 2L10 10M10 2L2 10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
@@ -889,7 +889,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
                 >
                   {s.state === "done" ? (
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <path d="M3 8.5L6.2 11.5L13 4.5" stroke="#ff9400" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M3 8.5L6.2 11.5L13 4.5" stroke="#ff9500" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   ) : (
                     <img
@@ -905,7 +905,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
                 <div className="flex-1 min-w-0 flex flex-col gap-[2px]">
                   <p
                     className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px]"
-                    style={{ color: s.state === "done" ? "#ff9400" : s.state === "todo" ? "#a8b9f4" : "#6c779d" }}
+                    style={{ color: s.state === "done" ? "#ff9500" : s.state === "todo" ? "#a8b9f4" : "#6c779d" }}
                   >
                     {s.label}
                   </p>
@@ -1251,7 +1251,7 @@ function KeysSection({ env }: { env: DevEnv }) {
               type="button"
               data-testid="button-request-live-access"
               onClick={() => alert.success("Request noted", "Live access is enabled when your workspace has a production tenant.")}
-              className="bg-[#222737] hover:bg-[#2a3046] transition-colors flex items-center justify-center px-[12px] py-[8px] rounded-[100px] self-start [font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[16px] whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+              className="bg-[#222737] hover:bg-[#2c3247] transition-colors flex items-center justify-center px-[12px] py-[8px] rounded-[100px] self-start [font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[16px] whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
             >
               Request Access
             </button>
@@ -1270,7 +1270,7 @@ function KeysSection({ env }: { env: DevEnv }) {
               data-testid="button-create-key"
               onClick={() => createMut.mutate()}
               disabled={createMut.isPending || name.trim().length === 0 || scopes.length === 0}
-              className="w-full bg-[#4a2300] hover:bg-[#5a2b00] transition-colors flex items-center justify-center px-[20px] py-[10px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[#ff9400] text-[14px] leading-[20px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full bg-[#4a2300] hover:bg-[#5a2d00] transition-colors flex items-center justify-center px-[20px] py-[10px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[#ff9500] text-[14px] leading-[20px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {createMut.isPending ? "Creating…" : "Create Key"}
             </button>
@@ -1324,16 +1324,10 @@ function KeysSection({ env }: { env: DevEnv }) {
             })}
           </PopupSection>
           {!keysUnavailable && !keysQ.isLoading && !keysQ.isError && (
-            <div
-              className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
-              style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
-            >
-            <InfoIcon className="mt-[2px]" />
-            <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#7631ee] text-[14px] leading-[18px] flex-1 min-w-px">
+            <PolicyCallout>
               Keys are issued by brain-core and stored hashed. Enforcement inside brain-core's API gateway is rolling
               out. Until then, keys authenticate against platform endpoints only.
-            </p>
-            </div>
+            </PolicyCallout>
           )}
         </PopupShell>
       )}
@@ -1404,16 +1398,10 @@ function KeysSection({ env }: { env: DevEnv }) {
       </div>
 
       {!keysUnavailable && !keysQ.isLoading && !keysQ.isError && (
-        <div
-          className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full shrink-0"
-          style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
-        >
-          <InfoIcon className="mt-[2px]" />
-          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#7631ee] text-[14px] leading-[18px] flex-1 min-w-px">
-            Keys are issued and stored hashed by brain-core, and enforced on every key-authenticated call.
-            Rate limit: 600 requests per 60 seconds per key.
-          </p>
-        </div>
+        <PolicyCallout className="shrink-0">
+          Keys are issued and stored hashed by brain-core, and enforced on every key-authenticated call.
+          Rate limit: 600 requests per 60 seconds per key.
+        </PolicyCallout>
       )}
     </div>
   );
@@ -1977,22 +1965,16 @@ function UsageSection({ env }: { env: DevEnv }) {
         !keysQ.isError &&
         !keyUsageQ.isLoading &&
         !keyUsageQ.isError && (
-          <div
-            className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
-            style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
-          >
-            <InfoIcon className="mt-[2px]" />
-            <div className="[font-family:'Gilroy',sans-serif] font-medium text-[#7631ee] text-[14px] flex-1 min-w-px">
-              <p className="leading-[18px] mb-[12px]">
-                Key counts come from brain-core&apos;s per-key usage attribution ({keyUsageQ.data?.window ?? "30d"} window).
-                They are a different measurement than the tenant-wide audit events above and won&apos;t match those totals.
-              </p>
-              <p className="leading-[18px]">
-                Usage is aggregated from brain-core audit events for your tenant, attributed to the environment your
-                tenancy mode runs in (demo to sandbox, production to live).
-              </p>
-            </div>
-          </div>
+          <PolicyCallout>
+            <p className="mb-[12px]">
+              Key counts come from brain-core&apos;s per-key usage attribution ({keyUsageQ.data?.window ?? "30d"} window).
+              They are a different measurement than the tenant-wide audit events above and won&apos;t match those totals.
+            </p>
+            <p>
+              Usage is aggregated from brain-core audit events for your tenant, attributed to the environment your
+              tenancy mode runs in (demo to sandbox, production to live).
+            </p>
+          </PolicyCallout>
         )}
       </div>
     </div>

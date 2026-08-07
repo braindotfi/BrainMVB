@@ -115,7 +115,7 @@ export function chipClasses(severity: Severity): string {
     case "danger":
       return "bg-[#350011] text-[#d20344]";
     case "warning":
-      return "bg-[#3a2600] text-[#ff9500]";
+      return "bg-[#4a2300] text-[#ff9500]";
     case "info":
       return "bg-[#1d2132] text-[#a8b9f4]";
     case "clean":
@@ -500,7 +500,7 @@ export function ProposalDetail({
                   type="button"
                   onClick={() => onAction("verifyFirst")}
                   data-testid="button-verify-first"
-                  className="flex flex-col items-center justify-center w-full px-[20px] py-[12px] rounded-[100px] bg-[#240757] border border-[rgba(118,49,238,0.35)] hover:bg-[#2e0a6b] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                  className="flex flex-col items-center justify-center w-full px-[20px] py-[12px] rounded-[100px] bg-[#240757] border border-[rgba(118,49,238,0.35)] hover:bg-[#2e0a6e] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
                 >
                   <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px]">
                     {proposal.actions.verifyFirst.label}
@@ -845,7 +845,7 @@ function AutoHandledReceipt({
             disabled={!ruleResolves}
             onClick={() => onReviewRule?.(proposal)}
             data-testid="button-review-rule"
-            className="flex flex-1 items-center justify-center gap-[8px] px-[12px] py-[10px] rounded-[100px] bg-[#240757] border border-[rgba(118,49,238,0.35)] hover:bg-[#2e0a6b] transition-colors disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+            className="flex flex-1 items-center justify-center gap-[8px] px-[12px] py-[10px] rounded-[100px] bg-[#240757] border border-[rgba(118,49,238,0.35)] hover:bg-[#2e0a6e] transition-colors disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
           >
             <SlidersHorizontal size={16} className="text-[#7631ee] shrink-0" />
             <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[18px] text-[14px] text-[#7631ee] whitespace-nowrap">
@@ -943,7 +943,7 @@ function AutoHandledReceipt({
                 type="button"
                 onClick={() => { setDidPause(true); submit(true); }}
                 data-testid="button-report-pause-review"
-                className="flex w-full items-center justify-center gap-[8px] px-[16px] py-[11px] rounded-[100px] bg-[#7631ee] hover:bg-[#8a4bf5] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                className="flex w-full items-center justify-center gap-[8px] px-[16px] py-[11px] rounded-[100px] bg-[#7631ee] hover:bg-[#8442f5] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
               >
                 Pause rule and review
               </button>

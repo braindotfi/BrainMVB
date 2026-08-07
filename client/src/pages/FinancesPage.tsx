@@ -28,6 +28,7 @@ import { ReceivablesTab } from "@/components/ReceivablesTab";
 import { VendorsPanel } from "@/pages/VendorsPanel";
 import { RulesPanel } from "@/pages/RulesPanel";
 import { WidgetCard } from "@/components/LedgerWidgets";
+import { LedgerRecordRow } from "@/components/LedgerRecordRow";
 import { TransactionDetailPopup } from "@/components/TransactionDetailPopup";
 import { AccountDetailPopup } from "@/components/AccountDetailPopup";
 import { UnavailableDataBox } from "@/components/Callout";
@@ -299,24 +300,12 @@ export function FinancesPage() {
             {accounts.map((acc, idx) => {
               const clickable = !!acc.id;
               return (
-              <div
+              <LedgerRecordRow
                   key={acc.name}
-                  data-testid={`row-account-${idx}`}
-                  {...(clickable
-                    ? {
-                        role: "button",
-                        tabIndex: 0,
-                        onClick: () => setOpenAccountId(acc.id!),
-                        onKeyDown: (e: React.KeyboardEvent) => {
-                          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpenAccountId(acc.id!); }
-                        },
-                      }
-                    : {})}
-                  className={`flex gap-[12px] items-center px-[16px] py-[12px] relative shrink-0 w-full bg-[#0a0c10] transition-colors border-b border-solid border-[#1d2132] last:border-b-0 ${clickable ? "hover:bg-[#11141b] cursor-pointer" : ""}`}
-                >
-                  <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">{acc.name}</p>
-                    <div className="flex gap-[4px] items-center relative shrink-0">
+                  rowTestId={`row-account-${idx}`}
+                  name={acc.name}
+                  secondary={
+                    <>
                       <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] whitespace-nowrap">{acc.sub}</p>
                       {acc.sub2 && (
                         <>
@@ -324,12 +313,20 @@ export function FinancesPage() {
                           <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] whitespace-nowrap">{acc.sub2}</p>
                         </>
                       )}
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-end justify-center relative shrink-0">
-                    <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap">{rowBalanceLabel(acc, format)}</p>
-                  </div>
-                </div>
+                    </>
+                  }
+                  amount={rowBalanceLabel(acc, format)}
+                  sign=""
+                  amountColor="#a8b9f4"
+                  {...(clickable
+                    ? {
+                        onClick: () => setOpenAccountId(acc.id!),
+                        onKeyDown: (e: React.KeyboardEvent<HTMLDivElement>) => {
+                          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpenAccountId(acc.id!); }
+                        },
+                      }
+                    : {})}
+                />
               
               );
             })}

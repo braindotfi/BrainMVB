@@ -99,23 +99,44 @@ export function UnavailableDataBox({
       className={`flex gap-[12px] items-center px-[16px] py-[12px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-solid border-[#1d2132] ${className}`}
       data-testid={testId}
     >
-      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#ff9400] text-[16px] flex-1">
+      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#ff9500] text-[16px] flex-1">
         {children}
       </p>
     </div>
   );
 }
 
+/**
+ * Geometry lives in the tone table, not in the frame, because the tones are not
+ * all the same kind of message. `alert` and `muted` are short one-line notices;
+ * `policy` carries multi-sentence prose, and squeezing that to 16px leading on
+ * 14px text reads as a wall. The padding/leading pair is therefore declared per
+ * tone — still one place to change, but honest about the difference.
+ */
 const TONES = {
   alert: {
     box: "bg-[#350011] border-[rgba(210,3,68,0.2)]",
+    pad: "p-[8px]",
+    gap: "gap-[8px]",
+    leading: "leading-[16px]",
     text: "text-[#d20344]",
     Icon: () => <AlertIcon />,
   },
   muted: {
     box: "bg-[#0a0c10] border-[#1d2132]",
+    pad: "p-[8px]",
+    gap: "gap-[8px]",
+    leading: "leading-[16px]",
     text: "text-[#6c779d]",
     Icon: () => <InfoIcon color="#6c779d" />,
+  },
+  policy: {
+    box: "bg-[#240757] border-[rgba(118,49,238,0.2)]",
+    pad: "p-[12px]",
+    gap: "gap-[10px]",
+    leading: "leading-[18px]",
+    text: "text-[#7631ee]",
+    Icon: () => <InfoIcon className="mt-[2px]" />,
   },
 } as const;
 
@@ -126,19 +147,19 @@ function CalloutFrame({
   testId,
   className = "",
 }: CalloutProps & { tone: keyof typeof TONES }) {
-  const { box, text, Icon } = TONES[tone];
+  const { box, pad, gap, leading, text, Icon } = TONES[tone];
   return (
     <div
-      className={`${box} border border-solid rounded-[12px] flex items-center p-[8px] w-full ${className}`}
+      className={`${box} border border-solid rounded-[12px] flex items-center ${pad} w-full ${className}`}
       data-testid={testId}
     >
-      <div className="flex flex-1 gap-[8px] items-start min-w-px">
+      <div className={`flex flex-1 ${gap} items-start min-w-px`}>
         <Icon />
         <div className="flex flex-1 flex-col justify-center min-w-px gap-[4px]">
           {title && (
             <p className={`${FONT} font-semibold leading-[16px] ${text} text-[14px]`}>{title}</p>
           )}
-          <div className={`${FONT} font-medium leading-[16px] ${text} text-[14px] [word-break:break-word]`}>
+          <div className={`${FONT} font-medium ${leading} ${text} text-[14px] [word-break:break-word]`}>
             {children}
           </div>
         </div>
@@ -162,4 +183,17 @@ export function AlertCallout(props: CalloutProps) {
  */
 export function MutedCallout(props: CalloutProps) {
   return <CalloutFrame tone="muted" {...props} />;
+}
+
+/**
+ * Explains how Brain's own policy layer behaves — core default rules, what the
+ * Inbox is for, how keys are enforced. Informational, never a failure, so it
+ * takes the product purple rather than crimson or grey.
+ *
+ * This shape had been hand-rolled in eight places across five files with the
+ * same #240757 fill, the same 20%-opacity #7631EE hairline, and the same
+ * `InfoIcon` nudged down 2px.
+ */
+export function PolicyCallout(props: CalloutProps) {
+  return <CalloutFrame tone="policy" {...props} />;
 }

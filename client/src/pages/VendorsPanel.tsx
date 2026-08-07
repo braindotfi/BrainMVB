@@ -72,7 +72,7 @@ function ReasonChip({ label }: { label: string }) {
   const danger = label.startsWith("Risk:") || label === "Paused for review";
   return (
     <RecordPill
-      className={danger ? "bg-[#350011] text-[#d20344] border-[rgba(210,3,68,0.2)]" : "bg-[#4a2300] text-[#ff9400] border-[rgba(255,149,0,0.2)]"}
+      className={danger ? "bg-[#350011] text-[#d20344] border-[rgba(210,3,68,0.2)]" : "bg-[#4a2300] text-[#ff9500] border-[rgba(255,149,0,0.2)]"}
       testId="chip-review-reason"
     >
       {label}
@@ -682,7 +682,7 @@ export function VendorsPanel() {
                     type="button"
                     onClick={() => setAddOpen(true)}
                     data-testid="button-add-vendor"
-                    className="flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#ff9400] text-[12px] whitespace-nowrap hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                    className="flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#ff9500] text-[12px] whitespace-nowrap hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
                     style={{ background: "#4a2300" }}
                   >
                     <Plus className="size-[16px] shrink-0" />
@@ -749,7 +749,7 @@ export function VendorsPanel() {
                         type="button"
                         onClick={resetAddVendor}
                         data-testid="button-add-vendor-cancel"
-                        className="flex-1 h-[36px] px-[12px] rounded-[100px] bg-[#222737] hover:bg-[#2b3145] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[16px] text-[#6c779d]"
+                        className="flex-1 h-[36px] px-[12px] rounded-[100px] bg-[#222737] hover:bg-[#2c3247] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[16px] text-[#6c779d]"
                       >
                         Cancel
                       </button>
@@ -762,7 +762,7 @@ export function VendorsPanel() {
                         }}
                         disabled={!vendorName.trim()}
                         data-testid="button-submit-vendor"
-                        className="flex-1 h-[36px] px-[12px] rounded-[100px] bg-[#4a2300] hover:bg-[#5a2d00] disabled:opacity-60 disabled:cursor-not-allowed transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[16px] text-[#ff9400]"
+                        className="flex-1 h-[36px] px-[12px] rounded-[100px] bg-[#4a2300] hover:bg-[#5a2d00] disabled:opacity-60 disabled:cursor-not-allowed transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[16px] text-[#ff9500]"
                       >
                         Submit for Verification
                       </button>

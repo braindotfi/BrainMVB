@@ -45,7 +45,7 @@ const Header = ({ title, onClose, onBack, testIdPrefix }: { title: string; onClo
         <RoundIconButton label="Back" testId={`button-${testIdPrefix}-back`} onClick={onBack}><BackIcon /></RoundIconButton>
       </div>
     )}
-    <Dialog.Title className="font-['Gilroy',sans-serif] font-semibold text-[20px] leading-[24px] text-[#a8b9f4]">
+    <Dialog.Title className="[font-family:'Gilroy',sans-serif] font-semibold text-[20px] leading-[24px] text-[#a8b9f4]">
       {title}
     </Dialog.Title>
     <div className="absolute right-[11px] top-1/2 -translate-y-1/2">
@@ -148,7 +148,7 @@ function CountrySelector({ value, onChange }: { value: string; onChange: (v: str
         className="w-full flex items-center gap-[8px] bg-[#222737] rounded-[8px] px-[8px] py-[10px] outline-none focus:ring-1 focus:ring-[#7631ee]"
       >
         <span className="text-[16px] leading-[20px]">{selected.flag}</span>
-        <span className="font-['Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#fff]">
+        <span className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#fff]">
           {selected.code}
         </span>
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="ml-auto shrink-0">
@@ -165,8 +165,8 @@ function CountrySelector({ value, onChange }: { value: string; onChange: (v: str
               className="w-full flex items-center gap-[8px] px-[8px] py-[10px] hover:bg-[#1d2132] transition-colors"
             >
               <span className="text-[16px]">{c.flag}</span>
-              <span className="font-['Gilroy',sans-serif] font-medium text-[16px] text-[#a8b9f4]">{c.label}</span>
-              <span className="font-['Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d] ml-auto">{c.code}</span>
+              <span className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] text-[#a8b9f4]">{c.label}</span>
+              <span className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d] ml-auto">{c.code}</span>
             </button>
           ))}
         </div>
@@ -313,7 +313,7 @@ export function ContactUpdateModal({
             <div className="flex flex-col gap-[16px] w-[322px]">
               <p
                 data-testid={`text-contact-sub-${type}-${step}`}
-                className="font-['Gilroy',sans-serif] font-medium text-[22px] leading-[28px] text-[#414965] w-full"
+                className="[font-family:'Gilroy',sans-serif] font-medium text-[22px] leading-[28px] text-[#414965] w-full"
               >
                 {subtitle}
               </p>
@@ -322,7 +322,7 @@ export function ContactUpdateModal({
                 <div className="flex flex-col gap-[12px] w-full">
                   {isEmail ? (
                     <div className="flex flex-col gap-[4px]">
-                      <p className="font-['Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-[#6c779d]">
+                      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-[#6c779d]">
                         Email Address
                       </p>
                       <TextInput
@@ -335,13 +335,13 @@ export function ContactUpdateModal({
                   ) : (
                     <>
                       <div className="flex flex-col gap-[4px]">
-                        <p className="font-['Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-[#6c779d]">
+                        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-[#6c779d]">
                           Country Code
                         </p>
                         <CountrySelector value={countryCode} onChange={setCountryCode} />
                       </div>
                       <div className="flex flex-col gap-[4px]">
-                        <p className="font-['Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-[#6c779d]">
+                        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-[#6c779d]">
                           Phone#
                         </p>
                         <TextInput
@@ -364,7 +364,7 @@ export function ContactUpdateModal({
                     testIdPrefix={`input-verify-code-${type}`}
                   />
                   {error && (
-                    <p data-testid="text-verify-error" className="font-['Gilroy',sans-serif] font-medium text-[13px] leading-[18px] text-[#d20344] w-full">
+                    <p data-testid="text-verify-error" className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[18px] text-[#d20344] w-full">
                       {error}
                     </p>
                   )}
@@ -381,7 +381,7 @@ export function ContactUpdateModal({
                   onClick={advanceToVerify}
                   className="flex-1 min-w-0 flex items-center justify-center bg-[#4a2300] rounded-[100px] px-[24px] py-[12px] disabled:opacity-60 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
                 >
-                  <span className="font-['Gilroy',sans-serif] font-semibold text-[18px] leading-[24px] text-[#ff9500] whitespace-nowrap">
+                  <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[18px] leading-[24px] text-[#ff9500] whitespace-nowrap">
                     Verify
                   </span>
                 </button>
@@ -393,7 +393,7 @@ export function ContactUpdateModal({
                     onClick={resend}
                     className="flex-1 min-w-0 flex items-center justify-center bg-[#222737] rounded-[100px] px-[16px] py-[10px] hover:opacity-90 transition-opacity"
                   >
-                    <span className="font-['Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#a8b9f4] whitespace-nowrap">
+                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#a8b9f4] whitespace-nowrap">
                       Resend
                     </span>
                   </button>
@@ -404,7 +404,7 @@ export function ContactUpdateModal({
                     onClick={confirm}
                     className="flex-1 min-w-0 flex items-center justify-center bg-[#42bf23] rounded-[100px] px-[16px] py-[10px] disabled:opacity-60 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
                   >
-                    <span className="font-['Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-[#fff] whitespace-nowrap">
+                    <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-[#fff] whitespace-nowrap">
                       Confirm
                     </span>
                   </button>

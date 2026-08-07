@@ -58,9 +58,9 @@ const FILTER_OPTIONS: { id: TypeFilter; label: string }[] = [
 type Category = "decision" | "assistant" | "system";
 
 const CATEGORY_BADGE: Record<Category, { label: string; bg: string; color: string; border: string }> = {
-  decision:  { label: "Decision",  bg: "#4a2300", color: "#ff9400", border: "1px solid rgba(255,149,0,0.2)" },
-  assistant: { label: "Assistant", bg: "#4a2300", color: "#ff9400", border: "1px solid rgba(255,149,0,0.2)" },
-  system:    { label: "Systems",   bg: "#4a2300", color: "#ff9400", border: "1px solid rgba(255,149,0,0.2)" },
+  decision:  { label: "Decision",  bg: "#4a2300", color: "#ff9500", border: "1px solid rgba(255,149,0,0.2)" },
+  assistant: { label: "Assistant", bg: "#4a2300", color: "#ff9500", border: "1px solid rgba(255,149,0,0.2)" },
+  system:    { label: "Systems",   bg: "#4a2300", color: "#ff9500", border: "1px solid rgba(255,149,0,0.2)" },
 };
 
 const RECORD_STATUS_BADGE = {

@@ -1192,3 +1192,64 @@ className="bg-[var(--action-bg)] hover:bg-[#4a0018] transition-colors"
 ```
 
 `ProposalCardParts.ActionButton` and `DevelopersSection.PillButton` both use this pattern.
+
+## One value per role
+
+Near-duplicate hexes are the app's most common drift: a colour gets re-picked from a Figma frame
+instead of copied from its neighbour, and the two differ by a channel or two. The pairs below are
+now single values. **Before introducing a new hex, grep for a sibling within a few RGB points.**
+
+| Role | Canonical | Was also |
+| --- | --- | --- |
+| Amber / warning | `#ff9500` | `#ff9400` |
+| Neutral hover grey | `#2c3247` | `#2a3040`, `#2a3046`, `#2b3145` |
+| Amber fill | `#4a2300` | `#3a2600`, `#3a2500` |
+| Amber fill hover | `#5a2d00` | `#5a2b00`, `#5a2c00` |
+| Purple secondary fill | `#240757` (hover `#2e0a6e`) | hover `#2e0a6b` |
+| Purple primary fill | `#7631ee` (hover `#8442f5`) | hover `#8a4bf5` |
+
+Two purple hovers were equally common, so the tie was broken on contrast: white on `#8442f5` is
+**5.15:1** versus **4.77:1** on `#8a4bf5`, and `#8442f5` is what the primary CTA already used.
+Collapsing the amber badge fill keeps `#ff9500` at **6.24:1** (was 6.55:1), still clear of AA.
+
+**`#11141b` and `#0a0c10` are NOT duplicates.** They are the page background and the card surface;
+the whole card system reads off that difference. Never merge them.
+
+**`#2a2010` is not an amber control colour.** It is body text inside the light "paper" document
+facsimile in `DocumentViewerPopup`, which has its own cream palette (`#e8e2d4` rules, `#8a7a60`
+labels). It only looks like a dark amber.
+
+### Font-family syntax
+Always `[font-family:'Gilroy',sans-serif]`. The `font-['Gilroy',sans-serif]` form compiles to the
+same declaration but splits every grep for typography in two; 76 occurrences across 11 files were
+converted so the search term is now reliable.
+
+### Fractional pixel values
+Figma exports at a non-1× zoom leak values like `18.75px`, `20.625px`, `16.88px`, `0.938px` — all of
+`DeleteConfirmDialog` was exported at 1.25×. Round on the way in. Sub-pixel borders in particular
+render inconsistently across browsers and zoom levels.
+
+### Shared primitives, not re-implementations
+`CountPill`, `LedgerRecordRow`, and `Callout` exist so a shape is a fact rather than a convention.
+When a surface needs one, import it — a hand-copy is how the geometry drifts.
+
+- `FilterChipRow` had `CountPill`'s exact geometry inline; it now imports it (the chip's `ml-[6px]`
+  became `gap-[6px]` on the button, and `CountPill` gained `transition-colors` so the badge fades
+  with its chip).
+- `FinancesPage`'s Accounts tab had its own copy of the ledger row; it now uses `LedgerRecordRow`,
+  which also gives those rows the focus ring and truncation the copy lacked.
+- `Callout` gained a **`policy`** tone (`PolicyCallout`) — the purple `#240757` info banner that had
+  been hand-rolled in eight places across five files. Geometry lives in the tone table rather than
+  the frame, because `policy` carries prose: it keeps `p-[12px]` / `leading-[18px]`, while the
+  short `alert` and `muted` notices keep `p-[8px]` / `leading-[16px]`. Squeezing multi-sentence
+  copy to 16px leading on 14px text is a readability regression, not a dedup.
+
+Still hand-rolled and *deliberately* not converted: the icon-less 8px-radius purple notes in
+`ProposalDetail` and `AddGoalModal`. Folding those into `PolicyCallout` would add an icon and change
+the radius — a design decision, not a dedup.
+
+### Page headers
+Overview, Inbox and Ledger share one header stack: a 20px eyebrow, a 32px title, and a 16px
+description, as three sibling `<p>`s in a `gap-[4px]` column. Overview previously wrapped each line
+in its own flex row and used a `leading-[0] text-[0px]` parent to kill whitespace between the
+greeting's spans.

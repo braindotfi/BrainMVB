@@ -67,7 +67,7 @@ type Format = (a: string | number) => string;
 const KIND_BADGE: Record<CashFlowKind, { bg: string; border: string; fg: string }> = {
   income: { bg: "#123509", border: "rgba(66,191,35,0.25)", fg: "#42bf23" },
   expense: { bg: "#350011", border: "rgba(210,3,68,0.25)", fg: "#d20344" },
-  bill: { bg: "#4a2300", border: "rgba(255,148,0,0.25)", fg: "#ff9400" },
+  bill: { bg: "#4a2300", border: "rgba(255,148,0,0.25)", fg: "#ff9500" },
   transfer: { bg: "#222737", border: "#2c3247", fg: "#6c779d" },
   adjustment: { bg: "#222737", border: "#2c3247", fg: "#6c779d" },
 };

@@ -28,7 +28,7 @@ const RoundIconButton = ({ children, onClick, label, testId }: { children: React
 
 const Header = ({ title, onClose, testIdPrefix }: { title: string; onClose: () => void; testIdPrefix: string }) => (
   <div className="relative h-[56px] flex items-center justify-center border-b border-[#1d2132] backdrop-blur-[10px]" style={{ background: "rgba(17,20,27,0.8)" }}>
-    <Dialog.Title className="font-['Gilroy',sans-serif] font-semibold text-[20px] leading-[24px] text-[#a8b9f4]">
+    <Dialog.Title className="[font-family:'Gilroy',sans-serif] font-semibold text-[20px] leading-[24px] text-[#a8b9f4]">
       {title}
     </Dialog.Title>
     <div className="absolute right-[11px] top-1/2 -translate-y-1/2">
@@ -138,14 +138,14 @@ export function ChangePlanModal({
               >
                 <PlanRadio active={isSelected} />
                 <div className="flex-1 min-w-0 flex flex-col justify-center">
-                <p className="font-['Gilroy',sans-serif] font-semibold text-[14px] leading-[20px]" style={{ color: nameColor }}>
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px]" style={{ color: nameColor }}>
                     {plan.name}
                   </p>
                   <div className="flex gap-[4px] items-center flex-wrap">
                     {plan.features.map((f, i) => (
                       <span key={f} className="flex items-center gap-[4px]">
                         {i > 0 && <Dot color={accent} />}
-                        <span className="font-['Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] whitespace-nowrap" style={{ color: accent }}>
+                        <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] whitespace-nowrap" style={{ color: accent }}>
                           {f}
                         </span>
                       </span>
@@ -175,7 +175,7 @@ export function ChangePlanModal({
                     }}
                   >
                     <StarIcon />
-                    <span className="font-['Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-[#4a2300]">Recommended</span>
+                    <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-[#4a2300]">Recommended</span>
                   </span>
                 )}
               </button>
@@ -190,7 +190,7 @@ export function ChangePlanModal({
           className="w-full flex items-center justify-center px-[20px] py-[10px] rounded-full hover-elevate disabled:opacity-60 disabled:cursor-not-allowed"
           style={{ background: "#4a2300" }}
         >
-          <span className="font-['Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-[#ff9400] whitespace-nowrap">
+          <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-[#ff9500] whitespace-nowrap">
             {isCurrent ? "Already On This Plan" : `Switch To ${selectedPlan?.name}`}
           </span>
         </button>
@@ -246,13 +246,13 @@ const CardInput = ({ value, onChange, placeholder, testId, maxLength, inputMode 
     inputMode={inputMode}
     data-testid={testId}
     autoComplete="off"
-    className="w-full rounded-[8px] px-[8px] py-[10px] font-['Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#a8b9f4] placeholder:text-[#6c779d] focus:outline-none focus:ring-1 focus:ring-[#7631ee]"
+    className="w-full rounded-[8px] px-[8px] py-[10px] [font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#a8b9f4] placeholder:text-[#6c779d] focus:outline-none focus:ring-1 focus:ring-[#7631ee]"
     style={{ background: "#222737" }}
   />
 );
 
 const InputLabel = ({ children }: { children: ReactNode }) => (
-  <p className="font-['Gilroy',sans-serif] font-semibold text-[14px] leading-[16px] text-[#6c779d] whitespace-nowrap">{children}</p>
+  <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[16px] text-[#6c779d] whitespace-nowrap">{children}</p>
 );
 
 export function UpdateCardModal({
@@ -284,22 +284,22 @@ export function UpdateCardModal({
         <div className="flex flex-col gap-[32px] p-[24px]">
           <div className="flex flex-col gap-[16px]">
             <div className="flex gap-[8px] items-center w-full">
-              <p className="font-['Gilroy',sans-serif] font-semibold text-[14px] leading-[14px] text-[#6c779d] whitespace-nowrap">Payment Method</p>
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[14px] text-[#6c779d] whitespace-nowrap">Payment Method</p>
               <div className="flex-1 h-px bg-[#1d2132]" />
             </div>
-            <p className="font-['Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#a8b9f4]">
+            <p className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#a8b9f4]">
               Card updates are unavailable until a tokenized payment processor is connected.
             </p>
             <div className="flex gap-[8px] items-start p-[8px] rounded-[12px] border border-[#1d2132]">
               <InfoCircleIcon />
-              <p className="font-['Gilroy',sans-serif] font-medium text-[14px] leading-[16px] text-[#6c779d]">
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[16px] text-[#6c779d]">
                 Brain will not collect card numbers or security codes in this form.
               </p>
             </div>
           </div>
           <div className="flex gap-[8px] items-start">
             <CheckCircleIcon />
-            <p className="font-['Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#a8b9f4]">
+            <p className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#a8b9f4]">
               Add Stripe Elements or another tokenizing widget before enabling card updates.
             </p>
           </div>
@@ -310,7 +310,7 @@ export function UpdateCardModal({
             className="w-full flex items-center justify-center px-[20px] py-[10px] rounded-full opacity-50 cursor-not-allowed"
             style={{ background: "#4a2300" }}
           >
-            <span className="font-['Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-[#ff9400] whitespace-nowrap">Processor Required</span>
+            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-[#ff9500] whitespace-nowrap">Processor Required</span>
           </button>
         </div>
       </ModalShell>
@@ -341,7 +341,7 @@ export function UpdateCardModal({
           </div>
           <div className="flex flex-col gap-[6px]">
             <div className="flex gap-[8px] items-center w-full">
-              <p className="flex-1 font-['Gilroy',sans-serif] font-semibold text-[14px] leading-[16px] text-[#6c779d]">Credit Card</p>
+              <p className="flex-1 [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[16px] text-[#6c779d]">Credit Card</p>
               <div className="flex gap-[8px] items-center shrink-0">
                 {CARD_BRANDS.map(b => (
                   <span
@@ -379,7 +379,7 @@ export function UpdateCardModal({
           className="w-full flex items-center justify-center px-[20px] py-[10px] rounded-full hover-elevate disabled:opacity-60 disabled:cursor-not-allowed"
           style={{ background: "#240757" }}
         >
-          <span className="font-['Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-[#7631ee] whitespace-nowrap">Add This Card</span>
+          <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-[#7631ee] whitespace-nowrap">Add This Card</span>
         </button>
       </div>
     </ModalShell>

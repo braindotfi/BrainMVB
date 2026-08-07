@@ -251,7 +251,7 @@ export function AuditRecordPopup({
                                     <div className="mt-[4px] mb-[4px] w-[2px] flex-1 bg-[#1d2132]" />
                                   )}
                                 </div>
-                                <div className="[word-break:break-word] content-stretch flex flex-[1_0_0] flex-col font-['Gilroy',sans-serif] font-medium gap-[8px] items-start justify-center leading-[16px] min-w-px not-italic relative text-[14px]">
+                                <div className="[word-break:break-word] content-stretch flex flex-[1_0_0] flex-col [font-family:'Gilroy',sans-serif] font-medium gap-[8px] items-start justify-center leading-[16px] min-w-px not-italic relative text-[14px]">
                                   <p className="relative shrink-0 text-[#a8b9f4] w-full">
                                     {actorMember ? (
                                       <button

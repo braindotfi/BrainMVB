@@ -153,7 +153,7 @@ export function AccountDetailPopup({
           {/* Title and Controls */}
           <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-[#1d2132] border-solid h-[56px] relative shrink-0 w-full">
             <DialogPrimitive.Title asChild>
-              <p className="-translate-x-1/2 absolute font-['Gilroy',sans-serif] font-semibold leading-[24px] left-1/2 not-italic text-[#a8b9f4] text-[20px] text-center top-[calc(50%-12px)] whitespace-nowrap">
+              <p className="-translate-x-1/2 absolute [font-family:'Gilroy',sans-serif] font-semibold leading-[24px] left-1/2 not-italic text-[#a8b9f4] text-[20px] text-center top-[calc(50%-12px)] whitespace-nowrap">
                 Account Details
               </p>
             </DialogPrimitive.Title>
@@ -244,7 +244,7 @@ export function AccountDetailPopup({
                   ) : (
                     <p
                       className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[16px] w-full"
-                      style={{ color: txFeed.unavailable ? "#ff9400" : "#6c779d" }}
+                      style={{ color: txFeed.unavailable ? "#ff9500" : "#6c779d" }}
                       data-testid={
                         txFeed.unavailable
                           ? "text-activity-unavailable"
@@ -311,7 +311,7 @@ export function AccountDetailPopup({
                   fine and simply unreadable this second. */}
               <p
                 className="[font-family:'Gilroy',sans-serif] font-medium text-[14px]"
-                style={{ color: accountsFeed.unavailable ? "#ff9400" : "#6c779d" }}
+                style={{ color: accountsFeed.unavailable ? "#ff9500" : "#6c779d" }}
                 data-testid={
                   accountsFeed.unavailable
                     ? "text-account-unavailable"

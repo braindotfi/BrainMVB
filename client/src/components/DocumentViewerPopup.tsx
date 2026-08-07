@@ -53,7 +53,7 @@ const KIND_ICON: Record<DocKind, typeof FileText> = {
 };
 
 const STATUS_CHIP: Record<DocStatus, string> = {
-  unpaid: "bg-[#3a2500] text-[#ff9500]",
+  unpaid: "bg-[#4a2300] text-[#ff9500]",
   paid: "bg-[#0a2a0a] text-[#42bf23]",
   held: "bg-[#350011] text-[#d20344]",
   disputed: "bg-[#350011] text-[#d20344]",

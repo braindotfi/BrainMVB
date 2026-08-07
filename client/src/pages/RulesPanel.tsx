@@ -30,7 +30,7 @@ import { useBrainPolicy } from "@/lib/brainPolicy";
 import { useBrainVendors } from "@/lib/brainVendors";
 import { useCurrency } from "@/lib/useCurrency";
 import type { AutoRule, RuleSuggestion } from "@/lib/proposalTypes";
-import { AlertCallout, InfoIcon, UnavailableDataBox } from "@/components/Callout";
+import { AlertCallout, PolicyCallout, UnavailableDataBox } from "@/components/Callout";
 import { AppAlertLink, useAppAlert } from "@/components/AppAlert";
 import { CountPill } from "@/components/CountPill";
 
@@ -739,7 +739,7 @@ export function RulesPanel() {
                   type="button"
                   onClick={onConfirmCreate}
                   data-testid="button-create-confirm"
-                  className="flex-1 px-[12px] py-[10px] rounded-[100px] bg-[#7631ee] hover:bg-[#8a4bf5] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-white"
+                  className="flex-1 px-[12px] py-[10px] rounded-[100px] bg-[#7631ee] hover:bg-[#8442f5] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-white"
                 >
                   Create rule
                 </button>
@@ -776,8 +776,8 @@ export function RulesPanel() {
                 </p>
               </div>
               <div className="bg-[#4a2300] flex gap-[4px] items-center justify-center px-[12px] py-[8px] relative rounded-[100px] shrink-0">
-                <Plus size={16} className="text-[#ff9400]" />
-                <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#ff9400] text-[12px]">
+                <Plus size={16} className="text-[#ff9500]" />
+                <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#ff9500] text-[12px]">
                   Add Rule
                 </span>
               </div>
@@ -967,7 +967,7 @@ export function RulesPanel() {
                   type="button"
                   onClick={resetBuilder}
                   data-testid="button-builder-cancel"
-                   className="flex-1 h-[36px] px-[12px] rounded-[100px] bg-[#222737] hover:bg-[#2b3145] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[16px] text-[#6c779d]"
+                   className="flex-1 h-[36px] px-[12px] rounded-[100px] bg-[#222737] hover:bg-[#2c3247] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[16px] text-[#6c779d]"
                 >
                   Cancel
                 </button>
@@ -976,7 +976,7 @@ export function RulesPanel() {
                   disabled={!builderValid}
                   onClick={() => setPendingCreate(buildDraft())}
                   data-testid="button-builder-create"
-                   className="flex-1 h-[36px] px-[12px] rounded-[100px] bg-[#4a2300] hover:bg-[#5a2d00] disabled:opacity-60 disabled:cursor-not-allowed transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[16px] text-[#ff9400]"
+                   className="flex-1 h-[36px] px-[12px] rounded-[100px] bg-[#4a2300] hover:bg-[#5a2d00] disabled:opacity-60 disabled:cursor-not-allowed transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[16px] text-[#ff9500]"
                 >
                    Create Rule
                 </button>
@@ -1010,15 +1010,9 @@ export function RulesPanel() {
             />
             {/* Default-specific purple info banner */}
             {!policyLoading && !policyError && (
-            <div
-              className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
-              style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
-            >
-              <InfoIcon className="mt-[2px]" />
-              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#7631ee] text-[14px]">
+              <PolicyCallout>
                 These rules are created automatically by Brain as a default policy layer to protect every tenant. They establish essential safeguards from the start, ensuring consistent security, governance, and oversight before any custom rules are added.
-              </p>
-            </div>
+              </PolicyCallout>
             )}
           </>
         )}
@@ -1038,17 +1032,11 @@ export function RulesPanel() {
               ))}
             </Section>
             {rulesHydration === "ready" && (
-            <div
-              className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
-              style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
-            >
-              <InfoIcon className="mt-[2px]" />
-              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#7631ee] text-[14px]">
-                Rules are written in plain English, not code. Brain turns each one into an enforceable
-                policy for every agent you use, then keeps learning and suggesting new ones, backed by
-                the evidence behind them.
-              </p>
-            </div>
+            <PolicyCallout>
+              Rules are written in plain English, not code. Brain turns each one into an enforceable
+              policy for every agent you use, then keeps learning and suggesting new ones, backed by
+              the evidence behind them.
+            </PolicyCallout>
             )}
           </>
         )}
@@ -1068,17 +1056,11 @@ export function RulesPanel() {
               ))}
             </Section>
             {rulesHydration === "ready" && (
-            <div
-              className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
-              style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
-            >
-              <InfoIcon className="mt-[2px]" />
-              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#7631ee] text-[14px]">
-                Rules are written in plain English, not code. Brain turns each one into an enforceable
-                policy for every agent you use, then keeps learning and suggesting new ones, backed by
-                the evidence behind them.
-              </p>
-            </div>
+            <PolicyCallout>
+              Rules are written in plain English, not code. Brain turns each one into an enforceable
+              policy for every agent you use, then keeps learning and suggesting new ones, backed by
+              the evidence behind them.
+            </PolicyCallout>
             )}
           </>
         )}

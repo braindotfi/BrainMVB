@@ -166,7 +166,7 @@ const AddGoalButton = ({ onClick }: { onClick: () => void }) => (
     type="button"
     data-testid="button-add-goal"
     onClick={onClick}
-    className="flex gap-[2px] items-center justify-center px-[10px] py-[4px] rounded-[100px] bg-[#4a2300] hover:bg-[#5a2c00] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ff9500]"
+    className="flex gap-[2px] items-center justify-center px-[10px] py-[4px] rounded-[100px] bg-[#4a2300] hover:bg-[#5a2d00] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ff9500]"
   >
     <span className="relative shrink-0 size-[16px]">
       <svg
@@ -1071,25 +1071,21 @@ export function HomePage() {
       <ScrollArea className="flex-1">
         <div className="flex flex-col gap-[40px] items-start pb-[16px] pt-[40px] px-[16px] w-full">
 
-          {/* Header */}
+          {/* Header — the eyebrow / 32px title / description stack Inbox and Ledger
+              use. Previously each line sat in its own flex wrapper and the eyebrow
+              used a `leading-[0] text-[0px]` parent to kill inter-span whitespace;
+              plain sibling <p>s make it the same three-line shape as the other pages. */}
           <div className="flex flex-col items-start gap-[4px] relative shrink-0 w-full">
-            <div className="flex items-center relative shrink-0 w-full">
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[0] not-italic relative text-[#6c779d] text-[0px]">
-                <span className="leading-[24px] text-[20px]">{greeting}{greetingName ? ", " : ""}</span>
-                {greetingName && (
-                  <span className="leading-[24px] text-[#a8b9f4] text-[20px]">{greetingName}</span>
-                )}
-                <span className="leading-[24px] text-[20px]">.</span>
-              </p>
-            </div>
-            <div className="flex items-center relative shrink-0 w-full">
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] not-italic relative text-[#a8b9f4] text-[32px]">
-                Here's your financial snapshot for today.
-              </p>
-            </div>
-            <div className="flex items-center relative shrink-0 w-full">
-              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px]">Updated {updatedLabel}</p>
-            </div>
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px]">
+              {greeting}{greetingName ? ", " : ""}
+              {greetingName && <span className="text-[#a8b9f4]">{greetingName}</span>}.
+            </p>
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">
+              Here's your financial snapshot for today.
+            </p>
+            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px]">
+              Updated {updatedLabel}
+            </p>
           </div>
 
           {/* Metrics */}
@@ -1198,7 +1194,7 @@ export function HomePage() {
                         type="button"
                         onClick={() => setSelectedOverviewIds(new Set())}
                         data-testid="button-bulk-clear"
-                        className="bg-[#222737] flex flex-1 h-[36px] items-center justify-center min-w-px px-[12px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[16px] whitespace-nowrap hover:bg-[#2a3046] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] disabled:opacity-60 disabled:cursor-not-allowed"
+                        className="bg-[#222737] flex flex-1 h-[36px] items-center justify-center min-w-px px-[12px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[16px] whitespace-nowrap hover:bg-[#2c3247] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] disabled:opacity-60 disabled:cursor-not-allowed"
                       >
                         Cancel
                       </button>
@@ -1207,7 +1203,7 @@ export function HomePage() {
                         onClick={approveSelectedOverview}
                         disabled={overviewBulkRunning}
                         data-testid="button-bulk-approve"
-                        className="bg-[#4a2300] flex flex-1 h-[36px] items-center justify-center min-w-px px-[12px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#ff9400] text-[16px] whitespace-nowrap hover:bg-[#5a2d00] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] disabled:opacity-60 disabled:cursor-not-allowed"
+                        className="bg-[#4a2300] flex flex-1 h-[36px] items-center justify-center min-w-px px-[12px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#ff9500] text-[16px] whitespace-nowrap hover:bg-[#5a2d00] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] disabled:opacity-60 disabled:cursor-not-allowed"
                       >
                         {overviewBulkRunning ? "Approving…" : "Approve"}
                       </button>

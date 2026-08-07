@@ -26,7 +26,7 @@ export function CountPill({
 }): JSX.Element {
   return (
     <div
-      className="flex items-center justify-center min-w-[18px] px-[5px] py-[1px] rounded-[4px] shrink-0"
+      className="flex items-center justify-center min-w-[18px] px-[5px] py-[1px] rounded-[4px] shrink-0 transition-colors"
       style={{ background }}
       data-testid={testId}
     >

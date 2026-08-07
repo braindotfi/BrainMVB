@@ -72,7 +72,7 @@ const Chip = ({
     onClick={onClick}
     className={
       "flex items-center justify-center px-[8px] py-[6px] rounded-[100px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] " +
-      (selected ? "bg-[#4a2300] hover:bg-[#5a2c00]" : "bg-[#06070a] hover:bg-[#101218]")
+      (selected ? "bg-[#4a2300] hover:bg-[#5a2d00]" : "bg-[#06070a] hover:bg-[#101218]")
     }
   >
     <span

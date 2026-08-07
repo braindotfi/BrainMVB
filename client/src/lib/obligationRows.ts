@@ -26,7 +26,7 @@ type Format = (a: string | number) => string;
    element; a colour alone renders no stroke at all. */
 const STATUS_COLORS: Record<string, { bg: string; border: string; fg: string }> = {
   overdue: { bg: "#350011", border: "rgba(210,3,68,0.25)", fg: "#d20344" },
-  due: { bg: "#4a2300", border: "rgba(255,148,0,0.25)", fg: "#ff9400" },
+  due: { bg: "#4a2300", border: "rgba(255,148,0,0.25)", fg: "#ff9500" },
   upcoming: { bg: "#222737", border: "#2c3247", fg: "#6c779d" },
 };
 const NEUTRAL = { bg: "#222737", border: "#2c3247", fg: "#6c779d" };
