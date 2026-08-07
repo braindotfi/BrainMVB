@@ -1558,7 +1558,7 @@ export function InboxPage() {
                   </p>
                 </div>
                 {/* Hairline vertical divider */}
-                <div className="w-px self-stretch shrink-0 bg-[#1d2132]" />
+                <div className="w-px self-stretch shrink-0 bg-[#240757]" />
                 {/* Right: Brain Observed */}
                 <div className="flex flex-col gap-[4px] items-start justify-center shrink-0 w-[450px]">
                   <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#7631ee] text-[16px]">
@@ -1584,7 +1584,7 @@ export function InboxPage() {
                   onClick={() => setSelectedIds(new Set())}
                   disabled={bulkRunning}
                   data-testid="button-bulk-clear"
-                  className="bg-[#222737] flex flex-1 items-center justify-center min-w-px px-[12px] py-[8px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[12px] whitespace-nowrap hover:bg-[#2a3046] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] disabled:opacity-40"
+                  className="bg-[#222737] flex flex-1 h-[36px] items-center justify-center min-w-px px-[12px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[16px] whitespace-nowrap hover:bg-[#2a3046] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] disabled:opacity-40"
                 >
                   Cancel
                 </button>
@@ -1593,7 +1593,7 @@ export function InboxPage() {
                   onClick={() => void approveSelected()}
                   disabled={bulkRunning}
                   data-testid="button-bulk-approve"
-                  className="bg-[#4a2300] flex flex-1 items-center justify-center min-w-px px-[12px] py-[8px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#ff9400] text-[12px] whitespace-nowrap hover:bg-[#5a2d00] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] disabled:opacity-50"
+                  className="bg-[#4a2300] flex flex-1 h-[36px] items-center justify-center min-w-px px-[12px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#ff9400] text-[16px] whitespace-nowrap hover:bg-[#5a2d00] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] disabled:opacity-50"
                 >
                   {bulkRunning ? "Approving\u2026" : "Approve Selected"}
                 </button>

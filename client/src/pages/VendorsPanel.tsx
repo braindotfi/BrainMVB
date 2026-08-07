@@ -749,7 +749,7 @@ export function VendorsPanel() {
                         type="button"
                         onClick={resetAddVendor}
                         data-testid="button-add-vendor-cancel"
-                        className="flex-1 px-[12px] py-[8px] rounded-[100px] bg-[#222737] hover:bg-[#2b3145] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-[#6c779d]"
+                        className="flex-1 h-[36px] px-[12px] rounded-[100px] bg-[#222737] hover:bg-[#2b3145] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[16px] text-[#6c779d]"
                       >
                         Cancel
                       </button>
@@ -762,7 +762,7 @@ export function VendorsPanel() {
                         }}
                         disabled={!vendorName.trim()}
                         data-testid="button-submit-vendor"
-                        className="flex-1 px-[12px] py-[8px] rounded-[100px] bg-[#4a2300] hover:bg-[#5a2d00] disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-[#ff9400]"
+                        className="flex-1 h-[36px] px-[12px] rounded-[100px] bg-[#4a2300] hover:bg-[#5a2d00] disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[16px] text-[#ff9400]"
                       >
                         Submit for Verification
                       </button>
