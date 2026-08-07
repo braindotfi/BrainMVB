@@ -1091,10 +1091,27 @@ disabled:opacity-60 disabled:cursor-not-allowed
 ```
 
 Nothing else. The app previously mixed `opacity-40`, `opacity-50`, `cursor-wait`, `cursor-default`
-and "no disabled styling at all". `opacity-40` over `#6c779d` on `#222737` lands around **1.6:1** —
-the label is legible only if you already know what it says. At `opacity-60` the same label is
-~2.1:1, visibly dimmer than its enabled state but still readable, which is the point of a disabled
-control.
+and "no disabled styling at all".
+
+Measured, not estimated. `opacity` fades the *whole* control — label **and** fill — toward the
+`#0a0c10` card behind it, so both sides of the ratio move together:
+
+| State | Effective label vs effective fill |
+| --- | --- |
+| enabled `#6c779d` on `#222737` | **3.37:1** |
+| `disabled:opacity-40` (old) | **1.51:1** |
+| `disabled:opacity-60` (current) | **2.00:1** |
+
+That is a 32% relative improvement, and it is the reason for the change. It is **not** WCAG AA for
+normal text, and it *cannot be*: 3.37:1 is the ceiling, so no opacity value reaches 4.5:1 — the
+enabled state already fails it. Getting disabled text to AA means changing the muted token itself,
+which changes every enabled control too, and is therefore not a disabled-state fix.
+
+This is permitted rather than merely tolerated. WCAG 2.2 SC 1.4.3 (Contrast Minimum) exempts
+"text ... that is part of an inactive user interface component", and SC 1.4.11 (Non-text Contrast)
+carries the same exemption. A disabled control has no contrast requirement by definition. The
+dimness *is* the affordance: a disabled control rendered at full enabled contrast stops reading as
+disabled.
 
 - Never use `disabled:cursor-wait`. A pending control is still a disabled control; "wait" implied a
   distinction the app does not actually make, and it read as a hang.
@@ -1102,10 +1119,12 @@ control.
   none` suppresses the cursor, so the two together silently cancel out. `ui/button.tsx` had exactly
   this bug. Native `disabled` buttons don't fire click, so dropping `pointer-events-none` is safe.
 - **Known exception:** the vendored shadcn primitives under `client/src/components/ui/` (input,
-  select, checkbox, switch, textarea, …) still carry upstream's `disabled:opacity-50`. No app code
-  imports them — they are only referenced by other `ui/` files — so they were deliberately left on
-  the upstream default rather than forked. If one of them ever gets adopted by a real surface,
-  bring it onto the rule above at that point.
+  select, checkbox, switch, textarea, …) still carry upstream's `disabled:opacity-50`. Reach was
+  verified as zero: nothing outside `ui/` imports `ui/button`, and the five `ui/` files that do
+  (`carousel`, `pagination`, `sidebar`, `calendar`, `alert-dialog`) are themselves imported by no
+  app code, so the primitive is unreachable at runtime. They were deliberately left on the upstream
+  default rather than forked. If one is ever adopted by a real surface, bring it onto the rule
+  above at that point.
 
 ### Colour roles — `#414965` is not a text colour
 | Colour | Role |
