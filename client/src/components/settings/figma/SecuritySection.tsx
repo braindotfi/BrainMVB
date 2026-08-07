@@ -33,7 +33,7 @@ import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
       <div className="flex flex-col gap-6 w-full">
         <div className="content-stretch flex flex-col gap-[4px] items-start relative shrink-0 w-full">
         <div className="content-stretch flex flex-col justify-center min-h-[36px] items-start relative shrink-0 w-full">
-          <p className="font-['Gilroy',sans-serif] font-semibold leading-[24px] not-italic relative shrink-0 text-[#414965] text-[16px] w-full">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] not-italic relative shrink-0 text-[#414965] text-[16px] w-full">
             Authentication
           </p>
         </div>
@@ -63,11 +63,11 @@ import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
                 </div>
               </div>
               <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
-                <p className="font-['Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
                   Two-Factor Authentication
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
-                  <p className="font-['Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
                     Not enabled
                   </p>
                 </div>
@@ -106,11 +106,11 @@ import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
                 </div>
               </div>
               <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
-                <p className="font-['Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
                   Session Timeout
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
-                  <p className="font-['Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
                     Auto-lock after inactivity
                   </p>
                 </div>
@@ -136,7 +136,7 @@ import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
       </div>
       <div className="content-stretch flex flex-col gap-[4px] items-start relative shrink-0 w-full">
         <div className="content-stretch flex flex-col justify-center min-h-[36px] items-start relative shrink-0 w-full">
-          <p className="font-['Gilroy',sans-serif] font-semibold leading-[24px] not-italic relative shrink-0 text-[#414965] text-[16px] w-full">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] not-italic relative shrink-0 text-[#414965] text-[16px] w-full">
             Account Activity
           </p>
         </div>
@@ -164,11 +164,11 @@ import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
                 </div>
               </div>
               <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
-                <p className="font-['Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
                   Login Alerts
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
-                  <p className="font-['Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
                     Not enabled
                   </p>
                 </div>
@@ -207,11 +207,11 @@ import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
                 </div>
               </div>
               <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
-                <p className="font-['Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
                   Login History
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
-                  <p className="font-['Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
                     View recent sign-in activity
                   </p>
                 </div>
@@ -271,11 +271,11 @@ import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
                 </div>
               </div>
               <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
-                <p className="font-['Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
                   Change PIN
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
-                  <p className="font-['Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
                     Update your 6-digit transaction PIN
                   </p>
                 </div>

@@ -427,7 +427,7 @@ function AddMemberDialog({ open, onClose, production }: { open: boolean; onClose
               onClick={submit}
               disabled={busy}
               data-testid="button-submit-member"
-              className="w-full bg-[#4a2300] hover:bg-[#5a2b00] transition-colors flex items-center justify-center px-[20px] py-[10px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[#ff9400] text-[14px] leading-[20px] disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full bg-[#4a2300] hover:bg-[#5a2d00] transition-colors flex items-center justify-center px-[20px] py-[10px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[#ff9500] text-[14px] leading-[20px] disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {busy ? "Adding…" : "Add Member"}
             </button>

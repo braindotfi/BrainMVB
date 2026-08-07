@@ -88,7 +88,7 @@ import {
   tierForReadOnlyInsight,
 } from "@/lib/proposalTiers";
 import { useBrainPolicy } from "@/lib/brainPolicy";
-import { InfoIcon, UnavailableDataBox } from "@/components/Callout";
+import { PolicyCallout, UnavailableDataBox } from "@/components/Callout";
 import {
   bulkCandidateFrom,
   bulkLimitFor,
@@ -254,7 +254,7 @@ const TAG_ACKNOWLEDGED = "bg-[#123509] text-[#42bf23] border-[rgba(66,191,35,0.2
 const TAG_DETECTED = "bg-[#222737] text-[#6c779d] border-[rgba(108,119,157,0.2)]";
 /* Orange agent-name chip — matches the orange badges on live proposals so the
    settled history reads consistently with the queue above it. */
-const TAG_AGENT = "bg-[#4a2300] text-[#ff9400] border-[rgba(255,149,0,0.2)]";
+const TAG_AGENT = "bg-[#4a2300] text-[#ff9500] border-[rgba(255,149,0,0.2)]";
 
 /* The decision outcome pills (Approved / Auto-Approved / Rejected /
    Acknowledged / Pending) and their event-type mapping now live in
@@ -1584,7 +1584,7 @@ export function InboxPage() {
                   onClick={() => setSelectedIds(new Set())}
                   disabled={bulkRunning}
                   data-testid="button-bulk-clear"
-                  className="bg-[#222737] flex flex-1 h-[36px] items-center justify-center min-w-px px-[12px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[16px] whitespace-nowrap hover:bg-[#2a3046] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="bg-[#222737] flex flex-1 h-[36px] items-center justify-center min-w-px px-[12px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[16px] whitespace-nowrap hover:bg-[#2c3247] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   Cancel
                 </button>
@@ -1593,7 +1593,7 @@ export function InboxPage() {
                   onClick={() => void approveSelected()}
                   disabled={bulkRunning}
                   data-testid="button-bulk-approve"
-                  className="bg-[#4a2300] flex flex-1 h-[36px] items-center justify-center min-w-px px-[12px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#ff9400] text-[16px] whitespace-nowrap hover:bg-[#5a2d00] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="bg-[#4a2300] flex flex-1 h-[36px] items-center justify-center min-w-px px-[12px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#ff9500] text-[16px] whitespace-nowrap hover:bg-[#5a2d00] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {bulkRunning ? "Approving\u2026" : "Approve"}
                 </button>
@@ -1627,15 +1627,9 @@ export function InboxPage() {
 
         {/* Helper banner — shown while anything is still awaiting a decision. */}
         {!inboxSourcesLoading && !decisionsUnreachable && visibleItems.some((it) => it.actionable) && (
-          <div
-            className="flex items-start gap-[10px] p-[12px] rounded-[12px] w-full"
-            style={{ background: "#240757", border: "1px solid rgba(118,49,238,0.2)" }}
-          >
-            <InfoIcon className="mt-[2px]" />
-            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#7631ee] text-[14px]">
-              Tap any item to see why Brain suggested it, what happens next, and what the risk is before you approve anything. Brain proposes. You decide. A separate execution service settles.
-            </p>
-          </div>
+          <PolicyCallout>
+            Tap any item to see why Brain suggested it, what happens next, and what the risk is before you approve anything. Brain proposes. You decide. A separate execution service settles.
+          </PolicyCallout>
         )}
         </div>{/* end inner gap-[10px] wrapper */}
       </div>

@@ -13,6 +13,8 @@
  * page when they had only narrowed a list.
  */
 
+import { CountPill } from "@/components/CountPill";
+
 export interface FilterChip {
   value: string;
   label: string;
@@ -57,7 +59,7 @@ export function FilterChipRow({ chips, value, onChange, label, testIdPrefix }: P
         const active = chip.value === value;
         // Selected is always the amber pill; an unselected amber chip keeps its
         // orange label so attention filters read as such from across the row.
-        const text = active ? "#ff9400" : chip.variant === "amber" ? "#ff9400" : "#414965";
+        const text = active ? "#ff9500" : chip.variant === "amber" ? "#ff9500" : "#414965";
 
         return (
           <button
@@ -67,7 +69,7 @@ export function FilterChipRow({ chips, value, onChange, label, testIdPrefix }: P
             onClick={() => onChange(chip.value)}
             data-testid={`${testIdPrefix}-${chip.value.toLowerCase().replace(/\s+/g, "-")}`}
             className={[
-              "flex items-center justify-center px-[16px] py-[8px] rounded-[100px] shrink-0 transition-colors",
+              "flex items-center justify-center gap-[6px] px-[16px] py-[8px] rounded-[100px] shrink-0 transition-colors",
               "outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]",
               active ? "" : "hover:bg-[#11141b]",
             ].join(" ")}
@@ -80,13 +82,12 @@ export function FilterChipRow({ chips, value, onChange, label, testIdPrefix }: P
               {chip.label}
             </span>
             {chip.count !== undefined && (
-              <span
-                data-testid={`${testIdPrefix}-${chip.value.toLowerCase().replace(/\s+/g, "-")}-count`}
-                className="ml-[6px] flex items-center justify-center min-w-[18px] px-[5px] py-[1px] rounded-[4px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[11px] text-center whitespace-nowrap transition-colors"
-                style={{ background: text, color: "#0a0c10" }}
+              <CountPill
+                background={text}
+                testId={`${testIdPrefix}-${chip.value.toLowerCase().replace(/\s+/g, "-")}-count`}
               >
                 {chip.count}
-              </span>
+              </CountPill>
             )}
           </button>
         );

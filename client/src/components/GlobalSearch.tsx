@@ -218,7 +218,7 @@ export function GlobalSearch() {
         >
           {allDown ? (
             <p
-              className="px-[14px] py-[10px] [font-family:'Gilroy',sans-serif] font-medium text-[13px] text-[#ff9400]"
+              className="px-[14px] py-[10px] [font-family:'Gilroy',sans-serif] font-medium text-[13px] text-[#ff9500]"
               data-testid="text-search-unavailable"
             >
               Search is unavailable. Decisions, vendors and accounts could not be
@@ -276,7 +276,7 @@ export function GlobalSearch() {
                   list renders, so nothing on screen suggests a source is absent. */}
               {down.length > 0 && (
                 <p
-                  className="border-t border-solid border-[#1d2132] px-[14px] py-[8px] [font-family:'Gilroy',sans-serif] font-medium text-[12px] text-[#ff9400]"
+                  className="border-t border-solid border-[#1d2132] px-[14px] py-[8px] [font-family:'Gilroy',sans-serif] font-medium text-[12px] text-[#ff9500]"
                   data-testid="text-search-partial"
                 >
                   {listOf(down)} could not be searched, so matches there are missing.

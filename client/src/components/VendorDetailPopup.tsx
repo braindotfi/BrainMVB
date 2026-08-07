@@ -69,7 +69,7 @@ const TRUST_META: Record<
   new: {
     label: "New",
     chipBg: "#4a2300",
-    chipText: "#ff9400",
+    chipText: "#ff9500",
     icon: Clock,
     headlineColor: "#a8b9f4",
   },
@@ -250,7 +250,7 @@ export function VendorDetailPopup({
             <DialogPrimitive.Title asChild>
               <p
                 data-testid="text-vendor-popup-title"
-                className="-translate-x-1/2 absolute font-['Gilroy',sans-serif] font-semibold leading-[24px] left-1/2 not-italic text-[#a8b9f4] text-[20px] text-center top-[calc(50%-12px)] whitespace-nowrap"
+                className="-translate-x-1/2 absolute [font-family:'Gilroy',sans-serif] font-semibold leading-[24px] left-1/2 not-italic text-[#a8b9f4] text-[20px] text-center top-[calc(50%-12px)] whitespace-nowrap"
               >
                 {/* Derived from the chip kind, not from trustStatus. Read directly,
                     that field made this heading claim "Trusted Vendor" for a row
@@ -491,7 +491,7 @@ export function VendorDetailPopup({
                           style={{
                             color:
                               ev.severity === "warning"
-                                ? "#ff9400"
+                                ? "#ff9500"
                                 : ev.severity === "danger"
                                   ? "#d20344"
                                   : "#a8b9f4",
@@ -504,7 +504,7 @@ export function VendorDetailPopup({
                             className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] shrink-0 border border-solid"
                             style={{ background: "#4a2300", borderColor: "rgba(255,149,0,0.2)" }}
                           >
-                            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#ff9400] text-[12px] text-center whitespace-nowrap">
+                            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#ff9500] text-[12px] text-center whitespace-nowrap">
                               Resolved
                             </p>
                           </div>
@@ -559,7 +559,7 @@ export function VendorDetailPopup({
                     label="Pause"
                     onClick={() => onPause?.(vendor.id)}
                     busy={trustBusy}
-                    color="#ff9400"
+                    color="#ff9500"
                     background="#4a2300"
                     testId="button-pause-trust"
                   />
@@ -599,7 +599,7 @@ export function VendorDetailPopup({
                     label="Pause"
                     onClick={() => onPause?.(vendor.id)}
                     busy={trustBusy}
-                    color="#ff9400"
+                    color="#ff9500"
                     background="#4a2300"
                     testId="button-pause-counterparty"
                   />
@@ -622,7 +622,7 @@ export function VendorDetailPopup({
                     label="Pause"
                     onClick={() => onPause?.(vendor.id)}
                     busy={trustBusy}
-                    color="#ff9400"
+                    color="#ff9500"
                     background="#4a2300"
                     testId="button-pause-counterparty"
                   />
@@ -710,7 +710,7 @@ export function VendorDetailPopup({
                     label="Pause"
                     onClick={() => onPause?.(vendor.id)}
                     busy={trustBusy}
-                    color="#ff9400"
+                    color="#ff9500"
                     background="#4a2300"
                     testId="button-pause-counterparty"
                   />

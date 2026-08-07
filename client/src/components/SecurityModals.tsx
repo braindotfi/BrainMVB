@@ -36,7 +36,7 @@ const Header = ({ title, onClose, onBack, testIdPrefix }: { title: string; onClo
         <RoundIconButton label="Back" testId={`button-${testIdPrefix}-back`} onClick={onBack}><BackIcon /></RoundIconButton>
       </div>
     )}
-    <Dialog.Title className="font-['Gilroy',sans-serif] font-semibold text-[20px] leading-[24px] text-[#a8b9f4]">
+    <Dialog.Title className="[font-family:'Gilroy',sans-serif] font-semibold text-[20px] leading-[24px] text-[#a8b9f4]">
       {title}
     </Dialog.Title>
     <div className="absolute right-[11px] top-1/2 -translate-y-1/2">
@@ -123,20 +123,20 @@ const SessionRow = ({ s, onSignOut }: { s: Session; onSignOut?: (id: string) => 
       <StatusDot active={s.current} />
       <div className="flex flex-col items-start justify-center w-[249px] shrink-0">
         <div className="flex gap-[4px] items-center">
-          <p className="font-['Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#a8b9f4] whitespace-nowrap">
+          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#a8b9f4] whitespace-nowrap">
             {s.device}
           </p>
           <Bullet />
-          <p className="font-['Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-[#6c779d] whitespace-nowrap">
+          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-[#6c779d] whitespace-nowrap">
             {s.browser}
           </p>
         </div>
         <div className="flex gap-[4px] items-center">
-          <p className="font-['Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-[#6c779d] whitespace-nowrap">
+          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-[#6c779d] whitespace-nowrap">
             {s.location}
           </p>
           <Bullet />
-          <p className="font-['Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-[#6c779d] whitespace-nowrap">
+          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-[#6c779d] whitespace-nowrap">
             {s.ip}
           </p>
         </div>
@@ -144,7 +144,7 @@ const SessionRow = ({ s, onSignOut }: { s: Session; onSignOut?: (id: string) => 
     </div>
     <div className="flex flex-1 min-w-0 items-center justify-end gap-[8px]">
       <p
-        className="font-['Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-right whitespace-nowrap"
+        className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-right whitespace-nowrap"
         style={{ color: s.current ? "#42bf23" : "#a8b9f4" }}
       >
         {s.when}
@@ -198,7 +198,7 @@ export function LoginHistoryModal({
 
           {/* Title + Controls (Figma 4569:61429) */}
           <div className="relative h-[56px] w-full border-b border-[#1d2132] bg-[rgba(17,20,27,0.8)] backdrop-blur-[10px]">
-            <Dialog.Title className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 font-['Gilroy',sans-serif] font-semibold text-[20px] leading-[24px] text-[#a8b9f4] whitespace-nowrap">
+            <Dialog.Title className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 [font-family:'Gilroy',sans-serif] font-semibold text-[20px] leading-[24px] text-[#a8b9f4] whitespace-nowrap">
               Login History
             </Dialog.Title>
             <Dialog.Close
@@ -212,7 +212,7 @@ export function LoginHistoryModal({
 
           {/* Body - Figma 4569:61431 */}
           <div className="flex flex-col gap-[24px] items-start p-[24px] w-full">
-            <p className="font-['Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#6c779d] w-full">
+            <p className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#6c779d] w-full">
               Devices and browsers that recently signed in to your Brain account.
             </p>
 
@@ -225,7 +225,7 @@ export function LoginHistoryModal({
                   {sessions.length === 0 ? (
                     <p
                       data-testid="text-no-sessions"
-                      className="font-['Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-[#6c779d] text-center py-[16px]"
+                      className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-[#6c779d] text-center py-[16px]"
                     >
                       No other active sessions.
                     </p>
@@ -251,7 +251,7 @@ export function LoginHistoryModal({
               disabled={!sessions.some((s) => !s.current)}
               className="flex flex-1 w-full items-center justify-center bg-[#350011] hover:bg-[#4a0018] rounded-[100px] px-[20px] py-[10px] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              <span className="font-['Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#d20344] whitespace-nowrap">
+              <span className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#d20344] whitespace-nowrap">
                 Sign Out of All Devices
               </span>
             </button>
@@ -406,7 +406,7 @@ export function ChangePinModal({
 
           {/* Title + Controls - Figma 4575:61705 */}
           <div className="relative h-[56px] w-full bg-[#0a0c10] border-b border-[#1d2132]">
-            <Dialog.Title className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 font-['Gilroy',sans-serif] font-semibold text-[20px] leading-[24px] text-[#a8b9f4] whitespace-nowrap">
+            <Dialog.Title className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 [font-family:'Gilroy',sans-serif] font-semibold text-[20px] leading-[24px] text-[#a8b9f4] whitespace-nowrap">
               Change Pin
             </Dialog.Title>
             <Dialog.Close
@@ -425,7 +425,7 @@ export function ChangePinModal({
             <div className="flex flex-col gap-[16px] w-[322px]">
               <p
                 data-testid={`text-pin-sub-${step}`}
-                className="font-['Gilroy',sans-serif] font-medium text-[22px] leading-[28px] text-[#414965] w-full"
+                className="[font-family:'Gilroy',sans-serif] font-medium text-[22px] leading-[28px] text-[#414965] w-full"
               >
                 {copy.sub}
               </p>
@@ -435,7 +435,7 @@ export function ChangePinModal({
                 testIdPrefix={`input-pin-${step}`}
               />
               {error && (
-                <p data-testid="text-pin-error" className="font-['Gilroy',sans-serif] font-medium text-[13px] leading-[18px] text-[#d20344] w-full">
+                <p data-testid="text-pin-error" className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[18px] text-[#d20344] w-full">
                   {error}
                 </p>
               )}
@@ -449,7 +449,7 @@ export function ChangePinModal({
                 onClick={advance}
                 className="flex-1 min-w-0 flex items-center justify-center bg-[#4a2300] rounded-[100px] px-[24px] py-[12px] disabled:opacity-60 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
               >
-                <span className="font-['Gilroy',sans-serif] font-semibold text-[18px] leading-[24px] text-[#ff9500] whitespace-nowrap">
+                <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[18px] leading-[24px] text-[#ff9500] whitespace-nowrap">
                   {copy.cta}
                 </span>
               </button>
