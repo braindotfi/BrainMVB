@@ -50,19 +50,26 @@ export function AnchorStatus({
   onVerify?: () => void;
   onViewFullRecord?: () => void;
 }) {
-  /* Three honest states (see AnchorStatus type in auditTypes.ts):
+  /* Four honest states (see AnchorStatus type in auditTypes.ts):
      anchored                → green, immutability claim, Verify On-Chain rendered.
      recorded_pending_anchor → amber, "verifiable, on-chain anchor pending", NO Verify button.
-     pending_next_batch      → neutral, proof incomplete, NO Verify button. */
+     pending_next_batch      → neutral, proof incomplete, NO Verify button.
+     not_recorded            → neutral, and must NOT say "yet": this record never reached
+                               brain-core's audit log, so no anchor will ever cover it.
+                               Promising a future anchor here is the same class of overclaim
+                               the green-badge fix removed, one state further down. */
   const isAnchored = anchor.status === "anchored" && !!anchor.baseTx;
   const isRecorded = anchor.status === "recorded_pending_anchor";
+  const isNotRecorded = anchor.status === "not_recorded";
   const pending = !isAnchored;
 
   const statusLabel = isAnchored
     ? "Anchored · Tamper-Evident"
     : isRecorded
       ? "Recorded and verifiable. On-chain anchor pending."
-      : "Proof incomplete. This record hasn't been anchored on-chain yet.";
+      : isNotRecorded
+        ? "Not in the audit log. This activity has no on-chain proof."
+        : "Proof incomplete. This record hasn't been anchored on-chain yet.";
 
   /* All non-anchored states share the clock icon (#a8b9f4 baby blue), so the
      status label matches it regardless of whether we're recorded-pending or
@@ -77,7 +84,9 @@ export function AnchorStatus({
     ? "This record is anchored on Base and can't be altered. Confirm it independently, without trusting Brain."
     : isRecorded
       ? "This record is sealed in Brain's append-only audit chain and can be verified cryptographically. The on-chain anchor to Base is pending."
-      : "Once anchored on Base, this record becomes independently verifiable.";
+      : isNotRecorded
+        ? "This activity was handled outside Brain's audit log, so there is nothing to anchor or verify on-chain."
+        : "Once anchored on Base, this record becomes independently verifiable.";
 
   return (
     <div className="flex flex-col gap-[16px] w-full">

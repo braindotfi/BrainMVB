@@ -646,7 +646,7 @@ interface LocalQuestionsResponse {
   questions: AssistantQuestion[];
 }
 
-function localQuestionToRecord(q: AssistantQuestion): AuditRecord {
+export function localQuestionToRecord(q: AssistantQuestion): AuditRecord {
   const createdMs = new Date(q.createdAt ?? 0).getTime();
   const question = q.question.trim();
   const canned = matchCannedPrompt(question);
@@ -668,7 +668,11 @@ function localQuestionToRecord(q: AssistantQuestion): AuditRecord {
     occurredAtMs: createdMs,
     lifecycle: [step],
     linked: [],
-    anchor: { status: "pending_next_batch", auditId: `local-question-${q.id}` },
+    /* not_recorded, NOT pending_next_batch: this question missed brain-core's
+       audit log entirely (the direct-Anthropic fallback above), so it is in no
+       anchor window and never will be. "Pending" promised an anchor that cannot
+       arrive. */
+    anchor: { status: "not_recorded", auditId: `local-question-${q.id}` },
     rawQuestion: question,
   };
 }

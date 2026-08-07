@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { mapAuditEventToRecord, anchorFromInclusionProof, extractActorName, bffPathForActorLookup, truncateForCard, CARD_TITLE_MAX, type BrainAuditEvent, type BrainAnchor, type BrainInclusionProof } from "./brainAudit";
+import { mapAuditEventToRecord, anchorFromInclusionProof, localQuestionToRecord, extractActorName, bffPathForActorLookup, truncateForCard, CARD_TITLE_MAX, type BrainAuditEvent, type BrainAnchor, type BrainInclusionProof } from "./brainAudit";
 
 /**
  * mapAuditEventToRecord's real branches: eventType/summary classification from
@@ -444,5 +444,31 @@ describe("bffPathForActorLookup", () => {
   it("only rewrites the bare /agents/{id} shape, never its sub-resources", () => {
     // /agents/{id}/actions is a real, different route - leave it alone.
     expect(bffPathForActorLookup("/v1/agents/collections/actions")).toBe("/api/brain/agents/collections/actions");
+  });
+});
+
+/* Local assistant questions are recorded by THIS app: assistant_questions
+   exists (shared/schema.ts) precisely because the Anthropic fallback path has
+   "no brain-core interaction -> no upstream audit". They are in no anchor
+   window and never will be, so rendering them as pending told the reader an
+   anchor was on its way that cannot arrive. */
+describe("localQuestionToRecord", () => {
+  const q = {
+    id: "q1",
+    userId: "u1",
+    question: "What's our trailing monthly cash flow?",
+    engine: "anthropic",
+    createdAt: new Date("2026-08-06T12:07:00Z"),
+  };
+
+  it("marks a local-only question not_recorded, never pending", () => {
+    expect(localQuestionToRecord(q).anchor.status).toBe("not_recorded");
+  });
+
+  it("never carries proof material or a verify link", () => {
+    const anchor = localQuestionToRecord(q).anchor;
+    expect(anchor.merkleRoot).toBeUndefined();
+    expect(anchor.baseTx).toBeUndefined();
+    expect(anchor.verifyHref).toBeUndefined();
   });
 });
