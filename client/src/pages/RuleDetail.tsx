@@ -385,9 +385,6 @@ export function RuleDetail() {
                 <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[20px]">
                   Trusted Vendors
                 </p>
-                <span className="min-w-[16px] p-[2px] rounded-[4px] bg-[#414965] flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold leading-[12px] text-[#a8b9f4] text-[12px]">
-                  {rule.allowlist.length}
-                </span>
               </div>
               <div className="flex flex-col gap-[8px] p-[8px]">
                 {rule.allowlist.map((vendor, i) => (
