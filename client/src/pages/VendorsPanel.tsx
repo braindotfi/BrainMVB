@@ -473,7 +473,11 @@ export function VendorsPanel() {
         credentials: "include",
       });
       if (!res.ok && res.status !== 404) {
-        toast({ title: "Couldn't delete vendor", description: "Brain core rejected the request. The vendor was not removed.", variant: "destructive" });
+        toast({
+          title: "Protocol Error",
+          description: "Brain rejected the request. The vendor was not removed.",
+          variant: "destructive",
+        });
         return;
       }
       await queryClient.invalidateQueries({ queryKey: ["/api/brain/ledger/counterparties"] });
