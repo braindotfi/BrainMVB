@@ -119,7 +119,7 @@ function TrustButton({
       disabled={busy}
       onClick={onClick}
       data-testid={testId}
-      className="flex items-center justify-center px-[20px] py-[10px] rounded-[100px] w-full disabled:opacity-50 disabled:cursor-wait [font-family:'Gilroy',sans-serif] font-semibold text-[16px] hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+      className="flex items-center justify-center px-[20px] py-[10px] rounded-[100px] w-full disabled:opacity-60 disabled:cursor-not-allowed [font-family:'Gilroy',sans-serif] font-semibold text-[16px] hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
       style={{ background, color }}
     >
       {busy ? "Working..." : label}
@@ -567,7 +567,7 @@ export function VendorDetailPopup({
                     type="button"
                     onClick={() => setConfirmingDelete(true)}
                     disabled={trustBusy}
-                    className="flex items-center justify-center px-[20px] py-[8px] rounded-[100px] hover:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#6c779d] w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                    className="flex items-center justify-center px-[20px] py-[8px] rounded-[100px] hover:opacity-80 disabled:opacity-60 disabled:cursor-not-allowed transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#6c779d] w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
                     style={{ background: "#350011", color: "#d20344" }}
                     data-testid="button-delete-vendor"
                   >
@@ -737,7 +737,7 @@ export function VendorDetailPopup({
                   disabled={pagerDisabled || !onPrev}
                   data-testid="button-vendor-previous"
                   onClick={onPrev}
-                  className="bg-[#222737] flex flex-1 gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
+                  className="bg-[#222737] flex flex-1 gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] disabled:opacity-60 disabled:cursor-not-allowed transition-opacity"
                 >
                   <ChevronLeft size={16} className="text-[#6c779d] shrink-0" />
                   <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">
@@ -749,7 +749,7 @@ export function VendorDetailPopup({
                   disabled={pagerDisabled || !onNext}
                   data-testid="button-vendor-next"
                   onClick={onNext}
-                  className="bg-[#222737] flex flex-1 gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
+                  className="bg-[#222737] flex flex-1 gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] disabled:opacity-60 disabled:cursor-not-allowed transition-opacity"
                 >
                   <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">
                     Next

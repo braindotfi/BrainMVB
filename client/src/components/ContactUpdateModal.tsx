@@ -379,7 +379,7 @@ export function ContactUpdateModal({
                   data-testid={`button-contact-verify-${type}`}
                   disabled={!canVerify}
                   onClick={advanceToVerify}
-                  className="flex-1 min-w-0 flex items-center justify-center bg-[#4a2300] rounded-[100px] px-[24px] py-[12px] disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
+                  className="flex-1 min-w-0 flex items-center justify-center bg-[#4a2300] rounded-[100px] px-[24px] py-[12px] disabled:opacity-60 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
                 >
                   <span className="font-['Gilroy',sans-serif] font-semibold text-[18px] leading-[24px] text-[#ff9500] whitespace-nowrap">
                     Verify
@@ -402,7 +402,7 @@ export function ContactUpdateModal({
                     data-testid={`button-verify-confirm-${type}`}
                     disabled={code.length !== CODE_LEN}
                     onClick={confirm}
-                    className="flex-1 min-w-0 flex items-center justify-center bg-[#42bf23] rounded-[100px] px-[16px] py-[10px] disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
+                    className="flex-1 min-w-0 flex items-center justify-center bg-[#42bf23] rounded-[100px] px-[16px] py-[10px] disabled:opacity-60 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
                   >
                     <span className="font-['Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-[#fff] whitespace-nowrap">
                       Confirm

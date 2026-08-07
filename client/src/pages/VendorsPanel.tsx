@@ -214,7 +214,7 @@ function SubmitConfirmDialog({
               onClick={onConfirm}
               disabled={busy}
               data-testid="button-confirm-submit-vendor"
-              className="flex flex-1 items-center justify-center min-w-px px-[12px] py-[8px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#42bf23] text-[12px] whitespace-nowrap hover:opacity-80 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[#42bf23]"
+              className="flex flex-1 items-center justify-center min-w-px px-[12px] py-[8px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#42bf23] text-[12px] whitespace-nowrap hover:opacity-80 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[#42bf23]"
               style={{ background: "#123509" }}
             >
               {busy ? "Submitting…" : "Confirm"}
@@ -762,7 +762,7 @@ export function VendorsPanel() {
                         }}
                         disabled={!vendorName.trim()}
                         data-testid="button-submit-vendor"
-                        className="flex-1 h-[36px] px-[12px] rounded-[100px] bg-[#4a2300] hover:bg-[#5a2d00] disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[16px] text-[#ff9400]"
+                        className="flex-1 h-[36px] px-[12px] rounded-[100px] bg-[#4a2300] hover:bg-[#5a2d00] disabled:opacity-60 disabled:cursor-not-allowed transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[16px] text-[#ff9400]"
                       >
                         Submit for Verification
                       </button>
@@ -923,7 +923,7 @@ export function VendorsPanel() {
                   onClick={handleBulkConfirm}
                   disabled={bulkBusy || trustBusy}
                   data-testid="button-bulk-confirm-customers"
-                  className="flex items-center justify-center px-[16px] py-[8px] rounded-[100px] w-full [font-family:'Gilroy',sans-serif] font-semibold text-[14px] disabled:opacity-50 disabled:cursor-wait hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                  className="flex items-center justify-center px-[16px] py-[8px] rounded-[100px] w-full [font-family:'Gilroy',sans-serif] font-semibold text-[14px] disabled:opacity-60 disabled:cursor-not-allowed hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
                   style={{ background: "#0d2214", color: "#42bf23" }}
                 >
                   {bulkBusy

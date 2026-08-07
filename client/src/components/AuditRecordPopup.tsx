@@ -427,7 +427,7 @@ export function AuditRecordPopup({
                 disabled={!isAnchored}
                 title={isAnchored || isNotRecorded ? undefined : "On-chain verification opens once this record is anchored."}
                 data-testid="button-verify-on-chain"
-                className="flex items-center justify-center gap-[6px] px-[20px] py-[10px] rounded-[100px] transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] w-full disabled:opacity-40 disabled:cursor-not-allowed enabled:hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                className="flex items-center justify-center gap-[6px] px-[20px] py-[10px] rounded-[100px] transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] w-full disabled:opacity-60 disabled:cursor-not-allowed enabled:hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
                 style={{ background: "#240757", color: "#7631ee" }}
               >
                 Verify On-Chain
@@ -448,7 +448,7 @@ export function AuditRecordPopup({
                     onClick={onPrev}
                     disabled={hasPrev === undefined ? pagerDisabled : !hasPrev}
                     data-testid="button-audit-record-prev"
-                    className="bg-[#222737] flex-1 flex gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#2c3247] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                    className="bg-[#222737] flex-1 flex gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] disabled:opacity-60 disabled:cursor-not-allowed hover:bg-[#2c3247] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
                   >
                     <ChevronLeft size={24} className="text-[#6c779d] shrink-0" />
                     <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">Previous</span>
@@ -458,7 +458,7 @@ export function AuditRecordPopup({
                     onClick={onNext}
                     disabled={hasNext === undefined ? pagerDisabled : !hasNext}
                     data-testid="button-audit-record-next"
-                    className="bg-[#222737] flex-1 flex gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#2c3247] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                    className="bg-[#222737] flex-1 flex gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] disabled:opacity-60 disabled:cursor-not-allowed hover:bg-[#2c3247] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
                   >
                     <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">Next</span>
                     <ChevronRight size={24} className="text-[#6c779d] shrink-0" />

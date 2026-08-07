@@ -187,7 +187,7 @@ export function ChangePlanModal({
           data-testid="button-change-plan-confirm"
           onClick={() => onConfirm(selected)}
           disabled={isCurrent}
-          className="w-full flex items-center justify-center px-[20px] py-[10px] rounded-full hover-elevate disabled:opacity-40 disabled:cursor-not-allowed"
+          className="w-full flex items-center justify-center px-[20px] py-[10px] rounded-full hover-elevate disabled:opacity-60 disabled:cursor-not-allowed"
           style={{ background: "#4a2300" }}
         >
           <span className="font-['Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-[#ff9400] whitespace-nowrap">
@@ -376,7 +376,7 @@ export function UpdateCardModal({
           data-testid="button-update-card-save"
           disabled={!valid}
           onClick={() => onConfirm(digits.slice(-4))}
-          className="w-full flex items-center justify-center px-[20px] py-[10px] rounded-full hover-elevate disabled:opacity-40 disabled:cursor-not-allowed"
+          className="w-full flex items-center justify-center px-[20px] py-[10px] rounded-full hover-elevate disabled:opacity-60 disabled:cursor-not-allowed"
           style={{ background: "#240757" }}
         >
           <span className="font-['Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-[#7631ee] whitespace-nowrap">Add This Card</span>

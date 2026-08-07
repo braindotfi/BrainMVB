@@ -51,7 +51,7 @@ const PrimaryButton = ({ children, onClick, disabled, testId }: { children: Reac
     onClick={onClick}
     disabled={disabled}
     data-testid={testId}
-    className="w-full rounded-full px-6 py-3 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed hover-elevate"
+    className="w-full rounded-full px-6 py-3 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed hover-elevate"
     style={{ background: "#4a2300", color: "#ff9500", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "18px", lineHeight: "24px" }}
   >
     {children}
@@ -249,7 +249,7 @@ export function LoginHistoryModal({
               data-testid="button-signout-others"
               onClick={signOutAll}
               disabled={!sessions.some((s) => !s.current)}
-              className="flex flex-1 w-full items-center justify-center bg-[#350011] rounded-[100px] px-[20px] py-[10px] hover:opacity-80 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+              className="flex flex-1 w-full items-center justify-center bg-[#350011] hover:bg-[#4a0018] rounded-[100px] px-[20px] py-[10px] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
             >
               <span className="font-['Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#d20344] whitespace-nowrap">
                 Sign Out of All Devices
@@ -447,7 +447,7 @@ export function ChangePinModal({
                 data-testid="button-change-pin-advance"
                 disabled={!canAdvance}
                 onClick={advance}
-                className="flex-1 min-w-0 flex items-center justify-center bg-[#4a2300] rounded-[100px] px-[24px] py-[12px] disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
+                className="flex-1 min-w-0 flex items-center justify-center bg-[#4a2300] rounded-[100px] px-[24px] py-[12px] disabled:opacity-60 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
               >
                 <span className="font-['Gilroy',sans-serif] font-semibold text-[18px] leading-[24px] text-[#ff9500] whitespace-nowrap">
                   {copy.cta}

@@ -241,7 +241,7 @@ function PlaidConnectButton({
         onClick={() => open()}
         disabled={disabled}
         data-testid="button-plaid-connect"
-        className="flex items-center justify-center gap-[10px] h-[48px] rounded-[12px] [font-family:'Gilroy',sans-serif] font-semibold text-[15px] leading-[18px] transition-opacity disabled:opacity-60"
+        className="flex items-center justify-center gap-[10px] h-[48px] rounded-[12px] [font-family:'Gilroy',sans-serif] font-semibold text-[15px] leading-[18px] transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
         style={{ background: "#7631EE", color: "#FFFFFF" }}
       >
         {isExchanging || isLoading ? (
@@ -341,7 +341,7 @@ export function ProviderPicker({ category }: { category: CategoryId }) {
               disabled={isConnecting || (!clickable)}
               onClick={() => handleClick(p)}
               data-testid={`button-provider-${p.id}`}
-              className="flex items-center gap-[12px] bg-[#0a0c10] rounded-[12px] p-[12px] transition-colors text-left disabled:cursor-default"
+              className="flex items-center gap-[12px] bg-[#0a0c10] rounded-[12px] p-[12px] transition-colors text-left disabled:opacity-60 disabled:cursor-not-allowed"
             >
               <div
                 className="size-[32px] rounded-full flex items-center justify-center shrink-0"

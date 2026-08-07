@@ -492,6 +492,10 @@ export const ActionButton = ({
   testId?: string;
 }) => {
   const palette = ACTION_TONES[tone];
+  /* Destructive actions share the app-wide #4a0018 hover. The background has to be
+     applied as a class (through a CSS var) rather than inline, because an inline
+     `background` always outranks a `hover:bg-*` utility. */
+  const isDestructive = tone === "reject";
   return (
     <button
       type="button"
@@ -503,8 +507,8 @@ export const ActionButton = ({
       disabled={disabled}
       title={title}
       data-testid={testId}
-      style={{ background: palette.background, color: palette.color }}
-      className={`flex items-center justify-center rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold whitespace-nowrap transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] ${ACTION_SIZES[size]}`}
+      style={{ ["--action-bg" as string]: palette.background, color: palette.color }}
+      className={`flex items-center justify-center rounded-[100px] bg-[var(--action-bg)] [font-family:'Gilroy',sans-serif] font-semibold whitespace-nowrap ${isDestructive ? "transition-colors hover:bg-[#4a0018]" : "transition-opacity hover:opacity-90"} disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] ${ACTION_SIZES[size]}`}
     >
       {label}
     </button>
@@ -546,7 +550,7 @@ export const PagerFooter = ({
         onClick={onPrev}
         disabled={!hasPrev}
         data-testid="button-proposal-prev"
-        className="flex flex-1 min-w-px gap-[8px] items-center justify-center bg-[#222737] px-[20px] py-[8px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-[#6c779d] whitespace-nowrap transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+        className="flex flex-1 min-w-px gap-[8px] items-center justify-center bg-[#222737] px-[20px] py-[8px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-[#6c779d] whitespace-nowrap transition-opacity hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
       >
         <ChevronLeft size={24} className="shrink-0" aria-hidden="true" />
         Previous
@@ -556,7 +560,7 @@ export const PagerFooter = ({
         onClick={onNext}
         disabled={!hasNext}
         data-testid="button-proposal-next"
-        className="flex flex-1 min-w-px gap-[8px] items-center justify-center bg-[#222737] px-[20px] py-[8px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-[#6c779d] whitespace-nowrap transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+        className="flex flex-1 min-w-px gap-[8px] items-center justify-center bg-[#222737] px-[20px] py-[8px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-[#6c779d] whitespace-nowrap transition-opacity hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
       >
         Next
         <ChevronRight size={24} className="shrink-0" aria-hidden="true" />

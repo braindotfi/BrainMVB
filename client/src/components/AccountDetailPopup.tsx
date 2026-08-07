@@ -281,7 +281,7 @@ export function AccountDetailPopup({
                       disabled={!prevAccount}
                       data-testid="button-account-previous"
                       onClick={() => prevAccount && onSelectAccount?.(prevAccount.id)}
-                      className="bg-[#222737] flex flex-1 gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
+                      className="bg-[#222737] flex flex-1 gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] disabled:opacity-60 disabled:cursor-not-allowed transition-opacity"
                     >
                       <img src={arrowIcon} alt="" className="size-[16px] rotate-180" />
                       <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">
@@ -293,7 +293,7 @@ export function AccountDetailPopup({
                       disabled={!nextAccount}
                       data-testid="button-account-next"
                       onClick={() => nextAccount && onSelectAccount?.(nextAccount.id)}
-                      className="bg-[#222737] flex flex-1 gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
+                      className="bg-[#222737] flex flex-1 gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] disabled:opacity-60 disabled:cursor-not-allowed transition-opacity"
                     >
                       <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">
                         Next

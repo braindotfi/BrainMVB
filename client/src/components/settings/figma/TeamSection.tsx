@@ -163,7 +163,7 @@ function MemberRow({ member, inviteActions }: { member: BrainMember; inviteActio
               disabled={busy !== null}
               onClick={() => inviteCall("resend")}
               data-testid={`button-resend-invite-${member.id}`}
-              className="rounded-[100px] bg-[#240757] px-[12px] py-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[#7631ee] text-[12px] leading-[16px] hover:bg-[#2e0a6e] transition-colors disabled:opacity-40 flex items-center justify-center"
+              className="rounded-[100px] bg-[#240757] px-[12px] py-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[#7631ee] text-[12px] leading-[16px] hover:bg-[#2e0a6e] transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center"
             >
               {busy === "resend" ? "Resending…" : "Resend Invite"}
             </button>
@@ -172,7 +172,7 @@ function MemberRow({ member, inviteActions }: { member: BrainMember; inviteActio
               disabled={busy !== null}
               onClick={() => inviteCall("revoke")}
               data-testid={`button-revoke-invite-${member.id}`}
-              className="rounded-[100px] px-[12px] py-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] transition-colors disabled:opacity-40 flex items-center justify-center"
+              className="rounded-[100px] px-[12px] py-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center"
               style={{ background: "rgba(210,3,68,0.08)", color: "#d20344", border: "1px solid rgba(210,3,68,0.3)" }}
             >
               {busy === "revoke" ? "Revoking…" : "Revoke Invite"}
@@ -427,7 +427,7 @@ function AddMemberDialog({ open, onClose, production }: { open: boolean; onClose
               onClick={submit}
               disabled={busy}
               data-testid="button-submit-member"
-              className="w-full bg-[#4a2300] hover:bg-[#5a2b00] transition-colors flex items-center justify-center px-[20px] py-[10px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[#ff9400] text-[14px] leading-[20px] disabled:opacity-40 disabled:cursor-not-allowed"
+              className="w-full bg-[#4a2300] hover:bg-[#5a2b00] transition-colors flex items-center justify-center px-[20px] py-[10px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[#ff9400] text-[14px] leading-[20px] disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {busy ? "Adding…" : "Add Member"}
             </button>

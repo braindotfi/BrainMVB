@@ -564,7 +564,7 @@ export function ProposalDetail({
                   onClick={onPrev}
                   disabled={hasPrev === undefined ? pagerDisabled : !hasPrev}
                   data-testid="button-proposal-prev"
-                  className="flex-[1_0_0] flex items-center justify-center gap-[8px] min-w-px px-[20px] py-[8px] rounded-[100px] bg-[#222737] text-[#6c779d] hover:bg-[#2c3247] transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[#222737] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                  className="flex-[1_0_0] flex items-center justify-center gap-[8px] min-w-px px-[20px] py-[8px] rounded-[100px] bg-[#222737] text-[#6c779d] hover:bg-[#2c3247] transition-colors disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-[#222737] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
                 >
                   <ArrowLeft size={16} className="shrink-0" />
                   <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px]">Previous</span>
@@ -574,7 +574,7 @@ export function ProposalDetail({
                   onClick={onNext}
                   disabled={hasNext === undefined ? pagerDisabled : !hasNext}
                   data-testid="button-proposal-next"
-                  className="flex-[1_0_0] flex items-center justify-center gap-[8px] min-w-px px-[20px] py-[8px] rounded-[100px] bg-[#222737] text-[#6c779d] hover:bg-[#2c3247] transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[#222737] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                  className="flex-[1_0_0] flex items-center justify-center gap-[8px] min-w-px px-[20px] py-[8px] rounded-[100px] bg-[#222737] text-[#6c779d] hover:bg-[#2c3247] transition-colors disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-[#222737] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
                 >
                   <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px]">Next</span>
                   <ArrowRight size={16} className="shrink-0" />
@@ -833,7 +833,7 @@ function AutoHandledReceipt({
             disabled={paused}
             onClick={() => onPauseRule?.(proposal)}
             data-testid="button-pause-rule"
-            className="flex flex-1 items-center justify-center gap-[8px] px-[12px] py-[10px] rounded-[100px] bg-[#1d2132] hover:bg-[#252a3d] transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965]"
+            className="flex flex-1 items-center justify-center gap-[8px] px-[12px] py-[10px] rounded-[100px] bg-[#1d2132] hover:bg-[#252a3d] transition-colors disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965]"
           >
             <PauseCircle size={16} className="text-[#a8b9f4] shrink-0" />
             <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[18px] text-[14px] text-[#a8b9f4] whitespace-nowrap">
@@ -845,7 +845,7 @@ function AutoHandledReceipt({
             disabled={!ruleResolves}
             onClick={() => onReviewRule?.(proposal)}
             data-testid="button-review-rule"
-            className="flex flex-1 items-center justify-center gap-[8px] px-[12px] py-[10px] rounded-[100px] bg-[#240757] border border-[rgba(118,49,238,0.35)] hover:bg-[#2e0a6b] transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+            className="flex flex-1 items-center justify-center gap-[8px] px-[12px] py-[10px] rounded-[100px] bg-[#240757] border border-[rgba(118,49,238,0.35)] hover:bg-[#2e0a6b] transition-colors disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
           >
             <SlidersHorizontal size={16} className="text-[#7631ee] shrink-0" />
             <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[18px] text-[14px] text-[#7631ee] whitespace-nowrap">
@@ -920,7 +920,7 @@ function AutoHandledReceipt({
                 disabled={!reasonReady}
                 onClick={() => setReportStep("confirm")}
                 data-testid="button-report-continue"
-                className="flex-1 px-[12px] py-[8px] rounded-[100px] bg-[#350011] hover:bg-[#4a0018] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[13px] focus:outline-none focus-visible:ring-2"
+                className="flex-1 px-[12px] py-[8px] rounded-[100px] bg-[#350011] hover:bg-[#4a0018] transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[13px] focus:outline-none focus-visible:ring-2"
                 style={{ color: ALERT, ["--tw-ring-color" as string]: ALERT }}
               >
                 Continue

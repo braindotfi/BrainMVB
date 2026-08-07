@@ -331,7 +331,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onLogout }: Props):
             </div>
           </div>
           <div className="flex flex-col items-center gap-2 pb-4 mt-auto pt-4 px-2">
-            <button title="Logout" onClick={() => setShowLogoutConfirm(true)} className="flex items-center justify-center w-9 h-9 bg-[#350011] rounded-full hover:opacity-80 transition-opacity">
+            <button title="Logout" onClick={() => setShowLogoutConfirm(true)} className="flex items-center justify-center w-9 h-9 bg-[#350011] rounded-full hover:bg-[#4a0018] transition-colors">
               <img className="w-5 h-5" alt="Logout" src={ICONS.logout} />
             </button>
           </div>

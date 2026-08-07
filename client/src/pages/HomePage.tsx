@@ -1198,7 +1198,7 @@ export function HomePage() {
                         type="button"
                         onClick={() => setSelectedOverviewIds(new Set())}
                         data-testid="button-bulk-clear"
-                        className="bg-[#222737] flex flex-1 h-[36px] items-center justify-center min-w-px px-[12px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[16px] whitespace-nowrap hover:bg-[#2a3046] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] disabled:opacity-40"
+                        className="bg-[#222737] flex flex-1 h-[36px] items-center justify-center min-w-px px-[12px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[16px] whitespace-nowrap hover:bg-[#2a3046] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] disabled:opacity-60 disabled:cursor-not-allowed"
                       >
                         Cancel
                       </button>
@@ -1207,7 +1207,7 @@ export function HomePage() {
                         onClick={approveSelectedOverview}
                         disabled={overviewBulkRunning}
                         data-testid="button-bulk-approve"
-                        className="bg-[#4a2300] flex flex-1 h-[36px] items-center justify-center min-w-px px-[12px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#ff9400] text-[16px] whitespace-nowrap hover:bg-[#5a2d00] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] disabled:opacity-50"
+                        className="bg-[#4a2300] flex flex-1 h-[36px] items-center justify-center min-w-px px-[12px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#ff9400] text-[16px] whitespace-nowrap hover:bg-[#5a2d00] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] disabled:opacity-60 disabled:cursor-not-allowed"
                       >
                         {overviewBulkRunning ? "Approving…" : "Approve"}
                       </button>

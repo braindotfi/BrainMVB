@@ -14,7 +14,7 @@ import brainLogo from "@assets/BrainLogo_1781769246241.png";
 const inputCls =
   "w-full h-[48px] px-4 rounded-2xl bg-[#0a0c10] border border-[#1d2132] focus:border-[#7631ee] outline-none transition-colors [font-family:'Gilroy',sans-serif] text-[#e8eaf0] placeholder:text-[#414965] text-[15px]";
 const primaryBtn =
-  "w-full h-[48px] rounded-2xl bg-[#7631ee] hover:bg-[#8442f5] disabled:opacity-50 transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-white text-[15px] flex items-center justify-center gap-2";
+  "w-full h-[48px] rounded-2xl bg-[#7631ee] hover:bg-[#8442f5] disabled:opacity-60 disabled:cursor-not-allowed transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-white text-[15px] flex items-center justify-center gap-2";
 
 /** Pull a bare invite token out of a pasted link or raw token. */
 function extractInviteToken(raw: string): string {

@@ -186,8 +186,8 @@ const PillButton = ({ children, onClick, tone = "purple", disabled, testId }: {
       data-testid={testId}
       onClick={onClick}
       disabled={disabled}
-      className="rounded-full px-4 py-2 hover:opacity-80 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] whitespace-nowrap"
-      style={styles}
+      className={`rounded-full px-4 py-2 bg-[var(--tone-bg)] ${tone === "danger" ? "transition-colors hover:bg-[#4a0018]" : "transition-opacity hover:opacity-80"} disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] whitespace-nowrap`}
+      style={{ ["--tone-bg" as string]: styles.background, color: styles.color }}
     >
       {children}
     </button>
@@ -828,7 +828,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
                   data-testid="button-activity-prev"
                   onClick={goPrevEvent}
                   disabled={!hasPrevEvent}
-                  className="bg-[#222737] flex gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] shrink-0 w-[148px] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#2c3247] transition-colors focus:outline-none"
+                  className="bg-[#222737] flex gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] shrink-0 w-[148px] disabled:opacity-60 disabled:cursor-not-allowed hover:bg-[#2c3247] transition-colors focus:outline-none"
                 >
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-[#6c779d] shrink-0">
                     <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -840,7 +840,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
                   data-testid="button-activity-next"
                   onClick={goNextEvent}
                   disabled={!hasNextEvent}
-                  className="bg-[#222737] flex gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] shrink-0 w-[148px] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#2c3247] transition-colors focus:outline-none"
+                  className="bg-[#222737] flex gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] shrink-0 w-[148px] disabled:opacity-60 disabled:cursor-not-allowed hover:bg-[#2c3247] transition-colors focus:outline-none"
                 >
                   <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">Next</span>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-[#6c779d] shrink-0">
@@ -943,7 +943,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
                     data-testid="button-overview-create-key"
                     onClick={() => onNavigate("keys")}
                     disabled={!hasTenant}
-                    className="bg-[#240757] flex gap-[2px] items-center justify-center px-[14px] py-[6px] rounded-[100px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#7631ee] text-[12px] whitespace-nowrap hover:bg-[#2e0a6e] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="bg-[#240757] flex gap-[2px] items-center justify-center px-[14px] py-[6px] rounded-[100px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#7631ee] text-[12px] whitespace-nowrap hover:bg-[#2e0a6e] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     <Plus className="relative shrink-0 size-[16px] text-[#7631ee]" />
                     Create Key
@@ -1270,7 +1270,7 @@ function KeysSection({ env }: { env: DevEnv }) {
               data-testid="button-create-key"
               onClick={() => createMut.mutate()}
               disabled={createMut.isPending || name.trim().length === 0 || scopes.length === 0}
-              className="w-full bg-[#4a2300] hover:bg-[#5a2b00] transition-colors flex items-center justify-center px-[20px] py-[10px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[#ff9400] text-[14px] leading-[20px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] disabled:opacity-40 disabled:cursor-not-allowed"
+              className="w-full bg-[#4a2300] hover:bg-[#5a2b00] transition-colors flex items-center justify-center px-[20px] py-[10px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[#ff9400] text-[14px] leading-[20px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {createMut.isPending ? "Creating…" : "Create Key"}
             </button>
@@ -1604,7 +1604,7 @@ function TenantsSection({ env, onNavigate }: { env: DevEnv; onNavigate: (s: DevS
                   data-testid="button-tenant-prev"
                   onClick={goPrev}
                   disabled={!hasPrev}
-                  className="bg-[#222737] flex gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] shrink-0 w-[148px] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#2c3247] transition-colors focus:outline-none"
+                  className="bg-[#222737] flex gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] shrink-0 w-[148px] disabled:opacity-60 disabled:cursor-not-allowed hover:bg-[#2c3247] transition-colors focus:outline-none"
                 >
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-[#6c779d] shrink-0">
                     <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -1616,7 +1616,7 @@ function TenantsSection({ env, onNavigate }: { env: DevEnv; onNavigate: (s: DevS
                   data-testid="button-tenant-next"
                   onClick={goNext}
                   disabled={!hasNext}
-                  className="bg-[#222737] flex gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] shrink-0 w-[148px] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#2c3247] transition-colors focus:outline-none"
+                  className="bg-[#222737] flex gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] shrink-0 w-[148px] disabled:opacity-60 disabled:cursor-not-allowed hover:bg-[#2c3247] transition-colors focus:outline-none"
                 >
                   <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">Next</span>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-[#6c779d] shrink-0">

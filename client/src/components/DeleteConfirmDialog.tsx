@@ -75,8 +75,8 @@ export function DeleteConfirmDialog({
 
           {/* ── Body — p-[30px], gap-[20px] ── */}
           <div className="flex flex-col gap-[20px] items-start p-[30px] w-full">
-            {/* Figma: font-medium, 20.625px/26.25px, #414965 */}
-            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[26.25px] text-[#414965] text-[20.625px] w-full">
+            {/* Figma: font-medium, 20.625px/26.25px. #414965 raised to #a8b9f4 — body copy must be readable. */}
+            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[26.25px] text-[#a8b9f4] text-[20.625px] w-full">
               {body}
             </p>
 
@@ -96,8 +96,7 @@ export function DeleteConfirmDialog({
                 disabled={busy}
                 onClick={onConfirm}
                 data-testid={confirmTestId}
-                className="flex shrink-0 h-[45px] items-center justify-center px-[22.5px] rounded-[100px] hover:opacity-80 disabled:opacity-40 disabled:cursor-wait transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[#d20344] text-[16.88px] leading-[22.5px] w-[150px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d20344]"
-                style={{ background: "#350011" }}
+                className="flex shrink-0 h-[45px] items-center justify-center px-[22.5px] rounded-[100px] bg-[#350011] hover:bg-[#4a0018] disabled:opacity-60 disabled:cursor-not-allowed transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[#d20344] text-[16.88px] leading-[22.5px] w-[150px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d20344]"
               >
                 {busy ? "Working…" : confirmLabel}
               </button>
