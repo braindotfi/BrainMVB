@@ -41,7 +41,7 @@ import {
 } from "@/lib/globalSearch";
 
 const INPUT =
-  "flex-1 min-w-0 h-[24px] bg-transparent border-0 px-0 py-0 [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-[#6c779d] caret-[#7631ee] outline-none placeholder:text-[#6c779d]";
+  "flex-1 min-w-0 h-[24px] bg-transparent border-0 px-0 py-0 [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-brain-v1baby-blue-60 caret-brain-v1purple outline-none placeholder:text-brain-v1baby-blue-60";
 
 export function GlobalSearch() {
   const [, navigate] = useLocation();
@@ -177,7 +177,7 @@ export function GlobalSearch() {
 
   return (
     <div className="relative mx-[7px] w-auto shrink-0 mt-[12px] mb-[7px]" ref={wrapRef} data-testid="global-search">
-      <div className="flex h-[40px] w-full items-center gap-[8px] rounded-[8px] bg-[#222737] px-[8px]">
+      <div className="flex h-[40px] w-full items-center gap-[8px] rounded-[8px] bg-brain-v1baby-blue-15 px-[8px]">
         <img
           src={searchIcon}
           alt=""
@@ -214,11 +214,11 @@ export function GlobalSearch() {
           /* Anchored to the input, not the viewport: the centre column of the
              three-panel shell is narrow, and a viewport-width dropdown would
              overhang the assistant panel. */
-          className="absolute bottom-[calc(100%+4px)] left-0 right-0 z-50 overflow-hidden rounded-[10px] border border-solid border-[#1d2132] bg-[#11141b] shadow-[0_18px_40px_rgba(0,0,0,0.55)]"
+          className="absolute bottom-[calc(100%+4px)] left-0 right-0 z-50 overflow-hidden rounded-[10px] border border-solid border-brain-v1stroke-2 bg-brain-v1baby-blue-5 shadow-[0_18px_40px_rgba(0,0,0,0.55)]"
         >
           {allDown ? (
             <p
-              className="px-[14px] py-[10px] [font-family:'Gilroy',sans-serif] font-medium text-[13px] text-[#ff9500]"
+              className="px-[14px] py-[10px] [font-family:'Gilroy',sans-serif] font-medium text-[13px] text-brain-v1light-orange"
               data-testid="text-search-unavailable"
             >
               Search is unavailable. Decisions, vendors and accounts could not be
@@ -229,14 +229,14 @@ export function GlobalSearch() {
               {results.length === 0 &&
                 (stillSearching ? (
                   <p
-                    className="px-[14px] py-[10px] [font-family:'Gilroy',sans-serif] font-medium text-[13px] text-[#6c779d]"
+                    className="px-[14px] py-[10px] [font-family:'Gilroy',sans-serif] font-medium text-[13px] text-brain-v1baby-blue-60"
                     data-testid="text-search-pending"
                   >
                     Searching…
                   </p>
                 ) : (
                   <p
-                    className="px-[14px] py-[10px] [font-family:'Gilroy',sans-serif] font-medium text-[13px] text-[#6c779d]"
+                    className="px-[14px] py-[10px] [font-family:'Gilroy',sans-serif] font-medium text-[13px] text-brain-v1baby-blue-60"
                     data-testid="text-search-no-matches"
                   >
                     No matches in {listOf(answered)}.
@@ -252,21 +252,21 @@ export function GlobalSearch() {
                   tabIndex={-1}
                   onMouseEnter={() => setActive(i)}
                   onClick={() => go(r)}
-                  className="flex cursor-pointer items-center justify-between gap-[10px] border-b border-solid border-[#1d2132] px-[14px] py-[10px] last:border-b-0"
+                  className="flex cursor-pointer items-center justify-between gap-[10px] border-b border-solid border-brain-v1stroke-2 px-[14px] py-[10px] last:border-b-0"
                   style={{ background: i === activeIndex ? "#151926" : "transparent" }}
                   data-testid={`search-result-${r.kind}`}
                 >
                   <span className="flex min-w-px flex-1 flex-col">
-                    <span className="truncate [font-family:'Gilroy',sans-serif] font-semibold text-[13px] text-[#a8b9f4]">
+                    <span className="truncate [font-family:'Gilroy',sans-serif] font-semibold text-[13px] text-brain-v1baby-blue-100">
                       {r.label}
                     </span>
                     {r.detail && (
-                      <span className="truncate [font-family:'Gilroy',sans-serif] font-medium text-[12px] text-[#6c779d]">
+                      <span className="truncate [font-family:'Gilroy',sans-serif] font-medium text-[12px] text-brain-v1baby-blue-60">
                         {r.detail}
                       </span>
                     )}
                   </span>
-                  <span className="shrink-0 rounded-[6px] bg-[#222737] px-[6px] py-[2px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] text-[#6c779d]">
+                  <span className="shrink-0 rounded-[6px] bg-brain-v1baby-blue-15 px-[6px] py-[2px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] text-brain-v1baby-blue-60">
                     {KIND_LABEL[r.kind]}
                   </span>
                 </div>
@@ -276,7 +276,7 @@ export function GlobalSearch() {
                   list renders, so nothing on screen suggests a source is absent. */}
               {down.length > 0 && (
                 <p
-                  className="border-t border-solid border-[#1d2132] px-[14px] py-[8px] [font-family:'Gilroy',sans-serif] font-medium text-[12px] text-[#ff9500]"
+                  className="border-t border-solid border-brain-v1stroke-2 px-[14px] py-[8px] [font-family:'Gilroy',sans-serif] font-medium text-[12px] text-brain-v1light-orange"
                   data-testid="text-search-partial"
                 >
                   {listOf(down)} could not be searched, so matches there are missing.

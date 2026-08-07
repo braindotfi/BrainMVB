@@ -77,9 +77,9 @@ export function ReceivablesTab({ format }: { format: Format }): JSX.Element {
             reason. It isn't a sign that nobody owes you anything.
           </UnavailableDataBox>
         ) : kind === "loading" ? (
-          <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative shrink-0 w-full bg-[#0a0c10]">
+          <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative shrink-0 w-full bg-brain-v1highlight-dropdown-bg">
             <p
-              className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[16px] text-[#6c779d]"
+              className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[16px] text-brain-v1baby-blue-60"
               data-testid="text-receivables-loading"
             >
               Loading what you're owed from the ledger…
@@ -97,18 +97,18 @@ export function ReceivablesTab({ format }: { format: Format }): JSX.Element {
           /* Zero rows, read fine — but documents are still being turned into ledger
              records, and those records arrive in waves. "Nobody owes you anything"
              would be a conclusion drawn from an import that has not finished. */
-          <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative shrink-0 w-full bg-[#0a0c10]">
+          <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative shrink-0 w-full bg-brain-v1highlight-dropdown-bg">
             <p
-              className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[16px] text-[#6c779d]"
+              className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[16px] text-brain-v1baby-blue-60"
               data-testid="text-receivables-arriving"
             >
               Still reading your documents. Anything you're owed will appear here as it lands.
             </p>
           </div>
         ) : kind === "empty" ? (
-          <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative shrink-0 w-full bg-[#0a0c10]">
+          <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative shrink-0 w-full bg-brain-v1highlight-dropdown-bg">
             <p
-              className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[16px] text-[#6c779d]"
+              className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[16px] text-brain-v1baby-blue-60"
               data-testid="text-receivables-empty"
             >
               Nothing outstanding. No unpaid customer invoices on record.
@@ -126,7 +126,7 @@ export function ReceivablesTab({ format }: { format: Format }): JSX.Element {
                   pill={{ label: capitalCase(r.status), ...statusColors(r.status), testId: `badge-receivable-status-${r.status.trim().toLowerCase()}` }}
                   secondary={
                     <>
-                      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] whitespace-nowrap">
+                      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">
                         {dueLabel(r.due_date)}
                       </p>
                       {r.invoice_number && (
@@ -134,7 +134,7 @@ export function ReceivablesTab({ format }: { format: Format }): JSX.Element {
                           <div className="relative shrink-0 size-[4px]">
                             <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_DOT} />
                           </div>
-                          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] truncate">
+                          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px] truncate">
                             {r.invoice_number}
                           </p>
                         </>
@@ -160,15 +160,15 @@ export function ReceivablesTab({ format }: { format: Format }): JSX.Element {
 
             {/* Running total — same row shape as the Payables and Accounts tabs. */}
             <div
-              className="flex gap-[12px] items-center px-[16px] py-[12px] relative shrink-0 w-full bg-[#0a0c10] border-b border-solid border-[#1d2132] last:border-b-0"
+              className="flex gap-[12px] items-center px-[16px] py-[12px] relative shrink-0 w-full bg-brain-v1highlight-dropdown-bg border-b border-solid border-brain-v1stroke-2 last:border-b-0"
               data-testid="row-receivable-totals"
             >
               <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
-                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[16px] whitespace-nowrap">
                   Receivable Totals
                 </p>
                 <p
-                  className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px]"
+                  className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px]"
                   data-testid="text-receivable-total-caption"
                 >
                   {/* Names what the figure is, or why it isn't final. A dash with no

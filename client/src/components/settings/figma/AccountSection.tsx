@@ -26,29 +26,29 @@ function Backdrop({ onClick }: { onClick: () => void }) {
 // (file cC2lQwC3g9hv96o5Wgy8Ek, nodes 3970:45780, 3969:45754, 3969:45740).
 const POPUP_CONTAINER =
   "fixed left-1/2 top-1/2 z-[101] w-[320px] -translate-x-1/2 -translate-y-1/2 " +
-  "flex flex-col rounded-[16px] bg-[#11141b] border border-[#1d2132] overflow-clip " +
+  "flex flex-col rounded-panel bg-brain-v1baby-blue-5 border border-brain-v1stroke-2 overflow-clip " +
   "shadow-[0px_68px_27px_0px_rgba(0,0,0,0.06),0px_38px_23px_0px_rgba(0,0,0,0.2),0px_17px_17px_0px_rgba(0,0,0,0.34),0px_4px_9px_0px_rgba(0,0,0,0.39)]";
 
 const POPUP_HEADER =
   "flex flex-col items-center gap-[8px] px-[8px] py-[24px] w-full text-center";
 
 const POPUP_TITLE =
-  "[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[20px] leading-[24px] w-full";
+  "[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[20px] leading-[24px] w-full";
 
 const POPUP_BODY =
-  "[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[16px] w-full";
+  "[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[16px] w-full";
 
 const POPUP_BUTTON_ROW = "flex gap-[8px] items-start p-[8px] w-full";
 
 const POPUP_BUTTON_NEUTRAL =
-  "flex-1 min-w-px flex items-center justify-center px-[12px] py-[8px] rounded-[100px] " +
-  "bg-[#222737] disabled:opacity-60 disabled:cursor-not-allowed " +
-  "[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[14px] leading-[20px] whitespace-nowrap";
+  "flex-1 min-w-px flex items-center justify-center px-[12px] py-[8px] rounded-pill " +
+  "bg-brain-v1baby-blue-15 disabled:opacity-60 disabled:cursor-not-allowed " +
+  "[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-60 text-[14px] leading-[20px] whitespace-nowrap";
 
 const POPUP_BUTTON_DESTRUCTIVE =
-  "flex-1 min-w-px flex items-center justify-center px-[12px] py-[8px] rounded-[100px] " +
-  "bg-[#350011] hover:bg-[#4a0018] transition-colors disabled:opacity-60 disabled:cursor-not-allowed " +
-  "[font-family:'Gilroy',sans-serif] font-semibold text-[#d20344] text-[14px] leading-[20px] whitespace-nowrap";
+  "flex-1 min-w-px flex items-center justify-center px-[12px] py-[8px] rounded-pill " +
+  "bg-brain-v1dark-pink-red hover:bg-[#4a0018] transition-colors disabled:opacity-60 disabled:cursor-not-allowed " +
+  "[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1pink-red text-[14px] leading-[20px] whitespace-nowrap";
 
 function ConfirmCloseModal({ onCancel, onConfirm, isDeleting }: { onCancel: () => void; onConfirm: () => void; isDeleting: boolean }) {
   return (
@@ -204,14 +204,14 @@ export default function AccountSection() {
     <div className="flex flex-col gap-6 w-full">
       <div className="content-stretch flex flex-col gap-[4px] items-start relative shrink-0 w-full">
         <div className="content-stretch flex flex-col justify-center min-h-[36px] items-start relative shrink-0 w-full">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] not-italic relative shrink-0 text-[#414965] text-[16px] w-full">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] not-italic relative shrink-0 text-brain-v1baby-blue-30 text-[16px] w-full">
             Your Data
           </p>
         </div>
-        <div className="bg-[#0a0c10] content-stretch flex flex-col gap-[16px] items-start overflow-clip p-[16px] relative rounded-[16px] shrink-0 w-full">
+        <div className="bg-brain-v1highlight-dropdown-bg content-stretch flex flex-col gap-[16px] items-start overflow-clip p-[16px] relative rounded-panel shrink-0 w-full">
           <div className="content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full">
             <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
-              <div className="relative rounded-[100px] shrink-0 size-[40px]">
+              <div className="relative rounded-pill shrink-0 size-[40px]">
                 <div className="absolute left-0 size-[40px] top-0">
                   <img alt="" className="absolute block inset-0 max-w-none size-full" src={SUB["ce14e446"]} />
                 </div>
@@ -224,17 +224,17 @@ export default function AccountSection() {
                 </div>
               </div>
               <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
-                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[14px] whitespace-nowrap">
+                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] not-italic relative shrink-0 text-brain-v1baby-blue-100 text-[14px] whitespace-nowrap">
                   Export My Data
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
-                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[12px] whitespace-nowrap">
+                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] not-italic relative shrink-0 text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">
                     Last updated January 1, 2025
                   </p>
                 </div>
               </div>
             </div>
-            <div className="relative rounded-[100px] shrink-0 size-[40px]">
+            <div className="relative rounded-pill shrink-0 size-[40px]">
               <div className="absolute left-0 size-[40px] top-0">
                 <img alt="" className="absolute block inset-0 max-w-none size-full" src={SUB["c2ab79ae"]} />
               </div>
@@ -261,10 +261,10 @@ export default function AccountSection() {
             onClick={() => setModal("deleteData")}
             data-testid="button-delete-data"
             aria-label="Delete My Data"
-            className="content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full text-left cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[#414965] rounded-[4px]"
+            className="content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full text-left cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30 rounded-[4px]"
           >
             <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
-              <div className="relative rounded-[100px] shrink-0 size-[40px]">
+              <div className="relative rounded-pill shrink-0 size-[40px]">
                 <div className="absolute left-0 size-[40px] top-0">
                   <img alt="" className="absolute block inset-0 max-w-none size-full" src={SUB["ce14e446"]} />
                 </div>
@@ -277,17 +277,17 @@ export default function AccountSection() {
                 </div>
               </div>
               <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
-                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-brain-v1baby-blue-100 text-[16px] whitespace-nowrap">
                   Delete My Data
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">
                     How we handle your data
                   </p>
                 </div>
               </div>
             </div>
-            <div className="relative rounded-[100px] shrink-0 size-[40px]">
+            <div className="relative rounded-pill shrink-0 size-[40px]">
               <div className="absolute left-0 size-[40px] top-0">
                 <img alt="" className="absolute block inset-0 max-w-none size-full" src={SUB["c2ab79ae"]} />
               </div>
@@ -308,20 +308,20 @@ export default function AccountSection() {
       </div>
       <div className="content-stretch flex flex-col gap-[4px] items-start relative shrink-0 w-full">
         <div className="content-stretch flex flex-col justify-center min-h-[36px] items-start relative shrink-0 w-full">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] not-italic relative shrink-0 text-[#414965] text-[16px] w-full">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] not-italic relative shrink-0 text-brain-v1baby-blue-30 text-[16px] w-full">
             Account
           </p>
         </div>
-        <div className="bg-[#0a0c10] content-stretch flex flex-col items-start overflow-clip p-[16px] relative rounded-[16px] shrink-0 w-full">
+        <div className="bg-brain-v1highlight-dropdown-bg content-stretch flex flex-col items-start overflow-clip p-[16px] relative rounded-panel shrink-0 w-full">
           <button
             type="button"
             onClick={handleCloseAccountClick}
             data-testid="button-close-account"
             aria-label="Close Account"
-            className="content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full text-left cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[#414965] rounded-[4px]"
+            className="content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full text-left cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30 rounded-[4px]"
           >
             <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
-              <div className="relative rounded-[100px] shrink-0 size-[40px]">
+              <div className="relative rounded-pill shrink-0 size-[40px]">
                 <div className="absolute left-0 size-[40px] top-0">
                   <img alt="" className="absolute block inset-0 max-w-none size-full" src={SUB["670b6028"]} />
                 </div>
@@ -334,17 +334,17 @@ export default function AccountSection() {
                 </div>
               </div>
               <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] not-italic relative shrink-0 text-[#d20344] text-[14px] whitespace-nowrap">
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] not-italic relative shrink-0 text-brain-v1pink-red text-[14px] whitespace-nowrap">
                   Close Account
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
-                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[12px] whitespace-nowrap">
+                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] not-italic relative shrink-0 text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">
                     Permanently delete your Brain account
                   </p>
                 </div>
               </div>
             </div>
-            <div className="relative rounded-[100px] shrink-0 size-[40px]">
+            <div className="relative rounded-pill shrink-0 size-[40px]">
               <div className="absolute left-0 size-[40px] top-0">
                 <img alt="" className="absolute block inset-0 max-w-none size-full" src={SUB["c2ab79ae"]} />
               </div>

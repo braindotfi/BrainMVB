@@ -51,7 +51,7 @@ export interface RecordRowPresentation {
  * thing. Border COLOUR only; the pill element adds `border border-solid`
  * itself (chip convention).
  */
-export const ROW_TAG_AGENT = "bg-[#4a2300] text-[#ff9500] border-[rgba(255,149,0,0.2)]";
+export const ROW_TAG_AGENT = "bg-brain-v1dark-orange text-brain-v1light-orange border-[rgba(255,149,0,0.2)]";
 
 /** Amber says "needs you" to anyone who sees colour. These carry the same fact
  *  as text for anyone who does not. */

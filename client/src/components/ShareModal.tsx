@@ -97,12 +97,12 @@ export const ShareModal = ({ open, onClose }: Props): JSX.Element | null => {
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-[3px]" onClick={onClose} />
 
-      <div className="relative z-10 w-[400px] max-h-[90vh] flex flex-col bg-[#11141b] border border-[#1d2132] rounded-[24px] shadow-2xl overflow-hidden">
+      <div className="relative z-10 w-[400px] max-h-[90vh] flex flex-col bg-brain-v1baby-blue-5 border border-brain-v1stroke-2 rounded-modal shadow-2xl overflow-hidden">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-[16px] h-[56px] flex-shrink-0 border-b border-[#1d2132] bg-[rgba(17,20,27,0.8)] backdrop-blur-[10px]">
+        <div className="flex items-center justify-between px-[16px] h-[56px] flex-shrink-0 border-b border-brain-v1stroke-2 bg-[rgba(17,20,27,0.8)] backdrop-blur-[10px]">
           <div className="w-8" />
-          <h2 className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[20px] leading-[24px]">
+          <h2 className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[20px] leading-[24px]">
             Invite Friends
           </h2>
           <button
@@ -118,12 +118,12 @@ export const ShareModal = ({ open, onClose }: Props): JSX.Element | null => {
         <div className="flex-1 overflow-y-auto px-[23px] py-[16px] flex flex-col gap-[16px]">
 
           {/* Hero banner */}
-          <div className="flex gap-[8px] items-start p-[16px] bg-[#240757] rounded-[16px] h-[100px] flex-shrink-0">
+          <div className="flex gap-[8px] items-start p-[16px] bg-brain-v1dark-purple rounded-panel h-[100px] flex-shrink-0">
             <div className="w-[40px] h-[40px] flex-shrink-0">
               <GiftIcon />
             </div>
             <div className="flex flex-col gap-[4px] flex-1 min-w-0">
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#7631ee] text-[20px] leading-[24px]">
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1purple text-[20px] leading-[24px]">
                 Invite and earn 50 $BRAIN
               </p>
               <p className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[16px] leading-[20px]">
@@ -134,36 +134,36 @@ export const ShareModal = ({ open, onClose }: Props): JSX.Element | null => {
 
           {/* Stats widgets - NO border/stroke */}
           <div className="flex gap-[16px]">
-            <div className="flex flex-col gap-[8px] items-center justify-center flex-1 p-[16px] bg-[#222737] rounded-[16px]">
+            <div className="flex flex-col gap-[8px] items-center justify-center flex-1 p-[16px] bg-brain-v1baby-blue-15 rounded-panel">
               <TeamIcon />
               <div className="flex flex-col gap-[4px] items-center w-full text-center">
                 <span className="[font-family:'Gilroy',sans-serif] font-bold text-white text-[32px] leading-[32px] w-full">21</span>
-                <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[14px] leading-[20px] w-full">Friends Joined</span>
+                <span className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-60 text-[14px] leading-[20px] w-full">Friends Joined</span>
               </div>
             </div>
-            <div className="flex flex-col gap-[8px] items-center justify-center flex-1 p-[16px] bg-[#222737] rounded-[16px]">
+            <div className="flex flex-col gap-[8px] items-center justify-center flex-1 p-[16px] bg-brain-v1baby-blue-15 rounded-panel">
               <CoinStackIcon />
               <div className="flex flex-col gap-[4px] items-center w-full text-center">
                 <span className="[font-family:'Gilroy',sans-serif] font-bold text-white text-[32px] leading-[32px] w-full">1050</span>
-                <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[14px] leading-[20px] w-full">$BRAIN Earned</span>
+                <span className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-60 text-[14px] leading-[20px] w-full">$BRAIN Earned</span>
               </div>
             </div>
           </div>
 
           {/* Referral Link */}
           <div className="flex flex-col gap-[4px]">
-            <label className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[14px] leading-[20px]">
+            <label className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-30 text-[14px] leading-[20px]">
               Referral Link
             </label>
-            <div className="flex items-center gap-[8px] p-[8px] bg-[#222737] rounded-[12px]">
+            <div className="flex items-center gap-[8px] p-[8px] bg-brain-v1baby-blue-15 rounded-row">
               <span className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[16px] leading-[20px] flex-1 truncate">
                 {REFERRAL_URL}
               </span>
               <button
                 onClick={handleCopyLink}
                 data-testid="copy-referral-link"
-                className={`flex items-center justify-center gap-[4px] px-[12px] py-[8px] rounded-[100px] text-[12px] leading-[16px] [font-family:'Gilroy',sans-serif] font-semibold flex-shrink-0 transition-opacity hover:opacity-80 ${
-                  copied ? "bg-[#0d3320] text-[#22c55e]" : "bg-[#4a2300] text-[#ff9500]"
+                className={`flex items-center justify-center gap-[4px] px-[12px] py-[8px] rounded-pill text-[12px] leading-[16px] [font-family:'Gilroy',sans-serif] font-semibold flex-shrink-0 transition-opacity hover:opacity-80 ${
+                  copied ? "bg-[#0d3320] text-[#22c55e]" : "bg-brain-v1dark-orange text-brain-v1light-orange"
                 }`}
               >
                 {copied ? "Copied!" : <><CopyIcon />Copy</>}
@@ -173,18 +173,18 @@ export const ShareModal = ({ open, onClose }: Props): JSX.Element | null => {
 
           {/* Referral Code */}
           <div className="flex flex-col gap-[4px]">
-            <label className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[14px] leading-[20px]">
+            <label className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-30 text-[14px] leading-[20px]">
               Referral Code
             </label>
-            <div className="flex items-center gap-[8px] p-[8px] bg-[#222737] rounded-[12px]">
+            <div className="flex items-center gap-[8px] p-[8px] bg-brain-v1baby-blue-15 rounded-row">
               <span className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[16px] leading-[20px] flex-1">
                 {REFERRAL_CODE}
               </span>
               <button
                 onClick={handleCopyCode}
                 data-testid="copy-referral-code"
-                className={`flex items-center justify-center gap-[4px] px-[12px] py-[8px] rounded-[100px] text-[12px] leading-[16px] [font-family:'Gilroy',sans-serif] font-semibold flex-shrink-0 transition-opacity hover:opacity-80 ${
-                  codeCopied ? "bg-[#0d3320] text-[#22c55e]" : "bg-[#4a2300] text-[#ff9500]"
+                className={`flex items-center justify-center gap-[4px] px-[12px] py-[8px] rounded-pill text-[12px] leading-[16px] [font-family:'Gilroy',sans-serif] font-semibold flex-shrink-0 transition-opacity hover:opacity-80 ${
+                  codeCopied ? "bg-[#0d3320] text-[#22c55e]" : "bg-brain-v1dark-orange text-brain-v1light-orange"
                 }`}
               >
                 {codeCopied ? "Copied!" : <><CopyIcon />Copy</>}
@@ -194,28 +194,28 @@ export const ShareModal = ({ open, onClose }: Props): JSX.Element | null => {
 
           {/* Invite by Email */}
           <div className="flex flex-col gap-[4px]">
-            <label className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[14px] leading-[20px]">
+            <label className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-30 text-[14px] leading-[20px]">
               Invite by Email
             </label>
-            <div className="flex items-center gap-[8px] p-[8px] bg-[#222737] rounded-[12px]">
+            <div className="flex items-center gap-[8px] p-[8px] bg-brain-v1baby-blue-15 rounded-row">
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleEmailSend()}
                 placeholder="johndoe@mail.com"
-                className="flex-1 bg-transparent text-white text-[16px] leading-[20px] [font-family:'Gilroy',sans-serif] placeholder-[#6c779d] outline-none"
+                className="flex-1 bg-transparent text-white text-[16px] leading-[20px] [font-family:'Gilroy',sans-serif] placeholder-brain-v1baby-blue-60 outline-none"
               />
               <button
                 onClick={handleEmailSend}
                 disabled={!email.trim()}
                 data-testid="send-invite-email"
-                className={`flex items-center justify-center gap-[4px] px-[12px] py-[8px] rounded-[100px] text-[12px] leading-[16px] [font-family:'Gilroy',sans-serif] font-semibold flex-shrink-0 transition-opacity bg-[#4a2300] ${
+                className={`flex items-center justify-center gap-[4px] px-[12px] py-[8px] rounded-pill text-[12px] leading-[16px] [font-family:'Gilroy',sans-serif] font-semibold flex-shrink-0 transition-opacity bg-brain-v1dark-orange ${
                   emailSent
                     ? "bg-[#0d3320] text-[#22c55e]"
                     : email.trim()
-                    ? "text-[#ff9500] hover:opacity-80"
-                    : "text-[#ff9500] opacity-50 cursor-not-allowed"
+                    ? "text-brain-v1light-orange hover:opacity-80"
+                    : "text-brain-v1light-orange opacity-50 cursor-not-allowed"
                 }`}
               >
                 {emailSent ? "Sent!" : <>Send<ArrowIcon /></>}
@@ -225,13 +225,13 @@ export const ShareModal = ({ open, onClose }: Props): JSX.Element | null => {
 
           {/* Share on Socials */}
           <div className="flex flex-col gap-[4px]">
-            <label className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">
+            <label className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-30 text-[16px] leading-[24px]">
               Share on Socials
             </label>
             <div className="flex items-center gap-[8px]">
               <button
                 onClick={() => handleSocial(`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Join me on Brain Finance - let AI handle your money. ${REFERRAL_URL}`)}`)}
-                className="bg-black rounded-[12px] p-[8px] hover:opacity-80 transition-opacity flex items-center justify-center"
+                className="bg-black rounded-row p-[8px] hover:opacity-80 transition-opacity flex items-center justify-center"
                 data-testid="share-x"
                 title="Share on X"
               >
@@ -239,7 +239,7 @@ export const ShareModal = ({ open, onClose }: Props): JSX.Element | null => {
               </button>
               <button
                 onClick={() => handleSocial(`https://t.me/share/url?url=${encodeURIComponent(REFERRAL_URL)}&text=${encodeURIComponent("Join me on Brain Finance!")}`)}
-                className="bg-[#0088cc] rounded-[12px] p-[8px] hover:opacity-80 transition-opacity flex items-center justify-center"
+                className="bg-[#0088cc] rounded-row p-[8px] hover:opacity-80 transition-opacity flex items-center justify-center"
                 data-testid="share-telegram"
                 title="Share on Telegram"
               >
@@ -247,7 +247,7 @@ export const ShareModal = ({ open, onClose }: Props): JSX.Element | null => {
               </button>
               <button
                 onClick={() => handleSocial(`https://wa.me/?text=${encodeURIComponent(`Join me on Brain Finance! ${REFERRAL_URL}`)}`)}
-                className="bg-[#075e54] rounded-[12px] p-[8px] hover:opacity-80 transition-opacity flex items-center justify-center"
+                className="bg-[#075e54] rounded-row p-[8px] hover:opacity-80 transition-opacity flex items-center justify-center"
                 data-testid="share-whatsapp"
                 title="Share on WhatsApp"
               >

@@ -145,7 +145,7 @@ export function DecisionPill({ pill }: { pill: TierRowStatusPill }) {
     pill.icon === "check" ? PillCheckIcon : pill.icon === "x" ? PillXIcon : PillClockIcon;
   return (
     <div
-      className="flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] shrink-0"
+      className="flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-pill shrink-0"
       style={{ background: pill.bg }}
       data-testid="status-pill"
     >
@@ -173,11 +173,11 @@ export const TierRow = ({ row }: { row: TierRowModel }) => {
      is the same 16px) and gave the two halves of the list different row heights.
      Only the title and the right-hand pill distinguish a settled row now. */
   const secondaryClass =
-    "[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] w-full truncate";
+    "[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px] w-full truncate";
 
   return (
     <div
-      className={`flex flex-col sm:flex-row gap-[12px] items-start sm:items-center justify-between px-[16px] py-[12px] w-full transition-colors border-b border-solid border-[#1d2132] last:border-b-0 ${
+      className={`flex flex-col sm:flex-row gap-[12px] items-start sm:items-center justify-between px-[16px] py-[12px] w-full transition-colors border-b border-solid border-brain-v1stroke-2 last:border-b-0 ${
         accent ? "border-l-[3px]" : ""
       } ${row.onOpenDetail ? "cursor-pointer" : ""}`}
       style={{
@@ -210,14 +210,14 @@ export const TierRow = ({ row }: { row: TierRowModel }) => {
           title={row.select.title}
           aria-label={row.select.label}
           data-testid={`${row.testIdPrefix}-${row.id}-select`}
-          className="decision-checkbox mt-[3px] sm:mt-0 size-[16px] shrink-0 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 disabled:cursor-not-allowed outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+          className="decision-checkbox mt-[3px] sm:mt-0 size-[16px] shrink-0 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 disabled:cursor-not-allowed outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
         />
       ) : (
         <div aria-hidden="true" className="size-[16px] shrink-0" />
       )}
       <div className="flex flex-col gap-[4px] items-start min-w-px flex-1">
         <div className="flex flex-nowrap items-center gap-x-[8px] w-full min-w-0">
-          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px] min-w-0 truncate">
+          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[16px] min-w-0 truncate">
             {row.title}
           </p>
           {row.badge && (
@@ -279,12 +279,12 @@ export const TierSection = ({ tier, rows }: { tier: ProposalTier; rows: TierRowM
         </p>
         <CountPill background={accent}>{rows.length}</CountPill>
         {meta.note && (
-          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[12px] truncate">
+          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[12px] truncate">
             Note: {meta.note}
           </p>
         )}
       </div>
-      <div className="flex flex-col w-full rounded-[12px] border border-solid border-[#1d2132] bg-[#0a0c10] overflow-hidden">
+      <div className="flex flex-col w-full rounded-row border border-solid border-brain-v1stroke-2 bg-brain-v1highlight-dropdown-bg overflow-hidden">
         <div className="flex flex-col w-full">
           {rows.map((row) => (
             <TierRow key={row.id} row={row} />
@@ -327,10 +327,10 @@ export const TierSections = ({
     }
     return (
       <div
-        className="flex items-center px-[16px] py-[20px] w-full rounded-[12px] border border-solid border-[#1d2132] bg-[#0a0c10]"
+        className="flex items-center px-[16px] py-[20px] w-full rounded-row border border-solid border-brain-v1stroke-2 bg-brain-v1highlight-dropdown-bg"
         data-testid="tier-sections-empty"
       >
-        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[16px]">
           {emptyMessage}
         </p>
       </div>

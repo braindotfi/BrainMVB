@@ -248,13 +248,13 @@ type InboxItem = DecisionFacets & {
 };
 
 const TAG_AUTO = "bg-[rgba(255,255,255,0.3)] text-white border-[rgba(255,255,255,0.2)] backdrop-blur-sm";
-const TAG_APPROVED_BY_YOU = "bg-[#123509] text-[#42bf23] border-[rgba(66,191,35,0.2)]";
-const TAG_REJECTED = "bg-[#350011] text-[#d20344] border-[rgba(210,3,68,0.2)]";
-const TAG_ACKNOWLEDGED = "bg-[#123509] text-[#42bf23] border-[rgba(66,191,35,0.2)]";
-const TAG_DETECTED = "bg-[#222737] text-[#6c779d] border-[rgba(108,119,157,0.2)]";
+const TAG_APPROVED_BY_YOU = "bg-brain-v1dark-green text-brain-v1green border-[rgba(66,191,35,0.2)]";
+const TAG_REJECTED = "bg-brain-v1dark-pink-red text-brain-v1pink-red border-[rgba(210,3,68,0.2)]";
+const TAG_ACKNOWLEDGED = "bg-brain-v1dark-green text-brain-v1green border-[rgba(66,191,35,0.2)]";
+const TAG_DETECTED = "bg-brain-v1baby-blue-15 text-brain-v1baby-blue-60 border-[rgba(108,119,157,0.2)]";
 /* Orange agent-name chip — matches the orange badges on live proposals so the
    settled history reads consistently with the queue above it. */
-const TAG_AGENT = "bg-[#4a2300] text-[#ff9500] border-[rgba(255,149,0,0.2)]";
+const TAG_AGENT = "bg-brain-v1dark-orange text-brain-v1light-orange border-[rgba(255,149,0,0.2)]";
 
 /* The decision outcome pills (Approved / Auto-Approved / Rejected /
    Acknowledged / Pending) and their event-type mapping now live in
@@ -371,9 +371,9 @@ function InboxDropdown({
         aria-label={label}
         data-testid={testId}
         onClick={() => onOpenChange(!open)}
-        className="bg-[#222737] rounded-[8px] p-[8px] flex items-center gap-[8px] w-full text-left outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+        className="bg-brain-v1baby-blue-15 rounded-[8px] p-[8px] flex items-center gap-[8px] w-full text-left outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
       >
-        <span className="flex-1 min-w-0 [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[14px] leading-[20px] whitespace-nowrap truncate">
+        <span className="flex-1 min-w-0 [font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[14px] leading-[20px] whitespace-nowrap truncate">
           {titleCaseDropdownLabel(triggerLabel)}
         </span>
         <img src={chevronDownIcon} alt="" aria-hidden="true" className="shrink-0 h-[7px] w-auto" />
@@ -383,7 +383,7 @@ function InboxDropdown({
         <div
           role="group"
           aria-label={label}
-          className="absolute left-0 top-[calc(100%+4px)] z-50 bg-[#0a0c10] border border-[#1d2132] border-solid flex flex-col items-start p-[8px] rounded-[12px] w-[208px] shadow-[0px_68px_13.5px_rgba(0,0,0,0.06),0px_38px_11.5px_rgba(0,0,0,0.2),0px_17px_8.5px_rgba(0,0,0,0.34),0px_4px_4.5px_rgba(0,0,0,0.39)]"
+          className="absolute left-0 top-[calc(100%+4px)] z-50 bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 border-solid flex flex-col items-start p-[8px] rounded-row w-[208px] shadow-[0px_68px_13.5px_rgba(0,0,0,0.06),0px_38px_11.5px_rgba(0,0,0,0.2),0px_17px_8.5px_rgba(0,0,0,0.34),0px_4px_4.5px_rgba(0,0,0,0.39)]"
           data-testid={`${testId}-menu`}
         >
           {options.map((option) => {
@@ -392,7 +392,7 @@ function InboxDropdown({
             return (
               <label
                 key={option.value}
-                className="flex items-center gap-[8px] p-[8px] rounded-[8px] shrink-0 w-full text-left [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[14px] whitespace-nowrap outline-none hover:bg-[#222737] cursor-pointer"
+                className="flex items-center gap-[8px] p-[8px] rounded-[8px] shrink-0 w-full text-left [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[14px] whitespace-nowrap outline-none hover:bg-brain-v1baby-blue-15 cursor-pointer"
                 data-testid={`${testId}-option-${option.value}`}
               >
                 <input
@@ -409,7 +409,7 @@ function InboxDropdown({
                         : [...values, option.value],
                     );
                   }}
-                  className="decision-checkbox size-[16px] shrink-0 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                  className="decision-checkbox size-[16px] shrink-0 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
                   data-testid={`${testId}-checkbox-${option.value}`}
                 />
                 {titleCaseDropdownLabel(option.label)}
@@ -1431,14 +1431,14 @@ export function InboxPage() {
         : "No resolved decisions yet.";
 
   return (
-    <div className="bg-[#11141b] overflow-hidden absolute inset-0 grid grid-rows-[auto_minmax(0,1fr)]">
+    <div className="bg-brain-v1baby-blue-5 overflow-hidden absolute inset-0 grid grid-rows-[auto_minmax(0,1fr)]">
 
       {/* Static chrome: header + filter toolbar — never scrolls */}
       <div className="shrink-0 flex flex-col gap-[40px] items-start pt-[40px] px-[16px] pb-[16px] w-full min-w-0">
         <div className="flex flex-col items-start gap-[4px] relative shrink-0 w-full">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px] whitespace-nowrap">Your AI Inbox</p>
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">Know what needs your attention.</p>
-          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px]">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-brain-v1baby-blue-60 text-[20px] whitespace-nowrap">Your AI Inbox</p>
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-brain-v1baby-blue-100 text-[32px]">Know what needs your attention.</p>
+          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-brain-v1baby-blue-30 text-[16px]">
             Review recommended actions, important updates, and insights from Brain's AI agents in one place.
           </p>
         </div>
@@ -1511,8 +1511,8 @@ export function InboxPage() {
 
         {/* Count row + clear-filter link */}
         <div className="flex items-center gap-[8px] w-full min-h-[20px]">
-          <div className="size-[6px] rounded-full shrink-0 bg-[#6c779d]" />
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[12px] uppercase tracking-[0.4px] whitespace-nowrap">
+          <div className="size-[6px] rounded-full shrink-0 bg-brain-v1baby-blue-60" />
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[12px] uppercase tracking-[0.4px] whitespace-nowrap">
             Decisions
           </p>
           <CountPill testId="text-decision-count">{visibleItems.length}</CountPill>
@@ -1521,7 +1521,7 @@ export function InboxPage() {
               type="button"
               onClick={() => setFilters(EMPTY_FILTERS)}
               data-testid="button-clear-filters"
-              className="ml-auto [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#7631ee] text-[12px] hover:underline outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-[4px]"
+              className="ml-auto [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1purple text-[12px] hover:underline outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple rounded-[4px]"
             >
               Clear filters
             </button>
@@ -1542,15 +1542,15 @@ export function InboxPage() {
             "eligible" meant. */}
         {selection.count >= 2 && selection.limit && (
           <div
-            className="bg-[#12032d] flex flex-col overflow-hidden rounded-[16px] shrink-0 w-full"
+            className="bg-brain-v1dark-dark-purple flex flex-col overflow-hidden rounded-panel shrink-0 w-full"
             data-testid="bulk-bar"
           >
             {/* Body — count metric + Brain Observed sentence */}
             <div className="flex flex-col items-start p-[16px] w-full">
-              <div className="bg-[#240757] flex gap-[26px] items-start overflow-hidden px-[32px] py-[16px] rounded-[16px] w-full">
+              <div className="bg-brain-v1dark-purple flex gap-[26px] items-start overflow-hidden px-[32px] py-[16px] rounded-panel w-full">
                 {/* Left: Number Selected */}
                 <div className="flex flex-col gap-[4px] items-start justify-center shrink-0 w-[128px]">
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#7631ee] text-[16px]">
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1purple text-[16px]">
                     Number Selected
                   </p>
                   <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[48px] text-[40px] text-white" data-testid="bulk-bar-count">
@@ -1558,10 +1558,10 @@ export function InboxPage() {
                   </p>
                 </div>
                 {/* Hairline vertical divider */}
-                <div className="w-px self-stretch shrink-0 bg-[#12032d]" />
+                <div className="w-px self-stretch shrink-0 bg-brain-v1dark-dark-purple" />
                 {/* Right: Brain Observed */}
                 <div className="flex min-w-0 flex-1 flex-col gap-[4px] items-start justify-center">
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#7631ee] text-[16px]">
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1purple text-[16px]">
                     Brain Observed
                   </p>
                   <p
@@ -1577,14 +1577,14 @@ export function InboxPage() {
               </div>
             </div>
             {/* Footer — Cancel / Approve Selected */}
-            <div className="border-t border-[#240757] bg-[#12032d] flex flex-col items-start p-[16px] w-full">
+            <div className="border-t border-brain-v1dark-purple bg-brain-v1dark-dark-purple flex flex-col items-start p-[16px] w-full">
               <div className="flex gap-[16px] items-center w-full">
                 <button
                   type="button"
                   onClick={() => setSelectedIds(new Set())}
                   disabled={bulkRunning}
                   data-testid="button-bulk-clear"
-                  className="bg-[#222737] flex flex-1 h-[36px] items-center justify-center min-w-px px-[12px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[16px] whitespace-nowrap hover:bg-[#2c3247] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="bg-brain-v1baby-blue-15 flex flex-1 h-[36px] items-center justify-center min-w-px px-[12px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[16px] whitespace-nowrap hover:bg-brain-v1baby-blue-15-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   Cancel
                 </button>
@@ -1593,7 +1593,7 @@ export function InboxPage() {
                   onClick={() => void approveSelected()}
                   disabled={bulkRunning}
                   data-testid="button-bulk-approve"
-                  className="bg-[#4a2300] flex flex-1 h-[36px] items-center justify-center min-w-px px-[12px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#ff9500] text-[16px] whitespace-nowrap hover:bg-[#5a2d00] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="bg-brain-v1dark-orange flex flex-1 h-[36px] items-center justify-center min-w-px px-[12px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1light-orange text-[16px] whitespace-nowrap hover:bg-brain-v1dark-orange-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {bulkRunning ? "Approving\u2026" : "Approve"}
                 </button>
@@ -1607,16 +1607,16 @@ export function InboxPage() {
             <UnavailableDataBox testId="text-decisions-empty">{emptyText}</UnavailableDataBox>
           ) : (
             <div
-              className="flex items-center px-[16px] py-[20px] w-full rounded-[12px] border border-solid border-[#1d2132] bg-[#0a0c10]"
+              className="flex items-center px-[16px] py-[20px] w-full rounded-row border border-solid border-brain-v1stroke-2 bg-brain-v1highlight-dropdown-bg"
               data-testid="text-decisions-empty"
             >
-              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
+              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[16px]">
                 {emptyText}
               </p>
             </div>
           )
         ) : (
-          <div className="shrink-0 flex flex-col w-full rounded-[12px] border border-solid border-[#1d2132] bg-[#0a0c10] overflow-hidden">
+          <div className="shrink-0 flex flex-col w-full rounded-row border border-solid border-brain-v1stroke-2 bg-brain-v1highlight-dropdown-bg overflow-hidden">
             <div className="flex flex-col w-full">
               {visibleItems.map((item) => (
                 <TierRow key={item.id} row={toRow(item)} />

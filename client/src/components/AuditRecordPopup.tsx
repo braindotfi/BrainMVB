@@ -162,8 +162,8 @@ export function AuditRecordPopup({
     return (
       <div
         data-testid="status-audit-record"
-        className={`content-stretch flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] shrink-0 ${
-          assistant ? "bg-[#222737] text-[#6c779d]" : auditEventChipClass(record.eventType)
+        className={`content-stretch flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-pill shrink-0 ${
+          assistant ? "bg-brain-v1baby-blue-15 text-brain-v1baby-blue-60" : auditEventChipClass(record.eventType)
         }`}
       >
         <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-center whitespace-nowrap">
@@ -175,10 +175,10 @@ export function AuditRecordPopup({
 
   const SectionHeader = ({ children }: { children: React.ReactNode }) => (
     <div className="content-stretch flex gap-[8px] items-center relative shrink-0 w-full">
-      <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#6c779d] text-[14px] whitespace-nowrap">
+      <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">
         {children}
       </p>
-      <div className="flex-[1_0_0] h-px bg-[#1d2132] min-w-px" />
+      <div className="flex-[1_0_0] h-px bg-brain-v1stroke-2 min-w-px" />
     </div>
   );
 
@@ -189,15 +189,15 @@ export function AuditRecordPopup({
       <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
         <DialogPrimitive.Portal>
           <DialogPrimitive.Overlay className={`fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px] ${transition.overlay}`} />
-          <DialogPrimitive.Content className={`fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[24px] w-[520px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none ${transition.card}`}>
+          <DialogPrimitive.Content className={`fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-brain-v1baby-blue-5 border border-brain-v1stroke-2 border-solid flex flex-col items-start overflow-hidden rounded-modal w-[520px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none ${transition.card}`}>
 
             {/* Header - close button right, title centred */}
-            <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-[#1d2132] border-b border-solid h-[56px] relative shrink-0 w-full">
-              <p className="-translate-x-1/2 [font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#a8b9f4] text-[20px] text-center whitespace-nowrap absolute left-1/2 top-[calc(50%-12px)]">
+            <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-brain-v1stroke-2 border-b border-solid h-[56px] relative shrink-0 w-full">
+              <p className="-translate-x-1/2 [font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-brain-v1baby-blue-100 text-[20px] text-center whitespace-nowrap absolute left-1/2 top-[calc(50%-12px)]">
                 {auditRecordTitle(record)}
               </p>
               <DialogPrimitive.Close
-                className="absolute right-[11px] top-[11px] size-[32px] p-0 hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                className="absolute right-[11px] top-[11px] size-[32px] p-0 hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
                 data-testid="button-close-audit-popup"
               >
                 <img src={closeIcon} alt="" className="size-[32px] rounded-full" />
@@ -205,18 +205,18 @@ export function AuditRecordPopup({
             </div>
 
             {/* Summary — the status pill follows the title like Inbox decision rows. */}
-            <div className="border-[#1d2132] border-b border-solid content-stretch flex flex-col gap-[8px] items-start p-[24px] relative shrink-0 w-full">
+            <div className="border-brain-v1stroke-2 border-b border-solid content-stretch flex flex-col gap-[8px] items-start p-[24px] relative shrink-0 w-full">
               {/* Figma 5734:71725 — the summary WRAPS beside a shrink-0 pill
                   (top-aligned), it does not truncate: an audit record's own
                   headline is the one string this surface must never clip. */}
               <div className="content-stretch flex items-start gap-[8px] relative shrink-0 w-full">
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-[#a8b9f4] text-[20px] flex-[1_0_0] min-w-px [word-break:break-word]">
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-brain-v1baby-blue-100 text-[20px] flex-[1_0_0] min-w-px [word-break:break-word]">
                   {formatText(record.summary)}
                 </p>
                 {statusPill()}
               </div>
               <div className="content-stretch flex items-center relative shrink-0 w-full">
-                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
+                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[16px]">
                   {record.occurredAtLabel}
                 </p>
               </div>
@@ -230,7 +230,7 @@ export function AuditRecordPopup({
                 <div className="relative shrink-0 w-full">
                   <div className="bg-clip-padding border-0 border-[transparent] border-solid content-stretch flex flex-col gap-[16px] items-start relative size-full">
                     <SectionHeader>Decision Lifecycle</SectionHeader>
-                    <div className="bg-[#0a0c10] border border-[#1d2132] border-solid content-stretch flex flex-col items-start relative rounded-[12px] shrink-0 w-full">
+                    <div className="bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 border-solid content-stretch flex flex-col items-start relative rounded-row shrink-0 w-full">
                       <div className="content-stretch flex items-start p-[16px] relative shrink-0 w-full">
                         <div className="content-stretch flex flex-[1_0_0] flex-col items-start min-w-px relative">
                           {record.lifecycle.map((step, idx) => {
@@ -248,17 +248,17 @@ export function AuditRecordPopup({
                                     className="size-[16px] shrink-0"
                                   />
                                   {!isLast && (
-                                    <div className="mt-[4px] mb-[4px] w-[2px] flex-1 bg-[#1d2132]" />
+                                    <div className="mt-[4px] mb-[4px] w-[2px] flex-1 bg-brain-v1stroke-2" />
                                   )}
                                 </div>
                                 <div className="[word-break:break-word] content-stretch flex flex-[1_0_0] flex-col [font-family:'Gilroy',sans-serif] font-medium gap-[8px] items-start justify-center leading-[16px] min-w-px not-italic relative text-[14px]">
-                                  <p className="relative shrink-0 text-[#a8b9f4] w-full">
+                                  <p className="relative shrink-0 text-brain-v1baby-blue-100 w-full">
                                     {actorMember ? (
                                       <button
                                         type="button"
                                         onClick={() => openMemberDetail(actorMember.id)}
                                         data-testid={`link-actor-member-${idx}`}
-                                        className="text-[#a8b9f4] underline decoration-[#414965] underline-offset-2 hover:decoration-[#a8b9f4] transition-colors"
+                                        className="text-brain-v1baby-blue-100 underline decoration-brain-v1baby-blue-30 underline-offset-2 hover:decoration-brain-v1baby-blue-100 transition-colors"
                                       >
                                         {formatText(step.label)}
                                       </button>
@@ -266,12 +266,12 @@ export function AuditRecordPopup({
                                       formatText(step.label)
                                     )}
                                     {actorRole && (
-                                      <span data-testid={`text-actor-role-${idx}`} className="text-[#6c779d]">
+                                      <span data-testid={`text-actor-role-${idx}`} className="text-brain-v1baby-blue-60">
                                         {" "}· {actorRole}
                                       </span>
                                     )}
                                     {step.authority && (
-                                      <span data-testid={`text-actor-authority-${idx}`} className="text-[#6c779d]">
+                                      <span data-testid={`text-actor-authority-${idx}`} className="text-brain-v1baby-blue-60">
                                         {" "}· {formatText(step.authority)}
                                       </span>
                                     )}
@@ -284,16 +284,16 @@ export function AuditRecordPopup({
                                     const canned = matchCannedPrompt(step.note);
                                     if (!canned) {
                                       return step.note ? (
-                                         <p className="relative shrink-0 text-[#414965] w-full">{formatText(step.note)}</p>
+                                         <p className="relative shrink-0 text-brain-v1baby-blue-30 w-full">{formatText(step.note)}</p>
                                       ) : null;
                                     }
                                     return (
                                       <>
-                                        <p data-testid={`text-canned-description-${idx}`} className="relative shrink-0 text-[#414965] w-full">
+                                        <p data-testid={`text-canned-description-${idx}`} className="relative shrink-0 text-brain-v1baby-blue-30 w-full">
                                            {formatText(canned.description)}
                                         </p>
-                                        <p data-testid={`text-canned-prompt-${idx}`} className="relative shrink-0 text-[#414965] w-full">
-                                           <span className="text-[#6c779d]">Exact prompt used:</span>{" "}
+                                        <p data-testid={`text-canned-prompt-${idx}`} className="relative shrink-0 text-brain-v1baby-blue-30 w-full">
+                                           <span className="text-brain-v1baby-blue-60">Exact prompt used:</span>{" "}
                                            {formatText(canned.prompt)}
                                         </p>
                                       </>
@@ -310,7 +310,7 @@ export function AuditRecordPopup({
                                     return (
                                       <p
                                         data-testid={`text-step-actor-${idx}`}
-                                        className="relative shrink-0 text-[#6c779d] w-full"
+                                        className="relative shrink-0 text-brain-v1baby-blue-60 w-full"
                                       >
                                         {isAssistantActivity(record)
                                           ? canned
@@ -320,7 +320,7 @@ export function AuditRecordPopup({
                                       </p>
                                     );
                                   })()}
-                                  <p className="relative shrink-0 text-[#6c779d] w-full">{step.timestamp}</p>
+                                  <p className="relative shrink-0 text-brain-v1baby-blue-60 w-full">{step.timestamp}</p>
                                 </div>
                               </div>
                             );
@@ -355,20 +355,20 @@ export function AuditRecordPopup({
                             <div
                               key={`${link.kind}-${link.refId}`}
                               data-testid={`text-linked-${link.kind}-${link.refId}`}
-                              className="bg-[#0a0c10] border border-[#1d2132] border-solid content-stretch flex gap-[16px] items-center px-[16px] py-[12px] relative rounded-[12px] shrink-0 w-full"
+                              className="bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 border-solid content-stretch flex gap-[16px] items-center px-[16px] py-[12px] relative rounded-row shrink-0 w-full"
                             >
                               <div className="content-stretch flex flex-[1_0_0] gap-[16px] items-center min-w-px relative">
-                                <div className="bg-[#222737] border border-[rgba(108,119,157,0.2)] border-solid content-stretch flex items-center justify-center px-[8px] py-[3px] relative rounded-[22px] shrink-0">
-                                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#6c779d] text-[12px] text-center whitespace-nowrap">
+                                <div className="bg-brain-v1baby-blue-15 border border-[rgba(108,119,157,0.2)] border-solid content-stretch flex items-center justify-center px-[8px] py-[3px] relative rounded-pill shrink-0">
+                                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-brain-v1baby-blue-60 text-[12px] text-center whitespace-nowrap">
                                     {capitalCase(chipLabel)}
                                   </p>
                                 </div>
-                                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[16px] text-[#6c779d]">
+                                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[16px] text-brain-v1baby-blue-60">
                                   {formatText(link.label)}
                                 </p>
                               </div>
                               {(ruleGone || vendorGone || invoiceGone || proposalGone) && (
-                                <p className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] text-[#414965] shrink-0">
+                                <p className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] text-brain-v1baby-blue-30 shrink-0">
                                   ({link.kind} unavailable)
                                 </p>
                               )}
@@ -382,19 +382,19 @@ export function AuditRecordPopup({
                             type="button"
                             onClick={() => handleNavigate(link)}
                             data-testid={`button-linked-${link.kind}-${link.refId}`}
-                            className="bg-[#0a0c10] border border-[#1d2132] border-solid content-stretch flex gap-[16px] items-center px-[16px] py-[12px] relative rounded-[12px] shrink-0 w-full text-left hover:bg-[#11141b] hover:border-[#1d2132] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                            className="bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 border-solid content-stretch flex gap-[16px] items-center px-[16px] py-[12px] relative rounded-row shrink-0 w-full text-left hover:bg-brain-v1baby-blue-5 hover:border-brain-v1stroke-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
                           >
                             <div className="content-stretch flex flex-[1_0_0] gap-[16px] items-center min-w-px relative">
-                              <div className="bg-[#222737] border border-[rgba(108,119,157,0.2)] border-solid content-stretch flex items-center justify-center px-[8px] py-[3px] relative rounded-[22px] shrink-0">
-                                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#6c779d] text-[12px] text-center whitespace-nowrap">
+                              <div className="bg-brain-v1baby-blue-15 border border-[rgba(108,119,157,0.2)] border-solid content-stretch flex items-center justify-center px-[8px] py-[3px] relative rounded-pill shrink-0">
+                                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-brain-v1baby-blue-60 text-[12px] text-center whitespace-nowrap">
                                   {capitalCase(chipLabel)}
                                 </p>
                               </div>
-                              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[16px] text-[#a8b9f4]">
+                              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[16px] text-brain-v1baby-blue-100">
                                 {formatText(link.label)}
                               </p>
                             </div>
-                            <ChevronRight size={16} className="text-[#6c779d] shrink-0" />
+                            <ChevronRight size={16} className="text-brain-v1baby-blue-60 shrink-0" />
                           </button>
                         );
                       })}
@@ -420,20 +420,20 @@ export function AuditRecordPopup({
                 Always present so the popup has a fixed bottom shape regardless of
                 anchor state. Disabled (not hidden) until a real tx hash backs it;
                 the caption explains why. Sits above the pager when both exist. */}
-            <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-[#1d2132] border-t border-solid flex flex-col gap-[12px] items-start p-[24px] shrink-0 w-full">
+            <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-brain-v1stroke-2 border-t border-solid flex flex-col gap-[12px] items-start p-[24px] shrink-0 w-full">
               <button
                 type="button"
                 onClick={handleVerify}
                 disabled={!isAnchored}
                 title={isAnchored || isNotRecorded ? undefined : "On-chain verification opens once this record is anchored."}
                 data-testid="button-verify-on-chain"
-                className="flex items-center justify-center gap-[6px] px-[20px] py-[10px] rounded-[100px] transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] w-full disabled:opacity-60 disabled:cursor-not-allowed enabled:hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                className="flex items-center justify-center gap-[6px] px-[20px] py-[10px] rounded-pill transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] w-full disabled:opacity-60 disabled:cursor-not-allowed enabled:hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
                 style={{ background: "#240757", color: "#7631ee" }}
               >
                 Verify On-Chain
               </button>
               {!isAnchored && !isNotRecorded && (
-                <p data-testid="text-verify-pending-caption" className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-[#6c779d]">
+                <p data-testid="text-verify-pending-caption" className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-brain-v1baby-blue-60">
                   On-chain verification opens once anchored.
                 </p>
               )}
@@ -441,27 +441,27 @@ export function AuditRecordPopup({
 
             {/* Bottom pager footer - Figma 5573:97391 - two full-width pill buttons */}
             {hasPager && (
-              <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-[#1d2132] border-t border-solid flex flex-col items-start p-[24px] shrink-0 w-full">
+              <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-brain-v1stroke-2 border-t border-solid flex flex-col items-start p-[24px] shrink-0 w-full">
                 <div className="flex gap-[16px] items-center w-full">
                   <button
                     type="button"
                     onClick={onPrev}
                     disabled={hasPrev === undefined ? pagerDisabled : !hasPrev}
                     data-testid="button-audit-record-prev"
-                    className="bg-[#222737] flex-1 flex gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] disabled:opacity-60 disabled:cursor-not-allowed hover:bg-[#2c3247] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                    className="bg-brain-v1baby-blue-15 flex-1 flex gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-pill disabled:opacity-60 disabled:cursor-not-allowed hover:bg-brain-v1baby-blue-15-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
                   >
-                    <ChevronLeft size={24} className="text-[#6c779d] shrink-0" />
-                    <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">Previous</span>
+                    <ChevronLeft size={24} className="text-brain-v1baby-blue-60 shrink-0" />
+                    <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[16px] whitespace-nowrap">Previous</span>
                   </button>
                   <button
                     type="button"
                     onClick={onNext}
                     disabled={hasNext === undefined ? pagerDisabled : !hasNext}
                     data-testid="button-audit-record-next"
-                    className="bg-[#222737] flex-1 flex gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] disabled:opacity-60 disabled:cursor-not-allowed hover:bg-[#2c3247] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                    className="bg-brain-v1baby-blue-15 flex-1 flex gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-pill disabled:opacity-60 disabled:cursor-not-allowed hover:bg-brain-v1baby-blue-15-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
                   >
-                    <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">Next</span>
-                    <ChevronRight size={24} className="text-[#6c779d] shrink-0" />
+                    <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[16px] whitespace-nowrap">Next</span>
+                    <ChevronRight size={24} className="text-brain-v1baby-blue-60 shrink-0" />
                   </button>
                 </div>
               </div>

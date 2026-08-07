@@ -149,7 +149,7 @@ const GET_STARTED_STEP_ICONS = [stepOneIcon, stepTwoIcon, stepThreeIcon] as cons
 
 /* ─── Shared primitives (Settings/Home card + label patterns) ─── */
 const Card = ({ children, testId }: { children: ReactNode; testId?: string }) => (
-  <div data-testid={testId} className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10" }}>
+  <div data-testid={testId} className="rounded-panel overflow-hidden" style={{ background: "#0a0c10" }}>
     {children}
   </div>
 );
@@ -158,7 +158,7 @@ const Card = ({ children, testId }: { children: ReactNode; testId?: string }) =>
    parent flex container (flex flex-col gap-[4px]), NOT margin here. */
 const SectionLabel = ({ children, testId }: { children: ReactNode; testId?: string }) => (
   <div className="flex items-center min-h-[36px]">
-    <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]" data-testid={testId}>
+    <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-30 text-[16px] leading-[24px]" data-testid={testId}>
       {children}
     </p>
   </div>
@@ -195,11 +195,11 @@ const PillButton = ({ children, onClick, tone = "purple", disabled, testId }: {
 };
 
 /* Pills matching the ProposalDetail review pop-up pattern:
-   rounded-[100px], px-[10px] py-[5px], 12px/16px semibold, subtle border. */
+   rounded-pill, px-[10px] py-[5px], 12px/16px semibold, subtle border. */
 const StatusBadge = ({ status }: { status: "active" | "revoked" }) => (
   <span
     data-testid={`badge-key-status-${status}`}
-    className="inline-flex items-center justify-center px-[8px] py-[3px] rounded-[22px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-center whitespace-nowrap border"
+    className="inline-flex items-center justify-center px-[8px] py-[3px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-center whitespace-nowrap border"
     style={status === "active"
       ? { background: "#222737", color: "#a8b9f4", borderColor: "rgba(168,185,244,0.2)" }
       : { background: "#350011", color: "#d20344", borderColor: "rgba(210,3,68,0.2)" }}
@@ -210,7 +210,7 @@ const StatusBadge = ({ status }: { status: "active" | "revoked" }) => (
 
 const EnvBadge = ({ env }: { env: string }) => (
   <span
-    className="inline-flex items-center justify-center px-[10px] py-[5px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] whitespace-nowrap border"
+    className="inline-flex items-center justify-center px-[10px] py-[5px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] whitespace-nowrap border"
     style={env === "live"
       ? { background: "#4a2300", color: "#ff9500", borderColor: "rgba(255,149,0,0.2)" }
       : { background: "#222737", color: "#a8b9f4", borderColor: "rgba(168,185,244,0.2)" }}
@@ -224,10 +224,10 @@ const EnvBadge = ({ env }: { env: string }) => (
 const KeysUnavailableCard = ({ testId }: { testId?: string }) => (
   <Card testId={testId ?? "card-keys-unavailable"}>
     <div className="p-[16px] flex flex-col gap-[4px]">
-      <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px]">
+      <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[20px]">
         The keys API isn't enabled yet
       </p>
-      <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[16px]">
+      <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[16px]">
         brain-core's API-key service hasn't been switched on for this environment. Keys become
         available here automatically as soon as it is. No action needed on your side.
       </p>
@@ -237,7 +237,7 @@ const KeysUnavailableCard = ({ testId }: { testId?: string }) => (
 
 const EmptyRow = ({ children, testId }: { children: ReactNode; testId?: string }) => (
   <div className="p-4" data-testid={testId}>
-    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[20px]">{children}</p>
+    <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px]">{children}</p>
   </div>
 );
 
@@ -271,7 +271,7 @@ function formatDateTime(iso: string | null): string {
 /* ─── Environment toggle (persisted; Live gated server-side too).
    Matches the Finances page tab switcher formatting. ─── */
 const EnvToggle = ({ env, onChange }: { env: DevEnv; onChange: (e: DevEnv) => void }) => (
-  <div className="bg-[#06070a] flex gap-[2px] items-center overflow-clip p-[2px] relative rounded-[400px] shrink-0">
+  <div className="bg-brain-v1headerfooterbg flex gap-[2px] items-center overflow-clip p-[2px] relative rounded-pill shrink-0">
     {(["sandbox", "live"] as DevEnv[]).map((e) => {
       const isActive = env === e;
       return (
@@ -280,7 +280,7 @@ const EnvToggle = ({ env, onChange }: { env: DevEnv; onChange: (e: DevEnv) => vo
           type="button"
           data-testid={`toggle-env-${e}`}
           onClick={() => onChange(e)}
-          className="flex items-center justify-center px-[14px] py-[8px] relative rounded-[100px] shrink-0 transition-colors"
+          className="flex items-center justify-center px-[14px] py-[8px] relative rounded-pill shrink-0 transition-colors"
           style={{ background: isActive ? "#4a2300" : "transparent" }}
         >
           <p
@@ -316,9 +316,9 @@ const PopupShell = ({ title, onClose, children, footer, testId }: {
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
       data-testid={testId}
     >
-      <div className="flex flex-col rounded-[24px] w-[480px] max-h-[85vh] overflow-hidden bg-[#11141b] border border-[#1d2132]">
-        <div className="relative h-[56px] shrink-0 w-full backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-[#1d2132]">
-          <p className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 [font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[20px] leading-[24px] whitespace-nowrap max-w-[380px] truncate text-center" data-testid="text-popup-title">
+      <div className="flex flex-col rounded-modal w-[480px] max-h-[85vh] overflow-hidden bg-brain-v1baby-blue-5 border border-brain-v1stroke-2">
+        <div className="relative h-[56px] shrink-0 w-full backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-brain-v1stroke-2">
+          <p className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[20px] leading-[24px] whitespace-nowrap max-w-[380px] truncate text-center" data-testid="text-popup-title">
             {title}
           </p>
           <button
@@ -326,7 +326,7 @@ const PopupShell = ({ title, onClose, children, footer, testId }: {
             data-testid="button-close-popup"
             onClick={onClose}
             aria-label="Close"
-            className="absolute right-[11px] top-[11px] size-[32px] rounded-full bg-[#222737] flex items-center justify-center hover:bg-[#2c3247] transition-colors text-[#6c779d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+            className="absolute right-[11px] top-[11px] size-[32px] rounded-full bg-brain-v1baby-blue-15 flex items-center justify-center hover:bg-brain-v1baby-blue-15-hover transition-colors text-brain-v1baby-blue-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
               <path d="M2 2L10 10M10 2L2 10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
@@ -335,7 +335,7 @@ const PopupShell = ({ title, onClose, children, footer, testId }: {
         </div>
         <div className="flex flex-col gap-[32px] p-[24px] overflow-y-auto">{children}</div>
         {footer && (
-          <div className="shrink-0 w-full backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-t border-[#1d2132] p-[24px]">
+          <div className="shrink-0 w-full backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-t border-brain-v1stroke-2 p-[24px]">
             {footer}
           </div>
         )}
@@ -348,8 +348,8 @@ const PopupShell = ({ title, onClose, children, footer, testId }: {
 const PopupSection = ({ label, children }: { label: string; children: ReactNode }) => (
   <div className="flex flex-col gap-[16px] w-full">
     <div className="flex gap-[8px] items-center w-full">
-      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[14px] leading-[14px] whitespace-nowrap">{label}</p>
-      <div className="flex-1 min-w-px border-t border-[#1d2132]" />
+      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-60 text-[14px] leading-[14px] whitespace-nowrap">{label}</p>
+      <div className="flex-1 min-w-px border-t border-brain-v1stroke-2" />
     </div>
     {children}
   </div>
@@ -357,8 +357,8 @@ const PopupSection = ({ label, children }: { label: string; children: ReactNode 
 
 /* Code box used for keys / curl examples inside popups. */
 const PopupCodeBox = ({ children, testId }: { children: ReactNode; testId?: string }) => (
-  <div className="bg-[#06070a] border border-[#1d2132] rounded-[12px] p-[12px] w-full">
-    <p className="[font-family:'JetBrains_Mono',monospace] font-bold text-[#a8b9f4] text-[12px] leading-[16px] break-all" data-testid={testId}>{children}</p>
+  <div className="bg-brain-v1headerfooterbg border border-brain-v1stroke-2 rounded-row p-[12px] w-full">
+    <p className="[font-family:'JetBrains_Mono',monospace] font-bold text-brain-v1baby-blue-100 text-[12px] leading-[16px] break-all" data-testid={testId}>{children}</p>
   </div>
 );
 
@@ -377,11 +377,11 @@ const PlaintextKeyModal = ({ plaintext, onClose }: { plaintext: string; onClose:
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
       data-testid="modal-plaintext-key"
     >
-      <div className="bg-[#11141b] border border-[#1d2132] border-solid flex flex-col items-start overflow-clip relative rounded-[24px] w-[480px] max-h-[85vh]">
+      <div className="bg-brain-v1baby-blue-5 border border-brain-v1stroke-2 border-solid flex flex-col items-start overflow-clip relative rounded-modal w-[480px] max-h-[85vh]">
 
         {/* ── Header ── */}
-        <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-[#1d2132] h-[56px] relative shrink-0 w-full">
-          <p className="-translate-x-1/2 absolute [font-family:'Gilroy',sans-serif] font-semibold leading-[24px] left-1/2 text-[#a8b9f4] text-[20px] text-center top-[calc(50%-12px)] whitespace-nowrap" data-testid="text-popup-title">
+        <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-brain-v1stroke-2 h-[56px] relative shrink-0 w-full">
+          <p className="-translate-x-1/2 absolute [font-family:'Gilroy',sans-serif] font-semibold leading-[24px] left-1/2 text-brain-v1baby-blue-100 text-[20px] text-center top-[calc(50%-12px)] whitespace-nowrap" data-testid="text-popup-title">
             API Key
           </p>
           <button
@@ -389,7 +389,7 @@ const PlaintextKeyModal = ({ plaintext, onClose }: { plaintext: string; onClose:
             data-testid="button-close-popup"
             onClick={onClose}
             aria-label="Close"
-            className="absolute right-[11px] top-[11px] size-[32px] rounded-full bg-[#222737] flex items-center justify-center hover:bg-[#2c3247] transition-colors text-[#6c779d] focus:outline-none"
+            className="absolute right-[11px] top-[11px] size-[32px] rounded-full bg-brain-v1baby-blue-15 flex items-center justify-center hover:bg-brain-v1baby-blue-15-hover transition-colors text-brain-v1baby-blue-60 focus:outline-none"
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
               <path d="M2 2L10 10M10 2L2 10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
@@ -414,7 +414,7 @@ const PlaintextKeyModal = ({ plaintext, onClose }: { plaintext: string; onClose:
         </div>
 
         {/* ── Footer row 1: Copy Key ── */}
-        <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-t border-[#1d2132] border-solid flex flex-col items-start p-[24px] relative shrink-0 w-full">
+        <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-t border-brain-v1stroke-2 border-solid flex flex-col items-start p-[24px] relative shrink-0 w-full">
           <div className="flex items-center relative shrink-0 w-full">
             <button
               type="button"
@@ -422,7 +422,7 @@ const PlaintextKeyModal = ({ plaintext, onClose }: { plaintext: string; onClose:
               onClick={async () => {
                 try { await navigator.clipboard.writeText(plaintext); setCopied(true); } catch { /* clipboard unavailable */ }
               }}
-              className="bg-[#240757] hover:bg-[#2e0a6e] transition-colors flex flex-[1_0_0] items-center justify-center min-w-px px-[20px] py-[10px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[#7631ee] text-[14px] leading-[20px] whitespace-nowrap focus:outline-none"
+              className="bg-brain-v1dark-purple hover:bg-brain-v1dark-purple-hover transition-colors flex flex-[1_0_0] items-center justify-center min-w-px px-[20px] py-[10px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1purple text-[14px] leading-[20px] whitespace-nowrap focus:outline-none"
             >
               {copied ? "Copied!" : "Copy Key"}
             </button>
@@ -430,25 +430,25 @@ const PlaintextKeyModal = ({ plaintext, onClose }: { plaintext: string; onClose:
         </div>
 
         {/* ── Footer row 2: Previous / Next (disabled — no list context for plaintext) ── */}
-        <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-t border-[#1d2132] border-solid flex flex-col items-start p-[24px] relative shrink-0 w-full">
+        <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-t border-brain-v1stroke-2 border-solid flex flex-col items-start p-[24px] relative shrink-0 w-full">
           <div className="flex items-center justify-between relative shrink-0 w-full">
             <button
               type="button"
               disabled
-              className="bg-[#222737] flex gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] shrink-0 w-[148px] opacity-40 cursor-not-allowed"
+              className="bg-brain-v1baby-blue-15 flex gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-pill shrink-0 w-[148px] opacity-40 cursor-not-allowed"
             >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-[#6c779d] shrink-0">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-brain-v1baby-blue-60 shrink-0">
                 <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
-              <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">Previous</span>
+              <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">Previous</span>
             </button>
             <button
               type="button"
               disabled
-              className="bg-[#222737] flex gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] shrink-0 w-[148px] opacity-40 cursor-not-allowed"
+              className="bg-brain-v1baby-blue-15 flex gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-pill shrink-0 w-[148px] opacity-40 cursor-not-allowed"
             >
-              <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">Next</span>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-[#6c779d] shrink-0">
+              <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">Next</span>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-brain-v1baby-blue-60 shrink-0">
                 <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </button>
@@ -482,16 +482,16 @@ const DetailModal = ({ title, badges, onClose, children, footer, testId }: {
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
       data-testid={testId}
     >
-      <div className="flex flex-col rounded-[16px] w-[480px] max-h-[80vh] overflow-hidden" style={{ background: "#11141b", border: "1px solid #1d2132" }}>
+      <div className="flex flex-col rounded-panel w-[480px] max-h-[80vh] overflow-hidden" style={{ background: "#11141b", border: "1px solid #1d2132" }}>
         <div className="flex items-center gap-2 p-5 pb-3">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[18px] leading-[22px] flex-1 min-w-0 truncate" data-testid="text-detail-modal-title">{title}</p>
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[18px] leading-[22px] flex-1 min-w-0 truncate" data-testid="text-detail-modal-title">{title}</p>
           {badges}
           <button
             type="button"
             data-testid="button-close-detail-modal"
             onClick={onClose}
             aria-label="Close"
-            className="flex-shrink-0 size-[28px] rounded-full flex items-center justify-center hover:bg-[#1d2132] transition-colors text-[#6c779d]"
+            className="flex-shrink-0 size-[28px] rounded-full flex items-center justify-center hover:bg-brain-v1stroke-2 transition-colors text-brain-v1baby-blue-60"
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
               <path d="M2 2L10 10M10 2L2 10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
@@ -499,7 +499,7 @@ const DetailModal = ({ title, badges, onClose, children, footer, testId }: {
           </button>
         </div>
         <div className="flex flex-col gap-3 px-5 pb-5 overflow-y-auto">{children}</div>
-        {footer && <div className="flex items-center gap-2 p-3 border-t border-[#1d2132]">{footer}</div>}
+        {footer && <div className="flex items-center gap-2 p-3 border-t border-brain-v1stroke-2">{footer}</div>}
       </div>
     </div>
   );
@@ -508,7 +508,7 @@ const DetailModal = ({ title, badges, onClose, children, footer, testId }: {
 /* Label/value line inside the detail modal. */
 const DetailRow = ({ label, children, testId }: { label: string; children: ReactNode; testId?: string }) => (
   <div className="flex items-start justify-between gap-4" data-testid={testId}>
-    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] leading-[18px] flex-shrink-0">{label}</p>
+    <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[13px] leading-[18px] flex-shrink-0">{label}</p>
     <div className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[13px] leading-[18px] text-right min-w-0 break-words">{children}</div>
   </div>
 );
@@ -542,15 +542,15 @@ const EndpointRow = ({ path, scope, description }: { path: string; scope: string
     <div className="flex flex-col gap-[16px] w-full" data-testid={`row-endpoint-${slug}`}>
       <div className="flex flex-col gap-[4px] justify-center w-full">
         <div className="flex gap-[12px] items-start w-full flex-wrap">
-          <span className="bg-[#222737] border border-[rgba(108,119,157,0.2)] flex items-center justify-center px-[8px] py-[3px] rounded-[22px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#6c779d] text-[12px] text-center whitespace-nowrap">
+          <span className="bg-brain-v1baby-blue-15 border border-[rgba(108,119,157,0.2)] flex items-center justify-center px-[8px] py-[3px] rounded-pill shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-brain-v1baby-blue-60 text-[12px] text-center whitespace-nowrap">
             GET
           </span>
-          <p className="flex-1 min-w-0 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px] break-all" data-testid={`text-endpoint-path-${slug}`}>
+          <p className="flex-1 min-w-0 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[16px] break-all" data-testid={`text-endpoint-path-${slug}`}>
             {path}
           </p>
           <span
             data-testid={`badge-endpoint-scope-${slug}`}
-            className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] shrink-0 border [font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[12px] text-center whitespace-nowrap"
+            className="flex items-center justify-center px-[8px] py-[3px] rounded-pill shrink-0 border [font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[12px] text-center whitespace-nowrap"
             style={scope
               ? { background: "#240757", color: "#7631ee", borderColor: "rgba(118,49,238,0.2)" }
               : { background: "#222737", color: "#6c779d", borderColor: "rgba(108,119,157,0.2)" }}
@@ -558,10 +558,10 @@ const EndpointRow = ({ path, scope, description }: { path: string; scope: string
             {scope ? `Requires ${scope}` : "Any Active Key"}
           </span>
         </div>
-        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px]">{description}</p>
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px]">{description}</p>
       </div>
-      <div className="bg-[#06070a] border border-[#1d2132] flex gap-[12px] items-center p-[12px] rounded-[12px] w-full">
-        <p className="flex-1 min-w-0 [font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[14px] truncate" data-testid={`text-curl-${slug}`}>
+      <div className="bg-brain-v1headerfooterbg border border-brain-v1stroke-2 flex gap-[12px] items-center p-[12px] rounded-row w-full">
+        <p className="flex-1 min-w-0 [font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[14px] truncate" data-testid={`text-curl-${slug}`}>
           {curl}
         </p>
         <button
@@ -574,7 +574,7 @@ const EndpointRow = ({ path, scope, description }: { path: string; scope: string
               setTimeout(() => setCopied(false), 1500);
             } catch { /* clipboard unavailable */ }
           }}
-          className="bg-[#222737] flex gap-[2px] items-center justify-center px-[10px] py-[4px] rounded-[100px] shrink-0 hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[12px] whitespace-nowrap"
+          className="bg-brain-v1baby-blue-15 flex gap-[2px] items-center justify-center px-[10px] py-[4px] rounded-pill shrink-0 hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap"
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0">
             <rect x="5.5" y="5.5" width="7.5" height="7.5" rx="1.5" stroke="#6c779d" strokeWidth="1.2" />
@@ -687,17 +687,17 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
           onClick={(e) => { if (e.target === e.currentTarget) setSelectedEvent(null); }}
           data-testid="modal-activity-detail"
         >
-          <div className="bg-[#11141b] border border-[#1d2132] border-solid flex flex-col items-start overflow-clip relative rounded-[24px] w-[480px] max-h-[85vh]">
+          <div className="bg-brain-v1baby-blue-5 border border-brain-v1stroke-2 border-solid flex flex-col items-start overflow-clip relative rounded-modal w-[480px] max-h-[85vh]">
 
             {/* ── Header ── */}
-            <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-[#1d2132] h-[56px] relative shrink-0 w-full">
+            <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-brain-v1stroke-2 h-[56px] relative shrink-0 w-full">
               {/* Centred title */}
-              <p className="-translate-x-1/2 absolute [font-family:'Gilroy',sans-serif] font-semibold leading-[24px] left-1/2 text-[#a8b9f4] text-[20px] text-center top-[calc(50%-12px)] whitespace-nowrap" data-testid="text-detail-modal-title">
+              <p className="-translate-x-1/2 absolute [font-family:'Gilroy',sans-serif] font-semibold leading-[24px] left-1/2 text-brain-v1baby-blue-100 text-[20px] text-center top-[calc(50%-12px)] whitespace-nowrap" data-testid="text-detail-modal-title">
                 {humanizeAction(selectedEvent.action)}
               </p>
               {/* Layer badge — left */}
-              <div className="absolute flex items-center justify-center left-[23px] top-[17px] bg-[#222737] border border-[rgba(108,119,157,0.2)] border-solid px-[8px] py-[3px] rounded-[22px]">
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#6c779d] text-[12px] text-center whitespace-nowrap capitalize">
+              <div className="absolute flex items-center justify-center left-[23px] top-[17px] bg-brain-v1baby-blue-15 border border-[rgba(108,119,157,0.2)] border-solid px-[8px] py-[3px] rounded-pill">
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-brain-v1baby-blue-60 text-[12px] text-center whitespace-nowrap capitalize">
                   {selectedEvent.layer}
                 </p>
               </div>
@@ -707,7 +707,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
                 data-testid="button-close-detail-modal"
                 onClick={() => setSelectedEvent(null)}
                 aria-label="Close"
-                className="absolute right-[11px] top-[11px] size-[32px] rounded-full flex items-center justify-center bg-[#1d2132] hover:bg-[#262b3d] transition-colors text-[#6c779d]"
+                className="absolute right-[11px] top-[11px] size-[32px] rounded-full flex items-center justify-center bg-brain-v1stroke-2 hover:bg-[#262b3d] transition-colors text-brain-v1baby-blue-60"
               >
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                   <path d="M2 2L10 10M10 2L2 10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
@@ -717,66 +717,66 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
 
             {/* ── Body ── */}
             <div className="flex flex-col gap-[16px] items-start p-[24px] relative shrink-0 w-full overflow-y-auto">
-              <div className="bg-[#0a0c10] border border-[#1d2132] border-solid flex flex-col items-start relative rounded-[12px] shrink-0 w-full">
+              <div className="bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 border-solid flex flex-col items-start relative rounded-row shrink-0 w-full">
 
                 {/* Event */}
-                <div className="border-b border-[#1d2132] flex items-start relative shrink-0 w-full">
+                <div className="border-b border-brain-v1stroke-2 flex items-start relative shrink-0 w-full">
                   <div className="flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[140px]">
-                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[12px] whitespace-nowrap">Event</p>
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">Event</p>
                   </div>
                   <div className="flex flex-[1_0_0] flex-col items-start justify-center min-w-px px-[12px] py-[8px]" data-testid="detail-activity-action">
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] overflow-hidden text-[#a8b9f4] text-[13px] text-ellipsis w-full whitespace-nowrap">{selectedEvent.action}</p>
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] overflow-hidden text-brain-v1baby-blue-100 text-[13px] text-ellipsis w-full whitespace-nowrap">{selectedEvent.action}</p>
                   </div>
                 </div>
 
                 {/* When */}
-                <div className="border-b border-[#1d2132] flex items-start relative shrink-0 w-full">
+                <div className="border-b border-brain-v1stroke-2 flex items-start relative shrink-0 w-full">
                   <div className="flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[140px]">
-                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[12px] whitespace-nowrap">When</p>
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">When</p>
                   </div>
                   <div className="flex flex-[1_0_0] flex-col items-start justify-center min-w-px px-[12px] py-[8px]" data-testid="detail-activity-when">
-                    <p className="[font-family:'JetBrains_Mono',monospace] leading-[20px] overflow-hidden text-[#a8b9f4] text-[13px] text-ellipsis w-full whitespace-nowrap">{formatDateTime(selectedEvent.created_at)}</p>
+                    <p className="[font-family:'JetBrains_Mono',monospace] leading-[20px] overflow-hidden text-brain-v1baby-blue-100 text-[13px] text-ellipsis w-full whitespace-nowrap">{formatDateTime(selectedEvent.created_at)}</p>
                   </div>
                 </div>
 
                 {/* Authenticated As */}
-                <div className="border-b border-[#1d2132] flex items-start relative shrink-0 w-full">
+                <div className="border-b border-brain-v1stroke-2 flex items-start relative shrink-0 w-full">
                   <div className="flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[140px]">
-                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[12px] whitespace-nowrap">Authenticated As</p>
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">Authenticated As</p>
                   </div>
                   <div className="flex flex-[1_0_0] flex-col items-start justify-center min-w-px px-[12px] py-[8px]" data-testid="detail-activity-actor">
-                    <p className="[font-family:'JetBrains_Mono',monospace] leading-[20px] overflow-hidden text-[#a8b9f4] text-[13px] text-ellipsis w-full whitespace-nowrap">{selectedEvent.actor}</p>
+                    <p className="[font-family:'JetBrains_Mono',monospace] leading-[20px] overflow-hidden text-brain-v1baby-blue-100 text-[13px] text-ellipsis w-full whitespace-nowrap">{selectedEvent.actor}</p>
                   </div>
                 </div>
 
                 {/* Tenant */}
-                <div className="border-b border-[#1d2132] flex items-start relative shrink-0 w-full">
+                <div className="border-b border-brain-v1stroke-2 flex items-start relative shrink-0 w-full">
                   <div className="flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[140px]">
-                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[12px] whitespace-nowrap">Tenant</p>
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">Tenant</p>
                   </div>
                   <div className="flex flex-[1_0_0] flex-col items-start justify-center min-w-px px-[12px] py-[8px]" data-testid="detail-activity-tenant">
-                    <p className="[font-family:'JetBrains_Mono',monospace] leading-[20px] overflow-hidden text-[#a8b9f4] text-[13px] text-ellipsis w-full whitespace-nowrap">{selectedEvent.tenant_id}</p>
+                    <p className="[font-family:'JetBrains_Mono',monospace] leading-[20px] overflow-hidden text-brain-v1baby-blue-100 text-[13px] text-ellipsis w-full whitespace-nowrap">{selectedEvent.tenant_id}</p>
                   </div>
                 </div>
 
                 {/* Event ID */}
-                <div className={`${str(selectedEvent.inputs, "question") || str(selectedEvent.outputs, "answer") || str(selectedEvent.outputs, "response") ? "border-b border-[#1d2132]" : ""} flex items-start relative shrink-0 w-full`}>
+                <div className={`${str(selectedEvent.inputs, "question") || str(selectedEvent.outputs, "answer") || str(selectedEvent.outputs, "response") ? "border-b border-brain-v1stroke-2" : ""} flex items-start relative shrink-0 w-full`}>
                   <div className="flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[140px]">
-                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[12px] whitespace-nowrap">Event ID</p>
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">Event ID</p>
                   </div>
                   <div className="flex flex-[1_0_0] flex-col items-start justify-center min-w-px px-[12px] py-[8px]">
-                    <p className="[font-family:'JetBrains_Mono',monospace] leading-[20px] overflow-hidden text-[#a8b9f4] text-[13px] text-ellipsis w-full whitespace-nowrap">{selectedEvent.id}</p>
+                    <p className="[font-family:'JetBrains_Mono',monospace] leading-[20px] overflow-hidden text-brain-v1baby-blue-100 text-[13px] text-ellipsis w-full whitespace-nowrap">{selectedEvent.id}</p>
                   </div>
                 </div>
 
                 {/* Question — wiki events only */}
                 {str(selectedEvent.inputs, "question") && (
-                  <div className={`${str(selectedEvent.outputs, "answer") || str(selectedEvent.outputs, "response") ? "border-b border-[#1d2132]" : ""} flex items-start relative shrink-0 w-full`}>
+                  <div className={`${str(selectedEvent.outputs, "answer") || str(selectedEvent.outputs, "response") ? "border-b border-brain-v1stroke-2" : ""} flex items-start relative shrink-0 w-full`}>
                     <div className="flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[140px]">
-                      <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[12px] whitespace-nowrap">Question</p>
+                      <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">Question</p>
                     </div>
                     <div className="flex flex-[1_0_0] flex-col items-start justify-center min-w-px px-[12px] py-[8px]">
-                      <div className="[font-family:'Gilroy',sans-serif] font-medium h-[99px] leading-[20px] overflow-hidden text-[#a8b9f4] text-[13px] w-full" data-testid="text-activity-question">
+                      <div className="[font-family:'Gilroy',sans-serif] font-medium h-[99px] leading-[20px] overflow-hidden text-brain-v1baby-blue-100 text-[13px] w-full" data-testid="text-activity-question">
                         {str(selectedEvent.inputs, "question")}
                       </div>
                     </div>
@@ -787,10 +787,10 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
                 {(str(selectedEvent.outputs, "answer") ?? str(selectedEvent.outputs, "response")) && (
                   <div className="flex items-start relative shrink-0 w-full">
                     <div className="flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[140px]">
-                      <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[12px] whitespace-nowrap">Response</p>
+                      <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">Response</p>
                     </div>
                     <div className="flex flex-[1_0_0] flex-col items-start justify-center min-w-px px-[12px] py-[8px]">
-                      <div className="[font-family:'Gilroy',sans-serif] font-medium h-[99px] leading-[20px] overflow-hidden text-[#a8b9f4] text-[13px] w-full" data-testid="text-activity-response">
+                      <div className="[font-family:'Gilroy',sans-serif] font-medium h-[99px] leading-[20px] overflow-hidden text-brain-v1baby-blue-100 text-[13px] w-full" data-testid="text-activity-response">
                         {str(selectedEvent.outputs, "answer") ?? str(selectedEvent.outputs, "response")}
                       </div>
                     </div>
@@ -800,7 +800,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
             </div>
 
             {/* ── Footer row 1: View this event on the Inbox timeline ── */}
-            <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-t border-[#1d2132] border-solid flex flex-col items-start p-[24px] relative shrink-0 w-full">
+            <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-t border-brain-v1stroke-2 border-solid flex flex-col items-start p-[24px] relative shrink-0 w-full">
               <div className="flex items-center relative shrink-0 w-full">
                 <button
                   type="button"
@@ -813,7 +813,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
                     setSelectedEvent(null);
                     navigate(`/inbox?record=${encodeURIComponent(eventId)}`);
                   }}
-                  className="bg-[#4a2300] flex flex-[1_0_0] items-center justify-center min-w-px px-[20px] py-[10px] relative rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#ff9500] text-[14px] whitespace-nowrap hover:opacity-90 transition-colors"
+                  className="bg-brain-v1dark-orange flex flex-[1_0_0] items-center justify-center min-w-px px-[20px] py-[10px] relative rounded-pill [font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1light-orange text-[14px] whitespace-nowrap hover:opacity-90 transition-colors"
                 >
                   View In Inbox
                 </button>
@@ -821,29 +821,29 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
             </div>
 
             {/* ── Footer row 2: Previous / Next ── */}
-            <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-t border-[#1d2132] border-solid flex flex-col items-start p-[24px] relative shrink-0 w-full">
+            <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-t border-brain-v1stroke-2 border-solid flex flex-col items-start p-[24px] relative shrink-0 w-full">
               <div className="flex items-center justify-between relative shrink-0 w-full">
                 <button
                   type="button"
                   data-testid="button-activity-prev"
                   onClick={goPrevEvent}
                   disabled={!hasPrevEvent}
-                  className="bg-[#222737] flex gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] shrink-0 w-[148px] disabled:opacity-60 disabled:cursor-not-allowed hover:bg-[#2c3247] transition-colors focus:outline-none"
+                  className="bg-brain-v1baby-blue-15 flex gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-pill shrink-0 w-[148px] disabled:opacity-60 disabled:cursor-not-allowed hover:bg-brain-v1baby-blue-15-hover transition-colors focus:outline-none"
                 >
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-[#6c779d] shrink-0">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-brain-v1baby-blue-60 shrink-0">
                     <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
-                  <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">Previous</span>
+                  <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">Previous</span>
                 </button>
                 <button
                   type="button"
                   data-testid="button-activity-next"
                   onClick={goNextEvent}
                   disabled={!hasNextEvent}
-                  className="bg-[#222737] flex gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] shrink-0 w-[148px] disabled:opacity-60 disabled:cursor-not-allowed hover:bg-[#2c3247] transition-colors focus:outline-none"
+                  className="bg-brain-v1baby-blue-15 flex gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-pill shrink-0 w-[148px] disabled:opacity-60 disabled:cursor-not-allowed hover:bg-brain-v1baby-blue-15-hover transition-colors focus:outline-none"
                 >
-                  <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">Next</span>
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-[#6c779d] shrink-0">
+                  <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">Next</span>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-brain-v1baby-blue-60 shrink-0">
                     <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </button>
@@ -856,10 +856,10 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
       {/* Header: text left, env toggle top-right. No bottom padding — root gap handles spacing. */}
       <div className="flex items-start justify-between gap-4 w-full">
         <div className="flex flex-col gap-[4px] min-w-0">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]" data-testid="text-page-title">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-brain-v1baby-blue-100 text-[32px]" data-testid="text-page-title">
             Build on your Brain ledger.
           </p>
-          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px]" data-testid="text-enforcement-disclosure">
+          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-brain-v1baby-blue-30 text-[16px]" data-testid="text-enforcement-disclosure">
             Keys are issued and enforced by brain-core. Start with GET /api/v1/ping.
           </p>
         </div>
@@ -870,14 +870,14 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
 
       <div className="flex flex-col gap-[4px]">
         <div className="flex h-[24px] items-center">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#414965] text-[16px]">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-brain-v1baby-blue-30 text-[16px]">
             Get Started
           </p>
         </div>
-        <div data-testid="card-get-started" className="bg-[#0a0c10] flex flex-col gap-[16px] items-start p-[16px] rounded-[16px] w-full">
+        <div data-testid="card-get-started" className="bg-brain-v1highlight-dropdown-bg flex flex-col gap-[16px] items-start p-[16px] rounded-panel w-full">
           {steps.map((s, i) => (
             <div key={s.label} className="contents">
-              {i > 0 && <div className="h-px w-full bg-[#1d2132]" />}
+              {i > 0 && <div className="h-px w-full bg-brain-v1stroke-2" />}
               <div
                 className="flex gap-[8px] items-center w-full"
                 data-testid={`step-get-started-${i}`}
@@ -911,7 +911,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
                   </p>
                   {s.state === "unknown" && (
                     <p
-                      className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] leading-[16px]"
+                      className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[13px] leading-[16px]"
                       data-testid={`step-get-started-${i}-unknown`}
                     >
         Couldn't check this. brain-core is unreachable. It may already be done.
@@ -919,7 +919,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
                   )}
                   {s.state === "checking" && (
                     <p
-                      className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] leading-[16px]"
+                      className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[13px] leading-[16px]"
                       data-testid={`step-get-started-${i}-checking`}
                     >
                       Checking…
@@ -931,9 +931,9 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
                     type="button"
                     data-testid="button-overview-add-tenant"
                     onClick={() => onNavigate("tenants")}
-                    className="bg-[#240757] flex gap-[2px] items-center justify-center px-[14px] py-[6px] rounded-[100px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#7631ee] text-[12px] whitespace-nowrap hover:bg-[#2e0a6e] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                    className="bg-brain-v1dark-purple flex gap-[2px] items-center justify-center px-[14px] py-[6px] rounded-pill shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1purple text-[12px] whitespace-nowrap hover:bg-brain-v1dark-purple-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
                   >
-                    <Plus className="relative shrink-0 size-[16px] text-[#7631ee]" />
+                    <Plus className="relative shrink-0 size-[16px] text-brain-v1purple" />
                     Add Tenant
                   </button>
                 )}
@@ -943,9 +943,9 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
                     data-testid="button-overview-create-key"
                     onClick={() => onNavigate("keys")}
                     disabled={!hasTenant}
-                    className="bg-[#240757] flex gap-[2px] items-center justify-center px-[14px] py-[6px] rounded-[100px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#7631ee] text-[12px] whitespace-nowrap hover:bg-[#2e0a6e] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="bg-brain-v1dark-purple flex gap-[2px] items-center justify-center px-[14px] py-[6px] rounded-pill shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1purple text-[12px] whitespace-nowrap hover:bg-brain-v1dark-purple-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    <Plus className="relative shrink-0 size-[16px] text-[#7631ee]" />
+                    <Plus className="relative shrink-0 size-[16px] text-brain-v1purple" />
                     Create Key
                   </button>
                 )}
@@ -957,10 +957,10 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
 
       <div className="flex flex-col gap-[4px]">
         <SectionLabel>API Reference</SectionLabel>
-        <div data-testid="card-api-reference" className="bg-[#0a0c10] flex flex-col gap-[16px] items-start p-[16px] rounded-[16px] w-full">
+        <div data-testid="card-api-reference" className="bg-brain-v1highlight-dropdown-bg flex flex-col gap-[16px] items-start p-[16px] rounded-panel w-full">
           {API_ENDPOINTS.map((ep, i) => (
             <div key={ep.path} className="contents">
-              {i > 0 && <div className="h-px w-full bg-[#1d2132]" />}
+              {i > 0 && <div className="h-px w-full bg-brain-v1stroke-2" />}
               <EndpointRow {...ep} />
             </div>
           ))}
@@ -974,33 +974,33 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
             <button
               type="button"
               onClick={() => onNavigate("usage")}
-              className="flex-1 min-w-px flex flex-col gap-[4px] justify-center text-left cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-[8px]"
+              className="flex-1 min-w-px flex flex-col gap-[4px] justify-center text-left cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple rounded-[8px]"
               data-testid="metric-requests-today"
             >
-              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] group-hover:text-white transition-colors">
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[20px] group-hover:text-white transition-colors">
                 Requests Today ({env === "sandbox" ? "Sandbox" : "Live"})
               </p>
               <p className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[40px] leading-[48px]">
                 {usageQ.isLoading ? "…" : usageQ.isError ? "?" : String(today ?? 0)}
               </p>
-              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[20px]">
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px]">
                 {usageQ.isError ? "Usage unavailable" : "From brain-core audit events"}
               </p>
             </button>
-            <div className="w-px shrink-0 self-stretch bg-[#1d2132]" />
+            <div className="w-px shrink-0 self-stretch bg-brain-v1stroke-2" />
             <button
               type="button"
               onClick={() => onNavigate("keys")}
-              className="flex-1 min-w-px flex flex-col gap-[4px] justify-center text-left cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-[8px]"
+              className="flex-1 min-w-px flex flex-col gap-[4px] justify-center text-left cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple rounded-[8px]"
               data-testid="metric-active-keys"
             >
-              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] group-hover:text-white transition-colors">
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[20px] group-hover:text-white transition-colors">
                 Active Keys ({env === "sandbox" ? "Sandbox" : "Live"})
               </p>
               <p className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[20px] leading-[48px]">
                 {keysQ.isLoading ? "…" : keysQ.isError ? "?" : String(activeKeys.length)}
               </p>
-              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[20px]">
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px]">
                 {keysUnavailable ? "Keys API not yet enabled" : "Issued by brain-core"}
               </p>
             </button>
@@ -1025,18 +1025,18 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
             <div className="flex flex-col gap-[16px] p-[16px]">
               {activityQ.data.events.slice(0, 8).map((ev, i) => (
                 <div key={ev.id} className="flex flex-col gap-[16px] w-full">
-                  {i > 0 && <div className="w-full border-t border-[#1d2132]" />}
+                  {i > 0 && <div className="w-full border-t border-brain-v1stroke-2" />}
                   <button
                     type="button"
                     onClick={() => setSelectedEvent(ev)}
-                    className="flex gap-[12px] items-start w-full text-left cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-[8px]"
+                    className="flex gap-[12px] items-start w-full text-left cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple rounded-[8px]"
                     data-testid={`row-activity-${ev.id}`}
                   >
-                    <span className="inline-flex items-center justify-center px-[8px] py-[3px] rounded-[22px] bg-[#222737] border border-[rgba(108,119,157,0.2)] [font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[14px] whitespace-nowrap shrink-0">
+                    <span className="inline-flex items-center justify-center px-[8px] py-[3px] rounded-pill bg-brain-v1baby-blue-15 border border-[rgba(108,119,157,0.2)] [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-60 text-[12px] leading-[14px] whitespace-nowrap shrink-0">
                       {capitalCase(ev.layer)}
                     </span>
-                    <p className="flex-1 min-w-px [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] break-words group-hover:text-white transition-colors" title={ev.action}>{humanizeAction(ev.action)}</p>
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[20px] text-right shrink-0">{formatDateTime(ev.created_at)}</p>
+                    <p className="flex-1 min-w-px [font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[20px] break-words group-hover:text-white transition-colors" title={ev.action}>{humanizeAction(ev.action)}</p>
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px] text-right shrink-0">{formatDateTime(ev.created_at)}</p>
                   </button>
                 </div>
               ))}
@@ -1168,7 +1168,7 @@ function KeysSection({ env }: { env: DevEnv }) {
                   )}
                 </div>
               ) : (
-                <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#d20344] text-[13px] leading-[18px]" data-testid="text-key-revoked-footer">
+                <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1pink-red text-[13px] leading-[18px]" data-testid="text-key-revoked-footer">
                   Revoked {formatDateTime(k.revokedAt)}. This key can no longer be used.
                 </p>
               )
@@ -1180,7 +1180,7 @@ function KeysSection({ env }: { env: DevEnv }) {
             </div>
             <PopupSection label="API Key">
               <PopupCodeBox testId="detail-key-masked">{maskKey(k)}</PopupCodeBox>
-              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[14px] leading-[16px] -mt-2">
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-30 text-[14px] leading-[16px] -mt-2">
                 brain-core stores keys hashed. The full key was shown exactly once, at creation. If it's lost, rotate to get a new one.
               </p>
             </PopupSection>
@@ -1206,7 +1206,7 @@ function KeysSection({ env }: { env: DevEnv }) {
               </div>
             </PopupSection>
             {k.status === "active" && k.lastUsedAt === null && (
-              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#ff9500] text-[12px] leading-[16px]">
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1light-orange text-[12px] leading-[16px]">
                 This key has never authenticated a call yet. Try GET /api/v1/ping from the API Reference.
               </p>
             )}
@@ -1227,9 +1227,9 @@ function KeysSection({ env }: { env: DevEnv }) {
                 }
                 setShowCreate(true);
               }}
-              className="bg-[#240757] flex gap-[2px] items-center justify-center px-[14px] py-[6px] rounded-[100px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#7631ee] text-[12px] whitespace-nowrap hover:bg-[#2e0a6e] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+              className="bg-brain-v1dark-purple flex gap-[2px] items-center justify-center px-[14px] py-[6px] rounded-pill shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1purple text-[12px] whitespace-nowrap hover:bg-brain-v1dark-purple-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
             >
-              <Plus className="relative shrink-0 size-[16px] text-[#7631ee]" />
+              <Plus className="relative shrink-0 size-[16px] text-brain-v1purple" />
               Create Key
             </button>
         </div>
@@ -1238,8 +1238,8 @@ function KeysSection({ env }: { env: DevEnv }) {
         <Card testId="card-live-gated">
           <div className="p-[16px] flex flex-col gap-[16px]">
             <div className="flex flex-col gap-[4px]">
-              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px]">Live key issuance is gated</p>
-              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[16px]">
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[20px]">Live key issuance is gated</p>
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[16px]">
                 {tenantsQ.data?.mode === "production"
                   ? "This workspace runs in production tenancy mode, but no company tenant is linked yet. Live key issuance unlocks once your company tenant is created."
                   : tenantsQ.data?.mode === "durable"
@@ -1251,7 +1251,7 @@ function KeysSection({ env }: { env: DevEnv }) {
               type="button"
               data-testid="button-request-live-access"
               onClick={() => alert.success("Request noted", "Live access is enabled when your workspace has a production tenant.")}
-              className="bg-[#222737] hover:bg-[#2c3247] transition-colors flex items-center justify-center px-[12px] py-[8px] rounded-[100px] self-start [font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[16px] whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+              className="bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-15-hover transition-colors flex items-center justify-center px-[12px] py-[8px] rounded-pill self-start [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-60 text-[12px] leading-[16px] whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
             >
               Request Access
             </button>
@@ -1270,14 +1270,14 @@ function KeysSection({ env }: { env: DevEnv }) {
               data-testid="button-create-key"
               onClick={() => createMut.mutate()}
               disabled={createMut.isPending || name.trim().length === 0 || scopes.length === 0}
-              className="w-full bg-[#4a2300] hover:bg-[#5a2d00] transition-colors flex items-center justify-center px-[20px] py-[10px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[#ff9500] text-[14px] leading-[20px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full bg-brain-v1dark-orange hover:bg-brain-v1dark-orange-hover transition-colors flex items-center justify-center px-[20px] py-[10px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1light-orange text-[14px] leading-[20px] focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {createMut.isPending ? "Creating…" : "Create Key"}
             </button>
           }
         >
           <PopupSection label="Key Name">
-            <div className="bg-[#222737] flex items-center px-[8px] py-[10px] rounded-[8px] w-full">
+            <div className="bg-brain-v1baby-blue-15 flex items-center px-[8px] py-[10px] rounded-[8px] w-full">
               <input
                 id="key-name"
                 data-testid="input-key-name"
@@ -1287,12 +1287,12 @@ function KeysSection({ env }: { env: DevEnv }) {
                 placeholder="e.g. Backend service"
                 maxLength={80}
                 autoFocus
-                className="w-full bg-transparent outline-none [font-family:'Gilroy',sans-serif] font-medium text-white placeholder:text-[#6c779d] text-[16px] leading-[20px]"
+                className="w-full bg-transparent outline-none [font-family:'Gilroy',sans-serif] font-medium text-white placeholder:text-brain-v1baby-blue-60 text-[16px] leading-[20px]"
               />
             </div>
           </PopupSection>
           <PopupSection label="Requested Scopes">
-            <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] w-full">
+            <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[20px] w-full">
               Enforced on the platform data endpoints (ledger/audit reads). See the API reference on Overview.
             </p>
             {SCOPE_OPTIONS.map((s) => {
@@ -1303,11 +1303,11 @@ function KeysSection({ env }: { env: DevEnv }) {
                   type="button"
                   data-testid={`checkbox-scope-${s.id.replace(/[^a-z]+/g, "-")}`}
                   onClick={() => setScopes((prev) => checked ? prev.filter((x) => x !== s.id) : [...prev, s.id])}
-                  className="flex gap-[8px] items-start w-full text-left cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-[4px]"
+                  className="flex gap-[8px] items-start w-full text-left cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple rounded-[4px]"
                   aria-pressed={checked}
                 >
                   <span
-                    className={`size-[20px] rounded-[4px] border flex items-center justify-center shrink-0 ${checked ? "bg-[#240757] border-[rgba(118,49,238,0.2)]" : "bg-[#06070a] border-[#222737]"}`}
+                    className={`size-[20px] rounded-[4px] border flex items-center justify-center shrink-0 ${checked ? "bg-brain-v1dark-purple border-[rgba(118,49,238,0.2)]" : "bg-brain-v1headerfooterbg border-brain-v1baby-blue-15"}`}
                   >
                     {checked && (
                       <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -1316,8 +1316,8 @@ function KeysSection({ env }: { env: DevEnv }) {
                     )}
                   </span>
                   <span className="flex flex-col gap-[4px] flex-1 min-w-px">
-                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[16px] leading-[20px]">{s.label}</span>
-                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[14px] leading-[16px]">{s.hint}</span>
+                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[16px] leading-[20px]">{s.label}</span>
+                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-30 text-[14px] leading-[16px]">{s.hint}</span>
                   </span>
                 </button>
               );
@@ -1342,10 +1342,10 @@ function KeysSection({ env }: { env: DevEnv }) {
             <EmptyRow>Couldn't load keys. brain-core may be unavailable.</EmptyRow>
           ) : keys.length === 0 ? (
           <div className="p-[16px] flex flex-col gap-[4px]">
-            <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px]" data-testid="text-no-keys-title">
+            <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[20px]" data-testid="text-no-keys-title">
               No {env} keys yet
             </p>
-            <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[16px]">
+            <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[16px]">
               {env === "sandbox"
                 ? "Create one to start calling the API."
                 : "Live keys appear here once issued."}
@@ -1355,35 +1355,35 @@ function KeysSection({ env }: { env: DevEnv }) {
           <div className="flex flex-col gap-[16px] p-[16px]">
             {keys.map((k, i) => (
               <div key={k.id} className="flex flex-col gap-[16px] w-full">
-                {i > 0 && <div className="w-full border-t border-[#1d2132]" />}
+                {i > 0 && <div className="w-full border-t border-brain-v1stroke-2" />}
                 <button
                   type="button"
                   onClick={() => setSelectedKeyId(k.id)}
-                  className="flex flex-col gap-[16px] w-full text-left cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-[8px] bg-[#0a0c10] border border-transparent hover:bg-[#11141b] hover:border-[#1d2132] transition-colors p-[12px]"
+                  className="flex flex-col gap-[16px] w-full text-left cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple rounded-[8px] bg-brain-v1highlight-dropdown-bg border border-transparent hover:bg-brain-v1baby-blue-5 hover:border-brain-v1stroke-2 transition-colors p-[12px]"
                   data-testid={`row-key-${k.id}`}
                 >
                   <div className="flex flex-col gap-[4px] justify-center w-full">
                     <div className="flex gap-[12px] items-start w-full">
-                      <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] flex-1 min-w-px break-words group-hover:text-white transition-colors">{k.name}</p>
+                      <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[20px] flex-1 min-w-px break-words group-hover:text-white transition-colors">{k.name}</p>
                       <StatusBadge status={k.status} />
                     </div>
                     <div className="flex items-center w-full">
-                      <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[16px] flex-1 min-w-px break-words" data-testid={`text-masked-key-${k.id}`}>{maskKey(k)}</p>
+                      <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[16px] flex-1 min-w-px break-words" data-testid={`text-masked-key-${k.id}`}>{maskKey(k)}</p>
                     </div>
                   </div>
-                  <div className="bg-[#06070a] border border-[#1d2132] rounded-[12px] flex flex-col w-full overflow-hidden">
+                  <div className="bg-brain-v1headerfooterbg border border-brain-v1stroke-2 rounded-row flex flex-col w-full overflow-hidden">
                     {[
                       { label: "Requested Scopes", value: k.scopes.length ? k.scopes.join(", ") : "None" },
                       { label: "Created", value: formatDate(k.createdAt), testId: `text-key-created-${k.id}` },
                       { label: "Last Used", value: k.lastUsedAt ? formatDateTime(k.lastUsedAt) : "Never", testId: `text-key-last-used-${k.id}` },
                       { label: `Requests (${usageQ.data?.window ?? "30d"})`, value: (usageByKey.get(k.id)?.eventCount ?? 0).toLocaleString(), testId: `text-request-count-${k.id}` },
                     ].map((row, ri, arr) => (
-                      <div key={row.label} className={`flex items-start w-full ${ri < arr.length - 1 ? "border-b border-[#1d2132]" : ""}`}>
+                      <div key={row.label} className={`flex items-start w-full ${ri < arr.length - 1 ? "border-b border-brain-v1stroke-2" : ""}`}>
                         <div className="flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[140px]">
-                          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[20px] whitespace-nowrap">{row.label}</p>
+                          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-60 text-[12px] leading-[20px] whitespace-nowrap">{row.label}</p>
                         </div>
                         <div className="flex flex-col flex-1 min-w-px items-start justify-center px-[12px] py-[8px]">
-                          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[13px] leading-[20px] w-full truncate" data-testid={row.testId}>{row.value}</p>
+                          <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[13px] leading-[20px] w-full truncate" data-testid={row.testId}>{row.value}</p>
                         </div>
                       </div>
                     ))}
@@ -1454,17 +1454,17 @@ function TenantsSection({ env, onNavigate }: { env: DevEnv; onNavigate: (s: DevS
           onClick={(e) => { if (e.target === e.currentTarget) setSelectedTenantId(null); }}
           data-testid="modal-tenant-detail"
         >
-          <div className="bg-[#11141b] border border-[#1d2132] border-solid flex flex-col items-start overflow-clip relative rounded-[24px] w-[480px] max-h-[85vh]">
+          <div className="bg-brain-v1baby-blue-5 border border-brain-v1stroke-2 border-solid flex flex-col items-start overflow-clip relative rounded-modal w-[480px] max-h-[85vh]">
 
             {/* ── Header ── */}
-            <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-[#1d2132] h-[56px] relative shrink-0 w-full">
+            <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-brain-v1stroke-2 h-[56px] relative shrink-0 w-full">
               {/* Centred title */}
-              <p className="-translate-x-1/2 absolute [font-family:'Gilroy',sans-serif] font-semibold leading-[24px] left-1/2 text-[#a8b9f4] text-[20px] text-center top-[calc(50%-12px)] whitespace-nowrap">
+              <p className="-translate-x-1/2 absolute [font-family:'Gilroy',sans-serif] font-semibold leading-[24px] left-1/2 text-brain-v1baby-blue-100 text-[20px] text-center top-[calc(50%-12px)] whitespace-nowrap">
                 Tenant
               </p>
               {/* Environment badge — left; tracks the page-level env toggle */}
               <div
-                className="absolute flex items-center justify-center px-[10px] py-[4px] rounded-[22px]"
+                className="absolute flex items-center justify-center px-[10px] py-[4px] rounded-pill"
                 style={{
                   left: 23, top: 17,
                   background: env === "live" ? "#4a2300" : "#222737",
@@ -1484,7 +1484,7 @@ function TenantsSection({ env, onNavigate }: { env: DevEnv; onNavigate: (s: DevS
                 data-testid="button-close-detail-modal"
                 onClick={() => setSelectedTenantId(null)}
                 aria-label="Close"
-                className="absolute right-[11px] top-[11px] size-[32px] rounded-full flex items-center justify-center bg-[#1d2132] hover:bg-[#262b3d] transition-colors text-[#6c779d]"
+                className="absolute right-[11px] top-[11px] size-[32px] rounded-full flex items-center justify-center bg-brain-v1stroke-2 hover:bg-[#262b3d] transition-colors text-brain-v1baby-blue-60"
               >
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                   <path d="M2 2L10 10M10 2L2 10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
@@ -1496,34 +1496,34 @@ function TenantsSection({ env, onNavigate }: { env: DevEnv; onNavigate: (s: DevS
             <div className="flex flex-col gap-[16px] items-start p-[24px] relative shrink-0 w-full overflow-y-auto">
 
               {/* Two-column table card */}
-              <div className="bg-[#0a0c10] border border-[#1d2132] border-solid flex flex-col items-start relative rounded-[12px] shrink-0 w-full">
+              <div className="bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 border-solid flex flex-col items-start relative rounded-row shrink-0 w-full">
                 {/* Tenant ID */}
-                <div className="border-b border-[#1d2132] flex items-start relative shrink-0 w-full">
+                <div className="border-b border-brain-v1stroke-2 flex items-start relative shrink-0 w-full">
                   <div className="flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[140px]">
-                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[12px] whitespace-nowrap">Tenant ID</p>
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">Tenant ID</p>
                   </div>
                   <div className="flex flex-[1_0_0] flex-col items-start justify-center min-w-px px-[12px] py-[8px]" data-testid="detail-tenant-id">
-                    <p className="[font-family:'JetBrains_Mono',monospace] leading-[20px] overflow-hidden text-[#a8b9f4] text-[13px] text-ellipsis w-full whitespace-nowrap">{selectedTenant.id}</p>
+                    <p className="[font-family:'JetBrains_Mono',monospace] leading-[20px] overflow-hidden text-brain-v1baby-blue-100 text-[13px] text-ellipsis w-full whitespace-nowrap">{selectedTenant.id}</p>
                   </div>
                 </div>
                 {/* Environment */}
-                <div className="border-b border-[#1d2132] flex items-start relative shrink-0 w-full">
+                <div className="border-b border-brain-v1stroke-2 flex items-start relative shrink-0 w-full">
                   <div className="flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[140px]">
-                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[12px] whitespace-nowrap">Environment</p>
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">Environment</p>
                   </div>
                   <div className="flex flex-[1_0_0] flex-col items-start justify-center min-w-px px-[12px] py-[8px]">
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[13px] w-full">{selectedTenant.environment === "live" ? "Live" : "Sandbox"}</p>
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[13px] w-full">{selectedTenant.environment === "live" ? "Live" : "Sandbox"}</p>
                   </div>
                 </div>
                 {/* Active Keys */}
-                <div className="border-b border-[#1d2132] flex items-start relative shrink-0 w-full">
+                <div className="border-b border-brain-v1stroke-2 flex items-start relative shrink-0 w-full">
                   <div className="flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[140px]">
-                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[12px] whitespace-nowrap">Active Keys</p>
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">Active Keys</p>
                   </div>
                   <div className="flex flex-[1_0_0] flex-col items-start justify-center min-w-px px-[12px] py-[8px]" data-testid="detail-tenant-key-count">
                     {/* A failed keys read must not render as "this tenant has 0 keys". */}
                     <p
-                      className="[font-family:'JetBrains_Mono',monospace] leading-[20px] text-[#a8b9f4] text-[13px] w-full"
+                      className="[font-family:'JetBrains_Mono',monospace] leading-[20px] text-brain-v1baby-blue-100 text-[13px] w-full"
                       data-testid="text-tenant-key-count"
                     >
                       {keysQ.isLoading ? "…" : keysQ.isError ? "Unavailable" : String(tenantKeyCount)}
@@ -1531,12 +1531,12 @@ function TenantsSection({ env, onNavigate }: { env: DevEnv; onNavigate: (s: DevS
                   </div>
                 </div>
                 {/* Created */}
-                <div className={`${selectedTenant.ephemeral ? "border-b border-[#1d2132]" : ""} flex items-start relative shrink-0 w-full`}>
+                <div className={`${selectedTenant.ephemeral ? "border-b border-brain-v1stroke-2" : ""} flex items-start relative shrink-0 w-full`}>
                   <div className="flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[140px]">
-                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[12px] whitespace-nowrap">Created</p>
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">Created</p>
                   </div>
                   <div className="flex flex-[1_0_0] flex-col items-start justify-center min-w-px px-[12px] py-[8px]" data-testid="detail-tenant-created">
-                    <p className="[font-family:'JetBrains_Mono',monospace] leading-[20px] text-[#a8b9f4] text-[13px] w-full">
+                    <p className="[font-family:'JetBrains_Mono',monospace] leading-[20px] text-brain-v1baby-blue-100 text-[13px] w-full">
                       {selectedTenant.ephemeral ? formatRelative(selectedTenant.createdAt) : formatDate(selectedTenant.createdAt)}
                     </p>
                   </div>
@@ -1545,10 +1545,10 @@ function TenantsSection({ env, onNavigate }: { env: DevEnv; onNavigate: (s: DevS
                 {selectedTenant.ephemeral && (
                   <div className="flex items-start relative shrink-0 w-full">
                     <div className="flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[140px]">
-                      <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[12px] whitespace-nowrap">Resets In</p>
+                      <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">Resets In</p>
                     </div>
                     <div className="flex flex-[1_0_0] flex-col items-start justify-center min-w-px px-[12px] py-[8px]" data-testid="detail-tenant-expiry">
-                      <p className="[font-family:'JetBrains_Mono',monospace] leading-[20px] text-[#ff9500] text-[13px] w-full">{countdown ?? ""}</p>
+                      <p className="[font-family:'JetBrains_Mono',monospace] leading-[20px] text-brain-v1light-orange text-[13px] w-full">{countdown ?? ""}</p>
                     </div>
                   </div>
                 )}
@@ -1556,14 +1556,14 @@ function TenantsSection({ env, onNavigate }: { env: DevEnv; onNavigate: (s: DevS
 
               {/* Info box — ephemeral/sandbox only */}
               {selectedTenant.ephemeral && (
-                <div className="border border-[#1d2132] border-solid relative rounded-[12px] shrink-0 w-full">
+                <div className="border border-brain-v1stroke-2 border-solid relative rounded-row shrink-0 w-full">
                   <div className="flex items-center gap-[8px] p-[8px]">
-                    <svg className="shrink-0 size-[16px] text-[#6c779d]" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <svg className="shrink-0 size-[16px] text-brain-v1baby-blue-60" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.2" />
                       <circle cx="8" cy="5.5" r="0.75" fill="currentColor" />
                       <path d="M8 7.5V11" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
                     </svg>
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] flex-[1_0_0] min-w-px">
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px] flex-[1_0_0] min-w-px">
                       Demo tenants are provisioned fresh per session (~30 minutes). When this one expires, a new tenant is provisioned automatically. IDs and data don't carry over.
                     </p>
                   </div>
@@ -1572,42 +1572,42 @@ function TenantsSection({ env, onNavigate }: { env: DevEnv; onNavigate: (s: DevS
             </div>
 
             {/* ── Footer row 1: View API Keys ── */}
-            <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-t border-[#1d2132] border-solid flex flex-col items-start p-[24px] relative shrink-0 w-full">
+            <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-t border-brain-v1stroke-2 border-solid flex flex-col items-start p-[24px] relative shrink-0 w-full">
               <div className="flex items-center relative shrink-0 w-full">
                 <button
                   type="button"
                   data-testid="button-tenant-view-keys"
                   onClick={() => { setSelectedTenantId(null); onNavigate("keys"); }}
-                  className="bg-[#4a2300] flex flex-[1_0_0] items-center justify-center min-w-px px-[20px] py-[10px] relative rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#ff9500] text-[14px] whitespace-nowrap hover:opacity-90 transition-colors"
+                  className="bg-brain-v1dark-orange flex flex-[1_0_0] items-center justify-center min-w-px px-[20px] py-[10px] relative rounded-pill [font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1light-orange text-[14px] whitespace-nowrap hover:opacity-90 transition-colors"
                 >
                   View API Keys
                 </button>
               </div>
             </div>
             {/* ── Footer row 2: Previous / Next ── */}
-            <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-t border-[#1d2132] border-solid flex flex-col items-start p-[24px] relative shrink-0 w-full">
+            <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-t border-brain-v1stroke-2 border-solid flex flex-col items-start p-[24px] relative shrink-0 w-full">
               <div className="flex items-center justify-between relative shrink-0 w-full">
                 <button
                   type="button"
                   data-testid="button-tenant-prev"
                   onClick={goPrev}
                   disabled={!hasPrev}
-                  className="bg-[#222737] flex gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] shrink-0 w-[148px] disabled:opacity-60 disabled:cursor-not-allowed hover:bg-[#2c3247] transition-colors focus:outline-none"
+                  className="bg-brain-v1baby-blue-15 flex gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-pill shrink-0 w-[148px] disabled:opacity-60 disabled:cursor-not-allowed hover:bg-brain-v1baby-blue-15-hover transition-colors focus:outline-none"
                 >
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-[#6c779d] shrink-0">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-brain-v1baby-blue-60 shrink-0">
                     <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
-                  <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">Previous</span>
+                  <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">Previous</span>
                 </button>
                 <button
                   type="button"
                   data-testid="button-tenant-next"
                   onClick={goNext}
                   disabled={!hasNext}
-                  className="bg-[#222737] flex gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] shrink-0 w-[148px] disabled:opacity-60 disabled:cursor-not-allowed hover:bg-[#2c3247] transition-colors focus:outline-none"
+                  className="bg-brain-v1baby-blue-15 flex gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-pill shrink-0 w-[148px] disabled:opacity-60 disabled:cursor-not-allowed hover:bg-brain-v1baby-blue-15-hover transition-colors focus:outline-none"
                 >
-                  <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap">Next</span>
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-[#6c779d] shrink-0">
+                  <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">Next</span>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-brain-v1baby-blue-60 shrink-0">
                     <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </button>
@@ -1645,9 +1645,9 @@ function TenantsSection({ env, onNavigate }: { env: DevEnv; onNavigate: (s: DevS
                 );
               }
             }}
-            className="bg-[#240757] flex gap-[2px] items-center justify-center px-[14px] py-[6px] rounded-[100px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#7631ee] text-[12px] whitespace-nowrap hover:bg-[#2e0a6e] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+            className="bg-brain-v1dark-purple flex gap-[2px] items-center justify-center px-[14px] py-[6px] rounded-pill shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1purple text-[12px] whitespace-nowrap hover:bg-brain-v1dark-purple-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
           >
-            {!showCreate && <Plus className="relative shrink-0 size-[16px] text-[#7631ee]" />}
+            {!showCreate && <Plus className="relative shrink-0 size-[16px] text-brain-v1purple" />}
             {showCreate ? "Cancel" : "Create Tenant"}
           </button>
         )}
@@ -1657,18 +1657,18 @@ function TenantsSection({ env, onNavigate }: { env: DevEnv; onNavigate: (s: DevS
         <Card testId="card-create-tenant">
           <div className="p-4 flex flex-col gap-3">
             <div className="flex flex-col gap-1">
-              <label className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px]" htmlFor="company-name">Company name</label>
+              <label className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[13px]" htmlFor="company-name">Company name</label>
               <input
                 id="company-name"
                 data-testid="input-company-name"
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
                 placeholder="Acme Inc."
-                className="rounded-[8px] px-3 py-2 outline-none [font-family:'Gilroy',sans-serif] font-medium text-white placeholder:text-[#414965] text-[14px]"
+                className="rounded-[8px] px-3 py-2 outline-none [font-family:'Gilroy',sans-serif] font-medium text-white placeholder:text-brain-v1baby-blue-30 text-[14px]"
                 style={{ background: "#11141b", border: "1px solid #1d2132" }}
               />
             </div>
-            <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#ff9500] text-[12px] leading-[16px]">
+            <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1light-orange text-[12px] leading-[16px]">
               Tenant creation is permanent and can't be retried automatically. If it fails, the error is shown as-is.
             </p>
             <div>
@@ -1702,19 +1702,19 @@ function TenantsSection({ env, onNavigate }: { env: DevEnv; onNavigate: (s: DevS
                 key={t.id}
                 type="button"
                 onClick={() => setSelectedTenantId(t.id)}
-                className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-brain-v1highlight-dropdown-bg border border-transparent transition-colors hover:bg-brain-v1baby-blue-5 hover:border-brain-v1stroke-2 cursor-pointer text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
                 data-testid={`row-tenant-${t.id}`}
               >
                 <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
-                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-100 text-[16px] whitespace-nowrap">
                     {t.companyName ?? (t.ephemeral ? "Demo tenant" : "Your company")}
                   </p>
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] whitespace-nowrap" data-testid={`text-tenant-id-${t.id}`}>
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap" data-testid={`text-tenant-id-${t.id}`}>
                     {t.id}
                   </p>
                 </div>
                 <div className="flex flex-col items-end justify-center relative shrink-0">
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px] text-right whitespace-nowrap" data-testid={`text-tenant-created-${t.id}`}>
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[14px] text-right whitespace-nowrap" data-testid={`text-tenant-created-${t.id}`}>
                     Created {t.ephemeral ? formatRelative(t.createdAt) : formatDate(t.createdAt)}
                   </p>
                 </div>
@@ -1782,13 +1782,13 @@ function UsageSection({ env }: { env: DevEnv }) {
         <Card testId="card-usage-metrics">
         <div className="flex gap-[16px] items-stretch p-[16px]">
           <div className="flex-1 min-w-px flex flex-col gap-[4px] justify-center" data-testid="metric-requests-month">
-            <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px]">
+            <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[20px]">
               Requests This Month
             </p>
             <p className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[40px] leading-[48px]">
               {usageQ.isLoading ? "…" : usageQ.isError ? "-" : String(thisMonth)}
             </p>
-            <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[20px]">
+            <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px]">
               {usageQ.isError
                 ? "Usage unavailable"
                 : trend === null
@@ -1796,22 +1796,22 @@ function UsageSection({ env }: { env: DevEnv }) {
                   : `${trend >= 0 ? "+" : ""}${trend}% vs. last month`}
             </p>
           </div>
-          <div className="w-px shrink-0 self-stretch bg-[#1d2132]" />
+          <div className="w-px shrink-0 self-stretch bg-brain-v1stroke-2" />
           <div className="flex-1 min-w-px flex flex-col gap-[4px] justify-center" data-testid="metric-rate-limit-tier">
-            <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px]">
+            <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[20px]">
               Rate-Limit Tier
             </p>
             <p className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[20px] leading-[48px]">
               {tier ? tier.tier : "No plan selected"}
             </p>
-            <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[20px]">
+            <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px]">
               {tier ? (
                 <>
                   {tier.requestsPerMin} req/min, burst {tier.burst}. From your{" "}
                   <button
                     type="button"
                     onClick={() => navigate("/settings?section=billing")}
-                    className="text-[#7631ee] hover:underline cursor-pointer"
+                    className="text-brain-v1purple hover:underline cursor-pointer"
                     data-testid="link-settings-billing"
                   >
                     Settings → Billing
@@ -1824,7 +1824,7 @@ function UsageSection({ env }: { env: DevEnv }) {
                   <button
                     type="button"
                     onClick={() => navigate("/settings?section=billing")}
-                    className="text-[#7631ee] hover:underline cursor-pointer"
+                    className="text-brain-v1purple hover:underline cursor-pointer"
                     data-testid="link-settings-billing"
                   >
                     Settings → Billing
@@ -1859,37 +1859,37 @@ function UsageSection({ env }: { env: DevEnv }) {
                 const trendMax = Math.max(1, ...trend.map((d) => d.count));
                 return (
                   <div key={a.action} className="flex flex-col gap-[16px] w-full">
-                    {i > 0 && <div className="w-full border-t border-[#1d2132]" />}
+                    {i > 0 && <div className="w-full border-t border-brain-v1stroke-2" />}
                     <div className="flex flex-col gap-[16px] w-full">
                       <button
                         type="button"
                         onClick={() => setExpandedAction(isOpen ? null : a.action)}
-                        className="flex flex-col gap-[8px] w-full text-left cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-[8px]"
+                        className="flex flex-col gap-[8px] w-full text-left cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple rounded-[8px]"
                         data-testid={`row-method-${a.action}`}
                         aria-expanded={isOpen}
                       >
-                        <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] w-full break-words group-hover:text-white transition-colors" title={a.action}>{humanizeAction(a.action)}</p>
+                        <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[20px] w-full break-words group-hover:text-white transition-colors" title={a.action}>{humanizeAction(a.action)}</p>
                         <div className="flex gap-[7px] items-center w-full">
-                          <div className="flex-1 min-w-px h-[6px] rounded-[3px] bg-[#222737] overflow-hidden">
-                            <div className="h-full rounded-[3px] bg-[#7631ee]" style={{ width: `${Math.max((a.count / max) * 100, 2)}%` }} />
+                          <div className="flex-1 min-w-px h-[6px] rounded-[3px] bg-brain-v1baby-blue-15 overflow-hidden">
+                            <div className="h-full rounded-[3px] bg-brain-v1purple" style={{ width: `${Math.max((a.count / max) * 100, 2)}%` }} />
                           </div>
-                          <p className="[font-family:'JetBrains_Mono',monospace] font-semibold text-[#6c779d] text-[14px] leading-[14px] text-right min-w-[24px] shrink-0">{a.count.toLocaleString()}</p>
+                          <p className="[font-family:'JetBrains_Mono',monospace] font-semibold text-brain-v1baby-blue-60 text-[14px] leading-[14px] text-right min-w-[24px] shrink-0">{a.count.toLocaleString()}</p>
                         </div>
                       </button>
                       {isOpen && (
                         <div className="flex flex-col gap-[16px]" data-testid={`panel-method-daily-${a.action}`}>
                           <div className="flex gap-[8px] items-center w-full">
-                            <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[14px] leading-[14px] whitespace-nowrap shrink-0">
+                            <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-60 text-[14px] leading-[14px] whitespace-nowrap shrink-0">
                               <span>Daily requests, last {trend.length} days: </span>
-                              <span className="text-[#a8b9f4]">{a.action}</span>
+                              <span className="text-brain-v1baby-blue-100">{a.action}</span>
                             </p>
-                            <div className="flex-1 min-w-px h-px bg-[#1d2132]" />
+                            <div className="flex-1 min-w-px h-px bg-brain-v1stroke-2" />
                           </div>
                           <div className="flex items-end gap-[8px] h-[48px]">
                             {trend.map((d) => (
                               <div key={d.date} className="flex-1 flex flex-col items-center min-w-0" title={`${d.date}: ${d.count.toLocaleString()} request${d.count === 1 ? "" : "s"}`}>
                                 <div
-                                  className="w-full rounded-[8px] bg-[#123509] border border-[rgba(66,191,35,0.4)]"
+                                  className="w-full rounded-[8px] bg-brain-v1dark-green border border-[rgba(66,191,35,0.4)]"
                                   style={{
                                     height: Math.max(4, Math.round((d.count / trendMax) * 40)),
                                   }}
@@ -1897,7 +1897,7 @@ function UsageSection({ env }: { env: DevEnv }) {
                               </div>
                             ))}
                           </div>
-                          <div className="flex justify-between [font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[20px]">
+                          <div className="flex justify-between [font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px]">
                             <span>{trend[0]?.date ?? ""}</span>
                             <span>{trend[trend.length - 1]?.date ?? ""}</span>
                           </div>
@@ -1931,22 +1931,22 @@ function UsageSection({ env }: { env: DevEnv }) {
                 const count = keyCount(k.id);
                 return (
                   <div key={k.id} className="flex flex-col gap-[16px] w-full">
-                    {i > 0 && <div className="w-full border-t border-[#1d2132]" />}
+                    {i > 0 && <div className="w-full border-t border-brain-v1stroke-2" />}
                     <div className="flex flex-col gap-[8px] justify-center w-full" data-testid={`row-usage-key-${k.id}`}>
                       <div className="flex flex-col gap-[4px] w-full">
                         <div className="flex gap-[12px] items-start w-full">
-                          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] flex-1 min-w-px break-words" title={k.name}>{k.name}</p>
+                          <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[20px] flex-1 min-w-px break-words" title={k.name}>{k.name}</p>
                           {k.status === "revoked" && <StatusBadge status="revoked" />}
                         </div>
                         <div className="flex items-center w-full">
-                          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[16px] flex-1 min-w-px break-words" data-testid={`text-usage-key-masked-${k.id}`}>{maskKey(k)}</p>
+                          <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[16px] flex-1 min-w-px break-words" data-testid={`text-usage-key-masked-${k.id}`}>{maskKey(k)}</p>
                         </div>
                       </div>
                       <div className="flex gap-[7px] items-center w-full">
-                        <div className="flex-1 min-w-px h-[6px] rounded-[3px] bg-[#222737] overflow-hidden">
-                          <div className="h-full rounded-[3px] bg-[#7631ee]" style={{ width: count > 0 ? `${Math.max((count / max) * 100, 2)}%` : "0%" }} />
+                        <div className="flex-1 min-w-px h-[6px] rounded-[3px] bg-brain-v1baby-blue-15 overflow-hidden">
+                          <div className="h-full rounded-[3px] bg-brain-v1purple" style={{ width: count > 0 ? `${Math.max((count / max) * 100, 2)}%` : "0%" }} />
                         </div>
-                        <p className="[font-family:'JetBrains_Mono',monospace] font-semibold text-[#6c779d] text-[14px] leading-[14px] text-right min-w-[24px] shrink-0" data-testid={`text-usage-key-count-${k.id}`}>{count.toLocaleString()}</p>
+                        <p className="[font-family:'JetBrains_Mono',monospace] font-semibold text-brain-v1baby-blue-60 text-[14px] leading-[14px] text-right min-w-[24px] shrink-0" data-testid={`text-usage-key-count-${k.id}`}>{count.toLocaleString()}</p>
                       </div>
                     </div>
                   </div>
@@ -2051,7 +2051,7 @@ export function DevelopersSection() {
 
   return (
     <div className="flex flex-col gap-[16px]">
-      <div role="tablist" aria-label="Developers" className="flex items-center gap-[2px] overflow-x-auto border-b border-[#1d2132]">
+      <div role="tablist" aria-label="Developers" className="flex items-center gap-[2px] overflow-x-auto border-b border-brain-v1stroke-2">
         {DEV_TABS.map(({ id, label }) => {
           const active = tab === id;
           return (

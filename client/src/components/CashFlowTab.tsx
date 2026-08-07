@@ -106,8 +106,8 @@ const Metric = ({
     const amountColor = value == null ? "#414965" : (colour ?? "#a8b9f4");
 
     return (
-  <div className="bg-[#0a0c10] border border-transparent rounded-[16px] p-[16px] flex flex-col gap-[8px]" data-testid={testId}>
-    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#414965] text-[13px] uppercase">
+  <div className="bg-brain-v1highlight-dropdown-bg border border-transparent rounded-panel p-[16px] flex flex-col gap-[8px]" data-testid={testId}>
+    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-30 text-[13px] uppercase">
       {label}
     </p>
     <p
@@ -116,7 +116,7 @@ const Metric = ({
       <span className="font-medium leading-[36px] text-[28px]" style={{ color: amountColor }}>{whole}</span>
       {cents && <span className="font-medium leading-[36px] text-[18px]" style={{ color: amountColor }}>{cents}</span>}
     </p>
-    <p className="[font-family:'Gilroy',sans-serif] font-normal leading-[18px] text-[#414965] text-[13px] w-full">{caption}</p>
+    <p className="[font-family:'Gilroy',sans-serif] font-normal leading-[18px] text-brain-v1baby-blue-30 text-[13px] w-full">{caption}</p>
   </div>
     );
   })()
@@ -360,8 +360,8 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
 
       <WidgetCard title="Transactions" count={settling && rows.length === 0 ? undefined : rows.length}>
         {settling && rows.length === 0 ? (
-          <div className="flex gap-[12px] items-center px-[16px] py-[12px] rounded-[8px] w-full bg-[#0a0c10]">
-            <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
+          <div className="flex gap-[12px] items-center px-[16px] py-[12px] rounded-[8px] w-full bg-brain-v1highlight-dropdown-bg">
+            <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[16px]">
               Loading…
             </p>
           </div>
@@ -375,8 +375,8 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
                   : "Bills couldn't be loaded, so this list may be incomplete."}
             </UnavailableDataBox>
           ) : (
-            <div className="flex gap-[12px] items-center px-[16px] py-[12px] rounded-[8px] w-full bg-[#0a0c10]" data-testid="text-cashflow-empty">
-              <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
+            <div className="flex gap-[12px] items-center px-[16px] py-[12px] rounded-[8px] w-full bg-brain-v1highlight-dropdown-bg" data-testid="text-cashflow-empty">
+              <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[16px]">
                 No money movement recorded yet. This fills in from your ledger as money comes in and goes out.
               </p>
             </div>
@@ -397,7 +397,7 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
             const secondary = isBill
               ? (
                   <>
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] whitespace-nowrap">
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">
                       {dueLabel(row.date || null)}
                     </p>
                     {row.secondaryLabel && (
@@ -405,7 +405,7 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
                         <div className="relative shrink-0 size-[4px]">
                           <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.activity_dot} />
                         </div>
-                        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] truncate">
+                        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px] truncate">
                           {row.secondaryLabel}
                         </p>
                       </>
@@ -414,7 +414,7 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
                 )
               : detailLine(row.sublabel, row.date)
                 ? (
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] truncate">
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px] truncate">
                       {detailLine(row.sublabel, row.date)}
                     </p>
                   )
@@ -437,7 +437,7 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
                 secondary={secondary}
                 additionalPill={row.flagged ? (
                   <RecordPill
-                    className="bg-[#350011] text-[#d20344] border-[rgba(210,3,68,0.2)]"
+                    className="bg-brain-v1dark-pink-red text-brain-v1pink-red border-[rgba(210,3,68,0.2)]"
                     testId={`badge-cashflow-anomaly-${idx}`}
                   >
                     <img src={alertIcon} alt="" className="size-[12px]" />

@@ -15,7 +15,7 @@ interface RecordPagerProps {
 }
 
 const BTN =
-  "bg-[#222737] flex flex-1 gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] hover:bg-[#2c3247] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] shrink-0 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-[#222737]";
+  "bg-brain-v1baby-blue-15 flex flex-1 gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-pill hover:bg-brain-v1baby-blue-15-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple shrink-0 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-brain-v1baby-blue-15";
 
 export function RecordPager({
   onPrev,
@@ -34,8 +34,8 @@ export function RecordPager({
         data-testid={`button-${testIdPrefix}-prev`}
         className={BTN}
       >
-        <ChevronLeft size={16} className="text-[#6c779d]" />
-        <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">
+        <ChevronLeft size={16} className="text-brain-v1baby-blue-60" />
+        <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[16px] whitespace-nowrap">
           Previous
         </span>
       </button>
@@ -47,10 +47,10 @@ export function RecordPager({
         data-testid={`button-${testIdPrefix}-next`}
         className={BTN}
       >
-        <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">
+        <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[16px] whitespace-nowrap">
           Next
         </span>
-        <ChevronRight size={16} className="text-[#6c779d]" />
+        <ChevronRight size={16} className="text-brain-v1baby-blue-60" />
       </button>
     </div>
   );

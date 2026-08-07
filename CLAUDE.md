@@ -1193,6 +1193,64 @@ className="bg-[var(--action-bg)] hover:bg-[#4a0018] transition-colors"
 
 `ProposalCardParts.ActionButton` and `DevelopersSection.PillButton` both use this pattern.
 
+## Design tokens are the standard — raw hex in a class string is a bug
+
+`client/src/index.css` defines the colour and radius variables; `tailwind.config.ts` maps each one
+to a utility class. **Write the class, not the value.**
+
+```
+text-[#6c779d]     →  text-brain-v1baby-blue-60
+bg-[#222737]       →  bg-brain-v1baby-blue-15
+border-[#1d2132]   →  border-brain-v1stroke-2
+rounded-[16px]     →  rounded-panel
+```
+
+The variant prefix does not change the rule: `hover:bg-[#2c3247]` → `hover:bg-brain-v1baby-blue-15-hover`,
+`focus-visible:ring-[#7631ee]` → `focus-visible:ring-brain-v1purple`.
+
+**Why:** before this pass the 25-token layer was decorative — nearly every token appeared only at its
+own definition while ~2,400 hex literals were typed by hand. A grep for a token told you nothing about
+where the colour was used, so a palette change meant a find-and-replace across 73 files and any missed
+site drifted silently. Now the token name *is* the usage index.
+
+| Hex | Token | | Hex | Token |
+| --- | --- | --- | --- | --- |
+| `#6c779d` | `brain-v1baby-blue-60` | | `#42bf23` | `brain-v1green` |
+| `#1d2132` | `brain-v1stroke-2` | | `#11141b` | `brain-v1baby-blue-5` |
+| `#a8b9f4` | `brain-v1baby-blue-100` | | `#ff9500` | `brain-v1light-orange` |
+| `#7631ee` | `brain-v1purple` | | `#4a2300` | `brain-v1dark-orange` |
+| `#0a0c10` | `brain-v1highlight-dropdown-bg` | | `#240757` | `brain-v1dark-purple` |
+| `#222737` | `brain-v1baby-blue-15` | | `#350011` | `brain-v1dark-pink-red` |
+| `#414965` | `brain-v1baby-blue-30` | | `#123509` | `brain-v1dark-green` |
+| `#d20344` | `brain-v1pink-red` | | `#06070a` | `brain-v1headerfooterbg` |
+| | | | `#12032d` | `brain-v1dark-dark-purple` |
+
+### Radius by concept
+
+`rounded-row` (12px) · `rounded-panel` (16px) · `rounded-modal` (24px) · `rounded-pill` (100px).
+
+Pick by what the element *is*, not by the number you measured. `rounded-pill` keeps the literal 100px
+rather than `9999px`: at pill sizes the browser clamps both to half the height, but on a tall surface
+they diverge, and 100px is what the app already shipped.
+
+### Hover tokens are not in Figma yet
+
+`brain-v1baby-blue-15-hover`, `brain-v1dark-purple-hover`, `brain-v1dark-orange-hover` and
+`brain-v1purple-hover` were canonicalised in-app; the Figma source file has no hover states for these
+four surfaces. They are named here so the "no raw hex" rule holds without an exception list — but if
+Figma later publishes its own hover values, these are the names to reconcile.
+
+### Where raw hex is still legitimate
+
+1. **Inline `style={{}}` and JS object literals.** A Tailwind class cannot reach them; they need
+   `var(--token)` instead. ~550 sites, deliberately deferred to their own pass.
+2. **SVG `fill` / `stroke` attributes** that are not driven by `currentColor`.
+3. **Comments quoting a Figma spec** — the hex is the citation, keep it.
+4. **Opacity modifiers.** `hover:border-[#7631ee]/40` must stay raw. Our tokens resolve to a full
+   `rgba()` behind `var()`, and Tailwind 3 cannot inject an alpha channel into that — converting it
+   silently drops the 40%. Supporting `/40` would mean restating all 25 tokens as bare channels with
+   an `<alpha-value>` placeholder. 8 sites rely on this; leave them.
+
 ## One value per role
 
 Near-duplicate hexes are the app's most common drift: a colour gets re-picked from a Figma frame

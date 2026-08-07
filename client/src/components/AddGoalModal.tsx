@@ -48,10 +48,10 @@ const PRIORITY_ANCHORS: { name: string; priority: number }[] = [
 
 const SectionLabel = ({ children }: { children: React.ReactNode }) => (
   <div className="flex gap-[8px] items-center w-full">
-    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#6c779d] text-[14px] whitespace-nowrap">
+    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">
       {children}
     </p>
-    <div className="flex-1 h-px bg-[#1d2132]" />
+    <div className="flex-1 h-px bg-brain-v1stroke-2" />
   </div>
 );
 
@@ -71,14 +71,14 @@ const Chip = ({
     data-testid={testId}
     onClick={onClick}
     className={
-      "flex items-center justify-center px-[8px] py-[6px] rounded-[100px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] " +
-      (selected ? "bg-[#4a2300] hover:bg-[#5a2d00]" : "bg-[#06070a] hover:bg-[#101218]")
+      "flex items-center justify-center px-[8px] py-[6px] rounded-pill transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple " +
+      (selected ? "bg-brain-v1dark-orange hover:bg-brain-v1dark-orange-hover" : "bg-brain-v1headerfooterbg hover:bg-[#101218]")
     }
   >
     <span
       className={
         "[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap " +
-        (selected ? "text-[#ff9500]" : "text-[#414965]")
+        (selected ? "text-brain-v1light-orange" : "text-brain-v1baby-blue-30")
       }
     >
       {children}
@@ -137,7 +137,7 @@ const RecommendationCard = ({ category }: { category: string }) => {
   return (
     <div
       data-testid="card-goal-recommendation"
-      className="border border-[#1d2132] border-solid flex items-center p-[8px] rounded-[12px] w-full"
+      className="border border-brain-v1stroke-2 border-solid flex items-center p-[8px] rounded-row w-full"
     >
       <div className="flex flex-1 gap-[8px] items-start min-w-0">
         <span className="relative shrink-0 size-[16px] mt-[1px]">
@@ -147,7 +147,7 @@ const RecommendationCard = ({ category }: { category: string }) => {
           data-testid="text-goal-recommendation"
           className={
             "flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[14px] " +
-            (isLoading ? "text-[#414965] italic" : "text-[#6c779d]")
+            (isLoading ? "text-brain-v1baby-blue-30 italic" : "text-brain-v1baby-blue-60")
           }
         >
           {text}
@@ -200,9 +200,9 @@ export const AddGoalModal = ({ open, onOpenChange, onCreate, isSubmitting }: Pro
   }, [name, priority]);
 
   const inputClass =
-    "bg-[#222737] flex items-center px-[8px] py-[10px] rounded-[8px] w-full " +
-    "[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px] " +
-    "placeholder:text-[#6c779d] outline-none focus:ring-2 focus:ring-[#7631EE]";
+    "bg-brain-v1baby-blue-15 flex items-center px-[8px] py-[10px] rounded-[8px] w-full " +
+    "[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[16px] " +
+    "placeholder:text-brain-v1baby-blue-60 outline-none focus:ring-2 focus:ring-brain-v1purple";
 
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
@@ -214,17 +214,17 @@ export const AddGoalModal = ({ open, onOpenChange, onCreate, isSubmitting }: Pro
         <DialogPrimitive.Content
           aria-describedby="add-goal-modal-description"
           data-testid="add-goal-modal"
-          className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[24px] w-[440px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
+          className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-brain-v1baby-blue-5 border border-brain-v1stroke-2 border-solid flex flex-col items-start overflow-hidden rounded-modal w-[440px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
         >
           {/* Title bar, Figma 4074:65866. */}
-          <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border border-[#1d2132] border-solid h-[56px] relative shrink-0 w-full">
-            <DialogPrimitive.Title className="absolute left-1/2 -translate-x-1/2 top-[calc(50%-12px)] [font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#a8b9f4] text-[20px] text-center whitespace-nowrap">
+          <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border border-brain-v1stroke-2 border-solid h-[56px] relative shrink-0 w-full">
+            <DialogPrimitive.Title className="absolute left-1/2 -translate-x-1/2 top-[calc(50%-12px)] [font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-brain-v1baby-blue-100 text-[20px] text-center whitespace-nowrap">
               New Goal
             </DialogPrimitive.Title>
             <DialogPrimitive.Close
               data-testid="button-add-goal-close"
               aria-label="Close"
-              className="absolute right-[11px] top-[11px] size-[32px] p-0 hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+              className="absolute right-[11px] top-[11px] size-[32px] p-0 hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
             >
               <img src={closeIcon} alt="" className="size-[32px] rounded-full" />
             </DialogPrimitive.Close>
@@ -234,7 +234,7 @@ export const AddGoalModal = ({ open, onOpenChange, onCreate, isSubmitting }: Pro
           <div className="flex flex-col gap-[24px] items-start p-[24px] w-full overflow-y-auto">
             <DialogPrimitive.Description
               id="add-goal-modal-description"
-              className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px] w-full"
+              className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[16px] w-full"
             >
               Tell Brain what your business is working toward. Agents will run it under signed policy.
             </DialogPrimitive.Description>
@@ -277,11 +277,11 @@ export const AddGoalModal = ({ open, onOpenChange, onCreate, isSubmitting }: Pro
               <SectionLabel>Target amount</SectionLabel>
               <div
                 className={
-                  "bg-[#222737] flex items-center gap-[4px] px-[8px] py-[10px] rounded-[8px] w-full transition-shadow " +
+                  "bg-brain-v1baby-blue-15 flex items-center gap-[4px] px-[8px] py-[10px] rounded-[8px] w-full transition-shadow " +
                   (amountError
-                    ? "ring-2 ring-[#d20344]"
+                    ? "ring-2 ring-brain-v1pink-red"
                     : amountFocused
-                      ? "ring-2 ring-[#7631EE]"
+                      ? "ring-2 ring-brain-v1purple"
                       : "")
                 }
               >
@@ -289,7 +289,7 @@ export const AddGoalModal = ({ open, onOpenChange, onCreate, isSubmitting }: Pro
                   aria-hidden
                   className={
                     "[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[16px] " +
-                    (amountEmpty ? "text-[#6c779d]" : "text-[#a8b9f4]")
+                    (amountEmpty ? "text-brain-v1baby-blue-60" : "text-brain-v1baby-blue-100")
                   }
                 >
                   $
@@ -318,14 +318,14 @@ export const AddGoalModal = ({ open, onOpenChange, onCreate, isSubmitting }: Pro
                   aria-invalid={amountError ? true : undefined}
                   aria-describedby={amountError ? "input-goal-amount-error" : undefined}
                   data-testid="input-goal-amount"
-                  className="flex-1 bg-transparent outline-none [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px] placeholder:text-[#6c779d]"
+                  className="flex-1 bg-transparent outline-none [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[16px] placeholder:text-brain-v1baby-blue-60"
                 />
               </div>
               {amountError && (
                 <p
                   id="input-goal-amount-error"
                   data-testid="text-goal-amount-error"
-                  className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#d20344] text-[13px]"
+                  className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1pink-red text-[13px]"
                 >
                   {amountError}
                 </p>
@@ -352,21 +352,21 @@ export const AddGoalModal = ({ open, onOpenChange, onCreate, isSubmitting }: Pro
             {/* Priority */}
             <div className="flex flex-col gap-[8px] items-start w-full">
               <SectionLabel>How important is this goal compared to others?</SectionLabel>
-              <div className="bg-[#0a0c10] flex flex-col gap-[16px] items-start p-[16px] rounded-[16px] w-full">
+              <div className="bg-brain-v1highlight-dropdown-bg flex flex-col gap-[16px] items-start p-[16px] rounded-panel w-full">
                 <div className="flex flex-col items-start w-full">
                   <div className="flex justify-between w-full">
-                    <p className="[font-family:'JetBrains_Mono',monospace] font-semibold leading-[12px] text-[#6c779d] text-[12px]">
+                    <p className="[font-family:'JetBrains_Mono',monospace] font-semibold leading-[12px] text-brain-v1baby-blue-60 text-[12px]">
                       Lower Priority
                     </p>
-                    <p className="[font-family:'JetBrains_Mono',monospace] font-semibold leading-[12px] text-[#6c779d] text-[12px] text-right">
+                    <p className="[font-family:'JetBrains_Mono',monospace] font-semibold leading-[12px] text-brain-v1baby-blue-60 text-[12px] text-right">
                       Higher Priority
                     </p>
                   </div>
                   {/* Slider: native range hidden over a styled track + knob. */}
                   <div className="relative h-[32px] w-full mt-[8px]">
-                    <div className="absolute top-1/2 -translate-y-1/2 left-0 right-0 h-[6px] bg-[#222737] rounded-[3px]" />
+                    <div className="absolute top-1/2 -translate-y-1/2 left-0 right-0 h-[6px] bg-brain-v1baby-blue-15 rounded-[3px]" />
                     <div
-                      className="absolute top-1/2 -translate-y-1/2 left-0 h-[6px] bg-[#ff9500] rounded-[3px]"
+                      className="absolute top-1/2 -translate-y-1/2 left-0 h-[6px] bg-brain-v1light-orange rounded-[3px]"
                       style={{ width: `${priority}%` }}
                     />
                     <input
@@ -407,15 +407,15 @@ export const AddGoalModal = ({ open, onOpenChange, onCreate, isSubmitting }: Pro
                         className={
                           "flex-1 [font-family:'Gilroy',sans-serif] leading-[16px] text-[14px] truncate " +
                           (p.placeholder
-                            ? "text-[#414965] font-medium"
+                            ? "text-brain-v1baby-blue-30 font-medium"
                             : p.isNew
-                              ? "text-[#ff9500] font-semibold"
-                              : "text-[#6c779d] font-medium")
+                              ? "text-brain-v1light-orange font-semibold"
+                              : "text-brain-v1baby-blue-60 font-medium")
                         }
                       >
                         {p.name}
                       </p>
-                      <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[16px] text-[#414965] text-[13px] whitespace-nowrap">
+                      <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[16px] text-brain-v1baby-blue-30 text-[13px] whitespace-nowrap">
                         {p.placeholder ? "--" : `Ranked ${p.rank}`}
                       </p>
                     </div>
@@ -425,8 +425,8 @@ export const AddGoalModal = ({ open, onOpenChange, onCreate, isSubmitting }: Pro
             </div>
 
             {/* Policy banner */}
-            <div className="bg-[#240757] border border-[rgba(118,49,238,0.2)] border-solid flex items-center p-[8px] rounded-[8px] w-full">
-              <p className="flex-1 [font-family:'Gilroy',sans-serif] leading-[16px] text-[#7631ee] text-[14px]">
+            <div className="bg-brain-v1dark-purple border border-[rgba(118,49,238,0.2)] border-solid flex items-center p-[8px] rounded-[8px] w-full">
+              <p className="flex-1 [font-family:'Gilroy',sans-serif] leading-[16px] text-brain-v1purple text-[14px]">
                 <span className="font-medium">You can change any of this later. P</span>
                 <span className="font-semibold">olicy v3 will apply.</span>
               </p>
@@ -444,9 +444,9 @@ export const AddGoalModal = ({ open, onOpenChange, onCreate, isSubmitting }: Pro
                 }
                 onCreate({ category, name, amount: stripCommas(amount), timeline, priority });
               }}
-              className="flex items-center justify-center px-[20px] py-[10px] rounded-[100px] bg-[#123509] hover:bg-[#174710] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#42bf23] w-full disabled:opacity-60 disabled:cursor-not-allowed"
+              className="flex items-center justify-center px-[20px] py-[10px] rounded-pill bg-brain-v1dark-green hover:bg-[#174710] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1green w-full disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#42bf23] text-[16px] whitespace-nowrap">
+              <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1green text-[16px] whitespace-nowrap">
                 {isSubmitting ? "Creating…" : "Create"}
               </span>
             </button>

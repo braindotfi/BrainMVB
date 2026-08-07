@@ -54,14 +54,14 @@ export function dueChip(dd: number | null): DueChip | null {
 /* ── Details table row, matching AccountDetailPopup/TransactionDetailPopup ── */
 export function Row({ label, value }: { label: string; value: ReactNode }) {
   return (
-    <div className="flex items-center w-full border-b border-[#1d2132] last:border-b-0">
+    <div className="flex items-center w-full border-b border-brain-v1stroke-2 last:border-b-0">
       <div className="flex flex-col justify-center px-[12px] py-[8px] w-[140px] shrink-0">
-        <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[20px] text-[#6c779d]">
+        <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[20px] text-brain-v1baby-blue-60">
           {label}
         </span>
       </div>
       <div className="flex flex-1 flex-col justify-center px-[12px] py-[8px] min-w-px">
-        <span className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[20px] text-[#a8b9f4] break-all">
+        <span className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[20px] text-brain-v1baby-blue-100 break-all">
           {value}
         </span>
       </div>
@@ -72,10 +72,10 @@ export function Row({ label, value }: { label: string; value: ReactNode }) {
 export function SectionLabel({ children }: { children: ReactNode }) {
   return (
     <div className="flex gap-[8px] items-center w-full">
-      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[14px] text-[#6c779d] whitespace-nowrap">
+      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[14px] text-brain-v1baby-blue-60 whitespace-nowrap">
         {children}
       </p>
-      <div className="flex-1 h-px bg-[#1d2132]" />
+      <div className="flex-1 h-px bg-brain-v1stroke-2" />
     </div>
   );
 }
@@ -83,7 +83,7 @@ export function SectionLabel({ children }: { children: ReactNode }) {
 /** The bordered table the Row list sits in. */
 export function DetailTable({ children }: { children: ReactNode }) {
   return (
-    <div className="bg-[#0a0c10] border border-[#1d2132] border-solid flex flex-col items-start rounded-[12px] w-full">
+    <div className="bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 border-solid flex flex-col items-start rounded-row w-full">
       {children}
     </div>
   );
@@ -108,18 +108,18 @@ export function DetailPopupHeader({
   amountTestId?: string;
 }) {
   return (
-    <div className="border-b border-[#1d2132] border-solid flex flex-col items-start p-[24px] relative shrink-0 w-full">
+    <div className="border-b border-brain-v1stroke-2 border-solid flex flex-col items-start p-[24px] relative shrink-0 w-full">
       <div className="flex flex-col gap-[8px] items-start w-full">
         <div className="flex gap-[8px] items-center w-full">
           <p
-            className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-[#a8b9f4] text-[20px]"
+            className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-brain-v1baby-blue-100 text-[20px]"
             data-testid={nameTestId}
           >
             {name}
           </p>
           {chip && (
             <div
-              className="flex items-center justify-center px-[10px] py-[4px] rounded-[22px] shrink-0 border border-solid"
+              className="flex items-center justify-center px-[10px] py-[4px] rounded-pill shrink-0 border border-solid"
               style={{ background: chip.bg, borderColor: chip.border }}
               data-testid={chipTestId}
             >
@@ -134,13 +134,13 @@ export function DetailPopupHeader({
         </div>
         <div className="flex gap-[8px] items-center w-full">
           <p
-            className="[font-family:'JetBrains_Mono',monospace] font-normal leading-[32px] text-[#a8b9f4] text-[32px]"
+            className="[font-family:'JetBrains_Mono',monospace] font-normal leading-[32px] text-brain-v1baby-blue-100 text-[32px]"
             data-testid={amountTestId}
           >
             {amount}
           </p>
-          <div className="bg-[#222737] border border-[rgba(108,119,157,0.2)] border-solid flex items-center justify-center px-[8px] py-[3px] rounded-[22px] shrink-0">
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#6c779d] text-[12px] text-center whitespace-nowrap">
+          <div className="bg-brain-v1baby-blue-15 border border-[rgba(108,119,157,0.2)] border-solid flex items-center justify-center px-[8px] py-[3px] rounded-pill shrink-0">
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-brain-v1baby-blue-60 text-[12px] text-center whitespace-nowrap">
               {currency}
             </p>
           </div>
@@ -180,16 +180,16 @@ export function DetailPopupShell({
     <DialogPrimitive.Root open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
-        <DialogPrimitive.Content className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[24px] w-[480px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out">
+        <DialogPrimitive.Content className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-brain-v1baby-blue-5 border border-brain-v1stroke-2 border-solid flex flex-col items-start overflow-hidden rounded-modal w-[480px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out">
           {/* Title and Controls */}
-          <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-[#1d2132] border-solid h-[56px] relative shrink-0 w-full">
+          <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-brain-v1stroke-2 border-solid h-[56px] relative shrink-0 w-full">
             <DialogPrimitive.Title asChild>
-              <p className="-translate-x-1/2 absolute [font-family:'Gilroy',sans-serif] font-semibold leading-[24px] left-1/2 not-italic text-[#a8b9f4] text-[20px] text-center top-[calc(50%-12px)] whitespace-nowrap">
+              <p className="-translate-x-1/2 absolute [font-family:'Gilroy',sans-serif] font-semibold leading-[24px] left-1/2 not-italic text-brain-v1baby-blue-100 text-[20px] text-center top-[calc(50%-12px)] whitespace-nowrap">
                 {title}
               </p>
             </DialogPrimitive.Title>
             <DialogPrimitive.Close
-              className="absolute right-[12px] top-[12px] size-[32px] p-0 hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+              className="absolute right-[12px] top-[12px] size-[32px] p-0 hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
               data-testid={closeTestId}
             >
               <img src={closeIcon} alt="" className="size-[32px] rounded-full" />

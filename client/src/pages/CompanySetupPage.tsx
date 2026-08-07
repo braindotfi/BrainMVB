@@ -12,9 +12,9 @@ import brainLogo from "@assets/BrainLogo_1781769246241.png";
    consumed after the explicit "Join" confirm below. */
 
 const inputCls =
-  "w-full h-[48px] px-4 rounded-2xl bg-[#0a0c10] border border-[#1d2132] focus:border-[#7631ee] outline-none transition-colors [font-family:'Gilroy',sans-serif] text-[#e8eaf0] placeholder:text-[#414965] text-[15px]";
+  "w-full h-[48px] px-4 rounded-2xl bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 focus:border-brain-v1purple outline-none transition-colors [font-family:'Gilroy',sans-serif] text-[#e8eaf0] placeholder:text-brain-v1baby-blue-30 text-[15px]";
 const primaryBtn =
-  "w-full h-[48px] rounded-2xl bg-[#7631ee] hover:bg-[#8442f5] disabled:opacity-60 disabled:cursor-not-allowed transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-white text-[15px] flex items-center justify-center gap-2";
+  "w-full h-[48px] rounded-2xl bg-brain-v1purple hover:bg-brain-v1purple-hover disabled:opacity-60 disabled:cursor-not-allowed transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-white text-[15px] flex items-center justify-center gap-2";
 
 /** Pull a bare invite token out of a pasted link or raw token. */
 function extractInviteToken(raw: string): string {
@@ -156,7 +156,7 @@ export function CompanySetupPage() {
       type="button"
       data-testid={testId}
       onClick={() => { setTab(key); setError(null); }}
-      className="flex-1 py-[10px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[14px] transition-colors flex items-center justify-center"
+      className="flex-1 py-[10px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-[14px] transition-colors flex items-center justify-center"
       style={{
         background: tab === key ? "#240757" : "#0c0f14",
         color: tab === key ? "#7631ee" : "#414965",
@@ -167,19 +167,19 @@ export function CompanySetupPage() {
   );
 
   return (
-    <div className="relative w-full h-screen overflow-hidden bg-[#06070a] flex flex-col">
-      <div className="pointer-events-none absolute -top-[160px] left-1/2 -translate-x-1/2 w-[640px] h-[420px] bg-[#7631ee] opacity-[0.18] blur-[120px] rounded-full" />
+    <div className="relative w-full h-screen overflow-hidden bg-brain-v1headerfooterbg flex flex-col">
+      <div className="pointer-events-none absolute -top-[160px] left-1/2 -translate-x-1/2 w-[640px] h-[420px] bg-brain-v1purple opacity-[0.18] blur-[120px] rounded-full" />
       <header className="flex items-center px-6 h-[50px] flex-shrink-0 z-10 relative">
         <img src={brainLogo} alt="Brain Finance" className="h-[24px] w-auto object-contain mt-[13px]" />
       </header>
 
       <div className="flex-1 flex items-center justify-center z-10 relative px-4">
-        <div className="w-full max-w-[440px] bg-[#11141b] border border-[#1d2132] rounded-[24px] px-7 py-8 shadow-2xl">
+        <div className="w-full max-w-[440px] bg-brain-v1baby-blue-5 border border-brain-v1stroke-2 rounded-modal px-7 py-8 shadow-2xl">
           <div className="flex flex-col items-center text-center mb-6">
             <h1 className="[font-family:'Gilroy',sans-serif] font-semibold text-[#e8eaf0] text-[24px] leading-[32px]">
               Set Up Your Company
             </h1>
-            <p className="[font-family:'Gilroy',sans-serif] font-normal text-[#6c779d] text-[15px] leading-[22px] mt-1">
+            <p className="[font-family:'Gilroy',sans-serif] font-normal text-brain-v1baby-blue-60 text-[15px] leading-[22px] mt-1">
               {user?.email ? `Signed in as ${user.email}. ` : ""}Your account isn't part of a company yet -
               create one, or join with an invite from your admin.
             </p>
@@ -193,7 +193,7 @@ export function CompanySetupPage() {
           {tab === "create" ? (
             <form onSubmit={createCompany} className="flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
-                <label className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] pl-1">
+                <label className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[13px] pl-1">
                   Company name
                 </label>
                 <input
@@ -214,14 +214,14 @@ export function CompanySetupPage() {
                 {busy && <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
                 Create company
               </button>
-              <p className="text-center text-[#414965] text-xs [font-family:'Gilroy',sans-serif]">
+              <p className="text-center text-brain-v1baby-blue-30 text-xs [font-family:'Gilroy',sans-serif]">
                 You'll be the company's first admin.
               </p>
             </form>
           ) : (
             <form onSubmit={joinCompany} className="flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
-                <label className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] pl-1">
+                <label className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[13px] pl-1">
                   Invite link or code
                 </label>
                 <input
@@ -233,7 +233,7 @@ export function CompanySetupPage() {
                   className={inputCls}
                 />
               </div>
-              <p className="[font-family:'Gilroy',sans-serif] text-[#6c779d] text-[13px] px-1">
+              <p className="[font-family:'Gilroy',sans-serif] text-brain-v1baby-blue-60 text-[13px] px-1">
                 Joining links this account{user?.email ? ` (${user.email})` : ""} to your company - make sure this
                 invite was meant for you.
               </p>
@@ -249,13 +249,13 @@ export function CompanySetupPage() {
             </form>
           )}
 
-          <p className="text-center mt-6 [font-family:'Gilroy',sans-serif] text-[#6c779d] text-[14px]">
+          <p className="text-center mt-6 [font-family:'Gilroy',sans-serif] text-brain-v1baby-blue-60 text-[14px]">
             Wrong account?{" "}
             <button
               type="button"
               data-testid="button-setup-logout"
               onClick={() => { logout(); navigate("/"); }}
-              className="text-[#a8b9f4] hover:text-[#7631ee] transition-colors font-medium"
+              className="text-brain-v1baby-blue-100 hover:text-brain-v1purple transition-colors font-medium"
             >
               Sign out
             </button>

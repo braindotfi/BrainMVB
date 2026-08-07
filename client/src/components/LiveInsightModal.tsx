@@ -89,12 +89,12 @@ export function LiveInsightModal({
         />
         <DialogPrimitive.Content
           aria-describedby={insight.explanation ? "live-insight-description" : undefined}
-          className={`fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[24px] w-[480px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none ${transition.card}`}
+          className={`fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-brain-v1baby-blue-5 border border-brain-v1stroke-2 border-solid flex flex-col items-start overflow-hidden rounded-modal w-[480px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none ${transition.card}`}
           data-testid="live-insight-modal"
         >
-          <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-[#1d2132] border-solid h-[56px] shrink-0 w-full flex items-center justify-center px-[16px]">
+          <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-brain-v1stroke-2 border-solid h-[56px] shrink-0 w-full flex items-center justify-center px-[16px]">
             <DialogPrimitive.Title
-              className="[font-family:'Gilroy',sans-serif] font-semibold text-[20px] leading-[24px] text-[#a8b9f4] text-center whitespace-nowrap"
+              className="[font-family:'Gilroy',sans-serif] font-semibold text-[20px] leading-[24px] text-brain-v1baby-blue-100 text-center whitespace-nowrap"
               data-testid="text-live-insight-agent-name"
             >
               {agentName}
@@ -102,14 +102,14 @@ export function LiveInsightModal({
             <DialogPrimitive.Close
               data-testid="button-live-insight-close"
               aria-label="Close"
-              className="absolute right-[11px] top-[11px] size-[32px] flex items-center justify-center rounded-full bg-[#222737] hover:bg-[#2a3050] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+              className="absolute right-[11px] top-[11px] size-[32px] flex items-center justify-center rounded-full bg-brain-v1baby-blue-15 hover:bg-[#2a3050] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
             >
-              <X size={16} className="text-[#6c779d]" />
+              <X size={16} className="text-brain-v1baby-blue-60" />
             </DialogPrimitive.Close>
           </div>
 
           <div className="flex flex-col items-start w-full overflow-y-auto">
-            <div className="border-b border-[#1d2132] border-solid flex flex-col gap-[8px] items-start p-[24px] shrink-0 w-full">
+            <div className="border-b border-brain-v1stroke-2 border-solid flex flex-col gap-[8px] items-start p-[24px] shrink-0 w-full">
               {/* These records have no decision to make, so the hero pill states
                   what the card IS rather than borrowing a risk colour it has no
                   risk to report — the frame (6206:71135) shows the same. */}
@@ -120,11 +120,11 @@ export function LiveInsightModal({
                 border="rgba(108,119,157,0.2)"
                 testId="pill-live-insight-kind"
               />
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[20px] leading-[28px] text-[#a8b9f4] w-full truncate">
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[20px] leading-[28px] text-brain-v1baby-blue-100 w-full truncate">
                 {formatText(insight.title)}
               </p>
               {insight.subtitle && (
-                <p className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#6c779d] w-full">
+                <p className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-brain-v1baby-blue-60 w-full">
                   {formatText(insight.subtitle)}
                 </p>
               )}
@@ -164,9 +164,9 @@ export function LiveInsightModal({
                     {insight.evidenceIds.map((id) => (
                       <div
                         key={id}
-                        className="bg-[#0a0c10] border border-solid border-[#1d2132] rounded-[12px] px-[16px] py-[12px] w-full"
+                        className="bg-brain-v1highlight-dropdown-bg border border-solid border-brain-v1stroke-2 rounded-row px-[16px] py-[12px] w-full"
                       >
-                        <p className="[font-family:'JetBrains_Mono',monospace] text-[12px] leading-[16px] text-[#a8b9f4] truncate">
+                        <p className="[font-family:'JetBrains_Mono',monospace] text-[12px] leading-[16px] text-brain-v1baby-blue-100 truncate">
                           {id}
                         </p>
                       </div>
@@ -192,14 +192,14 @@ export function LiveInsightModal({
                                 border: `1px solid ${point.value >= 0 ? "rgba(66,191,35,0.4)" : "rgba(210,3,68,0.4)"}`,
                               }}
                             />
-                            <span className="[font-family:'JetBrains_Mono',monospace] font-medium text-[11px] leading-[14px] text-[#6c779d] text-center w-full truncate">
+                            <span className="[font-family:'JetBrains_Mono',monospace] font-medium text-[11px] leading-[14px] text-brain-v1baby-blue-60 text-center w-full truncate">
                               {point.label}
                             </span>
                           </div>
                         ));
                       })()}
                     </div>
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[11px] leading-[14px] text-[#414965] w-full">
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[11px] leading-[14px] text-brain-v1baby-blue-30 w-full">
                       {formatText(insight.chart.note)}
                     </p>
                   </div>
@@ -282,20 +282,20 @@ export const LiveInsightRow = ({ insight, onClick }: { insight: LiveInsight; onC
       }
     }}
     data-testid={`row-live-insight-${insight.id}`}
-    className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer outline-none focus-visible:border-[#1d2132]"
+    className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-brain-v1highlight-dropdown-bg border border-transparent transition-colors hover:bg-brain-v1baby-blue-5 hover:border-brain-v1stroke-2 cursor-pointer outline-none focus-visible:border-brain-v1stroke-2"
   >
     <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
-      <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] truncate min-w-0">
+      <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-100 text-[16px] truncate min-w-0">
         {insight.title}
       </p>
       {insight.subtitle && (
-        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[14px] truncate w-full text-[#6c779d]">
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[14px] truncate w-full text-brain-v1baby-blue-60">
           {insight.subtitle}
         </p>
       )}
     </div>
     <span
-      className="inline-flex items-center justify-center gap-[5px] border border-solid border-[rgba(108,119,157,0.2)] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] px-[8px] py-[2px] rounded-[22px] whitespace-nowrap shrink-0 text-[#6c779d] bg-[#222737]"
+      className="inline-flex items-center justify-center gap-[5px] border border-solid border-[rgba(108,119,157,0.2)] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] px-[8px] py-[2px] rounded-pill whitespace-nowrap shrink-0 text-brain-v1baby-blue-60 bg-brain-v1baby-blue-15"
       data-testid={`pill-live-insight-row-${insight.id}`}
     >
       {INSIGHT_PILL_LABEL}

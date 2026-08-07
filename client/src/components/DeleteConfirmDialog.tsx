@@ -56,17 +56,17 @@ export function DeleteConfirmDialog({
         {/* Card — updated Figma frame: 375px wide, 22px radius, 1px border. */}
         <DialogPrimitive.Content
           aria-describedby={undefined}
-          className="fixed left-[50%] top-[50%] z-[60] translate-x-[-50%] translate-y-[-50%] bg-[#0a0c10] border-[1px] border-solid border-[#1d2132] flex flex-col items-start overflow-hidden rounded-[22px] w-[375px] max-w-[calc(100vw-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
+          className="fixed left-[50%] top-[50%] z-[60] translate-x-[-50%] translate-y-[-50%] bg-brain-v1highlight-dropdown-bg border-[1px] border-solid border-brain-v1stroke-2 flex flex-col items-start overflow-hidden rounded-pill w-[375px] max-w-[calc(100vw-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
         >
           {/* ── Title and Controls — h-[52px], border-b ── */}
-          <div className="bg-[#0a0c10] border-b-[1px] border-solid border-[#1d2132] h-[52px] relative shrink-0 w-full">
+          <div className="bg-brain-v1highlight-dropdown-bg border-b-[1px] border-solid border-brain-v1stroke-2 h-[52px] relative shrink-0 w-full">
             <DialogPrimitive.Title asChild>
-              <p className="-translate-x-1/2 absolute [font-family:'Gilroy',sans-serif] font-semibold leading-[22px] left-1/2 text-[#a8b9f4] text-[18px] text-center top-[calc(50%-11px)] whitespace-nowrap">
+              <p className="-translate-x-1/2 absolute [font-family:'Gilroy',sans-serif] font-semibold leading-[22px] left-1/2 text-brain-v1baby-blue-100 text-[18px] text-center top-[calc(50%-11px)] whitespace-nowrap">
                 {title}
               </p>
             </DialogPrimitive.Title>
             <DialogPrimitive.Close
-              className="absolute right-[11px] top-1/2 -translate-y-1/2 size-[30px] p-0 rounded-[100px] hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+              className="absolute right-[11px] top-1/2 -translate-y-1/2 size-[30px] p-0 rounded-pill hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
               data-testid="button-close-delete-confirm-dialog"
             >
               <img src={closeIcon} alt="" className="size-[30px] rounded-full" />
@@ -76,7 +76,7 @@ export function DeleteConfirmDialog({
           {/* ── Body — p-[30px], gap-[20px] ── */}
           <div className="flex flex-col gap-[20px] items-start p-[30px] w-full">
             {/* Figma: font-medium, 20px/26px. #414965 raised to #a8b9f4 — body copy must be readable. */}
-            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[26px] text-[#a8b9f4] text-[20px] w-full">
+            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[26px] text-brain-v1baby-blue-100 text-[20px] w-full">
               {body}
             </p>
 
@@ -86,7 +86,7 @@ export function DeleteConfirmDialog({
                 type="button"
                 onClick={onCancel}
                 data-testid={cancelTestId}
-                className="flex shrink-0 h-[45px] items-center justify-center px-[22px] rounded-[100px] hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[16px] leading-[22px] w-[150px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                className="flex shrink-0 h-[45px] items-center justify-center px-[22px] rounded-pill hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-60 text-[16px] leading-[22px] w-[150px] focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
                 style={{ background: "#222737" }}
               >
                 {cancelLabel}
@@ -96,7 +96,7 @@ export function DeleteConfirmDialog({
                 disabled={busy}
                 onClick={onConfirm}
                 data-testid={confirmTestId}
-                className="flex shrink-0 h-[45px] items-center justify-center px-[22px] rounded-[100px] bg-[#350011] hover:bg-[#4a0018] disabled:opacity-60 disabled:cursor-not-allowed transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[#d20344] text-[16px] leading-[22px] w-[150px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d20344]"
+                className="flex shrink-0 h-[45px] items-center justify-center px-[22px] rounded-pill bg-brain-v1dark-pink-red hover:bg-[#4a0018] disabled:opacity-60 disabled:cursor-not-allowed transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1pink-red text-[16px] leading-[22px] w-[150px] focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1pink-red"
               >
                 {busy ? "Working…" : confirmLabel}
               </button>

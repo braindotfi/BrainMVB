@@ -34,7 +34,7 @@ function truncIban(iban: string): string {
 function AccountIcon({ type }: { type: AccountType }) {
   if (type === "wallet") {
     return (
-      <div className="overflow-clip relative rounded-[16px] shrink-0 size-[32px]">
+      <div className="overflow-clip relative rounded-panel shrink-0 size-[32px]">
         <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICON.walletBg} />
         <div className="absolute aspect-[24/24] left-[18.75%] right-[18.75%] top-[6px]">
           <div className="absolute inset-[12.5%]">
@@ -46,7 +46,7 @@ function AccountIcon({ type }: { type: AccountType }) {
   }
   if (type === "bank") {
     return (
-      <div className="overflow-clip relative rounded-[16px] shrink-0 size-[32px]">
+      <div className="overflow-clip relative rounded-panel shrink-0 size-[32px]">
         <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICON.bankBg} />
         <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[20px] top-1/2">
           <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICON.bankVec} />
@@ -55,7 +55,7 @@ function AccountIcon({ type }: { type: AccountType }) {
     );
   }
   return (
-    <div className="overflow-clip relative rounded-[16px] shrink-0 size-[32px]">
+    <div className="overflow-clip relative rounded-panel shrink-0 size-[32px]">
       <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICON.agentBg} />
       <div className="absolute inset-[20%]">
         <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICON.agentVec} />
@@ -69,7 +69,7 @@ function BackBtn({ onClick }: { onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="absolute left-[12px] top-[12px] rounded-[100px] size-[32px] flex items-center justify-center hover:opacity-80 transition-opacity"
+      className="absolute left-[12px] top-[12px] rounded-pill size-[32px] flex items-center justify-center hover:opacity-80 transition-opacity"
       style={{ background: "#1d2132" }}
       data-testid="btn-modal-back"
     >
@@ -86,7 +86,7 @@ function BackBtn({ onClick }: { onClick: () => void }) {
 function RowEndIcon({ icon }: { icon: "plus" | "chevron-down" }) {
   // Rendered inside an outer button, so do NOT make this a button itself.
   return (
-    <div className="size-[32px] rounded-[100px] bg-[#1d2132] flex items-center justify-center shrink-0">
+    <div className="size-[32px] rounded-pill bg-brain-v1stroke-2 flex items-center justify-center shrink-0">
       <img
         alt=""
         src={icon === "plus" ? ICON.plusIcon : ICON.chevronDown}
@@ -116,7 +116,7 @@ function ActionBtn({
   return (
     <button
       onClick={onClick}
-      className="relative rounded-[100px] shrink-0 size-[32px] hover:opacity-80 transition-opacity"
+      className="relative rounded-pill shrink-0 size-[32px] hover:opacity-80 transition-opacity"
       data-testid={testId}
       title={title}
     >
@@ -141,7 +141,7 @@ function QRPopup({
       onClick={onClose}
     >
       <div
-        className="bg-[#0a0c10] border border-[#1d2132] rounded-[24px] flex flex-col gap-[16px] items-center p-[24px]"
+        className="bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 rounded-modal flex flex-col gap-[16px] items-center p-[24px]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="relative shrink-0 size-[274px]">
@@ -152,11 +152,11 @@ function QRPopup({
         </p>
         <button
           onClick={onCopy}
-          className="bg-[#4a2300] flex gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] w-full hover:opacity-80 transition-opacity"
+          className="bg-brain-v1dark-orange flex gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-pill w-full hover:opacity-80 transition-opacity"
           data-testid="btn-qr-copy"
         >
           <img alt="" src={ICON.copyIcon} className="block shrink-0" style={{ width: 24, height: 24 }} />
-          <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#ff9500] text-[16px] leading-[20px] whitespace-nowrap">
+          <span className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1light-orange text-[16px] leading-[20px] whitespace-nowrap">
             {copied ? "Copied!" : "Copy Address"}
           </span>
         </button>
@@ -186,17 +186,17 @@ function AccountPopup({
       onClick={onClose}
     >
       <div
-        className="w-[320px] bg-[#0a0c10] border border-[#1d2132] rounded-[16px] flex flex-col shadow-[0px_68px_27px_0px_rgba(0,0,0,0.06),0px_38px_23px_0px_rgba(0,0,0,0.2),0px_17px_17px_0px_rgba(0,0,0,0.34),0px_4px_9px_0px_rgba(0,0,0,0.39)]"
+        className="w-[320px] bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 rounded-panel flex flex-col shadow-[0px_68px_27px_0px_rgba(0,0,0,0.06),0px_38px_23px_0px_rgba(0,0,0,0.2),0px_17px_17px_0px_rgba(0,0,0,0.34),0px_4px_9px_0px_rgba(0,0,0,0.39)]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Popup header */}
-        <div className="flex items-center justify-between px-[16px] py-[16px] border-b border-[#1d2132] backdrop-blur-[10px]">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[20px] leading-[24px] whitespace-nowrap">
+        <div className="flex items-center justify-between px-[16px] py-[16px] border-b border-brain-v1stroke-2 backdrop-blur-[10px]">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-60 text-[20px] leading-[24px] whitespace-nowrap">
             Select Account
           </p>
           <button
             onClick={onClose}
-            className="relative rounded-[100px] shrink-0 size-[24px] overflow-hidden hover:opacity-80 transition-opacity"
+            className="relative rounded-pill shrink-0 size-[24px] overflow-hidden hover:opacity-80 transition-opacity"
             data-testid="btn-popup-close"
           >
             <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICON.popupCloseBg} />
@@ -209,14 +209,14 @@ function AccountPopup({
         {/* Search + list */}
         <div className="flex flex-col gap-[8px] p-[8px]">
           {/* Search field */}
-          <div className="bg-[#222737] flex items-center gap-[8px] p-[8px] rounded-[8px] w-full">
+          <div className="bg-brain-v1baby-blue-15 flex items-center gap-[8px] p-[8px] rounded-[8px] w-full">
             <img alt="" src={ICON.searchIcon} className="block shrink-0" style={{ width: 16, height: 16 }} />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search"
-              className="bg-transparent flex-1 text-[#6c779d] text-[16px] [font-family:'Gilroy',sans-serif] outline-none placeholder:text-[#6c779d] min-w-0"
+              className="bg-transparent flex-1 text-brain-v1baby-blue-60 text-[16px] [font-family:'Gilroy',sans-serif] outline-none placeholder:text-brain-v1baby-blue-60 min-w-0"
               data-testid="input-account-search"
             />
           </div>
@@ -224,7 +224,7 @@ function AccountPopup({
           {/* List */}
           <div className="flex flex-col">
             <div className="flex items-center justify-center px-[8px] py-[4px]">
-              <p className="flex-1 [font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[15px] leading-[24px]">
+              <p className="flex-1 [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-60 text-[15px] leading-[24px]">
                 All Assets
               </p>
             </div>
@@ -232,19 +232,19 @@ function AccountPopup({
               <button
                 key={acc.id}
                 onClick={() => onSelect(acc)}
-                className={`flex items-center gap-[8px] p-[8px] rounded-[8px] w-full transition-colors hover:bg-[#1d2132] ${
-                  i === 0 ? "bg-[#11141b]" : ""
+                className={`flex items-center gap-[8px] p-[8px] rounded-[8px] w-full transition-colors hover:bg-brain-v1stroke-2 ${
+                  i === 0 ? "bg-brain-v1baby-blue-5" : ""
                 }`}
                 data-testid={`btn-account-${acc.id}`}
               >
                 <AccountIcon type={acc.type} />
-                <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[32px] whitespace-nowrap">
+                <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[32px] whitespace-nowrap">
                   {acc.name}
                 </p>
               </button>
             ))}
             {filtered.length === 0 && (
-              <p className="px-[8px] py-[8px] text-[#414965] text-[14px] [font-family:'Gilroy',sans-serif]">No accounts found</p>
+              <p className="px-[8px] py-[8px] text-brain-v1baby-blue-30 text-[14px] [font-family:'Gilroy',sans-serif]">No accounts found</p>
             )}
           </div>
         </div>
@@ -349,10 +349,10 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep 
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center">
         <div className="absolute inset-0 bg-black/65 backdrop-blur-sm" onClick={handleClose} />
-        <div className="relative z-10 w-[402px] bg-[#0a0c10] border border-[#1d2132] rounded-[24px] overflow-hidden">
+        <div className="relative z-10 w-[402px] bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 rounded-modal overflow-hidden">
 
           {/* Header */}
-          <div className="bg-[#0a0c10] h-[56px] relative flex-shrink-0 border-b border-[#1d2132]">
+          <div className="bg-brain-v1highlight-dropdown-bg h-[56px] relative flex-shrink-0 border-b border-brain-v1stroke-2">
             <BackBtn onClick={handleClose} />
           </div>
 
@@ -360,10 +360,10 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep 
           <div className="flex flex-col gap-[24px] px-[39px] pt-[23px] pb-[0px]">
             {/* Title */}
             <div className="flex flex-col">
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[32px] leading-[40px]">
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[32px] leading-[40px]">
                 Add Money
               </p>
-              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[22px] leading-[28px]">
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-30 text-[22px] leading-[28px]">
                 What account should we fund?
               </p>
             </div>
@@ -372,7 +372,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep 
             <div className="relative">
               <button
                 onClick={() => setPopupOpen((v) => !v)}
-                className="bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] rounded-[16px] w-full hover:bg-[#2a3050] transition-colors"
+                className="bg-brain-v1baby-blue-15 flex gap-[8px] h-[56px] items-center px-[16px] rounded-panel w-full hover:bg-[#2a3050] transition-colors"
                 data-testid="btn-select-account"
               >
                 {selected ? (
@@ -385,7 +385,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep 
                   </>
                 ) : (
                   <>
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[20px] leading-[24px] flex-1 text-left whitespace-nowrap">
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[20px] leading-[24px] flex-1 text-left whitespace-nowrap">
                       Select Account
                     </p>
                     <RowEndIcon icon="plus" />
@@ -407,7 +407,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep 
           <div className="flex gap-[16px] items-center px-[39px] pt-[24px] pb-[32px]">
             <button
               onClick={handleClose}
-              className="bg-[#222737] flex-1 h-[48px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[18px] hover:opacity-80 transition-opacity flex items-center justify-center"
+              className="bg-brain-v1baby-blue-15 flex-1 h-[48px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-60 text-[18px] hover:opacity-80 transition-opacity flex items-center justify-center"
               data-testid="btn-add-cancel"
             >
               Cancel
@@ -415,7 +415,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep 
             <button
               onClick={() => selected && setStep(selected.type)}
               disabled={!selected}
-              className={`bg-[#4a2300] flex-1 h-[48px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[#ff9500] text-[18px] transition-opacity flex items-center justify-center ${selected ? "opacity-100 hover:opacity-80 cursor-pointer" : "opacity-50 cursor-not-allowed"}`}
+              className={`bg-brain-v1dark-orange flex-1 h-[48px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1light-orange text-[18px] transition-opacity flex items-center justify-center ${selected ? "opacity-100 hover:opacity-80 cursor-pointer" : "opacity-50 cursor-not-allowed"}`}
               data-testid="btn-add-next"
             >
               Next
@@ -431,7 +431,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep 
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center">
         <div className="absolute inset-0 bg-black/65 backdrop-blur-sm" onClick={handleClose} />
-        <div className="relative z-10 w-[402px] bg-[#0a0c10] border border-[#1d2132] rounded-[24px] overflow-hidden">
+        <div className="relative z-10 w-[402px] bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 rounded-modal overflow-hidden">
 
           {/* QR overlay */}
           {qrOpen && (
@@ -444,7 +444,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep 
           )}
 
           {/* Header */}
-          <div className="bg-[#0a0c10] h-[56px] relative flex-shrink-0 border-b border-[#1d2132]">
+          <div className="bg-brain-v1highlight-dropdown-bg h-[56px] relative flex-shrink-0 border-b border-brain-v1stroke-2">
             <BackBtn onClick={handleBack} />
           </div>
 
@@ -452,10 +452,10 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep 
           <div className="flex flex-col gap-[24px] px-[39px] pt-[23px]">
             {/* Title */}
             <div className="flex flex-col">
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[32px] leading-[40px]">
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[32px] leading-[40px]">
                 Add Money
               </p>
-              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[22px] leading-[28px]">
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-30 text-[22px] leading-[28px]">
                 What account should we fund?
               </p>
             </div>
@@ -464,7 +464,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep 
             <div className="relative">
               <button
                 onClick={() => { setPopupOpen((v) => !v); }}
-                className="bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] rounded-[16px] w-full hover:bg-[#2a3050] transition-colors"
+                className="bg-brain-v1baby-blue-15 flex gap-[8px] h-[56px] items-center px-[16px] rounded-panel w-full hover:bg-[#2a3050] transition-colors"
                 data-testid="btn-account-row"
               >
                 <AccountIcon type="wallet" />
@@ -484,10 +484,10 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep 
 
             {/* Wallet Address */}
             <div className="flex flex-col gap-[4px]">
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-30 text-[16px] leading-[24px]">
                 Wallet Address
               </p>
-              <div className="bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] py-[10px] rounded-[16px] w-full">
+              <div className="bg-brain-v1baby-blue-15 flex gap-[8px] h-[56px] items-center px-[16px] py-[10px] rounded-panel w-full">
                 <p className="[font-family:'JetBrains_Mono',monospace] font-medium text-white text-[20px] leading-[24px] flex-1 min-w-0 truncate whitespace-nowrap">
                   {truncAddr(activeAddr)}
                 </p>
@@ -497,7 +497,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep 
                 </div>
               </div>
               {copied && (
-                <p className="[font-family:'Gilroy',sans-serif] text-[#42bf23] text-[12px] leading-[16px]">
+                <p className="[font-family:'Gilroy',sans-serif] text-brain-v1green text-[12px] leading-[16px]">
                   Address copied!
                 </p>
               )}
@@ -508,7 +508,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep 
           <div className="px-[39px] pt-[24px] pb-[32px]">
             <button
               onClick={handleClose}
-              className="bg-[#4a2300] h-[48px] w-full rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[#ff9500] text-[18px] hover:opacity-80 transition-opacity flex items-center justify-center"
+              className="bg-brain-v1dark-orange h-[48px] w-full rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1light-orange text-[18px] hover:opacity-80 transition-opacity flex items-center justify-center"
               data-testid="btn-wallet-close"
             >
               Close
@@ -524,10 +524,10 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep 
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center">
         <div className="absolute inset-0 bg-black/65 backdrop-blur-sm" onClick={handleClose} />
-        <div className="relative z-10 w-[402px] bg-[#0a0c10] border border-[#1d2132] rounded-[24px] overflow-hidden">
+        <div className="relative z-10 w-[402px] bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 rounded-modal overflow-hidden">
 
           {/* Header */}
-          <div className="bg-[#0a0c10] h-[56px] relative flex-shrink-0 border-b border-[#1d2132]">
+          <div className="bg-brain-v1highlight-dropdown-bg h-[56px] relative flex-shrink-0 border-b border-brain-v1stroke-2">
             <BackBtn onClick={handleBack} />
           </div>
 
@@ -535,10 +535,10 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep 
           <div className="flex flex-col gap-[24px] px-[39px] pt-[23px]">
             {/* Title */}
             <div className="flex flex-col">
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[32px] leading-[40px]">
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[32px] leading-[40px]">
                 Add Money
               </p>
-              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[22px] leading-[28px]">
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-30 text-[22px] leading-[28px]">
                 What account should we fund?
               </p>
             </div>
@@ -547,7 +547,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep 
             <div className="relative">
               <button
                 onClick={() => setPopupOpen((v) => !v)}
-                className="bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] rounded-[16px] w-full hover:bg-[#2a3050] transition-colors"
+                className="bg-brain-v1baby-blue-15 flex gap-[8px] h-[56px] items-center px-[16px] rounded-panel w-full hover:bg-[#2a3050] transition-colors"
                 data-testid="btn-account-row-bank"
               >
                 <AccountIcon type="bank" />
@@ -569,10 +569,10 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep 
             <div className="flex flex-col gap-[24px]">
               {/* Recipient Name */}
               <div className="flex flex-col gap-[4px]">
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-30 text-[16px] leading-[24px]">
                   Recipient Name
                 </p>
-                <div className="bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] py-[10px] rounded-[16px] w-full">
+                <div className="bg-brain-v1baby-blue-15 flex gap-[8px] h-[56px] items-center px-[16px] py-[10px] rounded-panel w-full">
                   <p className="flex-1 [font-family:'Gilroy',sans-serif] font-semibold text-white text-[20px] leading-[24px] min-w-0 overflow-hidden text-ellipsis whitespace-nowrap" data-testid="text-recipient-name">
                     {recipientName || "-"}
                   </p>
@@ -588,10 +588,10 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep 
 
               {/* IBAN */}
               <div className="flex flex-col gap-[4px]">
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-30 text-[16px] leading-[24px]">
                   IBAN Bank Number
                 </p>
-                <div className="bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] py-[10px] rounded-[16px] w-full">
+                <div className="bg-brain-v1baby-blue-15 flex gap-[8px] h-[56px] items-center px-[16px] py-[10px] rounded-panel w-full">
                   <p className="flex-1 [font-family:'JetBrains_Mono',monospace] font-semibold text-white text-[20px] leading-[24px] whitespace-nowrap" data-testid="text-iban">
                     {iban ? truncIban(iban) : "-"}
                   </p>
@@ -611,7 +611,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep 
           <div className="px-[39px] pt-[24px] pb-[32px]">
             <button
               onClick={handleClose}
-              className="bg-[#4a2300] h-[48px] w-full rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[#ff9500] text-[18px] hover:opacity-80 transition-opacity flex items-center justify-center"
+              className="bg-brain-v1dark-orange h-[48px] w-full rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1light-orange text-[18px] hover:opacity-80 transition-opacity flex items-center justify-center"
               data-testid="btn-bank-close"
             >
               Close
@@ -626,7 +626,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/65 backdrop-blur-sm" onClick={handleClose} />
-      <div className="relative z-10 w-[402px] bg-[#0a0c10] border border-[#1d2132] rounded-[24px] overflow-hidden">
+      <div className="relative z-10 w-[402px] bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 rounded-modal overflow-hidden">
 
         {/* QR overlay */}
         {qrOpen && (
@@ -639,7 +639,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep 
         )}
 
         {/* Header */}
-        <div className="bg-[#0a0c10] h-[56px] relative flex-shrink-0 border-b border-[#1d2132]">
+        <div className="bg-brain-v1highlight-dropdown-bg h-[56px] relative flex-shrink-0 border-b border-brain-v1stroke-2">
           <BackBtn onClick={handleBack} />
         </div>
 
@@ -647,10 +647,10 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep 
         <div className="flex flex-col gap-[24px] px-[39px] pt-[23px]">
           {/* Title */}
           <div className="flex flex-col">
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[32px] leading-[40px]">
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[32px] leading-[40px]">
               Add Money
             </p>
-            <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[22px] leading-[28px]">
+            <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-30 text-[22px] leading-[28px]">
               What account should we fund?
             </p>
           </div>
@@ -659,7 +659,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep 
           <div className="relative">
             <button
               onClick={() => setPopupOpen((v) => !v)}
-              className="bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] rounded-[16px] w-full hover:bg-[#2a3050] transition-colors"
+              className="bg-brain-v1baby-blue-15 flex gap-[8px] h-[56px] items-center px-[16px] rounded-panel w-full hover:bg-[#2a3050] transition-colors"
               data-testid="btn-account-row-agent"
             >
               <AccountIcon type="agent" />
@@ -679,10 +679,10 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep 
 
           {/* Wallet Address */}
           <div className="flex flex-col gap-[4px]">
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-30 text-[16px] leading-[24px]">
               Wallet Address
             </p>
-            <div className="bg-[#222737] flex gap-[8px] h-[56px] items-center px-[16px] py-[10px] rounded-[16px] w-full">
+            <div className="bg-brain-v1baby-blue-15 flex gap-[8px] h-[56px] items-center px-[16px] py-[10px] rounded-panel w-full">
               <p className="[font-family:'JetBrains_Mono',monospace] font-medium text-white text-[20px] leading-[24px] flex-1 min-w-0 truncate whitespace-nowrap">
                 {truncAddr(activeAddr)}
               </p>
@@ -692,7 +692,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep 
               </div>
             </div>
             {copied && (
-              <p className="[font-family:'Gilroy',sans-serif] text-[#42bf23] text-[12px] leading-[16px]">
+              <p className="[font-family:'Gilroy',sans-serif] text-brain-v1green text-[12px] leading-[16px]">
                 Address copied!
               </p>
             )}
@@ -703,7 +703,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep 
         <div className="px-[39px] pt-[24px] pb-[32px]">
           <button
             onClick={handleClose}
-            className="bg-[#4a2300] h-[48px] w-full rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[#ff9500] text-[18px] hover:opacity-80 transition-opacity flex items-center justify-center"
+            className="bg-brain-v1dark-orange h-[48px] w-full rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1light-orange text-[18px] hover:opacity-80 transition-opacity flex items-center justify-center"
             data-testid="btn-agent-close"
           >
             Close

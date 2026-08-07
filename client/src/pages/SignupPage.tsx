@@ -171,21 +171,21 @@ export function SignupPage() {
   };
 
   return (
-    <div className="relative w-full h-screen overflow-hidden bg-[#06070a] flex flex-col">
+    <div className="relative w-full h-screen overflow-hidden bg-brain-v1headerfooterbg flex flex-col">
       {/* Ambient glow */}
-      <div className="pointer-events-none absolute -top-[160px] left-1/2 -translate-x-1/2 w-[640px] h-[420px] bg-[#7631ee] opacity-[0.18] blur-[120px] rounded-full" />
+      <div className="pointer-events-none absolute -top-[160px] left-1/2 -translate-x-1/2 w-[640px] h-[420px] bg-brain-v1purple opacity-[0.18] blur-[120px] rounded-full" />
 
       <header className="flex items-center px-6 h-[50px] flex-shrink-0 z-10 relative">
         <img src={brainLogo} alt="Brain Finance" className="h-[24px] w-auto object-contain mt-[13px]" />
       </header>
 
       <div className="flex-1 flex items-center justify-center z-10 relative px-4">
-        <div className="w-full max-w-[420px] bg-[#11141b] border border-[#1d2132] rounded-[24px] px-7 py-8 shadow-2xl">
+        <div className="w-full max-w-[420px] bg-brain-v1baby-blue-5 border border-brain-v1stroke-2 rounded-modal px-7 py-8 shadow-2xl">
           <div className="flex flex-col items-center text-center mb-6">
             <h1 className="[font-family:'Gilroy',sans-serif] font-semibold text-[#e8eaf0] text-[24px] leading-[32px]">
               {mode === "login" ? "Welcome Back" : "Create Your Account"}
             </h1>
-            <p className="[font-family:'Gilroy',sans-serif] font-normal text-[#6c779d] text-[15px] leading-[22px] mt-1">
+            <p className="[font-family:'Gilroy',sans-serif] font-normal text-brain-v1baby-blue-60 text-[15px] leading-[22px] mt-1">
               {mode === "login"
                 ? "Sign in to your Brain account."
                 : "Start managing your finances autonomously."}
@@ -199,16 +199,16 @@ export function SignupPage() {
                 type="button"
                 data-testid="button-google-signin"
                 onClick={loginWithGoogle}
-                className="w-full py-3 px-6 rounded-[100px] bg-[#131828] hover:bg-[#1a2235] border border-[#1d2132] hover:border-[#7631ee]/40 transition-colors [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[15px] flex items-center justify-center gap-3"
+                className="w-full py-3 px-6 rounded-pill bg-[#131828] hover:bg-[#1a2235] border border-brain-v1stroke-2 hover:border-[#7631ee]/40 transition-colors [font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[15px] flex items-center justify-center gap-3"
               >
                 <img src={googleLogo} alt="" className="h-[18px] w-[18px] rounded-full object-contain" />
                 Continue with Google
               </button>
 
               <div className="flex items-center gap-3 w-full my-5">
-                <div className="flex-1 h-px bg-[#1d2132]" />
-                <span className="text-[#414965] text-xs [font-family:'Gilroy',sans-serif]">or</span>
-                <div className="flex-1 h-px bg-[#1d2132]" />
+                <div className="flex-1 h-px bg-brain-v1stroke-2" />
+                <span className="text-brain-v1baby-blue-30 text-xs [font-family:'Gilroy',sans-serif]">or</span>
+                <div className="flex-1 h-px bg-brain-v1stroke-2" />
               </div>
             </>
           )}
@@ -216,7 +216,7 @@ export function SignupPage() {
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             {mode === "register" && tenancyProduction && (
               <div className="flex flex-col gap-1.5">
-                <label className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] pl-1">
+                <label className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[13px] pl-1">
                   Company name
                 </label>
                 <input
@@ -226,13 +226,13 @@ export function SignupPage() {
                   onChange={(e) => setCompanyName(e.target.value)}
                   autoComplete="organization"
                   placeholder="Acme Inc."
-                  className="w-full h-[48px] px-4 rounded-2xl bg-[#0a0c10] border border-[#1d2132] focus:border-[#7631ee] outline-none transition-colors [font-family:'Gilroy',sans-serif] text-[#e8eaf0] placeholder:text-[#414965] text-[15px]"
+                  className="w-full h-[48px] px-4 rounded-2xl bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 focus:border-brain-v1purple outline-none transition-colors [font-family:'Gilroy',sans-serif] text-[#e8eaf0] placeholder:text-brain-v1baby-blue-30 text-[15px]"
                 />
               </div>
             )}
             {mode === "register" && (
               <div className="flex flex-col gap-1.5">
-                <label className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] pl-1">
+                <label className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[13px] pl-1">
                   Name
                 </label>
                 <input
@@ -242,14 +242,14 @@ export function SignupPage() {
                   onChange={(e) => setName(e.target.value)}
                   autoComplete="name"
                   placeholder="Jane Doe"
-                  className="w-full h-[48px] px-4 rounded-2xl bg-[#0a0c10] border border-[#1d2132] focus:border-[#7631ee] outline-none transition-colors [font-family:'Gilroy',sans-serif] text-[#e8eaf0] placeholder:text-[#414965] text-[15px]"
+                  className="w-full h-[48px] px-4 rounded-2xl bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 focus:border-brain-v1purple outline-none transition-colors [font-family:'Gilroy',sans-serif] text-[#e8eaf0] placeholder:text-brain-v1baby-blue-30 text-[15px]"
                 />
               </div>
             )}
 
             {mode === "login" ? (
               <div className="flex flex-col gap-1.5">
-                <label className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] pl-1">
+                <label className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[13px] pl-1">
                   Username or Email
                 </label>
                 <input
@@ -259,13 +259,13 @@ export function SignupPage() {
                   onChange={(e) => setIdentifier(e.target.value)}
                   autoComplete="username"
                   placeholder="yourname or you@example.com"
-                  className="w-full h-[48px] px-4 rounded-2xl bg-[#0a0c10] border border-[#1d2132] focus:border-[#7631ee] outline-none transition-colors [font-family:'Gilroy',sans-serif] text-[#e8eaf0] placeholder:text-[#414965] text-[15px]"
+                  className="w-full h-[48px] px-4 rounded-2xl bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 focus:border-brain-v1purple outline-none transition-colors [font-family:'Gilroy',sans-serif] text-[#e8eaf0] placeholder:text-brain-v1baby-blue-30 text-[15px]"
                 />
               </div>
             ) : (
               <>
                 <div className="flex flex-col gap-1.5">
-                  <label className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] pl-1">
+                  <label className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[13px] pl-1">
                     Username
                   </label>
                   <input
@@ -275,12 +275,12 @@ export function SignupPage() {
                     onChange={(e) => setUsername(e.target.value)}
                     autoComplete="username"
                     placeholder="yourname"
-                    className="w-full h-[48px] px-4 rounded-2xl bg-[#0a0c10] border border-[#1d2132] focus:border-[#7631ee] outline-none transition-colors [font-family:'Gilroy',sans-serif] text-[#e8eaf0] placeholder:text-[#414965] text-[15px]"
+                    className="w-full h-[48px] px-4 rounded-2xl bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 focus:border-brain-v1purple outline-none transition-colors [font-family:'Gilroy',sans-serif] text-[#e8eaf0] placeholder:text-brain-v1baby-blue-30 text-[15px]"
                   />
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] pl-1">
+                  <label className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[13px] pl-1">
                     Email
                   </label>
                   <input
@@ -290,14 +290,14 @@ export function SignupPage() {
                     onChange={(e) => setEmail(e.target.value)}
                     autoComplete="email"
                     placeholder="you@example.com"
-                    className="w-full h-[48px] px-4 rounded-2xl bg-[#0a0c10] border border-[#1d2132] focus:border-[#7631ee] outline-none transition-colors [font-family:'Gilroy',sans-serif] text-[#e8eaf0] placeholder:text-[#414965] text-[15px]"
+                    className="w-full h-[48px] px-4 rounded-2xl bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 focus:border-brain-v1purple outline-none transition-colors [font-family:'Gilroy',sans-serif] text-[#e8eaf0] placeholder:text-brain-v1baby-blue-30 text-[15px]"
                   />
                 </div>
               </>
             )}
 
             <div className="flex flex-col gap-1.5">
-              <label className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] pl-1">
+              <label className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[13px] pl-1">
                 Password
               </label>
               <input
@@ -307,7 +307,7 @@ export function SignupPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete={mode === "login" ? "current-password" : "new-password"}
                 placeholder={mode === "register" ? "At least 8 characters" : "Your password"}
-                className="w-full h-[48px] px-4 rounded-2xl bg-[#0a0c10] border border-[#1d2132] focus:border-[#7631ee] outline-none transition-colors [font-family:'Gilroy',sans-serif] text-[#e8eaf0] placeholder:text-[#414965] text-[15px]"
+                className="w-full h-[48px] px-4 rounded-2xl bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 focus:border-brain-v1purple outline-none transition-colors [font-family:'Gilroy',sans-serif] text-[#e8eaf0] placeholder:text-brain-v1baby-blue-30 text-[15px]"
               />
             </div>
 
@@ -321,7 +321,7 @@ export function SignupPage() {
               type="submit"
               data-testid="button-submit-auth"
               disabled={submitting}
-              className="w-full h-[48px] mt-1 rounded-[100px] bg-[#7631ee] hover:bg-[#8442f5] disabled:opacity-60 disabled:cursor-not-allowed transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-white text-[15px] flex items-center justify-center gap-2"
+              className="w-full h-[48px] mt-1 rounded-pill bg-brain-v1purple hover:bg-brain-v1purple-hover disabled:opacity-60 disabled:cursor-not-allowed transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-white text-[15px] flex items-center justify-center gap-2"
             >
               {submitting && (
                 <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -332,9 +332,9 @@ export function SignupPage() {
 
           {/* Demo access - explore the app without creating an account */}
           <div className="flex items-center gap-3 w-full my-5">
-            <div className="flex-1 h-px bg-[#1d2132]" />
-            <span className="text-[#414965] text-xs [font-family:'Gilroy',sans-serif]">or continue with demo</span>
-            <div className="flex-1 h-px bg-[#1d2132]" />
+            <div className="flex-1 h-px bg-brain-v1stroke-2" />
+            <span className="text-brain-v1baby-blue-30 text-xs [font-family:'Gilroy',sans-serif]">or continue with demo</span>
+            <div className="flex-1 h-px bg-brain-v1stroke-2" />
           </div>
 
           <button
@@ -342,18 +342,18 @@ export function SignupPage() {
             data-testid="button-demo-login"
             onClick={handleDemo}
             disabled={submitting}
-            className="w-full py-3 px-6 rounded-[100px] bg-[#131828] hover:bg-[#1a2235] border border-[#1d2132] hover:border-[#7631ee]/40 disabled:opacity-60 disabled:cursor-not-allowed transition-colors [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[15px] flex items-center justify-center gap-3"
+            className="w-full py-3 px-6 rounded-pill bg-[#131828] hover:bg-[#1a2235] border border-brain-v1stroke-2 hover:border-[#7631ee]/40 disabled:opacity-60 disabled:cursor-not-allowed transition-colors [font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[15px] flex items-center justify-center gap-3"
           >
             Continue with Demo
           </button>
 
-          <p className="text-center mt-6 [font-family:'Gilroy',sans-serif] text-[#6c779d] text-[14px]">
+          <p className="text-center mt-6 [font-family:'Gilroy',sans-serif] text-brain-v1baby-blue-60 text-[14px]">
             {mode === "login" ? "Don't have an account?" : "Already have an account?"}{" "}
             <button
               type="button"
               data-testid="button-toggle-mode"
               onClick={() => switchMode(mode === "login" ? "register" : "login")}
-              className="text-[#a8b9f4] hover:text-[#7631ee] transition-colors font-medium"
+              className="text-brain-v1baby-blue-100 hover:text-brain-v1purple transition-colors font-medium"
             >
               {mode === "login" ? "Sign Up" : "Sign In"}
             </button>

@@ -136,20 +136,20 @@ const GoalProgress = ({ goal }: { goal: GoalRow }) => {
   return (
     <div className="flex flex-col gap-[8px] w-full" data-testid={`goal-${goal.id}`}>
       <div className="flex items-center justify-between gap-[12px] w-full">
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[14px] truncate">
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-100 text-[14px] truncate">
           <span>{goal.name}</span>
-          <span className="text-[#6c779d] font-medium"> · {goal.vault}</span>
+          <span className="text-brain-v1baby-blue-60 font-medium"> · {goal.vault}</span>
         </p>
         <div className="flex items-center gap-[12px] shrink-0 [font-family:'JetBrains_Mono',monospace] tabular-nums">
-          <p className="text-[#a8b9f4] text-[14px]">
+          <p className="text-brain-v1baby-blue-100 text-[14px]">
             <span className="font-medium">{fmt(goal.saved)}</span>
-            <span className="text-[#6c779d]"> of </span>
+            <span className="text-brain-v1baby-blue-60"> of </span>
             <span className="font-medium">{fmt(goal.target)}</span>
           </p>
-          <p className="text-[#6c779d] text-[14px] w-[36px] text-right">{pct}%</p>
+          <p className="text-brain-v1baby-blue-60 text-[14px] w-[36px] text-right">{pct}%</p>
         </div>
       </div>
-      <div className="h-[6px] w-full rounded-full bg-[#1d2132] overflow-hidden">
+      <div className="h-[6px] w-full rounded-full bg-brain-v1stroke-2 overflow-hidden">
         <div
           className="h-full rounded-full transition-all"
           style={{ width: `${pct}%`, background: goal.color }}
@@ -166,7 +166,7 @@ const AddGoalButton = ({ onClick }: { onClick: () => void }) => (
     type="button"
     data-testid="button-add-goal"
     onClick={onClick}
-    className="flex gap-[2px] items-center justify-center px-[10px] py-[4px] rounded-[100px] bg-[#4a2300] hover:bg-[#5a2d00] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ff9500]"
+    className="flex gap-[2px] items-center justify-center px-[10px] py-[4px] rounded-pill bg-brain-v1dark-orange hover:bg-brain-v1dark-orange-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1light-orange"
   >
     <span className="relative shrink-0 size-[16px]">
       <svg
@@ -180,7 +180,7 @@ const AddGoalButton = ({ onClick }: { onClick: () => void }) => (
         <path d="M8 3.33V12.67M3.33 8H12.67" stroke="#ff9500" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     </span>
-    <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#ff9500] text-[12px] whitespace-nowrap">
+    <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1light-orange text-[12px] whitespace-nowrap">
       Add Goal
     </span>
   </button>
@@ -222,9 +222,9 @@ const GoalsSection = () => {
   };
 
   return (
-    <div className="bg-[#0a0c10] flex flex-col items-start overflow-hidden rounded-[16px] w-full">
-      <div className="border-[#1d2132] border-b border-solid flex items-center justify-between px-[16px] py-[14px] w-full">
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px]">
+    <div className="bg-brain-v1highlight-dropdown-bg flex flex-col items-start overflow-hidden rounded-panel w-full">
+      <div className="border-brain-v1stroke-2 border-b border-solid flex items-center justify-between px-[16px] py-[14px] w-full">
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-100 text-[16px]">
           Your Goals
         </p>
         <AddGoalButton onClick={() => setAddOpen(true)} />
@@ -233,7 +233,7 @@ const GoalsSection = () => {
         {goals.length === 0 ? (
           <p
             data-testid="text-goals-empty"
-            className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[14px]"
+            className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[14px]"
           >
             No goals yet. Add one to start tracking progress.
           </p>
@@ -279,8 +279,8 @@ const MetricCard = ({
   testId: string;
 }) => (
   <div
-    className={`bg-[#0a0c10] flex flex-col gap-[8px] items-start justify-start p-[16px] relative rounded-[16px] border border-transparent ${
-      onClick ? "cursor-pointer transition-colors hover:bg-[#11141b] hover:border-[#1d2132]" : ""
+    className={`bg-brain-v1highlight-dropdown-bg flex flex-col gap-[8px] items-start justify-start p-[16px] relative rounded-panel border border-transparent ${
+      onClick ? "cursor-pointer transition-colors hover:bg-brain-v1baby-blue-5 hover:border-brain-v1stroke-2" : ""
     }`}
     data-testid={testId}
     {...(onClick
@@ -297,14 +297,14 @@ const MetricCard = ({
         }
       : {})}
   >
-    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#414965] text-[13px] uppercase">{label}</p>
-    <p className="[font-family:'JetBrains_Mono',monospace] leading-[0] relative shrink-0 text-[#a8b9f4] text-[0px] w-full whitespace-nowrap">
+    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-30 text-[13px] uppercase">{label}</p>
+    <p className="[font-family:'JetBrains_Mono',monospace] leading-[0] relative shrink-0 text-brain-v1baby-blue-100 text-[0px] w-full whitespace-nowrap">
       <span className="font-medium leading-[36px] text-[28px]">{whole}</span>
-      {cents && <span className="font-medium leading-[36px] text-[#6c779d] text-[18px]">{cents}</span>}
-      {suffix && <span className="font-medium leading-[36px] text-[#6c779d] text-[18px]">{suffix}</span>}
+      {cents && <span className="font-medium leading-[36px] text-brain-v1baby-blue-60 text-[18px]">{cents}</span>}
+      {suffix && <span className="font-medium leading-[36px] text-brain-v1baby-blue-60 text-[18px]">{suffix}</span>}
     </p>
     {caption && (
-      <p className={`[font-family:'Gilroy',sans-serif] font-normal leading-[18px] text-[13px] w-full ${captionClass ?? "text-[#414965]"}`}>
+      <p className={`[font-family:'Gilroy',sans-serif] font-normal leading-[18px] text-[13px] w-full ${captionClass ?? "text-brain-v1baby-blue-30"}`}>
         {caption}
       </p>
     )}
@@ -313,7 +313,7 @@ const MetricCard = ({
 
 // Shown when brain-core's ledger-grounded recommendation is unavailable — neutral,
 // no invented figures (was a hardcoded "$432 less than last month. Nice.").
-const SPENDING_INSIGHT_FALLBACK = { text: "No spending insight available yet.", colorClass: "text-[#6c779d]" };
+const SPENDING_INSIGHT_FALLBACK = { text: "No spending insight available yet.", colorClass: "text-brain-v1baby-blue-60" };
 
 /* ── Insight-text helpers ────────────────────────────────────────────────────────────
    The recommendation string from brain-core often contains raw numbers and
@@ -373,7 +373,7 @@ function detectSentimentColor(text: string): string {
     "underfunded", "insufficient", "short", "risky", "danger", "critical",
     "overdraft", "bounced", "rejected", "failed", "unpaid",
   ];
-  if (negative.some((w) => lower.includes(w))) return "text-[#d20344]";
+  if (negative.some((w) => lower.includes(w))) return "text-brain-v1pink-red";
   // 2) Positive / inflow / good signals. Green, checked before warning so that
   //    an "upcoming inflow" is green (the inflow wins) not orange.
   const positive = [
@@ -381,16 +381,16 @@ function detectSentimentColor(text: string): string {
     "growth", "up", "rising", "exceeded target", "ahead", "on track", "nice",
     "good", "strong", "healthy", "positive", "inflow", "received", "collected",
   ];
-  if (positive.some((w) => lower.includes(w))) return "text-[#42bf23]";
+  if (positive.some((w) => lower.includes(w))) return "text-brain-v1green";
   // 3) Warning / caution signals. Orange, only when no positive signal present
   const warning = [
     "watch", "caution", "careful", "attention", "upcoming", "due soon",
     "approaching", "nearing", "almost", "limited", "tight", "constrained",
     "review", "verify", "check", "pending", "unusual", "unexpected",
   ];
-  if (warning.some((w) => lower.includes(w))) return "text-[#ff9500]";
+  if (warning.some((w) => lower.includes(w))) return "text-brain-v1light-orange";
   // 4) Neutral / no strong sentiment → baby-blue (matches existing default)
-  return "text-[#a8b9f4]";
+  return "text-brain-v1baby-blue-100";
 }
 
 // Net monthly cash flow (inflow − outflow, averaged over the months present) from
@@ -1015,7 +1015,7 @@ export function HomePage() {
     : formatText(SPENDING_INSIGHT_FALLBACK.text);
   const insightLine =
     netMonthly === null
-      ? { text: "Connect accounts to see monthly spend.", colorClass: "text-[#6c779d]" }
+      ? { text: "Connect accounts to see monthly spend.", colorClass: "text-brain-v1baby-blue-60" }
       : rawText
         ? { text: processedText, colorClass: detectSentimentColor(processedText) }
         : { text: processedText, colorClass: SPENDING_INSIGHT_FALLBACK.colorClass };
@@ -1067,7 +1067,7 @@ export function HomePage() {
   };
 
   return (
-    <div className="bg-[#11141b] overflow-hidden relative size-full flex flex-col">
+    <div className="bg-brain-v1baby-blue-5 overflow-hidden relative size-full flex flex-col">
       <ScrollArea className="flex-1">
         <div className="flex flex-col gap-[40px] items-start pb-[16px] pt-[40px] px-[16px] w-full">
 
@@ -1076,14 +1076,14 @@ export function HomePage() {
               used a `leading-[0] text-[0px]` parent to kill inter-span whitespace;
               plain sibling <p>s make it the same three-line shape as the other pages. */}
           <div className="flex flex-col items-start gap-[4px] relative shrink-0 w-full">
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px]">
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-brain-v1baby-blue-60 text-[20px]">
               {greeting}{greetingName ? ", " : ""}
-              {greetingName && <span className="text-[#a8b9f4]">{greetingName}</span>}.
+              {greetingName && <span className="text-brain-v1baby-blue-100">{greetingName}</span>}.
             </p>
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-brain-v1baby-blue-100 text-[32px]">
               Here's your financial snapshot for today.
             </p>
-            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px]">
+            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-brain-v1baby-blue-30 text-[16px]">
               Updated {updatedLabel}
             </p>
           </div>
@@ -1153,15 +1153,15 @@ export function HomePage() {
               )}
               {overviewSelection.count >= 2 && overviewSelection.limit && (
                 <div
-                  className="bg-[#12032d] flex flex-col overflow-hidden rounded-[16px] shrink-0 w-full mb-[12px]"
+                  className="bg-brain-v1dark-dark-purple flex flex-col overflow-hidden rounded-panel shrink-0 w-full mb-[12px]"
                   data-testid="bulk-bar"
                 >
                   {/* Body — count metric + Brain Observed sentence */}
                   <div className="flex flex-col items-start p-[16px] w-full">
-                    <div className="bg-[#240757] flex gap-[26px] items-start overflow-hidden px-[32px] py-[16px] rounded-[16px] w-full">
+                    <div className="bg-brain-v1dark-purple flex gap-[26px] items-start overflow-hidden px-[32px] py-[16px] rounded-panel w-full">
                       {/* Left: Number Selected */}
                       <div className="flex flex-col gap-[4px] items-start justify-center shrink-0 w-[128px]">
-                        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#7631ee] text-[16px]">
+                        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1purple text-[16px]">
                           Number Selected
                         </p>
                         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[48px] text-[40px] text-white" data-testid="bulk-bar-count">
@@ -1169,10 +1169,10 @@ export function HomePage() {
                         </p>
                       </div>
                       {/* Hairline vertical divider */}
-                      <div className="w-px self-stretch shrink-0 bg-[#12032d]" />
+                      <div className="w-px self-stretch shrink-0 bg-brain-v1dark-dark-purple" />
                       {/* Right: Brain Observed */}
                       <div className="flex min-w-0 flex-1 flex-col gap-[4px] items-start justify-center">
-                        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#7631ee] text-[16px]">
+                        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1purple text-[16px]">
                           Brain Observed
                         </p>
                         <p
@@ -1188,13 +1188,13 @@ export function HomePage() {
                     </div>
                   </div>
                   {/* Footer — Cancel / Approve Selected */}
-                  <div className="border-t border-[#240757] bg-[#12032d] flex flex-col items-start p-[16px] w-full">
+                  <div className="border-t border-brain-v1dark-purple bg-brain-v1dark-dark-purple flex flex-col items-start p-[16px] w-full">
                     <div className="flex gap-[16px] items-center w-full">
                       <button
                         type="button"
                         onClick={() => setSelectedOverviewIds(new Set())}
                         data-testid="button-bulk-clear"
-                        className="bg-[#222737] flex flex-1 h-[36px] items-center justify-center min-w-px px-[12px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[16px] whitespace-nowrap hover:bg-[#2c3247] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] disabled:opacity-60 disabled:cursor-not-allowed"
+                        className="bg-brain-v1baby-blue-15 flex flex-1 h-[36px] items-center justify-center min-w-px px-[12px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[16px] whitespace-nowrap hover:bg-brain-v1baby-blue-15-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple disabled:opacity-60 disabled:cursor-not-allowed"
                       >
                         Cancel
                       </button>
@@ -1203,7 +1203,7 @@ export function HomePage() {
                         onClick={approveSelectedOverview}
                         disabled={overviewBulkRunning}
                         data-testid="button-bulk-approve"
-                        className="bg-[#4a2300] flex flex-1 h-[36px] items-center justify-center min-w-px px-[12px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#ff9500] text-[16px] whitespace-nowrap hover:bg-[#5a2d00] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] disabled:opacity-60 disabled:cursor-not-allowed"
+                        className="bg-brain-v1dark-orange flex flex-1 h-[36px] items-center justify-center min-w-px px-[12px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1light-orange text-[16px] whitespace-nowrap hover:bg-brain-v1dark-orange-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple disabled:opacity-60 disabled:cursor-not-allowed"
                       >
                         {overviewBulkRunning ? "Approving…" : "Approve"}
                       </button>

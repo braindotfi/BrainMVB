@@ -72,7 +72,7 @@ function ReasonChip({ label }: { label: string }) {
   const danger = label.startsWith("Risk:") || label === "Paused for review";
   return (
     <RecordPill
-      className={danger ? "bg-[#350011] text-[#d20344] border-[rgba(210,3,68,0.2)]" : "bg-[#4a2300] text-[#ff9500] border-[rgba(255,149,0,0.2)]"}
+      className={danger ? "bg-brain-v1dark-pink-red text-brain-v1pink-red border-[rgba(210,3,68,0.2)]" : "bg-brain-v1dark-orange text-brain-v1light-orange border-[rgba(255,149,0,0.2)]"}
       testId="chip-review-reason"
     >
       {label}
@@ -90,7 +90,7 @@ function ReasonChip({ label }: { label: string }) {
 function ReviewedChip() {
   return (
     <RecordPill
-      className="bg-[#222737] text-[#6c779d] border-[rgba(108,119,157,0.2)]"
+      className="bg-brain-v1baby-blue-15 text-brain-v1baby-blue-60 border-[rgba(108,119,157,0.2)]"
       testId="chip-reviewed"
       title="Reviewed — no action taken"
     >
@@ -122,17 +122,17 @@ function VendorRow({
       type="button"
       onClick={onClick}
       data-testid={`row-vendor-${vendor.id}`}
-      className="flex gap-[12px] items-center px-[16px] py-[12px] relative shrink-0 w-full bg-[#0a0c10] transition-colors border-b border-solid border-[#1d2132] last:border-b-0 hover:bg-[#11141b] cursor-pointer text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+      className="flex gap-[12px] items-center px-[16px] py-[12px] relative shrink-0 w-full bg-brain-v1highlight-dropdown-bg transition-colors border-b border-solid border-brain-v1stroke-2 last:border-b-0 hover:bg-brain-v1baby-blue-5 cursor-pointer text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
     >
       <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
         <div className="flex items-center gap-[8px] min-w-px max-w-full">
-          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px] truncate">
+          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[16px] truncate">
             {vendor.name}
           </p>
           {reason ? <ReasonChip label={reason} /> : null}
           {reviewed ? <ReviewedChip /> : null}
         </div>
-        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] whitespace-nowrap">
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">
           {vendor.category || "Vendor"} ·{" "}
           {hasPayments
             ? `${paymentCount} ${paymentCount === 1 ? "payment" : "payments"}`
@@ -144,7 +144,7 @@ function VendorRow({
           zero balance rather than an absence of history. */}
       {hasPayments && (
         <div className="flex flex-col items-end justify-center relative shrink-0">
-          <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-[#a8b9f4] text-[18px] text-right whitespace-nowrap">
+          <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[18px] text-right whitespace-nowrap">
             {format(totalPaid)}
           </p>
         </div>
@@ -190,12 +190,12 @@ function SubmitConfirmDialog({
         >
           <DialogPrimitive.Title asChild>
             <div className="flex flex-col gap-[8px] items-center px-[8px] pt-[24px] pb-[16px] text-center">
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#a8b9f4] text-[20px] w-full">
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-brain-v1baby-blue-100 text-[20px] w-full">
                 Submit {nounTitle} for Review
               </p>
-              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] w-full">
-                Add {noun} <span className="text-[#a8b9f4]">{vendorName}</span> as a{" "}
-                <span className="text-[#a8b9f4]">{category || "supplier"}</span> for review.
+              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px] w-full">
+                Add {noun} <span className="text-brain-v1baby-blue-100">{vendorName}</span> as a{" "}
+                <span className="text-brain-v1baby-blue-100">{category || "supplier"}</span> for review.
               </p>
             </div>
           </DialogPrimitive.Title>
@@ -204,7 +204,7 @@ function SubmitConfirmDialog({
             <button
               type="button"
               onClick={onCancel}
-              className="flex flex-1 items-center justify-center min-w-px px-[12px] py-[8px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[12px] whitespace-nowrap hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+              className="flex flex-1 items-center justify-center min-w-px px-[12px] py-[8px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
               style={{ background: "#222737" }}
             >
               Cancel
@@ -214,7 +214,7 @@ function SubmitConfirmDialog({
               onClick={onConfirm}
               disabled={busy}
               data-testid="button-confirm-submit-vendor"
-              className="flex flex-1 items-center justify-center min-w-px px-[12px] py-[8px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#42bf23] text-[12px] whitespace-nowrap hover:opacity-80 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[#42bf23]"
+              className="flex flex-1 items-center justify-center min-w-px px-[12px] py-[8px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1green text-[12px] whitespace-nowrap hover:opacity-80 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1green"
               style={{ background: "#123509" }}
             >
               {busy ? "Submitting…" : "Confirm"}
@@ -311,7 +311,7 @@ function CategoryDropdown({
         onClick={() => setOpen((p) => !p)}
         data-testid="button-vendor-category-dropdown"
         aria-expanded={open}
-        className="flex gap-[8px] items-center justify-between p-[8px] rounded-[8px] shrink-0 w-[116px] h-[40px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+        className="flex gap-[8px] items-center justify-between p-[8px] rounded-[8px] shrink-0 w-[116px] h-[40px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
         style={{ background: selected ? "#240757" : "#222737" }}
       >
         <span
@@ -333,7 +333,7 @@ function CategoryDropdown({
           /* Deliberately NOT role="listbox". This is a disclosure of ordinary
              buttons reached with Tab; claiming listbox would promise arrow-key
              roving focus that the markup does not implement. */
-          className="fixed z-[80] flex flex-col items-start p-[8px] rounded-[12px] min-w-[180px] overflow-y-auto"
+          className="fixed z-[80] flex flex-col items-start p-[8px] rounded-row min-w-[180px] overflow-y-auto"
           style={{
             top: pos.top,
             left: pos.left,
@@ -351,7 +351,7 @@ function CategoryDropdown({
               aria-current={cat === value || undefined}
               onClick={() => { onChange(cat); setOpen(false); }}
               data-testid={`option-vendor-category-${cat.toLowerCase().replace(/\s+/g, "-")}`}
-              className="flex items-start p-[8px] rounded-[8px] w-full text-left hover:bg-[#222737] transition-colors focus:outline-none focus-visible:bg-[#222737]"
+              className="flex items-start p-[8px] rounded-[8px] w-full text-left hover:bg-brain-v1baby-blue-15 transition-colors focus:outline-none focus-visible:bg-brain-v1baby-blue-15"
             >
               <span
                 className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[14px] whitespace-nowrap"
@@ -660,7 +660,7 @@ export function VendorsPanel() {
               {!addOpen ? (
                 /* Idle: dashed-border card with prompt + Add Vendor button */
                 <div
-                  className="flex items-center justify-between gap-[16px] p-[16px] rounded-[16px] w-full relative"
+                  className="flex items-center justify-between gap-[16px] p-[16px] rounded-panel w-full relative"
                   data-testid="panel-add-vendor-idle"
                 >
                   {/* SVG dashed border — matches rules builder exactly */}
@@ -675,14 +675,14 @@ export function VendorsPanel() {
                       strokeDasharray="6 8"
                     />
                   </svg>
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[#6c779d] text-[20px] flex-1 min-w-px relative">
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-brain-v1baby-blue-60 text-[20px] flex-1 min-w-px relative">
                     Add a new {segmentNounSingular} in plain English
                   </p>
                   <button
                     type="button"
                     onClick={() => setAddOpen(true)}
                     data-testid="button-add-vendor"
-                    className="flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-[100px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#ff9500] text-[12px] whitespace-nowrap hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                    className="flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-pill shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1light-orange text-[12px] whitespace-nowrap hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
                     style={{ background: "#4a2300" }}
                   >
                     <Plus className="size-[16px] shrink-0" />
@@ -692,7 +692,7 @@ export function VendorsPanel() {
               ) : (
                 /* Expanded: sentence-style form — matches Figma 6199:70745 exactly */
                 <div
-                  className="w-full rounded-[16px] overflow-hidden flex flex-col"
+                  className="w-full rounded-panel overflow-hidden flex flex-col"
                   style={{ background: "#12032d" }}
                   data-testid="panel-add-vendor"
                 >
@@ -701,7 +701,7 @@ export function VendorsPanel() {
                      <div className="flex flex-wrap gap-[16px] items-center w-full">
                       {/* Group 1: "Add vendor" + name input */}
                       <div className="flex gap-[16px] items-center shrink-0">
-                         <span className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                         <span className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-brain-v1baby-blue-100 text-[16px] whitespace-nowrap">
                           Add {segmentNounSingular}
                         </span>
                         <div
@@ -716,7 +716,7 @@ export function VendorsPanel() {
                             value={vendorName}
                             onChange={(e) => setVendorName(e.target.value)}
                             autoFocus
-                             className="bg-transparent [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] placeholder:text-[#6c779d] outline-none w-full min-w-0"
+                             className="bg-transparent [font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[20px] placeholder:text-brain-v1baby-blue-60 outline-none w-full min-w-0"
                             onKeyDown={(e) => { if (e.key === "Enter" && vendorName.trim()) setConfirmSubmit(true); }}
                           />
                         </div>
@@ -724,7 +724,7 @@ export function VendorsPanel() {
 
                       {/* Group 2: "as a" + category dropdown */}
                       <div className="flex gap-[16px] items-center shrink-0">
-                         <span className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                         <span className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-brain-v1baby-blue-100 text-[16px] whitespace-nowrap">
                           as a
                         </span>
                         <CategoryDropdown value={category} onChange={setCategory} />
@@ -732,7 +732,7 @@ export function VendorsPanel() {
 
                       {/* Group 3: "for review." */}
                       <div className="flex items-center shrink-0">
-                         <span className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                         <span className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-brain-v1baby-blue-100 text-[16px] whitespace-nowrap">
                           for review.
                         </span>
                       </div>
@@ -743,13 +743,13 @@ export function VendorsPanel() {
                     )}
 
                   </div>
-                  <div className="backdrop-blur-[10px] border-t border-[#1d2132] border-solid flex flex-col items-start p-[16px] w-full">
+                  <div className="backdrop-blur-[10px] border-t border-brain-v1stroke-2 border-solid flex flex-col items-start p-[16px] w-full">
                     <div className="flex gap-[16px] items-center w-full">
                       <button
                         type="button"
                         onClick={resetAddVendor}
                         data-testid="button-add-vendor-cancel"
-                        className="flex-1 h-[36px] px-[12px] rounded-[100px] bg-[#222737] hover:bg-[#2c3247] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[16px] text-[#6c779d]"
+                        className="flex-1 h-[36px] px-[12px] rounded-pill bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-15-hover transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[16px] text-brain-v1baby-blue-60"
                       >
                         Cancel
                       </button>
@@ -762,7 +762,7 @@ export function VendorsPanel() {
                         }}
                         disabled={!vendorName.trim()}
                         data-testid="button-submit-vendor"
-                        className="flex-1 h-[36px] px-[12px] rounded-[100px] bg-[#4a2300] hover:bg-[#5a2d00] disabled:opacity-60 disabled:cursor-not-allowed transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[16px] text-[#ff9500]"
+                        className="flex-1 h-[36px] px-[12px] rounded-pill bg-brain-v1dark-orange hover:bg-brain-v1dark-orange-hover disabled:opacity-60 disabled:cursor-not-allowed transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[16px] text-brain-v1light-orange"
                       >
                         Submit for Verification
                       </button>
@@ -900,8 +900,8 @@ export function VendorsPanel() {
   const listBlock = (
             <div className="flex flex-col gap-[10px] w-full">
               <div className="flex items-center gap-[8px] min-h-[16px] w-full">
-                <div className="size-[6px] rounded-full shrink-0 bg-[#6c779d]" />
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[12px] uppercase tracking-[0.4px] whitespace-nowrap">
+                <div className="size-[6px] rounded-full shrink-0 bg-brain-v1baby-blue-60" />
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[12px] uppercase tracking-[0.4px] whitespace-nowrap">
                   {effectiveTab === "Paused"
                     ? "Paused"
                     : segment === "vendor"
@@ -923,7 +923,7 @@ export function VendorsPanel() {
                   onClick={handleBulkConfirm}
                   disabled={bulkBusy || trustBusy}
                   data-testid="button-bulk-confirm-customers"
-                  className="flex items-center justify-center px-[16px] py-[8px] rounded-[100px] w-full [font-family:'Gilroy',sans-serif] font-semibold text-[14px] disabled:opacity-60 disabled:cursor-not-allowed hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                  className="flex items-center justify-center px-[16px] py-[8px] rounded-pill w-full [font-family:'Gilroy',sans-serif] font-semibold text-[14px] disabled:opacity-60 disabled:cursor-not-allowed hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
                   style={{ background: "#0d2214", color: "#42bf23" }}
                 >
                   {bulkBusy
@@ -933,13 +933,13 @@ export function VendorsPanel() {
               )}
 
               <div
-                className="bg-[#0a0c10] border border-solid border-[#1d2132] flex flex-col overflow-hidden relative rounded-[16px]"
+                className="bg-brain-v1highlight-dropdown-bg border border-solid border-brain-v1stroke-2 flex flex-col overflow-hidden relative rounded-panel"
                 data-testid="list-counterparties"
               >
                 <div>
                   {tabVendors.length === 0 ? (
                     <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative shrink-0 w-full">
-                      <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
+                      <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-brain-v1baby-blue-60 text-[16px]">
                         {effectiveTab === "Needs Review" &&
                           `Nothing to review. New and risk-flagged ${segmentNoun} appear here.`}
                         {effectiveTab === "Trusted" &&
@@ -1010,8 +1010,8 @@ export function VendorsPanel() {
 
       <div className="w-full flex flex-col gap-[16px]">
         {isLoading ? (
-          <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
-            <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#6c779d] text-[16px]">
+          <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative rounded-[8px] shrink-0 w-full bg-brain-v1highlight-dropdown-bg">
+            <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-brain-v1baby-blue-60 text-[16px]">
               Loading counterparties from Brain...
             </p>
           </div>

@@ -53,13 +53,13 @@
 
   .decision-checkbox {
     appearance: none;
-    background-color: #222737;
+    background-color: var(--brain-v1baby-blue-15);
     border: 0;
     border-radius: 3px;
   }
 
   .decision-checkbox:checked {
-    background-color: #222737;
+    background-color: var(--brain-v1baby-blue-15);
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 8.2 6.7 11.3 12.5 4.8' fill='none' stroke='%23a8b9f4' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
     background-position: center;
     background-repeat: no-repeat;
@@ -70,20 +70,26 @@
 :root {
   --brain-v1baby-blue-100: rgba(168, 185, 244, 1);
   --brain-v1baby-blue-15: rgba(34, 39, 55, 1);
+  /* Hover partners for the four surfaces above. Canonicalised by #129;
+     not yet in the Figma source file — see CLAUDE.md "Hover tokens". */
+  --brain-v1baby-blue-15-hover: rgba(44, 50, 71, 1);
   --brain-v1baby-blue-30: rgba(65, 73, 101, 1);
   --brain-v1baby-blue-5: rgba(17, 20, 27, 1);
   --brain-v1baby-blue-60: rgba(108, 119, 157, 1);
   --brain-v1dark-dark-purple: rgba(18, 3, 45, 1);
   --brain-v1dark-green: rgba(18, 53, 9, 1);
   --brain-v1dark-orange: rgba(74, 35, 0, 1);
+  --brain-v1dark-orange-hover: rgba(90, 45, 0, 1);
   --brain-v1dark-pink-red: rgba(53, 0, 17, 1);
   --brain-v1dark-purple: rgba(36, 7, 87, 1);
+  --brain-v1dark-purple-hover: rgba(46, 10, 110, 1);
   --brain-v1green: rgba(66, 191, 35, 1);
   --brain-v1headerfooterbg: rgba(6, 7, 10, 1);
   --brain-v1highlight-dropdown-bg: rgba(10, 12, 16, 1);
   --brain-v1light-orange: rgba(255, 149, 0, 1);
   --brain-v1pink-red: rgba(210, 3, 68, 1);
   --brain-v1purple: rgba(118, 49, 238, 1);
+  --brain-v1purple-hover: rgba(132, 66, 245, 1);
   --brain-v1stroke-2: rgba(29, 33, 50, 1);
   --brain-v1white: rgba(255, 255, 255, 1);
   --brain-v1white-30: rgba(255, 255, 255, 0.3);
@@ -100,6 +106,13 @@
   --subheading-2x-small-letter-spacing: 0.22px;
   --subheading-2x-small-line-height: 12px;
   --white: rgba(255, 255, 255, 1);
+
+  /* Radius by concept (docs/design-audit.md §3). These are the values already
+     in use, promoted to names — adopting them changes nothing visually. */
+  --radius-row: 12px;
+  --radius-panel: 16px;
+  --radius-modal: 24px;
+  --radius-pill: 100px;
 }
 
 :root {

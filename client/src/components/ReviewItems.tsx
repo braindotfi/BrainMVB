@@ -32,9 +32,9 @@ export type ReviewItemType = {
    Label  text-12 leading-14 #414965 (Baby Blue 30) Gilroy SemiBold.
    Value  text-14 leading-20 #a8b9f4 (Baby Blue 100) Gilroy Medium. */
 const InfoCell = ({ label, value }: { label: string; value: string }) => (
-  <div className="bg-[#0a0c10] flex flex-col h-[58px] items-start p-[12px] rounded-[16px] w-full">
-    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#414965] text-[12px] whitespace-nowrap">{label}</p>
-    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[14px] whitespace-nowrap">{value}</p>
+  <div className="bg-brain-v1highlight-dropdown-bg flex flex-col h-[58px] items-start p-[12px] rounded-panel w-full">
+    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-brain-v1baby-blue-30 text-[12px] whitespace-nowrap">{label}</p>
+    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[14px] whitespace-nowrap">{value}</p>
   </div>
 );
 
@@ -61,10 +61,10 @@ const FigmaCheckbox = ({
     data-testid="checkbox-review-auto"
     onClick={() => onChange(!checked)}
     className={
-      "overflow-clip relative size-[20px] shrink-0 rounded-[4px] border border-solid focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] " +
+      "overflow-clip relative size-[20px] shrink-0 rounded-[4px] border border-solid focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple " +
       (checked
-        ? "bg-[#240757] border-[rgba(118,49,238,0.2)]"
-        : "bg-[#06070a] border-[#222737]")
+        ? "bg-brain-v1dark-purple border-[rgba(118,49,238,0.2)]"
+        : "bg-brain-v1headerfooterbg border-brain-v1baby-blue-15")
     }
   >
     {checked && (
@@ -146,20 +146,20 @@ export const ReviewModal = ({
         />
         <DialogPrimitive.Content
           aria-describedby="review-modal-description"
-          className={`fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[24px] w-[440px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none ${transition.card}`}
+          className={`fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-brain-v1baby-blue-5 border border-brain-v1stroke-2 border-solid flex flex-col items-start overflow-hidden rounded-modal w-[440px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none ${transition.card}`}
           data-testid="review-modal"
         >
           {/* Title bar, Figma 4062:65550. Border on all sides per
               Figma; only the bottom is visible due to outer
-              overflow-clip + rounded-[24px]. */}
-          <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border border-[#1d2132] border-solid h-[56px] relative shrink-0 w-full">
-            <DialogPrimitive.Title className="absolute left-1/2 -translate-x-1/2 top-[calc(50%-12px)] [font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#a8b9f4] text-[20px] text-center whitespace-nowrap">
+              overflow-clip + rounded-modal. */}
+          <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border border-brain-v1stroke-2 border-solid h-[56px] relative shrink-0 w-full">
+            <DialogPrimitive.Title className="absolute left-1/2 -translate-x-1/2 top-[calc(50%-12px)] [font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-brain-v1baby-blue-100 text-[20px] text-center whitespace-nowrap">
               Review Details
             </DialogPrimitive.Title>
             <DialogPrimitive.Close
               data-testid="button-review-close"
               aria-label="Close"
-              className="absolute right-[11px] top-[11px] size-[32px] p-0 hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+              className="absolute right-[11px] top-[11px] size-[32px] p-0 hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
             >
               <img src={closeIcon} alt="" className="size-[32px] rounded-full" />
             </DialogPrimitive.Close>
@@ -169,13 +169,13 @@ export const ReviewModal = ({
             {/* Question + Description block, Figma 4062:65560,
                 gap-8, description #6c779d (Baby Blue 60). */}
             <div className="flex flex-col gap-[8px] items-start w-full">
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#a8b9f4] text-[20px] w-full">
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-brain-v1baby-blue-100 text-[20px] w-full">
                 {swap(item.question)}
               </p>
               <div className="flex items-center w-full">
                 <DialogPrimitive.Description
                   id="review-modal-description"
-                  className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]"
+                  className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[16px]"
                 >
                   {formatText(item.description)}
                 </DialogPrimitive.Description>
@@ -200,7 +200,7 @@ export const ReviewModal = ({
                   checked={auto}
                   onChange={setAuto}
                 />
-                <span className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">
+                <span className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[16px]">
                   {item.autoLabel}
                 </span>
               </label>
@@ -210,7 +210,7 @@ export const ReviewModal = ({
                 We do NOT pre-gate. Core is the sole enforcer. If it refuses, its
                 exact reason is rendered below (danger tone); otherwise a neutral note. */}
             {item.live && !rejection && (
-              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[13px] w-full">
+              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-brain-v1baby-blue-60 text-[13px] w-full">
                 This is a real payment. Approving asks Brain core to sign it off under your approval
                 authority. It will only settle if core accepts it.
               </p>
@@ -235,30 +235,30 @@ export const ReviewModal = ({
                 onClick={() => onConfirm(auto)}
                 disabled={busy}
                 data-testid="button-review-confirm"
-                className="flex flex-1 items-center justify-center px-[20px] py-[10px] rounded-[100px] bg-[#123509] hover:bg-[#174710] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#42bf23] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-[#123509]"
+                className="flex flex-1 items-center justify-center px-[20px] py-[10px] rounded-pill bg-brain-v1dark-green hover:bg-[#174710] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1green disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-brain-v1dark-green"
               >
-                <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#42bf23] text-[16px] whitespace-nowrap">{busy ? "Working…" : item.live ? "Approve" : "Confirm"}</span>
+                <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1green text-[16px] whitespace-nowrap">{busy ? "Working…" : item.live ? "Approve" : "Confirm"}</span>
               </button>
               <button
                 onClick={onReject}
                 disabled={busy}
                 data-testid="button-review-reject"
-                className="flex flex-1 items-center justify-center px-[20px] py-[10px] rounded-[100px] bg-[#350011] hover:bg-[#4a0018] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d20344] disabled:opacity-60 disabled:cursor-not-allowed"
+                className="flex flex-1 items-center justify-center px-[20px] py-[10px] rounded-pill bg-brain-v1dark-pink-red hover:bg-[#4a0018] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1pink-red disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#d20344] text-[16px] whitespace-nowrap">Decline</span>
+                <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1pink-red text-[16px] whitespace-nowrap">Decline</span>
               </button>
               </div>
             </CardActions>
 
             {hasPager && (
-              <div className="border-t border-[#1d2132] pt-[16px] flex gap-[16px] items-center w-full">
+              <div className="border-t border-brain-v1stroke-2 pt-[16px] flex gap-[16px] items-center w-full">
                 <button
                   type="button"
                   onClick={onPrev}
                   disabled={prevDisabled}
                   aria-label="Previous record"
                   data-testid="button-review-prev"
-                  className="flex flex-1 items-center justify-center gap-[8px] px-[20px] py-[8px] rounded-[100px] bg-[#222737] hover:bg-[#2c3247] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#6c779d] disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                  className="flex flex-1 items-center justify-center gap-[8px] px-[20px] py-[8px] rounded-pill bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-15-hover transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-brain-v1baby-blue-60 disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
                 >
                   <ArrowLeft size={18} />
                   Previous
@@ -269,7 +269,7 @@ export const ReviewModal = ({
                   disabled={nextDisabled}
                   aria-label="Next record"
                   data-testid="button-review-next"
-                  className="flex flex-1 items-center justify-center gap-[8px] px-[20px] py-[8px] rounded-[100px] bg-[#222737] hover:bg-[#2c3247] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#6c779d] disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                  className="flex flex-1 items-center justify-center gap-[8px] px-[20px] py-[8px] rounded-pill bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-15-hover transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-brain-v1baby-blue-60 disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
                 >
                   Next
                   <ArrowRight size={18} />

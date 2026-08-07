@@ -48,7 +48,7 @@ import {
 
 /* ─── Shared primitives (matching the Settings card + label patterns) ─── */
 const Card = ({ children, testId }: { children: ReactNode; testId?: string }) => (
-  <div data-testid={testId} className="rounded-[16px] overflow-hidden" style={{ background: "#0a0c10" }}>
+  <div data-testid={testId} className="rounded-panel overflow-hidden" style={{ background: "#0a0c10" }}>
     {children}
   </div>
 );
@@ -56,7 +56,7 @@ const Card = ({ children, testId }: { children: ReactNode; testId?: string }) =>
 const TableCard = ({ children, testId }: { children: ReactNode; testId?: string }) => (
   <div
     data-testid={testId}
-    className="rounded-[16px] overflow-hidden border border-solid border-[#1d2132]"
+    className="rounded-panel overflow-hidden border border-solid border-brain-v1stroke-2"
     style={{ background: "#0a0c10" }}
   >
     {children}
@@ -65,7 +65,7 @@ const TableCard = ({ children, testId }: { children: ReactNode; testId?: string 
 
 const SectionLabel = ({ children, testId }: { children: ReactNode; testId?: string }) => (
   <div className="flex items-center min-h-[36px]">
-    <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]" data-testid={testId}>
+    <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-30 text-[16px] leading-[24px]" data-testid={testId}>
       {children}
     </p>
   </div>
@@ -144,15 +144,15 @@ function SourceRow({
           onOpenAccount?.();
         }
       } : undefined}
-      className={`flex flex-col gap-[8px] px-[16px] py-[12px] ${last ? "" : "border-b border-[#1d2132]"} ${clickable ? "cursor-pointer transition-colors hover:bg-[#11141b] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631ee] focus-visible:ring-inset" : ""}`}
+      className={`flex flex-col gap-[8px] px-[16px] py-[12px] ${last ? "" : "border-b border-brain-v1stroke-2"} ${clickable ? "cursor-pointer transition-colors hover:bg-brain-v1baby-blue-5 focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple focus-visible:ring-inset" : ""}`}
     >
       <div className="flex items-center gap-[12px]">
         {/* 4px between title and subtext — the record spacing used everywhere else. */}
         <div className="flex-1 min-w-0 flex flex-col gap-[4px]">
-          <div className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] truncate">
+          <div className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[20px] truncate">
             {title}
           </div>
-          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[16px] truncate">
+          <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[16px] truncate">
             {subtitle}
           </p>
         </div>
@@ -164,7 +164,7 @@ function SourceRow({
               setConfirming(true);
             }}
             data-testid={removeTestId}
-            className="shrink-0 rounded-full px-[14px] py-[6px] bg-[#222737] hover:bg-[#2c3247] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[16px]"
+            className="shrink-0 rounded-full px-[14px] py-[6px] bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-15-hover transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-60 text-[12px] leading-[16px]"
           >
             Remove
           </button>
@@ -395,7 +395,7 @@ export function SourcesSection() {
           qualifier whenever a feed failed or has not answered yet. */}
       <div className="flex items-center justify-between gap-[12px] min-h-[36px]">
         <p
-          className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] leading-[18px]"
+          className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[13px] leading-[18px]"
           data-testid="text-source-count"
         >
           {sourceCountCaption(shown, allStates)}
@@ -405,9 +405,9 @@ export function SourcesSection() {
           onClick={() => setFormOpen((v) => !v)}
           data-testid="button-add-source"
           aria-expanded={formOpen}
-          className="shrink-0 rounded-full px-[16px] py-[8px] bg-[#4a2300] hover:opacity-90 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[#ff9500] text-[14px] leading-[20px] whitespace-nowrap flex items-center justify-center gap-[2px]"
+          className="shrink-0 rounded-full px-[16px] py-[8px] bg-brain-v1dark-orange hover:opacity-90 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1light-orange text-[14px] leading-[20px] whitespace-nowrap flex items-center justify-center gap-[2px]"
         >
-          {!formOpen && <Plus className="relative shrink-0 size-[16px] text-[#ff9500]" />}
+          {!formOpen && <Plus className="relative shrink-0 size-[16px] text-brain-v1light-orange" />}
           {formOpen ? "Cancel" : "Add Source"}
         </button>
       </div>
@@ -418,7 +418,7 @@ export function SourcesSection() {
             <div className="flex flex-col gap-[6px]">
               <label
                 htmlFor="add-source-category"
-                className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[16px]"
+                className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-60 text-[12px] leading-[16px]"
               >
                 Category
               </label>
@@ -445,7 +445,7 @@ export function SourcesSection() {
               )}
             </div>
 
-            <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[12px] leading-[16px]">
+            <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[12px] leading-[16px]">
               Connecting an account hands off to that provider's own secure login. Brain never sees
               or stores your credentials. Uploaded documents are read once, and anything Brain
               extracts shows up in Decisions for you to confirm individually.

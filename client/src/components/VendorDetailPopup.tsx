@@ -85,10 +85,10 @@ const TRUST_META: Record<
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex gap-[8px] items-center w-full">
-      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[14px] text-[#6c779d] whitespace-nowrap">
+      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[14px] text-brain-v1baby-blue-60 whitespace-nowrap">
         {children}
       </p>
-      <div className="flex-1 h-px bg-[#1d2132]" />
+      <div className="flex-1 h-px bg-brain-v1stroke-2" />
     </div>
   );
 }
@@ -119,7 +119,7 @@ function TrustButton({
       disabled={busy}
       onClick={onClick}
       data-testid={testId}
-      className="flex items-center justify-center px-[20px] py-[10px] rounded-[100px] w-full disabled:opacity-60 disabled:cursor-not-allowed [font-family:'Gilroy',sans-serif] font-semibold text-[16px] hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+      className="flex items-center justify-center px-[20px] py-[10px] rounded-pill w-full disabled:opacity-60 disabled:cursor-not-allowed [font-family:'Gilroy',sans-serif] font-semibold text-[16px] hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
       style={{ background, color }}
     >
       {busy ? "Working..." : label}
@@ -129,9 +129,9 @@ function TrustButton({
 
 function Row({ label, value, valueColor = "#a8b9f4" }: { label: string; value: string; valueColor?: string }) {
   return (
-    <div className="flex items-center w-full border-b border-[#1d2132] last:border-b-0">
+    <div className="flex items-center w-full border-b border-brain-v1stroke-2 last:border-b-0">
       <div className="flex flex-col justify-center px-[12px] py-[8px] w-[140px] shrink-0">
-        <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[20px] text-[#6c779d]">
+        <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[20px] text-brain-v1baby-blue-60">
           {label}
         </span>
       </div>
@@ -244,13 +244,13 @@ export function VendorDetailPopup({
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
-        <DialogPrimitive.Content className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[24px] w-[480px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out">
+        <DialogPrimitive.Content className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-brain-v1baby-blue-5 border border-brain-v1stroke-2 border-solid flex flex-col items-start overflow-hidden rounded-modal w-[480px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out">
           {/* Title and Controls */}
-          <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-[#1d2132] border-solid h-[56px] relative shrink-0 w-full">
+          <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-brain-v1stroke-2 border-solid h-[56px] relative shrink-0 w-full">
             <DialogPrimitive.Title asChild>
               <p
                 data-testid="text-vendor-popup-title"
-                className="-translate-x-1/2 absolute [font-family:'Gilroy',sans-serif] font-semibold leading-[24px] left-1/2 not-italic text-[#a8b9f4] text-[20px] text-center top-[calc(50%-12px)] whitespace-nowrap"
+                className="-translate-x-1/2 absolute [font-family:'Gilroy',sans-serif] font-semibold leading-[24px] left-1/2 not-italic text-brain-v1baby-blue-100 text-[20px] text-center top-[calc(50%-12px)] whitespace-nowrap"
               >
                 {/* Derived from the chip kind, not from trustStatus. Read directly,
                     that field made this heading claim "Trusted Vendor" for a row
@@ -269,7 +269,7 @@ export function VendorDetailPopup({
               </p>
             </DialogPrimitive.Title>
             <DialogPrimitive.Close
-              className="absolute right-[12px] top-[12px] size-[32px] p-0 hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+              className="absolute right-[12px] top-[12px] size-[32px] p-0 hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
               data-testid="button-close-vendor-popup"
             >
               <img src={closeIcon} alt="" className="size-[32px] rounded-full" />
@@ -277,7 +277,7 @@ export function VendorDetailPopup({
           </div>
 
           {/* Vendor name + status tag + subtitle */}
-          <div className="border-b border-[#1d2132] border-solid flex flex-col items-start p-[24px] relative shrink-0 w-full">
+          <div className="border-b border-brain-v1stroke-2 border-solid flex flex-col items-start p-[24px] relative shrink-0 w-full">
             <div className="flex flex-col gap-[8px] items-start w-full">
               <div className="flex gap-[8px] items-center w-full">
                 <p
@@ -288,7 +288,7 @@ export function VendorDetailPopup({
                   {vendor.name}
                 </p>
                 <div
-                  className="flex items-center justify-center px-[10px] py-[4px] rounded-[22px] shrink-0 border border-solid"
+                  className="flex items-center justify-center px-[10px] py-[4px] rounded-pill shrink-0 border border-solid"
                   style={{
                     background: !trustActionsAvailable
                       ? "#1a1e2b"
@@ -324,7 +324,7 @@ export function VendorDetailPopup({
                   </p>
                 </div>
               </div>
-              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px] w-full">
+              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[16px] w-full">
                 {vendor.category} · Account ending in {vendor.payeeAccountLast4}
               </p>
             </div>
@@ -334,11 +334,11 @@ export function VendorDetailPopup({
           <div className="flex flex-col gap-[32px] items-start p-[24px] relative w-full overflow-y-auto" data-testid="vendor-detail-popup-content">
             {/* Info callout */}
             {vendor.trustStatus === "under_review" && vendor.wasTrustedLabel && (
-              <div className="border border-[#1d2132] border-solid rounded-[12px] w-full">
+              <div className="border border-brain-v1stroke-2 border-solid rounded-row w-full">
                 <div className="flex items-center p-[8px] w-full">
                   <div className="flex flex-1 gap-[8px] items-start min-w-px">
                     <InfoIcon color="#6c779d" className="mt-[2px]" />
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] flex-1 min-w-px">
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px] flex-1 min-w-px">
                       {vendor.wasTrustedLabel}
                     </p>
                   </div>
@@ -346,11 +346,11 @@ export function VendorDetailPopup({
               </div>
             )}
             {vendor.trustStatus === "trusted" && vendor.trustGrantedLabel && (
-              <div className="border border-[#1d2132] border-solid rounded-[12px] w-full">
+              <div className="border border-brain-v1stroke-2 border-solid rounded-row w-full">
                 <div className="flex items-center p-[8px] w-full">
                   <div className="flex flex-1 gap-[8px] items-start min-w-px">
                     <InfoIcon color="#6c779d" className="mt-[2px]" />
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] flex-1 min-w-px">
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px] flex-1 min-w-px">
                       {vendor.trustGrantedLabel}
                     </p>
                   </div>
@@ -358,11 +358,11 @@ export function VendorDetailPopup({
               </div>
             )}
             {vendor.trustStatus === "new" && (
-              <div className="border border-[#1d2132] border-solid rounded-[12px] w-full">
+              <div className="border border-brain-v1stroke-2 border-solid rounded-row w-full">
                 <div className="flex items-center p-[8px] w-full">
                   <div className="flex flex-1 gap-[8px] items-start min-w-px">
                     <InfoIcon color="#6c779d" className="mt-[2px]" />
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] flex-1 min-w-px">
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px] flex-1 min-w-px">
                       Only {vendor.history.paymentCount} payment{vendor.history.paymentCount === 1 ? "" : "s"} on record. Brain needs more history before suggesting trust.
                     </p>
                   </div>
@@ -370,15 +370,15 @@ export function VendorDetailPopup({
               </div>
             )}
             {vendor.trustStatus === "known" && (
-              <div className="border border-[#1d2132] border-solid rounded-[12px] w-full">
+              <div className="border border-brain-v1stroke-2 border-solid rounded-row w-full">
                 <div className="flex items-center p-[8px] w-full">
                   <div className="flex flex-1 gap-[8px] items-start min-w-px">
                     <InfoIcon color="#a8b9f4" className="mt-[2px]" />
                     <div className="flex flex-col gap-[8px] flex-1 min-w-px">
-                      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#a8b9f4] text-[14px]">
+                      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-100 text-[14px]">
                         Brain suggests trusting this {noun}.
                       </p>
-                      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px]">
+                      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px]">
                         Based on consistent payment history and no unresolved flags. You decide, trust is never auto-granted.
                       </p>
                     </div>
@@ -390,7 +390,7 @@ export function VendorDetailPopup({
             {/* Payment History */}
             <div className="flex flex-col gap-[16px] items-start w-full">
               <SectionLabel>Payment History</SectionLabel>
-              <div className="bg-[#0a0c10] border border-[#1d2132] border-solid flex flex-col items-start rounded-[12px] w-full">
+              <div className="bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 border-solid flex flex-col items-start rounded-row w-full">
                 <Row label="Payments" value={`${vendor.history.paymentCount}`} />
                 <Row label="Total Paid" value={format(vendor.history.totalPaid)} />
                 <Row label="Average" value={format(vendor.history.avgAmount)} />
@@ -434,7 +434,7 @@ export function VendorDetailPopup({
                 {vendor.ruleIds.map((rid) => {
                   const rule = resolveRule(rid);
                   return (
-                    <div key={rid} className="bg-[#0a0c10] border border-[#1d2132] border-solid relative rounded-[12px] shrink-0 w-full">
+                    <div key={rid} className="bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 border-solid relative rounded-row shrink-0 w-full">
                       <button
                         type="button"
                         onClick={() => openRuleDetail(rid, navigate)}
@@ -443,19 +443,19 @@ export function VendorDetailPopup({
                         data-testid={`vendor-linked-rule-${rid}`}
                       >
                         <div className="flex flex-col items-center justify-center relative shrink-0 size-[64px]">
-                          <div className="bg-[#222737] border border-[rgba(108,119,157,0.2)] border-solid content-stretch flex items-center justify-center px-[8px] py-[3px] relative rounded-[22px] shrink-0">
-                            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#6c779d] text-[12px] text-center whitespace-nowrap">
+                          <div className="bg-brain-v1baby-blue-15 border border-[rgba(108,119,157,0.2)] border-solid content-stretch flex items-center justify-center px-[8px] py-[3px] relative rounded-pill shrink-0">
+                            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-brain-v1baby-blue-60 text-[12px] text-center whitespace-nowrap">
                               Rule
                             </p>
                           </div>
                         </div>
                         <div className="flex flex-1 flex-col items-start justify-center min-w-px relative self-stretch">
-                          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] w-full">
+                          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-100 text-[16px] w-full">
                             {rule ? titleCase(rule.name) : "Rule unavailable"}
                           </p>
                         </div>
                         <div className="flex flex-col items-center justify-center relative shrink-0 size-[64px]">
-                          <ChevronRight size={24} className="shrink-0 text-[#6c779d]" />
+                          <ChevronRight size={24} className="shrink-0 text-brain-v1baby-blue-60" />
                         </div>
                       </button>
                     </div>
@@ -474,14 +474,14 @@ export function VendorDetailPopup({
             {vendor.eligibilityEvidence && vendor.eligibilityEvidence.length > 0 && (
               <div className="flex flex-col gap-[16px] items-start w-full">
                 <SectionLabel>Payment eligibility</SectionLabel>
-                <div className="bg-[#0a0c10] border border-[#1d2132] border-solid flex flex-col items-start rounded-[12px] w-full">
+                <div className="bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 border-solid flex flex-col items-start rounded-row w-full">
                   {vendor.eligibilityEvidence.map((ev, idx) => (
                     <div
                       key={idx}
-                      className="flex items-center w-full border-b border-[#1d2132] last:border-b-0"
+                      className="flex items-center w-full border-b border-brain-v1stroke-2 last:border-b-0"
                     >
                       <div className="flex flex-col justify-center px-[12px] py-[8px] w-[140px] shrink-0">
-                        <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[20px] text-[#6c779d]">
+                        <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[20px] text-brain-v1baby-blue-60">
                           {ev.label.charAt(0).toUpperCase() + ev.label.slice(1)}
                         </span>
                       </div>
@@ -501,10 +501,10 @@ export function VendorDetailPopup({
                         </span>
                         {ev.severity === "warning" && (
                           <div
-                            className="flex items-center justify-center px-[8px] py-[3px] rounded-[22px] shrink-0 border border-solid"
+                            className="flex items-center justify-center px-[8px] py-[3px] rounded-pill shrink-0 border border-solid"
                             style={{ background: "#4a2300", borderColor: "rgba(255,149,0,0.2)" }}
                           >
-                            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#ff9500] text-[12px] text-center whitespace-nowrap">
+                            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-brain-v1light-orange text-[12px] text-center whitespace-nowrap">
                               Resolved
                             </p>
                           </div>
@@ -524,13 +524,13 @@ export function VendorDetailPopup({
             <div className="flex flex-col gap-[12px] w-full">
               {!trustActionsAvailable ? (
                 <div
-                  className="border border-[#1d2132] border-solid rounded-[12px] w-full"
+                  className="border border-brain-v1stroke-2 border-solid rounded-row w-full"
                   data-testid="text-informational-only"
                 >
                   <div className="flex items-center p-[8px] w-full">
                     <div className="flex flex-1 gap-[8px] items-start min-w-px">
                       <InfoIcon color="#6c779d" className="mt-[2px]" />
-                      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] flex-1 min-w-px">
+                      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px] flex-1 min-w-px">
                         Brain keeps this row to group entries from a payroll register. It is not a{" "}
                         {noun} you pay directly, so there is nothing here to trust, flag, or dismiss.
                       </p>
@@ -567,7 +567,7 @@ export function VendorDetailPopup({
                     type="button"
                     onClick={() => setConfirmingDelete(true)}
                     disabled={trustBusy}
-                    className="flex items-center justify-center px-[20px] py-[8px] rounded-[100px] hover:opacity-80 disabled:opacity-60 disabled:cursor-not-allowed transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-[#6c779d] w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                    className="flex items-center justify-center px-[20px] py-[8px] rounded-pill hover:opacity-80 disabled:opacity-60 disabled:cursor-not-allowed transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-brain-v1baby-blue-60 w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
                     style={{ background: "#350011", color: "#d20344" }}
                     data-testid="button-delete-vendor"
                   >
@@ -582,7 +582,7 @@ export function VendorDetailPopup({
               {reviewedOnly && (
                 <div className="flex flex-col gap-[14px] w-full">
                   <p
-                    className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]"
+                    className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-brain-v1baby-blue-60"
                     data-testid="text-acknowledged-note"
                   >
                     You reviewed this {noun} and took no action. You can still grant trust now if you've changed your mind.
@@ -646,7 +646,7 @@ export function VendorDetailPopup({
               {vendor.trustStatus === "under_review" && (
                 vendor.trustState === "paused" ? (
                   <div className="flex flex-col gap-[14px] w-full">
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-brain-v1baby-blue-60">
                       You paused trust for this {noun}. Verify the account directly before restoring it.
                     </p>
                     <TrustButton
@@ -668,7 +668,7 @@ export function VendorDetailPopup({
                   </div>
                 ) : (
                   <div className="flex flex-col gap-[14px] w-full">
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-brain-v1baby-blue-60">
                       Brain marked this {noun} as risky. Verify the account before granting trust.
                     </p>
                     <TrustButton
@@ -695,7 +695,7 @@ export function VendorDetailPopup({
                   acknowledge is a valid transition from unreviewed per the matrix. */}
               {vendor.trustStatus === "new" && !reviewedOnly && (
                 <div className="flex flex-col gap-[14px] w-full">
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-brain-v1baby-blue-60">
                     This {noun} will be eligible for trust after a few more on-time payments with consistent amounts and no flags.
                   </p>
                   <TrustButton
@@ -730,17 +730,17 @@ export function VendorDetailPopup({
           </div>
 
           {(onPrev || onNext) && (
-            <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-t border-[#1d2132] border-solid flex flex-col items-start p-[24px] relative shrink-0 w-full">
+            <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-t border-brain-v1stroke-2 border-solid flex flex-col items-start p-[24px] relative shrink-0 w-full">
               <div className="flex gap-[16px] items-center w-full">
                 <button
                   type="button"
                   disabled={pagerDisabled || !onPrev}
                   data-testid="button-vendor-previous"
                   onClick={onPrev}
-                  className="bg-[#222737] flex flex-1 gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] disabled:opacity-60 disabled:cursor-not-allowed transition-opacity"
+                  className="bg-brain-v1baby-blue-15 flex flex-1 gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-pill disabled:opacity-60 disabled:cursor-not-allowed transition-opacity"
                 >
-                  <ChevronLeft size={16} className="text-[#6c779d] shrink-0" />
-                  <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">
+                  <ChevronLeft size={16} className="text-brain-v1baby-blue-60 shrink-0" />
+                  <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[16px] whitespace-nowrap">
                     Previous
                   </span>
                 </button>
@@ -749,12 +749,12 @@ export function VendorDetailPopup({
                   disabled={pagerDisabled || !onNext}
                   data-testid="button-vendor-next"
                   onClick={onNext}
-                  className="bg-[#222737] flex flex-1 gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] disabled:opacity-60 disabled:cursor-not-allowed transition-opacity"
+                  className="bg-brain-v1baby-blue-15 flex flex-1 gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-pill disabled:opacity-60 disabled:cursor-not-allowed transition-opacity"
                 >
-                  <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">
+                  <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[16px] whitespace-nowrap">
                     Next
                   </span>
-                  <ChevronRight size={16} className="text-[#6c779d] shrink-0" />
+                  <ChevronRight size={16} className="text-brain-v1baby-blue-60 shrink-0" />
                 </button>
               </div>
             </div>

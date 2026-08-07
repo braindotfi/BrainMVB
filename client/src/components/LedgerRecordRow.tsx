@@ -54,14 +54,14 @@ export function LedgerRecordRow({
       data-testid={rowTestId}
       className={[
         "flex gap-[12px] items-center px-[16px] py-[12px] relative shrink-0 w-full",
-        "bg-[#0a0c10] border-b border-solid border-[#1d2132] last:border-b-0",
-        interactive ? "cursor-pointer transition-colors hover:bg-[#11141b] outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]" : "",
+        "bg-brain-v1highlight-dropdown-bg border-b border-solid border-brain-v1stroke-2 last:border-b-0",
+        interactive ? "cursor-pointer transition-colors hover:bg-brain-v1baby-blue-5 outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple" : "",
       ].join(" ")}
     >
       <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
         <div className="flex gap-[8px] items-center relative shrink-0 max-w-full">
           <p
-            className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px] truncate"
+            className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[16px] truncate"
             data-testid={nameTestId}
           >
             {name}

@@ -43,12 +43,12 @@ export const SectionHeading = ({
 }) => (
   <div className="flex gap-[8px] items-center w-full">
     <div className="flex gap-[4px] items-center shrink-0">
-      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[14px] text-[#6c779d] whitespace-nowrap">
+      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[14px] text-brain-v1baby-blue-60 whitespace-nowrap">
         {children}
       </p>
       {leading}
     </div>
-    <div className="flex-1 min-w-px h-px bg-[#1d2132]" aria-hidden="true" />
+    <div className="flex-1 min-w-px h-px bg-brain-v1stroke-2" aria-hidden="true" />
     {trailing}
   </div>
 );
@@ -98,7 +98,7 @@ export const CardSection = ({
  */
 export const CardActions = ({ children, testId }: { children: ReactNode; testId?: string }) => (
   <div
-    className="border-t border-solid border-[#1d2132] -mx-[24px] px-[24px] pt-[24px] shrink-0 w-[calc(100%+48px)]"
+    className="border-t border-solid border-brain-v1stroke-2 -mx-[24px] px-[24px] pt-[24px] shrink-0 w-[calc(100%+48px)]"
     data-testid={testId}
   >
     {children}
@@ -131,7 +131,7 @@ export const CardText = ({
 }) => (
   <p
     className={`[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] ${
-      tone === "muted" ? "text-[#6c779d]" : "text-[#a8b9f4]"
+      tone === "muted" ? "text-brain-v1baby-blue-60" : "text-brain-v1baby-blue-100"
     } w-full ${className}`}
     data-testid={testId}
   >
@@ -161,7 +161,7 @@ export const StatusPill = ({
      pill widths exactly — 81px for "Standard", 107px for "Informational". At
      14/16 the pill came out 26px tall and too wide at both lengths. */
   <div
-    className="inline-flex items-center justify-center px-[12px] py-[4px] rounded-[22px] border border-solid shrink-0"
+    className="inline-flex items-center justify-center px-[12px] py-[4px] rounded-pill border border-solid shrink-0"
     style={{ background, borderColor: border }}
     data-testid={testId}
   >
@@ -178,10 +178,10 @@ export const StatusPill = ({
  *  20px tall in the frame (2px padding + 14px line + 2px padding + 1px borders). */
 export const TypeTag = ({ label, testId }: { label: string; testId?: string }) => (
   <div
-    className="inline-flex items-center justify-center bg-[#222737] border border-solid border-[rgba(108,119,157,0.2)] px-[8px] py-[2px] rounded-[22px] shrink-0"
+    className="inline-flex items-center justify-center bg-brain-v1baby-blue-15 border border-solid border-[rgba(108,119,157,0.2)] px-[8px] py-[2px] rounded-pill shrink-0"
     data-testid={testId}
   >
-    <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-[#6c779d] text-center whitespace-nowrap">
+    <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-brain-v1baby-blue-60 text-center whitespace-nowrap">
       {capitalCase(label)}
     </span>
   </div>
@@ -202,7 +202,7 @@ const Callout = ({
   testId?: string;
 }) => (
   <div
-    className="flex items-center p-[8px] rounded-[12px] border border-solid w-full"
+    className="flex items-center p-[8px] rounded-row border border-solid w-full"
     style={{ background: tone.background, borderColor: tone.border }}
     data-testid={testId}
   >
@@ -249,22 +249,22 @@ export const KeyFactsTable = ({
   testId?: string;
 }) => (
   <div
-    className="bg-[#0a0c10] border border-solid border-[#1d2132] rounded-[12px] w-full flex flex-col overflow-hidden"
+    className="bg-brain-v1highlight-dropdown-bg border border-solid border-brain-v1stroke-2 rounded-row w-full flex flex-col overflow-hidden"
     data-testid={testId}
   >
     {rows.map((row, i) => (
       <div
         key={`${row.label}-${i}`}
-        className={`flex items-start w-full ${i < rows.length - 1 ? "border-b border-solid border-[#1d2132]" : ""}`}
+        className={`flex items-start w-full ${i < rows.length - 1 ? "border-b border-solid border-brain-v1stroke-2" : ""}`}
       >
         <div className="flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[140px]">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[20px] text-[#6c779d]">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[20px] text-brain-v1baby-blue-60">
             {row.label}
           </p>
         </div>
         <div className="flex flex-1 flex-col items-start justify-center min-w-px px-[12px] py-[8px]">
           <p
-            className={`text-[13px] leading-[20px] text-[#a8b9f4] break-words w-full ${
+            className={`text-[13px] leading-[20px] text-brain-v1baby-blue-100 break-words w-full ${
               row.mono
                 ? "[font-family:'JetBrains_Mono',monospace]"
                 : "[font-family:'Gilroy',sans-serif] font-medium"
@@ -306,7 +306,7 @@ export const ReasonList = ({
   testId?: string;
 }) => (
   <ul
-    className="bg-[#0a0c10] border border-solid border-[#1d2132] rounded-[12px] w-full flex flex-col overflow-hidden list-none"
+    className="bg-brain-v1highlight-dropdown-bg border border-solid border-brain-v1stroke-2 rounded-row w-full flex flex-col overflow-hidden list-none"
     data-testid={testId}
   >
     {reasons.map((reason, i) => {
@@ -316,21 +316,21 @@ export const ReasonList = ({
         <li
           key={`${reason.text}-${i}`}
           className={`flex gap-[8px] items-start px-[12px] py-[10px] w-full ${
-            i < reasons.length - 1 ? "border-b border-solid border-[#1d2132]" : ""
+            i < reasons.length - 1 ? "border-b border-solid border-brain-v1stroke-2" : ""
           }`}
           data-testid={testId ? `${testId}-item-${i}` : undefined}
         >
           <Icon
             size={16}
-            className={`shrink-0 ${failed ? "text-[#d20344]" : "text-[#6c779d]"}`}
+            className={`shrink-0 ${failed ? "text-brain-v1pink-red" : "text-brain-v1baby-blue-60"}`}
             aria-hidden="true"
           />
-          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[16px] text-[#a8b9f4] flex-1 min-w-px">
+          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[16px] text-brain-v1baby-blue-100 flex-1 min-w-px">
             {reason.text}
           </p>
           {failed && (
             <span
-              className="[font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[16px] text-[#d20344] shrink-0 whitespace-nowrap"
+              className="[font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[16px] text-brain-v1pink-red shrink-0 whitespace-nowrap"
               data-testid={testId ? `${testId}-verdict-${i}` : undefined}
             >
               Not met
@@ -380,8 +380,8 @@ export const OutcomeRow = ({
         className="size-[32px] shrink-0"
         data-testid={testId ? `${testId}-glyph` : undefined}
       />
-      <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-[#6c779d] flex-1 min-w-px">
-        <span className="font-semibold text-[#a8b9f4]">{label}:</span> {children}
+      <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-brain-v1baby-blue-60 flex-1 min-w-px">
+        <span className="font-semibold text-brain-v1baby-blue-100">{label}:</span> {children}
       </p>
     </div>
   );
@@ -408,23 +408,23 @@ export const EvidenceLinkRow = ({
     <>
       {kind && <TypeTag label={kind} testId={testId ? `${testId}-kind` : undefined} />}
       <div className="flex flex-1 items-center min-w-px">
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-[#a8b9f4] truncate">
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-brain-v1baby-blue-100 truncate">
           {label}
         </p>
       </div>
-      <ChevronRight size={16} className="text-[#6c779d] shrink-0" aria-hidden="true" />
+      <ChevronRight size={16} className="text-brain-v1baby-blue-60 shrink-0" aria-hidden="true" />
     </>
   );
 
   const shell =
-    "bg-[#0a0c10] border border-solid border-[#1d2132] rounded-[12px] px-[16px] py-[12px] flex gap-[16px] items-center w-full text-left";
+    "bg-brain-v1highlight-dropdown-bg border border-solid border-brain-v1stroke-2 rounded-row px-[16px] py-[12px] flex gap-[16px] items-center w-full text-left";
 
   return (
     <button
       type="button"
       onClick={onClick}
       data-testid={testId}
-      className={`${shell} transition-colors hover:border-[#2a3050] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]`}
+      className={`${shell} transition-colors hover:border-[#2a3050] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple`}
     >
       {inner}
     </button>
@@ -434,9 +434,9 @@ export const EvidenceLinkRow = ({
 /* ── Confidence meter ─────────────────────────────────────────────────────── */
 export const ConfidenceMeter = ({ pct }: { pct: number }) => (
   <div className="h-[6px] relative w-full" data-testid="bar-confidence-track">
-    <div className="absolute h-[6px] left-0 right-0 top-0 rounded-[3px] bg-[#222737]" />
+    <div className="absolute h-[6px] left-0 right-0 top-0 rounded-[3px] bg-brain-v1baby-blue-15" />
     <div
-      className="absolute h-[6px] left-0 top-0 rounded-[3px] bg-[#7631ee]"
+      className="absolute h-[6px] left-0 top-0 rounded-[3px] bg-brain-v1purple"
       style={{ width: `${Math.max(0, Math.min(100, pct))}%` }}
     />
   </div>
@@ -445,7 +445,7 @@ export const ConfidenceMeter = ({ pct }: { pct: number }) => (
 /** The mono value that sits at the right of the Confidence heading. */
 export const HeadingValue = ({ children, testId }: { children: ReactNode; testId?: string }) => (
   <p
-    className="[font-family:'JetBrains_Mono',monospace] font-semibold text-[14px] leading-[14px] text-[#6c779d] whitespace-nowrap shrink-0"
+    className="[font-family:'JetBrains_Mono',monospace] font-semibold text-[14px] leading-[14px] text-brain-v1baby-blue-60 whitespace-nowrap shrink-0"
     data-testid={testId}
   >
     {children}
@@ -508,7 +508,7 @@ export const ActionButton = ({
       title={title}
       data-testid={testId}
       style={{ ["--action-bg" as string]: palette.background, color: palette.color }}
-      className={`flex items-center justify-center rounded-[100px] bg-[var(--action-bg)] [font-family:'Gilroy',sans-serif] font-semibold whitespace-nowrap ${isDestructive ? "transition-colors hover:bg-[#4a0018]" : "transition-opacity hover:opacity-90"} disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] ${ACTION_SIZES[size]}`}
+      className={`flex items-center justify-center rounded-pill bg-[var(--action-bg)] [font-family:'Gilroy',sans-serif] font-semibold whitespace-nowrap ${isDestructive ? "transition-colors hover:bg-[#4a0018]" : "transition-opacity hover:opacity-90"} disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple ${ACTION_SIZES[size]}`}
     >
       {label}
     </button>
@@ -538,7 +538,7 @@ export const PagerFooter = ({
   /** "3 of 12" — announced to screen readers, since the buttons alone don't say where you are. */
   position?: string;
 }) => (
-  <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-t border-solid border-[#1d2132] flex flex-col items-start p-[24px] shrink-0 w-full">
+  <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-t border-solid border-brain-v1stroke-2 flex flex-col items-start p-[24px] shrink-0 w-full">
     {position && (
       <span className="sr-only" aria-live="polite" data-testid="text-proposal-pager-position">
         {position}
@@ -550,7 +550,7 @@ export const PagerFooter = ({
         onClick={onPrev}
         disabled={!hasPrev}
         data-testid="button-proposal-prev"
-        className="flex flex-1 min-w-px gap-[8px] items-center justify-center bg-[#222737] px-[20px] py-[8px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-[#6c779d] whitespace-nowrap transition-opacity hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+        className="flex flex-1 min-w-px gap-[8px] items-center justify-center bg-brain-v1baby-blue-15 px-[20px] py-[8px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-brain-v1baby-blue-60 whitespace-nowrap transition-opacity hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
       >
         <ChevronLeft size={24} className="shrink-0" aria-hidden="true" />
         Previous
@@ -560,7 +560,7 @@ export const PagerFooter = ({
         onClick={onNext}
         disabled={!hasNext}
         data-testid="button-proposal-next"
-        className="flex flex-1 min-w-px gap-[8px] items-center justify-center bg-[#222737] px-[20px] py-[8px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-[#6c779d] whitespace-nowrap transition-opacity hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+        className="flex flex-1 min-w-px gap-[8px] items-center justify-center bg-brain-v1baby-blue-15 px-[20px] py-[8px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-brain-v1baby-blue-60 whitespace-nowrap transition-opacity hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
       >
         Next
         <ChevronRight size={24} className="shrink-0" aria-hidden="true" />

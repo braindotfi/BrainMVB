@@ -101,9 +101,9 @@ export function SettingsDropdown({
         aria-label={ariaLabel}
         data-testid={testId}
         onClick={() => onOpenChange(!open)}
-        className="bg-[#222737] rounded-[8px] p-[8px] flex items-center gap-[8px] w-full text-left outline-none hover:bg-[#2a3045] transition-colors focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+        className="bg-brain-v1baby-blue-15 rounded-[8px] p-[8px] flex items-center gap-[8px] w-full text-left outline-none hover:bg-[#2a3045] transition-colors focus-visible:ring-2 focus-visible:ring-brain-v1purple"
       >
-        <span className="flex-1 min-w-0 [font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[14px] leading-[20px] whitespace-nowrap truncate">
+        <span className="flex-1 min-w-0 [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[14px] leading-[20px] whitespace-nowrap truncate">
           {titleCase(selected?.label ?? "")}
         </span>
         <img src={chevronDownIcon} alt="" aria-hidden="true" className="shrink-0 h-[7px] w-auto" />
@@ -120,7 +120,7 @@ export function SettingsDropdown({
             width: menuWidth,
             zIndex: 9999,
           }}
-          className="bg-[#0a0c10] border border-[#1d2132] border-solid flex flex-col items-start p-[8px] rounded-[12px] shadow-[0px_68px_13.5px_rgba(0,0,0,0.06),0px_38px_11.5px_rgba(0,0,0,0.2),0px_17px_8.5px_rgba(0,0,0,0.34),0px_4px_4.5px_rgba(0,0,0,0.39)]"
+          className="bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 border-solid flex flex-col items-start p-[8px] rounded-row shadow-[0px_68px_13.5px_rgba(0,0,0,0.06),0px_38px_11.5px_rgba(0,0,0,0.2),0px_17px_8.5px_rgba(0,0,0,0.34),0px_4px_4.5px_rgba(0,0,0,0.39)]"
         >
           {options.map((option) => (
             <button
@@ -132,7 +132,7 @@ export function SettingsDropdown({
                 onChange(option.value);
                 onOpenChange(false);
               }}
-              className="flex items-center p-[8px] rounded-[8px] shrink-0 w-full text-left [font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[14px] whitespace-nowrap outline-none hover:bg-[#222737] focus-visible:bg-[#222737]"
+              className="flex items-center p-[8px] rounded-[8px] shrink-0 w-full text-left [font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-100 text-[14px] whitespace-nowrap outline-none hover:bg-brain-v1baby-blue-15 focus-visible:bg-brain-v1baby-blue-15"
               data-testid={`${testId}-option-${option.value}`}
             >
               {titleCase(option.label)}

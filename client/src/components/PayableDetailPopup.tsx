@@ -127,7 +127,7 @@ export function PayableDetailPopup({
                   currently be proposed at all — promising a future approval step
                   would be inventing a workflow that does not exist for this record. */}
               <p
-                className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px] w-full"
+                className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[16px] w-full"
                 data-testid="text-payable-next"
               >
                 {invoicesUnknown
@@ -136,7 +136,7 @@ export function PayableDetailPopup({
               </p>
             </div>
           </DetailPopupBody>
-          <div className="border-t border-[#1d2132] border-solid flex items-center justify-between p-[16px] w-full">
+          <div className="border-t border-brain-v1stroke-2 border-solid flex items-center justify-between p-[16px] w-full">
             <RecordPager
               onPrev={() => currentIdx > 0 && onSelectPayable?.(list[currentIdx - 1])}
               onNext={() => currentIdx >= 0 && currentIdx < list.length - 1 && onSelectPayable?.(list[currentIdx + 1])}

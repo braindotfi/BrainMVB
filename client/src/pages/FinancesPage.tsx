@@ -256,18 +256,18 @@ export function FinancesPage() {
   const copy = TAB_COPY[activeTab];
 
   return (
-    <div className="bg-[#11141b] overflow-hidden relative size-full flex flex-col">
+    <div className="bg-brain-v1baby-blue-5 overflow-hidden relative size-full flex flex-col">
 
       {/* Static chrome: header + tab bar — never scrolls */}
       <div className="shrink-0 flex flex-col gap-[40px] items-start pt-[40px] px-[16px] pb-[16px] w-full">
         <div className="flex flex-col items-start gap-[4px] relative shrink-0 w-full">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#6c779d] text-[20px]">Your Financial Ledger</p>
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-[#a8b9f4] text-[32px]">{copy.heading}</p>
-          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-[#414965] text-[16px]">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-brain-v1baby-blue-60 text-[20px]">Your Financial Ledger</p>
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-brain-v1baby-blue-100 text-[32px]">{copy.heading}</p>
+          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-brain-v1baby-blue-30 text-[16px]">
             {copy.sub ?? `Updated ${updatedLabel}`}
           </p>
         </div>
-        <div role="tablist" aria-label="Ledger" className="flex items-center gap-[2px] overflow-x-auto border-b border-[#1d2132] w-full">
+        <div role="tablist" aria-label="Ledger" className="flex items-center gap-[2px] overflow-x-auto border-b border-brain-v1stroke-2 w-full">
           {LEDGER_TABS.map((tab) => {
             const isActive = activeTab === tab;
             return (
@@ -276,7 +276,7 @@ export function FinancesPage() {
                 role="tab"
                 aria-selected={isActive}
                 onClick={() => selectTab(tab)}
-                className="px-[8px] py-[8px] whitespace-nowrap text-[14px] leading-[18px] transition-colors shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] rounded-t-[4px]"
+                className="px-[8px] py-[8px] whitespace-nowrap text-[14px] leading-[18px] transition-colors shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple rounded-t-[4px]"
                 style={{
                   fontFamily: "'Gilroy', sans-serif",
                   fontWeight: 500,
@@ -306,11 +306,11 @@ export function FinancesPage() {
                   name={acc.name}
                   secondary={
                     <>
-                      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] whitespace-nowrap">{acc.sub}</p>
+                      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">{acc.sub}</p>
                       {acc.sub2 && (
                         <>
                           <div className="relative shrink-0 size-[4px]"><img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_DOT} /></div>
-                          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] whitespace-nowrap">{acc.sub2}</p>
+                          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">{acc.sub2}</p>
                         </>
                       )}
                     </>
@@ -336,7 +336,7 @@ export function FinancesPage() {
                   Your accounts couldn't be loaded just now, so this list is empty for the wrong reason. It isn't a sign that you have no accounts.
                 </UnavailableDataBox>
               ) : (
-              <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10]">
+              <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative rounded-[8px] shrink-0 w-full bg-brain-v1highlight-dropdown-bg">
                 {/* Three states, not two. An unreachable ledger used to render the
                     same "No connected accounts yet" as a genuinely empty one, which
                     tells someone with accounts that they have none. */}

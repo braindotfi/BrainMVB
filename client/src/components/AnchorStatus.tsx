@@ -20,10 +20,10 @@ function HashRow({
   last?: boolean;
 }) {
   return (
-    <div className={`content-stretch flex items-start relative shrink-0 w-full${last ? "" : " border-b border-[#1d2132]"}`}>
+    <div className={`content-stretch flex items-start relative shrink-0 w-full${last ? "" : " border-b border-brain-v1stroke-2"}`}>
       {/* Label column — fixed 140px, Gilroy SemiBold 12px/20 #6c779d */}
       <div className="content-stretch flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[140px]">
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[12px] whitespace-nowrap">
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">
           {label}
         </p>
       </div>
@@ -31,7 +31,7 @@ function HashRow({
           `break-all` keeps real merkle roots / tx hashes inside the cell;
           the Figma sample values are pre-truncated, real ones are not. */}
       <div className="content-stretch flex flex-[1_0_0] flex-col items-start justify-center min-w-px px-[12px] py-[8px]">
-        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[13px] break-all text-[#a8b9f4]">
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[13px] break-all text-brain-v1baby-blue-100">
           {value ?? "-"}
         </p>
       </div>
@@ -75,7 +75,7 @@ export function AnchorStatus({
      status label matches it regardless of whether we're recorded-pending or
      just waiting for the next batch. Using amber for "recorded" was visually
      inconsistent: the icon didn't change but the text did. */
-  const statusColor = isAnchored ? "text-[#42bf23]" : "text-[#a8b9f4]";
+  const statusColor = isAnchored ? "text-brain-v1green" : "text-brain-v1baby-blue-100";
 
   /* The on-chain-immutability claim is ONLY made when a real, linkable tx
      exists. The recorded state claims exactly what is true: sealed in the
@@ -105,7 +105,7 @@ export function AnchorStatus({
 
       {/* Guarantee sub-line */}
       <div className="content-stretch flex items-center relative shrink-0 w-full">
-        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px] flex-[1_0_0] min-w-px">
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[16px] flex-[1_0_0] min-w-px">
           {guarantee}
         </p>
       </div>
@@ -114,7 +114,7 @@ export function AnchorStatus({
           Border-b on all rows except the last so the table's own outer border
           closes cleanly without a double-line at the bottom. */}
       {mode === "proof" && (
-        <div className="bg-[#0a0c10] border border-[#1d2132] border-solid content-stretch flex flex-col items-start relative rounded-[12px] shrink-0 w-full overflow-hidden">
+        <div className="bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 border-solid content-stretch flex flex-col items-start relative rounded-row shrink-0 w-full overflow-hidden">
           {isAnchored ? (
             <>
               <HashRow label="Audit ID"    value={anchor.auditId} />
@@ -144,14 +144,14 @@ export function AnchorStatus({
           {isNotRecorded ? (
             <span
               data-testid="text-not-recorded-caption"
-              className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-[#414965]"
+              className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-brain-v1baby-blue-30"
             >
               No on-chain proof. This activity was never recorded in Brain's audit log.
             </span>
           ) : pending ? (
             <span
               data-testid="text-verify-pending-caption"
-              className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-[#414965]"
+              className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-brain-v1baby-blue-30"
             >
               Verification opens once anchored.
             </span>
@@ -160,7 +160,7 @@ export function AnchorStatus({
               type="button"
               onClick={onVerify}
               data-testid="button-verify-inline"
-              className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-[#7631ee] hover:text-[#a8b9f4] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+              className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-brain-v1purple hover:text-brain-v1baby-blue-100 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
             >
               Verify
             </button>
@@ -170,7 +170,7 @@ export function AnchorStatus({
               type="button"
               onClick={onViewFullRecord}
               data-testid="button-view-full-record"
-              className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-[#7631ee] hover:text-[#a8b9f4] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+              className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-brain-v1purple hover:text-brain-v1baby-blue-100 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
             >
               View full record in Audit Log
             </button>

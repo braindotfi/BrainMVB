@@ -9,9 +9,9 @@ export const HeaderFooterSection = (): JSX.Element => {
           src="/figmaAssets/frame-1000002163.svg"
         />
         <div className="w-fit mt-[-1.00px] [font-family:'Gilroy',sans-serif] font-normal text-transparent text-[28px] leading-7 whitespace-nowrap">
-          <span className="text-[#7631ee]">br</span>
+          <span className="text-brain-v1purple">br</span>
           <span className="text-[#ffffff] leading-[0.1px]">ai</span>
-          <span className="text-[#7631ee]">n</span>
+          <span className="text-brain-v1purple">n</span>
         </div>
       </div>
     </header>
