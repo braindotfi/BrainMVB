@@ -83,3 +83,4 @@
 - [API 404 vs SPA catch-all](api-404-vs-spa-catchall.md) — unmatched /api paths get 200+HTML from the SPA catch-all; keep the JSON-404 last in registerRoutes or removal tests go false-green.
 - [Tailwind class verification](tailwind-class-verification.md) — a variant never implies its base class; grep the served CSS (escaping lies), and client/public is outside the content globs.
 - [Branching off stale main](branching-off-stale-main.md) — origin/main lags the real UI work; check `git branch -vv` for [ahead N] before cutting a task branch, or the preview silently rolls back.
+- [Opacity contrast model](opacity-contrast-model.md) — opacity fades label AND fill, so the enabled ratio is a hard ceiling; disabled controls are WCAG-exempt (1.4.3/1.4.11).

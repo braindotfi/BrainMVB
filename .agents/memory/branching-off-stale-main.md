@@ -34,6 +34,19 @@ only on an open PR branch, three commits of which had never even been pushed.
    is the branch you are rebasing *onto*) and re-run the script on top. Then re-apply the handful
    of genuinely manual edits, which the script will not restore.
 
+## Local `main` can itself be a landmine
+Check `git branch -vv` for the local `main` line specifically. It has been seen sitting at
+`[ahead 1, behind N]` — an old checkpoint commit stranded on top of a branch that is many commits
+stale. Pushing that "1 ahead" commit looks harmless and would revert thousands of lines, because
+the push carries the staleness with it.
+
+**Why:** auto-checkpointing commits to whatever branch is checked out, including `main`, and a
+commit sitting on a stale base is not a small change — it is a rewind.
+
+**How to apply:** never `git push` a local `main` that reports `behind`. Fast-forward it first
+(`git fetch origin && git merge --ff-only origin/main`) and re-inspect what, if anything, is
+genuinely still ahead.
+
 ## Two traps seen while doing this
 - A conflict-marker grep run *between* `checkout --ours` and the next step reports clean while
   vite is still failing on markers it read a moment earlier. Trust `git diff --diff-filter=U`
