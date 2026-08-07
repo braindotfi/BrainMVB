@@ -56,7 +56,7 @@ export function DeleteConfirmDialog({
         {/* Card — updated Figma frame: 375px wide, 22px radius, 1px border. */}
         <DialogPrimitive.Content
           aria-describedby={undefined}
-          className="fixed left-[50%] top-[50%] z-[60] translate-x-[-50%] translate-y-[-50%] bg-brain-v1highlight-dropdown-bg border-[1px] border-solid border-brain-v1stroke-2 flex flex-col items-start overflow-hidden rounded-pill w-[375px] max-w-[calc(100vw-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
+          className="fixed left-[50%] top-[50%] z-[60] translate-x-[-50%] translate-y-[-50%] bg-brain-v1highlight-dropdown-bg border-[1px] border-solid border-brain-v1stroke-2 flex flex-col items-start overflow-hidden rounded-modal w-[375px] max-w-[calc(100vw-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
         >
           {/* ── Title and Controls — h-[52px], border-b ── */}
           <div className="bg-brain-v1highlight-dropdown-bg border-b-[1px] border-solid border-brain-v1stroke-2 h-[52px] relative shrink-0 w-full">
