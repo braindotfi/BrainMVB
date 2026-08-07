@@ -121,6 +121,10 @@ export function AuditRecordPopup({
   };
 
   const isAnchored = anchor.status === "anchored" && !!anchor.baseTx;
+  /* not_recorded never reached brain-core's audit log, so unlike the other
+     pending states there is no future anchor window to promise — suppress
+     the "opens once anchored" caption/tooltip for it (button stays disabled). */
+  const isNotRecorded = anchor.status === "not_recorded";
 
   const handleVerify = () => {
     if (anchor.verifyHref) {
@@ -421,14 +425,14 @@ export function AuditRecordPopup({
                 type="button"
                 onClick={handleVerify}
                 disabled={!isAnchored}
-                title={isAnchored ? undefined : "On-chain verification opens once this record is anchored."}
+                title={isAnchored || isNotRecorded ? undefined : "On-chain verification opens once this record is anchored."}
                 data-testid="button-verify-on-chain"
                 className="flex items-center justify-center gap-[6px] px-[20px] py-[10px] rounded-[100px] transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] w-full disabled:opacity-40 disabled:cursor-not-allowed enabled:hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
                 style={{ background: "#240757", color: "#7631ee" }}
               >
                 Verify On-Chain
               </button>
-              {!isAnchored && (
+              {!isAnchored && !isNotRecorded && (
                 <p data-testid="text-verify-pending-caption" className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-[#6c779d]">
                   On-chain verification opens once anchored.
                 </p>

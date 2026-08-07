@@ -44,7 +44,10 @@ function insightToRecord(insight: LiveInsight): AuditRecord {
     occurredAtMs,
     lifecycle: [{ label: `Acknowledged: ${insight.title}`, timestamp: occurredAtLabel, kind: "ok", actor: "operator" }],
     linked: [],
-    anchor: { status: "pending_next_batch", auditId: `local-acknowledged-${insight.id}` },
+    /* Acknowledgements live only in this browser store; nothing is written to
+       brain-core's audit log, so no anchor window will ever cover them. See the
+       not_recorded state in auditTypes.ts. */
+    anchor: { status: "not_recorded", auditId: `local-acknowledged-${insight.id}` },
     rowSubtitle: "Acknowledged from the Inbox; no payment was initiated.",
     agentLabel: insight.badge,
   };

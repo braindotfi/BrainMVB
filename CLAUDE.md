@@ -503,12 +503,24 @@ that let rules break before):
 
 6. **`checkAnchorUiCoherence()`** — anchor-UI honesty guard. On-chain verification
    is only real once a record is anchored, so any record whose `anchor.status` is
-   `pending_next_batch` must NOT carry `merkleRoot` / `baseTx` / `verifyHref` (there
-   is nothing to link to yet). This is the DATA-level assertion that keeps the ONE
-   shared `AnchorStatus` component honest across every surface — the UI renders the
-   Verify affordance disabled (with the caption "Verification opens once anchored.")
-   purely from `anchor.status`, so a pending record carrying hashes/href would be a
-   lie waiting to leak into the UI. Logs `[anchor-ui-consistency] OK ...`.
+   `pending_next_batch` OR `not_recorded` must NOT carry `merkleRoot` / `baseTx` /
+   `verifyHref` (there is nothing to link to yet, and for `not_recorded` never will
+   be). This is the DATA-level assertion that keeps the ONE shared `AnchorStatus`
+   component honest across every surface. There are four states, not two:
+   - `anchored` — Verify affordance enabled, live link.
+   - `recorded_pending_anchor` / `pending_next_batch` — Verify affordance disabled,
+     caption "Verification opens once anchored." — a real future anchor window
+     can still cover this record.
+   - `not_recorded` — record exists only in this app and was never written to
+     brain-core's audit log, so no anchor window will ever cover it. Verify
+     affordance stays disabled but gets NO future-tense caption/tooltip (the
+     "opens once anchored" wording would be false) and its own badge/label
+     ("Not recorded", not "Pending") wherever anchor status renders as a pill.
+   A local-only record (e.g. an `assistant_questions` row) is only `not_recorded`
+   when its `engine` confirms the direct-Anthropic fallback was taken; an
+   unresolved/unknown `engine` (including legacy rows written before the column
+   existed) falls back to `pending_next_batch` rather than asserting the stronger,
+   possibly-false `not_recorded` claim. Logs `[anchor-ui-consistency] OK ...`.
 
 7. **`checkAgentDomainCoherence()`** — agent↔event domain guard. The proposing
    agent named in a lifecycle label must stay inside its canonical catalog domain
@@ -620,11 +632,16 @@ verification, never auto-cleared.
 Two more "resolves-but-lies" classes, each fixed in data AND locked by a new
 unified dev guard (see guards 6 & 7 above):
 - **Anchor-UI:** on-chain verification is only real once anchored, so `AnchorStatus`
-  now renders the Verify affordance DISABLED with the caption "Verification opens
-  once anchored." and NO live link whenever `anchor.status` is `pending_next_batch`
-  — in BOTH proof and status modes, driven purely from `anchor.status`. Guarded by
-  `checkAnchorUiCoherence` (a pending record must not carry `merkleRoot`/`baseTx`/
-  `verifyHref`).
+  now renders the Verify affordance DISABLED and NO live link whenever `anchor.status`
+  is not `anchored`, driven purely from `anchor.status` — in BOTH proof and status
+  modes. The disabled-but-informative caption "Verification opens once anchored." is
+  correct ONLY for `recorded_pending_anchor` / `pending_next_batch` — a real future
+  anchor window can still cover those records. It is WRONG for `not_recorded` (the
+  record never reached brain-core's audit log at all, so no anchor window will ever
+  cover it): that state suppresses the future-tense caption/tooltip entirely and gets
+  its own honest label ("Not recorded") wherever anchor status renders as a pill.
+  Guarded by `checkAnchorUiCoherence` (a pending OR not-recorded record must not
+  carry `merkleRoot`/`baseTx`/`verifyHref`).
 - **Agent↔event domain:** two records had the WRONG proposing agent for the action —
   `AUD-8A1R` ("Close Agent proposed payment" for an office-lease AP payment) and
   `AUD-5J7Y` ("Close Agent proposed payroll run") both belong to the **Invoice**
