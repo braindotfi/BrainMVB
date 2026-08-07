@@ -1173,7 +1173,7 @@ export function HomePage() {
                         </p>
                       </div>
                       {/* Hairline vertical divider */}
-                      <div className="w-px self-stretch shrink-0 bg-[#240757]" />
+                      <div className="w-px self-stretch shrink-0 bg-[#12032d]" />
                       {/* Right: Brain Observed */}
                       <div className="flex min-w-0 flex-1 flex-col gap-[4px] items-start justify-center">
                         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#7631ee] text-[16px]">
