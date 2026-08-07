@@ -47,7 +47,7 @@ const ALERT = "#d20344";
 export function RuleDetail() {
   const [, params] = useRoute("/rules/:id");
   const [, navigate] = useLocation();
-  const { format } = useCurrency();
+  const { format, symbol } = useCurrency();
   const rule = useRule(params?.id);
   const { rule: policyRule, isLoading: policyLoading, isError: policyError } = usePolicyRule(params?.id);
   const isPolicy = params?.id?.startsWith("policy-") ?? false;
@@ -429,6 +429,7 @@ export function RuleDetail() {
                   <AmountRow
                     value={rule.threshold}
                     format={format}
+                    symbol={symbol}
                     editing={showAmountEditor}
                     draft={amountDraft}
                     onDraftChange={setAmountDraft}
@@ -449,6 +450,7 @@ export function RuleDetail() {
                   <AmountRow
                     value={rule.cap}
                     format={format}
+                    symbol={symbol}
                     editing={showCapEditor}
                     draft={capDraft}
                     onDraftChange={setCapDraft}
@@ -623,6 +625,7 @@ function HistoryRow({ event }: { event: RuleHistoryEvent }) {
 function AmountRow({
   value,
   format,
+  symbol,
   editing,
   draft,
   onDraftChange,
@@ -637,6 +640,7 @@ function AmountRow({
 }: {
   value: number;
   format: (n: number) => string;
+  symbol: string;
   editing: boolean;
   draft: string;
   onDraftChange: (v: string) => void;
@@ -672,18 +676,22 @@ function AmountRow({
   return (
     <div className="flex gap-[16px] items-center p-[8px] rounded-[8px]">
       <div className="flex-1 min-w-px flex flex-col justify-center">
-        <input
-          value={draft}
-          autoFocus
-          inputMode="numeric"
-          onChange={(e) => onDraftChange(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") onSave();
-            if (e.key === "Escape") onCancel();
-          }}
-          data-testid={testIdInput}
-          className="w-full h-[32px] flex items-center rounded-[8px] bg-[#222737] px-[12px] py-[8px] [font-family:'Gilroy',sans-serif] font-medium text-[15px] text-white focus:outline-none"
-        />
+        <div className="w-full h-[32px] flex items-center rounded-[8px] bg-[#222737] px-[12px] [font-family:'Gilroy',sans-serif] font-medium text-[15px] text-white">
+          <span aria-hidden="true" className="shrink-0">{symbol}</span>
+          <input
+            value={draft}
+            autoFocus
+            inputMode="numeric"
+            onChange={(e) => onDraftChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") onSave();
+              if (e.key === "Escape") onCancel();
+            }}
+            data-testid={testIdInput}
+            aria-label={`Amount in ${symbol}`}
+            className="min-w-0 flex-1 h-full bg-transparent pl-[4px] focus:outline-none"
+          />
+        </div>
       </div>
       <div className="flex gap-[8px] items-center shrink-0">
         <button
