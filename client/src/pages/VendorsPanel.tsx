@@ -13,7 +13,6 @@ import {
   supportsTrustActions,
 } from "@/lib/brainVendors";
 import { useCurrency } from "@/lib/useCurrency";
-import { useToast } from "@/hooks/use-toast";
 import { AppAlertLink, useAppAlert } from "@/components/AppAlert";
 import { queryClient } from "@/lib/queryClient";
 import type { Vendor, VendorTier } from "@/lib/vendorTypes";
@@ -375,7 +374,6 @@ export function VendorsPanel() {
   const [, navigate] = useLocation();
   const search = useSearch();
   const { vendors, isLoading, isError } = useBrainVendors();
-  const { toast } = useToast();
   const alert = useAppAlert();
   const [activeVendor, setActiveVendor] = useState<Vendor | null>(null);
   const detailVendor = useBrainVendorDetail(activeVendor);
@@ -473,11 +471,7 @@ export function VendorsPanel() {
         credentials: "include",
       });
       if (!res.ok && res.status !== 404) {
-        toast({
-          title: "Protocol Error",
-          description: "Brain rejected the request. The vendor was not removed.",
-          variant: "destructive",
-        });
+        alert.error("Protocol Error", "Brain rejected the request. The vendor was not removed.");
         return;
       }
       await queryClient.invalidateQueries({ queryKey: ["/api/brain/ledger/counterparties"] });
@@ -491,7 +485,7 @@ export function VendorsPanel() {
       params.set("tab", "counterparties");
       navigate(`/ledger?${params.toString()}`, { replace: true });
     } catch {
-      toast({ title: "Couldn't delete vendor", description: "Couldn't reach Brain core. Nothing was changed.", variant: "destructive" });
+      alert.error("Protocol Error", "Couldn't reach Brain core. Nothing was changed.");
     }
   };
 
