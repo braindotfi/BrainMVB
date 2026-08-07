@@ -112,6 +112,70 @@ describe("auth boundary hardening", () => {
     expect(res.status).toBe(401);
     expect(res.json).toEqual({ error: "Not authenticated" });
   });
+
+  /* The shared demo login (POST /api/auth/demo) was deleted: unauthenticated, it logged
+     every caller into ONE app user backed by ONE persistent tenant, so each visitor could
+     read and mutate what the previous visitor left behind. Isolated demo access is
+     /api/auth/demo-fresh. This pins the removal — reintroducing the route, or adding any
+     other unauthenticated path that hands out a session, fails here.
+
+     The 404 comes from the /api/* fallback at the end of registerRoutes, so this harness
+     exercises the same handler the real server uses. That matters: the running app mounts a
+     SPA catch-all after the API routes, and before that fallback existed an unknown /api path
+     answered 200 with the HTML shell — this test would have passed while the deployed server
+     still returned 200 for the deleted route. */
+  it("no longer exposes the shared demo login, and mints no session for it", async () => {
+    const client = new SessionClient(baseUrl);
+    const res = await client.request<{ error: string }>("POST", "/api/auth/demo");
+    expect(res.status).toBe(404);
+    expect(res.json.error).toBe("Not found");
+
+    // The decisive assertion: a 404 that still issued a cookie would mean some other
+    // handler had claimed the path and logged the caller in anyway.
+    const after = await client.request("GET", "/api/auth/user");
+    expect(after.status).toBe(401);
+  });
+
+  /* Demo sessions are handed out unauthenticated, so `requireAuth` alone does not gate
+     anything: /api/auth/demo-fresh turns any caller into an authenticated user. Routes that
+     reach a real third party or persist a real credential need requireNonDemo on top.
+     PLAID_ENV being unset (so Plaid resolves to sandbox) is a real mitigation but lives
+     outside the code and is one environment variable away from being wrong. */
+  it("refuses Plaid link-token and exchange for a demo session", async () => {
+    const demo = new SessionClient(baseUrl);
+    const login = await demo.request<{ user: { isDemo: boolean } }>("POST", "/api/auth/demo-fresh");
+    expect(login.status).toBe(200);
+    expect(login.json.user.isDemo).toBe(true);
+
+    const link = await demo.request<{ error: string }>("POST", "/api/integrations/plaid/link-token");
+    expect(link.status).toBe(403);
+    expect(link.json.error).toBe("demo_account_not_permitted");
+
+    // Empty body on purpose: a 403 here (not a 400) proves the gate short-circuits before
+    // the handler validates input or reaches Plaid, rather than refusing somewhere later.
+    const exchange = await demo.request<{ error: string }>("POST", "/api/integrations/plaid/exchange", {});
+    expect(exchange.status).toBe(403);
+    expect(exchange.json.error).toBe("demo_account_not_permitted");
+  });
+
+  it("does not apply the demo gate to a real account", async () => {
+    // Guards against the gate degrading into a blanket denial. The Plaid client is mocked
+    // without linkTokenCreate, so this fails downstream - what matters is that it is not
+    // refused as a demo account.
+    const client = new SessionClient(baseUrl);
+    await register(client, `plaid-${Date.now().toString(36)}`);
+
+    const link = await client.request<{ error: string }>("POST", "/api/integrations/plaid/link-token");
+    expect(link.status).not.toBe(403);
+    expect(link.json.error).not.toBe("demo_account_not_permitted");
+  });
+
+  it("answers unknown /api paths with JSON, not the SPA shell", async () => {
+    const res = await fetch(`${baseUrl}/api/definitely-not-a-route`, { method: "POST" });
+    expect(res.status).toBe(404);
+    expect(res.headers.get("content-type")).toMatch(/application\/json/);
+    expect(await res.json()).toMatchObject({ error: "Not found" });
+  });
 });
 
 describe("account deletion hygiene", () => {

@@ -21,7 +21,7 @@
 import { storage } from "../storage";
 import { ingestRawDocument, pollRawExtraction, BrainApiError } from "./client";
 import { extractStatusForJob } from "./extractStatus";
-import { getSeedDocuments } from "./demo-seed/documents";
+import { getSeedDocuments, SEED_MANIFEST as MANIFEST } from "./demo-seed/documents";
 import { withBrainBaseUrl } from "./baseUrl";
 import { brainConfig } from "./config";
 import type { ExtractStatus } from "../storage";
@@ -39,12 +39,87 @@ export type { SeedDocument, SeedManifestEntry } from "./demo-seed/documents";
 export async function seedTenantDocuments(appUserId: string, ingestToken: string, baseUrl?: string): Promise<void> {
   const run = withBrainBaseUrl(baseUrl ?? brainConfig.baseUrl, () => runSeed(appUserId, ingestToken));
   inFlightSeeds.add(run);
+  seedingUsers.set(appUserId, (seedingUsers.get(appUserId) ?? 0) + 1);
   try {
     await run;
   } finally {
     inFlightSeeds.delete(run);
+    const left = (seedingUsers.get(appUserId) ?? 1) - 1;
+    if (left > 0) seedingUsers.set(appUserId, left);
+    else seedingUsers.delete(appUserId);
   }
 }
+
+/**
+ * Which users have a seed run in flight RIGHT NOW.
+ *
+ * `inFlightSeeds` below answers "is anything seeding" for tests and shutdown; this
+ * answers "is THIS user's tenant still filling up", which is a question the UI has to
+ * ask on every read of their ledger.
+ *
+ * Why the UI cannot work it out for itself: a seed ingests its documents one at a
+ * time, and each one's ledger rows appear only when brain-core finishes projecting
+ * it. For the first seconds of a new tenant there are no documents and no rows, which
+ * is indistinguishable — from the client — from a tenant that genuinely has nothing.
+ * It once wasn't: a fresh tenant showed a confident $211,200.00 owed against a real
+ * $287,223.39, with nothing on screen to suggest the figure was a floor. The server
+ * kicked the seed off and is the only party that knows it is still running, so it
+ * says so rather than leaving the client to infer it from an absence.
+ *
+ * A count, not a flag: the same user can (in principle) have two runs in flight, and
+ * the first to finish must not clear the second's signal.
+ *
+ * In-memory and per-process, so a restart mid-seed reports "not seeding". That
+ * degrades to today's behaviour rather than to a wrong answer, and a seed does not
+ * survive the restart either.
+ */
+const seedingUsers = new Map<string, number>();
+
+export function isSeedInFlight(appUserId: string): boolean {
+  return (seedingUsers.get(appUserId) ?? 0) > 0;
+}
+
+/**
+ * Is this tenant still filling up — including before the seed has started, and after a
+ * restart forgot it?
+ *
+ * `isSeedInFlight` only knows about a run this process is currently performing. Two
+ * stretches sit outside it, and the figures on screen are provisional in both:
+ *
+ *   - **Before it starts.** A demo tenant is provisioned lazily, on the session's
+ *     first brain call, and only then are documents ingested. Measured: nothing is in
+ *     flight and no document exists for the first seconds of a new account.
+ *   - **After a restart.** The in-flight set is per-process.
+ *
+ * Both are covered by a durable fact rather than more in-memory state: a seeded demo
+ * tenant ends up with the whole starter manifest, so a demo account holding fewer
+ * documents than that has not finished being set up.
+ *
+ * `expectedWithinMs` bounds it. A user who later deletes a starter document must not
+ * be told forever that their ledger is still importing — this flag exists to caveat a
+ * figure while it is genuinely provisional, not to add a permanent disclaimer.
+ */
+export function seedStillExpected(input: {
+  inFlight: boolean;
+  isDemo: boolean;
+  createdAt: Date | null | undefined;
+  documentCount: number;
+  expectedDocuments?: number;
+  expectedWithinMs: number;
+  now: number;
+}): boolean {
+  if (input.inFlight) return true;
+  // Only demo accounts are ever seeded. A real account starts empty and stays empty
+  // until its owner connects something, so "fewer documents than the manifest" says
+  // nothing at all about it.
+  if (!input.isDemo) return false;
+  if (input.createdAt == null) return false;
+  if (input.now - input.createdAt.getTime() > input.expectedWithinMs) return false;
+  return input.documentCount < (input.expectedDocuments ?? SEED_MANIFEST_LENGTH);
+}
+
+/** How many documents a fully seeded demo tenant ends up with. */
+const SEED_MANIFEST_LENGTH = MANIFEST.length;
 
 /**
  * Seeding is fire-and-forget off the login path, so nothing normally awaits it. This

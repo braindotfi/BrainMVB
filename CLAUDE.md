@@ -159,6 +159,56 @@ prose is `answered: false`, while a legacy non-refusal response remains compatib
 The chat UI must render no-answer status separately from an answered message with
 supporting records. Evidence count alone never proves that an answer was produced.
 
+**`answerDeterministically()` runs before the Wiki path on `POST /api/assistant/chat`.**
+A class of questions ("how much do we owe X", payroll total, overdue AR invoices) has
+exactly one correct answer that is a number, so it is computed straight from a
+proven-complete ledger read with no model in the loop —
+`server/brain/deterministicAnswers.ts`. It returns `null` to fall through to the
+existing Wiki/LLM path; any other return, including a refusal, is sent to the client
+as-is and must not be re-processed. `deterministic-answers.test.ts` pins the ordering
+structurally (deterministic call before `askWikiQuestion` before the Anthropic call in
+`routes.ts`) so moving this block silently hands these questions back to a model
+without failing any behavioural test.
+
+## Route contracts easy to break silently
+
+- **`requireNonDemo` gates the real Plaid write routes.** `POST
+  /api/integrations/plaid/link-token` and `/exchange` require both `requireAuth` and
+  `requireNonDemo` — demo sessions are handed out unauthenticated, so `requireAuth`
+  alone does not exclude them, and a demo session must never reach live Plaid or
+  persist a real access token. Reads (`/status`, `/connections`) and `/disconnect` stay
+  open to demo accounts.
+- **`GET /api/integrations/ingest-status`** (`requireAuth`) is the only signal that a
+  fresh demo tenant's starter seed is still being projected into the ledger — the
+  document list alone cannot distinguish "seeding in progress" from "genuinely nothing
+  yet", which is how a fresh account once showed a settled-looking, understated total.
+  Bounded to a young demo account, so a user who later deletes a starter document is
+  not told forever that their ledger is still importing.
+- **Unmatched `/api/*` → JSON 404**, registered LAST in `routes.ts`, after every real
+  API route and before the SPA catch-all `server/vite.ts`(dev)/`server/static.ts`(prod)
+  install. Without it, an unknown or deleted API path falls through to that catch-all
+  and answers 200 + the `index.html` shell — a removed endpoint (like the old shared
+  `/api/auth/demo`) would look alive from outside the process.
+
+## Liabilities read obligations, not invoices — and AP is AR's complement
+
+`client/src/lib/liabilities.ts` sums `/ledger/obligations`, not `/ledger/invoices`: the
+invoice feed carries no payroll records at all, so the old invoice-derived total
+understated what the tenant owed. Three surfaces share this one figure by construction
+(the Overview metric card, the Cash Flow metric, the Payables tab total) — see the
+module's own doc comment and `liabilities.test.ts`'s cross-surface guard.
+
+**The `"ap"` scenario marker is demo-seed-only — never test an invoice for it
+directly.** `metadata.scenario === "ap"` is written ONLY by brain-core's demo seeder;
+no real tenant's invoice is ever marked `"ap"`. `metadata.scenario === "ar"`, by
+contrast, is written by brain-core's production projection path for every tenant, real
+or demo, and is reliable. So AP must be derived as the COMPLEMENT of AR
+(`scenario !== "ar"`), never as a positive `"ap"` test — `unpaidApInvoices()` in
+`lib/liabilities.ts` is the one place this filter lives, and every consumer (Cash
+Flow's bill rows, the Payables bill popup, `debtIdentity.ts`'s obligation↔invoice
+matching, the overdue-receivables banner) goes through it rather than re-implementing
+the filter inline.
+
 ## Demo vs real accounts — synthetic data fence
 
 Real signups must start **genuinely empty**: zero connected sources, zero raw-layer
@@ -166,9 +216,13 @@ ingestion, zero ledger, no disguised mock data. Only the demo accounts may ever 
 seeded/synthetic data.
 
 - **Who is demo:** decided ONLY by `server/demoUsers.ts` (`isDemoEmail`) —
-  `demo@brain.fi` (shared, `POST /api/auth/demo`) and `demo-fresh-*@brain.fi`
-  (`POST /api/auth/demo-fresh`). `publicUser` (server/auth.ts) exposes it to the
-  client as `user.isDemo`; never re-derive it anywhere else.
+  `demo-fresh-*@brain.fi` (`POST /api/auth/demo-fresh`) and `demo@brain.fi`, whose
+  shared `POST /api/auth/demo` route was DELETED. That route logged every visitor
+  into one account and one tenant, so each inherited the last one's data; the
+  address stays classified as demo only so any surviving row is never mistaken for
+  a real signup. Do not reintroduce the route — `server/auth-security.test.ts` pins
+  it as 404. `publicUser` (server/auth.ts) exposes demo-ness to the client as
+  `user.isDemo`; never re-derive it anywhere else.
 - **Server fence:** the one-time starter seed (`server/brain/seed.ts`, durable-mode
   create-tenant branch in `server/brain/auth.ts`) runs ONLY when the app user's email
   is a demo address. A real user's tenant is created with NO `/raw/ingest` calls.
@@ -194,7 +248,7 @@ another account's activity as its own.
 
 `applyUserScopedResets(u)` in `client/src/lib/authContext.tsx` is the single funnel.
 `setUser` calls it and nothing else re-implements it, so it covers every path —
-`loginWithPassword`, `register`, `loginDemo`, `loginDemoFresh`, session bootstrap,
+`loginWithPassword`, `register`, `loginDemoFresh`, session bootstrap,
 and `logout` (via `setUser(null)`).
 
 Currently resets:
@@ -1010,6 +1064,11 @@ Demo mode (default) is byte-identical to before — `/api/brain/tenancy` returns
   no edit path) was cut from the Profile section. `useBrainPolicy`, `autoApproveLimitFromPolicy`,
   and `groupPolicyAmount` are no longer imported by `SettingsPage.tsx`. Revisit once policy editing
   has a real home.
+  - **QA impact**: `scripts/qa-policy-read-states.mjs` was the dedicated script verifying the four
+    policy-read states (200 / 404-no-policy / 401-403 refused / 5xx broken) via the now-removed
+    card. It has been **deleted**. `scripts/qa-settings-degraded-states.mjs` had six assertions on
+    `setting-row-auto-approve-limit` and `text-auto-approve-limit`; those are also **removed**.
+    If a new surface re-exposes policy-read states, add new QA coverage — do not assume it exists.
 - **Notifications hidden from nav**: The "Notifications" entry was removed from `NAV_ITEMS`.
   The section itself (`NotificationsFigma`) and its entry in `VALID_SECTIONS` remain intact so
   a direct `?section=notifications` deep-link still resolves rather than 404ing.

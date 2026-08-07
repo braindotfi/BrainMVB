@@ -34,7 +34,8 @@
 - [brain-core sources registry](brain-sources-registry.md) — /v1/sources is a 4th source surface (empty upstream today); demo rows hide disconnect; type-keyed rows must not inherit per-record restrictions.
 - [Client route integrity](client-route-integrity.md) — wouter sends unregistered navigate() targets to NotFound silently; deep-link params need a consuming effect, not a mount-only initializer.
 - [Proposal evidence refs](brain-proposal-evidence-refs.md) — refs come bare AND as `wiki:` URIs; wiki refs are context not subject; `pd_`/`evt_` never resolve; probe live, don't trust mocks.
-- [Assistant answer status](assistant-answer-status.md) — evidence can accompany no-answer or error; trust explicit answered status, and keep trailing cash flow distinct from forecasting.
+- [Assistant tier order](assistant-tier-order.md) — the local deterministic tier answers before core's wiki route, so core-side audit traces legitimately show zero wiki.question events.
+- [Assistant answer status](assistant-answer-status.md) — refusals arrive as HTTP 200 prose; non-chat surfaces must check answered AND wording, never cache one; evidence ≠ answer.
 - [Guarding generated fixtures](generated-fixture-guards.md) — generated PDF/XLSX can't be hash-pinned (random /ID, zip mtimes); read facts back via PDF /Keywords; avoid tautological asserts.
 - [Proposal presentation contract](brain-proposal-presentation-contract.md) — doc's action table is aspirational: bind to available_decisions; policy_id null; core puts raw ids in prose; band ≠ pct.
 - [brain-core list caps & by-id](brain-list-endpoint-caps.md) — list reads cap silently (20 rows, no cursor) so bulk prefetch needs a by-id fallback; obligations by-id is 404; no email/reminder/message data exists.
@@ -47,6 +48,7 @@
 - [Narrow centre column](narrow-centre-column-layout.md) — the 3-panel shell leaves ~420px for content; use auto-fit/minmax grids, never viewport breakpoints, or figures clip.
 - [Policy rule order](policy-rule-order.md) — the VM short-circuits on first match; a UI "runs automatically up to X" claim must respect rule ORDER and applies_to, not just execute:"auto".
 - [Source freshness captions](source-freshness-captions.md) — only brain-core sources publish last_synced_at; a connection time is never a sync time, and sync_disabled is never "overdue".
+- [QA row selection](qa-fixture-row-selection.md) — never assert off `rows.first()`; pick the row by the action needed, and separate a spent tenant from a real regression.
 - [QA write guard](qa-write-guard.md) — QA scripts drive a live tenant, so writes are denied unless declared; route order + page.request bypass are the traps.
 - [Honest unsupported UI](honest-unsupported-ui.md) — visibly-disabled + honest label beats a placeholder; never invent specifics (channels, thresholds, recipients) in a dead control.
 - [Storage-backend test coverage](storage-backend-test-coverage.md) — storage class is picked at load from DATABASE_URL; a test seeding via one backend's internals = zero coverage on the other, not flake.
@@ -70,3 +72,12 @@
 - [Agent identity vs actor](agent-identity-vs-actor.md) — `actor` is often the human approver; agent-ness survives only in the actor_ref lookup PATH, so classify at map time or omit the prefix.
 - [Brain agent type resolution](brain-agent-type-resolution.md) — `proposing_agent` ULID ≠ analysis agent type; pass proposals into useBrainAuditRecords via inline useRef map (not module-level cache).
 - [brain-core extraction and obligations fixes](brain-core-extraction-fixes.md) — upload loop fix (fail terminally, not retry) + obligations `?direction=payable` filter; BFF proxy still needs direction param.
+- [Payable → invoice join](payable-invoice-join.md) — obligations carry no invoice ref; infer on counterparty+amount+due-day, counted one-for-one, unpaid AP only; unreadable feed ≠ "no invoice".
+- [Liabilities source contract](liabilities-source-contract.md) — "what we owe" = obligations feed, never invoices (no payroll/tax); payable filter fails open; RawObligation is permissive so TS can't catch a wrong source.
+- [Ledger figures arrive in waves](ledger-figures-arrive-in-waves.md) — a complete, consistent ledger read can still be short (truncated / unprojected / pre-seed); gate totals, caption floors, poll.
+- [Deterministic assistant answers](deterministic-assistant-answers.md) — numeric questions skip the model; an ABSENT next_cursor field ≠ explicit null, and tolerant parsers must turn strict at any figure.
+- [Counterparty create type](counterparty-create-type.md) — core keys its upsert on `type` and never coerces; a literal field in a BFF sanitiser silently discards the client's value.
+- [Informational counterparty rows](informational-counterparty-rows.md) — non-actionable rows need both-halves predicates that fail open, and their own hidden-while-empty tier, never a work queue.
+- [Receivables source contract](receivables-source-contract.md) — AR = invoices with positive scenario==="ar"; the receivable obligations feed is an incomplete subset; totals need a finished cursor walk.
+- [Auth test harness env](auth-test-harness-env.md) — the PG session store loses a race to an immediate follow-up request (looks like flake); load-time env reads force a dynamic import.
+- [API 404 vs SPA catch-all](api-404-vs-spa-catchall.md) — unmatched /api paths get 200+HTML from the SPA catch-all; keep the JSON-404 last in registerRoutes or removal tests go false-green.

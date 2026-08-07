@@ -52,6 +52,16 @@ const Card = ({ children, testId }: { children: ReactNode; testId?: string }) =>
   </div>
 );
 
+const TableCard = ({ children, testId }: { children: ReactNode; testId?: string }) => (
+  <div
+    data-testid={testId}
+    className="rounded-[16px] overflow-hidden border border-solid border-[#1d2132]"
+    style={{ background: "#0a0c10" }}
+  >
+    {children}
+  </div>
+);
+
 const SectionLabel = ({ children, testId }: { children: ReactNode; testId?: string }) => (
   <div className="flex items-center min-h-[36px]">
     <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]" data-testid={testId}>
@@ -136,7 +146,8 @@ function SourceRow({
       className={`flex flex-col gap-[8px] px-[16px] py-[12px] ${last ? "" : "border-b border-[#1d2132]"} ${clickable ? "cursor-pointer transition-colors hover:bg-[#11141b] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631ee] focus-visible:ring-inset" : ""}`}
     >
       <div className="flex items-center gap-[12px]">
-        <div className="flex-1 min-w-0 flex flex-col gap-[2px]">
+        {/* 4px between title and subtext — the record spacing used everywhere else. */}
+        <div className="flex-1 min-w-0 flex flex-col gap-[4px]">
           <div className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] truncate">
             {title}
           </div>
@@ -476,7 +487,7 @@ export function SourcesSection() {
 
       <div className="flex flex-col gap-[4px]">
         <SectionLabel testId="label-connected-accounts">Connected Accounts</SectionLabel>
-        <Card testId="list-connected-accounts">
+        <TableCard testId="list-connected-accounts">
           {accountRows.length === 0 ? (
             <EmptyRow
               states={accountStates}
@@ -499,7 +510,7 @@ export function SourcesSection() {
               />
             ))
           )}
-        </Card>
+        </TableCard>
       </div>
 
       <AccountDetailPopup
@@ -520,7 +531,7 @@ export function SourcesSection() {
 
       <div className="flex flex-col gap-[4px]">
         <SectionLabel testId="label-documents">Documents</SectionLabel>
-        <Card testId="list-documents">
+        <TableCard testId="list-documents">
           {docs.length === 0 ? (
             <EmptyRow
               states={[docState]}
@@ -546,7 +557,7 @@ export function SourcesSection() {
               />
             ))
           )}
-        </Card>
+        </TableCard>
       </div>
     </div>
   );

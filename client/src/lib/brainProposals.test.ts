@@ -102,3 +102,19 @@ describe("agentKeyForProposalType", () => {
     }
   });
 });
+
+/* Same contract as the PaymentIntent queues in brainQueue.ts: a proposal decided
+   by a teammate must not stay actionable here across a tab switch. No fan-out on
+   this hook (the list rows are already full detail records), so the one list
+   query carries it. Focus-only, no interval. */
+describe("the proposals list refreshes when the operator comes back to the tab", () => {
+  const src = (): string => require("fs").readFileSync("client/src/lib/brainProposals.ts", "utf8");
+
+  it("opts the list read into the focus refetch", () => {
+    expect(src()).toContain("refetchOnWindowFocus: true");
+  });
+
+  it("adds no polling interval", () => {
+    expect(src()).not.toContain("refetchInterval");
+  });
+});

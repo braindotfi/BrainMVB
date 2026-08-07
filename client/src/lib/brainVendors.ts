@@ -1,5 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { Vendor, TrustStatus, TrustState, VendorTier } from "./vendorTypes";
+import { ledgerPollMs } from "./ledgerRead";
+import { useIngestInProgress } from "./brainRefresh";
 
 /* ── Live brain-core counterparties → Vendor cards ────────────────────────────
    Replaces MOCK_VENDORS as the VendorsPage/VendorDetailPopup data source with
@@ -64,6 +66,45 @@ export interface BrainCounterparty {
    *  validated against the known set rather than cast — an unrecognised value
    *  is treated as "field not reported", never coerced into a review state. */
   trust_status?: string | null;
+  /** Free-form upstream metadata. Only `source_kind` is read (see the payroll
+   *  placeholder predicate below). Typed loosely because the BFF forwards this
+   *  read verbatim: what arrives is brain-core's shape, not ours. */
+  metadata?: Record<string, unknown> | null;
+}
+
+/** `metadata.source_kind` as a string, or undefined when the field is absent or
+ *  is not a string. Never dereferenced blind: `metadata` is proxied verbatim, so
+ *  a missing or differently-shaped object must read as "not reported" rather
+ *  than throw. */
+function readSourceKind(metadata: unknown): string | undefined {
+  if (typeof metadata !== "object" || metadata === null) return undefined;
+  const value = (metadata as { source_kind?: unknown }).source_kind;
+  return typeof value === "string" ? value : undefined;
+}
+
+/* ── Payroll register placeholders (brain-core #507) ──────────────────────────
+   Payroll runs are ingested against a PLACEHOLDER counterparty rather than
+   against each employee. It is a grouping row for a source document, not a
+   party anyone pays directly, so no trust transition means anything on it:
+   granting, pausing, restoring or acknowledging it would record a decision
+   about a bookkeeping artefact.
+
+   The predicate is deliberately BOTH halves. `type === "other"` alone is a
+   broad bucket that real counterparties land in, and those keep their full
+   trust controls — only the payroll placeholder is singled out. An absent or
+   unrecognised `source_kind` therefore leaves a row fully actionable, which is
+   the safe direction to fail: a normal row that keeps its controls is a
+   cosmetic miss, whereas hiding controls on a real counterparty would strand
+   it with no way to review it. */
+export function isPayrollRegisterPlaceholder(cp: BrainCounterparty): boolean {
+  return cp.type === "other" && readSourceKind(cp.metadata) === "payroll_register";
+}
+
+/** Whether trust transitions apply to this row at all. Informational rows are
+ *  read-only records, so every trust control is omitted rather than disabled —
+ *  there is no state in which they become available. */
+export function supportsTrustActions(v: Vendor): boolean {
+  return v.informationalSource === undefined;
 }
 
 const TRUST_STATES: readonly TrustState[] = ["unreviewed", "trusted", "paused", "acknowledged"];
@@ -120,6 +161,7 @@ export function mapCounterpartyToVendor(cp: BrainCounterparty): Vendor {
   const totalPaid = toAmount(cp.payment_total);
   const trustState = readTrustState(cp.trust_status);
   const trustStatus = deriveTrustStatus(cp, paymentCount, trustState);
+  const informationalSource = isPayrollRegisterPlaceholder(cp) ? ("payroll_register" as const) : undefined;
   const riskLevel =
     cp.risk_level === "sanctioned" || cp.risk_level === "high" ? cp.risk_level : null;
 
@@ -130,6 +172,7 @@ export function mapCounterpartyToVendor(cp: BrainCounterparty): Vendor {
     trustStatus,
     trustState,
     segment: cp.type === "customer" ? "customer" : "vendor",
+    informationalSource,
     riskLevel,
     // ponytail: brain-core's counterparty row carries no payout account
     // reference (that lives on payment rails, not the counterparty). "----"
@@ -158,8 +201,9 @@ export function mapCounterpartyToVendor(cp: BrainCounterparty): Vendor {
         ]
       : [],
     // Brain "suggests" trust from real payment history — the same signal that
-    // makes a counterparty "known". Never true for a risk-flagged row.
-    eligibleForTrust: trustStatus === "known",
+    // makes a counterparty "known". Never true for a risk-flagged row, and
+    // never for an informational row: there is no trust to suggest granting.
+    eligibleForTrust: informationalSource === undefined && trustStatus === "known",
     ruleIds: [],
   };
 }
@@ -183,9 +227,20 @@ export function mapCounterpartyToVendor(cp: BrainCounterparty): Vendor {
       marking a counterparty reviewed would be a trust-field write, which
       brain-core rejects outright. There is nowhere to persist it.
 
-   Risk always wins. A row someone flagged or dismissed is still risk-flagged,
-   and a risk-flagged row is never quietly settled by a click. */
+   Risk wins over every user action. A row someone flagged or dismissed is still
+   risk-flagged, and a risk-flagged row is never quietly settled by a click.
+
+   The one thing ahead of risk is a row that carries no controls at all (see
+   below): risk decides how urgently something needs reviewing, but it cannot
+   put work in a queue that has no way to carry it out. Such a row keeps its
+   flags rendered — it is moved, not silenced. */
 export function isNeedsReview(v: Vendor): boolean {
+  /* Informational rows carry no trust controls, so they are not work anyone can
+     finish. Counting them here would leave the Needs Review badge permanently
+     above zero with a row that cannot be cleared, which is what makes the badge
+     worth looking at. They are not dropped — vendorTier files them under their
+     own chip. */
+  if (v.informationalSource !== undefined) return false;
   if (v.riskLevel === "high" || v.riskLevel === "sanctioned") return true;
   if (v.trustState !== undefined) return v.trustState === "unreviewed";
   /* "known" is included here: a counterparty with payment history but no
@@ -198,7 +253,7 @@ export function isNeedsReview(v: Vendor): boolean {
    Exactly one tier per row, first match wins. This is the same invariant the
    needs-review predicate exists to protect, extended to the whole chip row: a
    row shown under two chips would let two counts disagree about the same work.
-   Needs Review therefore outranks Flagged — a risk-flagged row that someone
+   Needs Review therefore outranks Paused — a risk-flagged row that someone
    also paused is unfinished business, not parked business.
 
    Returns null when no tier fits. Every combination that is reachable from
@@ -207,6 +262,12 @@ export function isNeedsReview(v: Vendor): boolean {
    null so that a future regression is detectable in production telemetry
    rather than silently losing rows. */
 export function vendorTier(v: Vendor): VendorTier | null {
+  /* Informational rows first, ahead of the risk check, because tier order is a
+     statement about what the user can DO and the answer here is "nothing" in
+     every case. A risk signal on a placeholder is not lost by this: flags still
+     render on the row and in its detail popup. Filing it under Needs Review
+     instead would promise a review that has no controls to carry it out. */
+  if (v.informationalSource !== undefined) return "informational";
   /* Suggested slots in HERE, first, once brain-core confirms which provenance
      values (if any) mean "Brain inferred this, nobody has confirmed it". Order
      is the whole decision: a suggested row is also unreviewed, so whichever
@@ -218,7 +279,7 @@ export function vendorTier(v: Vendor): VendorTier | null {
      substitute a locally-invented predicate; a tier the user can act on has to
      mean something upstream can vouch for. */
   if (isNeedsReview(v)) return "needsReview";
-  if (v.trustState === "paused") return "flagged";
+  if (v.trustState === "paused") return "paused";
   /* Dismissed rows live here too, badged "Reviewed". They are not a trust grant,
      but they have been dealt with, and a row a user acted on must stay findable
      somewhere — otherwise dismissing looks like deleting. */
@@ -239,13 +300,93 @@ export function isReviewedOnly(v: Vendor): boolean {
   return v.trustState === "acknowledged" && v.trustStatus !== "trusted";
 }
 
+/* ── Detail-popup status chip ─────────────────────────────────────────────────
+   Deliberately a mirror of vendorTier's branch order, and deliberately NOT a read
+   of trustStatus. That field collapses causes: it reports `under_review` for both
+   a pause the user performed and a risk level brain-core assigned, and it reports
+   `trusted` before it looks at risk at all. Every chip keyed on it has therefore
+   ended up asserting a decision nobody made — a risk-marked row badged as paused,
+   an acknowledged row badged as paused, a granted-then-sanctioned row badged as
+   trusted while sitting in the review queue.
+
+   Living next to vendorTier in the same order is what makes "the chip names the
+   tab the row is filed under" a checkable claim rather than an aspiration:
+   CHIP_KIND_TIER below states the correspondence and a test walks every
+   combination of status, state, risk and informational source against it.
+
+   One deliberate refinement over the tier: a dismissed row shares the Trusted
+   tier but is not a trust grant, so it gets its own kind rather than being
+   labelled Trusted — the same distinction the row list draws with its Reviewed
+   badge. Widening it to "Trusted" would manufacture a grant out of a dismissal. */
+export type TrustChipKind =
+  | "informational"
+  | "needsReview"
+  | "paused"
+  | "reviewed"
+  | "trusted"
+  | "unclassified";
+
+export function trustChipKind(v: Vendor): TrustChipKind {
+  if (v.informationalSource !== undefined) return "informational";
+  if (isNeedsReview(v)) return "needsReview";
+  if (v.trustState === "paused") return "paused";
+  if (isReviewedOnly(v)) return "reviewed";
+  if (v.trustStatus === "trusted") return "trusted";
+  /* Mirrors vendorTier's own unreachable branch. The row does not render in any
+     list, but the popup is reachable by deep link, so the chip still needs an
+     answer — and it must not be a confident one. */
+  return "unclassified";
+}
+
+/** The tier each chip kind must resolve to. The popup and the list disagreeing
+ *  about a row is the failure this exists to make impossible. */
+export const CHIP_KIND_TIER: Record<TrustChipKind, VendorTier | null> = {
+  informational: "informational",
+  needsReview: "needsReview",
+  paused: "paused",
+  reviewed: "trusted",
+  trusted: "trusted",
+  unclassified: null,
+};
+
+/* The popup's heading sat directly above that chip and derived itself from
+   trustStatus, which is how it came to read "Trusted Vendor" — in the largest
+   text on the surface — for a granted counterparty brain-core had since marked
+   sanctioned, while the chip beneath it correctly read "Needs Review". Deriving
+   it from the chip kind instead makes that disagreement unrepresentable. */
+export type TrustTitleKind = TrustChipKind | "new";
+
+export function trustTitleKind(v: Vendor): TrustTitleKind {
+  const kind = trustChipKind(v);
+  /* The single place the heading is deliberately finer than the chip: a
+     first-seen counterparty does need review, but "New Vendor" says why in a way
+     "Review Vendor" does not. Risk-marked rows are excluded from this refinement
+     — a sanctioned row must read as review no matter how new it is. */
+  if (kind === "needsReview" && v.trustStatus === "new" && !v.riskLevel) return "new";
+  return kind;
+}
+
+/** As CHIP_KIND_TIER, for the heading. Both are walked over the full input space
+ *  in the tests — the heading, the chip and the tab must name one state. */
+export const TITLE_KIND_TIER: Record<TrustTitleKind, VendorTier | null> = {
+  ...CHIP_KIND_TIER,
+  new: "needsReview",
+};
+
 /** Why a row sits in Needs Review. Risk outranks newness when both apply. */
 export function reviewReasonLabel(v: Vendor): string | null {
   if (!isNeedsReview(v)) return null;
   if (v.riskLevel === "sanctioned") return "Risk: sanctioned";
   if (v.riskLevel === "high") return "Risk: high";
-  if (v.trustStatus === "under_review") return "Flagged for review";
+  if (v.trustStatus === "under_review") return "Paused for review";
   return "New";
+}
+
+/** What an informational row IS, for its row chip. Named rather than left blank
+ *  so the list explains itself: the tab says these rows are not actionable, this
+ *  says why this one is here. */
+export function informationalReasonLabel(v: Vendor): string | null {
+  return v.informationalSource === "payroll_register" ? "Payroll register" : null;
 }
 
 /** Mock fixtures predate the Vendors/Customers split; treat them as vendors. */
@@ -253,10 +394,36 @@ export function vendorSegment(v: Vendor): "vendor" | "customer" {
   return v.segment ?? "vendor";
 }
 
+/**
+ * The counterparty list, kept fresh the same way the Ledger money feeds are.
+ *
+ * Two things go stale here, and the app's query defaults (`staleTime: Infinity`,
+ * no refetch) meant both stayed stale until the user reloaded by hand:
+ *
+ *   1. **Trust decisions made somewhere else.** The in-tab case is already covered —
+ *      every trust action invalidates this key, and all five consumers share it, so
+ *      one grant repaints the panel, the rules picker and global search together.
+ *      What was NOT covered is the same account open in a SECOND browser tab, or a
+ *      teammate acting on the same tenant: that tab kept showing the pre-decision
+ *      state indefinitely. `refetchOnWindowFocus` is the real fix for that, since
+ *      returning to a tab is exactly when its stale rows are about to be read.
+ *
+ *   2. **Rows that have not landed yet.** Counterparties are projected from ingested
+ *      documents in the same asynchronous waves as obligations and invoices — a
+ *      payroll register deposits its rows well after the upload returns — so the
+ *      list is a floor while an import is running, not a total.
+ *
+ * Hence the shared interval rather than a local constant: fast while documents are
+ * still being projected, slow otherwise. Polling pauses when the window is not
+ * focused, so a backgrounded tab costs nothing.
+ */
 export function useBrainVendors() {
+  const ingesting = useIngestInProgress();
   const query = useQuery<ListCounterpartiesResponse>({
     queryKey: ["/api/brain/ledger/counterparties"],
     retry: false,
+    refetchInterval: ledgerPollMs(ingesting),
+    refetchOnWindowFocus: true,
   });
   return {
     isLoading: query.isLoading,

@@ -250,6 +250,13 @@ export function useBrainProposals(): { isLoading: boolean; isError: boolean; pro
     // proposal producer ships and volume can exceed one page
     queryKey: ["/api/brain/proposals?limit=100"],
     retry: false,
+    /* Focus refetch, deliberately without an interval. This is a shared work
+       queue: a proposal decided by a teammate stays actionable here until
+       something refetches, and the app's defaults (infinite stale time, no
+       interval, no focus refetch) mean nothing ever does. Returning to a
+       backgrounded tab is both the realistic moment for that and the dangerous
+       one — it is when the operator is about to act on what they see. */
+    refetchOnWindowFocus: true,
   });
   return {
     isLoading: list.isLoading,

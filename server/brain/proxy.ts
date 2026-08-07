@@ -18,7 +18,8 @@
 import { Router, type Request, type Response } from "express";
 import { requireAuth } from "../auth";
 import { brainAuthConfigured, brainTenancyMode, platformServiceConfigured } from "./config";
-import { getBrainSession, registerBrainSession, NoTenantError } from "./auth";
+import { isDemoEmail } from "../demoUsers";
+import { getBrainSession, getCachedBrainTenantId, registerBrainSession, NoTenantError } from "./auth";
 import { withBrainBaseUrl } from "./baseUrl";
 import { createTenant, consumeInvite, TenancyApiError } from "./tenancy";
 import { storage } from "../storage";
@@ -35,6 +36,7 @@ import {
   deactivateMember,
   getApprovalPolicyFacts,
   askWikiQuestion,
+  isKnownWikiRefusal,
   createCounterparty,
   type PolicyAction,
   type CreateCounterpartyBody,
@@ -42,6 +44,20 @@ import {
 
 import { enrichProposals } from "./proposalEnrichment";
 import { RECOMMENDATION_PROMPT } from "@shared/cannedPrompts";
+
+/* brain-core's counterparty `type` enum. Kept here because this is the only
+   write path that sets one, and core requires the field explicitly on create. */
+const COUNTERPARTY_TYPES: readonly string[] = [
+  "merchant",
+  "vendor",
+  "customer",
+  "employer",
+  "bank",
+  "wallet",
+  "exchange",
+  "tax_authority",
+  "other",
+];
 
 export function createBrainProxyRouter(): Router {
   const router = Router();
@@ -174,6 +190,31 @@ export function createBrainProxyRouter(): Router {
         if (entry.expiresAt <= now) recommendationCache.delete(key);
       }
       const answer = await withBrainBaseUrl(baseUrl, () => askWikiQuestion(token, RECOMMENDATION_PROMPT));
+      /* A refusal is not an insight. When Wiki Q&A cannot ground an answer it still
+         returns 200 with prose — "I couldn't produce a grounded answer from the
+         available evidence." — and passing that through rendered it on the dashboard
+         as the tenant's spending insight, unprompted and with no question in sight.
+         `answered` folds together explicit `answered:false`, empty content, and — for
+         legacy responses that omit the field — known refusal wording.
+
+         The phrase check is repeated here rather than left to `answered` because
+         `answered` only consults the wording when the field is ABSENT: an upstream that
+         sets `answered:true` and returns a refusal anyway would sail straight through.
+         Chat can afford to trust the flag, since it labels a no-answer as such. This
+         card cannot: it renders bare prose as the tenant's own insight, and there is no
+         reading under which "I couldn't produce a grounded answer" is one.
+
+         Treated as a failure, and failures are never cached: caching would pin the
+         refusal on the dashboard for the full 15 minutes even after brain-core
+         recovered. `{}` is the same shape the unconfigured and error paths return, so
+         the caller falls back to its own neutral line. */
+      if (
+        answer.answered === false ||
+        answer.raw.trim().length === 0 ||
+        isKnownWikiRefusal(answer.raw)
+      ) {
+        return res.json({});
+      }
       recommendationCache.set(cacheKey, {
         text: answer.raw,
         evidenceIds: answer.evidenceIds,
@@ -214,11 +255,29 @@ export function createBrainProxyRouter(): Router {
   // invite link" gate after login). Cheap: one local DB read, no brain-core call.
   router.get("/tenancy", async (req: Request, res: Response) => {
     const mode = brainTenancyMode();
-    // Demo is the only genuinely ephemeral mode. Production and durable both back
-    // the user with a real, persistent brain-core tenant recorded in brain_identities,
-    // so both report that tenant honestly instead of a bare linked:true.
+    const userId = req.session.userId!;
+
+    // Demo global mode: always ephemeral, no brain_identities row ever written.
     if (mode === "demo") return res.json({ mode, linked: true });
-    const identity = await storage.getBrainIdentity(req.session.userId!);
+
+    // Durable/production mode: demo-fresh users (isDemoEmail) are routed through
+    // provisionDemoTenant() which intentionally never writes a brain_identities row
+    // (ephemeral session-scoped tenant, fresh per demo-fresh login). For them the
+    // tenantId lives only in the in-memory session cache, not in the DB.
+    //
+    // Without this check, getBrainIdentity() returns null for demo-fresh users in
+    // a durable deployment and the response is {mode:"durable",linked:false} — the
+    // client never learns the session tenantId and the demo experience breaks.
+    //
+    // The user lookup is one DB read (same cost as the getBrainIdentity() below);
+    // we short-circuit to the demo-style response so no brain_identities read fires.
+    const user = await storage.getUser(userId);
+    if (isDemoEmail(user?.email)) {
+      const tenantId = getCachedBrainTenantId(userId) ?? undefined;
+      return res.json({ mode: "demo", linked: true, tenantId });
+    }
+
+    const identity = await storage.getBrainIdentity(userId);
     return res.json({
       mode,
       // Durable auto-creates the tenant on first brain-core use, so an unlinked
@@ -472,13 +531,21 @@ export function createBrainProxyRouter(): Router {
     }
   });
 
-  // POST /api/brain/ledger/counterparties - manually add a vendor (counterparty).
+  // POST /api/brain/ledger/counterparties - manually add a counterparty.
   //
   // MEMBER token (a ledger write, not an agent action). Only identity fields are
   // forwarded - never an `actor` (core derives it from the token) and never a
   // payment/bank/trust field (core rejects those; we don't even accept them from
   // the client). Upsert: core returns 201 (created) or 200 (merged into an
   // existing counterparty) - relayed verbatim.
+  //
+  // `type` IS an identity field and must be forwarded. Core requires it
+  // explicitly, accepts "customer", and persists what it is given - its upsert
+  // key includes the type, so there is no server-side coercion to fall back on.
+  // This route used to hardcode "vendor", which silently filed every customer
+  // the Add Customer box created as a vendor and put the row in the wrong
+  // segment. The client's value now wins; "vendor" is only the default for a
+  // request that names no type (the Add Vendor box sends none).
   router.post("/ledger/counterparties", async (req: Request, res: Response) => {
     if (!brainAuthConfigured()) return unconfigured(res);
     const raw = req.body as Record<string, unknown> | undefined;
@@ -486,7 +553,17 @@ export function createBrainProxyRouter(): Router {
     if (!name) {
       return res.status(400).json({ error: "invalid_request", message: "name is required" });
     }
-    const body: CreateCounterpartyBody = { name, type: "vendor" };
+    // Validated against core's enum rather than relayed blind: an unknown type
+    // is a client bug, and rejecting it here beats creating a row under a type
+    // no segment renders, where the user could never find it again.
+    const rawType = typeof raw?.type === "string" ? raw.type.trim() : "";
+    if (rawType.length > 0 && !COUNTERPARTY_TYPES.includes(rawType)) {
+      return res.status(400).json({
+        error: "invalid_request",
+        message: `type must be one of: ${COUNTERPARTY_TYPES.join(", ")}`,
+      });
+    }
+    const body: CreateCounterpartyBody = { name, type: rawType || "vendor" };
     const optionalStrings = ["display_name", "category", "contact_email", "country", "tax_id"] as const;
     for (const key of optionalStrings) {
       const v = raw?.[key];

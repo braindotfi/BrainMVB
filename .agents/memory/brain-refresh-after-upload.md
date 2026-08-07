@@ -1,7 +1,53 @@
 ---
 name: Refreshing brain data after document upload
-description: Why uploads don't refresh Home/Finances/Inbox on their own, and what a correct fix has to survive.
+description: Why uploads don't refresh Home/Finances/Inbox on their own, what a correct fix has to survive, and why invalidation alone never fixes a second tab.
 ---
+
+# Invalidation only reaches the tab that acted
+
+`invalidateQueries` after a write repaints every consumer **in that browser tab** —
+they share a query key and a cache, so one grant updates the panel, the pickers and
+search together. It does nothing for a second tab on the same account, or a teammate
+on the same tenant: that tab holds its own cache and, under this app's defaults, is
+never told anything changed.
+
+So "the write invalidates" is not the same claim as "the UI is fresh", and a bug
+report saying *changes don't show up without a manual refresh* is usually about the
+second tab, not a missing invalidation. `refetchOnWindowFocus: true` is the fix that
+actually addresses it — returning to a backgrounded tab is precisely when its stale
+rows are about to be read and acted on. A slow interval is the backstop for a tab
+left open and focused.
+
+**How to apply:** any read that a user can act on from more than one place wants the
+shared ledger interval plus focus refetch, not just invalidation at its write sites.
+Take the interval from the shared helper rather than a local constant, so the feeds
+sitting next to each other on screen cannot drift onto different schedules.
+
+**Watch out:** hooks that fan out (a list query whose ids spawn a per-id detail query
+each) multiply every *interval tick* by the number of rows, so they usually want focus
+refetch without an interval — one bounded burst per focus, not a standing multiplier.
+
+## On a fan-out hook, refresh whichever query holds the filter
+
+Refreshing the list is the intuitive fix and can be worth nothing. What matters is
+where the predicate that removes a settled row lives:
+
+- If the list's id-selection has **no status predicate** (it selects on "has a linked
+  record" or similar), a settled row keeps its id on the refreshed list. The detail
+  record is what carries `status`, so leaving the details on infinite stale time means
+  the refreshed list re-renders exactly the same stale rows. The list refetch is pure
+  cost.
+- The fan-out therefore needs the focus refetch **too** — and it is the half that
+  actually fixes the bug.
+
+**Why:** the list/detail split hides which query is authoritative for the thing the
+user is looking at. "The queue refreshed" is not the same claim as "the queue is
+correct" when the filter reads a different query's cache.
+
+**How to apply:** before adding refetch options to a fan-out hook, find the predicate
+that drops a decided/settled row and follow it to the query that supplies its input.
+Give that query the refetch, then decide whether the list needs one as well. A guard
+that asserts only the list refetches will pass while the surface stays broken.
 
 # Refreshing /api/brain/* after an upload
 

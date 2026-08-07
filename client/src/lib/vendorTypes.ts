@@ -12,8 +12,8 @@ export type TrustStatus = "new" | "known" | "trusted" | "under_review";
  *  derivation. See brainVendors.ts for the predicate and the mapping rules.
  *    unreviewed   — nobody has acted on it (default)
  *    trusted      — user granted trust ("Confirmed" on the Customers segment)
- *    paused       — user flagged it
- *    acknowledged — user dismissed it without granting or flagging */
+ *    paused       — user paused trust for it
+ *    acknowledged — user dismissed it without granting or pausing */
 export type TrustState = "unreviewed" | "trusted" | "paused" | "acknowledged";
 
 /** Which segment of the Counterparties screen a row belongs to. brain-core's
@@ -24,7 +24,7 @@ export type CounterpartySegment = "vendor" | "customer";
 /** The chip a row is filed under. Named by meaning, not by label: the Customers
  *  segment renders "trusted" as "Confirmed", and the label is the only thing
  *  that differs — same state, same endpoint. */
-export type VendorTier = "needsReview" | "flagged" | "trusted" | "suggested";
+export type VendorTier = "needsReview" | "paused" | "trusted" | "suggested" | "informational";
 
 export type VendorFlagKind =
   | "bank_detail_change"
@@ -66,6 +66,13 @@ export interface Vendor {
   /** brain-core `risk_level`, kept only when it is review-worthy. Drives the
    *  short reason chip; absent on fixtures that carry hand-written flags. */
   riskLevel?: "high" | "sanctioned" | null;
+  /** Set when the row is a placeholder brain-core keeps for a source document
+   *  rather than a party anyone transacts with — today only the payroll
+   *  register (`type: "other"` + `metadata.source_kind === "payroll_register"`).
+   *  Such a row is informational: it renders read-only and carries no trust
+   *  controls, because no trust transition is meaningful on it. `undefined` is
+   *  the normal case and means the row behaves like any other counterparty. */
+  informationalSource?: "payroll_register";
   /** brain-core's canonical review state, when it reports one. `undefined`
    *  means the field was absent from the read — NOT "unreviewed". The two are
    *  kept apart on purpose: absent means we fall back to deriving the tier from

@@ -99,6 +99,7 @@ import {
   runBulkApprove,
   type BulkCandidate,
 } from "@/lib/bulkApprove";
+import { CountPill } from "@/components/CountPill";
 
 /* ── Audit records → timeline facets ──────────────────────────────────────────
    The six tabs are gone. Where a tab used to answer "which list does this belong
@@ -1514,11 +1515,7 @@ export function InboxPage() {
           <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[12px] uppercase tracking-[0.4px] whitespace-nowrap">
             Decisions
           </p>
-          <div className="bg-[#6c779d] flex items-center justify-center min-w-[18px] px-[5px] py-[1px] rounded-[4px] shrink-0" data-testid="text-decision-count">
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#0a0c10] text-[11px] text-center whitespace-nowrap">
-              {visibleItems.length}
-            </p>
-          </div>
+          <CountPill testId="text-decision-count">{visibleItems.length}</CountPill>
           {filtering && (
             <button
               type="button"

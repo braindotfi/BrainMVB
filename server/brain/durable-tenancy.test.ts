@@ -50,6 +50,10 @@ interface RecordedCall {
 let calls: RecordedCall[] = [];
 const realFetch = globalThis.fetch;
 let failTenantCreation = false;
+/** When true, POST /tenants answers with core's already-linked conflict (invariant J). */
+let tenantAlreadyLinked = false;
+/** Tenant id POST /sessions attributes its token to; null omits `member` entirely. */
+let sessionTenantId: string | null = TENANT_ID;
 
 function json(obj: unknown, status = 200): Response {
   return new Response(JSON.stringify(obj), { status, headers: { "content-type": "application/json" } });
@@ -62,6 +66,19 @@ function routeBrainCore(fullUrl: string, method: string): Response {
   }
   if (url.endsWith("/tenants") && method === "POST") {
     if (failTenantCreation) return json({ error: { code: "internal_server_error" } }, 500);
+    /* Verbatim shape captured from staging on 2026-08-05. The tenant id lives in
+       details.tenant_id — the whole point of the recovery path. */
+    if (tenantAlreadyLinked) {
+      return json({
+        error: {
+          code: "tenant_identity_already_linked",
+          message: "platform identity is already linked to a tenant",
+          request_id: "req_test_already_linked",
+          docs_url: "https://docs.brain.fi/resources/errors#tenant_identity_already_linked",
+          details: { tenant_id: TENANT_ID },
+        },
+      }, 409);
+    }
     return json({
       tenant_id: TENANT_ID,
       member: { id: "m1", tenantId: TENANT_ID, email: "u@co.com", displayName: "User", role: "admin" },
@@ -78,7 +95,9 @@ function routeBrainCore(fullUrl: string, method: string): Response {
       token: MEMBER_TOKEN,
       refresh_token: "rt_2",
       expires_in: 900,
-      member: { id: "m1", tenantId: TENANT_ID, email: "u@co.com", displayName: "User", role: "admin" },
+      ...(sessionTenantId === null
+        ? {}
+        : { member: { id: "m1", tenantId: sessionTenantId, email: "u@co.com", displayName: "User", role: "admin" } }),
     });
   }
   if (url.endsWith("/sessions/refresh") && method === "POST") {
@@ -168,6 +187,8 @@ beforeEach(async () => {
   expect(await whenSeedsSettle(10_000), "a seed run never settled - later assertions would see its ingests").toBe(true);
   calls = [];
   failTenantCreation = false;
+  tenantAlreadyLinked = false;
+  sessionTenantId = TENANT_ID;
   clearBrainTokenCache();
 });
 
@@ -344,6 +365,101 @@ describe("durable tenancy invariants", () => {
     expect(body.mode).toBe("durable");
     expect(body.linked).toBe(true);
     expect(body.tenantId).toBe(TENANT_ID);
+  });
+
+  /* ── J: demo sessions survive losing the session cache ──────────────────────
+     POST /tenants is not idempotent and the demo path stores NO brain_identities
+     row, so the in-memory cache is the only record that a demo user has a tenant.
+     A restart or eviction therefore sends every demo user back through creation,
+     where core answers 409 tenant_identity_already_linked. Before the recovery
+     path that 409 was fatal: the visitor's app went dead with no way back except
+     a brand-new identity. */
+  it("J: a demo user whose cache was cleared adopts the linked tenant instead of failing", async () => {
+    const userId = await createDemoAppUser();
+    await getBrainSession(userId);
+    expect(await whenSeedsSettle(10_000)).toBe(true);
+
+    // Second session creation: exactly what a server restart produces.
+    clearBrainTokenCache();
+    calls = [];
+    tenantAlreadyLinked = true;
+
+    const session = await getBrainSession(userId);
+    expect(session.tenantId).toBe(TENANT_ID);
+    expect(session.token).toBe(MEMBER_TOKEN);
+    // A real agent principal is re-minted, so raw:write still works after adoption.
+    expect(session.agentToken).toBe(AGENT_TOKEN);
+
+    // Recovery goes through /sessions on the founder's external_ref — the same
+    // route the production path uses for an existing tenant.
+    const sessionCalls = calls.filter((c) => c.url.endsWith("/sessions") && c.method === "POST");
+    expect(sessionCalls.length).toBe(1);
+    expect((sessionCalls[0].body as { external_ref?: string }).external_ref).toBe(userId);
+    expect(sessionCalls[0].svcAuth).toBe(SERVICE_SECRET);
+
+    // One creation attempt, not a retry loop.
+    expect(calls.filter((c) => c.url.endsWith("/tenants") && c.method === "POST").length).toBe(1);
+  });
+
+  it("J: adopting an existing tenant never re-seeds its documents", async () => {
+    // /raw/ingest is not idempotent, so re-seeding on every cache miss would
+    // duplicate every fixture document in the tenant.
+    const userId = await createDemoAppUser();
+    await getBrainSession(userId);
+    expect(await whenSeedsSettle(10_000)).toBe(true);
+
+    clearBrainTokenCache();
+    calls = [];
+    tenantAlreadyLinked = true;
+
+    await getBrainSession(userId);
+    expect(await whenSeedsSettle(10_000)).toBe(true);
+    expect(calls.filter((c) => c.url.endsWith("/raw/ingest")).length).toBe(0);
+  });
+
+  it("J: refuses to adopt when core names two different tenants for one external_ref", async () => {
+    /* The conflict payload and the issued session are two independent statements
+       about which tenant this external_ref owns. If they disagree, caching either
+       one attributes a live member token — and a freshly minted agent token — to a
+       tenant that may not own it. That is a cross-tenant leak, not a degraded
+       session, so adoption fails closed and mints nothing. */
+    const userId = await createDemoAppUser();
+    await getBrainSession(userId);
+    expect(await whenSeedsSettle(10_000)).toBe(true);
+
+    clearBrainTokenCache();
+    calls = [];
+    tenantAlreadyLinked = true;          // conflict says TENANT_ID
+    sessionTenantId = "tnt_someone_else"; // session says otherwise
+
+    await expect(getBrainSession(userId)).rejects.toThrow(/conflicting tenant ids/i);
+    expect(calls.filter((c) => c.url.endsWith("/agent-token")).length).toBe(0);
+  });
+
+  it("J: adopts on the conflict's tenant id when the session omits member", async () => {
+    // Both answers describe the same external_ref in the same exchange, so the
+    // conflict id is authoritative when core doesn't repeat it on the session.
+    const userId = await createDemoAppUser();
+    await getBrainSession(userId);
+    expect(await whenSeedsSettle(10_000)).toBe(true);
+
+    clearBrainTokenCache();
+    calls = [];
+    tenantAlreadyLinked = true;
+    sessionTenantId = null; // no `member` in the session response
+
+    const session = await getBrainSession(userId);
+    expect(session.tenantId).toBe(TENANT_ID);
+    expect(session.agentToken).toBe(AGENT_TOKEN);
+  });
+
+  it("J: a tenant-creation failure that is NOT the already-linked conflict still fails", async () => {
+    // The recovery path is keyed on one specific code. A 500, or any other 409,
+    // must not be quietly swallowed into an adoption attempt.
+    const userId = await createDemoAppUser();
+    failTenantCreation = true;
+    await expect(getBrainSession(userId)).rejects.toThrow();
+    expect(calls.filter((c) => c.url.endsWith("/sessions") && c.method === "POST").length).toBe(0);
   });
 
   it("I: durable mode never triggers the production company-setup gate", async () => {

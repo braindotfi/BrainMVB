@@ -21,7 +21,11 @@
  *    the Overview metric and this view can never disagree.
  */
 
-import { liabilitiesTotal, unpaidApInvoices, type ApInvoiceLike } from "./liabilities";
+import { liabilitiesTotal, unpaidApInvoices, payableObligations, type ApInvoiceLike } from "./liabilities";
+import { isoDay, absAmount as num, debtKey, matchObligationsToInvoices } from "./debtIdentity";
+import type { RawObligation } from "./brainObligations";
+import { capitalCase } from "./displayLabels";
+import { subLabel } from "./obligationRows";
 
 export interface CashFlowTxLike {
   id: string;
@@ -46,8 +50,21 @@ export type CashFlowKind = "income" | "expense" | "transfer" | "adjustment" | "b
 export interface CashFlowRow {
   key: string;
   kind: CashFlowKind;
+  /**
+   * Overrides the badge text without changing the row's styling or sign.
+   *
+   * Payroll and tax are owed exactly the way a bill is, so they take the `bill`
+   * treatment — but a payroll run badged "Bill" would be a lie about what it is,
+   * and the obligation kinds are open-ended (bill / payroll / tax so far, and the
+   * set has already grown once), so they cannot each become a `CashFlowKind`.
+   */
+  badgeLabel?: string;
+  /** Source status for debt-like rows; shared with Payables/Receivables pills. */
+  status?: string;
   label: string;
   sublabel: string;
+  /** The kind/counterparty detail used by the canonical Payables row treatment. */
+  secondaryLabel?: string;
   /** ISO date used for ordering. Empty when the source carried none. */
   date: string;
   amount: number;
@@ -57,6 +74,8 @@ export interface CashFlowRow {
   txId?: string;
   /** Set on rows that open the bill detail popup. */
   invoiceId?: string;
+  /** Set on unmatched obligation rows that open the payable detail popup. */
+  obligationId?: string;
   flagged: boolean;
 }
 
@@ -83,15 +102,10 @@ export const KIND_LABEL: Record<CashFlowKind, string> = {
   bill: "Bill",
 };
 
-function num(v: unknown): number {
-  const n = Number(v);
-  return Number.isFinite(n) ? Math.abs(n) : 0;
-}
-
-function isoDay(v: string | null | undefined): string {
-  if (typeof v !== "string" || !v.trim()) return "";
-  return v.slice(0, 10);
-}
+/* Debt identity lives in its own module because Payables needs the same definition
+   to link an obligation row back to the invoice that billed it. If the two drifted,
+   a bill Cash Flow collapses into one row would be a payable Payables calls
+   uninvoiced. */
 
 /**
  * One ordered list of everything that moved or is owed.
@@ -104,6 +118,8 @@ function isoDay(v: string | null | undefined): string {
 export function buildCashFlowRows(input: {
   transactions?: readonly CashFlowTxLike[] | null;
   invoices?: readonly CashFlowInvoiceLike[] | null;
+  /** Obligations supply what the invoice feed cannot: payroll and tax. See below. */
+  obligations?: readonly RawObligation[] | null;
   nameOf?: (id: string | null | undefined) => string | null;
 }): CashFlowRow[] {
   const nameOf = input.nameOf ?? (() => null);
@@ -133,22 +149,103 @@ export function buildCashFlowRows(input: {
     });
   }
 
+  /* How many debts of each identity are already listed from invoices, so the
+     obligations pass below does not list the same debt twice.
+     
+     A COUNT, not a presence flag. With a plain set, one invoice would suppress every
+     obligation sharing its identity — so a tenant genuinely owing the same
+     counterparty the same amount on the same day twice (one invoiced, one not) would
+     see the second debt silently vanish. Under-reporting money owed is the worst
+     thing this list can do, so each invoice cancels exactly one obligation. */
+  const listedDebts = new Map<string, number>();
+  /* The invoice and obligation twins can carry different lifecycle vocabulary
+     ("sent" versus "upcoming"). Payables established the obligation's status as
+     canonical for a debt row, so carry that status onto the invoice projection
+     Cash Flow renders for the same debt. */
+  const obligationByInvoice = new Map<string, RawObligation>();
+  const payableRows = payableObligations(input.obligations ?? null);
+  const obligationById = new Map(payableRows.map((o) => [o.id, o]));
+  for (const [obligationId, invoice] of matchObligationsToInvoices(payableRows, input.invoices ?? [])) {
+    const obligation = obligationById.get(obligationId);
+    if (obligation) obligationByInvoice.set(invoice.id, obligation);
+  }
+
   for (const inv of unpaidApInvoices(input.invoices ?? [])) {
     if (!inv?.id) continue;
     const flags = inv.metadata?.flags ?? [];
     const due = isoDay(inv.due_date);
+    const matchedObligation = obligationByInvoice.get(inv.id);
+    const counterpartyId = inv.counterparty_id ?? null;
+    const counterpartyName = nameOf(counterpartyId);
+    const matchedKind =
+      matchedObligation && typeof matchedObligation.kind === "string"
+        ? matchedObligation.kind
+        : null;
+    const key = debtKey(counterpartyId, num(inv.amount_due), due);
+    listedDebts.set(key, (listedDebts.get(key) ?? 0) + 1);
     rows.push({
       key: `inv:${inv.id}`,
       kind: "bill",
-      label: nameOf(inv.counterparty_id) ?? inv.invoice_number ?? "Bill",
+      status: (() => {
+        const obligationStatus = obligationByInvoice.get(inv.id)?.status;
+        return typeof obligationStatus === "string" && obligationStatus.trim()
+          ? obligationStatus
+          : inv.status ?? undefined;
+      })(),
+      label: counterpartyName ?? inv.invoice_number ?? "Bill",
       sublabel: [inv.invoice_number, due ? `due ${due}` : "", inv.status === "overdue" ? "overdue" : ""]
         .filter(Boolean)
         .join(" · "),
+      secondaryLabel: subLabel(matchedKind, counterpartyName, counterpartyId),
       date: due,
       amount: num(inv.amount_due),
       sign: "-",
       invoiceId: inv.id,
       flagged: flags.length > 0,
+    });
+  }
+
+  /* ── obligations: the rows the invoice feed cannot supply ──────────────────
+     The Liabilities figure above this list sums obligations, so a list built only
+     from invoices could never add up to it: the invoice feed carries no payroll and
+     no tax. That mismatch is the same confusion the figure itself was just fixed
+     for — a total whose own list contradicts it reads as a bug in the data.
+
+     Bills are deliberately still sourced from invoices rather than replaced by their
+     obligation twins: the invoice row carries the invoice number and opens the bill
+     detail popup, and the obligation carries neither. brain-core exposes NO invoice
+     reference on an obligation (`source_ids` point at raw documents, not invoices),
+     so the two records are matched on the debt they describe — counterparty, amount
+     and due date, which align exactly on every bill.
+
+     Matching on identity rather than excluding `type === "bill"` matters: obligation
+     kinds are open-ended, and a bill obligation that has no invoice behind it is a
+     real debt that must still appear rather than being filtered out by its name. */
+  for (const o of payableRows) {
+    const due = isoDay(o.due_date);
+    const key = debtKey(o.counterparty_id, num(o.amount_due), due);
+    const alreadyListed = listedDebts.get(key) ?? 0;
+    if (alreadyListed > 0) {
+      listedDebts.set(key, alreadyListed - 1);
+      continue;
+    }
+    const kindWord = o.kind && o.kind.trim() ? capitalCase(o.kind.trim()) : "";
+    const counterpartyName = nameOf(o.counterparty_id);
+    rows.push({
+      key: `obl:${o.id}`,
+      kind: "bill",
+      badgeLabel: kindWord || "Owed",
+      status: o.status,
+      label: counterpartyName || "Unidentified counterparty",
+      sublabel: [due ? `due ${due}` : "", o.status.toLowerCase() === "overdue" ? "overdue" : ""]
+        .filter(Boolean)
+        .join(" · "),
+      secondaryLabel: subLabel(o.kind, counterpartyName, o.counterparty_id),
+      date: due,
+      amount: num(o.amount_due),
+      sign: "-",
+      obligationId: o.id,
+      flagged: false,
     });
   }
 
@@ -162,11 +259,28 @@ export function buildCashFlowRows(input: {
   });
 }
 
+/**
+ * The secondary line under a row's label.
+ *
+ * Owed rows put the due date in their sublabel ("due 2026-08-12") because for a bill
+ * the date means something different than it does on a transaction — it is when the
+ * money is owed, not when it moved. The row then also renders `date` for ordering
+ * context, which printed the same day twice: "INV-CLOUDOPS-001 · due 2026-08-12 ·
+ * 2026-08-12". The word is worth keeping and the repeat is not, so the bare date is
+ * dropped when the sublabel already states it.
+ */
+export function detailLine(sublabel: string, date: string): string {
+  const parts = [sublabel];
+  if (date && !sublabel.includes(date)) parts.push(date);
+  return parts.filter(Boolean).join(" · ");
+}
+
 export interface CashFlowTotals {
   /** `null` means the transaction feed could not be read — never render as 0. */
   income: number | null;
   expenses: number | null;
-  /** `null` means the invoice feed could not be read. */
+  /** `null` means the obligations feed could not be read, or was read only in part —
+   *  either way there is no figure to state. Never render it as 0. */
   liabilities: number | null;
   /** ISO bounds of the transactions actually counted, for an honest period label. */
   periodStart: string | null;
@@ -176,9 +290,21 @@ export interface CashFlowTotals {
 export function cashFlowTotals(input: {
   transactions?: readonly CashFlowTxLike[] | null;
   invoices?: readonly CashFlowInvoiceLike[] | null;
+  /* Liabilities come from obligations, NOT from `invoices`. The invoice feed carries
+     no payroll, so deriving the figure from it understated what the tenant owed and
+     disagreed with the Payables tab this metric sits beside. `invoices` is still
+     read above, for the dated bill ROWS — a different question from the total.
+
+     The whole READ, not just the rows: the obligations list pages behind a cursor, and
+     a total summed from a partial walk is a plausible smaller number with nothing to
+     mark it as partial. `complete: false` yields `null`, which this card already
+     renders as "—". Rows may still be listed from a partial read; only the total is
+     withheld. */
+  obligations?: { rows: readonly RawObligation[]; complete: boolean } | null;
 }): CashFlowTotals {
   const txs = input.transactions;
-  const liabilities = liabilitiesTotal(input.invoices ?? null);
+  const obligations = input.obligations ?? null;
+  const liabilities = obligations && liabilitiesTotal(obligations.rows, obligations);
 
   if (txs == null) {
     return { income: null, expenses: null, liabilities, periodStart: null, periodEnd: null };
@@ -207,6 +333,37 @@ export function cashFlowTotals(input: {
   }
 
   return { income, expenses, liabilities, periodStart: start, periodEnd: end };
+}
+
+/**
+ * The partial-failure notice above the metrics.
+ *
+ * Three independent reads back the Cash Flow tab, and they fail independently. A single
+ * generic "cash flow couldn't be loaded" overstates the damage when only one is down
+ * and — the real problem — never says WHICH figure on screen is now untrustworthy. A
+ * user cannot tell a $0 that means "nothing moved" from a $0 that means "we could not
+ * find out" unless the banner names the casualty.
+ *
+ * Ordered by how much a wrong reading costs: money owed first, then earnings, then rows.
+ */
+export function incompleteMessage(f: { tx: boolean; inv: boolean; ob: boolean; invTruncated?: boolean }): string {
+  const lost: string[] = [];
+  /* Obligations now supply rows as well as the figure: when that read fails the
+     payroll and tax rows disappear from the list too, and a list that looks complete
+     while quietly missing rows is worse than one that admits it. Named without
+     enumerating kinds, which are open-ended. */
+  if (f.ob) lost.push("liabilities and some of the rows below");
+  if (f.tx) lost.push("income and expenses");
+  if (f.inv) lost.push("the bills listed below");
+  /* A cut-short (not failed) invoice walk still owes the same caveat: bills past the
+     cap are just as invisible as bills from a read that failed outright. */
+  else if (f.invTruncated) lost.push("some of the bills listed below");
+  if (lost.length === 0) return "";
+  const list = lost.length === 1 ? lost[0] : `${lost.slice(0, -1).join(", ")} and ${lost[lost.length - 1]}`;
+  return (
+    `${list.charAt(0).toUpperCase()}${list.slice(1)} couldn't be loaded. That is not a statement ` +
+    `that nothing moved or that nothing is owed. Treat it as unknown, and refresh to see the real position.`
+  );
 }
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];

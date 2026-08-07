@@ -1,4 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, resolve } from "node:path";
 import {
   documentsInProgress,
   projectionSettledCleanly,
@@ -148,5 +151,44 @@ describe("projectionSettledCleanly", () => {
     expect(
       projectionSettledCleanly([projecting("projected"), projecting("projecting")], NOW),
     ).toBe(false);
+  });
+});
+
+/* ── the mount-time race that disabled the whole refresh machinery ────────────
+   `documentsInProgress([])` is false, and correctly so: an account with no documents
+   has nothing in flight. But the refresh hook mounts once, and under this app's
+   `staleTime: Infinity` defaults a query that is never re-read never changes its
+   answer. A shell that mounted while the tenant was still being seeded therefore saw
+   an empty list, concluded nothing was in flight, and stopped looking — so the
+   in-progress → done edge that refreshes every ledger figure could not fire, and the
+   first (partial) totals stayed on screen until the user reloaded by hand.
+
+   The fix is an idle refetch interval on the document query itself. It cannot be
+   asserted through the pure helpers below — the bug is in when they are CALLED, not
+   in what they return — so it is pinned at the source. */
+
+describe("the document read keeps looking after an empty first answer", () => {
+  const src = readFileSync(
+    resolve(dirname(fileURLToPath(import.meta.url)), "./brainRefresh.ts"),
+    "utf8",
+  );
+
+  it("every document query carries a refetch interval", () => {
+    /* Both of them: the shell's watcher and `useIngestInProgress`, which the ledger
+       surfaces mount. A bare `useQuery({ queryKey: [DOCUMENTS_KEY] })` is the exact
+       shape of the original bug. */
+    const queries = src.match(/useQuery<DocumentProgressLike\[\]>\(\{[\s\S]*?\}\)/g) ?? [];
+    expect(queries.length).toBeGreaterThanOrEqual(2);
+    for (const q of queries) {
+      expect(q, "a document query with no interval can never notice a late document").toContain(
+        "refetchInterval",
+      );
+    }
+  });
+
+  it("re-reads often enough to catch a tenant being seeded, not just eventually", () => {
+    const idle = src.match(/DOCUMENT_IDLE_POLL_MS\s*=\s*([\d_]+)/);
+    expect(idle, "the idle interval must stay a named, reviewable number").not.toBeNull();
+    expect(Number(idle![1].replace(/_/g, ""))).toBeLessThanOrEqual(60_000);
   });
 });

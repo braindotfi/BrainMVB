@@ -9,7 +9,7 @@ import { z } from "zod";
 import { storage } from "./storage";
 import type { User } from "@shared/schema";
 import { brainTenancyMode } from "./brain/config";
-import { isDemoEmail, SHARED_DEMO_EMAIL } from "./demoUsers";
+import { isDemoEmail } from "./demoUsers";
 import { evictBrainSession } from "./brain/auth";
 
 const scryptAsync = promisify(scrypt);
@@ -209,26 +209,19 @@ export function setupAuth(app: Express) {
     return res.json({ user: publicUser(user) });
   });
 
-  // ─── Demo login (no credentials) - explore the app with a shared demo account ───
-  app.post("/api/auth/demo", async (req, res) => {
-    // No shared demo account in production tenancy - real tenants/agents live there,
-    // and there is no honest "explore with someone else's data" story. 404, not a
-    // gated 403, so the route reads as not existing rather than merely locked.
-    if (brainTenancyMode() === "production") {
-      return res.status(404).json({ error: "Not found" });
-    }
-    let user = await storage.getUserByEmail(SHARED_DEMO_EMAIL);
-    if (!user) {
-      user = await storage.createUser({
-        username: SHARED_DEMO_EMAIL,
-        email: SHARED_DEMO_EMAIL,
-        password: null,
-        name: "ACME Inc.",
-      });
-    }
-    await switchSession(req, user.id);
-    return res.json({ user: publicUser(user) });
-  });
+  /* ── REMOVED: POST /api/auth/demo (shared demo@brain.fi login) ──────────────
+     Deleted deliberately; do not reintroduce. It was unauthenticated and logged
+     every caller into ONE app user backed by ONE persistent tenant, so each
+     visitor could read and mutate whatever the previous visitor left behind:
+     ledger rows, counterparties, trust decisions, audit entries, document
+     metadata, tenant API keys, and any linked Plaid connection (institution,
+     account names, last-4 masks) which they could also disconnect. The
+     production-mode 404 above did not cover it in practice, because this
+     deployment runs BRAIN_TENANCY_MODE=durable.
+
+     Isolated demo access is /api/auth/demo-fresh, which mints a new user and a
+     new seeded tenant per visitor. Any "explore the app" entry point must use
+     that route. server/auth-security.test.ts pins this route as 404. */
 
   // ─── Demo fresh user (no credentials) - creates a NEW account each time ───
   app.post("/api/auth/demo-fresh", async (req, res) => {
@@ -347,16 +340,32 @@ export function setupAuth(app: Express) {
         name?: string;
       };
 
+      /* Demo accounts are NEVER reachable through OAuth. They hold shared, synthetic data
+         and have no real owner, so adopting one by email match would hand the caller the
+         demo tenant — the same exposure as the deleted shared demo login (see the note in
+         the demo section above), just through a different door. This is deliberately
+         narrower than /api/auth/register's blanket @brain.fi block: real brain.fi staff
+         must still be able to sign in with Google, they just cannot land on a demo row. */
+      const profileEmail = profile.email?.toLowerCase() ?? null;
+      if (isDemoEmail(profileEmail)) {
+        return res.redirect("/?auth_error=google_demo_account");
+      }
+
       let user = await storage.getUserByGoogleId(profile.sub);
-      if (!user && profile.email) {
-        const email = profile.email.toLowerCase();
-        const byEmail = await storage.getUserByEmail(email);
+      if (!user && profileEmail) {
+        const byEmail = await storage.getUserByEmail(profileEmail);
         if (byEmail) {
           if (profile.email_verified !== true) {
             return res.redirect("/?auth_error=google_unverified_email");
           }
           user = byEmail;
         }
+      }
+      /* Covers a demo row reached either by an existing googleId or by the by-email
+         adoption just above — checked AFTER both resolve `user`, not only after the
+         googleId lookup, so a demo row reached via email adoption is still caught. */
+      if (isDemoEmail(user?.email)) {
+        return res.redirect("/?auth_error=google_demo_account");
       }
       if (!user) {
         const email = profile.email_verified === true ? profile.email?.toLowerCase() : undefined;
@@ -381,5 +390,40 @@ export function setupAuth(app: Express) {
 // ─── Route guard helper ───
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
   if (!req.session.userId) return res.status(401).json({ error: "Not authenticated" });
+  next();
+}
+
+/**
+ * Blocks demo accounts from routes that reach a real third party or persist a real
+ * credential on the account.
+ *
+ * Demo sessions are handed out unauthenticated (POST /api/auth/demo-fresh), so any route
+ * behind `requireAuth` alone is effectively public. That is fine for reading seeded data,
+ * but not for linking a live bank: the credential would outlive the visitor's session on an
+ * account nobody owns. `PLAID_ENV` being unset (so Plaid resolves to sandbox) is a real
+ * mitigation but a fragile one — it is one environment variable away from being wrong, and
+ * it lives outside the code. This guard does not depend on it.
+ *
+ * Fails CLOSED: if the account type cannot be determined, the route is refused rather than
+ * allowed, because the failure mode of guessing wrong is a real credential on a demo row.
+ */
+export async function requireNonDemo(req: Request, res: Response, next: NextFunction) {
+  if (!req.session.userId) return res.status(401).json({ error: "Not authenticated" });
+  let user: User | undefined;
+  try {
+    user = await storage.getUser(req.session.userId);
+  } catch (err) {
+    console.error("[auth] requireNonDemo could not load the session user:", err);
+    return res.status(503).json({
+      error: "account_check_unavailable",
+      message: "Could not verify this account right now. Please try again.",
+    });
+  }
+  if (!user || isDemoEmail(user.email)) {
+    return res.status(403).json({
+      error: "demo_account_not_permitted",
+      message: "Demo accounts can't connect a real account. Sign up to link your own.",
+    });
+  }
   next();
 }

@@ -128,3 +128,11 @@ category. The category is our own label, and the Add Source "N connected" badges
 documents by exactly that string, so a value outside the UI's `CategoryId` union makes a
 document real, ingested, and invisible. There is no upstream vocabulary to reconcile with;
 the only contract is between the seed manifest, the upload route, and the badge grouping.
+- **A "core now returns field X" change may be written at projection time, not read time.**
+  Verify it against a tenant created AFTER the deploy: an existing tenant's rows were
+  projected by the old code and never gain the field retroactively, so checking a tenant
+  you already had reads as "not deployed yet" long after it shipped.
+  **Why:** cost a confused round of re-checking a payroll marker that was already live —
+  staging /health reported the right commit while the old tenant still showed nothing.
+  **How to apply:** read the PR's changed files first. A projection/ingest path means
+  re-seed or provision fresh; only a serializer/read-path change shows up on old rows.

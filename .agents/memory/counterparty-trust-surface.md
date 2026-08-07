@@ -166,6 +166,65 @@ endpoint visually distinct from the parked ones. And check the whole frame, not
 just the button: titles, chip labels and body copy that name the old action or
 the wrong segment noun are the same inconsistency one layer up.
 
+## Label a row from the tier predicate, never from the derived status
+
+The derived trust status collapses unrelated causes into one value: a pause the user
+performed and a risk level the server assigned both surface as "under review", and a
+prior human grant wins over a later risk mark. Tier assignment resolves those overlaps
+in its own order, with risk outranking everything. So a label keyed on the status field
+disagrees with the tab the row is filed under, and asserts a human decision that may
+never have happened — a granted counterparty the server later marks risky reads as
+Trusted while sitting in the review queue.
+
+**Why:** the collapse is invisible at the call site — the status field reads like a
+single state, so each new label looks correct in isolation and only the combination is
+wrong. Fixing one branch at a time reproduces the bug in the next branch; the popup here
+had already split its action block on the pause while the chip above it had not.
+
+**How to apply:** do not fix the branch that was reported. Every point-fix here passed the
+cases someone thought of and broke on one nobody did — risk-marked read as paused, then
+granted-then-risky read as trusted, then dismissed read as paused. Three rounds of review
+found three more, because the label was being *re-derived* alongside the tier instead of
+*from* it.
+
+Extract the label decision into a pure function that sits beside the tier function, in
+the same branch order, returning a kind rather than words; let the component map kinds to
+copy (that is where segment vocabulary belongs). Publish the kind→tier correspondence as
+a constant and assert it over the **entire product space** of the inputs — status × state
+× risk × source is a few dozen cases, cheap to walk, and it is the only version of this
+test that keeps catching the combination you did not imagine. Count the iterations so a
+collapsed loop cannot pass silently, and stub the tier's warn if its unclassifiable branch
+is reachable.
+
+Two refinements worth keeping: a label may be *finer* than the tier where the tier
+deliberately merges (a dismissed row shares the trusted tier but is not a grant, so it
+gets its own word rather than being called Trusted), and when a label demotes a row the
+body needs a sentence saying why — otherwise the surface demands a review with no cause.
+
+## Unifying aliases: name the state after the backend verb
+
+Two questions, in order, when one state has picked up several names. First, are they
+aliases at all? Find every producer of the state and check whether a separate endpoint
+or field exists — three words for one state is cosmetic drift, but one word over two
+real concepts loses information, so the burden of proof is on merging. Second, and the
+one that is easy to skip: **is the winning word already taken by a different concept
+elsewhere in the app?** Search the whole client, not the surface being edited.
+
+**Why:** the trust-pause state was called Flag / Flagged / Paused. All three were the
+same stored value, so unifying was right — but "flag" was already spoken for twice over,
+by the per-counterparty anomaly signals rendered *in the same popup* and by an
+awaiting-decision filter in the audit log. Picking the most familiar-sounding word would
+have put three meanings of "flagged" in one product. Naming the state after the verb
+that writes it leaves exactly one meaning per word.
+
+**How to apply:** default to the backend verb — it is the one name that cannot drift from
+what the system does. Rename the internal tier/enum key too, not just the copy: a key
+that matches neither the wire nor the UI is the same ambiguity relocated into the code.
+Leave the *route* literal alone though — routes get built from the action name, so a
+sweep over the old word can produce a 404 that only appears live. Pin the rendered copy
+and the route literal in one test, and add a guard that the losing word cannot come back
+while the concept that owns it still exists.
+
 ## Display copy vs wire value on a state name
 
 The acknowledged state reads "No action" to a human while `acknowledged` remains

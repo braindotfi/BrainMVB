@@ -564,10 +564,13 @@ function ReportCard({
         className="flex items-center justify-between gap-[10px] w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#414965] rounded-[6px]"
       >
         <div className="flex flex-col gap-[4px] min-w-px">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px]">
+          {/* Record ramp, matching every other title-over-subtext row: medium 16/20
+              title, medium 14/16 subtext. This row had both lines at semibold 16/20,
+              which made the timestamp compete with the reason. */}
+          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px]">
             {report.reason}
           </p>
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px]">
+          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px]">
             {report.reportedAtLabel}
           </p>
         </div>

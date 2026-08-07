@@ -1,7 +1,7 @@
 import express, { type Express, type Request, type Response } from "express";
 import { createServer, type Server } from "http";
 import Anthropic from "@anthropic-ai/sdk";
-import { setupAuth, googleEnabled, requireAuth } from "./auth";
+import { setupAuth, googleEnabled, requireAuth, requireNonDemo } from "./auth";
 import { storage } from "./storage";
 import { z } from "zod";
 import { verifyMessage } from "viem";
@@ -40,6 +40,16 @@ import type { ExtractStatus, SourceDocumentExtractionPatch } from "./storage";
 import { extractStatusForJob } from "./brain/extractStatus";
 import { projectionStatusFrom, isTerminalProjectionStatus } from "./brain/projectionStatus";
 import { shouldSettle, needsExtractSettle } from "./brain/settleTargets";
+import { isSeedInFlight, seedStillExpected } from "./brain/seed";
+import { isDemoEmail } from "./demoUsers";
+
+/**
+ * How long after a demo account is created its starter documents are still expected.
+ * A seed takes about a minute end to end; this is generous enough to cover a slow
+ * brain-core and short enough that a half-deleted starter set stops being reported as
+ * an import in progress.
+ */
+const SEED_EXPECTED_WITHIN_MS = 10 * 60_000;
 import { generateNonce } from "./nonce";
 import { brainAuthConfigured, platformServiceConfigured, brainDurableTenancy } from "./brain/config";
 import {
@@ -49,6 +59,7 @@ import {
 } from "./developers";
 import { ANTHROPIC_MODEL } from "./anthropicModel";
 import { isDegenerateWikiPayload } from "./wikiAnswerGuard";
+import { answerDeterministically } from "./brain/deterministicAnswers";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -994,6 +1005,38 @@ When you mention a money amount, always reproduce it exactly as the grounding da
       }
     }
 
+    /* ─── STRUCTURED: exact answers computed from the ledger, no model in the loop ───
+       Runs BEFORE wiki/question and before the Anthropic fallback, because both of those
+       answer from a capped, prose-flattened snapshot. For "what do we owe X", "which
+       customer invoices are overdue" and "what is our payroll obligation" there is one
+       correct number, and a model narrating a truncated snapshot produces a confident
+       wrong one. A `null` here means the question was not one of those, so the normal
+       paths below run untouched. See server/brain/deterministicAnswers.ts. */
+    try {
+      const { token, baseUrl: exactBaseUrl } = await getBrainSession(req.session.userId!);
+      const exact = await withBrainBaseUrl(exactBaseUrl, () =>
+        answerDeterministically(token, lastUserContent),
+      );
+      if (exact) {
+        /* "deterministic" is neither "wiki" nor unknown, so the Audit Log renders
+           these as not_recorded: the answer is computed here from ledger reads and
+           never reaches brain-core's wiki/question endpoint, so no audit event
+           exists upstream and no anchor window will ever cover it. */
+        await recordEngine(exact.engine);
+        return res.json({
+          reply: exact.reply,
+          sources: exact.sources,
+          grounded: exact.grounded,
+          answered: exact.answered,
+          engine: exact.engine,
+        });
+      }
+    } catch (e) {
+      /* Only an unexpected failure lands here — the module turns unreachable and
+         truncated ledger reads into explicit refusals rather than throwing. */
+      console.warn("[Assistant] deterministic path errored, falling back:", (e as Error)?.message);
+    }
+
     // ─── PRIMARY: brain-core wiki/question — per-answer cited evidence, grounded
     // server-side with brain-core's own key. ponytail: wiki/question takes a
     // single question, so multi-turn follow-up context (earlier messages) is
@@ -1297,7 +1340,12 @@ When you mention a money amount, always reproduce it exactly as the grounding da
     }
   });
 
-  app.post("/api/integrations/plaid/link-token", requireAuth, async (req, res) => {
+  /* link-token and exchange are gated with requireNonDemo: they reach Plaid for real and,
+     in exchange's case, persist a live access token on the account. Demo sessions are handed
+     out unauthenticated, so requireAuth alone does not gate them. Reads (/status,
+     /connections) and /disconnect stay open to demo accounts — with no way to create a
+     connection they list nothing, and disconnect only ever removes. */
+  app.post("/api/integrations/plaid/link-token", requireAuth, requireNonDemo, async (req, res) => {
     try {
       const { getPlaidClient, PLAID_PRODUCTS, PLAID_COUNTRIES } = await import("./plaid");
       const client = getPlaidClient();
@@ -1319,7 +1367,7 @@ When you mention a money amount, always reproduce it exactly as the grounding da
     }
   });
 
-  app.post("/api/integrations/plaid/exchange", requireAuth, async (req, res) => {
+  app.post("/api/integrations/plaid/exchange", requireAuth, requireNonDemo, async (req, res) => {
     try {
       const schema = z.object({
         public_token: z.string().min(1),
@@ -1486,6 +1534,62 @@ When you mention a money amount, always reproduce it exactly as the grounding da
       }),
     );
   }
+
+  /**
+   * Is this user's tenant still being filled in?
+   *
+   * The client cannot tell from the document list: a seed ingests one file at a time,
+   * so for the first seconds of a new tenant there are no documents and no ledger rows
+   * — identical, from the browser, to a tenant that genuinely has nothing. That gap is
+   * exactly how a fresh account once showed a settled-looking $211,200.00 owed when the
+   * real figure was $287,223.39. The server started the seed; it answers.
+   *
+   * Separate from the documents route rather than a field on it: that route returns a
+   * bare array, and the surfaces that need this signal are not the ones that need the
+   * documents.
+   */
+  app.get("/api/integrations/ingest-status", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      // The run itself, while this process is doing it.
+      if (isSeedInFlight(userId)) return res.json({ seeding: true });
+
+      /* ...and the stretches the in-flight flag cannot see. A demo tenant is
+         provisioned lazily on the session's first brain call, so between opening the
+         app and the seed starting there is nothing in flight and nothing on disk — the
+         window in which the old UI printed its confident, wrong total. The flag is also
+         per-process, so a restart mid-seed would forget.
+
+         Both are covered by a durable fact instead: a seeded demo tenant ends up with
+         the whole starter manifest, so a demo account that has fewer documents than
+         that has not finished being set up. Bounded to a young account, because a user
+         who later DELETES a starter document must not be told forever that their
+         ledger is still importing — the point of this flag is to caveat a figure while
+         it is genuinely provisional, not to add a permanent disclaimer. */
+      const user = await storage.getUser(userId);
+      const isDemo = isDemoEmail(user?.email);
+      // Only a young demo account can still be waiting on a seed, so the document read
+      // — the expensive part — is skipped for everyone else.
+      const documentCount =
+        isDemo && user?.createdAt != null ? (await storage.listSourceDocuments(userId)).length : 0;
+      res.json({
+        seeding: seedStillExpected({
+          inFlight: false,
+          isDemo,
+          createdAt: user?.createdAt,
+          documentCount,
+          expectedWithinMs: SEED_EXPECTED_WITHIN_MS,
+          now: Date.now(),
+        }),
+      });
+    } catch (err) {
+      /* Deliberately an error, not `{ seeding: false }`. A read that failed is not a
+         finished import, and answering "false" would let the UI drop the caveat on a
+         figure it has no evidence is final. The client treats an unreachable status as
+         no signal and falls back to the document-progress one. */
+      res.status(500).json({ error: (err as Error).message });
+    }
+  });
 
   app.get("/api/integrations/documents", requireAuth, async (req, res) => {
     try {
@@ -1832,6 +1936,15 @@ Evidence rows must cite the actual vendor names, amounts, and counts you saw in 
     } catch (err) {
       res.status(500).json({ error: (err as Error).message });
     }
+  });
+
+  /* Unmatched /api/* → JSON 404. Registered LAST: after every real API route, and before
+     the SPA catch-all that server/vite.ts (dev) and server/static.ts (prod) install. Without
+     it those catch-alls answer an unknown API path with 200 + the index.html shell, so a
+     deleted or mistyped endpoint still looks alive — callers get HTML where they expect JSON,
+     and a removal like the shared demo login is unobservable from outside the process. */
+  app.use("/api/{*path}", (req: Request, res: Response) => {
+    res.status(404).json({ error: "Not found", path: req.originalUrl.split("?")[0] });
   });
 
   return httpServer;

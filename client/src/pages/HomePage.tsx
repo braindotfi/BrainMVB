@@ -43,7 +43,9 @@ import {
 } from "@/lib/proposalTiers";
 import { TierSections, type TierRowAction, type TierRowModel } from "@/components/TierRowList";
 import { buildProposalHeaderCopy, buildDecisionButtons } from "@/lib/proposalCards";
-import { liabilitiesTotal, type ApInvoiceLike } from "@/lib/liabilities";
+import { payablesView } from "@/lib/liabilities";
+import { usePagedLedgerRead, ledgerFigureCaption } from "@/lib/ledgerRead";
+import type { RawObligation } from "@/lib/brainObligations";
 import { apiRequest } from "@/lib/queryClient";
 import { mapApprovalRejection, parseCoreError, type ApprovalRejection } from "@/lib/approvalRejections";
 import { ProposalDetail, type ProposalAction } from "@/components/ProposalDetail";
@@ -1018,15 +1020,20 @@ export function HomePage() {
         ? { text: processedText, colorClass: detectSentimentColor(processedText) }
         : { text: processedText, colorClass: SPENDING_INSIGHT_FALLBACK.colorClass };
 
-  /* Liabilities — outstanding accounts-payable, the same figure and the same
-     filter the Ledger's Liabilities view quotes (lib/liabilities.ts owns it so the
-     two can't drift). null, rendered "-", when no invoice data is reachable: zero
-     would be a claim that nothing is owed. */
-  const { data: brainInvoices } = useQuery<{ invoices?: ApInvoiceLike[] }>({
-    queryKey: ["/api/brain/ledger/invoices"],
-    retry: false,
+  /* Liabilities — everything outstanding: unpaid bills AND accrued payroll. Same
+     figure, same source, same module (lib/liabilities.ts) as the Cash Flow metric
+     and the itemized list this card links to, so the three can't drift. Reads the
+     obligations feed rather than invoices: invoices carry no payroll records, which
+     silently understated this number. null, rendered "-", when nothing is reachable
+     OR when only part of the ledger could be read: zero would be a claim that nothing
+     is owed, and a partial sum is a smaller number that looks just as settled. */
+  const obligationsRead = usePagedLedgerRead<RawObligation>("/api/brain/ledger/obligations", "obligations");
+  const payables = payablesView({
+    failed: obligationsRead.failed,
+    read: obligationsRead.read,
+    ingesting: obligationsRead.ingesting,
   });
-  const liabilities = liabilitiesTotal(brainInvoices?.invoices ?? null);
+  const liabilities = payables.total;
   const liabilitiesFormatted = liabilities !== null ? format(liabilities) : "-";
   const liabParts = liabilitiesFormatted.match(/^(.+)\.(\d{2})$/);
   const liabWhole = liabParts ? liabParts[1] : liabilitiesFormatted;
@@ -1119,8 +1126,8 @@ export function HomePage() {
                 label="Liabilities"
                 whole={liabWhole}
                 cents={liabCents}
-                caption="Unpaid bills you still owe."
-                onClick={() => navigate("/ledger?tab=cash-flow")}
+                caption={ledgerFigureCaption(payables, "Everything you still owe.")}
+                onClick={() => navigate("/ledger?tab=payables")}
                 testId="card-metric-liabilities"
               />
             </div>

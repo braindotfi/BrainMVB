@@ -77,6 +77,7 @@ export function useBrainReviewQueue() {
   const list = useQuery<ProposalsPage>({
     queryKey: [PROPOSALS_QUERY_KEY],
     retry: false,
+    refetchOnWindowFocus: true,
   });
   const pendingIds = selectMoneyPathIntentIds(list.data?.proposals ?? []);
 
@@ -90,11 +91,21 @@ export function useBrainReviewQueue() {
       // mapIntentToProposal's rowSubtitle below.
       queryKey: [`/api/brain/payment-intents/${id}?expand=agent`],
       retry: false,
+      /* The fan-out needs the focus refetch as much as the list does, and it is
+         the half that actually fixes the stale queue. selectMoneyPathIntentIds
+         picks ids by `payment_intent_id != null` with NO status filter, so a
+         teammate approving an intent does not remove it from the list — the
+         `status` filter below, reading the DETAIL record, is what drops it.
+         Refreshing only the list would therefore return the same ids, leave
+         every detail on the app's infinite stale time, and keep rendering a
+         settled intent as pending. */
+      refetchOnWindowFocus: true,
     })),
   }) as { data?: BrainPaymentIntent; isLoading: boolean; isError: boolean }[];
   const counterparties = useQuery<CounterpartiesLiteResponse>({
     queryKey: ["/api/brain/ledger/counterparties"],
     retry: false,
+    refetchOnWindowFocus: true,
   });
 
   const intents = details
@@ -132,6 +143,7 @@ export function useBrainAutoApproved() {
   const list = useQuery<ProposalsPage>({
     queryKey: [PROPOSALS_QUERY_KEY],
     retry: false,
+    refetchOnWindowFocus: true,
   });
   const autoIds = selectMoneyPathIntentIds(list.data?.proposals ?? []);
 
@@ -139,11 +151,16 @@ export function useBrainAutoApproved() {
     queries: autoIds.map((id) => ({
       queryKey: [`/api/brain/payment-intents/${id}?expand=agent`],
       retry: false,
+      /* Same reasoning as the review queue: the status filter below reads the
+         detail record, so a stale detail keeps an executed intent sitting in
+         "cleared". */
+      refetchOnWindowFocus: true,
     })),
   }) as { data?: BrainPaymentIntent; isLoading: boolean; isError: boolean }[];
   const counterparties = useQuery<CounterpartiesLiteResponse>({
     queryKey: ["/api/brain/ledger/counterparties"],
     retry: false,
+    refetchOnWindowFocus: true,
   });
 
   const intents = details

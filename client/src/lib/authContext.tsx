@@ -22,9 +22,10 @@ interface AuthContextType {
   user: AuthUser | null;
   isLoggedIn: boolean;
   isLoading: boolean;
+  /** True while an auth request may be rotating the browser session cookie. */
+  isTransitioning: boolean;
   loginWithPassword: (identifier: string, password: string) => Promise<void>;
   register: (params: { email: string; username?: string; password: string; name?: string }) => Promise<void>;
-  loginDemo: () => Promise<void>;
   loginDemoFresh: (opts?: { skipOnboarding?: boolean }) => Promise<void>;
   loginWithGoogle: () => void;
   logout: () => Promise<void>;
@@ -40,8 +41,8 @@ const AuthContext = createContext<AuthContextType | null>(null);
     remount these modules, so anything left here silently carries over and renders
     on the next account as activity it never had.
 
-    Runs on EVERY transition — `loginWithPassword`, `register`, `loginDemo`,
-    `loginDemoFresh`, session bootstrap, and `logout` (via `setUser(null)`) — not
+    Runs on EVERY transition — `loginWithPassword`, `register`, `loginDemoFresh`,
+    session bootstrap, and `logout` (via `setUser(null)`) — not
     just the paths that happen to call `logout()`. Exported so tests can pin the
     funnel without mounting the provider. Add new user-scoped stores HERE, not to
     an individual caller. */
@@ -63,6 +64,7 @@ export function applyUserScopedResets(u: AuthUser | null): void {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUserState] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   // Single funnel for user changes so the demo-data gate can NEVER drift from
   // the signed-in user. Real accounts (isDemo false/absent) disable all
@@ -92,52 +94,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const loginWithPassword = useCallback(async (identifier: string, password: string) => {
-    const res = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ identifier, password }),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data?.error || "Login failed");
-    // Clear any stale queries from a prior session (e.g. demo → real user switch)
-    // before applying the new user identity, so no cached data from the previous
-    // principal leaks into this session's renders. Same pattern as loginDemoFresh.
-    queryClient.clear();
-    clearMembers();
-    setUser(data.user);
+    setIsTransitioning(true);
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ identifier, password }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "Login failed");
+      // Clear any stale queries from a prior session (e.g. demo → real user switch)
+      // before applying the new user identity, so no cached data from the previous
+      // principal leaks into this session's renders. Same pattern as loginDemoFresh.
+      queryClient.clear();
+      clearMembers();
+      setUser(data.user);
+    } finally {
+      setIsTransitioning(false);
+    }
   }, []);
 
   const register = useCallback(
     async (params: { email: string; username?: string; password: string; name?: string }) => {
-      const res = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(params),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || "Registration failed");
-      // Same cache-clear as loginWithPassword — guards against any prior session data.
-      queryClient.clear();
-      clearMembers();
-      setUser(data.user);
+      setIsTransitioning(true);
+      try {
+        const res = await fetch("/api/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(params),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data?.error || "Registration failed");
+        // Same cache-clear as loginWithPassword — guards against any prior session data.
+        queryClient.clear();
+        clearMembers();
+        setUser(data.user);
+      } finally {
+        setIsTransitioning(false);
+      }
     },
     [],
   );
-
-  const loginDemo = useCallback(async () => {
-    const res = await fetch("/api/auth/demo", {
-      method: "POST",
-      credentials: "include",
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data?.error || "Demo login failed");
-    const u = data.user;
-    // Shared demo login always skips the onboarding flow.
-    markOnboardingComplete(u.id);
-    setUser(u);
-  }, []);
 
   /**
    * Fresh demo identity: a brand-new demo-fresh-<id>@brain.fi user, which durable tenancy
@@ -150,23 +149,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    * internal use, where seeing onboarding is the point).
    */
   const loginDemoFresh = useCallback(async (opts?: { skipOnboarding?: boolean }) => {
-    const res = await fetch("/api/auth/demo-fresh", {
-      method: "POST",
-      credentials: "include",
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data?.error || "Demo login failed");
-    const u = data.user;
-    if (opts?.skipOnboarding) markOnboardingComplete(u.id);
-    // Clear the React Query cache and members store before switching the user
-    // state. Without this, all queries cached for the previous (real) user
-    // persist in the cache and Settings/Home/Finances pages continue to render
-    // that user's tenant data — including company name, email, ledger figures,
-    // proposals, etc. — until each query happens to stale-expire on its own.
-    // This is the same pattern logout() and deleteAccount() already use.
-    queryClient.clear();
-    clearMembers();
-    setUser(u);
+    setIsTransitioning(true);
+    try {
+      const res = await fetch("/api/auth/demo-fresh", {
+        method: "POST",
+        credentials: "include",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "Demo login failed");
+      const u = data.user;
+      if (opts?.skipOnboarding) markOnboardingComplete(u.id);
+      // Clear the React Query cache and members store before switching the user
+      // state. Without this, all queries cached for the previous (real) user
+      // persist in the cache and Settings/Home/Finances pages continue to render
+      // that user's tenant data — including company name, email, ledger figures,
+      // proposals, etc. — until each query happens to stale-expire on its own.
+      // This is the same pattern logout() and deleteAccount() already use.
+      queryClient.clear();
+      clearMembers();
+      setUser(u);
+    } finally {
+      setIsTransitioning(false);
+    }
   }, []);
 
   const loginWithGoogle = useCallback(() => {
@@ -232,9 +236,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       isLoggedIn: !!user,
       isLoading,
+      isTransitioning,
       loginWithPassword,
       register,
-      loginDemo,
       loginDemoFresh,
       loginWithGoogle,
       logout,

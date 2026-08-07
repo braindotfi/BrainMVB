@@ -18,6 +18,7 @@ import { queryClient } from "@/lib/queryClient";
 import { openMemberDetail } from "@/lib/membersStore";
 import { useSuggestedQuestions, resolveSuggestionChips } from "@/lib/brainSuggestedQuestions";
 import { resolveVendor, openVendorDetail } from "@/lib/openVendorDetail";
+import { parseAssistantResponse, ASSISTANT_GENERIC_ERROR } from "@/lib/assistantChat";
 import brainLogo from "@assets/Brain_1_1783374797129.png";
 import timeIcon from "@assets/Time_1781821466642.png";
 import expandBtnIcon from "@assets/Expand_Button_1781817819809.png";
@@ -366,9 +367,6 @@ function ChatBubble({
   );
 }
 
-const CANNED_REPLY =
-  "I'm Brain, your finance assistant. Live answers are coming soon. For now this is a preview of how I'll help.";
-
 let idCounter = 0;
 const nextId = () => `m${++idCounter}`;
 
@@ -379,7 +377,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
   const devSearch = useSearch();
   const onDevelopersPage =
     location.startsWith("/settings") && new URLSearchParams(devSearch).get("section") === "developers";
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading, isTransitioning } = useAuth();
 
   /* Suggestion chips come from brain-core (GET /wiki/suggested-questions),
      already filtered and ranked upstream, rendered in the order it returns
@@ -416,6 +414,37 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
   const [openTxId, setOpenTxId] = useState<string | null>(null);
   const [openAccountId, setOpenAccountId] = useState<string | null>(null);
   const [openBillId, setOpenBillId] = useState<string | null>(null);
+  const chatAbortRef = useRef<AbortController | null>(null);
+  const chatGenerationRef = useRef(0);
+  const assistantInputRef = useRef<HTMLTextAreaElement | null>(null);
+
+  // Grow the composer as its text wraps, while keeping very long drafts from
+  // pushing the rest of the assistant panel off-screen.
+  useLayoutEffect(() => {
+    const input = assistantInputRef.current;
+    if (!input) return;
+
+    input.style.height = "auto";
+    const maxHeight = 120;
+    const nextHeight = Math.min(input.scrollHeight, maxHeight);
+    input.style.height = `${nextHeight}px`;
+    input.style.overflowY = input.scrollHeight > maxHeight ? "auto" : "hidden";
+  }, [draft]);
+
+  // Demo-fresh rotates the session cookie. Stop any request that started under
+  // the previous principal, and ignore its result even if the server already
+  // began processing it.
+  useEffect(() => {
+    if (!isTransitioning && user?.id) {
+      // A user change is handled by the same generation bump below; this branch
+      // only documents that new sends are safe after the transition settles.
+      return;
+    }
+    chatGenerationRef.current += 1;
+    chatAbortRef.current?.abort();
+    chatAbortRef.current = null;
+    setSending(false);
+  }, [isTransitioning, user?.id]);
 
   // Recent ledger data caches (shared with Finances/Bills) for resolving ids.
   const { data: txData } = useQuery<{ transactions: { id: string }[] }>({
@@ -554,7 +583,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
 
   const sendMessage = async (text: string) => {
     const trimmed = text.trim();
-    if (!trimmed || sending) return;
+    if (!trimmed || sending || authLoading || isTransitioning || !user) return;
 
     setDraft("");
 
@@ -600,32 +629,30 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
     );
 
     setSending(true);
+    const requestGeneration = chatGenerationRef.current;
+    const controller = new AbortController();
+    chatAbortRef.current = controller;
     try {
       const res = await fetch("/api/assistant/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
+        signal: controller.signal,
         body: JSON.stringify({ messages: history }),
       });
-      const data = await res.json().catch(() => null);
-      // Only use a reply when the server responded successfully. A non-OK
-      // response (e.g. 401 {"error":"Not authenticated"} or a 400/500) has no
-      // `reply` field, so falling back to CANNED_REPLY would show a misleading
-      // "coming soon" message instead of an honest error.
-      const reply = res.ok
-        ? (data?.reply as string)?.trim() || CANNED_REPLY
-        : (data?.error as string)?.trim() ||
-          "Something went wrong reaching the assistant. Please try again.";
+      const parsed = await parseAssistantResponse(res);
+      if (requestGeneration !== chatGenerationRef.current) return;
+      const { data, reply } = parsed;
       const isUngrounded = data?.ungrounded === true;
+      const answerError = parsed.answerError || data?.answerError === true;
       const answerStatus =
-        data?.answerError === true
+        answerError
           ? ("error" as const)
           : data?.answered === false
             ? ("no_answer" as const)
           : data?.answered === true
             ? ("answered" as const)
             : undefined;
-      const answerError = data?.answerError === true;
       // Tolerate both the structured `{entityId,entityType,excerpt}` shape and the
       // legacy bare-string-id shape.
       const sources: EvidenceRecord[] = Array.isArray(data?.sources)
@@ -660,7 +687,9 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
             : s,
         ),
       );
-    } catch {
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
+      if (requestGeneration !== chatGenerationRef.current) return;
       setSessions((prev) =>
         prev.map((s) =>
           s.id === sessionId
@@ -668,7 +697,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                 ...s,
                 messages: s.messages.map((m) =>
                   m.id === assistantId
-                    ? { ...m, text: "Something went wrong reaching the assistant. Please try again." }
+                    ? { ...m, text: ASSISTANT_GENERIC_ERROR, answerStatus: "error", answerError: true }
                     : m,
                 ),
               }
@@ -676,7 +705,10 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
         ),
       );
     } finally {
-      setSending(false);
+      if (requestGeneration === chatGenerationRef.current) {
+        chatAbortRef.current = null;
+        setSending(false);
+      }
     }
   };
 
@@ -1072,9 +1104,11 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                                 else if (resolvedType === "member") openMemberDetail(s.entityId);
                                 else if (resolvedType === "counterparty") openVendorDetail(s.entityId, navigate);
                                 else if (resolvedType === "audit_event") navigate(`/audit-log?record=${s.entityId}`);
-                                /* Obligations surface in the Finances "Bills" tab; there is no
-                                   /bills route (navigating there hit the NotFound catch-all). */
-                                else if (resolvedType === "obligation") navigate("/ledger?tab=cash-flow");
+                                /* Payables is the itemized "what we owe" list, so a citation
+                                   about one obligation lands beside the rest of them. It went to
+                                   Cash Flow only because that list did not exist yet — there is
+                                   still no /bills route (navigating there hit NotFound). */
+                                else if (resolvedType === "obligation") navigate("/ledger?tab=payables");
                                 else if (resolvedType === "payment_intent") navigate("/review");
                                 else if (resolvedType === "wiki.question") navigate(`/audit-log?record=${s.entityId}`);
                               }}
@@ -1125,8 +1159,10 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
 
       {/* Input field */}
       <div className="mx-[7px] mb-[7px] rounded-[12px] bg-[#0a0c10] p-[8px] flex flex-col gap-[10px]">
-        <input
+        <textarea
+          ref={assistantInputRef}
           data-testid="input-assistant-message"
+          rows={1}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => {
@@ -1136,7 +1172,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
             }
           }}
           placeholder="Ask me a question..."
-          className="w-full bg-transparent outline-none px-[8px] pt-[6px] [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] placeholder:text-[#6c779d] text-[16px] leading-[20px]"
+          className="w-full resize-none bg-transparent outline-none px-[8px] pt-[6px] [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] placeholder:text-[#6c779d] text-[16px] leading-[20px] overflow-x-hidden"
         />
         <div className="flex items-center justify-between">
           <input
@@ -1163,7 +1199,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
             <button
               data-testid="button-assistant-send"
               onClick={() => sendMessage(draft)}
-              disabled={!draft.trim() || sending}
+              disabled={!draft.trim() || sending || authLoading || isTransitioning || !user}
               className="size-[32px] rounded-full bg-[#7631ee] flex items-center justify-center transition-opacity disabled:opacity-40 hover:opacity-90"
               title="Send"
             >

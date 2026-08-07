@@ -143,11 +143,15 @@ MOCK-ONLY: Rules and document viewer/resolution stores (`client/src/lib/mock*.ts
   (Pending for covered events) but never over-claims.
 
 ## API Endpoints (details in `server/routes.ts` / `server/auth.ts`)
-- Auth: `POST /api/auth/register|login|logout|demo`, `GET /api/auth/user`, Google OAuth +
+- Auth: `POST /api/auth/register|login|logout|demo-fresh`, `GET /api/auth/user`, Google OAuth +
   `/callback`, SIWE `GET /api/auth/nonce` (CSPRNG, pinned by `server/nonce.test.ts`) +
   `POST /api/auth/verify`. `GET /api/config`. Login accepts `{identifier, password}`.
-  `POST /api/auth/demo` = shared demo account; the single "Continue with Demo" button always
-  sets the `brain_onboarding_complete_<userId>` localStorage flag (skips onboarding).
+  `POST /api/auth/demo-fresh` = a NEW isolated demo user + tenant per visitor; the single
+  "Continue with Demo" button calls it and always sets the
+  `brain_onboarding_complete_<userId>` localStorage flag (skips onboarding).
+  The shared `POST /api/auth/demo` route was DELETED — one unauthenticated account and tenant
+  for every visitor meant each one inherited the previous visitor's data. Do not reintroduce
+  it; `server/auth-security.test.ts` pins it as 404.
 - Assistant: `POST /api/assistant/chat` — zod-validated, Claude; 503/402/500 errors each carry
   a user-facing `reply`.
 - Brain proxy: see BFF above; also `GET /api/brain/recommendation`, `/approval-policy`.

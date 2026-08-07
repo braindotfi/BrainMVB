@@ -36,5 +36,8 @@ Two consequences worth knowing before designing new copy:
    status plumbed through properly first; it cannot be recovered from the
    flattened message.
 
-Regression cover: `scripts/qa-policy-read-states.mjs` drives all of these
-answers and asserts the "no policy" and "unknown" states stay visibly different.
+Regression cover: `scripts/qa-policy-read-states.mjs` was the dedicated QA
+script for these states. **It was deleted** when the Auto-Approve Limit card was
+removed from Settings → Profile (the card was the only surface that script
+tested). If a new surface re-exposes these four states, a new QA script must
+cover them again — don't assume the coverage still exists.

@@ -22,6 +22,8 @@ import { Divider } from "@/components/LedgerWidgets";
 import { UnavailableDataBox } from "@/components/Callout";
 import { capitalCase } from "@/lib/displayLabels";
 import type { TierRowStatusPill } from "@/lib/decisionPills";
+import { CountPill } from "@/components/CountPill";
+import { RecordPill } from "@/components/RecordPill";
 
 /* Tier accents. Red = Urgent, amber = Waiting on you, periwinkle = Insights —
    the palette already used for Inbox status tags, not the prototype's colours. */
@@ -219,13 +221,13 @@ export const TierRow = ({ row }: { row: TierRowModel }) => {
             {row.title}
           </p>
           {row.badge && (
-            <span
-              className={`${row.badge.className} border border-solid rounded-[22px] px-[8px] py-[2px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-center whitespace-nowrap shrink-0`}
-              data-testid={`${row.testIdPrefix}-${row.id}-badge`}
+            <RecordPill
+              className={row.badge.className}
+              testId={`${row.testIdPrefix}-${row.id}-badge`}
             >
               {capitalCase(row.badge.label)}
               {row.badge.srLabel && <span className="sr-only">{`, ${row.badge.srLabel}`}</span>}
-            </span>
+            </RecordPill>
           )}
         </div>
         {row.subtitle && (
@@ -275,9 +277,7 @@ export const TierSection = ({ tier, rows }: { tier: ProposalTier; rows: TierRowM
         >
           {meta.title}
         </p>
-        <div className="flex items-center justify-center min-w-[18px] px-[5px] py-[1px] rounded-[4px] shrink-0" style={{ background: accent }}>
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#0a0c10] text-[11px] text-center whitespace-nowrap">{rows.length}</p>
-        </div>
+        <CountPill background={accent}>{rows.length}</CountPill>
         {meta.note && (
           <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[12px] truncate">
             Note: {meta.note}

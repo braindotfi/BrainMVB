@@ -8,7 +8,9 @@ import {
   vendorTier,
   isReviewedOnly,
   reviewReasonLabel,
+  informationalReasonLabel,
   vendorSegment,
+  supportsTrustActions,
 } from "@/lib/brainVendors";
 import { useCurrency } from "@/lib/useCurrency";
 import { useToast } from "@/hooks/use-toast";
@@ -20,13 +22,15 @@ import { FilterChipRow } from "@/components/FilterChipRow";
 import { Plus, ChevronDown } from "lucide-react";
 import { AlertCallout, UnavailableDataBox } from "@/components/Callout";
 import closeIcon from "@assets/Close_1783293571882.png";
+import { CountPill } from "@/components/CountPill";
+import { RecordPill } from "@/components/RecordPill";
 
 /* "New" is deliberately NOT a top-level chip. It was one half of the bug this
    screen used to have: the banner counted new+unreviewed rows while the Needs
    Review chip counted only risk-flagged ones, so a warning pointed at rows the
    active filter refused to show. Newness is now a REASON inside Needs Review,
    not a competing filter. */
-type VendorTab = "Needs Review" | "Trusted" | "Flagged" | "Suggested";
+type VendorTab = "Needs Review" | "Trusted" | "Paused" | "Suggested" | "Informational";
 
 /** Vendors (we pay them) vs Customers (they pay us). */
 type Segment = "vendor" | "customer";
@@ -39,8 +43,9 @@ type Segment = "vendor" | "customer";
 const TAB_TIER: Record<VendorTab, VendorTier> = {
   "Needs Review": "needsReview",
   Trusted: "trusted",
-  Flagged: "flagged",
+  Paused: "paused",
   Suggested: "suggested",
+  Informational: "informational",
 };
 
 const Divider = () => <div className="h-px shrink-0 w-full" style={{ background: "#1d2132" }} />;
@@ -65,19 +70,14 @@ const VENDOR_CATEGORIES = [
 /** Why a row is in the review queue. Risk reads as danger, newness as amber —
  *  the same two tones the rest of the app uses for those meanings. */
 function ReasonChip({ label }: { label: string }) {
-  const danger = label.startsWith("Risk:") || label === "Flagged for review";
+  const danger = label.startsWith("Risk:") || label === "Paused for review";
   return (
-    <span
-      data-testid="chip-review-reason"
-      className="shrink-0 rounded-[4px] px-[6px] py-[1px] [font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[11px] whitespace-nowrap"
-      style={
-        danger
-          ? { background: "#350011", color: "#d20344" }
-          : { background: "#4a2300", color: "#ff9400" }
-      }
+    <RecordPill
+      className={danger ? "bg-[#350011] text-[#d20344] border-[rgba(210,3,68,0.2)]" : "bg-[#4a2300] text-[#ff9400] border-[rgba(255,149,0,0.2)]"}
+      testId="chip-review-reason"
     >
       {label}
-    </span>
+    </RecordPill>
   );
 }
 
@@ -90,14 +90,13 @@ function ReasonChip({ label }: { label: string }) {
  *  what a human sees; nothing about the API changed. */
 function ReviewedChip() {
   return (
-    <span
-      data-testid="chip-reviewed"
+    <RecordPill
+      className="bg-[#222737] text-[#6c779d] border-[rgba(108,119,157,0.2)]"
+      testId="chip-reviewed"
       title="Reviewed — no action taken"
-      className="shrink-0 rounded-[4px] px-[6px] py-[1px] [font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[11px] whitespace-nowrap"
-      style={{ background: "#222737", color: "#6c779d" }}
     >
       No action
-    </span>
+    </RecordPill>
   );
 }
 
@@ -416,10 +415,13 @@ export function VendorsPanel() {
         body: JSON.stringify({
           name: vendorName.trim(),
           category: category.trim() || undefined,
-          /* The create route accepts `type: "customer"`, so the add box has to
-             follow the active segment. Vendors send no type and keep
-             brain-core's default — changing that is a separate decision. */
-          ...(segment === "customer" ? { type: "customer" } : {}),
+          /* The type decides which segment the row comes back in, so it has to
+             follow the active segment — brain-core persists what it is sent and
+             its upsert key includes the type, so a wrong value here is not
+             recoverable by the read side. Sent explicitly for BOTH segments:
+             omitting it left the BFF to supply a default, which is exactly how
+             customers used to be filed as vendors. */
+          type: segment === "customer" ? "customer" : "vendor",
         }),
       });
       const body = await res.json().catch(() => undefined);
@@ -461,8 +463,10 @@ export function VendorsPanel() {
     }
   };
 
-  /* ── Delete vendor handler ── */
+  /* ── Delete counterparty handler ── */
   const handleDeleteVendor = async (vendorId: string, vendorNameLabel: string) => {
+    const deletedVendor = vendors.find((v) => v.id === vendorId);
+    const isCustomer = deletedVendor ? vendorSegment(deletedVendor) === "customer" : false;
     try {
       const res = await fetch(`/api/brain/ledger/counterparties/${vendorId}`, {
         method: "DELETE",
@@ -473,7 +477,10 @@ export function VendorsPanel() {
         return;
       }
       await queryClient.invalidateQueries({ queryKey: ["/api/brain/ledger/counterparties"] });
-      toast({ title: "Vendor deleted", description: `${vendorNameLabel} has been removed.` });
+      alert.success(
+        isCustomer ? "Customers Successfully Deleted" : "Vendor Successfully Deleted",
+        `${vendorNameLabel} has been successfully deleted and removed.`,
+      );
       setActiveVendor(null);
       const params = new URLSearchParams(search);
       params.delete("vendor");
@@ -527,9 +534,10 @@ export function VendorsPanel() {
   const grouped = useMemo(() => {
     const buckets: Record<VendorTier, Vendor[]> = {
       needsReview: [],
-      flagged: [],
+      paused: [],
       trusted: [],
       suggested: [],
+      informational: [],
     };
     for (const v of segmentVendors) {
       const tier = vendorTier(v);
@@ -538,6 +546,16 @@ export function VendorsPanel() {
     }
     return buckets;
   }, [segmentVendors]);
+
+  /* The exact rows "Confirm All" acts on. Derived once so the button's count,
+     its visibility and the loop it runs can never describe different sets. */
+  const bulkConfirmable = useMemo(
+    () =>
+      grouped.needsReview.filter(
+        (v) => vendorSegment(v) === "customer" && !v.riskLevel && supportsTrustActions(v),
+      ),
+    [grouped],
+  );
 
   const countsKnown = !isLoading && !isError;
 
@@ -552,8 +570,13 @@ export function VendorsPanel() {
      reasoning as the Needs Review count, which is omitted rather than zeroed
      until the read lands.
 
-     Flagged: rare enough on Customers that a permanently-empty chip is just
-     noise there, but it stays on Vendors, where flagging is the point.
+     Paused: always visible on both Vendors and Customers. The tab groups every
+     counterparty whose trust state has been set to paused — the state written by
+     /trust/pause, named after the verb rather than "flagged" because this app
+     already uses flags for the unrelated per-vendor anomaly signals. Hiding it
+     while empty would remove the tab during normal operations, making it look
+     like a feature that isn't there; keeping it visible makes pausing a
+     discoverable action.
      Suggested: nothing can currently reach the tier on either segment — brain-
      core's provenance enum has no value meaning "Brain-suggested, not yet
      confirmed". The chip is hidden until vendorTier() returns "suggested" for
@@ -563,17 +586,24 @@ export function VendorsPanel() {
      during load and hiding it once the read lands would assert "this tier exists
      here" on stale data. The chip either has rows or it doesn't.
 
-     Both hide only WHILE empty — hiding a chip that has rows would hide the
-     rows, which is the failure this screen exists to prevent. */
-  const showFlagged =
-    !countsKnown || segment === "vendor" || grouped.flagged.length > 0;
+     Informational hides only WHILE empty — hiding a chip that has rows would
+     hide the rows, which is the failure this screen exists to prevent. */
+  const showPaused = true;
   const showSuggested = grouped.suggested.length > 0;
+  /* Informational: same hidden-while-empty rule as Suggested, and for the same
+     reason — a chip for a tier the tenant has no rows in claims a distinction
+     that does not exist for them. Most tenants will never see it. It appears the
+     moment brain-core returns a placeholder row and disappears if they stop
+     coming, and the loading guard is likewise absent: the chip either has rows
+     or it doesn't. */
+  const showInformational = grouped.informational.length > 0;
 
   const tabVisible: Record<VendorTab, boolean> = {
     "Needs Review": true,
     Trusted: true,
-    Flagged: showFlagged,
+    Paused: showPaused,
     Suggested: showSuggested,
+    Informational: showInformational,
   };
 
   /* A segment switch — or a bucket emptying out — can retire the chip that is
@@ -612,8 +642,10 @@ export function VendorsPanel() {
     },
     // The settled tiers stay clean — their counts carry no action signal.
     { value: "Trusted", label: trustedLabel },
-    ...(showFlagged ? [{ value: "Flagged", label: "Flagged" }] : []),
+    ...(showPaused ? [{ value: "Paused", label: "Paused" }] : []),
     ...(showSuggested ? [{ value: "Suggested", label: "Suggested" }] : []),
+    // No count: these rows are records, not a workload.
+    ...(showInformational ? [{ value: "Informational", label: "Informational" }] : []),
   ];
 
   const segmentFilters = [
@@ -761,8 +793,15 @@ export function VendorsPanel() {
     vendorId: string,
     action: "grant" | "pause" | "acknowledge" | "restore",
     successTitle: string,
-    successDesc: string,
+    successText: string,
   ) => {
+    /* Informational rows render no trust controls, so reaching here means a
+       caller bypassed the UI (a deep link, a stale popup, a future call site).
+       Guard at the mount point rather than trusting the absence of a button:
+       this is the only place trust writes originate, so it is the only place
+       that can promise none is ever recorded against a placeholder. */
+    const target = vendors.find((x) => x.id === vendorId);
+    if (target && !supportsTrustActions(target)) return;
     setTrustBusy(true);
     try {
       const res = await fetch(
@@ -775,7 +814,7 @@ export function VendorsPanel() {
           (body?.body?.error?.message as string | undefined) ??
           (body?.message as string | undefined) ??
           "Brain core rejected this action.";
-        toast({ title: "Action failed", description: msg, variant: "destructive" });
+        alert.error("Action failed", msg);
         return;
       }
       await queryClient.invalidateQueries({ queryKey: ["/api/brain/ledger/counterparties"] });
@@ -784,9 +823,9 @@ export function VendorsPanel() {
       params.delete("vendor");
       params.set("tab", "counterparties");
       navigate(`/ledger?${params.toString()}`, { replace: true });
-      toast({ title: successTitle, description: successDesc });
+      alert.success(successTitle, successText);
     } catch {
-      toast({ title: "Action failed", description: "Couldn't reach Brain core. Nothing was changed.", variant: "destructive" });
+      alert.error("Action failed", "Couldn't reach Brain core. Nothing was changed.");
     } finally {
       setTrustBusy(false);
     }
@@ -796,35 +835,46 @@ export function VendorsPanel() {
     const v = vendors.find((x) => x.id === vendorId);
     const isCustomer = v ? vendorSegment(v) === "customer" : false;
     return callTrustAction(
-      vendorId, "grant",
-      isCustomer ? "Confirmed" : "Trusted",
-      isCustomer ? "Customer confirmed." : "Vendor trusted.",
+      vendorId,
+      "grant",
+      isCustomer ? "Customers Successfully Trusted" : "Vendor Successfully Trusted",
+      `${v?.name ?? (isCustomer ? "Customer" : "Vendor")} has been added as a trusted ${isCustomer ? "customer" : "vendor"}.`,
     );
   };
-  const handleFlag = (vendorId: string) =>
-    callTrustAction(vendorId, "pause", "Flagged", "Flagged for review.");
+  const handlePause = (vendorId: string) => {
+    const v = vendors.find((x) => x.id === vendorId);
+    const isCustomer = v ? vendorSegment(v) === "customer" : false;
+    return callTrustAction(
+      vendorId,
+      "pause",
+      isCustomer ? "Customer Trust Paused" : "Vendor Trust Paused",
+      `Trust for ${v?.name ?? (isCustomer ? "this customer" : "this vendor")} is paused. Restore it once you've verified the account.`,
+    );
+  };
   /* paused → trusted. Uses /trust/restore (not grant — grant is only valid from
      unreviewed/acknowledged; the matrix has no paused→trusted grant transition). */
   const handleRestore = (vendorId: string) => {
     const v = vendors.find((x) => x.id === vendorId);
     const isCustomer = v ? vendorSegment(v) === "customer" : false;
     return callTrustAction(
-      vendorId, "restore",
-      isCustomer ? "Confirmation restored" : "Trust restored",
-      isCustomer ? "Confirmation has been restored." : "Trust has been restored.",
+      vendorId,
+      "restore",
+      isCustomer ? "Customers Successfully Trusted" : "Vendor Successfully Trusted",
+      `${v?.name ?? (isCustomer ? "Customer" : "Vendor")} has been added as a trusted ${isCustomer ? "customer" : "vendor"}.`,
     );
   };
-  const handleAcknowledge = (vendorId: string) =>
-    callTrustAction(vendorId, "acknowledge", "No action", "Marked reviewed with no action taken.");
+  const handleAcknowledge = (vendorId: string) => {
+    const v = vendors.find((x) => x.id === vendorId);
+    const isCustomer = v ? vendorSegment(v) === "customer" : false;
+    return callTrustAction(vendorId, "acknowledge", isCustomer ? "Customers Successfully Marked with No Action" : "Vendor Successfully Mark with No Action", `${v?.name ?? (isCustomer ? "Customer" : "Vendor")} has been reviewed but no action was taken.`);
+  };
 
   /* Bulk confirm — Customers segment only. N individual grant calls so each
      row gets its own audit event. Risk-flagged rows (riskLevel set) cannot be
      cleared here and stay in the per-item queue. */
   const handleBulkConfirm = async () => {
     if (bulkBusy) return;
-    const toConfirm = grouped.needsReview.filter(
-      (v) => vendorSegment(v) === "customer" && !v.riskLevel,
-    );
+    const toConfirm = bulkConfirmable;
     if (toConfirm.length === 0) return;
     setBulkBusy(true);
     let succeeded = 0;
@@ -840,13 +890,12 @@ export function VendorsPanel() {
     }
     await queryClient.invalidateQueries({ queryKey: ["/api/brain/ledger/counterparties"] });
     if (failed === 0) {
-      toast({ title: "All confirmed", description: `${succeeded} customer${succeeded !== 1 ? "s" : ""} confirmed.` });
+      alert.success("All Customers Successfully Added", "All customers have been added as trusted customers.");
     } else {
-      toast({
-        title: `${succeeded} confirmed, ${failed} failed`,
-        description: "Some customers couldn't be confirmed. Try those individually.",
-        variant: "destructive",
-      });
+      alert.error(
+        `${succeeded} confirmed, ${failed} failed`,
+        "Some customers couldn't be confirmed. Try those individually.",
+      );
     }
     setBulkBusy(false);
   };
@@ -857,23 +906,22 @@ export function VendorsPanel() {
               <div className="flex items-center gap-[8px] min-h-[16px] w-full">
                 <div className="size-[6px] rounded-full shrink-0 bg-[#6c779d]" />
                 <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#6c779d] text-[12px] uppercase tracking-[0.4px] whitespace-nowrap">
-                  {effectiveTab === "Flagged"
-                    ? "Flagged"
+                  {effectiveTab === "Paused"
+                    ? "Paused"
                     : segment === "vendor"
                       ? "Added Vendors"
                       : "Customers"}
                 </p>
-                <div className="bg-[#6c779d] flex items-center justify-center min-w-[18px] px-[5px] py-[1px] rounded-[4px] shrink-0">
-                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#0a0c10] text-[11px] text-center whitespace-nowrap">
-                    {tabVendors.length}
-                  </p>
-                </div>
+                <CountPill>{tabVendors.length}</CountPill>
               </div>
 
               {/* Bulk confirm: Customers segment, Needs Review tab, risk-free rows only.
-                  Risk-flagged rows need per-item review and are excluded here. */}
+                  Risk-flagged rows need per-item review and are excluded here, as
+                  are informational rows, which no confirmation applies to. The
+                  count comes from the SAME list the click confirms — a button
+                  offering to confirm more rows than it acts on is a lie. */}
               {segment === "customer" && effectiveTab === "Needs Review" &&
-               tabVendors.filter((v) => !v.riskLevel).length > 0 && (
+               bulkConfirmable.length > 0 && (
                 <button
                   type="button"
                   onClick={handleBulkConfirm}
@@ -884,7 +932,7 @@ export function VendorsPanel() {
                 >
                   {bulkBusy
                     ? "Confirming..."
-                    : `Confirm All ${tabVendors.filter((v) => !v.riskLevel).length} Customers`}
+                    : `Confirm All ${bulkConfirmable.length} Customers`}
                 </button>
               )}
 
@@ -904,10 +952,11 @@ export function VendorsPanel() {
                               ? "Trust a vendor from the Needs Review tab."
                               : "Confirm a customer from the Needs Review tab."
                           }`}
-                        {/* No Suggested copy: the chip is only rendered while its
-                            bucket has rows, so an empty Suggested list is
-                            unreachable. Restore a line here if that changes. */}
-                        {effectiveTab === "Flagged" && `No flagged ${segmentNoun}.`}
+                        {/* No Suggested or Informational copy: those chips are
+                            only rendered while their bucket has rows, so an
+                            empty list is unreachable for both. Restore a line
+                            here if that changes. */}
+                        {effectiveTab === "Paused" && `No paused ${segmentNoun}.`}
                       </p>
                     </div>
                   ) : (
@@ -919,7 +968,13 @@ export function VendorsPanel() {
                           format={format}
                           // Reason is shown only in the review queue — it answers
                           // "why is this here?", which is only a question there.
-                          reason={effectiveTab === "Needs Review" ? reviewReasonLabel(vendor) : null}
+                          reason={
+                            effectiveTab === "Needs Review"
+                              ? reviewReasonLabel(vendor)
+                              : effectiveTab === "Informational"
+                                ? informationalReasonLabel(vendor)
+                                : null
+                          }
                           reviewed={effectiveTab === "Trusted" && isReviewedOnly(vendor)}
                           onClick={() => handleOpenVendor(vendor)}
                         />
@@ -994,7 +1049,7 @@ export function VendorsPanel() {
         pagerDisabled={vendorPagerDisabled}
         onDeleteVendor={(id, name) => handleDeleteVendor(id, name)}
         onGrant={handleGrant}
-        onFlag={handleFlag}
+        onPause={handlePause}
         onRestore={handleRestore}
         onAcknowledge={handleAcknowledge}
         trustBusy={trustBusy}

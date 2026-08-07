@@ -21,7 +21,14 @@ import {
 import { useLocation } from "wouter";
 import { useCurrency } from "@/lib/useCurrency";
 import type { Vendor, TrustStatus } from "@/lib/vendorTypes";
-import { vendorSegment, isReviewedOnly } from "@/lib/brainVendors";
+import {
+  vendorSegment,
+  isReviewedOnly,
+  supportsTrustActions,
+  isNeedsReview,
+  trustChipKind,
+  trustTitleKind,
+} from "@/lib/brainVendors";
 import { openRuleDetail, resolveRule } from "@/lib/openRuleDetail";
 import closeIcon from "@assets/Close_1783293571882.png";
 import { AlertCallout, InfoIcon } from "@/components/Callout";
@@ -145,7 +152,7 @@ export function VendorDetailPopup({
   pagerDisabled,
   onDeleteVendor,
   onGrant,
-  onFlag,
+  onPause,
   onRestore,
   onAcknowledge,
   trustBusy,
@@ -160,7 +167,7 @@ export function VendorDetailPopup({
   /** Grant trust / confirm. Valid from unreviewed or acknowledged states. */
   onGrant?: (vendorId: string) => void;
   /** Pause / flag. Moves trusted → paused via /trust/pause. */
-  onFlag?: (vendorId: string) => void;
+  onPause?: (vendorId: string) => void;
   /** Restore paused vendor to trusted via /trust/restore. paused → trusted only. */
   onRestore?: (vendorId: string) => void;
   /** Acknowledge without granting — dismiss from review queue. */
@@ -199,12 +206,37 @@ export function VendorDetailPopup({
   const grantLabel = isCustomer ? `Confirm ${nounTitle}` : `Trust ${nounTitle}`;
   const restoreLabel = isCustomer ? "Restore Confirmation" : "Restore Trust";
 
-  const chipLabel =
-    vendor.trustStatus === "under_review"
-      ? "Paused"
-      : vendor.trustStatus === "trusted"
-        ? trustedWord
-        : meta.label;
+  /* Informational rows (today: the payroll register placeholder) carry no trust
+     controls. The derived trustStatus still says "new"/"known" — that is a tier
+     derivation over payment history and it does not know the row is a
+     bookkeeping artefact — so the status chip and the heading are overridden
+     too. Leaving them would label the row "New Vendor" and invite exactly the
+     review that is being withheld. */
+  const trustActionsAvailable = supportsTrustActions(vendor);
+
+  /* Which status this row is in is decided by trustChipKind, next to vendorTier
+     and in the same branch order, so the chip cannot disagree with the tab the row
+     is filed under. Deciding it here from trustStatus is what produced a run of
+     false badges: that field reports `under_review` for a pause AND for a server
+     risk mark, and reports `trusted` before it looks at risk at all.
+
+     This component owns only the words, because those are segment-dependent —
+     customers are "Confirmed", vendors "Trusted". "Paused" rather than "Flagged"
+     for the /trust/pause state: this app already spends "flag" on the per-
+     counterparty anomaly signals rendered further down this same popup ("Active
+     Flags", "Flags Raised"), and two meanings for one word on one screen is worse
+     than the naming drift it replaced. */
+  const chipLabel = {
+    informational: "Informational",
+    needsReview: "Needs Review",
+    paused: "Paused",
+    /* Dismissed, not granted. It shares the Trusted tab, and the row list draws
+       the same distinction with its Reviewed badge. */
+    reviewed: "Reviewed",
+    trusted: trustedWord,
+    /* No tier claims this row, so the chip must not claim anything either. */
+    unclassified: meta.label,
+  }[trustChipKind(vendor)];
 
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
@@ -214,12 +246,24 @@ export function VendorDetailPopup({
           {/* Title and Controls */}
           <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-[#1d2132] border-solid h-[56px] relative shrink-0 w-full">
             <DialogPrimitive.Title asChild>
-              <p className="-translate-x-1/2 absolute font-['Gilroy',sans-serif] font-semibold leading-[24px] left-1/2 not-italic text-[#a8b9f4] text-[20px] text-center top-[calc(50%-12px)] whitespace-nowrap">
-                {vendor.trustStatus === "new"
-                  ? `New ${nounTitle}`
-                  : vendor.trustStatus === "trusted"
-                    ? `${trustedWord} ${nounTitle}`
-                    : `Review ${nounTitle}`}
+              <p
+                data-testid="text-vendor-popup-title"
+                className="-translate-x-1/2 absolute font-['Gilroy',sans-serif] font-semibold leading-[24px] left-1/2 not-italic text-[#a8b9f4] text-[20px] text-center top-[calc(50%-12px)] whitespace-nowrap"
+              >
+                {/* Derived from the chip kind, not from trustStatus. Read directly,
+                    that field made this heading claim "Trusted Vendor" for a row
+                    brain-core had marked sanctioned — in the largest text on the
+                    popup, directly above a chip reading "Needs Review". */}
+                {{
+                  informational: "Payroll Register",
+                  needsReview: `Review ${nounTitle}`,
+                  new: `New ${nounTitle}`,
+                  paused: `Paused ${nounTitle}`,
+                  reviewed: `Reviewed ${nounTitle}`,
+                  trusted: `${trustedWord} ${nounTitle}`,
+                  /* No tier claims the row; ask for a look rather than assert a state. */
+                  unclassified: `Review ${nounTitle}`,
+                }[trustTitleKind(vendor)]}
               </p>
             </DialogPrimitive.Title>
             <DialogPrimitive.Close
@@ -244,28 +288,34 @@ export function VendorDetailPopup({
                 <div
                   className="flex items-center justify-center px-[10px] py-[4px] rounded-[22px] shrink-0 border border-solid"
                   style={{
-                    background: vendor.trustStatus === "under_review"
-                      ? "#350011"
-                      : vendor.trustStatus === "trusted"
-                        ? "#123509"
-                        : meta.chipBg,
-                    borderColor: vendor.trustStatus === "under_review"
-                      ? "rgba(210,3,68,0.2)"
-                      : vendor.trustStatus === "new"
-                        ? "rgba(255,149,0,0.2)"
+                    background: !trustActionsAvailable
+                      ? "#1a1e2b"
+                      : vendor.trustStatus === "under_review"
+                        ? "#350011"
                         : vendor.trustStatus === "trusted"
-                          ? "rgba(66,191,35,0.2)"
-                          : "transparent",
+                          ? "#123509"
+                          : meta.chipBg,
+                    borderColor: !trustActionsAvailable
+                      ? "rgba(108,119,157,0.2)"
+                      : vendor.trustStatus === "under_review"
+                        ? "rgba(210,3,68,0.2)"
+                        : vendor.trustStatus === "new"
+                          ? "rgba(255,149,0,0.2)"
+                          : vendor.trustStatus === "trusted"
+                            ? "rgba(66,191,35,0.2)"
+                            : "transparent",
                   }}
                 >
                   <p
                     className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] text-center whitespace-nowrap"
                     style={{
-                      color: vendor.trustStatus === "under_review"
-                        ? "#d20344"
-                        : vendor.trustStatus === "trusted"
-                          ? "#42bf23"
-                          : meta.chipText,
+                      color: !trustActionsAvailable
+                        ? "#6c779d"
+                        : vendor.trustStatus === "under_review"
+                          ? "#d20344"
+                          : vendor.trustStatus === "trusted"
+                            ? "#42bf23"
+                            : meta.chipText,
                     }}
                   >
                     {chipLabel}
@@ -464,8 +514,29 @@ export function VendorDetailPopup({
               </div>
             )}
 
-            {/* Action buttons — wired to VendorsPanel mount-point handlers */}
+            {/* Action buttons — wired to VendorsPanel mount-point handlers.
+                Informational rows get none of them: every control below records
+                a trust decision, and there is no decision to record about a
+                placeholder. They are omitted rather than disabled because no
+                sequence of events makes them available. */}
             <div className="flex flex-col gap-[12px] w-full">
+              {!trustActionsAvailable ? (
+                <div
+                  className="border border-[#1d2132] border-solid rounded-[12px] w-full"
+                  data-testid="text-informational-only"
+                >
+                  <div className="flex items-center p-[8px] w-full">
+                    <div className="flex flex-1 gap-[8px] items-start min-w-px">
+                      <InfoIcon color="#6c779d" className="mt-[2px]" />
+                      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] flex-1 min-w-px">
+                        Brain keeps this row to group entries from a payroll register. It is not a{" "}
+                        {noun} you pay directly, so there is nothing here to trust, flag, or dismiss.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <>
               {/* Trusted → Revoke + Delete */}
               {vendor.trustStatus === "trusted" && (
                 <div className="flex flex-col gap-[12px] w-full">
@@ -502,16 +573,26 @@ export function VendorDetailPopup({
                     </div>
                   ) : (
                     <>
-                      {/* trusted → paused via /trust/pause.
-                          "Flag" matches the Flagged chip the row lands under.
-                          The paused → trusted path uses /trust/restore (in the Flagged tab popup). */}
+                      {/* A granted row can be risk-marked upstream afterwards. The chip
+                          and the tab both say Needs Review in that case, so the body has
+                          to give the reason — otherwise the popup shows a review demand
+                          with nothing on it explaining what changed. */}
+                      {isNeedsReview(vendor) && (
+                        <AlertCallout testId="text-trusted-risk-note">
+                          Brain marked this {noun} as risky since trust was granted. Verify the
+                          account, or pause trust while you check.
+                        </AlertCallout>
+                      )}
+                      {/* trusted → paused via /trust/pause. The button, the tab and the
+                          chip all read "Pause"/"Paused" so one state has one name.
+                          The paused → trusted path uses /trust/restore (in the Paused tab popup). */}
                       <TrustButton
-                        label="Flag"
-                        onClick={() => onFlag?.(vendor.id)}
+                        label="Pause"
+                        onClick={() => onPause?.(vendor.id)}
                         busy={trustBusy}
                         color="#ff9400"
                         background="#4a2300"
-                        testId="button-flag-trust"
+                        testId="button-pause-trust"
                       />
                       <button
                         type="button"
@@ -548,12 +629,12 @@ export function VendorDetailPopup({
                     testId="button-grant-trust"
                   />
                   <TrustButton
-                    label="Flag"
-                    onClick={() => onFlag?.(vendor.id)}
+                    label="Pause"
+                    onClick={() => onPause?.(vendor.id)}
                     busy={trustBusy}
                     color="#ff9400"
                     background="#4a2300"
-                    testId="button-flag-counterparty"
+                    testId="button-pause-counterparty"
                   />
                 </div>
               )}
@@ -571,12 +652,12 @@ export function VendorDetailPopup({
                     testId="button-grant-trust"
                   />
                   <TrustButton
-                    label="Flag"
-                    onClick={() => onFlag?.(vendor.id)}
+                    label="Pause"
+                    onClick={() => onPause?.(vendor.id)}
                     busy={trustBusy}
                     color="#ff9400"
                     background="#4a2300"
-                    testId="button-flag-counterparty"
+                    testId="button-pause-counterparty"
                   />
                   <TrustButton
                     label="No action"
@@ -590,7 +671,7 @@ export function VendorDetailPopup({
               )}
 
               {/* under_review covers two distinct states with different valid transitions:
-                    trustState === "paused"  → user previously flagged this row;
+                    trustState === "paused"  → user previously paused this row;
                                                only /trust/restore returns it to trusted
                                                (grant is invalid here per the transition matrix)
                     trustState !== "paused"  → unreviewed + high/sanctioned risk_level;
@@ -599,7 +680,7 @@ export function VendorDetailPopup({
                 vendor.trustState === "paused" ? (
                   <div className="flex flex-col gap-[14px] w-full">
                     <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
-                      Trust is paused. Verify the {noun} account directly before restoring.
+                      You paused trust for this {noun}. Verify the account directly before restoring it.
                     </p>
                     <TrustButton
                       label={restoreLabel}
@@ -621,7 +702,7 @@ export function VendorDetailPopup({
                 ) : (
                   <div className="flex flex-col gap-[14px] w-full">
                     <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d]">
-                      This {noun} carries a risk flag. Verify the account before granting trust.
+                      Brain marked this {noun} as risky. Verify the account before granting trust.
                     </p>
                     <TrustButton
                       label={grantLabel}
@@ -659,12 +740,12 @@ export function VendorDetailPopup({
                     testId="button-grant-trust"
                   />
                   <TrustButton
-                    label="Flag"
-                    onClick={() => onFlag?.(vendor.id)}
+                    label="Pause"
+                    onClick={() => onPause?.(vendor.id)}
                     busy={trustBusy}
                     color="#ff9400"
                     background="#4a2300"
-                    testId="button-flag-counterparty"
+                    testId="button-pause-counterparty"
                   />
                   <TrustButton
                     label="No action"
@@ -675,6 +756,8 @@ export function VendorDetailPopup({
                     testId="button-acknowledge-counterparty"
                   />
                 </div>
+              )}
+                </>
               )}
             </div>
           </div>

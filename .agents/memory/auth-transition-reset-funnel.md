@@ -88,6 +88,23 @@ to `setUser()`.
 
 `membersStore.clearMembers()` was called from `logout()` only (resolved above).
 
+## In-flight requests during cookie rotation
+
+When an auth path regenerates the session cookie (notably fresh-demo login),
+an already-mounted user-scoped panel can still have a request in flight under
+the old principal. The auth transition must expose a short-lived transitioning
+state; request-owning panels should block new sends, abort active requests, and
+ignore late responses until the new user is settled.
+
+**Why:** clearing React Query and switching the rendered user does not cancel
+plain `fetch` calls. A late response can otherwise write old-account data into
+the newly selected account, or surface a misleading auth failure during the
+cookie race.
+
+**How to apply:** for every long-lived user-scoped request with local state,
+couple an `AbortController` and a generation/identity guard to the auth
+transition. Reset the guard when the new user is observable.
+
 ## Persisted stores: key by user, do NOT clear in the funnel
 
 The funnel also runs on **session bootstrap** — restoring the existing session on
