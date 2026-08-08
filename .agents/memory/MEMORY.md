@@ -27,7 +27,7 @@
 - [Stacked PR rebases](stacked-pr-rebase.md) — squash merges hide the parent's commits: always `rebase --onto origin/main <parent's old tip>`, never plain rebase, and re-test after.
 - [CI red + armed auto-merge](ci-red-and-auto-merge.md) — npm ci fails on lock drift so every PR is red before tests run; fixing it squash-merges open PRs unreviewed (main unprotected).
 - [Admin-merge rule](merge-bypass-rule.md) — docs/memory and presentation of reviewed logic may be admin-merged; tiering, the bulk-approve gate and any threshold reading need a real reviewer.
-- [Partial GitHub write access](github-connector-write-limit.md) — push, create-PR and merge-PR are separately grantable and have each been denied; check before promising a merge, verify trees after.
+- [GitHub push credentials](github-connector-write-limit.md) — push via credential.helper reading a PAT env var; secrets are live instantly (never reboot); public repos fake scope probes.
 - [Verifying the demo seed](demo-seed-verification.md) — seed docs are generated at seed time, dates roll with "now" (never re-pin); Brightline fixture authoritative vs brain-core's __fixtures__.
 - [Refresh after upload](brain-refresh-after-upload.md) — query defaults never refetch, so ingest paths must invalidate; extract done ≠ projected, and modal-scoped settle windows die on close.
 - [Headless UI walkthroughs](headless-ui-qa.md) — verify what *renders* on auth-gated screens: npx-cache playwright + nix chromium, reuse a curl cookie; default tabs hide data.
@@ -84,5 +84,3 @@
 - [Tailwind class verification](tailwind-class-verification.md) — a variant never implies its base class; grep the served CSS (escaping lies), and client/public is outside the content globs.
 - [Branching off stale main](branching-off-stale-main.md) — origin/main lags the real UI work; check `git branch -vv` for [ahead N] before cutting a task branch, or the preview silently rolls back.
 - [Opacity contrast model](opacity-contrast-model.md) — opacity fades label AND fill, so the enabled ratio is a hard ceiling; disabled controls are WCAG-exempt (1.4.3/1.4.11).
-- [Radius token clamping](radius-token-clamping.md) — a literal→pill swap is neutral only while min(W,H) ≤ 2r; computed styles report the specified radius, so assert on geometry.
-- [Memory-change PR hygiene](memory-change-pr-hygiene.md) — anything under .agents/memory/ ships as its own PR and is called out at the top of the summary, including its absence.
