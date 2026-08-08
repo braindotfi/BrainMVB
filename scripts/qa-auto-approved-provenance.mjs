@@ -118,59 +118,56 @@ check(
   `rendered ${autoRowCount} "Approved automatically" row(s) for ${autos.length} auto-cleared intent(s)`,
 );
 
-/* The bug itself: a human approval wearing the automatic wording. Checked per
-   record, by the counterparty name shown on its row, so a failure names the
-   payment instead of just reporting a count mismatch.
+/* ---------- 4. is this run capable of catching the bug at all? ----------
 
-   An unresolvable name FAILS. The first version of this loop skipped such a
-   record with `continue`, which silently dropped the single most important
-   assertion in the file and still printed ALL CHECKS PASSED — the same class of
-   mistake as the bug under test: a green result standing in for evidence that
-   was never gathered. */
-const cpList = await (await api.get(`${base}/api/brain/ledger/counterparties`)).json();
-const cpName = new Map(
-  (cpList.counterparties ?? cpList.data ?? []).map((c) => [c.id, c.name ?? c.display_name]),
+   The count assertion above is the real test, but on a tenant with no relevant
+   records it would pass while proving nothing. So state the witness explicitly:
+   a record the OLD rule (status alone) would have admitted to the automatic
+   bucket, and the new rule excludes. Before the fix, this tenant rendered one
+   such row; the assertion below is what turns that history into a live check.
+
+   Text-window matching around a counterparty name was tried here and removed:
+   a +/-200 character slice of body text is not a row-level association, and the
+   name lookup could skip the most important assertion in the file while still
+   printing ALL CHECKS PASSED. The rows carry no stable id to bind to, so the
+   honest instrument is the population count, not a pretend per-row check. */
+
+const oldRuleWouldAdmit = intents.filter(cleared);
+const witnesses = oldRuleWouldAdmit.filter(humanApproved);
+console.log(
+  `\nregression witnesses (old status-only rule would have called these automatic): ${witnesses.length}`,
+);
+for (const w of witnesses) console.log(`    - ${w.id} approvals=${w.approval_ids.join(",")}`);
+
+check(
+  "this run can actually catch the bug (a human-approved record the old rule would have mislabelled exists)",
+  witnesses.length > 0,
+  witnesses.length > 0
+    ? ""
+    : "no witness on this tenant — the automatic-bucket assertions cannot fail here, so this run proves nothing",
 );
 
-for (const i of humans) {
-  const name = cpName.get(i.destination_counterparty_id);
-  check(
-    `counterparty for ${i.id} resolves, so its row can be located`,
-    Boolean(name),
-    name ? "" : `no name for ${i.destination_counterparty_id} — cannot verify this record`,
-  );
-  if (!name) continue;
-  /* The record's DECISION must survive the exclusion, but do not demand the
-     payee name: the surviving row is brain-core's audit projection, which
-     renders "Payment approved / Approved by <actor> after review" WITHOUT the
-     counterparty or the amount. That thinness is a pre-existing gap in the
-     audit projection, not something this fix introduced — the payee was only
-     ever visible on the row that was lying about how it cleared. Asserting on
-     the name here would fail for the wrong reason and pressure a future author
-     into restoring the false row to make the test green. */
-  const approvalRows = (body.match(/Payment approved/gi) ?? []).length;
-  check(
-    `the decision on ${name}'s payment survives (an approval row is still shown)`,
-    approvalRows >= humans.length,
-    `${approvalRows} approval row(s) for ${humans.length} human-approved payment(s)`,
-  );
-  if (!body.includes(name)) continue;
+/* With a witness present, this is the bug, stated as a population invariant:
+   the old rule rendered 1 automatic row against 0 genuinely auto-cleared
+   intents. */
+check(
+  "no human-approved payment is rendered as automatic",
+  autoRowCount === autos.length,
+  `${autoRowCount} automatic row(s) rendered, ${autos.length} auto-cleared intent(s) exist, ` +
+    `${witnesses.length} human-approved record(s) the old rule would have admitted`,
+);
 
-  const at = body.indexOf(name);
-  const window = body.slice(Math.max(0, at - 200), at + 400);
-  const wrong = window.match(AUTO_WORDING);
-  check(
-    `human-approved payment to ${name} is NOT described as automatic`,
-    !wrong,
-    wrong ? `renders "${wrong[0]}"` : "",
-  );
-  check(
-    `human-approved payment to ${name} still surfaces truthfully`,
-    /Approved by .+ after review|Payment approved/i.test(window),
-    /Approved by .+ after review|Payment approved/i.test(window)
-      ? window.match(/Approved by .+? after review|Payment approved/i)[0]
-      : "no truthful row found near the record",
-  );
-}
+/* And the decision itself must survive the exclusion. Not asserted by payee
+   name: the surviving row is brain-core's audit projection, which renders
+   "Payment approved / Approved by <actor> after review" WITHOUT counterparty or
+   amount (see the follow-up issue). Demanding the name here would fail for the
+   wrong reason and pressure a future author into restoring the false row to go
+   green. */
+const approvalRows = (body.match(/Payment approved/gi) ?? []).length;
+check(
+  "every human-approved payment still has its decision on the surface",
+  approvalRows >= humans.length,
+  `${approvalRows} approval row(s) for ${humans.length} human-approved payment(s)`,
+);
 
 await finish();
