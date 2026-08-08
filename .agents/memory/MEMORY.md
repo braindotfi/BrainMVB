@@ -84,3 +84,9 @@
 - [Tailwind class verification](tailwind-class-verification.md) — a variant never implies its base class; grep the served CSS (escaping lies), and client/public is outside the content globs.
 - [Branching off stale main](branching-off-stale-main.md) — origin/main lags the real UI work; check `git branch -vv` for [ahead N] before cutting a task branch, or the preview silently rolls back.
 - [Opacity contrast model](opacity-contrast-model.md) — opacity fades label AND fill, so the enabled ratio is a hard ceiling; disabled controls are WCAG-exempt (1.4.3/1.4.11).
+- [Radius token clamping](radius-token-clamping.md) — a literal→pill swap is neutral only while min(W,H) ≤ 2r; computed styles report the specified radius, so assert on geometry.
+- [Memory-change PR hygiene](memory-change-pr-hygiene.md) — anything under .agents/memory/ ships as its own PR and is called out at the top of the summary, including its absence.
+- [Agent card section order](agent-card-section-order.md) — one shared card for all 11 agents; fixed 7-section order; "why suggested" only from MATCHED trace checks + ranked_signals, verdict must show.
+- [Deleted merged feature refs](deleted-merged-feature-ref.md) — after PR merge branch deletion, Git pane UNKNOWN_REF is fixed by recreating the same remote ref; preserve local commits and untracked uploads.
+- [Live insight card structure](live-insight-card-structure.md) — read-only ledger insights reuse the agent-card rhythm with honest observational sections, never invented decision content.
+- [Unified record pager](unified-record-pager.md) — Prev/Next must walk the rendered row list, not each source queue; spread props hide a modal that ignores per-direction state.
