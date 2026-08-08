@@ -995,6 +995,26 @@ Related traps:
   Retarget the rest through the API, and re-check `base.ref` and `head.sha` in the same
   call that merges.
 
+### Memory PRs: rebase immediately before merge, ALWAYS
+Every `.agents/memory/` change edits the same few lines of the same file (`MEMORY.md`), so a
+memory PR cut from an older `main` reverts whichever index lines landed in between. The
+squash restores the stale file wholesale and GitHub reports no conflict, because the branch
+is a clean descendant of the commit it was cut from.
+
+Rebase a memory PR onto `origin/main` **immediately before merging it**, never relying on the
+state it was opened from. Then verify the index in BOTH directions:
+
+- every topic file is reachable from an index line, and
+- every index line points at a file that exists.
+
+**Why:** six entries were lost exactly this way and went unnoticed. The topic files stay on
+disk, so nothing looks broken and no test fails — the content is simply never found again,
+because the only way to reach it is to already know the filename. A dropped pointer is worse
+than a dropped file for that reason.
+
+This applies to any PR that edits a shared append-only index, but `MEMORY.md` is the one that
+gets hit, because it is touched by nearly every session.
+
 ### Verification standard for merges: try to break it
 Confirming that a feature works is not verification. For every gated PR in this stack — #38
 (done), #42 and #46 still to come — the pass must also hunt for a live case where the
