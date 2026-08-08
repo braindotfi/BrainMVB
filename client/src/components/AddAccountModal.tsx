@@ -224,7 +224,7 @@ function AccountPopup({
           {/* List */}
           <div className="flex flex-col">
             <div className="flex items-center justify-center px-[8px] py-[4px]">
-              <p className="flex-1 [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-60 text-[15px] leading-[24px]">
+              <p className="flex-1 [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-60 text-[16px] leading-[24px]">
                 All Assets
               </p>
             </div>
@@ -407,7 +407,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep 
           <div className="flex gap-[16px] items-center px-[39px] pt-[24px] pb-[32px]">
             <button
               onClick={handleClose}
-              className="bg-brain-v1baby-blue-15 flex-1 h-[48px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-60 text-[18px] hover:opacity-80 transition-opacity flex items-center justify-center"
+              className="bg-brain-v1baby-blue-15 flex-1 h-[48px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-60 text-[18px] leading-[24px] hover:opacity-80 transition-opacity flex items-center justify-center"
               data-testid="btn-add-cancel"
             >
               Cancel
@@ -415,7 +415,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep 
             <button
               onClick={() => selected && setStep(selected.type)}
               disabled={!selected}
-              className={`bg-brain-v1dark-orange flex-1 h-[48px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1light-orange text-[18px] transition-opacity flex items-center justify-center ${selected ? "opacity-100 hover:opacity-80 cursor-pointer" : "opacity-50 cursor-not-allowed"}`}
+              className={`bg-brain-v1dark-orange flex-1 h-[48px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1light-orange text-[18px] leading-[24px] transition-opacity flex items-center justify-center ${selected ? "opacity-100 hover:opacity-80 cursor-pointer" : "opacity-50 cursor-not-allowed"}`}
               data-testid="btn-add-next"
             >
               Next
@@ -508,7 +508,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep 
           <div className="px-[39px] pt-[24px] pb-[32px]">
             <button
               onClick={handleClose}
-              className="bg-brain-v1dark-orange h-[48px] w-full rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1light-orange text-[18px] hover:opacity-80 transition-opacity flex items-center justify-center"
+              className="bg-brain-v1dark-orange h-[48px] w-full rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1light-orange text-[18px] leading-[24px] hover:opacity-80 transition-opacity flex items-center justify-center"
               data-testid="btn-wallet-close"
             >
               Close
@@ -611,7 +611,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep 
           <div className="px-[39px] pt-[24px] pb-[32px]">
             <button
               onClick={handleClose}
-              className="bg-brain-v1dark-orange h-[48px] w-full rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1light-orange text-[18px] hover:opacity-80 transition-opacity flex items-center justify-center"
+              className="bg-brain-v1dark-orange h-[48px] w-full rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1light-orange text-[18px] leading-[24px] hover:opacity-80 transition-opacity flex items-center justify-center"
               data-testid="btn-bank-close"
             >
               Close
@@ -703,7 +703,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep 
         <div className="px-[39px] pt-[24px] pb-[32px]">
           <button
             onClick={handleClose}
-            className="bg-brain-v1dark-orange h-[48px] w-full rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1light-orange text-[18px] hover:opacity-80 transition-opacity flex items-center justify-center"
+            className="bg-brain-v1dark-orange h-[48px] w-full rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1light-orange text-[18px] leading-[24px] hover:opacity-80 transition-opacity flex items-center justify-center"
             data-testid="btn-agent-close"
           >
             Close

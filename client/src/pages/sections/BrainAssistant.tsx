@@ -133,7 +133,13 @@ function renderRichText(text: string, formatText: (t: string) => string): React.
     const headerMatch = trimmed.match(/^(#{1,3})\s+(.+)$/);
     if (headerMatch) {
       const level = headerMatch[1].length;
-      const sizes = ["text-[15px]", "text-[14px]", "text-[13px]"];
+      // Markdown headings ride the same scale as the rest of the app: a
+      // standalone title at 16/24, then the label and dense-description steps.
+      const sizes = [
+        "text-[16px] leading-[24px]",
+        "text-[14px] leading-[20px]",
+        "text-[13px] leading-[18px]",
+      ];
       elements.push(
         <h3 key={i} className={`${sizes[level - 1]} font-semibold text-inherit mt-2 mb-1 [font-family:'Gilroy',sans-serif]`}>
           {renderInlineRich(headerMatch[2])}
@@ -886,7 +892,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
               )}
               {filteredGroups.map((group) => (
                 <div key={group.label} className="flex flex-col gap-[8px] w-full">
-                  <div className="pl-[8px] [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-30 text-[14px] leading-[20px]">
+                  <div className="pl-[8px] [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-30 text-[14px] leading-[16px]">
                     {group.label}
                   </div>
                   {group.items.map((session) => (
@@ -953,7 +959,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
               <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[24px] leading-[32px]">
                 Hi, I'm Brain
               </p>
-              <p className="[font-family:'Gilroy',sans-serif] font-normal text-brain-v1baby-blue-60 text-[18px] leading-[24px]">
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[18px] leading-[24px]">
                 What can I help you with today?
               </p>
             </div>

@@ -34,7 +34,7 @@ function LabelValue({ label, value, mono }: { label: string; value: string; mono
         {label}
       </p>
       <p
-        className={`${mono ? "[font-family:'JetBrains_Mono',monospace]" : "[font-family:'Gilroy',sans-serif] font-semibold"} leading-[20px] text-brain-v1baby-blue-100 text-[15px] break-words`}
+        className={`${mono ? "[font-family:'JetBrains_Mono',monospace]" : "[font-family:'Gilroy',sans-serif] font-semibold"} leading-[20px] text-brain-v1baby-blue-100 text-[14px] break-words`}
       >
         {value}
       </p>
@@ -82,7 +82,7 @@ function MemberDetailBody({ id }: { id: string }) {
   if (!member) {
     return (
       <div className="p-[24px]">
-        <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[15px]" data-testid="text-member-unavailable">
+        <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px]" data-testid="text-member-unavailable">
           {isLoading ? "Loading member…" : "This member is no longer available."}
         </p>
       </div>
@@ -105,7 +105,7 @@ function MemberDetailBody({ id }: { id: string }) {
       {/* Identity */}
       <div className="flex items-center gap-[14px]">
         <div className="size-[48px] rounded-full bg-brain-v1stroke-2 flex items-center justify-center shrink-0">
-          <span className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[18px]">
+          <span className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[18px] leading-[24px]">
             {member.displayName.slice(0, 1).toUpperCase()}
           </span>
         </div>

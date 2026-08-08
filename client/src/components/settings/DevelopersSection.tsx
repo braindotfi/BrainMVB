@@ -227,7 +227,7 @@ const KeysUnavailableCard = ({ testId }: { testId?: string }) => (
       <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[20px]">
         The keys API isn't enabled yet
       </p>
-      <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px]">
+      <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[16px]">
         brain-core's API-key service hasn't been switched on for this environment. Keys become
         available here automatically as soon as it is. No action needed on your side.
       </p>
@@ -558,7 +558,7 @@ const EndpointRow = ({ path, scope, description }: { path: string; scope: string
             {scope ? `Requires ${scope}` : "Any Active Key"}
           </span>
         </div>
-        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[14px]">{description}</p>
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px]">{description}</p>
       </div>
       <div className="bg-brain-v1headerfooterbg border border-brain-v1stroke-2 flex gap-[12px] items-center p-[12px] rounded-row w-full">
         <p className="flex-1 min-w-0 [font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[14px] truncate" data-testid={`text-curl-${slug}`}>
@@ -1180,7 +1180,7 @@ function KeysSection({ env }: { env: DevEnv }) {
             </div>
             <PopupSection label="API Key">
               <PopupCodeBox testId="detail-key-masked">{maskKey(k)}</PopupCodeBox>
-              <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[14px] leading-[20px] -mt-2">
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[14px] leading-[16px] -mt-2">
                 brain-core stores keys hashed. The full key was shown exactly once, at creation. If it's lost, rotate to get a new one.
               </p>
             </PopupSection>
@@ -1239,7 +1239,7 @@ function KeysSection({ env }: { env: DevEnv }) {
           <div className="p-[16px] flex flex-col gap-[16px]">
             <div className="flex flex-col gap-[4px]">
               <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[20px]">Live key issuance is gated</p>
-              <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px]">
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[16px]">
                 {tenantsQ.data?.mode === "production"
                   ? "This workspace runs in production tenancy mode, but no company tenant is linked yet. Live key issuance unlocks once your company tenant is created."
                   : tenantsQ.data?.mode === "durable"
@@ -1317,7 +1317,7 @@ function KeysSection({ env }: { env: DevEnv }) {
                   </span>
                   <span className="flex flex-col gap-[4px] flex-1 min-w-px">
                     <span className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[16px] leading-[20px]">{s.label}</span>
-                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px]">{s.hint}</span>
+                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[16px]">{s.hint}</span>
                   </span>
                 </button>
               );
@@ -1345,7 +1345,7 @@ function KeysSection({ env }: { env: DevEnv }) {
             <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[20px]" data-testid="text-no-keys-title">
               No {env} keys yet
             </p>
-            <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px]">
+            <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[16px]">
               {env === "sandbox"
                 ? "Create one to start calling the API."
                 : "Live keys appear here once issued."}
@@ -1368,7 +1368,7 @@ function KeysSection({ env }: { env: DevEnv }) {
                       <StatusBadge status={k.status} />
                     </div>
                     <div className="flex items-center w-full">
-                      <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px] flex-1 min-w-px break-words" data-testid={`text-masked-key-${k.id}`}>{maskKey(k)}</p>
+                      <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[16px] flex-1 min-w-px break-words" data-testid={`text-masked-key-${k.id}`}>{maskKey(k)}</p>
                     </div>
                   </div>
                   <div className="bg-brain-v1headerfooterbg border border-brain-v1stroke-2 rounded-row flex flex-col w-full overflow-hidden">
@@ -1472,7 +1472,7 @@ function TenantsSection({ env, onNavigate }: { env: DevEnv; onNavigate: (s: DevS
                 }}
               >
                 <p
-                  className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[14px] text-center whitespace-nowrap"
+                  className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] text-center whitespace-nowrap"
                   style={{ color: env === "live" ? "#ff9500" : "#a8b9f4" }}
                 >
                   {env === "live" ? "Live" : "Sandbox"}
@@ -1563,7 +1563,7 @@ function TenantsSection({ env, onNavigate }: { env: DevEnv; onNavigate: (s: DevS
                       <circle cx="8" cy="5.5" r="0.75" fill="currentColor" />
                       <path d="M8 7.5V11" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
                     </svg>
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[14px] flex-[1_0_0] min-w-px">
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px] flex-[1_0_0] min-w-px">
                       Demo tenants are provisioned fresh per session (~30 minutes). When this one expires, a new tenant is provisioned automatically. IDs and data don't carry over.
                     </p>
                   </div>
@@ -1939,7 +1939,7 @@ function UsageSection({ env }: { env: DevEnv }) {
                           {k.status === "revoked" && <StatusBadge status="revoked" />}
                         </div>
                         <div className="flex items-center w-full">
-                          <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px] flex-1 min-w-px break-words" data-testid={`text-usage-key-masked-${k.id}`}>{maskKey(k)}</p>
+                          <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[16px] flex-1 min-w-px break-words" data-testid={`text-usage-key-masked-${k.id}`}>{maskKey(k)}</p>
                         </div>
                       </div>
                       <div className="flex gap-[7px] items-center w-full">

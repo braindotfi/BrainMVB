@@ -185,7 +185,7 @@ export function SignupPage() {
             <h1 className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1white text-[24px] leading-[32px]">
               {mode === "login" ? "Welcome Back" : "Create Your Account"}
             </h1>
-            <p className="[font-family:'Gilroy',sans-serif] font-normal text-brain-v1baby-blue-60 text-[15px] leading-[22px] mt-1">
+            <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px] mt-1">
               {mode === "login"
                 ? "Sign in to your Brain account."
                 : "Start managing your finances autonomously."}
@@ -199,7 +199,7 @@ export function SignupPage() {
                 type="button"
                 data-testid="button-google-signin"
                 onClick={loginWithGoogle}
-                className="w-full py-3 px-6 rounded-pill bg-brain-v1baby-blue-5 hover:bg-brain-v1stroke-2 border border-brain-v1stroke-2 hover:border-[#7631ee]/40 transition-colors [font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[15px] flex items-center justify-center gap-3"
+                className="w-full py-3 px-6 rounded-pill bg-brain-v1baby-blue-5 hover:bg-brain-v1stroke-2 border border-brain-v1stroke-2 hover:border-[#7631ee]/40 transition-colors [font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[20px] flex items-center justify-center gap-3"
               >
                 <img src={googleLogo} alt="" className="h-[18px] w-[18px] rounded-full object-contain" />
                 Continue with Google
@@ -226,7 +226,7 @@ export function SignupPage() {
                   onChange={(e) => setCompanyName(e.target.value)}
                   autoComplete="organization"
                   placeholder="Acme Inc."
-                  className="w-full h-[48px] px-4 rounded-2xl bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 focus:border-brain-v1purple outline-none transition-colors [font-family:'Gilroy',sans-serif] text-brain-v1white placeholder:text-brain-v1baby-blue-30 text-[15px]"
+                  className="w-full h-[48px] px-4 rounded-2xl bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 focus:border-brain-v1purple outline-none transition-colors [font-family:'Gilroy',sans-serif] text-brain-v1white placeholder:text-brain-v1baby-blue-30 text-[16px] leading-[20px]"
                 />
               </div>
             )}
@@ -242,7 +242,7 @@ export function SignupPage() {
                   onChange={(e) => setName(e.target.value)}
                   autoComplete="name"
                   placeholder="Jane Doe"
-                  className="w-full h-[48px] px-4 rounded-2xl bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 focus:border-brain-v1purple outline-none transition-colors [font-family:'Gilroy',sans-serif] text-brain-v1white placeholder:text-brain-v1baby-blue-30 text-[15px]"
+                  className="w-full h-[48px] px-4 rounded-2xl bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 focus:border-brain-v1purple outline-none transition-colors [font-family:'Gilroy',sans-serif] text-brain-v1white placeholder:text-brain-v1baby-blue-30 text-[16px] leading-[20px]"
                 />
               </div>
             )}
@@ -259,7 +259,7 @@ export function SignupPage() {
                   onChange={(e) => setIdentifier(e.target.value)}
                   autoComplete="username"
                   placeholder="yourname or you@example.com"
-                  className="w-full h-[48px] px-4 rounded-2xl bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 focus:border-brain-v1purple outline-none transition-colors [font-family:'Gilroy',sans-serif] text-brain-v1white placeholder:text-brain-v1baby-blue-30 text-[15px]"
+                  className="w-full h-[48px] px-4 rounded-2xl bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 focus:border-brain-v1purple outline-none transition-colors [font-family:'Gilroy',sans-serif] text-brain-v1white placeholder:text-brain-v1baby-blue-30 text-[16px] leading-[20px]"
                 />
               </div>
             ) : (
@@ -275,7 +275,7 @@ export function SignupPage() {
                     onChange={(e) => setUsername(e.target.value)}
                     autoComplete="username"
                     placeholder="yourname"
-                    className="w-full h-[48px] px-4 rounded-2xl bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 focus:border-brain-v1purple outline-none transition-colors [font-family:'Gilroy',sans-serif] text-brain-v1white placeholder:text-brain-v1baby-blue-30 text-[15px]"
+                    className="w-full h-[48px] px-4 rounded-2xl bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 focus:border-brain-v1purple outline-none transition-colors [font-family:'Gilroy',sans-serif] text-brain-v1white placeholder:text-brain-v1baby-blue-30 text-[16px] leading-[20px]"
                   />
                 </div>
 
@@ -290,7 +290,7 @@ export function SignupPage() {
                     onChange={(e) => setEmail(e.target.value)}
                     autoComplete="email"
                     placeholder="you@example.com"
-                    className="w-full h-[48px] px-4 rounded-2xl bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 focus:border-brain-v1purple outline-none transition-colors [font-family:'Gilroy',sans-serif] text-brain-v1white placeholder:text-brain-v1baby-blue-30 text-[15px]"
+                    className="w-full h-[48px] px-4 rounded-2xl bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 focus:border-brain-v1purple outline-none transition-colors [font-family:'Gilroy',sans-serif] text-brain-v1white placeholder:text-brain-v1baby-blue-30 text-[16px] leading-[20px]"
                   />
                 </div>
               </>
@@ -307,7 +307,7 @@ export function SignupPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete={mode === "login" ? "current-password" : "new-password"}
                 placeholder={mode === "register" ? "At least 8 characters" : "Your password"}
-                className="w-full h-[48px] px-4 rounded-2xl bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 focus:border-brain-v1purple outline-none transition-colors [font-family:'Gilroy',sans-serif] text-brain-v1white placeholder:text-brain-v1baby-blue-30 text-[15px]"
+                className="w-full h-[48px] px-4 rounded-2xl bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 focus:border-brain-v1purple outline-none transition-colors [font-family:'Gilroy',sans-serif] text-brain-v1white placeholder:text-brain-v1baby-blue-30 text-[16px] leading-[20px]"
               />
             </div>
 
@@ -321,7 +321,7 @@ export function SignupPage() {
               type="submit"
               data-testid="button-submit-auth"
               disabled={submitting}
-              className="w-full h-[48px] mt-1 rounded-pill bg-brain-v1purple hover:bg-brain-v1purple-hover disabled:opacity-60 disabled:cursor-not-allowed transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-white text-[15px] flex items-center justify-center gap-2"
+              className="w-full h-[48px] mt-1 rounded-pill bg-brain-v1purple hover:bg-brain-v1purple-hover disabled:opacity-60 disabled:cursor-not-allowed transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-white text-[16px] leading-[20px] flex items-center justify-center gap-2"
             >
               {submitting && (
                 <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -342,7 +342,7 @@ export function SignupPage() {
             data-testid="button-demo-login"
             onClick={handleDemo}
             disabled={submitting}
-            className="w-full py-3 px-6 rounded-pill bg-brain-v1baby-blue-5 hover:bg-brain-v1stroke-2 border border-brain-v1stroke-2 hover:border-[#7631ee]/40 disabled:opacity-60 disabled:cursor-not-allowed transition-colors [font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[15px] flex items-center justify-center gap-3"
+            className="w-full py-3 px-6 rounded-pill bg-brain-v1baby-blue-5 hover:bg-brain-v1stroke-2 border border-brain-v1stroke-2 hover:border-[#7631ee]/40 disabled:opacity-60 disabled:cursor-not-allowed transition-colors [font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[20px] flex items-center justify-center gap-3"
           >
             Continue with Demo
           </button>

@@ -146,7 +146,7 @@ function MemberRow({ member, inviteActions }: { member: BrainMember; inviteActio
               </span>
             )}
           </div>
-          <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px] truncate" data-testid={`text-envelope-${member.id}`}>
+          <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[16px] truncate" data-testid={`text-envelope-${member.id}`}>
             {envelopeLine(member.approval)}
           </p>
           </div>

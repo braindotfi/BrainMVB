@@ -174,7 +174,7 @@ export function AccountDetailPopup({
                     {account.name}
                   </p>
                   <div className="flex gap-[8px] items-center w-full">
-                    <p className="[font-family:'JetBrains_Mono',monospace] font-normal leading-[32px] text-brain-v1baby-blue-100 text-[32px]" data-testid="text-account-balance">
+                    <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[32px] text-brain-v1baby-blue-100 text-[32px]" data-testid="text-account-balance">
                       {balanceLabel(account, format)}
                     </p>
                     <div className="bg-brain-v1baby-blue-15 border border-[rgba(108,119,157,0.2)] border-solid flex items-center justify-center px-[8px] py-[3px] rounded-pill shrink-0">
@@ -232,7 +232,7 @@ export function AccountDetailPopup({
                               <p className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-brain-v1baby-blue-60">{shortDate(t.transaction_date)}</p>
                             </div>
                             <p
-                              className="[font-family:'JetBrains_Mono',monospace] font-medium text-[15px] shrink-0"
+                              className="[font-family:'JetBrains_Mono',monospace] font-medium text-[14px] leading-[20px] shrink-0"
                               style={{ color: positive ? "#42bf23" : "#a8b9f4" }}
                             >
                               {positive ? "+" : "-"}{format(Math.abs(Number.isFinite(amt) ? amt : 0))}
@@ -266,7 +266,7 @@ export function AccountDetailPopup({
                 <div className="border border-brain-v1stroke-2 border-solid rounded-row w-full">
                   <div className="flex items-start gap-[8px] p-[8px] w-full">
                     <InfoIcon color="#6c779d" className="mt-[2px]" />
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[14px] flex-1 min-w-px">
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px] flex-1 min-w-px">
                       A read only view. Brain reads this balance from your ledger; your bank owns the account.
                     </p>
                   </div>

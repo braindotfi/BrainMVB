@@ -1133,7 +1133,7 @@ export function HomePage() {
                 of the card's trailing monthly average rather than a second fact about
                 a different period. Both numbers are real; only the framing was wrong. */}
             <p
-              className={`[font-family:'Gilroy',sans-serif] font-normal leading-[20px] text-[16px] w-full ${insightLine.colorClass}`}
+              className={`[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[16px] w-full ${insightLine.colorClass}`}
               data-testid="text-home-cash-insight"
             >
               {insightLine.text}

@@ -175,7 +175,7 @@ export function PayablesTab({ format }: { format: Format }): JSX.Element {
                 ) : undefined}
                 secondary={
                   <>
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">
                       {dueLabel(o.due_date)}
                     </p>
                     {sub && (
@@ -183,7 +183,7 @@ export function PayablesTab({ format }: { format: Format }): JSX.Element {
                         <div className="relative shrink-0 size-[4px]">
                           <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_DOT} />
                         </div>
-                        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[14px] truncate">
+                        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px] truncate">
                           {sub}
                         </p>
                       </>
@@ -217,7 +217,7 @@ export function PayablesTab({ format }: { format: Format }): JSX.Element {
                 Payable Totals
               </p>
               <p
-                className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[14px]"
+                className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px]"
                 data-testid="text-obligation-total-caption"
               >
                 {/* Names what the figure is, or why it isn't final. A total that is

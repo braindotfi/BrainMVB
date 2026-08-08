@@ -241,7 +241,7 @@ function PlaidConnectButton({
         onClick={() => open()}
         disabled={disabled}
         data-testid="button-plaid-connect"
-        className="flex items-center justify-center gap-[10px] h-[48px] rounded-row [font-family:'Gilroy',sans-serif] font-semibold text-[15px] leading-[18px] transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
+        className="flex items-center justify-center gap-[10px] h-[48px] rounded-row [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
         style={{ background: "#7631EE", color: "#FFFFFF" }}
       >
         {isExchanging || isLoading ? (
@@ -372,7 +372,7 @@ export function ProviderPicker({ category }: { category: CategoryId }) {
               ) : isConnecting ? (
                 <span className="size-[14px] rounded-full border-2 border-brain-v1purple border-t-transparent animate-spin" aria-hidden />
               ) : !p.live ? (
-                <span className="px-[8px] py-[3px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-[10px] leading-[12px] bg-brain-v1stroke-2 text-brain-v1baby-blue-60">
+                <span className="px-[8px] py-[3px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[14px] bg-brain-v1stroke-2 text-brain-v1baby-blue-60">
                   Soon
                 </span>
               ) : (

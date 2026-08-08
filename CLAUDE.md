@@ -1411,6 +1411,90 @@ converted so the search term is now reliable.
 The Tailwind `font-sans` default is Gilroy, the app's primary UI font. Use JetBrains Mono only for
 amounts and identifiers, and Gridular only for the "brain" wordmark.
 
+### The type scale
+
+Five sizes carry the whole app. Anything outside this list is drift — grep for a sibling before
+introducing one.
+
+| Size | Role |
+| --- | --- |
+| **16px** | Row titles, standalone titles, inputs and ≥44px controls |
+| **14px** | Labels, body copy, interactive text, key/value rows, pill-shaped action buttons |
+| **13px** | **Reserved.** Dense description prose that wraps — nothing else |
+| **12px** | Compact metadata, uppercase eyebrows |
+| **11px** | **Reserved.** Badge pills (`CountPill`, status chips) |
+
+Two reservations are easy to misread, so they are spelled out:
+
+- **13px is a prose size, not a "slightly smaller label" size.** It exists for explanatory
+  paragraphs that wrap in a narrow column. A label, a value, a validation message or a button at
+  13px is drift — those are 14px. 51 sites were moved back.
+- **11px is for badges, not for anything pill-*shaped*.** Read literally, "pills are 11px" shrinks
+  real Approve/Decline buttons to 11px. Only the badge tier is 11px; a pill-shaped *action button*
+  is on the body scale at 14px.
+
+**Mono keeps 13px as a second legitimate reservation.** JetBrains Mono reads wider and taller than
+Gilroy at the same px, so a 13px mono value sits optically level with the 14px Gilroy label beside
+it. Promoting mono to 14px makes the value out-shout its own label. 14 sites.
+
+**`DocumentViewerPopup`'s document facsimile is outside this scale entirely.** It paints a simulated
+invoice on paper with its own `doc-paper-ink-*` ramp, and it should look like a document, not like
+app chrome. Leave its sizes alone — the same reason that palette is namespaced away from `brain-v1*`.
+
+### Weight
+
+**Semibold (600)** for titles and labels. **Medium (500)** for explanatory body. `font-normal` is
+not part of the UI scale — it survives only in the shadcn primitives under `components/ui/` and in
+one transparent spacer.
+
+The collision this resolved: descriptive captions were `font-normal` in a handful of places and
+`font-medium` everywhere else, and the large mono figures disagreed with each other (28px KPI
+figures at medium, 32px popup balances at normal). Same role, one weight: medium.
+
+**A record row's title is `font-medium`, not semibold** — see the exemption below. Semibold there
+makes the title shout over its own subtext, which is why `rowFormatting.test.ts` pins it.
+
+### Size ↔ line-height pairing
+
+Every custom `text-[Npx]` must declare a `leading-`. Tailwind sets no line-height on an arbitrary
+size, so an undeclared one inherits whatever the parent happens to have — the rhythm then depends on
+where the element is mounted rather than on what it is.
+
+| Size | Leading |
+| --- | --- |
+| 11px | `leading-[14px]` |
+| 12px | `leading-[16px]` |
+| 13px | `leading-[18px]` |
+| 14px | `leading-[20px]` |
+| 16px | `leading-[20px]`, or `leading-[24px]` for a standalone title |
+| 18px | `leading-[24px]` |
+
+**13px pairs with 18, uniformly.** 16px leading on 13px text is a 1.23 ratio — tighter than both of
+its neighbours (12→16 is 1.33, 14→20 is 1.43) — and 13px is reserved precisely for the role that
+wraps, so the cramping lands where it does the most damage. Rendered side by side at the real 420px
+column width, `leading-18` is the one that reads. Single-line sites are identical either way.
+
+#### The one exemption: record rows
+
+**14px inside a fixed-geometry record row's title/subtext stack uses `leading-16`. 14px as flow
+body or label text uses `leading-20`.**
+
+Do not flatten these into one rule. Every list in the app presents a record the same way — a 16/20
+medium title, a 4px gap, a 14/16 medium subtext — and `20 + 4 + 16 = 40px` is what makes every row
+in every list the same height. Applying the 14→20 pairing literally re-leads 72 of those subtexts
+and grows every list row in the app by 4px. `rowFormatting.test.ts` and
+`scripts/qa-measure-row-heights.mjs` both guard the 40px stack; if you are changing a row's leading
+and one of them goes red, the guard is right.
+
+The distinction is the same one that governs pills: **fixed geometry follows the geometry, flow text
+follows the pairing table.**
+
+#### Named Tailwind sizes are fine
+
+`text-sm` and `text-xs` are not drift. The project does not override `fontSize`, so they resolve to
+14px/20px and 12px/16px — exactly the pairing table. They need no `leading-` because they already
+carry one. Only *arbitrary* sizes do.
+
 ### Fractional pixel values
 Figma exports at a non-1× zoom leak values like `18.75px`, `20.625px`, `16.88px`, `0.938px` — all of
 `DeleteConfirmDialog` was exported at 1.25×. Round on the way in. Sub-pixel borders in particular

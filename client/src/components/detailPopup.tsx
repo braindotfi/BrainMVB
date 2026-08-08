@@ -124,7 +124,7 @@ export function DetailPopupHeader({
               data-testid={chipTestId}
             >
               <p
-                className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[14px] text-center whitespace-nowrap"
+                className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] text-center whitespace-nowrap"
                 style={{ color: chip.color }}
               >
                 {chip.text}
@@ -134,7 +134,7 @@ export function DetailPopupHeader({
         </div>
         <div className="flex gap-[8px] items-center w-full">
           <p
-            className="[font-family:'JetBrains_Mono',monospace] font-normal leading-[32px] text-brain-v1baby-blue-100 text-[32px]"
+            className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[32px] text-brain-v1baby-blue-100 text-[32px]"
             data-testid={amountTestId}
           >
             {amount}

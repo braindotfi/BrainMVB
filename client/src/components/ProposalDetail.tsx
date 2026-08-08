@@ -403,7 +403,7 @@ export function ProposalDetail({
                       data-testid="button-source-invoice"
                       className="flex items-center gap-[8px] p-[10px] rounded-[10px] bg-brain-v1highlight-dropdown-bg hover:bg-brain-v1baby-blue-5 border border-transparent hover:border-[#7631ee]/40 transition-colors w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
                     >
-                      <span className="[font-family:'JetBrains_Mono',monospace] text-[10px] text-brain-v1baby-blue-30">{docKindLabel(srcDoc.kind)}</span>
+                      <span className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px] text-brain-v1baby-blue-30">{docKindLabel(srcDoc.kind)}</span>
                       <span className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-brain-v1baby-blue-100 flex-1 min-w-px">#{srcDoc.id}</span>
                       <ChevronRight size={14} className="text-brain-v1baby-blue-30 shrink-0" />
                     </button>

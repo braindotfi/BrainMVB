@@ -157,7 +157,7 @@ function CalloutFrame({
         <Icon />
         <div className="flex flex-1 flex-col justify-center min-w-px gap-[4px]">
           {title && (
-            <p className={`${FONT} font-semibold leading-[20px] ${text} text-[14px]`}>{title}</p>
+            <p className={`${FONT} font-semibold leading-[16px] ${text} text-[14px]`}>{title}</p>
           )}
           <div className={`${FONT} font-medium ${leading} ${text} text-[14px] leading-[20px] [word-break:break-word]`}>
             {children}

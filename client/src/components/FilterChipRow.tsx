@@ -76,7 +76,7 @@ export function FilterChipRow({ chips, value, onChange, label, testIdPrefix }: P
             style={{ background: active ? "#4a2300" : "transparent" }}
           >
             <span
-              className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[14px] whitespace-nowrap transition-colors"
+              className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap transition-colors"
               style={{ color: text }}
             >
               {chip.label}

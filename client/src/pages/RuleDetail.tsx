@@ -64,7 +64,7 @@ export function RuleDetail() {
   if (isPolicy && policyLoading) {
     return (
       <div className="bg-brain-v1baby-blue-5 border border-brain-v1stroke-2 border-solid overflow-hidden relative rounded-panel size-full flex flex-col items-center justify-center gap-[16px] p-[24px]">
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[18px]">
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[18px] leading-[24px]">
           Loading policy rule…
         </p>
         <button
@@ -89,7 +89,7 @@ export function RuleDetail() {
   if (definitelyMissing) {
     return (
       <div className="bg-brain-v1baby-blue-5 border border-brain-v1stroke-2 border-solid overflow-hidden relative rounded-panel size-full flex flex-col items-center justify-center gap-[16px] p-[24px]">
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[18px]">
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[18px] leading-[24px]">
           {isPolicy ? "This policy rule is not available right now." : "This rule no longer exists."}
         </p>
         <button
@@ -211,7 +211,7 @@ export function RuleDetail() {
             data-testid="text-what-changed"
           >
             <InfoIcon color="#6c779d" className="mt-[2px]" />
-            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[14px] text-brain-v1baby-blue-60">
+            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[14px] text-brain-v1baby-blue-60">
               {rule.active ? (
                 <>
                   This rule is <span className="font-semibold text-brain-v1green">active</span>. It auto-clears {titleCase(rule.scopeSummary ?? "matching payments")} automatically.
@@ -304,7 +304,7 @@ export function RuleDetail() {
                       type="button"
                       onClick={() => setResumeModalOpen(false)}
                       data-testid="button-resume-cancel"
-                      className="flex-1 px-[24px] py-[12px] rounded-pill bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-15-hover transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[18px] text-brain-v1baby-blue-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30"
+                      className="flex-1 px-[24px] py-[12px] rounded-pill bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-15-hover transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[18px] leading-[24px] text-brain-v1baby-blue-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30"
                     >
                       Keep Paused
                     </button>
@@ -312,7 +312,7 @@ export function RuleDetail() {
                       type="button"
                       onClick={onResume}
                       data-testid="button-resume-confirm"
-                      className="flex-1 px-[24px] py-[12px] rounded-pill bg-brain-v1dark-green hover:bg-brain-v1dark-green-hover transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[18px] text-brain-v1green focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1green"
+                      className="flex-1 px-[24px] py-[12px] rounded-pill bg-brain-v1dark-green hover:bg-brain-v1dark-green-hover transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[18px] leading-[24px] text-brain-v1green focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1green"
                     >
                       Resume
                     </button>
@@ -560,7 +560,7 @@ function ReportCard({
           <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[16px]">
             {report.reason}
           </p>
-          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[14px]">
+          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px]">
             {report.reportedAtLabel}
           </p>
         </div>
@@ -664,7 +664,7 @@ function AmountRow({
   return (
     <div className="flex gap-[16px] items-center p-[8px] rounded-[8px]">
       <div className="flex-1 min-w-px flex flex-col justify-center">
-        <div className="w-full h-[32px] flex items-center rounded-[8px] bg-brain-v1baby-blue-15 px-[12px] [font-family:'Gilroy',sans-serif] font-medium text-[15px] text-white">
+        <div className="w-full h-[32px] flex items-center rounded-[8px] bg-brain-v1baby-blue-15 px-[12px] [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-white">
           <span aria-hidden="true" className="shrink-0">{symbol}</span>
           <input
             value={draft}
@@ -739,7 +739,7 @@ function PolicyDetailHeader({ rule }: { rule: PolicyContentRule }) {
             </p>
             <span
               data-testid="pill-rule-status"
-              className="bg-brain-v1dark-purple border border-[rgba(118,49,238,0.2)] border-solid flex items-center justify-center px-[10px] py-[4px] rounded-pill shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1purple text-[14px] text-center"
+              className="bg-brain-v1dark-purple border border-[rgba(118,49,238,0.2)] border-solid flex items-center justify-center px-[10px] py-[4px] rounded-pill shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1purple text-[14px] text-center"
             >
               Read-Only
             </span>

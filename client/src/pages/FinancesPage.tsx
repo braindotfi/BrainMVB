@@ -306,11 +306,11 @@ export function FinancesPage() {
                   name={acc.name}
                   secondary={
                     <>
-                      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">{acc.sub}</p>
+                      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">{acc.sub}</p>
                       {acc.sub2 && (
                         <>
                           <div className="relative shrink-0 size-[4px]"><img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_DOT} /></div>
-                          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">{acc.sub2}</p>
+                          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">{acc.sub2}</p>
                         </>
                       )}
                     </>

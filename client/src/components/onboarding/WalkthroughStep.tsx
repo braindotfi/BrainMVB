@@ -59,7 +59,7 @@ export function WalkthroughStepView({ step, index }: { step: StepContent; index:
         >
           <div className="flex-1 min-w-0 flex flex-col gap-[4px]">
             <div className="flex items-center gap-[8px] flex-wrap">
-              <span className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[15px] leading-[20px]">
+              <span className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[16px] leading-[20px]">
                 {row.title}
               </span>
               {row.badge && (

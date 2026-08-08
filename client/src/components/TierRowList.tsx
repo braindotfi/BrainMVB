@@ -173,7 +173,7 @@ export const TierRow = ({ row }: { row: TierRowModel }) => {
      is the same 16px) and gave the two halves of the list different row heights.
      Only the title and the right-hand pill distinguish a settled row now. */
   const secondaryClass =
-    "[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[14px] w-full truncate";
+    "[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px] w-full truncate";
 
   return (
     <div

@@ -12,9 +12,9 @@ import brainLogo from "@assets/BrainLogo_1781769246241.png";
    consumed after the explicit "Join" confirm below. */
 
 const inputCls =
-  "w-full h-[48px] px-4 rounded-2xl bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 focus:border-brain-v1purple outline-none transition-colors [font-family:'Gilroy',sans-serif] text-brain-v1white placeholder:text-brain-v1baby-blue-60 text-[15px]";
+  "w-full h-[48px] px-4 rounded-2xl bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 focus:border-brain-v1purple outline-none transition-colors [font-family:'Gilroy',sans-serif] text-brain-v1white placeholder:text-brain-v1baby-blue-60 text-[16px] leading-[20px]";
 const primaryBtn =
-  "w-full h-[48px] rounded-2xl bg-brain-v1purple hover:bg-brain-v1purple-hover disabled:opacity-60 disabled:cursor-not-allowed transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-white text-[15px] flex items-center justify-center gap-2";
+  "w-full h-[48px] rounded-2xl bg-brain-v1purple hover:bg-brain-v1purple-hover disabled:opacity-60 disabled:cursor-not-allowed transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-white text-[16px] leading-[20px] flex items-center justify-center gap-2";
 
 /** Pull a bare invite token out of a pasted link or raw token. */
 function extractInviteToken(raw: string): string {
@@ -179,7 +179,7 @@ export function CompanySetupPage() {
             <h1 className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1white text-[24px] leading-[32px]">
               Set Up Your Company
             </h1>
-            <p className="[font-family:'Gilroy',sans-serif] font-normal text-brain-v1baby-blue-60 text-[15px] leading-[22px] mt-1">
+            <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px] mt-1">
               {user?.email ? `Signed in as ${user.email}. ` : ""}Your account isn't part of a company yet -
               create one, or join with an invite from your admin.
             </p>

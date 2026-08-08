@@ -159,7 +159,7 @@ function AutomationRow({ rule }: { rule: AutoRule }) {
         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[16px] whitespace-nowrap w-full">
           {titleCase(rule.name)}
         </p>
-        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[14px]">
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px]">
           {titleCase(rule.scopeSummary ?? rule.summary)}
         </p>
         {pausedFromReport && (
@@ -167,7 +167,7 @@ function AutomationRow({ rule }: { rule: AutoRule }) {
         )}
       </button>
       <div className="content-stretch flex items-center justify-center px-[10px] py-[4px] relative rounded-pill shrink-0 border border-solid bg-brain-v1dark-green border-[rgba(66,191,35,0.2)]">
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[14px] whitespace-nowrap text-brain-v1green">
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap text-brain-v1green">
           Anchored
         </p>
       </div>
@@ -195,7 +195,7 @@ function GuardrailRow({ rule }: { rule: AutoRule }) {
         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[16px] whitespace-nowrap w-full">
           {titleCase(rule.name)}
         </p>
-        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[14px]">
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px]">
           {titleCase(rule.summary)}
         </p>
         {pausedFromReport && (
@@ -206,7 +206,7 @@ function GuardrailRow({ rule }: { rule: AutoRule }) {
           boundary without reusing amber's needs-attention meaning. */}
       <div className="content-stretch flex items-center gap-[5px] justify-center px-[10px] py-[4px] relative rounded-pill shrink-0 border border-solid bg-brain-v1baby-blue-15 border-[rgba(108,119,157,0.2)]">
         <Lock size={11} className="text-brain-v1baby-blue-60 shrink-0" aria-hidden />
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[14px] whitespace-nowrap text-brain-v1baby-blue-60">
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap text-brain-v1baby-blue-60">
           Guardrail
         </p>
       </div>
@@ -233,12 +233,12 @@ function AlwaysOnRow({ rule }: { rule: AutoRule }) {
         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[16px] whitespace-nowrap w-full">
           {titleCase(rule.name)}
         </p>
-        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[14px]">
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px]">
           {titleCase(rule.summary)}
         </p>
       </button>
       <div className="content-stretch flex items-center justify-center px-[10px] py-[4px] relative rounded-pill shrink-0 border border-solid bg-brain-v1dark-green border-[rgba(66,191,35,0.2)]">
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[14px] whitespace-nowrap text-brain-v1green">
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap text-brain-v1green">
           Always On
         </p>
       </div>
@@ -333,7 +333,7 @@ function SuggestionCard({
             {titleCase(suggestion.title)}
           </p>
           <span
-            className="shrink-0 [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] px-[10px] py-[4px] rounded-pill border border-solid whitespace-nowrap"
+            className="shrink-0 [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[16px] px-[10px] py-[4px] rounded-pill border border-solid whitespace-nowrap"
             style={{ backgroundColor: conf.bg, borderColor: conf.border, color: conf.text }}
             data-testid={`text-confidence-${suggestion.id}`}
           >
@@ -714,7 +714,7 @@ export function RulesPanel() {
               <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[16px] leading-[20px]">
                 Create this rule?
               </p>
-              <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[15px] leading-[22px]">
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[14px] leading-[20px]">
                 {pendingCreate.name}
               </p>
               <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[13px] leading-[18px]">
@@ -895,7 +895,7 @@ export function RulesPanel() {
                                <span className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[14px] text-brain-v1baby-blue-60">
                                 {v}
                               </span>
-                              <span className="shrink-0 px-[8px] py-[2px] rounded-pill bg-brain-v1dark-pink-red text-brain-v1pink-red [font-family:'Gilroy',sans-serif] font-semibold text-[10px] uppercase tracking-[0.04em]">
+                              <span className="shrink-0 px-[8px] py-[2px] rounded-pill bg-brain-v1dark-pink-red text-brain-v1pink-red [font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[14px] uppercase tracking-[0.04em]">
                                 Not Trusted
                               </span>
                             </div>

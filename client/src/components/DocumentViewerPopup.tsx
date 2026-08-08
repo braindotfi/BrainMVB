@@ -71,7 +71,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 function KeyValue({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between items-start gap-[8px]">
-      <span className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-brain-v1baby-blue-30 shrink-0">
+      <span className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px] uppercase text-brain-v1baby-blue-30 shrink-0">
         {label}
       </span>
       <span className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-brain-v1baby-blue-100 text-right">
@@ -161,7 +161,7 @@ function InvoicePane({ doc }: { doc: DocumentRecord }) {
                 className={`content-stretch flex items-center justify-center px-[10px] py-[4px] relative rounded-pill shrink-0 border border-solid ${STATUS_CHIP[doc.status]}`}
                 style={{ background: doc.status === "paid" ? "#123509" : doc.status === "held" ? "#350011" : "#222737", borderColor: doc.status === "paid" ? "rgba(66,191,35,0.2)" : doc.status === "held" ? "rgba(210,3,68,0.2)" : "rgba(108,119,157,0.2)" }}
               >
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[14px] whitespace-nowrap" style={{ color: doc.status === "paid" ? "#42bf23" : doc.status === "held" ? "#d20344" : "#6c779d" }}>
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap" style={{ color: doc.status === "paid" ? "#42bf23" : doc.status === "held" ? "#d20344" : "#6c779d" }}>
                   {docStatusLabel(doc.status)}
                 </p>
               </div>
@@ -209,7 +209,7 @@ function InvoicePane({ doc }: { doc: DocumentRecord }) {
             <div className="bg-brain-v1dark-green content-stretch flex items-center px-[16px] py-[12px] relative rounded-row shrink-0 w-full">
               <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
                 <CheckCircle2 size={16} className="text-brain-v1green shrink-0" />
-                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1green text-[14px] whitespace-nowrap">
+                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1green text-[14px] whitespace-nowrap">
                   {match
                     ? `Matches the linked payment (${format(proposal.amount)})`
                     : `Differs from the linked payment. Document ${format(doc.amount)} vs payment ${format(proposal.amount)}`
@@ -257,7 +257,7 @@ function InvoicePane({ doc }: { doc: DocumentRecord }) {
       <div className="border border-brain-v1stroke-2 border-solid content-stretch flex items-center p-[8px] relative rounded-row w-full">
         <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-start min-w-px">
           <InfoIcon color="#6c779d" className="mt-[2px]" />
-          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[14px] flex-1 min-w-px">
+          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px] flex-1 min-w-px">
             A viewer, not an AP system. Brain reads this invoice; your accounting system owns it.
           </p>
         </div>
@@ -432,7 +432,7 @@ function BankTransactionPane({ doc }: { doc: DocumentRecord }) {
           <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-brain-v1baby-blue-100 flex-1">
             {doc.counterparty ?? doc.title}
           </span>
-          <span className="[font-family:'JetBrains_Mono',monospace] font-medium text-[15px] text-brain-v1baby-blue-100">
+          <span className="[font-family:'JetBrains_Mono',monospace] font-medium text-[14px] leading-[20px] text-brain-v1baby-blue-100">
             {doc.direction === "credit" ? "+" : "−"}
             {typeof doc.amount === "number" ? `$${fmt(doc.amount)}` : "-"}
           </span>
@@ -456,11 +456,11 @@ function BankTransactionPane({ doc }: { doc: DocumentRecord }) {
           <div className="grid grid-cols-2 gap-[8px] w-full">
             {/* Bank side */}
             <div className="bg-brain-v1highlight-dropdown-bg rounded-[10px] p-[12px] flex flex-col gap-[6px]">
-              <p className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-brain-v1baby-blue-30">
+              <p className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px] uppercase text-brain-v1baby-blue-30">
                 Bank line
               </p>
               <p
-                className={`[font-family:'JetBrains_Mono',monospace] font-medium text-[15px] ${amountsDiffer ? "text-brain-v1pink-red" : "text-brain-v1green"}`}
+                className={`[font-family:'JetBrains_Mono',monospace] font-medium text-[14px] leading-[20px] ${amountsDiffer ? "text-brain-v1pink-red" : "text-brain-v1green"}`}
               >
                 ${fmt(recon.bankAmount)}
               </p>
@@ -470,11 +470,11 @@ function BankTransactionPane({ doc }: { doc: DocumentRecord }) {
             </div>
             {/* Ledger side */}
             <div className="bg-brain-v1highlight-dropdown-bg rounded-[10px] p-[12px] flex flex-col gap-[6px]">
-              <p className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-brain-v1baby-blue-30">
+              <p className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px] uppercase text-brain-v1baby-blue-30">
                 Ledger {recon.ledgerRef}
               </p>
               <p
-                className={`[font-family:'JetBrains_Mono',monospace] font-medium text-[15px] ${amountsDiffer ? "text-brain-v1pink-red" : "text-brain-v1green"}`}
+                className={`[font-family:'JetBrains_Mono',monospace] font-medium text-[14px] leading-[20px] ${amountsDiffer ? "text-brain-v1pink-red" : "text-brain-v1green"}`}
               >
                 ${fmt(recon.ledgerAmount)}
               </p>
@@ -565,7 +565,7 @@ function ProvenanceBlock({ doc }: { doc: DocumentRecord }) {
       <div className="bg-brain-v1highlight-dropdown-bg rounded-[8px] px-[12px] py-[10px] flex flex-col gap-[6px]">
         <KeyValue label="source" value={doc.provenance.source} />
         <div className="flex justify-between items-start gap-[8px]">
-          <span className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-brain-v1baby-blue-30 shrink-0">
+          <span className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px] uppercase text-brain-v1baby-blue-30 shrink-0">
             ingested
           </span>
           <span className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px] text-brain-v1baby-blue-60 text-right">
@@ -573,7 +573,7 @@ function ProvenanceBlock({ doc }: { doc: DocumentRecord }) {
           </span>
         </div>
         <div className="flex justify-between items-start gap-[8px]">
-          <span className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-brain-v1baby-blue-30 shrink-0">
+          <span className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px] uppercase text-brain-v1baby-blue-30 shrink-0">
             channel
           </span>
           <span className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px] text-brain-v1baby-blue-100 text-right">
@@ -581,7 +581,7 @@ function ProvenanceBlock({ doc }: { doc: DocumentRecord }) {
           </span>
         </div>
         <div className="flex justify-between items-start gap-[8px]">
-          <span className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-brain-v1baby-blue-30 shrink-0">
+          <span className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px] uppercase text-brain-v1baby-blue-30 shrink-0">
             ledger ref
           </span>
           <span className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px] text-brain-v1baby-blue-60 text-right break-all">
@@ -612,14 +612,14 @@ function CompareColumns({
 
   const col = (d: DocumentRecord, heading: string) => (
     <div className="bg-brain-v1highlight-dropdown-bg rounded-[10px] p-[12px] flex flex-col gap-[8px] flex-1 min-w-px">
-      <p className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-brain-v1baby-blue-30">
+      <p className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px] uppercase text-brain-v1baby-blue-30">
         {heading}
       </p>
       <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-brain-v1baby-blue-100 leading-[20px]">
         {d.id}
       </p>
       <div className="flex justify-between items-center gap-[6px]">
-        <span className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-brain-v1baby-blue-30">
+        <span className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px] uppercase text-brain-v1baby-blue-30">
           amount
         </span>
         <span
@@ -629,7 +629,7 @@ function CompareColumns({
         </span>
       </div>
       <div className="flex justify-between items-center gap-[6px]">
-        <span className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-brain-v1baby-blue-30">
+        <span className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px] uppercase text-brain-v1baby-blue-30">
           date
         </span>
         <span className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px] text-brain-v1baby-blue-60">
@@ -637,7 +637,7 @@ function CompareColumns({
         </span>
       </div>
       <div className="flex justify-between items-center gap-[6px]">
-        <span className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-brain-v1baby-blue-30">
+        <span className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px] uppercase text-brain-v1baby-blue-30">
           pay to
         </span>
         <span
@@ -723,13 +723,13 @@ export function DocumentViewerPopup({
                   <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-brain-v1baby-blue-100 truncate">
                     {doc.id}
                   </span>
-                  <span className="[font-family:'JetBrains_Mono',monospace] text-[9px] uppercase text-brain-v1baby-blue-30">
+                  <span className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px] uppercase text-brain-v1baby-blue-30">
                     {docKindLabel(doc.kind)}
                   </span>
                 </div>
                 {doc.status && (
                   <span
-                    className={`px-[6px] py-[2px] rounded-[4px] [font-family:'JetBrains_Mono',monospace] font-medium text-[10px] uppercase shrink-0 ${STATUS_CHIP[doc.status]}`}
+                    className={`px-[6px] py-[2px] rounded-[4px] [font-family:'JetBrains_Mono',monospace] font-medium text-[11px] leading-[14px] uppercase shrink-0 ${STATUS_CHIP[doc.status]}`}
                     data-testid="document-status-chip"
                   >
                     {docStatusLabel(doc.status)}

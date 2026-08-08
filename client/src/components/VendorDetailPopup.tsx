@@ -309,7 +309,7 @@ export function VendorDetailPopup({
                   }}
                 >
                   <p
-                    className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[14px] text-center whitespace-nowrap"
+                    className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] text-center whitespace-nowrap"
                     style={{
                       color: !trustActionsAvailable
                         ? "#6c779d"
@@ -338,7 +338,7 @@ export function VendorDetailPopup({
                 <div className="flex items-center p-[8px] w-full">
                   <div className="flex flex-1 gap-[8px] items-start min-w-px">
                     <InfoIcon color="#6c779d" className="mt-[2px]" />
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[14px] flex-1 min-w-px">
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px] flex-1 min-w-px">
                       {vendor.wasTrustedLabel}
                     </p>
                   </div>
@@ -350,7 +350,7 @@ export function VendorDetailPopup({
                 <div className="flex items-center p-[8px] w-full">
                   <div className="flex flex-1 gap-[8px] items-start min-w-px">
                     <InfoIcon color="#6c779d" className="mt-[2px]" />
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[14px] flex-1 min-w-px">
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px] flex-1 min-w-px">
                       {vendor.trustGrantedLabel}
                     </p>
                   </div>
@@ -362,7 +362,7 @@ export function VendorDetailPopup({
                 <div className="flex items-center p-[8px] w-full">
                   <div className="flex flex-1 gap-[8px] items-start min-w-px">
                     <InfoIcon color="#6c779d" className="mt-[2px]" />
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[14px] flex-1 min-w-px">
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px] flex-1 min-w-px">
                       Only {vendor.history.paymentCount} payment{vendor.history.paymentCount === 1 ? "" : "s"} on record. Brain needs more history before suggesting trust.
                     </p>
                   </div>
@@ -375,10 +375,10 @@ export function VendorDetailPopup({
                   <div className="flex flex-1 gap-[8px] items-start min-w-px">
                     <InfoIcon color="#a8b9f4" className="mt-[2px]" />
                     <div className="flex flex-col gap-[8px] flex-1 min-w-px">
-                      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[14px]">
+                      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-100 text-[14px]">
                         Brain suggests trusting this {noun}.
                       </p>
-                      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[14px]">
+                      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px]">
                         Based on consistent payment history and no unresolved flags. You decide, trust is never auto-granted.
                       </p>
                     </div>
@@ -530,7 +530,7 @@ export function VendorDetailPopup({
                   <div className="flex items-center p-[8px] w-full">
                     <div className="flex flex-1 gap-[8px] items-start min-w-px">
                       <InfoIcon color="#6c779d" className="mt-[2px]" />
-                      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[14px] flex-1 min-w-px">
+                      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px] flex-1 min-w-px">
                         Brain keeps this row to group entries from a payroll register. It is not a{" "}
                         {noun} you pay directly, so there is nothing here to trust, flag, or dismiss.
                       </p>

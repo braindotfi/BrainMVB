@@ -116,7 +116,7 @@ const Metric = ({
       <span className="font-medium leading-[36px] text-[28px]" style={{ color: amountColor }}>{whole}</span>
       {cents && <span className="font-medium leading-[36px] text-[18px]" style={{ color: amountColor }}>{cents}</span>}
     </p>
-    <p className="[font-family:'Gilroy',sans-serif] font-normal leading-[18px] text-brain-v1baby-blue-60 text-[13px] w-full">{caption}</p>
+    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-brain-v1baby-blue-60 text-[13px] w-full">{caption}</p>
   </div>
     );
   })()
@@ -397,7 +397,7 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
             const secondary = isBill
               ? (
                   <>
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">
                       {dueLabel(row.date || null)}
                     </p>
                     {row.secondaryLabel && (
@@ -405,7 +405,7 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
                         <div className="relative shrink-0 size-[4px]">
                           <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.activity_dot} />
                         </div>
-                        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[14px] truncate">
+                        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px] truncate">
                           {row.secondaryLabel}
                         </p>
                       </>
@@ -414,7 +414,7 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
                 )
               : detailLine(row.sublabel, row.date)
                 ? (
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[14px] truncate">
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px] truncate">
                       {detailLine(row.sublabel, row.date)}
                     </p>
                   )

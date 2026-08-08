@@ -132,7 +132,7 @@ function VendorRow({
           {reason ? <ReasonChip label={reason} /> : null}
           {reviewed ? <ReviewedChip /> : null}
         </div>
-        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">
           {vendor.category || "Vendor"} ·{" "}
           {hasPayments
             ? `${paymentCount} ${paymentCount === 1 ? "payment" : "payments"}`
@@ -193,7 +193,7 @@ function SubmitConfirmDialog({
               <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-brain-v1baby-blue-100 text-[20px] w-full">
                 Submit {nounTitle} for Review
               </p>
-              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[14px] w-full">
+              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px] w-full">
                 Add {noun} <span className="text-brain-v1baby-blue-100">{vendorName}</span> as a{" "}
                 <span className="text-brain-v1baby-blue-100">{category || "supplier"}</span> for review.
               </p>
