@@ -91,3 +91,4 @@
 - [Live insight card structure](live-insight-card-structure.md) — read-only ledger insights reuse the agent-card rhythm with honest observational sections, never invented decision content.
 - [Unified record pager](unified-record-pager.md) — Prev/Next must walk the rendered row list, not each source queue; spread props hide a modal that ignores per-direction state.
 - [Hex→token mapping](hex-to-token-mapping.md) — ΔE finds candidates but can't decide them: resolve base/hover pairs together, and contrast-check every text collapse.
+- [Design-token scan](design-token-scan.md) — it is a vitest source-scan in client/src, not CI; it cannot see inline styles or role misuse, and its guards count rather than classify.
