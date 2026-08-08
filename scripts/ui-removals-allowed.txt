@@ -1,0 +1,15 @@
+# Declared UI removals.
+#
+# scripts/check-removed-ui.mjs fails when a data-testid / testId that exists on
+# the base ref exists nowhere in your branch. That is deliberate: three separate
+# "sync to main" merges silently deleted finished UI because a stale copy of a
+# file rode along in a large diff, and no check ever noticed.
+#
+# Removing UI is fine. It just has to be a decision somebody wrote down.
+# One id per line, followed by the reason it is gone.
+#
+#     <test-id>    <why it was removed>
+#
+# If you are adding a line here only to make the check pass, stop -- that is the
+# exact failure this file exists to prevent. Confirm the control is genuinely
+# superseded before declaring it.

@@ -1577,3 +1577,52 @@ Overview, Inbox and Ledger share one header stack: a 20px eyebrow, a 32px title,
 description, as three sibling `<p>`s in a `gap-[4px]` column. Overview previously wrapped each line
 in its own flex row and used a `leading-[0] text-[0px]` parent to kill whitespace between the
 greeting's spans.
+
+## Merging to main — the review gate
+
+Three merges have silently deleted finished work. Each was a long-lived "sync"
+branch holding a stale copy of a file, merged in a diff large enough that nobody
+read the deletions:
+
+| merge | what it took | how long it was gone |
+|---|---|---|
+| "Sync today completed work into main" | Settings **Auto-Approve Limit** row and the **Escalation** block | 4 days |
+| "Sync current BrainMVB changes to main" (101 files, −5860) | 8 test ids, 4 of them merged hours earlier the same day | never restored until audited |
+| stale-branch merge | 6 memory index entries | until noticed by hand |
+
+None of these were decisions. They were side effects.
+
+**The rule: no PR reaches main without a review, including your own.** The
+auto-approve-limit loss self-merged eight minutes after it opened. A tool cannot
+fix that; only the gate can. Specifically:
+
+1. **Never self-merge.** Not for a sync branch, not for "just a rebase", not for
+   docs. The two smallest-looking merges in the table above did the most damage.
+2. **Rebase before merging, never merge a stale branch.** If a branch has been
+   open long enough that main moved, `git rebase origin/main` and re-read the
+   diff. A squash merge of a stale branch reverts whatever landed meanwhile.
+3. **Read the deletions, not the additions.** In a sync diff the additions are
+   the intent and the deletions are the accident. `git diff origin/main...HEAD
+   --diff-filter=M -- client/src | grep '^-'` is the two minutes that would have
+   caught all three incidents.
+4. **A deletion is a claim.** If a control disappears, the PR body has to say
+   which control and why. "Sync" is not a reason.
+
+`scripts/check-removed-ui.mjs` enforces the mechanical part of this: a
+`data-testid` / `testId` present on the base ref and absent from the branch is a
+failure until it is declared in `scripts/ui-removals-allowed.txt`. Run it before
+you merge:
+
+```
+node scripts/check-removed-ui.mjs            # against origin/main
+node scripts/check-removed-ui.mjs origin/foo # against another base
+```
+
+It belongs in `.github/workflows/test.yml` as a `pull_request` step placed
+*before* the install steps, so that a broken lockfile — CI's current state —
+cannot hide a silent deletion. That step is not wired yet: updating a workflow
+file needs a token with `workflow` scope. Until it is, this is a local check and
+the review gate above is doing the work. It only sees
+literal ids in `client/src` — untagged copy, dynamic ids, and server behaviour
+are invisible to it, so it lowers the cost of the mistake but does not remove the
+need for the review.
