@@ -12,9 +12,9 @@ import brainLogo from "@assets/BrainLogo_1781769246241.png";
    consumed after the explicit "Join" confirm below. */
 
 const inputCls =
-  "w-full h-[48px] px-4 rounded-2xl bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 focus:border-brain-v1purple outline-none transition-colors [font-family:'Gilroy',sans-serif] text-brain-v1white placeholder:text-brain-v1baby-blue-60 text-[15px]";
+  "w-full h-[48px] px-4 rounded-2xl bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 focus:border-brain-v1purple outline-none transition-colors [font-family:'Gilroy',sans-serif] text-brain-v1white placeholder:text-brain-v1baby-blue-60 text-[16px] leading-[20px]";
 const primaryBtn =
-  "w-full h-[48px] rounded-2xl bg-brain-v1purple hover:bg-brain-v1purple-hover disabled:opacity-60 disabled:cursor-not-allowed transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-white text-[15px] flex items-center justify-center gap-2";
+  "w-full h-[48px] rounded-2xl bg-brain-v1purple hover:bg-brain-v1purple-hover disabled:opacity-60 disabled:cursor-not-allowed transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-white text-[16px] leading-[20px] flex items-center justify-center gap-2";
 
 /** Pull a bare invite token out of a pasted link or raw token. */
 function extractInviteToken(raw: string): string {
@@ -156,7 +156,7 @@ export function CompanySetupPage() {
       type="button"
       data-testid={testId}
       onClick={() => { setTab(key); setError(null); }}
-      className="flex-1 py-[10px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-[14px] transition-colors flex items-center justify-center"
+      className="flex-1 py-[10px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] transition-colors flex items-center justify-center"
       style={{
         background: tab === key ? "#240757" : "#0c0f14",
         color: tab === key ? "#7631ee" : "#6c779d",
@@ -179,7 +179,7 @@ export function CompanySetupPage() {
             <h1 className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1white text-[24px] leading-[32px]">
               Set Up Your Company
             </h1>
-            <p className="[font-family:'Gilroy',sans-serif] font-normal text-brain-v1baby-blue-60 text-[15px] leading-[22px] mt-1">
+            <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px] mt-1">
               {user?.email ? `Signed in as ${user.email}. ` : ""}Your account isn't part of a company yet -
               create one, or join with an invite from your admin.
             </p>
@@ -193,7 +193,7 @@ export function CompanySetupPage() {
           {tab === "create" ? (
             <form onSubmit={createCompany} className="flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
-                <label className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[13px] pl-1">
+                <label className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px] pl-1">
                   Company name
                 </label>
                 <input
@@ -206,7 +206,7 @@ export function CompanySetupPage() {
                 />
               </div>
               {error && (
-                <p data-testid="text-company-setup-error" className="[font-family:'Gilroy',sans-serif] text-brain-v1error-text text-[13px] px-1">
+                <p data-testid="text-company-setup-error" className="[font-family:'Gilroy',sans-serif] text-brain-v1error-text text-[14px] leading-[20px] px-1">
                   {error}
                 </p>
               )}
@@ -221,7 +221,7 @@ export function CompanySetupPage() {
           ) : (
             <form onSubmit={joinCompany} className="flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
-                <label className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[13px] pl-1">
+                <label className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px] pl-1">
                   Invite link or code
                 </label>
                 <input
@@ -233,12 +233,12 @@ export function CompanySetupPage() {
                   className={inputCls}
                 />
               </div>
-              <p className="[font-family:'Gilroy',sans-serif] text-brain-v1baby-blue-60 text-[13px] px-1">
+              <p className="[font-family:'Gilroy',sans-serif] text-brain-v1baby-blue-60 text-[13px] leading-[18px] px-1">
                 Joining links this account{user?.email ? ` (${user.email})` : ""} to your company - make sure this
                 invite was meant for you.
               </p>
               {error && (
-                <p data-testid="text-company-setup-error" className="[font-family:'Gilroy',sans-serif] text-brain-v1error-text text-[13px] px-1">
+                <p data-testid="text-company-setup-error" className="[font-family:'Gilroy',sans-serif] text-brain-v1error-text text-[14px] leading-[20px] px-1">
                   {error}
                 </p>
               )}
@@ -249,7 +249,7 @@ export function CompanySetupPage() {
             </form>
           )}
 
-          <p className="text-center mt-6 [font-family:'Gilroy',sans-serif] text-brain-v1baby-blue-60 text-[14px]">
+          <p className="text-center mt-6 [font-family:'Gilroy',sans-serif] text-brain-v1baby-blue-60 text-[14px] leading-[20px]">
             Wrong account?{" "}
             <button
               type="button"

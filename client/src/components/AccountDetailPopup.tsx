@@ -83,12 +83,12 @@ function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center w-full border-b border-brain-v1stroke-2 last:border-b-0">
       <div className="flex flex-col justify-center px-[12px] py-[8px] w-[140px] shrink-0">
-        <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[20px] text-brain-v1baby-blue-60">
+        <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-brain-v1baby-blue-60">
           {label}
         </span>
       </div>
       <div className="flex flex-1 flex-col justify-center px-[12px] py-[8px] min-w-px">
-        <span className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[20px] text-brain-v1baby-blue-100 break-all">
+        <span className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-brain-v1baby-blue-100 break-all">
           {value}
         </span>
       </div>
@@ -99,7 +99,7 @@ function Row({ label, value }: { label: string; value: string }) {
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex gap-[8px] items-center w-full">
-      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[14px] text-brain-v1baby-blue-60 whitespace-nowrap">
+      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-brain-v1baby-blue-60 whitespace-nowrap">
         {children}
       </p>
       <div className="flex-1 h-px bg-brain-v1stroke-2" />
@@ -174,7 +174,7 @@ export function AccountDetailPopup({
                     {account.name}
                   </p>
                   <div className="flex gap-[8px] items-center w-full">
-                    <p className="[font-family:'JetBrains_Mono',monospace] font-normal leading-[32px] text-brain-v1baby-blue-100 text-[32px]" data-testid="text-account-balance">
+                    <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[32px] text-brain-v1baby-blue-100 text-[32px]" data-testid="text-account-balance">
                       {balanceLabel(account, format)}
                     </p>
                     <div className="bg-brain-v1baby-blue-15 border border-[rgba(108,119,157,0.2)] border-solid flex items-center justify-center px-[8px] py-[3px] rounded-pill shrink-0">
@@ -228,11 +228,11 @@ export function AccountDetailPopup({
                             className="flex gap-[12px] items-center p-[10px] rounded-[8px] bg-brain-v1highlight-dropdown-bg border border-transparent transition-colors hover:bg-brain-v1item-hover hover:border-brain-v1stroke-2 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple w-full"
                           >
                             <div className="flex flex-1 flex-col min-w-px">
-                              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-brain-v1baby-blue-100 truncate">{label}</p>
-                              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] text-brain-v1baby-blue-60">{shortDate(t.transaction_date)}</p>
+                              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-brain-v1baby-blue-100 truncate">{label}</p>
+                              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-brain-v1baby-blue-60">{shortDate(t.transaction_date)}</p>
                             </div>
                             <p
-                              className="[font-family:'JetBrains_Mono',monospace] font-medium text-[15px] shrink-0"
+                              className="[font-family:'JetBrains_Mono',monospace] font-medium text-[14px] leading-[20px] shrink-0"
                               style={{ color: positive ? "#42bf23" : "#a8b9f4" }}
                             >
                               {positive ? "+" : "-"}{format(Math.abs(Number.isFinite(amt) ? amt : 0))}
@@ -266,7 +266,7 @@ export function AccountDetailPopup({
                 <div className="border border-brain-v1stroke-2 border-solid rounded-row w-full">
                   <div className="flex items-start gap-[8px] p-[8px] w-full">
                     <InfoIcon color="#6c779d" className="mt-[2px]" />
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px] flex-1 min-w-px">
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[14px] flex-1 min-w-px">
                       A read only view. Brain reads this balance from your ledger; your bank owns the account.
                     </p>
                   </div>
@@ -310,7 +310,7 @@ export function AccountDetailPopup({
                   read failed we have no basis for it. The account may be perfectly
                   fine and simply unreadable this second. */}
               <p
-                className="[font-family:'Gilroy',sans-serif] font-medium text-[14px]"
+                className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px]"
                 style={{ color: accountsFeed.unavailable ? "#ff9500" : "#6c779d" }}
                 data-testid={
                   accountsFeed.unavailable

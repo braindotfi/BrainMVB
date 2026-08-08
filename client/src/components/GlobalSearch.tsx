@@ -218,7 +218,7 @@ export function GlobalSearch() {
         >
           {allDown ? (
             <p
-              className="px-[14px] py-[10px] [font-family:'Gilroy',sans-serif] font-medium text-[13px] text-brain-v1light-orange"
+              className="px-[14px] py-[10px] [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-brain-v1light-orange"
               data-testid="text-search-unavailable"
             >
               Search is unavailable. Decisions, vendors and accounts could not be
@@ -229,14 +229,14 @@ export function GlobalSearch() {
               {results.length === 0 &&
                 (stillSearching ? (
                   <p
-                    className="px-[14px] py-[10px] [font-family:'Gilroy',sans-serif] font-medium text-[13px] text-brain-v1baby-blue-60"
+                    className="px-[14px] py-[10px] [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-brain-v1baby-blue-60"
                     data-testid="text-search-pending"
                   >
                     Searching…
                   </p>
                 ) : (
                   <p
-                    className="px-[14px] py-[10px] [font-family:'Gilroy',sans-serif] font-medium text-[13px] text-brain-v1baby-blue-60"
+                    className="px-[14px] py-[10px] [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-brain-v1baby-blue-60"
                     data-testid="text-search-no-matches"
                   >
                     No matches in {listOf(answered)}.
@@ -257,16 +257,16 @@ export function GlobalSearch() {
                   data-testid={`search-result-${r.kind}`}
                 >
                   <span className="flex min-w-px flex-1 flex-col">
-                    <span className="truncate [font-family:'Gilroy',sans-serif] font-semibold text-[13px] text-brain-v1baby-blue-100">
+                    <span className="truncate [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-brain-v1baby-blue-100">
                       {r.label}
                     </span>
                     {r.detail && (
-                      <span className="truncate [font-family:'Gilroy',sans-serif] font-medium text-[12px] text-brain-v1baby-blue-60">
+                      <span className="truncate [font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-brain-v1baby-blue-60">
                         {r.detail}
                       </span>
                     )}
                   </span>
-                  <span className="shrink-0 rounded-[6px] bg-brain-v1baby-blue-15 px-[6px] py-[2px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] text-brain-v1baby-blue-60">
+                  <span className="shrink-0 rounded-[6px] bg-brain-v1baby-blue-15 px-[6px] py-[2px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[14px] text-brain-v1baby-blue-60">
                     {KIND_LABEL[r.kind]}
                   </span>
                 </div>
@@ -276,7 +276,7 @@ export function GlobalSearch() {
                   list renders, so nothing on screen suggests a source is absent. */}
               {down.length > 0 && (
                 <p
-                  className="border-t border-solid border-brain-v1stroke-2 px-[14px] py-[8px] [font-family:'Gilroy',sans-serif] font-medium text-[12px] text-brain-v1light-orange"
+                  className="border-t border-solid border-brain-v1stroke-2 px-[14px] py-[8px] [font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-brain-v1light-orange"
                   data-testid="text-search-partial"
                 >
                   {listOf(down)} could not be searched, so matches there are missing.

@@ -356,13 +356,13 @@ function SuggestionCard({
               className={`content-stretch flex items-start relative shrink-0 w-full ${i < suggestion.evidence.length - 1 ? "border-b border-brain-v1stroke-2" : ""}`}
             >
               <div className="flex flex-col items-start justify-center px-[12px] py-[8px] relative shrink-0 w-[200px]">
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">
                   {titleCase(fact.label)}
                 </p>
               </div>
               <div className="flex flex-1 flex-col items-start justify-center min-w-px px-[12px] py-[8px] relative">
                 <p
-                  className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[13px]"
+                  className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[14px]"
                   style={{ color: fact.severity === "clean" ? ACTIVE : "#a8b9f4" }}
                 >
                   {fact.value}
@@ -379,7 +379,7 @@ function SuggestionCard({
               type="button"
               onClick={onAccept}
               data-testid={`button-accept-suggestion-${suggestion.id}`}
-              className="bg-brain-v1dark-purple content-stretch flex items-center justify-center px-[12px] py-[8px] relative rounded-pill shrink-0 w-[140px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-brain-v1purple focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
+              className="bg-brain-v1dark-purple content-stretch flex items-center justify-center px-[12px] py-[8px] relative rounded-pill shrink-0 w-[140px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-brain-v1purple focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
             >
               Accept
             </button>
@@ -387,7 +387,7 @@ function SuggestionCard({
               type="button"
               onClick={onTweak}
               data-testid={`button-tweak-suggestion-${suggestion.id}`}
-              className="bg-brain-v1baby-blue-15 content-stretch flex items-center justify-center px-[12px] py-[8px] relative rounded-pill shrink-0 w-[140px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-brain-v1baby-blue-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30"
+              className="bg-brain-v1baby-blue-15 content-stretch flex items-center justify-center px-[12px] py-[8px] relative rounded-pill shrink-0 w-[140px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-brain-v1baby-blue-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30"
             >
               Edit
             </button>
@@ -396,7 +396,7 @@ function SuggestionCard({
             type="button"
             onClick={onDismiss}
             data-testid={`button-dismiss-suggestion-${suggestion.id}`}
-            className="bg-brain-v1baby-blue-5 content-stretch flex items-center justify-center px-[12px] py-[8px] relative rounded-pill shrink-0 w-[140px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-brain-v1baby-blue-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30"
+            className="bg-brain-v1baby-blue-5 content-stretch flex items-center justify-center px-[12px] py-[8px] relative rounded-pill shrink-0 w-[140px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-brain-v1baby-blue-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30"
           >
             Dismiss
           </button>
@@ -711,10 +711,10 @@ export function RulesPanel() {
               style={{ background: "#240757", borderColor: "rgba(118,49,238,0.35)" }}
               data-testid="panel-create-confirm"
             >
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[16px] leading-[22px]">
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[16px] leading-[20px]">
                 Create this rule?
               </p>
-              <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[15px] leading-[22px]">
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[14px] leading-[20px]">
                 {pendingCreate.name}
               </p>
               <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[13px] leading-[18px]">
@@ -731,7 +731,7 @@ export function RulesPanel() {
                   type="button"
                   onClick={cancelCreate}
                   data-testid="button-create-cancel"
-                  className="flex-1 px-[12px] py-[10px] rounded-pill bg-brain-v1stroke-2 hover:bg-brain-v1stroke-2-hover transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-brain-v1baby-blue-100"
+                  className="flex-1 px-[12px] py-[10px] rounded-pill bg-brain-v1stroke-2 hover:bg-brain-v1stroke-2-hover transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-brain-v1baby-blue-100"
                 >
                   Not yet
                 </button>
@@ -739,7 +739,7 @@ export function RulesPanel() {
                   type="button"
                   onClick={onConfirmCreate}
                   data-testid="button-create-confirm"
-                  className="flex-1 px-[12px] py-[10px] rounded-pill bg-brain-v1purple hover:bg-brain-v1purple-hover transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-white"
+                  className="flex-1 px-[12px] py-[10px] rounded-pill bg-brain-v1purple hover:bg-brain-v1purple-hover transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-white"
                 >
                   Create rule
                 </button>
@@ -777,7 +777,7 @@ export function RulesPanel() {
               </div>
               <div className="bg-brain-v1dark-orange flex gap-[4px] items-center justify-center px-[12px] py-[8px] relative rounded-pill shrink-0">
                 <Plus size={16} className="text-brain-v1light-orange" />
-                <span className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1light-orange text-[12px]">
+                <span className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1light-orange text-[12px] leading-[16px]">
                   Add Rule
                 </span>
               </div>
@@ -838,7 +838,7 @@ export function RulesPanel() {
                     />
                     {openChip === "vendor" && (
                       <div className="absolute z-10 mt-[6px] w-[280px] rounded-row border border-brain-v1stroke-2 bg-brain-v1highlight-dropdown-bg p-[8px] shadow-lg max-h-[320px] overflow-y-auto">
-                        <p className="px-[10px] pt-[4px] pb-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] uppercase text-brain-v1baby-blue-100">
+                        <p className="px-[10px] pt-[4px] pb-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[14px] uppercase text-brain-v1baby-blue-100">
                           Trusted vendors
                         </p>
                         {/* An unreachable vendor list is not an empty vendor list.
@@ -879,7 +879,7 @@ export function RulesPanel() {
                           );
                         })}
                         <div className="mx-[8px] my-[6px] h-px bg-brain-v1stroke-2" />
-                        <p className="px-[8px] pt-[2px] pb-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] uppercase text-brain-v1baby-blue-60">
+                        <p className="px-[8px] pt-[2px] pb-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[14px] uppercase text-brain-v1baby-blue-60">
                           Not Trusted Yet
                         </p>
                         {untrustedVendors.length === 0 ? (
@@ -895,7 +895,7 @@ export function RulesPanel() {
                                <span className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[14px] text-brain-v1baby-blue-60">
                                 {v}
                               </span>
-                              <span className="shrink-0 px-[8px] py-[2px] rounded-pill bg-brain-v1dark-pink-red text-brain-v1pink-red [font-family:'Gilroy',sans-serif] font-semibold text-[10px] uppercase tracking-[0.04em]">
+                              <span className="shrink-0 px-[8px] py-[2px] rounded-pill bg-brain-v1dark-pink-red text-brain-v1pink-red [font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[14px] uppercase tracking-[0.04em]">
                                 Not Trusted
                               </span>
                             </div>
@@ -967,7 +967,7 @@ export function RulesPanel() {
                   type="button"
                   onClick={resetBuilder}
                   data-testid="button-builder-cancel"
-                   className="flex-1 h-[36px] px-[12px] rounded-pill bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-15-hover transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[16px] text-brain-v1baby-blue-60"
+                   className="flex-1 h-[36px] px-[12px] rounded-pill bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-15-hover transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-brain-v1baby-blue-60"
                 >
                   Cancel
                 </button>
@@ -976,7 +976,7 @@ export function RulesPanel() {
                   disabled={!builderValid}
                   onClick={() => setPendingCreate(buildDraft())}
                   data-testid="button-builder-create"
-                   className="flex-1 h-[36px] px-[12px] rounded-pill bg-brain-v1dark-orange hover:bg-brain-v1dark-orange-hover disabled:opacity-60 disabled:cursor-not-allowed transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[16px] text-brain-v1light-orange"
+                   className="flex-1 h-[36px] px-[12px] rounded-pill bg-brain-v1dark-orange hover:bg-brain-v1dark-orange-hover disabled:opacity-60 disabled:cursor-not-allowed transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-brain-v1light-orange"
                 >
                    Create Rule
                 </button>
@@ -993,7 +993,7 @@ export function RulesPanel() {
         <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[12px] uppercase tracking-[0.4px] whitespace-nowrap">Rules</p>
         <CountPill>{activeCount}</CountPill>
         {activeTab === "Default" && !policyLoading && !policyError && policyVersion !== undefined && (
-          <p className="ml-auto [font-family:'JetBrains_Mono',monospace] text-[12px] text-brain-v1baby-blue-60 whitespace-nowrap">
+          <p className="ml-auto [font-family:'JetBrains_Mono',monospace] text-[12px] leading-[16px] text-brain-v1baby-blue-60 whitespace-nowrap">
             v{policyVersion} · quorum {policyQuorum}
           </p>
         )}

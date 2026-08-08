@@ -164,9 +164,9 @@ function CountrySelector({ value, onChange }: { value: string; onChange: (v: str
               onClick={() => { onChange(c.code); setOpen(false); }}
               className="w-full flex items-center gap-[8px] px-[8px] py-[10px] hover:bg-brain-v1stroke-2 transition-colors"
             >
-              <span className="text-[16px]">{c.flag}</span>
-              <span className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] text-brain-v1baby-blue-100">{c.label}</span>
-              <span className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-brain-v1baby-blue-60 ml-auto">{c.code}</span>
+              <span className="text-[16px] leading-[20px]">{c.flag}</span>
+              <span className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-brain-v1baby-blue-100">{c.label}</span>
+              <span className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-brain-v1baby-blue-60 ml-auto">{c.code}</span>
             </button>
           ))}
         </div>
@@ -364,7 +364,7 @@ export function ContactUpdateModal({
                     testIdPrefix={`input-verify-code-${type}`}
                   />
                   {error && (
-                    <p data-testid="text-verify-error" className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[18px] text-brain-v1pink-red w-full">
+                    <p data-testid="text-verify-error" className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-brain-v1pink-red w-full">
                       {error}
                     </p>
                   )}

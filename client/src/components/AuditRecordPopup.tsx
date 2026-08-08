@@ -175,7 +175,7 @@ export function AuditRecordPopup({
 
   const SectionHeader = ({ children }: { children: React.ReactNode }) => (
     <div className="content-stretch flex gap-[8px] items-center relative shrink-0 w-full">
-      <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">
+      <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">
         {children}
       </p>
       <div className="flex-[1_0_0] h-px bg-brain-v1stroke-2 min-w-px" />
@@ -368,7 +368,7 @@ export function AuditRecordPopup({
                                 </p>
                               </div>
                               {(ruleGone || vendorGone || invoiceGone || proposalGone) && (
-                                <p className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] text-brain-v1baby-blue-30 shrink-0">
+                                <p className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-brain-v1baby-blue-30 shrink-0">
                                   ({link.kind} unavailable)
                                 </p>
                               )}

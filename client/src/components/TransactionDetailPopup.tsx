@@ -48,12 +48,12 @@ function Row({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="flex items-center w-full border-b border-brain-v1stroke-2 last:border-b-0">
       <div className="flex flex-col justify-center px-[12px] py-[8px] w-[140px] shrink-0">
-        <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[20px] text-brain-v1baby-blue-60">
+        <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-brain-v1baby-blue-60">
           {label}
         </span>
       </div>
       <div className="flex flex-1 flex-col justify-center px-[12px] py-[8px] min-w-px">
-        <span className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[20px] text-brain-v1baby-blue-100 break-all">
+        <span className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-brain-v1baby-blue-100 break-all">
           {value}
         </span>
       </div>
@@ -64,7 +64,7 @@ function Row({ label, value }: { label: string; value: ReactNode }) {
 function SectionLabel({ children }: { children: ReactNode }) {
   return (
     <div className="flex gap-[8px] items-center w-full">
-      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[14px] text-brain-v1baby-blue-60 whitespace-nowrap">
+      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-brain-v1baby-blue-60 whitespace-nowrap">
         {children}
       </p>
       <div className="flex-1 h-px bg-brain-v1stroke-2" />
@@ -153,7 +153,7 @@ export function TransactionDetailPopup({
                     {label}
                   </p>
                   <div className="flex gap-[8px] items-center w-full">
-                    <p className="[font-family:'JetBrains_Mono',monospace] font-normal leading-[32px] text-brain-v1baby-blue-100 text-[32px]" data-testid="text-transaction-amount">
+                    <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[32px] text-brain-v1baby-blue-100 text-[32px]" data-testid="text-transaction-amount">
                       {format(Math.abs(Number.isFinite(amount) ? amount : 0))}
                     </p>
                     <div className="bg-brain-v1baby-blue-15 border border-[rgba(108,119,157,0.2)] border-solid flex items-center justify-center px-[8px] py-[3px] rounded-pill shrink-0">
@@ -184,7 +184,7 @@ export function TransactionDetailPopup({
                   )}
                   <Row
                     label="Transaction ID"
-                    value={<span className="[font-family:'JetBrains_Mono',monospace] text-[13px] text-brain-v1baby-blue-100">{tx.id}</span>}
+                    value={<span className="[font-family:'JetBrains_Mono',monospace] text-[13px] leading-[18px] text-brain-v1baby-blue-100">{tx.id}</span>}
                   />
                 </div>
               </div>
@@ -222,11 +222,11 @@ export function TransactionDetailPopup({
             </>
           ) : (
             <div className="flex flex-col gap-[8px] items-start p-[24px] w-full">
-              <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px]">
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px]">
                 This record isn't in your recent transactions.
               </p>
               {txId && (
-                <span className="[font-family:'JetBrains_Mono',monospace] text-[13px] text-brain-v1baby-blue-60 break-words">
+                <span className="[font-family:'JetBrains_Mono',monospace] text-[13px] leading-[18px] text-brain-v1baby-blue-60 break-words">
                   {txId}
                 </span>
               )}

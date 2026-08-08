@@ -749,7 +749,7 @@ export function VendorsPanel() {
                         type="button"
                         onClick={resetAddVendor}
                         data-testid="button-add-vendor-cancel"
-                        className="flex-1 h-[36px] px-[12px] rounded-pill bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-15-hover transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[16px] text-brain-v1baby-blue-60"
+                        className="flex-1 h-[36px] px-[12px] rounded-pill bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-15-hover transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-brain-v1baby-blue-60"
                       >
                         Cancel
                       </button>
@@ -762,7 +762,7 @@ export function VendorsPanel() {
                         }}
                         disabled={!vendorName.trim()}
                         data-testid="button-submit-vendor"
-                        className="flex-1 h-[36px] px-[12px] rounded-pill bg-brain-v1dark-orange hover:bg-brain-v1dark-orange-hover disabled:opacity-60 disabled:cursor-not-allowed transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[16px] text-brain-v1light-orange"
+                        className="flex-1 h-[36px] px-[12px] rounded-pill bg-brain-v1dark-orange hover:bg-brain-v1dark-orange-hover disabled:opacity-60 disabled:cursor-not-allowed transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-brain-v1light-orange"
                       >
                         Submit for Verification
                       </button>
@@ -923,7 +923,7 @@ export function VendorsPanel() {
                   onClick={handleBulkConfirm}
                   disabled={bulkBusy || trustBusy}
                   data-testid="button-bulk-confirm-customers"
-                  className="flex items-center justify-center px-[16px] py-[8px] rounded-pill w-full [font-family:'Gilroy',sans-serif] font-semibold text-[14px] disabled:opacity-60 disabled:cursor-not-allowed hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
+                  className="flex items-center justify-center px-[16px] py-[8px] rounded-pill w-full [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] disabled:opacity-60 disabled:cursor-not-allowed hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
                   style={{ background: "#0d2214", color: "#42bf23" }}
                 >
                   {bulkBusy

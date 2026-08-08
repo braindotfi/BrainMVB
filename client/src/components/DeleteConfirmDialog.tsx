@@ -86,7 +86,7 @@ export function DeleteConfirmDialog({
                 type="button"
                 onClick={onCancel}
                 data-testid={cancelTestId}
-                className="flex shrink-0 h-[45px] items-center justify-center px-[22px] rounded-pill hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-60 text-[16px] leading-[22px] w-[150px] focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
+                className="flex shrink-0 h-[45px] items-center justify-center px-[22px] rounded-pill hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-60 text-[16px] leading-[20px] w-[150px] focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
                 style={{ background: "#222737" }}
               >
                 {cancelLabel}
@@ -96,7 +96,7 @@ export function DeleteConfirmDialog({
                 disabled={busy}
                 onClick={onConfirm}
                 data-testid={confirmTestId}
-                className="flex shrink-0 h-[45px] items-center justify-center px-[22px] rounded-pill bg-brain-v1dark-pink-red hover:bg-brain-v1dark-pink-red-hover disabled:opacity-60 disabled:cursor-not-allowed transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1pink-red text-[16px] leading-[22px] w-[150px] focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1pink-red"
+                className="flex shrink-0 h-[45px] items-center justify-center px-[22px] rounded-pill bg-brain-v1dark-pink-red hover:bg-brain-v1dark-pink-red-hover disabled:opacity-60 disabled:cursor-not-allowed transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1pink-red text-[16px] leading-[20px] w-[150px] focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1pink-red"
               >
                 {busy ? "Working…" : confirmLabel}
               </button>

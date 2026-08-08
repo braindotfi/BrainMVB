@@ -59,7 +59,7 @@ export function WalkthroughStepView({ step, index }: { step: StepContent; index:
         >
           <div className="flex-1 min-w-0 flex flex-col gap-[4px]">
             <div className="flex items-center gap-[8px] flex-wrap">
-              <span className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[15px] leading-[20px]">
+              <span className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[16px] leading-[20px]">
                 {row.title}
               </span>
               {row.badge && (
@@ -88,14 +88,14 @@ export function WalkthroughStepView({ step, index }: { step: StepContent; index:
               <button
                 type="button"
                 disabled
-                className="px-[12px] py-[6px] rounded-pill bg-brain-v1dark-green [font-family:'Gilroy',sans-serif] font-semibold text-[13px] leading-[16px] text-brain-v1green opacity-50 cursor-default"
+                className="px-[12px] py-[6px] rounded-pill bg-brain-v1dark-green [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-brain-v1green opacity-50 cursor-default"
               >
                 Approve
               </button>
               <button
                 type="button"
                 disabled
-                className="px-[12px] py-[6px] rounded-pill bg-brain-v1dark-pink-red [font-family:'Gilroy',sans-serif] font-semibold text-[13px] leading-[16px] text-brain-v1pink-red opacity-50 cursor-default"
+                className="px-[12px] py-[6px] rounded-pill bg-brain-v1dark-pink-red [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-brain-v1pink-red opacity-50 cursor-default"
               >
                 Decline
               </button>

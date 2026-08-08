@@ -62,7 +62,7 @@ const STATUS_CHIP: Record<DocStatus, string> = {
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-brain-v1baby-blue-30 uppercase">
+    <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-brain-v1baby-blue-30 uppercase">
       {children}
     </p>
   );
@@ -71,10 +71,10 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 function KeyValue({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between items-start gap-[8px]">
-      <span className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-brain-v1baby-blue-30 shrink-0">
+      <span className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px] uppercase text-brain-v1baby-blue-30 shrink-0">
         {label}
       </span>
-      <span className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] text-brain-v1baby-blue-100 text-right">
+      <span className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-brain-v1baby-blue-100 text-right">
         {value}
       </span>
     </div>
@@ -86,12 +86,12 @@ function DarkTableRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="border-brain-v1stroke-2 border-b border-solid content-stretch flex items-start relative shrink-0 w-full last:border-b-0">
       <div className="content-stretch flex flex-col items-start justify-center px-[12px] py-[8px] relative shrink-0 w-[140px]">
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">
           {label}
         </p>
       </div>
       <div className="content-stretch flex flex-[1_0_0] flex-col items-start justify-center min-w-px px-[12px] py-[8px] relative">
-        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[13px] whitespace-nowrap">
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[14px] whitespace-nowrap">
           {value}
         </p>
       </div>
@@ -181,7 +181,7 @@ function InvoicePane({ doc }: { doc: DocumentRecord }) {
       <div className="relative shrink-0 w-full">
         <div className="bg-clip-padding border-0 border-[transparent] border-solid content-stretch flex flex-col gap-[16px] items-start relative size-full">
           <div className="content-stretch flex gap-[8px] items-center relative shrink-0 w-full">
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">What Brain Extracted</p>
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">What Brain Extracted</p>
             <div className="flex-[1_0_0] h-px bg-brain-v1stroke-2 min-w-px" />
           </div>
           <div className="bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 border-solid content-stretch flex flex-col items-start relative rounded-row shrink-0 w-full">
@@ -203,7 +203,7 @@ function InvoicePane({ doc }: { doc: DocumentRecord }) {
         <div className="relative shrink-0 w-full">
           <div className="bg-clip-padding border-0 border-[transparent] border-solid content-stretch flex flex-col gap-[16px] items-start relative size-full">
             <div className="content-stretch flex gap-[8px] items-center relative shrink-0 w-full">
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">Amount Coherence</p>
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">Amount Coherence</p>
               <div className="flex-[1_0_0] h-px bg-brain-v1stroke-2 min-w-px" />
             </div>
             <div className="bg-brain-v1dark-green content-stretch flex items-center px-[16px] py-[12px] relative rounded-row shrink-0 w-full">
@@ -225,7 +225,7 @@ function InvoicePane({ doc }: { doc: DocumentRecord }) {
       <div className="relative shrink-0 w-full">
         <div className="bg-clip-padding border-0 border-[transparent] border-solid content-stretch flex flex-col gap-[16px] items-start relative size-full">
           <div className="content-stretch flex gap-[8px] items-center relative shrink-0 w-full">
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">Provenance</p>
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">Provenance</p>
             <div className="flex-[1_0_0] h-px bg-brain-v1stroke-2 min-w-px" />
           </div>
           <div className="bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 border-solid content-stretch flex flex-col items-start relative rounded-row shrink-0 w-full">
@@ -242,7 +242,7 @@ function InvoicePane({ doc }: { doc: DocumentRecord }) {
         <div className="relative shrink-0 w-full">
           <div className="bg-clip-padding border-0 border-[transparent] border-solid content-stretch flex flex-col gap-[16px] items-start relative size-full">
             <div className="content-stretch flex gap-[8px] items-center relative shrink-0 w-full">
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">Cleared By</p>
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">Cleared By</p>
               <div className="flex-[1_0_0] h-px bg-brain-v1stroke-2 min-w-px" />
             </div>
             <div className="bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 border-solid content-stretch flex flex-col items-start relative rounded-row shrink-0 w-full">
@@ -272,7 +272,7 @@ function InvoicePane({ doc }: { doc: DocumentRecord }) {
           className="flex items-center justify-center px-[20px] py-[10px] rounded-pill w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple transition-opacity hover:opacity-80"
           style={{ background: "#240757" }}
         >
-          <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px]" style={{ color: "#7631ee" }}>
+          <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px]" style={{ color: "#7631ee" }}>
             Open Original in Source System
           </span>
         </button>
@@ -429,10 +429,10 @@ function BankTransactionPane({ doc }: { doc: DocumentRecord }) {
       >
         <div className="flex items-center gap-[8px]">
           <Landmark size={15} className="text-brain-v1baby-blue-100 shrink-0" />
-          <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-brain-v1baby-blue-100 flex-1">
+          <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-brain-v1baby-blue-100 flex-1">
             {doc.counterparty ?? doc.title}
           </span>
-          <span className="[font-family:'JetBrains_Mono',monospace] font-medium text-[15px] text-brain-v1baby-blue-100">
+          <span className="[font-family:'JetBrains_Mono',monospace] font-medium text-[14px] leading-[20px] text-brain-v1baby-blue-100">
             {doc.direction === "credit" ? "+" : "−"}
             {typeof doc.amount === "number" ? `$${fmt(doc.amount)}` : "-"}
           </span>
@@ -456,29 +456,29 @@ function BankTransactionPane({ doc }: { doc: DocumentRecord }) {
           <div className="grid grid-cols-2 gap-[8px] w-full">
             {/* Bank side */}
             <div className="bg-brain-v1highlight-dropdown-bg rounded-[10px] p-[12px] flex flex-col gap-[6px]">
-              <p className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-brain-v1baby-blue-30">
+              <p className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px] uppercase text-brain-v1baby-blue-30">
                 Bank line
               </p>
               <p
-                className={`[font-family:'JetBrains_Mono',monospace] font-medium text-[15px] ${amountsDiffer ? "text-brain-v1pink-red" : "text-brain-v1green"}`}
+                className={`[font-family:'JetBrains_Mono',monospace] font-medium text-[14px] leading-[20px] ${amountsDiffer ? "text-brain-v1pink-red" : "text-brain-v1green"}`}
               >
                 ${fmt(recon.bankAmount)}
               </p>
-              <p className="[font-family:'JetBrains_Mono',monospace] text-[11px] text-brain-v1baby-blue-60">
+              <p className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px] text-brain-v1baby-blue-60">
                 {recon.bankDateLabel}
               </p>
             </div>
             {/* Ledger side */}
             <div className="bg-brain-v1highlight-dropdown-bg rounded-[10px] p-[12px] flex flex-col gap-[6px]">
-              <p className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-brain-v1baby-blue-30">
+              <p className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px] uppercase text-brain-v1baby-blue-30">
                 Ledger {recon.ledgerRef}
               </p>
               <p
-                className={`[font-family:'JetBrains_Mono',monospace] font-medium text-[15px] ${amountsDiffer ? "text-brain-v1pink-red" : "text-brain-v1green"}`}
+                className={`[font-family:'JetBrains_Mono',monospace] font-medium text-[14px] leading-[20px] ${amountsDiffer ? "text-brain-v1pink-red" : "text-brain-v1green"}`}
               >
                 ${fmt(recon.ledgerAmount)}
               </p>
-              <p className="[font-family:'JetBrains_Mono',monospace] text-[11px] text-brain-v1baby-blue-60">
+              <p className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px] text-brain-v1baby-blue-60">
                 {recon.ledgerDateLabel}
               </p>
             </div>
@@ -565,26 +565,26 @@ function ProvenanceBlock({ doc }: { doc: DocumentRecord }) {
       <div className="bg-brain-v1highlight-dropdown-bg rounded-[8px] px-[12px] py-[10px] flex flex-col gap-[6px]">
         <KeyValue label="source" value={doc.provenance.source} />
         <div className="flex justify-between items-start gap-[8px]">
-          <span className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-brain-v1baby-blue-30 shrink-0">
+          <span className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px] uppercase text-brain-v1baby-blue-30 shrink-0">
             ingested
           </span>
-          <span className="[font-family:'JetBrains_Mono',monospace] text-[11px] text-brain-v1baby-blue-60 text-right">
+          <span className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px] text-brain-v1baby-blue-60 text-right">
             {doc.provenance.ingestedAtLabel}
           </span>
         </div>
         <div className="flex justify-between items-start gap-[8px]">
-          <span className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-brain-v1baby-blue-30 shrink-0">
+          <span className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px] uppercase text-brain-v1baby-blue-30 shrink-0">
             channel
           </span>
-          <span className="[font-family:'JetBrains_Mono',monospace] text-[11px] text-brain-v1baby-blue-100 text-right">
+          <span className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px] text-brain-v1baby-blue-100 text-right">
             {doc.provenance.enum}
           </span>
         </div>
         <div className="flex justify-between items-start gap-[8px]">
-          <span className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-brain-v1baby-blue-30 shrink-0">
+          <span className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px] uppercase text-brain-v1baby-blue-30 shrink-0">
             ledger ref
           </span>
-          <span className="[font-family:'JetBrains_Mono',monospace] text-[11px] text-brain-v1baby-blue-60 text-right break-all">
+          <span className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px] text-brain-v1baby-blue-60 text-right break-all">
             {doc.provenance.ledgerRef}
           </span>
         </div>
@@ -612,36 +612,36 @@ function CompareColumns({
 
   const col = (d: DocumentRecord, heading: string) => (
     <div className="bg-brain-v1highlight-dropdown-bg rounded-[10px] p-[12px] flex flex-col gap-[8px] flex-1 min-w-px">
-      <p className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-brain-v1baby-blue-30">
+      <p className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px] uppercase text-brain-v1baby-blue-30">
         {heading}
       </p>
-      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[13px] text-brain-v1baby-blue-100 leading-[18px]">
+      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-brain-v1baby-blue-100 leading-[20px]">
         {d.id}
       </p>
       <div className="flex justify-between items-center gap-[6px]">
-        <span className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-brain-v1baby-blue-30">
+        <span className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px] uppercase text-brain-v1baby-blue-30">
           amount
         </span>
         <span
-          className={`[font-family:'JetBrains_Mono',monospace] text-[12px] font-medium ${amountDiffers ? "text-brain-v1pink-red" : "text-brain-v1baby-blue-100"}`}
+          className={`[font-family:'JetBrains_Mono',monospace] text-[12px] leading-[16px] font-medium ${amountDiffers ? "text-brain-v1pink-red" : "text-brain-v1baby-blue-100"}`}
         >
           {typeof d.amount === "number" ? `$${fmt(d.amount)}` : "-"}
         </span>
       </div>
       <div className="flex justify-between items-center gap-[6px]">
-        <span className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-brain-v1baby-blue-30">
+        <span className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px] uppercase text-brain-v1baby-blue-30">
           date
         </span>
-        <span className="[font-family:'JetBrains_Mono',monospace] text-[11px] text-brain-v1baby-blue-60">
+        <span className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px] text-brain-v1baby-blue-60">
           {d.dateLabel}
         </span>
       </div>
       <div className="flex justify-between items-center gap-[6px]">
-        <span className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-brain-v1baby-blue-30">
+        <span className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px] uppercase text-brain-v1baby-blue-30">
           pay to
         </span>
         <span
-          className={`[font-family:'JetBrains_Mono',monospace] text-[12px] font-medium ${accountDiffers ? "text-brain-v1pink-red" : "text-brain-v1baby-blue-100"}`}
+          className={`[font-family:'JetBrains_Mono',monospace] text-[12px] leading-[16px] font-medium ${accountDiffers ? "text-brain-v1pink-red" : "text-brain-v1baby-blue-100"}`}
         >
           {d.payeeAccountLast4 ? `••${d.payeeAccountLast4}` : "-"}
         </span>
@@ -659,7 +659,7 @@ function CompareColumns({
       {(amountDiffers || accountDiffers) && (
         <div className="flex items-start gap-[10px] p-[12px] rounded-[10px] bg-brain-v1dark-pink-red">
           <AlertCircle size={15} className="text-brain-v1pink-red shrink-0 mt-[1px]" />
-          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[18px] text-brain-v1pink-red">
+          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-brain-v1pink-red">
             {accountDiffers
               ? "Payout account differs from the established one. A common invoice-redirect signal."
               : "Amounts differ between these near-identical documents. Check for a duplicate."}
@@ -720,16 +720,16 @@ export function DocumentViewerPopup({
                   <KindIcon size={14} className="text-brain-v1baby-blue-100" />
                 </div>
                 <div className="flex flex-col min-w-px">
-                  <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-brain-v1baby-blue-100 truncate">
+                  <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-brain-v1baby-blue-100 truncate">
                     {doc.id}
                   </span>
-                  <span className="[font-family:'JetBrains_Mono',monospace] text-[9px] uppercase text-brain-v1baby-blue-30">
+                  <span className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px] uppercase text-brain-v1baby-blue-30">
                     {docKindLabel(doc.kind)}
                   </span>
                 </div>
                 {doc.status && (
                   <span
-                    className={`px-[6px] py-[2px] rounded-[4px] [font-family:'JetBrains_Mono',monospace] font-medium text-[10px] uppercase shrink-0 ${STATUS_CHIP[doc.status]}`}
+                    className={`px-[6px] py-[2px] rounded-[4px] [font-family:'JetBrains_Mono',monospace] font-medium text-[11px] leading-[14px] uppercase shrink-0 ${STATUS_CHIP[doc.status]}`}
                     data-testid="document-status-chip"
                   >
                     {docStatusLabel(doc.status)}
@@ -764,7 +764,7 @@ export function DocumentViewerPopup({
                       className="flex items-center gap-[8px] p-[10px] rounded-[10px] bg-brain-v1highlight-dropdown-bg hover:bg-brain-v1item-hover border border-transparent hover:border-[#7631ee]/40 transition-colors w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
                     >
                       <ArrowLeftRight size={14} className="text-brain-v1purple shrink-0" />
-                      <span className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] text-brain-v1baby-blue-100 flex-1 min-w-px">
+                      <span className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-brain-v1baby-blue-100 flex-1 min-w-px">
                         {comparing ? "Hide comparison" : `Compare with prior (${prior.id})`}
                       </span>
                     </button>
@@ -784,7 +784,7 @@ export function DocumentViewerPopup({
                     className="flex items-center gap-[8px] p-[10px] rounded-[10px] bg-brain-v1highlight-dropdown-bg hover:bg-brain-v1item-hover border border-transparent hover:border-[#7631ee]/40 transition-colors w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
                   >
                     <ExternalLink size={14} className="text-brain-v1purple shrink-0" />
-                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] text-brain-v1baby-blue-100 flex-1 min-w-px">
+                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-brain-v1baby-blue-100 flex-1 min-w-px">
                       Open original in source system
                     </span>
                   </button>
@@ -792,7 +792,7 @@ export function DocumentViewerPopup({
 
                 <div className="flex items-start gap-[8px] w-full">
                   <Package size={13} className="text-brain-v1baby-blue-30 shrink-0 mt-[2px]" />
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium text-[11px] leading-[16px] text-brain-v1baby-blue-60">
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium text-[11px] leading-[14px] text-brain-v1baby-blue-60">
                     {docKindCaption(doc.kind)}
                   </p>
                 </div>
@@ -805,7 +805,7 @@ export function DocumentViewerPopup({
 
                 <div className="flex items-start gap-[8px] w-full">
                   <Package size={13} className="text-brain-v1baby-blue-30 shrink-0 mt-[2px]" />
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium text-[11px] leading-[16px] text-brain-v1baby-blue-60">
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium text-[11px] leading-[14px] text-brain-v1baby-blue-60">
                     {docKindCaption(doc.kind)}
                   </p>
                 </div>

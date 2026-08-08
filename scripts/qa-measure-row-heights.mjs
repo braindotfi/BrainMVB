@@ -171,4 +171,78 @@ for (const [tab, selector, label] of [
   await assertBaseline(label, selector, { optional: true });
 }
 
+/* ── Badge pills ──────────────────────────────────────────────────────────
+   A badge pill is 20px tall: 2px padding + a 14px line + 2px padding + 1px
+   borders. That is not decoration — 20px is exactly the height of the row
+   title line the badge sits on, so a badge that grows drags the whole stack
+   with it.
+
+   This check exists because the typography pass re-led these to 12/16 for
+   pairing-table compliance. Every pill-bearing row silently went 40px -> 42px,
+   and tsc, 1126 unit tests and the design-token scan all stayed green. The row
+   assertions above did catch it, but they report it as a *row* failure, which
+   is one indirection away from the actual cause. This names the cause. */
+const COLLECT_BADGES = () => {
+  const out = [];
+  for (const el of document.querySelectorAll('[class*="rounded-pill"]')) {
+    const r = el.getBoundingClientRect();
+    if (r.height < 2 || r.width < 2) continue;
+    let t = el;
+    for (const c of el.querySelectorAll("span,p")) {
+      if ((c.textContent ?? "").trim()) { t = c; break; }
+    }
+    const cs = getComputedStyle(el);
+    const ts = getComputedStyle(t);
+    const py = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
+    const by =
+      (parseFloat(cs.borderTopWidth) || 0) + (parseFloat(cs.borderBottomWidth) || 0);
+    /* A badge is a small BORDERED chip: 12px type, <=4px vertical padding, a
+       1px stroke. The border is what separates it from the other two things
+       wearing `rounded-pill` — action buttons with 12-16px padding, and small
+       borderless controls like Developers' "Copy". Both of those own their own
+       height and correctly follow the pairing table at 12/16, so judging them
+       against a badge leading would be wrong, not merely noisy. */
+    if (Math.round(parseFloat(ts.fontSize)) !== 12 || py > 8 || by === 0) continue;
+    out.push({
+      h: Math.round(r.height),
+      py,
+      lh: ts.lineHeight === "normal" ? 0 : Math.round(parseFloat(ts.lineHeight)),
+      text: (el.textContent ?? "").trim().slice(0, 18),
+    });
+  }
+  return out;
+};
+
+/* Three surfaces, because the badge components do not share a padding value
+   and a single page only proves the ones it happens to render. Inbox covers
+   RecordPill/TypeTag (py-2, 20px), Team covers the role/state badges and
+   Developers the status/method/layer badges (py-3, 22px). A surface that
+   renders none is reported as an evidence gap, not silently passed. */
+const badgesBySurface = {};
+for (const [label, path] of [
+  ["inbox", "/inbox"],
+  ["team", "/settings?section=team"],
+  ["developers", "/settings?section=developers"],
+]) {
+  await go(path);
+  badgesBySurface[label] = await page.evaluate(COLLECT_BADGES);
+}
+const badges = Object.entries(badgesBySurface).flatMap(([s, v]) => v.map((b) => ({ ...b, s })));
+const emptySurfaces = Object.entries(badgesBySurface).filter(([, v]) => !v.length).map(([s]) => s);
+const offLeading = badges.filter((b) => b.lh !== 14);
+const geometry = [
+  ...new Set(badges.map((b) => `py${b.py}=>${b.h}px`)),
+].sort().join(" ");
+
+check(
+  "every 12px badge pill is on leading-14",
+  badges.length > 0 && emptySurfaces.length === 0 && offLeading.length === 0,
+  emptySurfaces.length
+    ? `no badges rendered on: ${emptySurfaces.join(", ")} — evidence gap, not a pass`
+    : `${badges.length} badges across ${Object.keys(badgesBySurface).length} surfaces [${geometry}], ` +
+      (offLeading.length
+        ? `${offLeading.length} off: ${[...new Set(offLeading.map((b) => `${b.s} leading-${b.lh}=>${b.h}px "${b.text}"`))].slice(0, 3).join(", ")}`
+        : "all leading-14"),
+);
+
 await finish();

@@ -23,7 +23,7 @@ function HashRow({
     <div className={`content-stretch flex items-start relative shrink-0 w-full${last ? "" : " border-b border-brain-v1stroke-2"}`}>
       {/* Label column — fixed 140px, Gilroy SemiBold 12px/20 #6c779d */}
       <div className="content-stretch flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[140px]">
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">
           {label}
         </p>
       </div>
@@ -31,7 +31,7 @@ function HashRow({
           `break-all` keeps real merkle roots / tx hashes inside the cell;
           the Figma sample values are pre-truncated, real ones are not. */}
       <div className="content-stretch flex flex-[1_0_0] flex-col items-start justify-center min-w-px px-[12px] py-[8px]">
-        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[13px] break-all text-brain-v1baby-blue-100">
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[14px] break-all text-brain-v1baby-blue-100">
           {value ?? "-"}
         </p>
       </div>

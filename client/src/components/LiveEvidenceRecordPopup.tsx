@@ -55,12 +55,12 @@ export function LiveEvidenceRecordPopup({
                       className={`flex items-start w-full ${index < evidence.facts.length - 1 ? "border-b border-solid border-brain-v1stroke-2" : ""}`}
                     >
                       <div className="px-[12px] py-[8px] w-[140px] shrink-0">
-                        <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[20px] text-brain-v1baby-blue-60">
+                        <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-brain-v1baby-blue-60">
                           {fact.label}
                         </span>
                       </div>
                       <div className="px-[12px] py-[8px] min-w-0 flex-1">
-                        <span className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[20px] text-brain-v1baby-blue-100 break-words">
+                        <span className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-brain-v1baby-blue-100 break-words">
                           {fact.value}
                         </span>
                       </div>

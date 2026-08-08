@@ -263,7 +263,7 @@ export function FinancesPage() {
         <div className="flex flex-col items-start gap-[4px] relative shrink-0 w-full">
           <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-brain-v1baby-blue-60 text-[20px]">Your Financial Ledger</p>
           <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-brain-v1baby-blue-100 text-[32px]">{copy.heading}</p>
-          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-brain-v1baby-blue-30 text-[16px]">
+          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-30 text-[16px]">
             {copy.sub ?? `Updated ${updatedLabel}`}
           </p>
         </div>
@@ -276,7 +276,7 @@ export function FinancesPage() {
                 role="tab"
                 aria-selected={isActive}
                 onClick={() => selectTab(tab)}
-                className="px-[8px] py-[8px] whitespace-nowrap text-[14px] leading-[18px] transition-colors shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple rounded-t-[4px]"
+                className="px-[8px] py-[8px] whitespace-nowrap text-[14px] leading-[20px] transition-colors shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple rounded-t-[4px]"
                 style={{
                   fontFamily: "'Gilroy', sans-serif",
                   fontWeight: 500,

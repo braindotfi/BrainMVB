@@ -436,7 +436,7 @@ export function LiveProposalModal({
                 <CardSection title="Message Draft" testId="section-live-proposal-message-draft">
                   <div className="bg-brain-v1highlight-dropdown-bg border border-solid border-brain-v1stroke-2 rounded-row p-[16px] w-full flex flex-col gap-[12px]">
                     <p
-                      className="[font-family:'Gilroy',sans-serif] font-semibold text-[13px] leading-[20px] text-brain-v1baby-blue-100"
+                      className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-brain-v1baby-blue-100"
                       data-testid="text-live-proposal-message-subject"
                     >
                       Subject: {messageDraft.subject}

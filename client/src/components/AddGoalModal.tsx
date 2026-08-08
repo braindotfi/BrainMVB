@@ -48,7 +48,7 @@ const PRIORITY_ANCHORS: { name: string; priority: number }[] = [
 
 const SectionLabel = ({ children }: { children: React.ReactNode }) => (
   <div className="flex gap-[8px] items-center w-full">
-    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">
+    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">
       {children}
     </p>
     <div className="flex-1 h-px bg-brain-v1stroke-2" />
@@ -146,7 +146,7 @@ const RecommendationCard = ({ category }: { category: string }) => {
         <p
           data-testid="text-goal-recommendation"
           className={
-            "flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[14px] text-brain-v1baby-blue-60 " +
+            "flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[14px] text-brain-v1baby-blue-60 " +
             (isLoading ? "italic" : "")
           }
         >
@@ -325,7 +325,7 @@ export const AddGoalModal = ({ open, onOpenChange, onCreate, isSubmitting }: Pro
                 <p
                   id="input-goal-amount-error"
                   data-testid="text-goal-amount-error"
-                  className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1pink-red text-[13px]"
+                  className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1pink-red text-[14px]"
                 >
                   {amountError}
                 </p>
@@ -355,10 +355,10 @@ export const AddGoalModal = ({ open, onOpenChange, onCreate, isSubmitting }: Pro
               <div className="bg-brain-v1highlight-dropdown-bg flex flex-col gap-[16px] items-start p-[16px] rounded-panel w-full">
                 <div className="flex flex-col items-start w-full">
                   <div className="flex justify-between w-full">
-                    <p className="[font-family:'JetBrains_Mono',monospace] font-semibold leading-[12px] text-brain-v1baby-blue-60 text-[12px]">
+                    <p className="[font-family:'JetBrains_Mono',monospace] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[12px]">
                       Lower Priority
                     </p>
-                    <p className="[font-family:'JetBrains_Mono',monospace] font-semibold leading-[12px] text-brain-v1baby-blue-60 text-[12px] text-right">
+                    <p className="[font-family:'JetBrains_Mono',monospace] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[12px] text-right">
                       Higher Priority
                     </p>
                   </div>
@@ -415,7 +415,7 @@ export const AddGoalModal = ({ open, onOpenChange, onCreate, isSubmitting }: Pro
                       >
                         {p.name}
                       </p>
-                      <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[13px] whitespace-nowrap">
+                      <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[18px] text-brain-v1baby-blue-60 text-[13px] whitespace-nowrap">
                         {p.placeholder ? "--" : `Ranked ${p.rank}`}
                       </p>
                     </div>
@@ -426,7 +426,7 @@ export const AddGoalModal = ({ open, onOpenChange, onCreate, isSubmitting }: Pro
 
             {/* Policy banner */}
             <div className="bg-brain-v1dark-purple border border-[rgba(118,49,238,0.2)] border-solid flex items-center p-[8px] rounded-[8px] w-full">
-              <p className="flex-1 [font-family:'Gilroy',sans-serif] leading-[16px] text-brain-v1purple text-[14px]">
+              <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1purple text-[14px]">
                 <span className="font-medium">You can change any of this later. P</span>
                 <span className="font-semibold">olicy v3 will apply.</span>
               </p>

@@ -173,7 +173,7 @@ export function BillDetailPopup({
                       type="button"
                       onClick={goReview}
                       data-testid="button-review-proposal"
-                      className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] rounded-[8px] px-[12px] py-[8px] w-fit transition-colors"
+                      className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] rounded-[8px] px-[12px] py-[8px] w-fit transition-colors"
                       style={
                         isFlagged
                           ? { color: "#d20344", border: "1px solid rgba(210,3,68,0.4)" }

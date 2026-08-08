@@ -85,7 +85,7 @@ const TRUST_META: Record<
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex gap-[8px] items-center w-full">
-      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[14px] text-brain-v1baby-blue-60 whitespace-nowrap">
+      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-brain-v1baby-blue-60 whitespace-nowrap">
         {children}
       </p>
       <div className="flex-1 h-px bg-brain-v1stroke-2" />
@@ -119,7 +119,7 @@ function TrustButton({
       disabled={busy}
       onClick={onClick}
       data-testid={testId}
-      className="flex items-center justify-center px-[20px] py-[10px] rounded-pill w-full disabled:opacity-60 disabled:cursor-not-allowed [font-family:'Gilroy',sans-serif] font-semibold text-[16px] hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
+      className="flex items-center justify-center px-[20px] py-[10px] rounded-pill w-full disabled:opacity-60 disabled:cursor-not-allowed [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
       style={{ background, color }}
     >
       {busy ? "Working..." : label}
@@ -131,12 +131,12 @@ function Row({ label, value, valueColor = "#a8b9f4" }: { label: string; value: s
   return (
     <div className="flex items-center w-full border-b border-brain-v1stroke-2 last:border-b-0">
       <div className="flex flex-col justify-center px-[12px] py-[8px] w-[140px] shrink-0">
-        <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[20px] text-brain-v1baby-blue-60">
+        <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-brain-v1baby-blue-60">
           {label}
         </span>
       </div>
       <div className="flex flex-1 flex-col justify-center px-[12px] py-[8px] min-w-px">
-        <span className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[20px] break-all" style={{ color: valueColor }}>
+        <span className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] break-all" style={{ color: valueColor }}>
           {value}
         </span>
       </div>
@@ -412,14 +412,14 @@ export function VendorDetailPopup({
                   <AlertCallout key={idx} title={flag.label}>
                     <div className="flex flex-col gap-[8px] items-start w-full">
                       {flag.kind === "bank_detail_change" && flag.priorAccountLast4 && flag.newAccountLast4 && (
-                        <p className="[font-family:'JetBrains_Mono',monospace] text-[12px] w-full">
+                        <p className="[font-family:'JetBrains_Mono',monospace] text-[12px] leading-[16px] w-full">
                           Account changed from ···{flag.priorAccountLast4} to ···{flag.newAccountLast4}
                         </p>
                       )}
                       <p className="w-full">
                         A trusted vendor with changed bank details is automatically placed under review. Verify the new account with the vendor before restoring trust.
                       </p>
-                      <p className="[font-family:'JetBrains_Mono',monospace] text-[11px] w-full">
+                      <p className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px] w-full">
                         Raised {flag.raisedAtLabel}
                       </p>
                     </div>
@@ -481,13 +481,13 @@ export function VendorDetailPopup({
                       className="flex items-center w-full border-b border-brain-v1stroke-2 last:border-b-0"
                     >
                       <div className="flex flex-col justify-center px-[12px] py-[8px] w-[140px] shrink-0">
-                        <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[20px] text-brain-v1baby-blue-60">
+                        <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-brain-v1baby-blue-60">
                           {ev.label.charAt(0).toUpperCase() + ev.label.slice(1)}
                         </span>
                       </div>
                       <div className="flex flex-1 items-center gap-[8px] px-[12px] py-[8px] min-w-px">
                         <span
-                          className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[20px] whitespace-nowrap"
+                          className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] whitespace-nowrap"
                           style={{
                             color:
                               ev.severity === "warning"
@@ -567,7 +567,7 @@ export function VendorDetailPopup({
                     type="button"
                     onClick={() => setConfirmingDelete(true)}
                     disabled={trustBusy}
-                    className="flex items-center justify-center px-[20px] py-[8px] rounded-pill hover:opacity-80 disabled:opacity-60 disabled:cursor-not-allowed transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-brain-v1baby-blue-60 w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
+                    className="flex items-center justify-center px-[20px] py-[8px] rounded-pill hover:opacity-80 disabled:opacity-60 disabled:cursor-not-allowed transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-brain-v1baby-blue-60 w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
                     style={{ background: "#350011", color: "#d20344" }}
                     data-testid="button-delete-vendor"
                   >
@@ -582,7 +582,7 @@ export function VendorDetailPopup({
               {reviewedOnly && (
                 <div className="flex flex-col gap-[14px] w-full">
                   <p
-                    className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-brain-v1baby-blue-60"
+                    className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-brain-v1baby-blue-60"
                     data-testid="text-acknowledged-note"
                   >
                     You reviewed this {noun} and took no action. You can still grant trust now if you've changed your mind.
@@ -646,7 +646,7 @@ export function VendorDetailPopup({
               {vendor.trustStatus === "under_review" && (
                 vendor.trustState === "paused" ? (
                   <div className="flex flex-col gap-[14px] w-full">
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-brain-v1baby-blue-60">
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-brain-v1baby-blue-60">
                       You paused trust for this {noun}. Verify the account directly before restoring it.
                     </p>
                     <TrustButton
@@ -668,7 +668,7 @@ export function VendorDetailPopup({
                   </div>
                 ) : (
                   <div className="flex flex-col gap-[14px] w-full">
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-brain-v1baby-blue-60">
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-brain-v1baby-blue-60">
                       Brain marked this {noun} as risky. Verify the account before granting trust.
                     </p>
                     <TrustButton
@@ -695,7 +695,7 @@ export function VendorDetailPopup({
                   acknowledge is a valid transition from unreviewed per the matrix. */}
               {vendor.trustStatus === "new" && !reviewedOnly && (
                 <div className="flex flex-col gap-[14px] w-full">
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-brain-v1baby-blue-60">
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-brain-v1baby-blue-60">
                     This {noun} will be eligible for trust after a few more on-time payments with consistent amounts and no flags.
                   </p>
                   <TrustButton

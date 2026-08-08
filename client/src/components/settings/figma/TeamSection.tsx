@@ -288,12 +288,12 @@ function AddMemberDialog({ open, onClose, production }: { open: boolean; onClose
   };
 
   const fieldCls =
-    "w-full bg-brain-v1baby-blue-15 rounded-[8px] px-[8px] py-[10px] [font-family:'Gilroy',sans-serif] text-[16px] text-white placeholder:text-brain-v1baby-blue-60 outline-none focus:ring-1 focus:ring-brain-v1purple";
+    "w-full bg-brain-v1baby-blue-15 rounded-[8px] px-[8px] py-[10px] [font-family:'Gilroy',sans-serif] text-[16px] leading-[20px] text-white placeholder:text-brain-v1baby-blue-60 outline-none focus:ring-1 focus:ring-brain-v1purple";
 
   const inputLabel = (text: string) => (
     <div className="content-stretch flex flex-col items-start relative shrink-0 w-full">
       <div className="content-stretch flex gap-[8px] items-center relative shrink-0 w-full">
-        <p className="[word-break:break-word] [font-family:'Gilroy',sans-serif] font-semibold leading-[14px] not-italic relative shrink-0 text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">{text}</p>
+        <p className="[word-break:break-word] [font-family:'Gilroy',sans-serif] font-semibold leading-[20px] not-italic relative shrink-0 text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">{text}</p>
         <div className="flex-[1_0_0] h-px min-w-px bg-brain-v1stroke-2 relative" />
       </div>
     </div>
@@ -409,7 +409,7 @@ function AddMemberDialog({ open, onClose, production }: { open: boolean; onClose
                     ))}
                   </div>
                   <p
-                    className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[13px]"
+                    className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-brain-v1baby-blue-60 text-[13px]"
                     data-testid="text-backup-unenforced"
                   >
                     {BACKUP_APPROVER_NOTE}

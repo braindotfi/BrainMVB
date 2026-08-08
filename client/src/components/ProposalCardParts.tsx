@@ -43,7 +43,7 @@ export const SectionHeading = ({
 }) => (
   <div className="flex gap-[8px] items-center w-full">
     <div className="flex gap-[4px] items-center shrink-0">
-      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[14px] text-brain-v1baby-blue-60 whitespace-nowrap">
+      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-brain-v1baby-blue-60 whitespace-nowrap">
         {children}
       </p>
       {leading}
@@ -209,7 +209,7 @@ const Callout = ({
     <div className="flex flex-1 gap-[8px] items-start min-w-px">
       <img src={icon} alt="" aria-hidden="true" className="size-[16px] shrink-0" />
       <p
-        className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[16px] flex-1 min-w-px"
+        className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] flex-1 min-w-px"
         style={{ color: tone.color }}
       >
         {children}
@@ -258,13 +258,13 @@ export const KeyFactsTable = ({
         className={`flex items-start w-full ${i < rows.length - 1 ? "border-b border-solid border-brain-v1stroke-2" : ""}`}
       >
         <div className="flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[140px]">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[20px] text-brain-v1baby-blue-60">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-brain-v1baby-blue-60">
             {row.label}
           </p>
         </div>
         <div className="flex flex-1 flex-col items-start justify-center min-w-px px-[12px] py-[8px]">
           <p
-            className={`text-[13px] leading-[20px] text-brain-v1baby-blue-100 break-words w-full ${
+            className={`text-[14px] leading-[20px] text-brain-v1baby-blue-100 break-words w-full ${
               row.mono
                 ? "[font-family:'JetBrains_Mono',monospace]"
                 : "[font-family:'Gilroy',sans-serif] font-medium"
@@ -325,12 +325,12 @@ export const ReasonList = ({
             className={`shrink-0 ${failed ? "text-brain-v1pink-red" : "text-brain-v1baby-blue-60"}`}
             aria-hidden="true"
           />
-          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[16px] text-brain-v1baby-blue-100 flex-1 min-w-px">
+          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[18px] text-brain-v1baby-blue-100 flex-1 min-w-px">
             {reason.text}
           </p>
           {failed && (
             <span
-              className="[font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[16px] text-brain-v1pink-red shrink-0 whitespace-nowrap"
+              className="[font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[14px] text-brain-v1pink-red shrink-0 whitespace-nowrap"
               data-testid={testId ? `${testId}-verdict-${i}` : undefined}
             >
               Not met
@@ -445,7 +445,7 @@ export const ConfidenceMeter = ({ pct }: { pct: number }) => (
 /** The mono value that sits at the right of the Confidence heading. */
 export const HeadingValue = ({ children, testId }: { children: ReactNode; testId?: string }) => (
   <p
-    className="[font-family:'JetBrains_Mono',monospace] font-semibold text-[14px] leading-[14px] text-brain-v1baby-blue-60 whitespace-nowrap shrink-0"
+    className="[font-family:'JetBrains_Mono',monospace] font-semibold text-[14px] leading-[20px] text-brain-v1baby-blue-60 whitespace-nowrap shrink-0"
     data-testid={testId}
   >
     {children}
@@ -471,7 +471,7 @@ export type ActionSize = "full" | "compact";
 
 const ACTION_SIZES: Record<ActionSize, string> = {
   full: "flex-1 min-w-px px-[20px] py-[10px] text-[16px] leading-[20px]",
-  compact: "shrink-0 px-[14px] py-[6px] text-[13px] leading-[16px]",
+  compact: "shrink-0 px-[14px] py-[6px] text-[14px] leading-[20px]",
 };
 
 export const ActionButton = ({

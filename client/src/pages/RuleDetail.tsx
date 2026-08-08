@@ -64,14 +64,14 @@ export function RuleDetail() {
   if (isPolicy && policyLoading) {
     return (
       <div className="bg-brain-v1baby-blue-5 border border-brain-v1stroke-2 border-solid overflow-hidden relative rounded-panel size-full flex flex-col items-center justify-center gap-[16px] p-[24px]">
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[18px]">
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[18px] leading-[24px]">
           Loading policy rule…
         </p>
         <button
           type="button"
           onClick={() => navigate("/ledger?tab=rules&rules=default")}
           data-testid="button-back-to-rules"
-          className="flex items-center justify-center gap-[8px] px-[16px] py-[10px] rounded-pill bg-brain-v1dark-purple border border-[rgba(118,49,238,0.35)] hover:bg-brain-v1dark-purple-hover transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-brain-v1purple"
+          className="flex items-center justify-center gap-[8px] px-[16px] py-[10px] rounded-pill bg-brain-v1dark-purple border border-[rgba(118,49,238,0.35)] hover:bg-brain-v1dark-purple-hover transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-brain-v1purple"
         >
           <ArrowLeft size={16} /> Back
         </button>
@@ -89,14 +89,14 @@ export function RuleDetail() {
   if (definitelyMissing) {
     return (
       <div className="bg-brain-v1baby-blue-5 border border-brain-v1stroke-2 border-solid overflow-hidden relative rounded-panel size-full flex flex-col items-center justify-center gap-[16px] p-[24px]">
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[18px]">
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[18px] leading-[24px]">
           {isPolicy ? "This policy rule is not available right now." : "This rule no longer exists."}
         </p>
         <button
           type="button"
           onClick={() => navigate(isPolicy ? "/ledger?tab=rules&rules=default" : "/ledger?tab=rules")}
           data-testid="button-back-to-rules"
-          className="flex items-center justify-center gap-[8px] px-[16px] py-[10px] rounded-pill bg-brain-v1dark-purple border border-[rgba(118,49,238,0.35)] hover:bg-brain-v1dark-purple-hover transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-brain-v1purple"
+          className="flex items-center justify-center gap-[8px] px-[16px] py-[10px] rounded-pill bg-brain-v1dark-purple border border-[rgba(118,49,238,0.35)] hover:bg-brain-v1dark-purple-hover transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-brain-v1purple"
         >
           <ArrowLeft size={16} /> Back
         </button>
@@ -161,7 +161,7 @@ export function RuleDetail() {
                 navigate(`/ledger?tab=rules&rules=${tab}`);
               }}
               data-testid="button-back-to-rules"
-              className="flex items-center justify-center gap-[4px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-brain-v1baby-blue-60 hover:text-brain-v1baby-blue-100 bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-15-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30 rounded-pill px-[12px] py-[8px]"
+              className="flex items-center justify-center gap-[4px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-brain-v1baby-blue-60 hover:text-brain-v1baby-blue-100 bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-15-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30 rounded-pill px-[12px] py-[8px]"
             >
               <ArrowLeft size={16} /> Back
             </button>
@@ -184,7 +184,7 @@ export function RuleDetail() {
                 <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[14px]">
                   {rule.summary}
                 </p>
-                <p className="[font-family:'JetBrains_Mono',monospace] leading-[18px] text-brain-v1baby-blue-60 text-[12px]" data-testid="text-rule-policy-id">
+                <p className="[font-family:'JetBrains_Mono',monospace] leading-[16px] text-brain-v1baby-blue-60 text-[12px]" data-testid="text-rule-policy-id">
                   {rule.policyId} · {rule.createdLabel}
                 </p>
               </div>
@@ -235,7 +235,7 @@ export function RuleDetail() {
                   type="button"
                   onClick={() => (rule.active ? pauseRule(rule.id) : setResumeModalOpen(true))}
                   data-testid="button-toggle-rule"
-                  className="flex items-center justify-center gap-[4px] px-[12px] py-[8px] rounded-pill transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] focus:outline-none focus-visible:ring-2"
+                  className="flex items-center justify-center gap-[4px] px-[12px] py-[8px] rounded-pill transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] focus:outline-none focus-visible:ring-2"
                   style={
                     rule.active
                       ? { backgroundColor: "#4a2300", color: "#ff9500", ["--tw-ring-color" as string]: "#ff9500" }
@@ -249,7 +249,7 @@ export function RuleDetail() {
                   type="button"
                   onClick={() => setConfirmingDelete(true)}
                   data-testid="button-delete-rule"
-                  className="flex items-center justify-center gap-[4px] px-[12px] py-[8px] rounded-pill bg-brain-v1dark-pink-red hover:bg-brain-v1dark-pink-red-hover transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] focus:outline-none focus-visible:ring-2"
+                  className="flex items-center justify-center gap-[4px] px-[12px] py-[8px] rounded-pill bg-brain-v1dark-pink-red hover:bg-brain-v1dark-pink-red-hover transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] focus:outline-none focus-visible:ring-2"
                   style={{ color: ALERT, ["--tw-ring-color" as string]: ALERT }}
                 >
                   <img src={deleteIcon} alt="" className="shrink-0 size-[16px]" /> Delete Rule
@@ -304,7 +304,7 @@ export function RuleDetail() {
                       type="button"
                       onClick={() => setResumeModalOpen(false)}
                       data-testid="button-resume-cancel"
-                      className="flex-1 px-[24px] py-[12px] rounded-pill bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-15-hover transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[18px] text-brain-v1baby-blue-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30"
+                      className="flex-1 px-[24px] py-[12px] rounded-pill bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-15-hover transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[18px] leading-[24px] text-brain-v1baby-blue-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30"
                     >
                       Keep Paused
                     </button>
@@ -312,7 +312,7 @@ export function RuleDetail() {
                       type="button"
                       onClick={onResume}
                       data-testid="button-resume-confirm"
-                      className="flex-1 px-[24px] py-[12px] rounded-pill bg-brain-v1dark-green hover:bg-brain-v1dark-green-hover transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[18px] text-brain-v1green focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1green"
+                      className="flex-1 px-[24px] py-[12px] rounded-pill bg-brain-v1dark-green hover:bg-brain-v1dark-green-hover transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[18px] leading-[24px] text-brain-v1green focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1green"
                     >
                       Resume
                     </button>
@@ -394,7 +394,7 @@ export function RuleDetail() {
                       className="flex items-center gap-[16px] p-[8px] rounded-[8px]"
                       data-testid={`row-vendor-${vendor.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`}
                     >
-                      <span className="flex-1 [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-brain-v1baby-blue-100 truncate">
+                      <span className="flex-1 [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-brain-v1baby-blue-100 truncate">
                         {vendor}
                       </span>
                     </div>
@@ -516,7 +516,7 @@ function StatusPill({ active }: { active: boolean }) {
     return (
       <span
         data-testid="pill-rule-status"
-        className="flex items-center gap-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[18px] px-[10px] py-[4px] rounded-pill border bg-brain-v1dark-green text-brain-v1green"
+        className="flex items-center gap-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] px-[10px] py-[4px] rounded-pill border bg-brain-v1dark-green text-brain-v1green"
         style={{ borderColor: "rgba(66,191,35,0.2)" }}
       >
         Active
@@ -526,7 +526,7 @@ function StatusPill({ active }: { active: boolean }) {
   return (
     <span
       data-testid="pill-rule-status"
-      className="flex items-center gap-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[18px] px-[10px] py-[4px] rounded-pill border bg-brain-v1dark-orange text-brain-v1light-orange"
+      className="flex items-center gap-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] px-[10px] py-[4px] rounded-pill border bg-brain-v1dark-orange text-brain-v1light-orange"
       style={{ borderColor: "rgba(255,148,0,0.2)" }}
     >
       Paused
@@ -583,7 +583,7 @@ function ReportCard({
               type="button"
               onClick={() => onOpenReceipt(report.proposalId)}
               data-testid={`button-report-receipt-${report.id}`}
-              className="shrink-0 flex items-center justify-center px-[12px] py-[8px] rounded-pill bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-15-hover transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-brain-v1baby-blue-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30"
+              className="shrink-0 flex items-center justify-center px-[12px] py-[8px] rounded-pill bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-15-hover transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-brain-v1baby-blue-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30"
             >
               View the Receipt
             </button>
@@ -600,10 +600,10 @@ function HistoryRow({ event }: { event: RuleHistoryEvent }) {
       className="flex items-center justify-between gap-[16px] p-[8px]"
       data-testid={`row-history-${event.id}`}
     >
-      <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-brain-v1baby-blue-100 truncate">
+      <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-brain-v1baby-blue-100 truncate">
         {event.label}
       </span>
-      <span className="[font-family:'JetBrains_Mono',monospace] text-[13px] text-brain-v1baby-blue-60 shrink-0">
+      <span className="[font-family:'JetBrains_Mono',monospace] text-[13px] leading-[18px] text-brain-v1baby-blue-60 shrink-0">
         {event.atLabel}
       </span>
     </div>
@@ -645,7 +645,7 @@ function AmountRow({
     return (
       <div className="flex items-center gap-[16px] p-[8px] rounded-[8px]">
         <span
-          className="flex-1 [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-brain-v1baby-blue-100"
+          className="flex-1 [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-brain-v1baby-blue-100"
           data-testid={testIdValue}
         >
           {format(value)}
@@ -654,7 +654,7 @@ function AmountRow({
           type="button"
           onClick={onEditStart}
           data-testid={testIdEdit}
-          className="w-[80px] flex items-center justify-center px-[12px] py-[8px] rounded-pill bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-15-hover transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-brain-v1baby-blue-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30"
+          className="w-[80px] flex items-center justify-center px-[12px] py-[8px] rounded-pill bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-15-hover transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-brain-v1baby-blue-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30"
         >
           Edit
         </button>
@@ -664,7 +664,7 @@ function AmountRow({
   return (
     <div className="flex gap-[16px] items-center p-[8px] rounded-[8px]">
       <div className="flex-1 min-w-px flex flex-col justify-center">
-        <div className="w-full h-[32px] flex items-center rounded-[8px] bg-brain-v1baby-blue-15 px-[12px] [font-family:'Gilroy',sans-serif] font-medium text-[15px] text-white">
+        <div className="w-full h-[32px] flex items-center rounded-[8px] bg-brain-v1baby-blue-15 px-[12px] [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-white">
           <span aria-hidden="true" className="shrink-0">{symbol}</span>
           <input
             value={draft}
@@ -686,7 +686,7 @@ function AmountRow({
           type="button"
           onClick={onCancel}
           data-testid={testIdCancel}
-          className="w-[80px] flex items-center justify-center px-[12px] py-[8px] rounded-pill bg-brain-v1baby-blue-5 hover:bg-brain-v1stroke-2 transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-brain-v1baby-blue-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30"
+          className="w-[80px] flex items-center justify-center px-[12px] py-[8px] rounded-pill bg-brain-v1baby-blue-5 hover:bg-brain-v1stroke-2 transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-brain-v1baby-blue-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30"
         >
           Cancel
         </button>
@@ -694,7 +694,7 @@ function AmountRow({
           type="button"
           onClick={onSave}
           data-testid={testIdSave}
-          className="w-[80px] flex items-center justify-center px-[12px] py-[8px] rounded-pill bg-brain-v1dark-green hover:bg-brain-v1dark-green-hover transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-brain-v1green focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1green"
+          className="w-[80px] flex items-center justify-center px-[12px] py-[8px] rounded-pill bg-brain-v1dark-green hover:bg-brain-v1dark-green-hover transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-brain-v1green focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1green"
         >
           Save
         </button>
@@ -722,7 +722,7 @@ function PolicyDetailHeader({ rule }: { rule: PolicyContentRule }) {
         type="button"
         onClick={() => navigate("/ledger?tab=rules&rules=default")}
         data-testid="button-back-to-rules"
-        className="flex items-center justify-center gap-[4px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-brain-v1baby-blue-60 hover:text-brain-v1baby-blue-100 bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-15-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30 rounded-pill px-[12px] py-[8px]"
+        className="flex items-center justify-center gap-[4px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-brain-v1baby-blue-60 hover:text-brain-v1baby-blue-100 bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-15-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30 rounded-pill px-[12px] py-[8px]"
       >
         <ArrowLeft size={16} /> Back
       </button>
@@ -747,7 +747,7 @@ function PolicyDetailHeader({ rule }: { rule: PolicyContentRule }) {
           <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[14px]">
             {titleCase(appliesTo)} · {titleCase(executeLabel)}
           </p>
-          <p className="[font-family:'JetBrains_Mono',monospace] leading-[18px] text-brain-v1baby-blue-60 text-[12px]">
+          <p className="[font-family:'JetBrains_Mono',monospace] leading-[16px] text-brain-v1baby-blue-60 text-[12px]">
             {rule.id} · From your active Brain policy
           </p>
         </div>

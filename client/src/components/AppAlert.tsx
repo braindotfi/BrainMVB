@@ -102,7 +102,7 @@ const AppAlertCard = ({ alert, onDismiss }: { alert: ActiveAlert; onDismiss: () 
       }}
     >
       <Glyph variant={alert.variant} />
-      <div className="flex flex-col flex-1 min-w-0 [font-family:'Gilroy',sans-serif] font-medium text-[16px]">
+      <div className="flex flex-col flex-1 min-w-0 [font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px]">
         <p
           data-testid={`alert-title-${alert.variant}`}
           className="leading-[24px] w-full"
