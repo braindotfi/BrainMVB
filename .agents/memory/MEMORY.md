@@ -96,3 +96,5 @@
 - [Badge pill geometry](badge-pill-geometry.md) — small bordered pills keep leading-14; +2px drags record rows off their canonical height, and only a runtime measurement sees it.
 - [Silent UI deletion](silent-ui-deletion.md) — stale sync merges revert finished work; match all 3 testid spellings, re-apply never revert, and live tests can guard dead UI.
 - [Trust claim verification](trust-claim-verification.md) — money-promise copy must be read back from the live tenant policy; the shipped policy auto-executes payments the "you decide" copy claims it never does.
+- [JSX source-scan probes](jsx-source-scan-probes.md) — a fixed char window swallows children and `[^>]*>` stops at an arrow function; confirm any load-bearing scan with a second probe.
+- [Primitive migration delegation](primitive-migration-delegation.md) — tell agents to leave unmappable values and report them; the leftovers are the missing spec (tonal vs solid families).
