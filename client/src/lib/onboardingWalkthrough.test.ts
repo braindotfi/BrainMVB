@@ -96,3 +96,27 @@ describe("walkthrough copy", () => {
     }
   });
 });
+
+describe("readPolicyState — a policy that answered but could not be interpreted", () => {
+  /* `unknown` means the read landed and told us nothing. It is not knowable
+     right now, which is `failed` — the one state whose copy says nothing about
+     what the tenant has. Reaching `known` here would let the walkthrough
+     describe automation it cannot see. */
+  it("maps an unknown limit to failed, not known", () => {
+    expect(readPolicyState({ isLoading: false, isError: false, limit: { kind: "unknown" } })).toEqual({
+      state: "failed",
+    });
+  });
+
+  it("never claims nothing is automated when the policy could not be interpreted", () => {
+    const copy = allCopy(readPolicyState({ isLoading: false, isError: false, limit: { kind: "unknown" } }));
+    expect(copy).not.toMatch(CLAIMS_NOTHING_AUTOMATED);
+  });
+
+  it("keeps a genuine 'none' distinct from an uninterpretable one", () => {
+    expect(readPolicyState({ isLoading: false, isError: false, limit: { kind: "none" } })).toEqual({
+      state: "known",
+      limit: { kind: "none" },
+    });
+  });
+});

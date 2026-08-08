@@ -60,6 +60,10 @@ export function readPolicyState(input: {
 }): PolicyRead {
   if (input.isLoading) return { state: "pending" };
   if (input.isError) return { state: "failed" };
+  /* A policy that answered but could not be interpreted is not knowable right
+     now, which is exactly `failed`. It must not reach `known`, where the copy
+     would state what the tenant has. */
+  if (input.limit?.kind === "unknown") return { state: "failed" };
   /* `null` here means the facts were undefined without an error: brain-core
      answered 404 policy_not_found, i.e. no policy is activated yet. */
   if (input.limit === null) return { state: "noPolicy" };

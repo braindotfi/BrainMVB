@@ -450,6 +450,10 @@ function ProfileSection() {
      is the most dangerous thing this row could get wrong. */
   const policy = useBrainPolicy();
   const autoLimit = autoApproveLimitFromPolicy(policy.facts);
+  /* A policy that answered but cannot be interpreted is unreadable, not empty.
+     It joins the error treatment rather than falling through to "None", which
+     would assert the one thing we do not know. */
+  const limitUnreadable = policy.isError || autoLimit?.kind === "unknown";
 
   useEffect(() => {
     if (!currencyOpen) return;
@@ -673,7 +677,7 @@ function ProfileSection() {
             sublabel={
               policy.isLoading
                 ? "Reading your approval policy…"
-                : policy.isError
+                : limitUnreadable
                   ? "Brain could not read your approval policy. This limit is unknown, not absent."
                   : autoLimit === null
                     ? "No approval policy is active on this tenant yet."
@@ -691,7 +695,7 @@ function ProfileSection() {
                  base colours are tokens (brain-v1light-orange). */
               <div
                 className={`shrink-0 rounded-[8px] px-[12px] py-[8px] border border-solid ${
-                  policy.isError
+                  limitUnreadable
                     ? "bg-[rgba(255,149,0,0.1)] border-[rgba(255,149,0,0.3)]"
                     : "bg-brain-v1baby-blue-15 border-transparent"
                 }`}
@@ -699,7 +703,7 @@ function ProfileSection() {
               >
                 <p
                   className={`[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] whitespace-nowrap ${
-                    policy.isError
+                    limitUnreadable
                       ? "text-brain-v1light-orange"
                       : policy.isLoading
                         ? "text-brain-v1baby-blue-60"
@@ -708,7 +712,7 @@ function ProfileSection() {
                 >
                   {policy.isLoading
                     ? "Checking…"
-                    : policy.isError
+                    : limitUnreadable
                       ? "Unknown"
                       : autoLimit === null
                         ? "No policy"
