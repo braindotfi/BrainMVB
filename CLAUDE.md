@@ -1230,10 +1230,12 @@ site drifted silently. Now the token name *is* the usage index.
 `-60` on `baby-blue-15` is only **3.37:1**, and `-80` clears AA. `brain-v1error-text` exists
 because `brain-v1pink-red` on a dark surface does not reach AA for body-size text.
 
-`brain-v1baby-blue-15-muted` is the `postponed` audit chip. It is the same role as the
-`system_activity` chip next to it in `auditTypes.ts`, which uses plain `baby-blue-15` — so the two
-are a collapse candidate, but folding them is a **visible** lightening (ΔL\* +5.44), not a
-sub-perceptual one. Named, not merged, pending that call.
+`brain-v1baby-blue-15-muted` is the de-emphasised neutral chip, used for `system_activity`.
+It and plain `baby-blue-15` (`postponed`) are the only two neutral chips, and the weight gap
+between them is **deliberate, not drift**: `postponed` is unfinished business the user still owes a
+decision on, `system_activity` is non-actionable pipeline noise. They meet in Settings > Audit Log,
+which shows the full trail by default. Do not collapse them into one value -- the pair is the
+point.
 
 ### Radius by concept
 

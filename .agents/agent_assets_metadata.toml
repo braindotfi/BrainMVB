@@ -38,3 +38,10 @@ uri = "file://attached_assets/proposal-card-parity-demo-detail.png"
 type = "image"
 title = "Proposal card parity — live proposal detail"
 description = "Authenticated browser capture of a real seeded Collections proposal detail card showing headline, recommendation, key facts, resolved evidence, confidence, policy attribution, message draft, Technical Detail, and decision buttons."
+
+[[outputs]]
+id = "dT3UodJtJCyanTsdSrvTF"
+uri = "file://screenshots/chip-postponed-vs-system.jpg"
+type = "image"
+title = "Postponed vs System Activity chips — current, merged, swapped"
+description = "Real chip markup (px-12/py-8, rounded-pill, Gilroy Semibold 12/16, baby-blue-60 text) on the actual baby-blue-5 surface, at 1x and 3x. A = shipped, B = merged into baby-blue-15, C = swapped so the actionable state reads heavier."

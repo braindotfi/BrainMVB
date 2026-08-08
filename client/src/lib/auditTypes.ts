@@ -256,10 +256,21 @@ export function auditEventChipClass(type: AuditEventType): string {
       return "bg-brain-v1dark-pink-red text-brain-v1pink-red border-[rgba(210,3,68,0.2)]";
     case "trust_revoked":
       return "bg-brain-v1dark-pink-red text-brain-v1pink-red border-[rgba(210,3,68,0.2)]";
+    /* These two are the only neutral chips, and their weights are ordered on
+       purpose -- do not "tidy" them into one value.
+
+       `postponed` is unfinished business: a local queue state the user created
+       by parking a proposal, still actionable, still in the waiting tier, and
+       nothing resurfaces it automatically. `system_activity` is brain-core's
+       informational bucket (ingest, dedupe, unmapped actions) and is never
+       actionable -- Inbox filters it out entirely.
+
+       They meet only in Settings > Audit Log, which defaults to the full trail.
+       So the state that still owes a decision gets the heavier fill. */
     case "postponed":
-      return "bg-brain-v1baby-blue-15-muted text-brain-v1baby-blue-60 border-[rgba(108,119,157,0.2)]";
-    case "system_activity":
       return "bg-brain-v1baby-blue-15 text-brain-v1baby-blue-60 border-[rgba(108,119,157,0.2)]";
+    case "system_activity":
+      return "bg-brain-v1baby-blue-15-muted text-brain-v1baby-blue-60 border-[rgba(108,119,157,0.2)]";
   }
 }
 
