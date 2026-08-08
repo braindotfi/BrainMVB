@@ -115,3 +115,21 @@ turned an access question into a governance one.
     `git hash-object <file>` with `git rev-parse origin/<branch>:<file>` — matching blob shas
     prove the content landed intact.
     
+## Trap 4 — no available PAT can push `.github/workflows/`
+
+GitHub refuses a PAT that lacks `workflow` scope:
+
+```
+! [remote rejected] <branch> (refusing to allow a Personal Access Token to
+  create or update workflow `.github/workflows/test.yml` without `workflow` scope)
+```
+
+**Both** tokens in the environment are rejected, including the one whose name
+suggests otherwise. The refusal happens at push time, so a branch containing a
+workflow edit fails *entirely* — other branches in the same `git push` still
+succeed, which makes the failure easy to misread as a partial network error.
+
+**How to apply:** never put a `.github/workflows/` change in a branch with other
+work. Split it out, ship the rest, and hand the maintainer the exact YAML in the
+PR body. Check for it *before* writing the commit message — a message that
+describes CI wiring becomes false when the wiring has to be dropped.

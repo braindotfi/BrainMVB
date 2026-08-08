@@ -94,3 +94,4 @@
 - [Design-token scan](design-token-scan.md) — it is a vitest source-scan in client/src, not CI; it cannot see inline styles or role misuse, and its guards count rather than classify.
 - [Global restyle passes](global-restyle-passes.md) — tally before→after transitions to catch the unintended direction; component geometry invariants outrank the global table.
 - [Badge pill geometry](badge-pill-geometry.md) — small bordered pills keep leading-14; +2px drags record rows off their canonical height, and only a runtime measurement sees it.
+- [Silent UI deletion](silent-ui-deletion.md) — stale sync merges revert finished work; match all 3 testid spellings, re-apply never revert, and live tests can guard dead UI.
