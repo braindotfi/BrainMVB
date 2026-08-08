@@ -27,7 +27,7 @@
 - [Stacked PR rebases](stacked-pr-rebase.md) — squash merges hide the parent's commits: always `rebase --onto origin/main <parent's old tip>`, never plain rebase, and re-test after.
 - [CI red + armed auto-merge](ci-red-and-auto-merge.md) — npm ci fails on lock drift so every PR is red before tests run; fixing it squash-merges open PRs unreviewed (main unprotected).
 - [No admin-merge bypass](merge-bypass-rule.md) — every PR to main needs a real review; a memory note is not evidence of a user decision, and a zero-review merge is not proof of a policy.
-- [GitHub push credentials](github-connector-write-limit.md) — push via credential.helper reading a PAT env var; secrets are live instantly (never reboot); public repos fake scope probes.
+- [GitHub push credentials](github-connector-write-limit.md) — PATs refuse .github/workflows; connector is no fallback (contents=HTML 403, git/trees=404 after a 201 blob); hand over the editor link.
 - [Verifying the demo seed](demo-seed-verification.md) — seed docs are generated at seed time, dates roll with "now" (never re-pin); Brightline fixture authoritative vs brain-core's __fixtures__.
 - [Refresh after upload](brain-refresh-after-upload.md) — query defaults never refetch, so ingest paths must invalidate; extract done ≠ projected, and modal-scoped settle windows die on close.
 - [Headless UI walkthroughs](headless-ui-qa.md) — verify what *renders* on auth-gated screens: npx-cache playwright + nix chromium, reuse a curl cookie; default tabs hide data.
