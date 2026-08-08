@@ -1625,10 +1625,25 @@ export function InboxPage() {
           </div>
         )}
 
-        {/* Helper banner — shown while anything is still awaiting a decision. */}
+        {/* Helper banner — shown while anything is still awaiting a decision.
+
+           This used to end "Brain proposes. You decide. A separate execution
+           service settles." The middle sentence was not true. The tenant policy
+           this app provisions matches outbound payments in order, and the FIRST
+           rule is execute:"auto" for approved vendors under $50,000 -- so the
+           ordinary AP path clears with no human decision at all.
+
+           The contradiction was already visible in this codebase: useBrainAutoApproved
+           exists to render exactly those records, and describes them as intents that
+           cleared the policy gate "without needing a human decision". They land in
+           this same list wearing an Auto-Approved pill. A banner promising "you
+           decide" sat directly above a bucket built for the payments nobody decided.
+
+           So the reassurance is scoped to the rows it can honestly speak for, and
+           the automatic path is named rather than denied. */}
         {!inboxSourcesLoading && !decisionsUnreachable && visibleItems.some((it) => it.actionable) && (
           <PolicyCallout>
-            Tap any item to see why Brain suggested it, what happens next, and what the risk is before you approve anything. Brain proposes. You decide. A separate execution service settles.
+            Tap any item to see why Brain suggested it, what happens next, and what the risk is before you approve anything. These are waiting on you. Payments your Rules clear automatically are recorded here as Auto-Approved rather than held for a decision.
           </PolicyCallout>
         )}
         </div>{/* end inner gap-[10px] wrapper */}
