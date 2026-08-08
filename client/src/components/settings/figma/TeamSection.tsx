@@ -14,7 +14,7 @@ import { mapApprovalRejection, parseCoreError } from "@/lib/approvalRejections";
 import closeIcon from "@assets/Close_1783293571882.png";
 import memberIcon from "@assets/member_1783635675512.png";
 import arrowButton from "@assets/Button_1783635877872.png";
-import { AlertCallout } from "@/components/Callout";
+import { AlertCallout, MutedCallout } from "@/components/Callout";
 import {
   ROLE_LABELS,
   envelopeLine,
@@ -502,6 +502,70 @@ export default function TeamSection() {
         <Plus className="relative shrink-0 size-[16px] text-brain-v1purple" />
         {production ? "Invite Member" : "Add Member"}
       </button>
+
+      {/* Escalation — shown for shape, inert in substance.
+          Two reasons it cannot be wired: there is no scheduler or notification
+          channel to fire on a timer, and the backup approver it would notify is
+          itself a UI-only mark. Rendering working-looking dropdowns here would
+          promise an escalation that nobody would ever receive, on the exact
+          surface where an operator decides whether an item is covered. */}
+      <div className="flex flex-col gap-[4px]">
+        <div className="flex items-center min-h-[36px]">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-60 text-[16px] leading-[24px]">
+            Escalation
+          </p>
+        </div>
+
+        <div className="bg-brain-v1highlight-dropdown-bg rounded-panel p-[16px] flex flex-col gap-[16px] w-full">
+          <MutedCallout
+            title="Escalation timers are not active."
+            testId="text-escalation-unavailable"
+          >
+            Brain is propose-only: if the primary approver does not act, nothing ships
+            and nothing is escalated. Backup-approver marks are recorded in this
+            browser only, so no reminder is sent to anyone today.
+          </MutedCallout>
+
+          {[
+            {
+              id: "urgent",
+              title: "Escalate urgent items after",
+              detail: "Fraud anomalies and similarly time-sensitive flags.",
+              value: "1 hour",
+            },
+            {
+              id: "action-needed",
+              title: "Escalate action-needed items after",
+              detail: "Payments, collections, treasury, close.",
+              value: "4 hours",
+            },
+          ].map((row, i) => (
+            <div key={row.id} className="flex flex-col gap-[16px]">
+              {i > 0 && <div className="h-px bg-brain-v1stroke-2 w-full" />}
+              <div
+                className="flex gap-[16px] items-center opacity-40"
+                data-testid={`row-escalation-${row.id}`}
+                aria-disabled="true"
+              >
+                <div className="flex flex-[1_0_0] flex-col gap-[4px] min-w-px">
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[16px]">
+                    {row.title}
+                  </p>
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px]">
+                    {row.detail}
+                  </p>
+                </div>
+                <div
+                  className="shrink-0 rounded-[8px] px-[12px] py-[8px] [font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] bg-brain-v1baby-blue-15"
+                  aria-hidden="true"
+                >
+                  {row.value}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
 
       <AddMemberDialog open={addOpen} onClose={() => setAddOpen(false)} production={production} />
     </div>

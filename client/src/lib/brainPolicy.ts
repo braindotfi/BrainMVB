@@ -154,7 +154,13 @@ export type AutoApproveLimit =
   /** Auto-execution exists, but only under conditions beyond a plain amount cap. */
   | { kind: "conditional" }
   /** Nothing in the policy runs automatically. */
-  | { kind: "none" };
+  | { kind: "none" }
+  /** The policy answered but cannot be read: the rule collection is missing or
+   *  not the shape it claims to be. Distinct from "none" on purpose — the
+   *  declared TypeScript type does not validate what the BFF actually sends, so
+   *  a malformed payload would otherwise arrive here as an authoritative
+   *  "nothing is automated". Callers must present this as unknown. */
+  | { kind: "unknown" };
 
 /** Rules that can match an outbound payment. An absent/empty `applies_to` is
  *  "any action" (the same reading `mapPolicyRuleToCard` uses), which includes
@@ -191,7 +197,18 @@ function coversPayments(rule: PolicyContentRule): boolean {
  */
 export function autoApproveLimitFromPolicy(facts: ApprovalPolicyFacts | undefined): AutoApproveLimit | null {
   if (!facts) return null;
-  const paymentRules = (facts.rules ?? []).filter(coversPayments);
+  /* The declared type is not a runtime guarantee: this comes off the BFF. A
+     response missing `rules`, or carrying something other than a list of rule
+     objects, tells us nothing about what is automated -- and the old
+     `facts.rules ?? []` turned exactly that into a confident `{kind:"none"}`,
+     which the Settings row renders as "Nothing runs automatically". For a
+     money-authorization figure that is the worst available answer, so an
+     unreadable rule set is reported as unknown. */
+  const rules = facts.rules;
+  if (!Array.isArray(rules) || rules.some((r) => typeof r !== "object" || r === null)) {
+    return { kind: "unknown" };
+  }
+  const paymentRules = rules.filter(coversPayments);
 
   /* No rule that can touch a payment executes automatically: nothing about
      payments is automated, whatever the rest of the policy does. */

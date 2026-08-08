@@ -161,3 +161,54 @@ describe("groupPolicyAmount", () => {
     expect(groupPolicyAmount("9007199254740993.15")).toBe("9,007,199,254,740,993.15");
   });
 });
+
+/* The declared ApprovalPolicyFacts type is not a runtime guarantee — these
+   objects come off the BFF. The hazard is specific: `facts.rules ?? []` used to
+   turn a payload with no readable rule set into a confident `{kind:"none"}`,
+   which Settings renders as "Nothing runs automatically" next to a money
+   figure. Not knowing must never present as knowing there is no automation. */
+describe("autoApproveLimitFromPolicy — payloads that do not match the declared type", () => {
+  const malformed: Array<[string, unknown]> = [
+    ["rules missing entirely", undefined],
+    ["rules null", null],
+    ["rules an object rather than a list", { r1: { execute: "auto" } }],
+    ["rules a string", "auto"],
+    ["rules a number", 3],
+    ["a null entry in the list", [null]],
+    ["a string entry in the list", ["r1"]],
+  ];
+
+  function withRules(rules: unknown): ApprovalPolicyFacts {
+    return {
+      selfApprovalBlocked: true,
+      secondApprovalThreshold: null,
+      version: 1,
+      quorumRequired: 1,
+      rules,
+    } as unknown as ApprovalPolicyFacts;
+  }
+
+  for (const [label, rules] of malformed) {
+    it(`reports 'unknown' with ${label}`, () => {
+      expect(autoApproveLimitFromPolicy(withRules(rules))).toEqual({ kind: "unknown" });
+    });
+  }
+
+  it("never claims 'none' for an unreadable rule set", () => {
+    for (const [, rules] of malformed) {
+      expect(autoApproveLimitFromPolicy(withRules(rules))).not.toEqual({ kind: "none" });
+    }
+  });
+
+  it("does not throw on a rule entry it cannot read", () => {
+    expect(() => autoApproveLimitFromPolicy(withRules([null, { execute: "auto" }]))).not.toThrow();
+  });
+
+  it("still reads a well-formed policy, so the guard has not swallowed the happy path", () => {
+    expect(
+      autoApproveLimitFromPolicy(
+        facts([{ id: "r1", execute: "auto", when: { "amount.lte": { value: "250.00", currency: "EUR" } } }]),
+      ),
+    ).toEqual({ kind: "limit", value: "250.00", currency: "EUR" });
+  });
+});
