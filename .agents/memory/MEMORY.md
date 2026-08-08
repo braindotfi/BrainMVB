@@ -42,7 +42,7 @@
 - [Proposal card design system](proposal-card-design-system.md) — card built only from shared primitives; display vs source currency for anything quoted to a third party; never round a shown value through Number().
 - [Auto-approved cross-surface records](auto-approved-cross-surface.md) — Inbox and Audit Log project the same live PaymentIntent source and preserve Brain's original creation time.
 - [Overview priority tiers](overview-priority-tiers.md) — tier derives from available_decisions not proposal_type; high = Urgent, elevated only if over a configured rule threshold; a missing band never escalates.
-- [Lockfile proxy URLs](lockfile-replit-proxy-urls.md) — regenerating a lock in Replit bakes in package-firewall.replit.local, which no GitHub runner resolves; rewrite to registry.npmjs.org.
+- [Lockfile hazards in Replit](lockfile-replit-proxy-urls.md) — proxy URLs break GitHub CI; the packager re-runs install after your commit; `npm audit fix` does transitive majors and drops packages.
 - [Unreachable data ≠ all clear](unreachable-data-all-clear.md) — `data?.x ?? []` + `retry:false` hooks expose no isError, so a failed read renders a reassuring empty state; fix at the hook.
 - [Bulk-approve threshold source](bulk-approve-threshold-source.md) — gate on the second-approver line, never the auto-approve line; unknown amount or unreachable policy = no checkbox.
 - [Narrow centre column](narrow-centre-column-layout.md) — the 3-panel shell leaves ~420px for content; use auto-fit/minmax grids, never viewport breakpoints, or figures clip.
