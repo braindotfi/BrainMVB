@@ -393,14 +393,25 @@ export function SourcesSection() {
     <div className="flex flex-col gap-[16px]">
       {/* The second sentence is the reason this line exists. This is the screen
           where someone hands Brain access to their financial data, and the
-          question in their head is what that access lets it do. Saying it here,
-          next to the button, is worth more than saying it correctly elsewhere. */}
+          question in their head is what that access lets it do.
+
+          It does NOT say "that still runs through Rules and Decisions", which
+          is what the deleted original said. On the policy this app provisions,
+          outbound payments to approved vendors up to $50,000 carry
+          execute:"auto" -- they run through Rules and never reach a Decision.
+          Promising a human step that a live rule skips is the more expensive
+          kind of wrong on a screen about granting access to money data.
+
+          What survives is the boundary that is actually true and actually the
+          question being asked: the source grants reading, not spending, and the
+          spending authority lives somewhere the reader can go and check. */}
       <p
         className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[14px]"
         data-testid="text-sources-subhead"
       >
-        What Brain reads to build your financial picture. Adding a source never lets Brain move
-        money — that still runs through Rules and Decisions.
+        What Brain reads to build your financial picture. Connecting a source grants read access
+        only — it gives Brain no new authority to move money. What can be paid without asking you
+        is set by your Rules.
       </p>
 
       {/* Toolbar: the count is a claim about completeness, so it carries its own
