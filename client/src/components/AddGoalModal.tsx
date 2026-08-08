@@ -78,7 +78,7 @@ const Chip = ({
     <span
       className={
         "[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap " +
-        (selected ? "text-brain-v1light-orange" : "text-brain-v1baby-blue-30")
+        (selected ? "text-brain-v1light-orange" : "text-brain-v1baby-blue-60")
       }
     >
       {children}
@@ -146,8 +146,8 @@ const RecommendationCard = ({ category }: { category: string }) => {
         <p
           data-testid="text-goal-recommendation"
           className={
-            "flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[14px] " +
-            (isLoading ? "text-brain-v1baby-blue-30 italic" : "text-brain-v1baby-blue-60")
+            "flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[14px] text-brain-v1baby-blue-60 " +
+            (isLoading ? "italic" : "")
           }
         >
           {text}
@@ -407,7 +407,7 @@ export const AddGoalModal = ({ open, onOpenChange, onCreate, isSubmitting }: Pro
                         className={
                           "flex-1 [font-family:'Gilroy',sans-serif] leading-[16px] text-[14px] truncate " +
                           (p.placeholder
-                            ? "text-brain-v1baby-blue-30 font-medium"
+                            ? "text-brain-v1baby-blue-60 font-medium"
                             : p.isNew
                               ? "text-brain-v1light-orange font-semibold"
                               : "text-brain-v1baby-blue-60 font-medium")
@@ -415,7 +415,7 @@ export const AddGoalModal = ({ open, onOpenChange, onCreate, isSubmitting }: Pro
                       >
                         {p.name}
                       </p>
-                      <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[16px] text-brain-v1baby-blue-30 text-[13px] whitespace-nowrap">
+                      <p className="[font-family:'JetBrains_Mono',monospace] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[13px] whitespace-nowrap">
                         {p.placeholder ? "--" : `Ranked ${p.rank}`}
                       </p>
                     </div>

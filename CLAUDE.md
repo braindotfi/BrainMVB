@@ -1190,11 +1190,24 @@ the **busy** state full contrast — not to raise every disabled control uniform
 had leaked into policy IDs and 22px modal descriptions, where it read as greyed-out/disabled copy.
 `#6c779d` on the same surface is 4.4:1.
 
-Note this is only *enforced* on the surfaces the fix touched (`RuleDetail`, `RulesPanel`).
-`#414965` is still used as a text colour for Settings section labels
-(`SecuritySection`, `LegalSection`, `NotificationsSection`, `TeamSection`, `AuditLogSection`),
-`CashFlowTab` captions, `AddGoalModal` and `CompanySetupPage`. Those were left alone deliberately —
-converting them is a visible restyle of Settings, not a contrast fix. Don't add new ones.
+**This is now enforced by a scan** — `client/src/design-tokens.test.ts`, under `npm test`.
+
+#128 fixed `RuleDetail` and `RulesPanel`. #134 converted the Settings cluster: the section labels
+(`SecuritySection`, `LegalSection`, `NotificationsSection`, `TeamSection`, `AccountSection`,
+`AuditLogSection`, `SourcesSection`, `DevelopersSection`, `SettingsPage`), `CashFlowTab` captions,
+`AddGoalModal` and `CompanySetupPage` — 32 sites, almost all to `#6c779d`, with the Developers page
+subtitle and the key-hashing explainer to `#a8b9f4` as real body copy.
+
+An earlier version of this note implied Settings was the whole remainder. It was not — it was
+about 28% of it. **72 text uses survive outside Settings**, the largest being
+`DocumentViewerPopup` (14), `AddAccountModal` (9), `SignupPage` (9) and `ProposalDetail` (7).
+They are frozen as per-file counts in the scan's `NAMED_TEXT_BASELINE` / `RAW_TEXT_BASELINE`:
+a new one fails the build, and removing one fails until you lower the baseline. The count can only
+go down. Don't add new ones, and don't raise a baseline to make a failure go away.
+
+Two spellings, both covered: the named `text-brain-v1baby-blue-30` class and a raw `#414965` in an
+inline `style={{}}`. The #131 rules above catch neither — the class is a legitimate token
+reference, and #131 does not read inline styles at all.
 
 ### Destructive buttons share one hover
 Destructive = `brain-v1pink-red` text on a `brain-v1dark-pink-red` background. The hover is

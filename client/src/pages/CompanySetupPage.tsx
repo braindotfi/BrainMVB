@@ -12,7 +12,7 @@ import brainLogo from "@assets/BrainLogo_1781769246241.png";
    consumed after the explicit "Join" confirm below. */
 
 const inputCls =
-  "w-full h-[48px] px-4 rounded-2xl bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 focus:border-brain-v1purple outline-none transition-colors [font-family:'Gilroy',sans-serif] text-brain-v1white placeholder:text-brain-v1baby-blue-30 text-[15px]";
+  "w-full h-[48px] px-4 rounded-2xl bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 focus:border-brain-v1purple outline-none transition-colors [font-family:'Gilroy',sans-serif] text-brain-v1white placeholder:text-brain-v1baby-blue-60 text-[15px]";
 const primaryBtn =
   "w-full h-[48px] rounded-2xl bg-brain-v1purple hover:bg-brain-v1purple-hover disabled:opacity-60 disabled:cursor-not-allowed transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-white text-[15px] flex items-center justify-center gap-2";
 
@@ -159,7 +159,7 @@ export function CompanySetupPage() {
       className="flex-1 py-[10px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-[14px] transition-colors flex items-center justify-center"
       style={{
         background: tab === key ? "#240757" : "#0c0f14",
-        color: tab === key ? "#7631ee" : "#414965",
+        color: tab === key ? "#7631ee" : "#6c779d",
       }}
     >
       {label}
@@ -214,7 +214,7 @@ export function CompanySetupPage() {
                 {busy && <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
                 Create company
               </button>
-              <p className="text-center text-brain-v1baby-blue-30 text-xs [font-family:'Gilroy',sans-serif]">
+              <p className="text-center text-brain-v1baby-blue-60 text-xs [font-family:'Gilroy',sans-serif]">
                 You'll be the company's first admin.
               </p>
             </form>
@@ -264,7 +264,7 @@ export function CompanySetupPage() {
       </div>
 
       <footer className="flex items-center justify-between px-6 h-14 flex-shrink-0 z-10 relative">
-        <span className="[font-family:'Gilroy',sans-serif] text-brain-v1baby-blue-30 text-sm">
+        <span className="[font-family:'Gilroy',sans-serif] text-brain-v1baby-blue-60 text-sm">
           Copyright © 2026 Brain Finance. All rights reserved.
         </span>
         <img alt="Socials" src="/figmaAssets/socials.svg" className="opacity-40" />

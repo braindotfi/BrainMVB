@@ -268,7 +268,7 @@ export function AuditLogSection() {
     <div className="flex flex-col gap-[20px] w-full">
       <div className="flex flex-col gap-[4px] w-full">
         <div className="flex items-center gap-2 min-h-[36px]">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-brain-v1baby-blue-30 text-[16px]">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-brain-v1baby-blue-60 text-[16px]">
             Audit Log
           </p>
           {/* Suppressed while the feed is unreadable: a count next to a partial
