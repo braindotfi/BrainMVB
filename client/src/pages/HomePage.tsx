@@ -141,12 +141,12 @@ const GoalProgress = ({ goal }: { goal: GoalRow }) => {
           <span className="text-brain-v1baby-blue-60 font-medium"> · {goal.vault}</span>
         </p>
         <div className="flex items-center gap-[12px] shrink-0 [font-family:'JetBrains_Mono',monospace] tabular-nums">
-          <p className="text-brain-v1baby-blue-100 text-[14px]">
+          <p className="text-brain-v1baby-blue-100 text-[14px] leading-[20px]">
             <span className="font-medium">{fmt(goal.saved)}</span>
             <span className="text-brain-v1baby-blue-60"> of </span>
             <span className="font-medium">{fmt(goal.target)}</span>
           </p>
-          <p className="text-brain-v1baby-blue-60 text-[14px] w-[36px] text-right">{pct}%</p>
+          <p className="text-brain-v1baby-blue-60 text-[14px] leading-[20px] w-[36px] text-right">{pct}%</p>
         </div>
       </div>
       <div className="h-[6px] w-full rounded-full bg-brain-v1stroke-2 overflow-hidden">
@@ -297,14 +297,14 @@ const MetricCard = ({
         }
       : {})}
   >
-    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-30 text-[13px] uppercase">{label}</p>
+    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-30 text-[12px] uppercase">{label}</p>
     <p className="[font-family:'JetBrains_Mono',monospace] leading-[0] relative shrink-0 text-brain-v1baby-blue-100 text-[0px] w-full whitespace-nowrap">
       <span className="font-medium leading-[36px] text-[28px]">{whole}</span>
       {cents && <span className="font-medium leading-[36px] text-brain-v1baby-blue-60 text-[18px]">{cents}</span>}
       {suffix && <span className="font-medium leading-[36px] text-brain-v1baby-blue-60 text-[18px]">{suffix}</span>}
     </p>
     {caption && (
-      <p className={`[font-family:'Gilroy',sans-serif] font-normal leading-[18px] text-[13px] w-full ${captionClass ?? "text-brain-v1baby-blue-30"}`}>
+      <p className={`[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[13px] w-full ${captionClass ?? "text-brain-v1baby-blue-30"}`}>
         {caption}
       </p>
     )}
@@ -1083,7 +1083,7 @@ export function HomePage() {
             <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-brain-v1baby-blue-100 text-[32px]">
               Here's your financial snapshot for today.
             </p>
-            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-brain-v1baby-blue-30 text-[16px]">
+            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-30 text-[16px]">
               Updated {updatedLabel}
             </p>
           </div>
