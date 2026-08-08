@@ -11,18 +11,18 @@ export function Switch({ className, active = false }: SwitchProps) {
     <div
       className={
         className ||
-        `h-[24px] relative w-[40px] ${off ? "rounded-[12px]" : "rounded-[100px]"}`
+        `h-[24px] relative w-[40px] ${off ? "rounded-row" : "rounded-pill"}`
       }
       data-testid={`switch-${active ? "on" : "off"}`}
     >
       <div
-        className={`absolute h-[20px] left-[2px] rounded-[100px] top-[2px] w-[36px] ${
-          off ? "bg-[#222737]" : "bg-[#123509]"
+        className={`absolute h-[20px] left-[2px] rounded-pill top-[2px] w-[36px] ${
+          off ? "bg-brain-v1baby-blue-15" : "bg-brain-v1dark-green"
         }`}
       />
       <div
-        className={`absolute rounded-[100px] size-[16px] top-[4px] ${
-          off ? "bg-[#06070a] left-[4px]" : "bg-[#42bf23] left-[20px]"
+        className={`absolute rounded-pill size-[16px] top-[4px] ${
+          off ? "bg-brain-v1headerfooterbg left-[4px]" : "bg-brain-v1green left-[20px]"
         }`}
       />
     </div>

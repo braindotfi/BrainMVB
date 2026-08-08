@@ -9,20 +9,24 @@ module.exports = {
       colors: {
         "brain-v1baby-blue-100": "var(--brain-v1baby-blue-100)",
         "brain-v1baby-blue-15": "var(--brain-v1baby-blue-15)",
+        "brain-v1baby-blue-15-hover": "var(--brain-v1baby-blue-15-hover)",
         "brain-v1baby-blue-30": "var(--brain-v1baby-blue-30)",
         "brain-v1baby-blue-5": "var(--brain-v1baby-blue-5)",
         "brain-v1baby-blue-60": "var(--brain-v1baby-blue-60)",
         "brain-v1dark-dark-purple": "var(--brain-v1dark-dark-purple)",
         "brain-v1dark-green": "var(--brain-v1dark-green)",
         "brain-v1dark-orange": "var(--brain-v1dark-orange)",
+        "brain-v1dark-orange-hover": "var(--brain-v1dark-orange-hover)",
         "brain-v1dark-pink-red": "var(--brain-v1dark-pink-red)",
         "brain-v1dark-purple": "var(--brain-v1dark-purple)",
+        "brain-v1dark-purple-hover": "var(--brain-v1dark-purple-hover)",
         "brain-v1green": "var(--brain-v1green)",
         "brain-v1headerfooterbg": "var(--brain-v1headerfooterbg)",
         "brain-v1highlight-dropdown-bg": "var(--brain-v1highlight-dropdown-bg)",
         "brain-v1light-orange": "var(--brain-v1light-orange)",
         "brain-v1pink-red": "var(--brain-v1pink-red)",
         "brain-v1purple": "var(--brain-v1purple)",
+        "brain-v1purple-hover": "var(--brain-v1purple-hover)",
         "brain-v1stroke-2": "var(--brain-v1stroke-2)",
         "brain-v1white": "var(--brain-v1white)",
         "brain-v1white-30": "var(--brain-v1white-30)",
@@ -84,6 +88,12 @@ module.exports = {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+        // Named radii for the de-facto scale (docs/design-audit.md §3).
+        // Values are the existing measured ones, so adoption is visually neutral.
+        row: "var(--radius-row)", // 12px — list/table rows
+        panel: "var(--radius-panel)", // 16px — cards and panels
+        modal: "var(--radius-modal)", // 24px — dialogs and modals
+        pill: "var(--radius-pill)", // 100px — pills and chip tracks
       },
       keyframes: {
         "accordion-down": {

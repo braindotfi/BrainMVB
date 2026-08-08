@@ -222,7 +222,7 @@ function renderInlineRich(text: string): React.ReactNode {
   return codeParts.map((part, i) => {
     if (part.startsWith("`") && part.endsWith("`")) {
       return (
-        <code key={i} className="bg-[#1a1e2e] px-1 py-[1px] rounded-[4px] text-[#a8b9f4] text-[12px] [font-family:'JetBrains_Mono',monospace]">
+        <code key={i} className="bg-[#1a1e2e] px-1 py-[1px] rounded-[4px] text-brain-v1baby-blue-100 text-[12px] [font-family:'JetBrains_Mono',monospace]">
           {part.slice(1, -1)}
         </code>
       );
@@ -750,7 +750,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
   // ── Collapsed rail ─────────────────────────────────────────────
   if (collapsed) {
     return (
-      <div className="relative w-[54px] h-full rounded-[16px] border border-solid border-[#1d2132] bg-[#11141b] overflow-hidden">
+      <div className="relative w-[54px] h-full rounded-panel border border-solid border-brain-v1stroke-2 bg-brain-v1baby-blue-5 overflow-hidden">
         <div className="flex flex-col gap-[16px] items-start absolute left-[7px] top-[7px] w-[40px]">
           {/* Expand button */}
           <button
@@ -763,12 +763,12 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
           </button>
 
           {/* Divider */}
-          <div className="w-full h-px bg-[#1d2132]" />
+          <div className="w-full h-px bg-brain-v1stroke-2" />
 
           {/* Chat group */}
           <div className="flex flex-col gap-[4px] items-start w-full">
             <div className="flex items-center justify-center px-[8px] w-[40px]">
-              <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[12px] leading-[16px]">
+              <span className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-30 text-[12px] leading-[16px]">
                 Chat
               </span>
             </div>
@@ -820,7 +820,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
 
   // ── Expanded panel ─────────────────────────────────────────────
   return (
-    <div className="relative w-full max-w-[390px] h-full rounded-[16px] border border-solid border-[#1d2132] bg-[#11141b] overflow-hidden flex flex-col">
+    <div className="relative w-full max-w-[390px] h-full rounded-panel border border-solid border-brain-v1stroke-2 bg-brain-v1baby-blue-5 overflow-hidden flex flex-col">
       {/* Header: collapse button + session dropdown */}
       <div className="flex items-center gap-[8px] p-[7px]">
         <button
@@ -836,57 +836,57 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
           <button
             data-testid="button-session-dropdown"
             onClick={() => setDropdownOpen((v) => !v)}
-            className={`w-full h-[40px] pl-[16px] pr-[4px] flex items-center gap-[8px] rounded-[40px] bg-[#222737] border border-solid transition-colors ${dropdownOpen ? "border-[#414965]" : "border-transparent"}`}
+            className={`w-full h-[40px] pl-[16px] pr-[4px] flex items-center gap-[8px] rounded-[40px] bg-brain-v1baby-blue-15 border border-solid transition-colors ${dropdownOpen ? "border-brain-v1baby-blue-30" : "border-transparent"}`}
           >
             {!activeSession && (
               <SquarePen className="flex-shrink-0 size-[20px]" color="#a8b9f4" strokeWidth={1.8} />
             )}
-            <span className="flex-1 min-w-0 text-left truncate [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[24px]">
+            <span className="flex-1 min-w-0 text-left truncate [font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[24px]">
               {triggerLabel}
             </span>
-            <span className="flex-shrink-0 size-[32px] rounded-full bg-[#1d2132] flex items-center justify-center">
+            <span className="flex-shrink-0 size-[32px] rounded-full bg-brain-v1stroke-2 flex items-center justify-center">
               <ChevronDown className={`size-[18px] transition-transform ${dropdownOpen ? "rotate-180" : ""}`} color="#a8b9f4" strokeWidth={2} />
             </span>
           </button>
 
           {/* Sessions dropdown */}
           {dropdownOpen && (
-            <div className="absolute left-0 top-[calc(100%+4px)] w-full z-[60] bg-[#0a0c10] border border-solid border-[#1d2132] rounded-[12px] p-[8px] flex flex-col gap-[8px] shadow-[0px_68px_13.5px_rgba(0,0,0,0.06),0px_38px_11.5px_rgba(0,0,0,0.2),0px_17px_8.5px_rgba(0,0,0,0.34),0px_4px_4.5px_rgba(0,0,0,0.39)] max-h-[520px] overflow-y-auto">
+            <div className="absolute left-0 top-[calc(100%+4px)] w-full z-[60] bg-brain-v1highlight-dropdown-bg border border-solid border-brain-v1stroke-2 rounded-row p-[8px] flex flex-col gap-[8px] shadow-[0px_68px_13.5px_rgba(0,0,0,0.06),0px_38px_11.5px_rgba(0,0,0,0.2),0px_17px_8.5px_rgba(0,0,0,0.34),0px_4px_4.5px_rgba(0,0,0,0.39)] max-h-[520px] overflow-y-auto">
               {/* New chat session */}
               <button
                 data-testid="button-new-session"
                 onClick={startNewSession}
-                className="w-full flex items-center gap-[8px] p-[8px] rounded-[8px] transition-colors hover:bg-[#11141b]"
+                className="w-full flex items-center gap-[8px] p-[8px] rounded-[8px] transition-colors hover:bg-brain-v1baby-blue-5"
               >
                 <SquarePen className="flex-shrink-0 size-[24px]" color="#a8b9f4" strokeWidth={1.8} />
-                <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[24px]">
+                <span className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[24px]">
                   New Chat Session
                 </span>
               </button>
 
-              <div className="h-px w-full bg-[#1d2132]" />
+              <div className="h-px w-full bg-brain-v1stroke-2" />
 
               {/* Search */}
-              <div className="w-full flex items-center gap-[8px] p-[8px] rounded-[8px] bg-[#222737]">
+              <div className="w-full flex items-center gap-[8px] p-[8px] rounded-[8px] bg-brain-v1baby-blue-15">
                 <Search className="flex-shrink-0 size-[24px]" color="#6c779d" strokeWidth={1.8} />
                 <input
                   data-testid="input-session-search"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Search"
-                  className="flex-1 min-w-0 bg-transparent outline-none [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] placeholder:text-[#6c779d] text-[16px] leading-[20px]"
+                  className="flex-1 min-w-0 bg-transparent outline-none [font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 placeholder:text-brain-v1baby-blue-60 text-[16px] leading-[20px]"
                 />
               </div>
 
               {/* Grouped sessions */}
               {filteredGroups.length === 0 && (
-                <div className="px-[8px] py-[6px] [font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px]">
+                <div className="px-[8px] py-[6px] [font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px]">
                   {sessions.length === 0 ? "No conversations yet" : "No conversations found"}
                 </div>
               )}
               {filteredGroups.map((group) => (
                 <div key={group.label} className="flex flex-col gap-[8px] w-full">
-                  <div className="pl-[8px] [font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[14px] leading-[16px]">
+                  <div className="pl-[8px] [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-30 text-[14px] leading-[16px]">
                     {group.label}
                   </div>
                   {group.items.map((session) => (
@@ -904,9 +904,9 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                           selectSession(session.id);
                         }
                       }}
-                      className={`group w-full flex items-center gap-[8px] p-[8px] rounded-[8px] cursor-pointer transition-colors ${session.id === activeSessionId ? "bg-[#222737]" : "hover:bg-[#222737]"}`}
+                      className={`group w-full flex items-center gap-[8px] p-[8px] rounded-[8px] cursor-pointer transition-colors ${session.id === activeSessionId ? "bg-brain-v1baby-blue-15" : "hover:bg-brain-v1baby-blue-15"}`}
                     >
-                      <span className="flex-1 min-w-0 text-left truncate [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px]">
+                      <span className="flex-1 min-w-0 text-left truncate [font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[20px]">
                         {session.title}
                       </span>
 
@@ -944,16 +944,16 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
       {/* Body */}
       <div
         ref={bodyRef}
-        className="flex-1 min-h-0 mx-[7px] rounded-[12px] bg-[#0a0c10] overflow-y-auto"
+        className="flex-1 min-h-0 mx-[7px] rounded-row bg-brain-v1highlight-dropdown-bg overflow-y-auto"
       >
         {messages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center gap-[4px] px-[16px]">
             <img src={brainLogo} alt="Brain" className="size-[72px]" />
             <div className="flex flex-col items-center text-center">
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[24px] leading-[32px]">
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[24px] leading-[32px]">
                 Hi, I'm Brain
               </p>
-              <p className="[font-family:'Gilroy',sans-serif] font-normal text-[#6c779d] text-[18px] leading-[24px]">
+              <p className="[font-family:'Gilroy',sans-serif] font-normal text-brain-v1baby-blue-60 text-[18px] leading-[24px]">
                 What can I help you with today?
               </p>
             </div>
@@ -965,7 +965,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                 {msg.dateTag && (
                   <div className="flex items-center justify-center gap-[4px] py-[2px]">
                     <img src={timeIcon} alt="" className="size-[12px] block" />
-                    <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[14px]">
+                    <span className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-60 text-[12px] leading-[14px]">
                       {msg.dateTag}
                     </span>
                   </div>
@@ -983,21 +983,21 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                   <ChatBubble
                     measureKey={`${symbol}${msg.text}`}
                     measure={msg.text !== ""}
-                    className={`max-w-[75%] break-words px-[12px] py-[8px] rounded-[12px] [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] ${
+                    className={`max-w-[75%] break-words px-[12px] py-[8px] rounded-row [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] ${
                       msg.role === "user"
-                        ? "bg-[#7631ee] text-white text-right"
+                        ? "bg-brain-v1purple text-white text-right"
                         : msg.answerStatus === "no_answer"
-                          ? "bg-[#1b1e2a] border border-dashed border-[#6c779d] text-[#8b95b8] text-left"
+                          ? "bg-[#1b1e2a] border border-dashed border-brain-v1baby-blue-60 text-[#8b95b8] text-left"
                           : msg.answerStatus === "error"
                             ? "bg-[#211c22] border border-dashed border-[#8b5362] text-[#b99aa5] text-left"
-                          : "bg-[#222737] text-[#6c779d] text-left"
+                          : "bg-brain-v1baby-blue-15 text-brain-v1baby-blue-60 text-left"
                     }`}
                   >
                     {msg.role === "assistant" && msg.text === "" ? (
                       <span className="inline-flex gap-[3px] py-[2px]" aria-label="Brain is typing">
-                        <span className="size-[6px] rounded-full bg-[#6c779d] animate-bounce [animation-delay:-0.3s]" />
-                        <span className="size-[6px] rounded-full bg-[#6c779d] animate-bounce [animation-delay:-0.15s]" />
-                        <span className="size-[6px] rounded-full bg-[#6c779d] animate-bounce" />
+                        <span className="size-[6px] rounded-full bg-brain-v1baby-blue-60 animate-bounce [animation-delay:-0.3s]" />
+                        <span className="size-[6px] rounded-full bg-brain-v1baby-blue-60 animate-bounce [animation-delay:-0.15s]" />
+                        <span className="size-[6px] rounded-full bg-brain-v1baby-blue-60 animate-bounce" />
                       </span>
                     ) : (
                       renderRichText(msg.text, formatText)
@@ -1009,10 +1009,10 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                     className="flex items-center gap-[4px] px-[4px] w-full"
                     data-testid="assistant-no-answer"
                   >
-                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#ff9500] text-[11px] leading-[14px]">
+                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1light-orange text-[11px] leading-[14px]">
                       No grounded answer
                     </span>
-                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[11px] leading-[14px]">
+                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-30 text-[11px] leading-[14px]">
                       {msg.sources && msg.sources.length > 0
                         ? "evidence was found, but it was not sufficient to answer"
                         : "no supporting records were available"}
@@ -1024,20 +1024,20 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                     className="flex items-center gap-[4px] px-[4px] w-full"
                     data-testid="assistant-error"
                   >
-                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#ff9500] text-[11px] leading-[14px]">
+                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1light-orange text-[11px] leading-[14px]">
                       Assistant unavailable
                     </span>
-                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[11px] leading-[14px]">
+                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-30 text-[11px] leading-[14px]">
                       this response was not generated from your ledger
                     </span>
                   </div>
                 )}
                 {msg.role === "assistant" && msg.ungrounded && (
                   <div className="flex items-center gap-[4px] px-[4px] w-full">
-                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#ff9500] text-[11px] leading-[14px]">
+                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1light-orange text-[11px] leading-[14px]">
                       Data unavailable
                     </span>
-                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#414965] text-[11px] leading-[14px]">
+                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-30 text-[11px] leading-[14px]">
                       live ledger connection not ready
                     </span>
                   </div>
@@ -1050,7 +1050,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                       type="button"
                       data-testid="assistant-sources"
                       onClick={() => setOpenEvidenceFor((cur) => (cur === msg.id ? null : msg.id))}
-                      className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[11px] leading-[14px] px-[4px] cursor-pointer hover:underline text-left"
+                      className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[11px] leading-[14px] px-[4px] cursor-pointer hover:underline text-left"
                     >
                       {msg.answerStatus === "error"
                         ? `${msg.sources.length} record${msg.sources.length === 1 ? "" : "s"} available as context — answer unavailable`
@@ -1113,7 +1113,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                                 else if (resolvedType === "wiki.question") navigate(`/audit-log?record=${s.entityId}`);
                               }}
                               title={s.entityId}
-                              className="[font-family:'Gilroy',sans-serif] font-medium text-[#7631ee] text-[11px] leading-[15px] text-left hover:underline block w-full min-w-0 truncate"
+                              className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1purple text-[11px] leading-[15px] text-left hover:underline block w-full min-w-0 truncate"
                             >
                               {text}
                             </button>
@@ -1121,7 +1121,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                             <span
                               key={`${s.entityId}-${i}`}
                               title={s.entityId}
-                              className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[11px] leading-[15px] block w-full min-w-0 truncate"
+                              className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[11px] leading-[15px] block w-full min-w-0 truncate"
                             >
                               {text}
                             </span>
@@ -1150,7 +1150,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
             key={`${i}-${q}`}
             data-testid={`button-suggested-${q.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`}
             onClick={() => sendMessage(q)}
-            className="flex-shrink-0 bg-[#222737] px-[12px] py-[8px] rounded-[100px] transition-colors hover:bg-[#2a3145] [font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[12px] leading-[16px] whitespace-nowrap"
+            className="flex-shrink-0 bg-brain-v1baby-blue-15 px-[12px] py-[8px] rounded-pill transition-colors hover:bg-[#2a3145] [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[12px] leading-[16px] whitespace-nowrap"
           >
             {q}
           </button>
@@ -1158,7 +1158,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
       </div>
 
       {/* Input field */}
-      <div className="mx-[7px] mb-[7px] rounded-[12px] bg-[#0a0c10] p-[8px] flex flex-col gap-[10px]">
+      <div className="mx-[7px] mb-[7px] rounded-row bg-brain-v1highlight-dropdown-bg p-[8px] flex flex-col gap-[10px]">
         <textarea
           ref={assistantInputRef}
           data-testid="input-assistant-message"
@@ -1172,7 +1172,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
             }
           }}
           placeholder="Ask me a question..."
-          className="w-full resize-none bg-transparent outline-none px-[8px] pt-[6px] [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] placeholder:text-[#6c779d] text-[16px] leading-[20px] overflow-x-hidden"
+          className="w-full resize-none bg-transparent outline-none px-[8px] pt-[6px] [font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 placeholder:text-brain-v1baby-blue-60 text-[16px] leading-[20px] overflow-x-hidden"
         />
         <div className="flex items-center justify-between">
           <input
@@ -1190,7 +1190,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
             data-testid="button-assistant-attach"
             onClick={() => fileInputRef.current?.click()}
             disabled={uploadDoc.isPending}
-            className="size-[32px] rounded-full bg-[#222737] flex items-center justify-center transition-colors hover:bg-[#2a3145] disabled:opacity-60 disabled:cursor-not-allowed"
+            className="size-[32px] rounded-full bg-brain-v1baby-blue-15 flex items-center justify-center transition-colors hover:bg-[#2a3145] disabled:opacity-60 disabled:cursor-not-allowed"
             title="Attach a document"
           >
             <Plus className="size-[18px]" color="#a8b9f4" strokeWidth={2} />
@@ -1200,7 +1200,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
               data-testid="button-assistant-send"
               onClick={() => sendMessage(draft)}
               disabled={!draft.trim() || sending || authLoading || isTransitioning || !user}
-              className="size-[32px] rounded-full bg-[#7631ee] flex items-center justify-center transition-opacity disabled:opacity-60 disabled:cursor-not-allowed hover:opacity-90"
+              className="size-[32px] rounded-full bg-brain-v1purple flex items-center justify-center transition-opacity disabled:opacity-60 disabled:cursor-not-allowed hover:opacity-90"
               title="Send"
             >
               <ArrowUp className="size-[18px]" color="#ffffff" strokeWidth={2.4} />

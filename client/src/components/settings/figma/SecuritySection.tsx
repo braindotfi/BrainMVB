@@ -33,14 +33,14 @@ import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
       <div className="flex flex-col gap-6 w-full">
         <div className="content-stretch flex flex-col gap-[4px] items-start relative shrink-0 w-full">
         <div className="content-stretch flex flex-col justify-center min-h-[36px] items-start relative shrink-0 w-full">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] not-italic relative shrink-0 text-[#414965] text-[16px] w-full">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] not-italic relative shrink-0 text-brain-v1baby-blue-30 text-[16px] w-full">
             Authentication
           </p>
         </div>
-        <div className="bg-[#0a0c10] content-stretch flex flex-col gap-[16px] items-start p-[16px] relative rounded-[16px] shrink-0 w-full">
+        <div className="bg-brain-v1highlight-dropdown-bg content-stretch flex flex-col gap-[16px] items-start p-[16px] relative rounded-panel shrink-0 w-full">
           <div className="content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full">
             <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
-              <div className="relative rounded-[100px] shrink-0 size-[40px]">
+              <div className="relative rounded-pill shrink-0 size-[40px]">
                 <div className="absolute left-0 size-[40px] top-0">
                   <img alt="" className="absolute block inset-0 max-w-none size-full" src={SUB["8075e445"]} />
                 </div>
@@ -63,18 +63,18 @@ import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
                 </div>
               </div>
               <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
-                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-brain-v1baby-blue-100 text-[16px] whitespace-nowrap">
                   Two-Factor Authentication
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">
                     Not enabled
                   </p>
                 </div>
               </div>
             </div>
             {/* No 2FA backend wired up yet - off, not a fabricated "enabled". */}
-            <Switch className="h-[24px] relative rounded-[12px] shrink-0 w-[40px]" />
+            <Switch className="h-[24px] relative rounded-row shrink-0 w-[40px]" />
           </div>
           <div className="h-0 relative shrink-0 w-full">
             <div className="absolute inset-[-0.5px_0]">
@@ -83,7 +83,7 @@ import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
           </div>
           <div className="content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full">
             <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
-              <div className="relative rounded-[100px] shrink-0 size-[40px]">
+              <div className="relative rounded-pill shrink-0 size-[40px]">
                 <div className="absolute left-0 size-[40px] top-0">
                   <img alt="" className="absolute block inset-0 max-w-none size-full" src={SUB["8075e445"]} />
                 </div>
@@ -106,11 +106,11 @@ import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
                 </div>
               </div>
               <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
-                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-brain-v1baby-blue-100 text-[16px] whitespace-nowrap">
                   Session Timeout
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">
                     Auto-lock after inactivity
                   </p>
                 </div>
@@ -136,14 +136,14 @@ import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
       </div>
       <div className="content-stretch flex flex-col gap-[4px] items-start relative shrink-0 w-full">
         <div className="content-stretch flex flex-col justify-center min-h-[36px] items-start relative shrink-0 w-full">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] not-italic relative shrink-0 text-[#414965] text-[16px] w-full">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] not-italic relative shrink-0 text-brain-v1baby-blue-30 text-[16px] w-full">
             Account Activity
           </p>
         </div>
-        <div className="bg-[#0a0c10] content-stretch flex flex-col gap-[16px] items-start overflow-clip p-[16px] relative rounded-[16px] shrink-0 w-full">
+        <div className="bg-brain-v1highlight-dropdown-bg content-stretch flex flex-col gap-[16px] items-start overflow-clip p-[16px] relative rounded-panel shrink-0 w-full">
           <div className="content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full">
             <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
-              <div className="relative rounded-[100px] shrink-0 size-[40px]">
+              <div className="relative rounded-pill shrink-0 size-[40px]">
                 <div className="absolute left-0 size-[40px] top-0">
                   <img alt="" className="absolute block inset-0 max-w-none size-full" src={SUB["8075e445"]} />
                 </div>
@@ -164,18 +164,18 @@ import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
                 </div>
               </div>
               <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
-                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-brain-v1baby-blue-100 text-[16px] whitespace-nowrap">
                   Login Alerts
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">
                     Not enabled
                   </p>
                 </div>
               </div>
             </div>
             {/* No email/notification backend wired up yet - off, not fabricated. */}
-            <Switch className="h-[24px] relative rounded-[12px] shrink-0 w-[40px]" />
+            <Switch className="h-[24px] relative rounded-row shrink-0 w-[40px]" />
           </div>
           <div className="h-0 relative shrink-0 w-full">
             <div className="absolute inset-[-0.5px_0]">
@@ -184,7 +184,7 @@ import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
           </div>
           <div className="content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full">
             <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
-              <div className="relative rounded-[100px] shrink-0 size-[40px]">
+              <div className="relative rounded-pill shrink-0 size-[40px]">
                 <div className="absolute left-0 size-[40px] top-0">
                   <img alt="" className="absolute block inset-0 max-w-none size-full" src={SUB["8075e445"]} />
                 </div>
@@ -207,11 +207,11 @@ import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
                 </div>
               </div>
               <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
-                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-brain-v1baby-blue-100 text-[16px] whitespace-nowrap">
                   Login History
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">
                     View recent sign-in activity
                   </p>
                 </div>
@@ -222,7 +222,7 @@ import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
               data-testid="button-login-history"
               aria-label="View login history"
               onClick={() => setLoginHistoryOpen(true)}
-              className="relative rounded-[100px] shrink-0 size-[40px] hover-elevate"
+              className="relative rounded-pill shrink-0 size-[40px] hover-elevate"
             >
               <div className="absolute left-0 size-[40px] top-0">
                 <img alt="" className="absolute block inset-0 max-w-none size-full" src={SUB["f9526a37"]} />
@@ -247,7 +247,7 @@ import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
           </div>
           <div className="content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full">
             <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
-              <div className="relative rounded-[100px] shrink-0 size-[40px]">
+              <div className="relative rounded-pill shrink-0 size-[40px]">
                 <div className="absolute left-0 size-[40px] top-0">
                   <img alt="" className="absolute block inset-0 max-w-none size-full" src={SUB["8075e445"]} />
                 </div>
@@ -267,15 +267,15 @@ import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
                       <img alt="" className="block max-w-none size-full" src={SUB["c3ec2ee7"]} />
                     </div>
                   </div>
-                  <div className="absolute border-2 border-[#6c779d] border-solid h-[11px] left-[3px] rounded-[3px] top-[7px] w-[18px]" />
+                  <div className="absolute border-2 border-brain-v1baby-blue-60 border-solid h-[11px] left-[3px] rounded-[3px] top-[7px] w-[18px]" />
                 </div>
               </div>
               <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
-                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-[#a8b9f4] text-[16px] whitespace-nowrap">
+                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-brain-v1baby-blue-100 text-[16px] whitespace-nowrap">
                   Change PIN
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">
                     Update your 6-digit transaction PIN
                   </p>
                 </div>
@@ -286,7 +286,7 @@ import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
               data-testid="button-change-pin"
               aria-label="Change PIN"
               onClick={() => setChangePinOpen(true)}
-              className="relative rounded-[100px] shrink-0 size-[40px] hover-elevate"
+              className="relative rounded-pill shrink-0 size-[40px] hover-elevate"
             >
               <div className="absolute left-0 size-[40px] top-0">
                 <img alt="" className="absolute block inset-0 max-w-none size-full" src={SUB["f9526a37"]} />

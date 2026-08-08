@@ -103,9 +103,9 @@ export function PayablesTab({ format }: { format: Format }): JSX.Element {
           It isn't a sign that you owe nothing.
         </UnavailableDataBox>
       ) : kind === "loading" ? (
-        <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative shrink-0 w-full bg-[#0a0c10]">
+        <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative shrink-0 w-full bg-brain-v1highlight-dropdown-bg">
           <p
-            className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[16px] text-[#6c779d]"
+            className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[16px] text-brain-v1baby-blue-60"
             data-testid="text-obligations-loading"
           >
             Loading what you owe from the ledger…
@@ -123,18 +123,18 @@ export function PayablesTab({ format }: { format: Format }): JSX.Element {
         /* Zero rows, read fine — but documents are still being turned into ledger
            records, and those records arrive in waves. "You owe nothing" would be a
            conclusion drawn from an import that has not finished. */
-        <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative shrink-0 w-full bg-[#0a0c10]">
+        <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative shrink-0 w-full bg-brain-v1highlight-dropdown-bg">
           <p
-            className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[16px] text-[#6c779d]"
+            className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[16px] text-brain-v1baby-blue-60"
             data-testid="text-obligations-arriving"
           >
             Still reading your documents. Anything you owe will appear here as it lands.
           </p>
         </div>
       ) : kind === "empty" ? (
-        <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative shrink-0 w-full bg-[#0a0c10]">
+        <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative shrink-0 w-full bg-brain-v1highlight-dropdown-bg">
           <p
-            className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[16px] text-[#6c779d]"
+            className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[16px] text-brain-v1baby-blue-60"
             data-testid="text-obligations-empty"
           >
             Nothing outstanding. You have no unpaid bills or payroll on record.
@@ -166,7 +166,7 @@ export function PayablesTab({ format }: { format: Format }): JSX.Element {
                 pill={{ label: capitalCase(o.status), ...statusColors(o.status), testId: `badge-obligation-status-${o.status.trim().toLowerCase()}` }}
                 additionalPill={flagged ? (
                   <RecordPill
-                    className="bg-[#350011] text-[#d20344] border-[rgba(210,3,68,0.2)]"
+                    className="bg-brain-v1dark-pink-red text-brain-v1pink-red border-[rgba(210,3,68,0.2)]"
                     testId={`badge-obligation-anomaly-${idx}`}
                   >
                     <img src={alertIcon} alt="" className="size-[12px]" />
@@ -175,7 +175,7 @@ export function PayablesTab({ format }: { format: Format }): JSX.Element {
                 ) : undefined}
                 secondary={
                   <>
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] whitespace-nowrap">
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">
                       {dueLabel(o.due_date)}
                     </p>
                     {sub && (
@@ -183,7 +183,7 @@ export function PayablesTab({ format }: { format: Format }): JSX.Element {
                         <div className="relative shrink-0 size-[4px]">
                           <img alt="" className="absolute block inset-0 max-w-none size-full" src={IMG_DOT} />
                         </div>
-                        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] truncate">
+                        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px] truncate">
                           {sub}
                         </p>
                       </>
@@ -209,15 +209,15 @@ export function PayablesTab({ format }: { format: Format }): JSX.Element {
 
           {/* Running total — same row shape as the Accounts tab's "Account Totals". */}
           <div
-            className="flex gap-[12px] items-center px-[16px] py-[12px] relative shrink-0 w-full bg-[#0a0c10] border-b border-solid border-[#1d2132] last:border-b-0"
+            className="flex gap-[12px] items-center px-[16px] py-[12px] relative shrink-0 w-full bg-brain-v1highlight-dropdown-bg border-b border-solid border-brain-v1stroke-2 last:border-b-0"
             data-testid="row-obligation-totals"
           >
             <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
-              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px] whitespace-nowrap">
+              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[16px] whitespace-nowrap">
                 Payable Totals
               </p>
               <p
-                className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px]"
+                className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px]"
                 data-testid="text-obligation-total-caption"
               >
                 {/* Names what the figure is, or why it isn't final. A total that is

@@ -27,8 +27,8 @@ const RoundIconButton = ({ children, onClick, label, testId }: { children: React
 );
 
 const Header = ({ title, onClose, testIdPrefix }: { title: string; onClose: () => void; testIdPrefix: string }) => (
-  <div className="relative h-[56px] flex items-center justify-center border-b border-[#1d2132] backdrop-blur-[10px]" style={{ background: "rgba(17,20,27,0.8)" }}>
-    <Dialog.Title className="[font-family:'Gilroy',sans-serif] font-semibold text-[20px] leading-[24px] text-[#a8b9f4]">
+  <div className="relative h-[56px] flex items-center justify-center border-b border-brain-v1stroke-2 backdrop-blur-[10px]" style={{ background: "rgba(17,20,27,0.8)" }}>
+    <Dialog.Title className="[font-family:'Gilroy',sans-serif] font-semibold text-[20px] leading-[24px] text-brain-v1baby-blue-100">
       {title}
     </Dialog.Title>
     <div className="absolute right-[11px] top-1/2 -translate-y-1/2">
@@ -51,7 +51,7 @@ const ModalShell = ({ open, onOpenChange, title, testId, description, width = 40
       <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm data-[state=open]:animate-in data-[state=open]:fade-in-0" />
       <Dialog.Content
         data-testid={`modal-${testId}`}
-        className="fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 rounded-[24px] border border-[#1d2132] overflow-hidden focus:outline-none data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
+        className="fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 rounded-modal border border-brain-v1stroke-2 overflow-hidden focus:outline-none data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
         style={{ background: "#11141b", width }}
       >
         <Dialog.Description className="sr-only">{description}</Dialog.Description>
@@ -131,7 +131,7 @@ export function ChangePlanModal({
                 type="button"
                 data-testid={`option-plan-${plan.id}`}
                 onClick={() => setSelected(plan.id)}
-                className="relative flex items-center gap-[12px] p-[16px] rounded-[16px] text-left w-full border transition-colors"
+                className="relative flex items-center gap-[12px] p-[16px] rounded-panel text-left w-full border transition-colors"
                 style={isSelected
                   ? { background: "#12032d", borderColor: "#7631ee" }
                   : { background: "#0a0c10", borderColor: "#1d2132" }}
@@ -168,14 +168,14 @@ export function ChangePlanModal({
                 )}
                 {plan.recommended && (
                   <span
-                    className="absolute -top-[8px] right-[24px] flex gap-[2px] items-center justify-center px-[6px] py-[2px] rounded-[22px] border"
+                    className="absolute -top-[8px] right-[24px] flex gap-[2px] items-center justify-center px-[6px] py-[2px] rounded-pill border"
                     style={{
                       backgroundImage: "linear-gradient(110deg, rgb(255,171,55) 0%, rgb(255,148,0) 100%)",
                       borderColor: "rgba(74,35,0,0.4)",
                     }}
                   >
                     <StarIcon />
-                    <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-[#4a2300]">Recommended</span>
+                    <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-brain-v1dark-orange">Recommended</span>
                   </span>
                 )}
               </button>
@@ -190,7 +190,7 @@ export function ChangePlanModal({
           className="w-full flex items-center justify-center px-[20px] py-[10px] rounded-full hover-elevate disabled:opacity-60 disabled:cursor-not-allowed"
           style={{ background: "#4a2300" }}
         >
-          <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-[#ff9500] whitespace-nowrap">
+          <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-brain-v1light-orange whitespace-nowrap">
             {isCurrent ? "Already On This Plan" : `Switch To ${selectedPlan?.name}`}
           </span>
         </button>
@@ -246,13 +246,13 @@ const CardInput = ({ value, onChange, placeholder, testId, maxLength, inputMode 
     inputMode={inputMode}
     data-testid={testId}
     autoComplete="off"
-    className="w-full rounded-[8px] px-[8px] py-[10px] [font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#a8b9f4] placeholder:text-[#6c779d] focus:outline-none focus:ring-1 focus:ring-[#7631ee]"
+    className="w-full rounded-[8px] px-[8px] py-[10px] [font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-brain-v1baby-blue-100 placeholder:text-brain-v1baby-blue-60 focus:outline-none focus:ring-1 focus:ring-brain-v1purple"
     style={{ background: "#222737" }}
   />
 );
 
 const InputLabel = ({ children }: { children: ReactNode }) => (
-  <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[16px] text-[#6c779d] whitespace-nowrap">{children}</p>
+  <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[16px] text-brain-v1baby-blue-60 whitespace-nowrap">{children}</p>
 );
 
 export function UpdateCardModal({
@@ -284,22 +284,22 @@ export function UpdateCardModal({
         <div className="flex flex-col gap-[32px] p-[24px]">
           <div className="flex flex-col gap-[16px]">
             <div className="flex gap-[8px] items-center w-full">
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[14px] text-[#6c779d] whitespace-nowrap">Payment Method</p>
-              <div className="flex-1 h-px bg-[#1d2132]" />
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[14px] text-brain-v1baby-blue-60 whitespace-nowrap">Payment Method</p>
+              <div className="flex-1 h-px bg-brain-v1stroke-2" />
             </div>
-            <p className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#a8b9f4]">
+            <p className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-brain-v1baby-blue-100">
               Card updates are unavailable until a tokenized payment processor is connected.
             </p>
-            <div className="flex gap-[8px] items-start p-[8px] rounded-[12px] border border-[#1d2132]">
+            <div className="flex gap-[8px] items-start p-[8px] rounded-row border border-brain-v1stroke-2">
               <InfoCircleIcon />
-              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[16px] text-[#6c779d]">
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[16px] text-brain-v1baby-blue-60">
                 Brain will not collect card numbers or security codes in this form.
               </p>
             </div>
           </div>
           <div className="flex gap-[8px] items-start">
             <CheckCircleIcon />
-            <p className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#a8b9f4]">
+            <p className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-brain-v1baby-blue-100">
               Add Stripe Elements or another tokenizing widget before enabling card updates.
             </p>
           </div>
@@ -310,7 +310,7 @@ export function UpdateCardModal({
             className="w-full flex items-center justify-center px-[20px] py-[10px] rounded-full opacity-50 cursor-not-allowed"
             style={{ background: "#4a2300" }}
           >
-            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-[#ff9500] whitespace-nowrap">Processor Required</span>
+            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-brain-v1light-orange whitespace-nowrap">Processor Required</span>
           </button>
         </div>
       </ModalShell>
@@ -341,7 +341,7 @@ export function UpdateCardModal({
           </div>
           <div className="flex flex-col gap-[6px]">
             <div className="flex gap-[8px] items-center w-full">
-              <p className="flex-1 [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[16px] text-[#6c779d]">Credit Card</p>
+              <p className="flex-1 [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[16px] text-brain-v1baby-blue-60">Credit Card</p>
               <div className="flex gap-[8px] items-center shrink-0">
                 {CARD_BRANDS.map(b => (
                   <span
@@ -379,7 +379,7 @@ export function UpdateCardModal({
           className="w-full flex items-center justify-center px-[20px] py-[10px] rounded-full hover-elevate disabled:opacity-60 disabled:cursor-not-allowed"
           style={{ background: "#240757" }}
         >
-          <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-[#7631ee] whitespace-nowrap">Add This Card</span>
+          <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-brain-v1purple whitespace-nowrap">Add This Card</span>
         </button>
       </div>
     </ModalShell>
@@ -401,7 +401,7 @@ export function CancelSubscriptionModal({
       data-testid="modal-cancel-subscription"
     >
       <div
-        className="flex flex-col overflow-hidden rounded-[16px] w-[320px]"
+        className="flex flex-col overflow-hidden rounded-panel w-[320px]"
         style={{
           background: "#11141b",
           border: "1px solid #1d2132",
@@ -410,10 +410,10 @@ export function CancelSubscriptionModal({
         }}
       >
         <div className="flex flex-col gap-[8px] items-center px-[8px] py-[24px] text-center w-full">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[20px] leading-[24px] w-full">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[20px] leading-[24px] w-full">
             Cancel Subscription
           </p>
-          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[16px] w-full">
+          <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[16px] w-full">
             Are you sure you want to cancel your subscription?
           </p>
         </div>
@@ -421,18 +421,18 @@ export function CancelSubscriptionModal({
           <button
             data-testid="button-cancel-sub-dismiss"
             onClick={onCancel}
-            className="flex flex-1 items-center justify-center px-[12px] py-[8px] rounded-[100px] hover:opacity-80 transition-opacity"
+            className="flex flex-1 items-center justify-center px-[12px] py-[8px] rounded-pill hover:opacity-80 transition-opacity"
             style={{ background: "#222737" }}
           >
-            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[14px] leading-[20px] whitespace-nowrap">Cancel</span>
+            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-60 text-[14px] leading-[20px] whitespace-nowrap">Cancel</span>
           </button>
           <button
             data-testid="button-cancel-sub-confirm"
             onClick={onConfirm}
-            className="flex flex-1 items-center justify-center px-[12px] py-[8px] rounded-[100px] hover:opacity-80 transition-opacity"
+            className="flex flex-1 items-center justify-center px-[12px] py-[8px] rounded-pill hover:opacity-80 transition-opacity"
             style={{ background: "#350011" }}
           >
-            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#d20344] text-[14px] leading-[20px] whitespace-nowrap">Confirm</span>
+            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1pink-red text-[14px] leading-[20px] whitespace-nowrap">Confirm</span>
           </button>
         </div>
       </div>

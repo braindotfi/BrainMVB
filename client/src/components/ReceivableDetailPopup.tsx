@@ -100,7 +100,7 @@ export function ReceivableDetailPopup({
                   so this says what is true (it is tracked and counted) and promises
                   nothing about being chased. */}
               <p
-                className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px] w-full"
+                className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[16px] w-full"
                 data-testid="text-receivable-next"
               >
                 This is money owed to you. Brain counts it in your receivables total
@@ -108,7 +108,7 @@ export function ReceivableDetailPopup({
               </p>
             </div>
           </DetailPopupBody>
-          <div className="border-t border-[#1d2132] border-solid flex items-center justify-between p-[16px] w-full">
+          <div className="border-t border-brain-v1stroke-2 border-solid flex items-center justify-between p-[16px] w-full">
             <RecordPager
               onPrev={() => currentIdx > 0 && onSelectReceivable?.(list[currentIdx - 1])}
               onNext={() => currentIdx >= 0 && currentIdx < list.length - 1 && onSelectReceivable?.(list[currentIdx + 1])}

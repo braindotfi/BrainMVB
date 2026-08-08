@@ -96,10 +96,10 @@ export function UnavailableDataBox({
 }) {
   return (
     <div
-      className={`flex gap-[12px] items-center px-[16px] py-[12px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-solid border-[#1d2132] ${className}`}
+      className={`flex gap-[12px] items-center px-[16px] py-[12px] relative rounded-[8px] shrink-0 w-full bg-brain-v1highlight-dropdown-bg border border-solid border-brain-v1stroke-2 ${className}`}
       data-testid={testId}
     >
-      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[#ff9500] text-[16px] flex-1">
+      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-brain-v1light-orange text-[16px] flex-1">
         {children}
       </p>
     </div>
@@ -115,27 +115,27 @@ export function UnavailableDataBox({
  */
 const TONES = {
   alert: {
-    box: "bg-[#350011] border-[rgba(210,3,68,0.2)]",
+    box: "bg-brain-v1dark-pink-red border-[rgba(210,3,68,0.2)]",
     pad: "p-[8px]",
     gap: "gap-[8px]",
     leading: "leading-[16px]",
-    text: "text-[#d20344]",
+    text: "text-brain-v1pink-red",
     Icon: () => <AlertIcon />,
   },
   muted: {
-    box: "bg-[#0a0c10] border-[#1d2132]",
+    box: "bg-brain-v1highlight-dropdown-bg border-brain-v1stroke-2",
     pad: "p-[8px]",
     gap: "gap-[8px]",
     leading: "leading-[16px]",
-    text: "text-[#6c779d]",
+    text: "text-brain-v1baby-blue-60",
     Icon: () => <InfoIcon color="#6c779d" />,
   },
   policy: {
-    box: "bg-[#240757] border-[rgba(118,49,238,0.2)]",
+    box: "bg-brain-v1dark-purple border-[rgba(118,49,238,0.2)]",
     pad: "p-[12px]",
     gap: "gap-[10px]",
     leading: "leading-[18px]",
-    text: "text-[#7631ee]",
+    text: "text-brain-v1purple",
     Icon: () => <InfoIcon className="mt-[2px]" />,
   },
 } as const;
@@ -150,7 +150,7 @@ function CalloutFrame({
   const { box, pad, gap, leading, text, Icon } = TONES[tone];
   return (
     <div
-      className={`${box} border border-solid rounded-[12px] flex items-center ${pad} w-full ${className}`}
+      className={`${box} border border-solid rounded-row flex items-center ${pad} w-full ${className}`}
       data-testid={testId}
     >
       <div className={`flex flex-1 ${gap} items-start min-w-px`}>

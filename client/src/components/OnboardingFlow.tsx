@@ -78,18 +78,18 @@ export function OnboardingFlow({ open, onClose, onComplete }: OnboardingFlowProp
         />
         <DialogPrimitive.Content
           aria-describedby="onboarding-description"
-          className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[24px] w-[480px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
+          className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-brain-v1baby-blue-5 border border-brain-v1stroke-2 border-solid flex flex-col items-start overflow-hidden rounded-modal w-[480px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
           data-testid="onboarding-modal"
         >
           {/* Header */}
-          <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-[#1d2132] border-solid h-[56px] relative shrink-0 w-full">
+          <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-brain-v1stroke-2 border-solid h-[56px] relative shrink-0 w-full">
             {step > 0 && (
               <button
                 type="button"
                 onClick={goBack}
                 aria-label="Back"
                 data-testid="button-onboarding-back"
-                className="absolute left-[11px] top-[11px] size-[32px] rounded-full bg-[#222737] flex items-center justify-center hover:bg-[#2c3247] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                className="absolute left-[11px] top-[11px] size-[32px] rounded-full bg-brain-v1baby-blue-15 flex items-center justify-center hover:bg-brain-v1baby-blue-15-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
               >
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                   <path d="M7.5 1.5L3 6L7.5 10.5" stroke="#a8b9f4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -102,7 +102,7 @@ export function OnboardingFlow({ open, onClose, onComplete }: OnboardingFlowProp
             <DialogPrimitive.Close
               data-testid="button-onboarding-close"
               aria-label="Close"
-              className="absolute right-[11px] top-[11px] size-[32px] p-0 hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+              className="absolute right-[11px] top-[11px] size-[32px] p-0 hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
             >
               <img src={closeIcon} alt="" className="size-[32px] rounded-full" />
             </DialogPrimitive.Close>
@@ -123,9 +123,9 @@ export function OnboardingFlow({ open, onClose, onComplete }: OnboardingFlowProp
                   type="button"
                   onClick={onClose}
                   data-testid="button-onboarding-skip"
-                  className="flex flex-1 items-center justify-center px-[20px] py-[10px] rounded-[100px] bg-[#222737] hover:bg-[#2c3247] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                  className="flex flex-1 items-center justify-center px-[20px] py-[10px] rounded-pill bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-15-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
                 >
-                  <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">
+                  <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[16px] whitespace-nowrap">
                     Skip
                   </span>
                 </button>
@@ -133,9 +133,9 @@ export function OnboardingFlow({ open, onClose, onComplete }: OnboardingFlowProp
                   type="button"
                   onClick={goNext}
                   data-testid="button-onboarding-continue"
-                  className="flex flex-1 items-center justify-center px-[20px] py-[10px] rounded-[100px] bg-[#4a2300] hover:bg-[#5a2d00] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ff9500]"
+                  className="flex flex-1 items-center justify-center px-[20px] py-[10px] rounded-pill bg-brain-v1dark-orange hover:bg-brain-v1dark-orange-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1light-orange"
                 >
-                  <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#ff9500] text-[16px] whitespace-nowrap">
+                  <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1light-orange text-[16px] whitespace-nowrap">
                     {isLast ? "Got it. Take me to Brain" : "Next"}
                   </span>
                 </button>
@@ -156,7 +156,7 @@ function StepDots({ total, current }: { total: number; current: number }) {
         <span
           key={i}
           className={`block rounded-full transition-colors ${
-            i === current ? "bg-[#7631EE] size-[8px]" : "bg-[rgba(118,49,238,0.3)] size-[6px]"
+            i === current ? "bg-brain-v1purple size-[8px]" : "bg-[rgba(118,49,238,0.3)] size-[6px]"
           }`}
         />
       ))}

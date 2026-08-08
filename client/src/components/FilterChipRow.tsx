@@ -1,7 +1,7 @@
 /**
  * The secondary filter control used by the Ledger's Vendors and Rules tabs.
  *
- * Visually this is an enclosed pill track (a #06070a rail holding rounded-[100px]
+ * Visually this is an enclosed pill track (a #06070a rail holding rounded-pill
  * pills), matching the Figma tab component. Semantically it is still a filter,
  * not a tab bar: Needs Review / New / Trusted / Suggested are filters over one
  * vendor list, and Default / Automations / Guardrails / Suggested are filters
@@ -52,7 +52,7 @@ export function FilterChipRow({ chips, value, onChange, label, testIdPrefix }: P
     <div
       role="group"
       aria-label={label}
-      className="inline-flex gap-[2px] items-center p-[2px] rounded-[400px] shrink-0 w-fit max-w-full flex-wrap"
+      className="inline-flex gap-[2px] items-center p-[2px] rounded-pill shrink-0 w-fit max-w-full flex-wrap"
       style={{ background: "#06070a" }}
     >
       {chips.map((chip) => {
@@ -69,9 +69,9 @@ export function FilterChipRow({ chips, value, onChange, label, testIdPrefix }: P
             onClick={() => onChange(chip.value)}
             data-testid={`${testIdPrefix}-${chip.value.toLowerCase().replace(/\s+/g, "-")}`}
             className={[
-              "flex items-center justify-center gap-[6px] px-[16px] py-[8px] rounded-[100px] shrink-0 transition-colors",
-              "outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]",
-              active ? "" : "hover:bg-[#11141b]",
+              "flex items-center justify-center gap-[6px] px-[16px] py-[8px] rounded-pill shrink-0 transition-colors",
+              "outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple",
+              active ? "" : "hover:bg-brain-v1baby-blue-5",
             ].join(" ")}
             style={{ background: active ? "#4a2300" : "transparent" }}
           >

@@ -81,14 +81,14 @@ function shortDate(iso: string): string {
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center w-full border-b border-[#1d2132] last:border-b-0">
+    <div className="flex items-center w-full border-b border-brain-v1stroke-2 last:border-b-0">
       <div className="flex flex-col justify-center px-[12px] py-[8px] w-[140px] shrink-0">
-        <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[20px] text-[#6c779d]">
+        <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[20px] text-brain-v1baby-blue-60">
           {label}
         </span>
       </div>
       <div className="flex flex-1 flex-col justify-center px-[12px] py-[8px] min-w-px">
-        <span className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[20px] text-[#a8b9f4] break-all">
+        <span className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[20px] text-brain-v1baby-blue-100 break-all">
           {value}
         </span>
       </div>
@@ -99,10 +99,10 @@ function Row({ label, value }: { label: string; value: string }) {
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex gap-[8px] items-center w-full">
-      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[14px] text-[#6c779d] whitespace-nowrap">
+      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[14px] text-brain-v1baby-blue-60 whitespace-nowrap">
         {children}
       </p>
-      <div className="flex-1 h-px bg-[#1d2132]" />
+      <div className="flex-1 h-px bg-brain-v1stroke-2" />
     </div>
   );
 }
@@ -149,16 +149,16 @@ export function AccountDetailPopup({
     <DialogPrimitive.Root open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
-        <DialogPrimitive.Content className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[24px] w-[480px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out">
+        <DialogPrimitive.Content className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-brain-v1baby-blue-5 border border-brain-v1stroke-2 border-solid flex flex-col items-start overflow-hidden rounded-modal w-[480px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out">
           {/* Title and Controls */}
-          <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-[#1d2132] border-solid h-[56px] relative shrink-0 w-full">
+          <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-brain-v1stroke-2 border-solid h-[56px] relative shrink-0 w-full">
             <DialogPrimitive.Title asChild>
-              <p className="-translate-x-1/2 absolute [font-family:'Gilroy',sans-serif] font-semibold leading-[24px] left-1/2 not-italic text-[#a8b9f4] text-[20px] text-center top-[calc(50%-12px)] whitespace-nowrap">
+              <p className="-translate-x-1/2 absolute [font-family:'Gilroy',sans-serif] font-semibold leading-[24px] left-1/2 not-italic text-brain-v1baby-blue-100 text-[20px] text-center top-[calc(50%-12px)] whitespace-nowrap">
                 Account Details
               </p>
             </DialogPrimitive.Title>
             <DialogPrimitive.Close
-              className="absolute right-[12px] top-[12px] size-[32px] p-0 hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+              className="absolute right-[12px] top-[12px] size-[32px] p-0 hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
               data-testid="button-close-account-popup"
             >
               <img src={closeIcon} alt="" className="size-[32px] rounded-full" />
@@ -168,22 +168,22 @@ export function AccountDetailPopup({
           {account ? (
             <>
               {/* Name / balance / role */}
-              <div className="border-b border-[#1d2132] border-solid flex flex-col items-start p-[24px] relative shrink-0 w-full">
+              <div className="border-b border-brain-v1stroke-2 border-solid flex flex-col items-start p-[24px] relative shrink-0 w-full">
                 <div className="flex flex-col gap-[8px] items-start w-full">
-                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-[#a8b9f4] text-[20px]" data-testid="text-account-name">
+                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-brain-v1baby-blue-100 text-[20px]" data-testid="text-account-name">
                     {account.name}
                   </p>
                   <div className="flex gap-[8px] items-center w-full">
-                    <p className="[font-family:'JetBrains_Mono',monospace] font-normal leading-[32px] text-[#a8b9f4] text-[32px]" data-testid="text-account-balance">
+                    <p className="[font-family:'JetBrains_Mono',monospace] font-normal leading-[32px] text-brain-v1baby-blue-100 text-[32px]" data-testid="text-account-balance">
                       {balanceLabel(account, format)}
                     </p>
-                    <div className="bg-[#222737] border border-[rgba(108,119,157,0.2)] border-solid flex items-center justify-center px-[8px] py-[3px] rounded-[22px] shrink-0">
-                      <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#6c779d] text-[12px] text-center whitespace-nowrap">
+                    <div className="bg-brain-v1baby-blue-15 border border-[rgba(108,119,157,0.2)] border-solid flex items-center justify-center px-[8px] py-[3px] rounded-pill shrink-0">
+                      <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-brain-v1baby-blue-60 text-[12px] text-center whitespace-nowrap">
                         {account.currency}
                       </p>
                     </div>
                   </div>
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px] w-full">
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[16px] w-full">
                     {roleOf(account)}
                   </p>
                 </div>
@@ -194,7 +194,7 @@ export function AccountDetailPopup({
                 {/* Provenance */}
                 <div className="flex flex-col gap-[16px] items-start w-full" data-testid="account-provenance">
                   <SectionLabel>Provenance</SectionLabel>
-                  <div className="bg-[#0a0c10] border border-[#1d2132] border-solid flex flex-col items-start rounded-[12px] w-full">
+                  <div className="bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 border-solid flex flex-col items-start rounded-row w-full">
                     <Row label="Source" value={`${account.institution ?? "-"} · ${KIND_LABEL[account.account_type] ?? account.account_type}`} />
                     <Row label="Account" value={accountRef(account)} />
                     {account.status && <Row label="Status" value={account.status} />}
@@ -225,11 +225,11 @@ export function AccountDetailPopup({
                             onKeyDown={(e) => {
                               if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpenTransaction(t.id); }
                             }}
-                            className="flex gap-[12px] items-center p-[10px] rounded-[8px] bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#151926] hover:border-[#1d2132] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] w-full"
+                            className="flex gap-[12px] items-center p-[10px] rounded-[8px] bg-brain-v1highlight-dropdown-bg border border-transparent transition-colors hover:bg-[#151926] hover:border-brain-v1stroke-2 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple w-full"
                           >
                             <div className="flex flex-1 flex-col min-w-px">
-                              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#a8b9f4] truncate">{label}</p>
-                              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] text-[#6c779d]">{shortDate(t.transaction_date)}</p>
+                              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-brain-v1baby-blue-100 truncate">{label}</p>
+                              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] text-brain-v1baby-blue-60">{shortDate(t.transaction_date)}</p>
                             </div>
                             <p
                               className="[font-family:'JetBrains_Mono',monospace] font-medium text-[15px] shrink-0"
@@ -263,10 +263,10 @@ export function AccountDetailPopup({
                 </div>
 
                 {/* Info banner */}
-                <div className="border border-[#1d2132] border-solid rounded-[12px] w-full">
+                <div className="border border-brain-v1stroke-2 border-solid rounded-row w-full">
                   <div className="flex items-start gap-[8px] p-[8px] w-full">
                     <InfoIcon color="#6c779d" className="mt-[2px]" />
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[14px] flex-1 min-w-px">
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px] flex-1 min-w-px">
                       A read only view. Brain reads this balance from your ledger; your bank owns the account.
                     </p>
                   </div>
@@ -274,17 +274,17 @@ export function AccountDetailPopup({
               </div>
 
               {!hidePager && (
-                <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-t border-[#1d2132] border-solid flex flex-col items-start p-[24px] relative shrink-0 w-full">
+                <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-t border-brain-v1stroke-2 border-solid flex flex-col items-start p-[24px] relative shrink-0 w-full">
                   <div className="flex gap-[16px] items-center w-full">
                     <button
                       type="button"
                       disabled={!prevAccount}
                       data-testid="button-account-previous"
                       onClick={() => prevAccount && onSelectAccount?.(prevAccount.id)}
-                      className="bg-[#222737] flex flex-1 gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] disabled:opacity-60 disabled:cursor-not-allowed transition-opacity"
+                      className="bg-brain-v1baby-blue-15 flex flex-1 gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-pill disabled:opacity-60 disabled:cursor-not-allowed transition-opacity"
                     >
                       <img src={arrowIcon} alt="" className="size-[16px] rotate-180" />
-                      <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">
+                      <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[16px] whitespace-nowrap">
                         Previous
                       </span>
                     </button>
@@ -293,9 +293,9 @@ export function AccountDetailPopup({
                       disabled={!nextAccount}
                       data-testid="button-account-next"
                       onClick={() => nextAccount && onSelectAccount?.(nextAccount.id)}
-                      className="bg-[#222737] flex flex-1 gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] disabled:opacity-60 disabled:cursor-not-allowed transition-opacity"
+                      className="bg-brain-v1baby-blue-15 flex flex-1 gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-pill disabled:opacity-60 disabled:cursor-not-allowed transition-opacity"
                     >
-                      <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">
+                      <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[16px] whitespace-nowrap">
                         Next
                       </span>
                       <img src={arrowIcon} alt="" className="size-[16px]" />

@@ -39,13 +39,13 @@ const RoundIconButton = ({ children, onClick, label, testId }: { children: React
 );
 
 const Header = ({ title, onClose, onBack, testIdPrefix }: { title: string; onClose: () => void; onBack?: () => void; testIdPrefix: string }) => (
-  <div className="relative h-[56px] flex items-center justify-center border-b border-[#1d2132]">
+  <div className="relative h-[56px] flex items-center justify-center border-b border-brain-v1stroke-2">
     {onBack && (
       <div className="absolute left-[11px] top-1/2 -translate-y-1/2">
         <RoundIconButton label="Back" testId={`button-${testIdPrefix}-back`} onClick={onBack}><BackIcon /></RoundIconButton>
       </div>
     )}
-    <Dialog.Title className="[font-family:'Gilroy',sans-serif] font-semibold text-[20px] leading-[24px] text-[#a8b9f4]">
+    <Dialog.Title className="[font-family:'Gilroy',sans-serif] font-semibold text-[20px] leading-[24px] text-brain-v1baby-blue-100">
       {title}
     </Dialog.Title>
     <div className="absolute right-[11px] top-1/2 -translate-y-1/2">
@@ -102,7 +102,7 @@ function CodeInput({ value, onChange, testIdPrefix }: { value: string; onChange:
               const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, CODE_LEN);
               if (pasted) { e.preventDefault(); onChange(pasted); }
             }}
-            className="flex-1 min-w-0 h-[56px] text-center rounded-[16px] outline-none focus:ring-1 focus:ring-[#7631ee] transition-shadow"
+            className="flex-1 min-w-0 h-[56px] text-center rounded-panel outline-none focus:ring-1 focus:ring-brain-v1purple transition-shadow"
             style={{
               background: "#222737",
               border: "none",
@@ -145,7 +145,7 @@ function CountrySelector({ value, onChange }: { value: string; onChange: (v: str
         type="button"
         data-testid="button-country-select"
         onClick={() => setOpen(v => !v)}
-        className="w-full flex items-center gap-[8px] bg-[#222737] rounded-[8px] px-[8px] py-[10px] outline-none focus:ring-1 focus:ring-[#7631ee]"
+        className="w-full flex items-center gap-[8px] bg-brain-v1baby-blue-15 rounded-[8px] px-[8px] py-[10px] outline-none focus:ring-1 focus:ring-brain-v1purple"
       >
         <span className="text-[16px] leading-[20px]">{selected.flag}</span>
         <span className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#fff]">
@@ -156,17 +156,17 @@ function CountrySelector({ value, onChange }: { value: string; onChange: (v: str
         </svg>
       </button>
       {open && (
-        <div className="absolute z-10 mt-[4px] w-full bg-[#222737] rounded-[8px] border border-[#1d2132] overflow-hidden">
+        <div className="absolute z-10 mt-[4px] w-full bg-brain-v1baby-blue-15 rounded-[8px] border border-brain-v1stroke-2 overflow-hidden">
           {COUNTRY_OPTIONS.map(c => (
             <button
               key={c.code}
               type="button"
               onClick={() => { onChange(c.code); setOpen(false); }}
-              className="w-full flex items-center gap-[8px] px-[8px] py-[10px] hover:bg-[#1d2132] transition-colors"
+              className="w-full flex items-center gap-[8px] px-[8px] py-[10px] hover:bg-brain-v1stroke-2 transition-colors"
             >
               <span className="text-[16px]">{c.flag}</span>
-              <span className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] text-[#a8b9f4]">{c.label}</span>
-              <span className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-[#6c779d] ml-auto">{c.code}</span>
+              <span className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] text-brain-v1baby-blue-100">{c.label}</span>
+              <span className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-brain-v1baby-blue-60 ml-auto">{c.code}</span>
             </button>
           ))}
         </div>
@@ -191,7 +191,7 @@ function TextInput({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className="w-full bg-[#222737] rounded-[8px] px-[8px] py-[10px] outline-none focus:ring-1 focus:ring-[#7631ee]"
+      className="w-full bg-brain-v1baby-blue-15 rounded-[8px] px-[8px] py-[10px] outline-none focus:ring-1 focus:ring-brain-v1purple"
       style={{
         color: "#fff",
         fontFamily: "'Gilroy', sans-serif",
@@ -296,7 +296,7 @@ export function ContactUpdateModal({
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm data-[state=open]:animate-in data-[state=open]:fade-in-0" />
         <Dialog.Content
           data-testid={`modal-contact-update-${type}`}
-          className="fixed left-1/2 top-1/2 z-50 w-[400px] -translate-x-1/2 -translate-y-1/2 bg-[#0a0c10] border border-[#1d2132] rounded-[24px] overflow-clip focus:outline-none data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
+          className="fixed left-1/2 top-1/2 z-50 w-[400px] -translate-x-1/2 -translate-y-1/2 bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 rounded-modal overflow-clip focus:outline-none data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
         >
           <Dialog.Description className="sr-only">
             {isEmail ? "Update your email address." : "Update your phone number."}
@@ -313,7 +313,7 @@ export function ContactUpdateModal({
             <div className="flex flex-col gap-[16px] w-[322px]">
               <p
                 data-testid={`text-contact-sub-${type}-${step}`}
-                className="[font-family:'Gilroy',sans-serif] font-medium text-[22px] leading-[28px] text-[#414965] w-full"
+                className="[font-family:'Gilroy',sans-serif] font-medium text-[22px] leading-[28px] text-brain-v1baby-blue-30 w-full"
               >
                 {subtitle}
               </p>
@@ -322,7 +322,7 @@ export function ContactUpdateModal({
                 <div className="flex flex-col gap-[12px] w-full">
                   {isEmail ? (
                     <div className="flex flex-col gap-[4px]">
-                      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-[#6c779d]">
+                      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-brain-v1baby-blue-60">
                         Email Address
                       </p>
                       <TextInput
@@ -335,13 +335,13 @@ export function ContactUpdateModal({
                   ) : (
                     <>
                       <div className="flex flex-col gap-[4px]">
-                        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-[#6c779d]">
+                        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-brain-v1baby-blue-60">
                           Country Code
                         </p>
                         <CountrySelector value={countryCode} onChange={setCountryCode} />
                       </div>
                       <div className="flex flex-col gap-[4px]">
-                        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-[#6c779d]">
+                        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-brain-v1baby-blue-60">
                           Phone#
                         </p>
                         <TextInput
@@ -364,7 +364,7 @@ export function ContactUpdateModal({
                     testIdPrefix={`input-verify-code-${type}`}
                   />
                   {error && (
-                    <p data-testid="text-verify-error" className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[18px] text-[#d20344] w-full">
+                    <p data-testid="text-verify-error" className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[18px] text-brain-v1pink-red w-full">
                       {error}
                     </p>
                   )}
@@ -379,9 +379,9 @@ export function ContactUpdateModal({
                   data-testid={`button-contact-verify-${type}`}
                   disabled={!canVerify}
                   onClick={advanceToVerify}
-                  className="flex-1 min-w-0 flex items-center justify-center bg-[#4a2300] rounded-[100px] px-[24px] py-[12px] disabled:opacity-60 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
+                  className="flex-1 min-w-0 flex items-center justify-center bg-brain-v1dark-orange rounded-pill px-[24px] py-[12px] disabled:opacity-60 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
                 >
-                  <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[18px] leading-[24px] text-[#ff9500] whitespace-nowrap">
+                  <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[18px] leading-[24px] text-brain-v1light-orange whitespace-nowrap">
                     Verify
                   </span>
                 </button>
@@ -391,9 +391,9 @@ export function ContactUpdateModal({
                     type="button"
                     data-testid={`button-verify-resend-${type}`}
                     onClick={resend}
-                    className="flex-1 min-w-0 flex items-center justify-center bg-[#222737] rounded-[100px] px-[16px] py-[10px] hover:opacity-90 transition-opacity"
+                    className="flex-1 min-w-0 flex items-center justify-center bg-brain-v1baby-blue-15 rounded-pill px-[16px] py-[10px] hover:opacity-90 transition-opacity"
                   >
-                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#a8b9f4] whitespace-nowrap">
+                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-brain-v1baby-blue-100 whitespace-nowrap">
                       Resend
                     </span>
                   </button>
@@ -402,7 +402,7 @@ export function ContactUpdateModal({
                     data-testid={`button-verify-confirm-${type}`}
                     disabled={code.length !== CODE_LEN}
                     onClick={confirm}
-                    className="flex-1 min-w-0 flex items-center justify-center bg-[#42bf23] rounded-[100px] px-[16px] py-[10px] disabled:opacity-60 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
+                    className="flex-1 min-w-0 flex items-center justify-center bg-brain-v1green rounded-pill px-[16px] py-[10px] disabled:opacity-60 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
                   >
                     <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-[#fff] whitespace-nowrap">
                       Confirm

@@ -84,7 +84,7 @@ describe("the count pill is declared once", () => {
     // 11px on 14px leading, dark text on a solid fill.
     expect(pill).toContain("text-[11px]");
     expect(pill).toContain("leading-[14px]");
-    expect(pill).toContain("text-[#0a0c10]");
+    expect(pill).toContain("text-brain-v1highlight-dropdown-bg");
   });
 
   it("the pill still forwards a test id", () => {
@@ -116,10 +116,10 @@ describe("record rows sit on the shared type ramp", () => {
     const row = block(read("../pages/RuleDetail.tsx"), "data-testid={`card-report-", 1100);
     // Title: medium 16/20. Subtext: medium 14/16 — it had been semibold 16/20,
     // which made the timestamp shout as loudly as the reason.
-    expect(row).toContain("font-medium leading-[20px] text-[#a8b9f4] text-[16px]");
-    expect(row).toContain("font-medium leading-[16px] text-[#6c779d] text-[14px]");
+    expect(row).toContain("font-medium leading-[20px] text-brain-v1baby-blue-100 text-[16px]");
+    expect(row).toContain("font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px]");
     expect(row, "the report title must not go back to semibold").not.toContain(
-      "font-semibold leading-[20px] text-[#a8b9f4] text-[16px]",
+      "font-semibold leading-[20px] text-brain-v1baby-blue-100 text-[16px]",
     );
   });
 

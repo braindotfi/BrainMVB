@@ -201,18 +201,18 @@ const NAV_ITEMS: { id: Section; label: string; Icon: ComponentType<{ active: boo
 /* ─── Shared primitives ─────────────────────────────────── */
 const Card = ({ children, noBorder }: { children: React.ReactNode; noBorder?: boolean }) => (
   <div
-    className={`rounded-[16px] overflow-hidden ${noBorder ? "" : "border border-[#1d2132]"}`}
+    className={`rounded-panel overflow-hidden ${noBorder ? "" : "border border-brain-v1stroke-2"}`}
     style={{ background: "#0a0c10" }}
   >
     {children}
   </div>
 );
 
-const Divider = () => <div className="h-px bg-[#1d2132] mx-4" />;
+const Divider = () => <div className="h-px bg-brain-v1stroke-2 mx-4" />;
 
 const RowIcon = ({ children, danger }: { children: React.ReactNode; danger?: boolean }) => (
   <div
-    className="size-[40px] rounded-[12px] flex items-center justify-center flex-shrink-0"
+    className="size-[40px] rounded-row flex items-center justify-center flex-shrink-0"
     style={{ background: danger ? "#1a0510" : "#161b28" }}
   >
     {children}
@@ -304,7 +304,7 @@ const SectionLabel = ({ children }: { children: string }) => (
 
 /* ─── Profile section (Figma 3695:38606 / 3957:43974) ─── */
 const RowCircleIcon = ({ src, inset, innerInset, overflowClip }: { src: string; inset: string; innerInset: string; overflowClip?: boolean }) => (
-  <div className="relative rounded-[100px] shrink-0 size-[40px]">
+  <div className="relative rounded-pill shrink-0 size-[40px]">
     <div className="absolute left-0 size-[40px] top-0">
       <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.settings_row_circle_bg} />
     </div>
@@ -322,7 +322,7 @@ const RowCircleIcon = ({ src, inset, innerInset, overflowClip }: { src: string; 
    width/height to preserve its aspect ratio (the Figma exports use
    preserveAspectRatio="none", so we size the wrapper exactly). */
 const ProfileRowCircle = ({ src, w, h }: { src: string; w: number; h: number }) => (
-  <div className="relative rounded-[100px] shrink-0 size-[40px]">
+  <div className="relative rounded-pill shrink-0 size-[40px]">
     <img alt="" className="absolute inset-0 block size-full" src={ICONS.settings_row_circle_bg} />
     <img
       alt=""
@@ -336,7 +336,7 @@ const ProfileRowCircle = ({ src, w, h }: { src: string; w: number; h: number }) 
 /* Briefcase icon: 4-layer composite for the "Add Business Account" row
    (Figma node within 3957:43975 misc section). */
 const BriefcaseRowCircle = () => (
-  <div className="relative rounded-[100px] shrink-0 size-[40px]">
+  <div className="relative rounded-pill shrink-0 size-[40px]">
     <img alt="" className="absolute inset-0 block size-full" src={ICONS.settings_row_circle_bg} />
     <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 size-[24px]">
       {/* body 20×15 */}
@@ -363,7 +363,7 @@ const ChevronActionButton = ({ label, testId, onClick }: { label: string; testId
     aria-label={label}
     aria-disabled={!onClick}
     data-testid={testId}
-    className={`relative rounded-[100px] shrink-0 size-[40px] transition-opacity ${onClick ? "cursor-pointer hover:opacity-90" : "opacity-40 cursor-not-allowed"}`}
+    className={`relative rounded-pill shrink-0 size-[40px] transition-opacity ${onClick ? "cursor-pointer hover:opacity-90" : "opacity-40 cursor-not-allowed"}`}
   >
     <img alt="" className="absolute inset-0 block size-full" src={ICONS.settings_action_circle_bg} />
     <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 size-[24px]">
@@ -466,7 +466,7 @@ function ProfileSection() {
             data-testid="button-avatar"
             onClick={() => avatarFileRef.current?.click()}
             aria-label="Change profile photo"
-            className="relative size-[64px] rounded-full flex-shrink-0 group focus:outline-none focus:ring-2 focus:ring-[#7631ee] hover-elevate"
+            className="relative size-[64px] rounded-full flex-shrink-0 group focus:outline-none focus:ring-2 focus:ring-brain-v1purple hover-elevate"
           >
             <img
               data-testid="img-avatar"
@@ -533,7 +533,7 @@ function ProfileSection() {
               }
               setEditing(v => !v);
             }}
-            className="bg-[#4a2300] flex gap-[8px] items-center justify-center px-[14px] py-[8px] rounded-[100px] hover:opacity-90 transition-opacity flex-shrink-0"
+            className="bg-brain-v1dark-orange flex gap-[8px] items-center justify-center px-[14px] py-[8px] rounded-pill hover:opacity-90 transition-opacity flex-shrink-0"
           >
             <div className="overflow-clip relative shrink-0 size-[16px]">
               <div className="absolute inset-[13.87%_13.87%_12.5%_12.5%]">
@@ -547,7 +547,7 @@ function ProfileSection() {
                 </div>
               </div>
             </div>
-            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#ff9500] text-[14px] leading-[20px] whitespace-nowrap">
+            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1light-orange text-[14px] leading-[20px] whitespace-nowrap">
               {editing ? "Save" : "Edit"}
             </span>
           </button>
@@ -611,10 +611,10 @@ function ProfileSection() {
       <div className="flex flex-col gap-[4px]">
         <SectionLabel>Currency</SectionLabel>
         {/* overflow-visible so the dropdown isn’t clipped by the card */}
-        <div className="rounded-[16px]" style={{ background: "#0a0c10" }}>
+        <div className="rounded-panel" style={{ background: "#0a0c10" }}>
           <SettingRow
             icon={
-              <div className="relative rounded-[100px] shrink-0 size-[40px]">
+              <div className="relative rounded-pill shrink-0 size-[40px]">
                 <img alt="" className="absolute inset-0 block size-full" src={ICONS.settings_row_circle_bg} />
                 <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 size-[24px]">
                   <div className="absolute inset-[12.5%]">
@@ -672,7 +672,7 @@ function ProfileSection() {
                   clearOnboarding(user?.id);
                   navigate("/");
                 }}
-                className="shrink-0 rounded-[100px] px-[14px] py-[8px] bg-[#222737] hover:bg-[#2c3247] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-[#a8b9f4] whitespace-nowrap"
+                className="shrink-0 rounded-pill px-[14px] py-[8px] bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-15-hover transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-brain-v1baby-blue-100 whitespace-nowrap"
               >
                 Replay
               </button>
@@ -723,7 +723,7 @@ function BillingSection() {
                 </p>
                 {plan && cancelled && (
                   <span
-                    className="px-2 py-[3px] rounded-[22px]"
+                    className="px-2 py-[3px] rounded-pill"
                     style={{
                       background: "#4a2300",
                       color: "#ff9500",
@@ -760,7 +760,7 @@ function BillingSection() {
                 type="button"
                 data-testid="button-upgrade-plan"
                 onClick={() => setChangePlanOpen(true)}
-                className="rounded-[100px] px-[14px] py-[8px] hover-elevate"
+                className="rounded-pill px-[14px] py-[8px] hover-elevate"
                 style={{ background: "#240757", color: "#7631ee", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "14px", lineHeight: "20px", whiteSpace: "nowrap" }}
               >
                   {plan ? "Change Plan" : "Choose A Plan"}
@@ -827,10 +827,10 @@ function BillingSection() {
               type="button"
               data-testid="button-update-card"
               onClick={() => setUpdateCardOpen(true)}
-              className="rounded-[100px] px-[14px] py-[8px] hover-elevate flex-shrink-0 flex items-center justify-center gap-[2px]"
+              className="rounded-pill px-[14px] py-[8px] hover-elevate flex-shrink-0 flex items-center justify-center gap-[2px]"
               style={{ background: "#240757", color: "#7631ee", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "14px", lineHeight: "20px", whiteSpace: "nowrap" }}
             >
-              {!cardLast4 && <Plus className="relative shrink-0 size-[16px] text-[#7631ee]" />}
+              {!cardLast4 && <Plus className="relative shrink-0 size-[16px] text-brain-v1purple" />}
               {cardLast4 ? "Update Card" : "Add Card"}
             </button>
           </div>
@@ -944,7 +944,7 @@ export function SettingsPage() {
 
   return (
     <div
-      className="flex h-full rounded-[16px] border border-[#1d2132] overflow-hidden"
+      className="flex h-full rounded-panel border border-brain-v1stroke-2 overflow-hidden"
       style={{ background: "#11141b" }}
     >
       {/* ── Settings sidebar ── */}
@@ -960,7 +960,7 @@ export function SettingsPage() {
                 key={id}
                 data-testid={`settings-nav-${id}`}
                 onClick={() => selectSection(id)}
-                className="flex items-center gap-2 p-2 w-full rounded-[12px] transition-colors text-left"
+                className="flex items-center gap-2 p-2 w-full rounded-row transition-colors text-left"
                 style={{ background: active ? "#0a0c10" : "transparent" }}
                 onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.background = "rgba(168,185,244,0.05)"; }}
                 onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.background = "transparent"; }}

@@ -29,8 +29,8 @@ import {
 
 function LabelValue({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
-    <div className="flex flex-col gap-[4px] rounded-[12px] bg-[#0a0c10] p-[12px]">
-      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[14px] text-[#414965] text-[12px] uppercase">
+    <div className="flex flex-col gap-[4px] rounded-row bg-brain-v1highlight-dropdown-bg p-[12px]">
+      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[14px] text-brain-v1baby-blue-30 text-[12px] uppercase">
         {label}
       </p>
       <p
@@ -44,14 +44,14 @@ function LabelValue({ label, value, mono }: { label: string; value: string; mono
 
 function LockedRow({ title, detail }: { title: string; detail: string }) {
   return (
-    <div className="flex items-start gap-[10px] rounded-[12px] border border-[#1d2132] bg-[#0a0c10] p-[12px]">
+    <div className="flex items-start gap-[10px] rounded-row border border-brain-v1stroke-2 bg-brain-v1highlight-dropdown-bg p-[12px]">
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="mt-[2px] shrink-0" aria-hidden="true">
         <rect x="3" y="7" width="10" height="6.5" rx="1.5" stroke="#6c779d" strokeWidth="1.3" />
         <path d="M5 7V5.5a3 3 0 0 1 6 0V7" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" />
       </svg>
       <div className="flex-1 min-w-0">
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[18px] text-[#a8b9f4] text-[14px]">{title}</p>
-        <p className="mt-[2px] [font-family:'Gilroy',sans-serif] font-medium leading-[17px] text-[#6c779d] text-[13px]">{detail}</p>
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[18px] text-brain-v1baby-blue-100 text-[14px]">{title}</p>
+        <p className="mt-[2px] [font-family:'Gilroy',sans-serif] font-medium leading-[17px] text-brain-v1baby-blue-60 text-[13px]">{detail}</p>
       </div>
     </div>
   );
@@ -82,7 +82,7 @@ function MemberDetailBody({ id }: { id: string }) {
   if (!member) {
     return (
       <div className="p-[24px]">
-        <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[15px]" data-testid="text-member-unavailable">
+        <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[15px]" data-testid="text-member-unavailable">
           {isLoading ? "Loading member…" : "This member is no longer available."}
         </p>
       </div>
@@ -105,7 +105,7 @@ function MemberDetailBody({ id }: { id: string }) {
       {/* Identity */}
       <div className="flex items-center gap-[14px]">
         <div className="size-[48px] rounded-full bg-[#161b28] flex items-center justify-center shrink-0">
-          <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[18px]">
+          <span className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[18px]">
             {member.displayName.slice(0, 1).toUpperCase()}
           </span>
         </div>
@@ -116,7 +116,7 @@ function MemberDetailBody({ id }: { id: string }) {
             </p>
             {!member.active && (
               <span
-                className="px-[8px] py-[2px] rounded-[22px] [font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[13px]"
+                className="px-[8px] py-[2px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[13px]"
                 style={{ background: "rgba(210,3,68,0.12)", color: "#d20344", border: "1px solid rgba(210,3,68,0.3)" }}
                 data-testid="badge-member-deactivated"
               >
@@ -124,7 +124,7 @@ function MemberDetailBody({ id }: { id: string }) {
               </span>
             )}
           </div>
-          <p className="[font-family:'JetBrains_Mono',monospace] text-[#6c779d] text-[13px] leading-[18px] truncate">{member.email}</p>
+          <p className="[font-family:'JetBrains_Mono',monospace] text-brain-v1baby-blue-60 text-[13px] leading-[18px] truncate">{member.email}</p>
         </div>
       </div>
 
@@ -139,7 +139,7 @@ function MemberDetailBody({ id }: { id: string }) {
 
       {/* Locked, core-enforced rows */}
       <div className="flex flex-col gap-[8px]">
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[12px] uppercase">
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-30 text-[12px] uppercase">
           Enforced by Brain core
         </p>
         {policy?.selfApprovalBlocked && (
@@ -172,17 +172,17 @@ function MemberDetailDialog({ id }: { id: string }) {
         />
         <DialogPrimitive.Content
           aria-describedby={undefined}
-          className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[24px] w-[440px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
+          className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-brain-v1baby-blue-5 border border-brain-v1stroke-2 border-solid flex flex-col items-start overflow-hidden rounded-modal w-[440px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
           data-testid="member-detail-popup"
         >
-          <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border border-[#1d2132] border-solid h-[56px] relative shrink-0 w-full">
-            <DialogPrimitive.Title className="absolute left-1/2 -translate-x-1/2 top-[calc(50%-12px)] [font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#a8b9f4] text-[20px] text-center whitespace-nowrap">
+          <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border border-brain-v1stroke-2 border-solid h-[56px] relative shrink-0 w-full">
+            <DialogPrimitive.Title className="absolute left-1/2 -translate-x-1/2 top-[calc(50%-12px)] [font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-brain-v1baby-blue-100 text-[20px] text-center whitespace-nowrap">
               Member
             </DialogPrimitive.Title>
             <DialogPrimitive.Close
               data-testid="button-member-close"
               aria-label="Close"
-              className="absolute right-[11px] top-[11px] size-[32px] p-0 hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+              className="absolute right-[11px] top-[11px] size-[32px] p-0 hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
             >
               <img src={closeIcon} alt="" className="size-[32px] rounded-full" />
             </DialogPrimitive.Close>

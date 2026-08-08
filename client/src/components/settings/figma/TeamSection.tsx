@@ -53,7 +53,7 @@ function RolePill({ role }: { role: MemberRole }) {
   const border = role === "admin" ? "rgba(118,49,238,0.2)" : `${color}33`;
   return (
     <span
-      className="px-[8px] py-[3px] rounded-[22px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px]"
+      className="px-[8px] py-[3px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px]"
       style={{ background: bg, color, border: `1px solid ${border}` }}
       data-testid={`pill-role-${role}`}
     >
@@ -106,7 +106,7 @@ function MemberRow({ member, inviteActions }: { member: BrainMember; inviteActio
         type="button"
         onClick={() => openMemberDetail(member.id)}
         data-testid={`row-member-${member.id}`}
-        className="flex gap-[16px] h-[40px] items-center w-full text-left cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[#414965] rounded-[4px]"
+        className="flex gap-[16px] h-[40px] items-center w-full text-left cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30 rounded-[4px]"
       >
         <div className="flex flex-[1_0_0] gap-[8px] items-center min-w-px">
           <div className="shrink-0 size-[40px] rounded-full overflow-hidden">
@@ -114,13 +114,13 @@ function MemberRow({ member, inviteActions }: { member: BrainMember; inviteActio
           </div>
           <div className="min-w-0 flex flex-col gap-[4px] items-start justify-center">
           <div className="flex gap-[8px] items-center shrink-0">
-            <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] truncate">
+            <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[20px] truncate">
               {member.displayName}
             </p>
             <RolePill role={member.role} />
             {invited && (
               <span
-                className="px-[8px] py-[3px] rounded-[22px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px]"
+                className="px-[8px] py-[3px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px]"
                 style={{ background: "rgba(108,119,157,0.1)", color: "#6c779d", border: "1px solid rgba(108,119,157,0.3)" }}
                 data-testid={`pill-invited-${member.id}`}
               >
@@ -129,7 +129,7 @@ function MemberRow({ member, inviteActions }: { member: BrainMember; inviteActio
             )}
             {isBackup && (
               <span
-                className="px-[8px] py-[3px] rounded-[22px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px]"
+                className="px-[8px] py-[3px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px]"
                 style={{ background: "rgba(255,149,0,0.1)", color: "#ff9500", border: "1px solid rgba(255,149,0,0.3)" }}
                 title={BACKUP_APPROVER_NOTE}
                 data-testid={`pill-backup-${member.id}`}
@@ -139,19 +139,19 @@ function MemberRow({ member, inviteActions }: { member: BrainMember; inviteActio
             )}
             {!member.active && (
               <span
-                className="px-[8px] py-[3px] rounded-[22px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px]"
+                className="px-[8px] py-[3px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px]"
                 style={{ background: "rgba(210,3,68,0.12)", color: "#d20344", border: "1px solid rgba(210,3,68,0.3)" }}
               >
                 Deactivated
               </span>
             )}
           </div>
-          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[16px] truncate" data-testid={`text-envelope-${member.id}`}>
+          <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[16px] truncate" data-testid={`text-envelope-${member.id}`}>
             {envelopeLine(member.approval)}
           </p>
           </div>
         </div>
-        <div className="relative rounded-[100px] shrink-0 size-[40px] overflow-hidden">
+        <div className="relative rounded-pill shrink-0 size-[40px] overflow-hidden">
           <img alt="" className="absolute inset-0 size-full" src={arrowButton} />
         </div>
       </button>
@@ -163,7 +163,7 @@ function MemberRow({ member, inviteActions }: { member: BrainMember; inviteActio
               disabled={busy !== null}
               onClick={() => inviteCall("resend")}
               data-testid={`button-resend-invite-${member.id}`}
-              className="rounded-[100px] bg-[#240757] px-[12px] py-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[#7631ee] text-[12px] leading-[16px] hover:bg-[#2e0a6e] transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center"
+              className="rounded-pill bg-brain-v1dark-purple px-[12px] py-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1purple text-[12px] leading-[16px] hover:bg-brain-v1dark-purple-hover transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center"
             >
               {busy === "resend" ? "Resending…" : "Resend Invite"}
             </button>
@@ -172,7 +172,7 @@ function MemberRow({ member, inviteActions }: { member: BrainMember; inviteActio
               disabled={busy !== null}
               onClick={() => inviteCall("revoke")}
               data-testid={`button-revoke-invite-${member.id}`}
-              className="rounded-[100px] px-[12px] py-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center"
+              className="rounded-pill px-[12px] py-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center"
               style={{ background: "rgba(210,3,68,0.08)", color: "#d20344", border: "1px solid rgba(210,3,68,0.3)" }}
             >
               {busy === "revoke" ? "Revoking…" : "Revoke Invite"}
@@ -186,7 +186,7 @@ function MemberRow({ member, inviteActions }: { member: BrainMember; inviteActio
           data-testid={`button-backup-${member.id}`}
           aria-pressed={isBackup}
           title={BACKUP_APPROVER_NOTE}
-          className="rounded-[100px] px-[12px] py-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] transition-colors flex items-center justify-center"
+          className="rounded-pill px-[12px] py-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] transition-colors flex items-center justify-center"
           style={
             isBackup
               ? { background: "rgba(255,149,0,0.1)", color: "#ff9500", border: "1px solid rgba(255,149,0,0.3)" }
@@ -288,13 +288,13 @@ function AddMemberDialog({ open, onClose, production }: { open: boolean; onClose
   };
 
   const fieldCls =
-    "w-full bg-[#222737] rounded-[8px] px-[8px] py-[10px] [font-family:'Gilroy',sans-serif] text-[16px] text-white placeholder:text-[#6c779d] outline-none focus:ring-1 focus:ring-[#7631ee]";
+    "w-full bg-brain-v1baby-blue-15 rounded-[8px] px-[8px] py-[10px] [font-family:'Gilroy',sans-serif] text-[16px] text-white placeholder:text-brain-v1baby-blue-60 outline-none focus:ring-1 focus:ring-brain-v1purple";
 
   const inputLabel = (text: string) => (
     <div className="content-stretch flex flex-col items-start relative shrink-0 w-full">
       <div className="content-stretch flex gap-[8px] items-center relative shrink-0 w-full">
-        <p className="[word-break:break-word] [font-family:'Gilroy',sans-serif] font-semibold leading-[14px] not-italic relative shrink-0 text-[#6c779d] text-[14px] whitespace-nowrap">{text}</p>
-        <div className="flex-[1_0_0] h-px min-w-px bg-[#1d2132] relative" />
+        <p className="[word-break:break-word] [font-family:'Gilroy',sans-serif] font-semibold leading-[14px] not-italic relative shrink-0 text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">{text}</p>
+        <div className="flex-[1_0_0] h-px min-w-px bg-brain-v1stroke-2 relative" />
       </div>
     </div>
   );
@@ -305,11 +305,11 @@ function AddMemberDialog({ open, onClose, production }: { open: boolean; onClose
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px]" data-testid="add-member-backdrop" />
         <DialogPrimitive.Content
           aria-labelledby="add-member-title"
-          className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] rounded-[24px] w-[440px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none flex flex-col overflow-hidden"
+          className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-brain-v1baby-blue-5 border border-brain-v1stroke-2 rounded-modal w-[440px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none flex flex-col overflow-hidden"
           data-testid="add-member-dialog"
         >
-          <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-[#1d2132] border-solid h-[56px] relative shrink-0 w-full">
-            <p id="add-member-title" className="-translate-x-1/2 [font-family:'Gilroy',sans-serif] font-semibold leading-[24px] absolute left-[calc(50%+0.5px)] not-italic text-[#a8b9f4] text-[20px] text-center top-[calc(50%-12px)] whitespace-nowrap">
+          <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-brain-v1stroke-2 border-solid h-[56px] relative shrink-0 w-full">
+            <p id="add-member-title" className="-translate-x-1/2 [font-family:'Gilroy',sans-serif] font-semibold leading-[24px] absolute left-[calc(50%+0.5px)] not-italic text-brain-v1baby-blue-100 text-[20px] text-center top-[calc(50%-12px)] whitespace-nowrap">
               Add Member
             </p>
             <DialogPrimitive.Close aria-label="Close" data-testid="button-add-member-close" className="absolute right-[11px] top-[11px] size-[32px] p-0 hover:opacity-90 transition-opacity">
@@ -340,7 +340,7 @@ function AddMemberDialog({ open, onClose, production }: { open: boolean; onClose
                         type="button"
                         onClick={() => setRole(r)}
                         data-testid={`select-role-${r}`}
-              className="content-stretch flex flex-[1_0_0] items-center justify-center min-w-px px-[16px] py-[8px] relative rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[14px] whitespace-nowrap transition-colors"
+              className="content-stretch flex flex-[1_0_0] items-center justify-center min-w-px px-[16px] py-[8px] relative rounded-pill [font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[14px] whitespace-nowrap transition-colors"
                         style={{
                           background: role === r ? "#240757" : "#0c0f14",
                           color: role === r ? "#7631ee" : "#414965",
@@ -361,7 +361,7 @@ function AddMemberDialog({ open, onClose, production }: { open: boolean; onClose
                         type="button"
                         onClick={() => toggleDomain(d)}
                         data-testid={`toggle-domain-${d}`}
-                        className="content-stretch flex items-center justify-center px-[16px] py-[8px] relative rounded-[100px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[14px] whitespace-nowrap transition-colors"
+                        className="content-stretch flex items-center justify-center px-[16px] py-[8px] relative rounded-pill shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[14px] whitespace-nowrap transition-colors"
                         style={{
                           background: domains.includes(d) ? "#240757" : "#0c0f14",
                           color: domains.includes(d) ? "#7631ee" : "#414965",
@@ -398,7 +398,7 @@ function AddMemberDialog({ open, onClose, production }: { open: boolean; onClose
                         type="button"
                         onClick={() => setBackup(v)}
                         data-testid={`select-backup-${label.toLowerCase()}`}
-                        className="content-stretch flex flex-[1_0_0] items-center justify-center min-w-px px-[16px] py-[8px] relative rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[14px] whitespace-nowrap transition-colors"
+                        className="content-stretch flex flex-[1_0_0] items-center justify-center min-w-px px-[16px] py-[8px] relative rounded-pill [font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[14px] whitespace-nowrap transition-colors"
                         style={{
                           background: backup === v ? "#240757" : "#0c0f14",
                           color: backup === v ? "#7631ee" : "#414965",
@@ -409,7 +409,7 @@ function AddMemberDialog({ open, onClose, production }: { open: boolean; onClose
                     ))}
                   </div>
                   <p
-                    className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[#6c779d] text-[13px]"
+                    className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[13px]"
                     data-testid="text-backup-unenforced"
                   >
                     {BACKUP_APPROVER_NOTE}
@@ -427,7 +427,7 @@ function AddMemberDialog({ open, onClose, production }: { open: boolean; onClose
               onClick={submit}
               disabled={busy}
               data-testid="button-submit-member"
-              className="w-full bg-[#4a2300] hover:bg-[#5a2d00] transition-colors flex items-center justify-center px-[20px] py-[10px] rounded-[100px] [font-family:'Gilroy',sans-serif] font-semibold text-[#ff9500] text-[14px] leading-[20px] disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full bg-brain-v1dark-orange hover:bg-brain-v1dark-orange-hover transition-colors flex items-center justify-center px-[20px] py-[10px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1light-orange text-[14px] leading-[20px] disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {busy ? "Adding…" : "Add Member"}
             </button>
@@ -461,32 +461,32 @@ export default function TeamSection() {
       {/* Header + panel: 4px gap, matching Account subpage */}
       <div className="flex flex-col gap-[4px]">
         <div className="flex items-center min-h-[36px]">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[16px] leading-[24px]">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-30 text-[16px] leading-[24px]">
             Members
           </p>
         </div>
 
-        <div className="bg-[#0a0c10] rounded-[16px] p-[16px] flex flex-col gap-[16px]">
+        <div className="bg-brain-v1highlight-dropdown-bg rounded-panel p-[16px] flex flex-col gap-[16px]">
         {isLoading && (
           <div className="flex gap-[16px] h-[40px] items-center">
-            <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">Loading members…</p>
+            <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[16px]">Loading members…</p>
           </div>
         )}
         {isError && (
           <div className="flex gap-[16px] h-[40px] items-center">
-            <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#d20344] text-[16px]" data-testid="text-members-error">
+            <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1pink-red text-[16px]" data-testid="text-members-error">
               Couldn't load your team from Brain core.
             </p>
           </div>
         )}
         {!isLoading && !isError && members.length === 0 && (
           <div className="flex gap-[16px] h-[40px] items-center">
-            <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#6c779d] text-[16px]">No members yet.</p>
+            <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[16px]">No members yet.</p>
           </div>
         )}
         {members.map((m, i) => (
           <div key={m.id} className="flex flex-col gap-[16px]">
-            {i > 0 && <div className="h-px bg-[#1d2132] w-full" />}
+            {i > 0 && <div className="h-px bg-brain-v1stroke-2 w-full" />}
             <MemberRow member={m} inviteActions={production} />
           </div>
         ))}
@@ -497,9 +497,9 @@ export default function TeamSection() {
         type="button"
         onClick={() => setAddOpen(true)}
         data-testid="button-add-member"
-        className="self-start rounded-[100px] bg-[#240757] px-[14px] py-[8px] [font-family:'Gilroy',sans-serif] font-semibold text-[#7631ee] text-[14px] leading-[20px] hover:bg-[#2e0a6e] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE] flex items-center justify-center gap-[2px]"
+        className="self-start rounded-pill bg-brain-v1dark-purple px-[14px] py-[8px] [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1purple text-[14px] leading-[20px] hover:bg-brain-v1dark-purple-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple flex items-center justify-center gap-[2px]"
       >
-        <Plus className="relative shrink-0 size-[16px] text-[#7631ee]" />
+        <Plus className="relative shrink-0 size-[16px] text-brain-v1purple" />
         {production ? "Invite Member" : "Add Member"}
       </button>
 

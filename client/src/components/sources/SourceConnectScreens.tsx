@@ -177,12 +177,12 @@ export function BankConnect({ onDone }: { onDone: () => void }) {
       ) : statusQuery.isSuccess && !isConfigured ? (
         <div
           data-testid="alert-plaid-not-configured"
-          className="rounded-[12px] px-[14px] py-[12px] [font-family:'Gilroy',sans-serif] text-[13px] leading-[18px]"
+          className="rounded-row px-[14px] py-[12px] [font-family:'Gilroy',sans-serif] text-[13px] leading-[18px]"
           style={{ background: "rgba(118,49,238,0.08)", color: "#a8b9f4", border: "1px solid rgba(118,49,238,0.25)" }}
         >
           Bank connections require Plaid credentials. Add{" "}
-          <code className="text-[#7631EE]">PLAID_CLIENT_ID</code> and{" "}
-          <code className="text-[#7631EE]">PLAID_SECRET</code> to enable this.
+          <code className="text-brain-v1purple">PLAID_CLIENT_ID</code> and{" "}
+          <code className="text-brain-v1purple">PLAID_SECRET</code> to enable this.
         </div>
       ) : statusQuery.isSuccess && isConfigured ? (
         <PlaidConnectButton
@@ -241,7 +241,7 @@ function PlaidConnectButton({
         onClick={() => open()}
         disabled={disabled}
         data-testid="button-plaid-connect"
-        className="flex items-center justify-center gap-[10px] h-[48px] rounded-[12px] [font-family:'Gilroy',sans-serif] font-semibold text-[15px] leading-[18px] transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
+        className="flex items-center justify-center gap-[10px] h-[48px] rounded-row [font-family:'Gilroy',sans-serif] font-semibold text-[15px] leading-[18px] transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
         style={{ background: "#7631EE", color: "#FFFFFF" }}
       >
         {isExchanging || isLoading ? (
@@ -258,7 +258,7 @@ function PlaidConnectButton({
           {loadError.replace(/^\d+:\s*/, "")}
         </p>
       )}
-      <p className="[font-family:'Gilroy',sans-serif] text-[11px] leading-[14px] text-[#6c779d] text-center">
+      <p className="[font-family:'Gilroy',sans-serif] text-[11px] leading-[14px] text-brain-v1baby-blue-60 text-center">
         Search 12,000+ institutions · bank-grade encryption
       </p>
     </div>
@@ -341,7 +341,7 @@ export function ProviderPicker({ category }: { category: CategoryId }) {
               disabled={isConnecting || (!clickable)}
               onClick={() => handleClick(p)}
               data-testid={`button-provider-${p.id}`}
-              className="flex items-center gap-[12px] bg-[#0a0c10] rounded-[12px] p-[12px] transition-colors text-left disabled:opacity-60 disabled:cursor-not-allowed"
+              className="flex items-center gap-[12px] bg-brain-v1highlight-dropdown-bg rounded-row p-[12px] transition-colors text-left disabled:opacity-60 disabled:cursor-not-allowed"
             >
               <div
                 className="size-[32px] rounded-full flex items-center justify-center shrink-0"
@@ -352,7 +352,7 @@ export function ProviderPicker({ category }: { category: CategoryId }) {
                 </span>
               </div>
               <div className="flex-1 min-w-0 flex flex-col">
-                <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[14px] leading-[18px] truncate">
+                <span className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[14px] leading-[18px] truncate">
                   {p.name}
                 </span>
                 <span
@@ -370,9 +370,9 @@ export function ProviderPicker({ category }: { category: CategoryId }) {
                   <path d="M4.5 8L7 10.5L11.5 6" stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               ) : isConnecting ? (
-                <span className="size-[14px] rounded-full border-2 border-[#7631EE] border-t-transparent animate-spin" aria-hidden />
+                <span className="size-[14px] rounded-full border-2 border-brain-v1purple border-t-transparent animate-spin" aria-hidden />
               ) : !p.live ? (
-                <span className="px-[8px] py-[3px] rounded-[22px] [font-family:'Gilroy',sans-serif] font-semibold text-[10px] leading-[12px] bg-[#1d2132] text-[#6c779d]">
+                <span className="px-[8px] py-[3px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-[10px] leading-[12px] bg-brain-v1stroke-2 text-brain-v1baby-blue-60">
                   Soon
                 </span>
               ) : (
@@ -453,14 +453,14 @@ export function DocumentUpload({ category, onDone }: { category: string; onDone:
         tabIndex={0}
         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); inputRef.current?.click(); } }}
         data-testid="dropzone-add-source"
-        className={`flex flex-col items-center justify-center gap-[8px] px-[24px] py-[40px] rounded-[16px] border-2 border-dashed cursor-pointer transition-colors ${
-          dragOver ? "border-[#7631EE] bg-[rgba(118,49,238,0.05)]" : "border-[#1d2132] hover:border-[#2c3247] bg-[#0a0c10]"
+        className={`flex flex-col items-center justify-center gap-[8px] px-[24px] py-[40px] rounded-panel border-2 border-dashed cursor-pointer transition-colors ${
+          dragOver ? "border-brain-v1purple bg-[rgba(118,49,238,0.05)]" : "border-brain-v1stroke-2 hover:border-brain-v1baby-blue-15-hover bg-brain-v1highlight-dropdown-bg"
         }`}
       >
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[16px] leading-[24px]">
-          Drop files here, or <span className="text-[#ff9500]">click to browse</span>
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[16px] leading-[24px]">
+          Drop files here, or <span className="text-brain-v1light-orange">click to browse</span>
         </p>
-        <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[20px]">
+        <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px]">
           PDF, CSV, Excel, images, ZIPs
         </p>
         <input
@@ -481,9 +481,9 @@ export function DocumentUpload({ category, onDone }: { category: string; onDone:
       {uploadMut.isPending && (
         <div className="flex flex-col gap-[6px]">
           {uploadMut.isPending && (
-            <div className="flex items-center gap-[10px] bg-[#0a0c10] rounded-[10px] px-[12px] py-[8px]">
-              <span className="size-[16px] rounded-full border-2 border-[#7631EE] border-t-transparent animate-spin shrink-0" aria-hidden />
-              <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px]">Uploading…</span>
+            <div className="flex items-center gap-[10px] bg-brain-v1highlight-dropdown-bg rounded-[10px] px-[12px] py-[8px]">
+              <span className="size-[16px] rounded-full border-2 border-brain-v1purple border-t-transparent animate-spin shrink-0" aria-hidden />
+              <span className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[13px]">Uploading…</span>
             </div>
           )}
         </div>

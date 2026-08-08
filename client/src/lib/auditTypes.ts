@@ -246,20 +246,20 @@ export function auditEventChipClass(type: AuditEventType): string {
     case "approved":
     case "trust_granted":
     case "rule_change":
-      return "bg-[#123509] text-[#42bf23] border-[rgba(66,191,35,0.2)]";
+      return "bg-brain-v1dark-green text-brain-v1green border-[rgba(66,191,35,0.2)]";
     case "acknowledged":
-      return "bg-[#123509] text-[#42bf23] border-[rgba(66,191,35,0.2)]";
+      return "bg-brain-v1dark-green text-brain-v1green border-[rgba(66,191,35,0.2)]";
     case "auto_approved":
       return "bg-[rgba(255,255,255,0.3)] text-white border-[rgba(255,255,255,0.2)] backdrop-blur-sm";
     case "flagged":
     case "rejected":
-      return "bg-[#350011] text-[#d20344] border-[rgba(210,3,68,0.2)]";
+      return "bg-brain-v1dark-pink-red text-brain-v1pink-red border-[rgba(210,3,68,0.2)]";
     case "trust_revoked":
-      return "bg-[#350011] text-[#d20344] border-[rgba(210,3,68,0.2)]";
+      return "bg-brain-v1dark-pink-red text-brain-v1pink-red border-[rgba(210,3,68,0.2)]";
     case "postponed":
-      return "bg-[#1a1c24] text-[#6c779d] border-[rgba(108,119,157,0.2)]";
+      return "bg-[#1a1c24] text-brain-v1baby-blue-60 border-[rgba(108,119,157,0.2)]";
     case "system_activity":
-      return "bg-[#222737] text-[#6c779d] border-[rgba(108,119,157,0.2)]";
+      return "bg-brain-v1baby-blue-15 text-brain-v1baby-blue-60 border-[rgba(108,119,157,0.2)]";
   }
 }
 
@@ -301,7 +301,7 @@ export function auditRecordLabel(
 export function auditRecordChipClass(
   record: Pick<AuditRecord, "eventType" | "subtype" | "coreEventType">,
 ): string {
-  return "bg-[#222737] text-[#6c779d] border border-[rgba(108,119,157,0.2)]";
+  return "bg-brain-v1baby-blue-15 text-brain-v1baby-blue-60 border border-[rgba(108,119,157,0.2)]";
 }
 
 /* Raw internal identifiers (user_01KY…, evt_01KY…, tnt_…, agt_…) must never

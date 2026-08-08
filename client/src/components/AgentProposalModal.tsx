@@ -324,13 +324,13 @@ export function LiveProposalModal({
         <DialogPrimitive.Content
           aria-describedby={undefined}
           data-testid="live-proposal-modal"
-          className={`fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#11141b] border border-[#1d2132] border-solid flex flex-col items-start overflow-hidden rounded-[24px] w-[520px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none ${transition.card}`}
+          className={`fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-brain-v1baby-blue-5 border border-brain-v1stroke-2 border-solid flex flex-col items-start overflow-hidden rounded-modal w-[520px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none ${transition.card}`}
         >
           {/* Header — agent name centered, close right. No avatar anywhere on the
               card: the agent is named once, here. */}
-          <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-[#1d2132] border-solid h-[56px] relative shrink-0 w-full flex items-center justify-center px-[16px]">
+          <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-brain-v1stroke-2 border-solid h-[56px] relative shrink-0 w-full flex items-center justify-center px-[16px]">
             <DialogPrimitive.Title
-              className="[font-family:'Gilroy',sans-serif] font-semibold text-[20px] leading-[24px] text-[#a8b9f4] text-center whitespace-nowrap"
+              className="[font-family:'Gilroy',sans-serif] font-semibold text-[20px] leading-[24px] text-brain-v1baby-blue-100 text-center whitespace-nowrap"
               data-testid="text-live-proposal-agent-name"
             >
               {agentHeaderName}
@@ -338,15 +338,15 @@ export function LiveProposalModal({
             <DialogPrimitive.Close
               aria-label="Close"
               data-testid="button-live-proposal-close"
-              className="absolute right-[11px] top-[11px] size-[32px] flex items-center justify-center rounded-full bg-[#222737] hover:bg-[#2a3050] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+              className="absolute right-[11px] top-[11px] size-[32px] flex items-center justify-center rounded-full bg-brain-v1baby-blue-15 hover:bg-[#2a3050] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
             >
-              <X size={16} className="text-[#6c779d]" />
+              <X size={16} className="text-brain-v1baby-blue-60" />
             </DialogPrimitive.Close>
           </div>
 
           <div className="flex flex-col items-start w-full overflow-y-auto">
             {/* Hero — risk pill directly under the header, then the headline group. */}
-            <div className="border-b border-[#1d2132] border-solid flex flex-col gap-[8px] items-start p-[24px] shrink-0 w-full">
+            <div className="border-b border-brain-v1stroke-2 border-solid flex flex-col gap-[8px] items-start p-[24px] shrink-0 w-full">
               {risk && (
                 <StatusPill
                   label={titleCaseLabel(risk.label)}
@@ -358,13 +358,13 @@ export function LiveProposalModal({
               )}
               <div className="flex flex-col gap-[8px] items-start w-full">
                 <p
-                  className="[font-family:'Gilroy',sans-serif] font-semibold text-[20px] leading-[28px] text-[#a8b9f4] w-full"
+                  className="[font-family:'Gilroy',sans-serif] font-semibold text-[20px] leading-[28px] text-brain-v1baby-blue-100 w-full"
                   data-testid="text-live-proposal-subject"
                 >
                   {headerCopy.title}
                 </p>
                 <p
-                  className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#6c779d] w-full"
+                  className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-brain-v1baby-blue-60 w-full"
                   data-testid="text-live-proposal-headline"
                 >
                   {headerCopy.text}
@@ -434,15 +434,15 @@ export function LiveProposalModal({
                   actually goes out at execution time, which the caption says plainly. */}
               {messageDraft && (
                 <CardSection title="Message Draft" testId="section-live-proposal-message-draft">
-                  <div className="bg-[#0a0c10] border border-solid border-[#1d2132] rounded-[12px] p-[16px] w-full flex flex-col gap-[12px]">
+                  <div className="bg-brain-v1highlight-dropdown-bg border border-solid border-brain-v1stroke-2 rounded-row p-[16px] w-full flex flex-col gap-[12px]">
                     <p
-                      className="[font-family:'Gilroy',sans-serif] font-semibold text-[13px] leading-[20px] text-[#a8b9f4]"
+                      className="[font-family:'Gilroy',sans-serif] font-semibold text-[13px] leading-[20px] text-brain-v1baby-blue-100"
                       data-testid="text-live-proposal-message-subject"
                     >
                       Subject: {messageDraft.subject}
                     </p>
                     <p
-                      className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-[#6c779d] whitespace-pre-wrap"
+                      className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-brain-v1baby-blue-60 whitespace-pre-wrap"
                       data-testid="text-live-proposal-message-body"
                     >
                       {messageDraft.body}
@@ -497,7 +497,7 @@ export function LiveProposalModal({
                       at all, never rendered as "Flagged by —". */}
                   {flaggedBy && (
                     <CardText tone="muted" testId={`text-live-proposal-flagged-by-${flaggedBy.source}`}>
-                      Flagged by <span className="text-[#a8b9f4]">{flaggedBy.text}</span>
+                      Flagged by <span className="text-brain-v1baby-blue-100">{flaggedBy.text}</span>
                     </CardText>
                   )}
                 </CardSection>
@@ -623,15 +623,15 @@ export const LiveProposalRow = ({
         }
       }}
       data-testid={`row-live-proposal-${proposal.id}`}
-      className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-[#0a0c10] border border-transparent transition-colors hover:bg-[#11141b] hover:border-[#1d2132] cursor-pointer outline-none focus-visible:border-[#1d2132]"
+      className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-brain-v1highlight-dropdown-bg border border-transparent transition-colors hover:bg-brain-v1baby-blue-5 hover:border-brain-v1stroke-2 cursor-pointer outline-none focus-visible:border-brain-v1stroke-2"
     >
       <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] truncate min-w-0">
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-100 text-[16px] truncate min-w-0">
           {AGENT_DISPLAY_NAME[agentKeyForProposalType(proposal.type)]}
         </p>
         {risk && (
           <span
-            className="[font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[14px] px-[8px] py-[2px] rounded-[100px] whitespace-nowrap shrink-0 w-fit"
+            className="[font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[14px] px-[8px] py-[2px] rounded-pill whitespace-nowrap shrink-0 w-fit"
             style={{ color: risk.color, background: risk.bg, border: `1px solid ${risk.border}` }}
           >
             {risk.label}

@@ -65,7 +65,7 @@ describe("the row pill", () => {
       insightRow(insight(), fmt).badge.className,
     ];
     expect(new Set(pills)).toEqual(new Set([ROW_TAG_AGENT]));
-    expect(ROW_TAG_AGENT).toContain("#ff9500");
+    expect(ROW_TAG_AGENT).toContain("text-brain-v1light-orange");
   });
 
   it("names the agent, not the state of the record", () => {

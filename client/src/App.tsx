@@ -140,7 +140,7 @@ function AppLayout() {
   if (isLoading) {
     return (
       <div className="bg-shared-colorsheaderfooterbg w-full h-screen flex items-center justify-center">
-        <div className="h-8 w-8 rounded-full border-2 border-[#1d2132] border-t-[#7631ee] animate-spin" />
+        <div className="h-8 w-8 rounded-full border-2 border-brain-v1stroke-2 border-t-brain-v1purple animate-spin" />
       </div>
     );
   }
@@ -166,7 +166,7 @@ function TenancyGate({ onLogout }: { onLogout: () => void }) {
   if (isLoading) {
     return (
       <div className="bg-shared-colorsheaderfooterbg w-full h-screen flex items-center justify-center">
-        <div className="h-8 w-8 rounded-full border-2 border-[#1d2132] border-t-[#7631ee] animate-spin" />
+        <div className="h-8 w-8 rounded-full border-2 border-brain-v1stroke-2 border-t-brain-v1purple animate-spin" />
       </div>
     );
   }
@@ -223,7 +223,7 @@ function MainShell({ onLogout }: { onLogout: () => void }) {
           onLogout={handleLogout}
         />
 
-        <div className="flex-1 min-w-0 min-h-0 h-full overflow-hidden flex flex-col rounded-[16px] border border-solid border-[#1d2132] bg-[#11141b]">
+        <div className="flex-1 min-w-0 min-h-0 h-full overflow-hidden flex flex-col rounded-panel border border-solid border-brain-v1stroke-2 bg-brain-v1baby-blue-5">
           {/* The page owns the flexible space. Keeping search after it pins the
               control to the bottom of the middle column, like Logout in the nav. */}
           <div className="flex-1 min-w-0 min-h-0 overflow-hidden flex flex-col relative">

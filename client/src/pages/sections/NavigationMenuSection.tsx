@@ -18,7 +18,7 @@ const LogoutConfirmModal = ({ show, onCancel, onConfirm }: { show: boolean; onCa
       onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}
     >
       <div
-        className="flex flex-col overflow-hidden rounded-[16px] w-[320px]"
+        className="flex flex-col overflow-hidden rounded-panel w-[320px]"
         style={{
           background: "#11141b",
           border: "1px solid #1d2132",
@@ -26,15 +26,15 @@ const LogoutConfirmModal = ({ show, onCancel, onConfirm }: { show: boolean; onCa
         }}
       >
         <div className="flex flex-col gap-[8px] items-center px-[8px] py-[24px] text-center w-full">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[#a8b9f4] text-[20px] leading-[24px] w-full">Logout</p>
-          <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[16px] w-full">Are you sure you want to logout?</p>
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[20px] leading-[24px] w-full">Logout</p>
+          <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[16px] w-full">Are you sure you want to logout?</p>
         </div>
         <div className="flex gap-[8px] items-start p-[8px] w-full">
-          <button data-testid="button-logout-cancel" onClick={onCancel} className="flex flex-1 items-center justify-center px-[12px] py-[8px] rounded-[100px] hover:opacity-80 transition-opacity" style={{ background: "#222737" }}>
-            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#6c779d] text-[12px] leading-[16px] whitespace-nowrap">Cancel</span>
+          <button data-testid="button-logout-cancel" onClick={onCancel} className="flex flex-1 items-center justify-center px-[12px] py-[8px] rounded-pill hover:opacity-80 transition-opacity" style={{ background: "#222737" }}>
+            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-60 text-[12px] leading-[16px] whitespace-nowrap">Cancel</span>
           </button>
-          <button data-testid="button-logout-confirm" onClick={onConfirm} className="flex flex-1 items-center justify-center px-[12px] py-[8px] rounded-[100px] hover:opacity-80 transition-opacity" style={{ background: "#350011" }}>
-            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#d20344] text-[12px] leading-[16px] whitespace-nowrap">Confirm</span>
+          <button data-testid="button-logout-confirm" onClick={onConfirm} className="flex flex-1 items-center justify-center px-[12px] py-[8px] rounded-pill hover:opacity-80 transition-opacity" style={{ background: "#350011" }}>
+            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1pink-red text-[12px] leading-[16px] whitespace-nowrap">Confirm</span>
           </button>
         </div>
       </div>
@@ -55,7 +55,7 @@ const CollapseButton = ({ onClick }: { onClick: () => void }) => (
     data-testid="button-collapse-sidebar"
     onClick={onClick}
     title="Collapse menu"
-    className="relative rounded-[100px] shrink-0 size-[40px] hover:opacity-80 transition-opacity"
+    className="relative rounded-pill shrink-0 size-[40px] hover:opacity-80 transition-opacity"
   >
     <div className="absolute left-0 size-[40px] top-0">
       <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.collapse_bg} />
@@ -168,10 +168,10 @@ const SettingsIconInactive = () => (
 const NotificationBadge = ({ count, testId }: { count: number; testId?: string }) => (
   <div
     data-testid={testId}
-    className="bg-[#7631ee] flex flex-col items-center justify-center min-w-[16px] p-[2px] relative rounded-[4px] shrink-0"
+    className="bg-brain-v1purple flex flex-col items-center justify-center min-w-[16px] p-[2px] relative rounded-[4px] shrink-0"
   >
     <p
-      className="[font-family:'Gilroy',sans-serif] font-semibold leading-[12px] text-[#240757] text-[12px] text-center whitespace-nowrap"
+      className="[font-family:'Gilroy',sans-serif] font-semibold leading-[12px] text-brain-v1dark-purple text-[12px] text-center whitespace-nowrap"
     >
       {count > 99 ? "99+" : count}
     </p>
@@ -259,19 +259,19 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onLogout }: Props):
     return (
       <>
         <LogoutConfirmModal show={showLogoutConfirm} onCancel={() => setShowLogoutConfirm(false)} onConfirm={() => { setShowLogoutConfirm(false); onLogout?.(); }} />
-        <nav className="flex flex-col w-[60px] h-full rounded-[16px] border border-solid border-[#1d2132] bg-[#11141b] flex-shrink-0">
+        <nav className="flex flex-col w-[60px] h-full rounded-panel border border-solid border-brain-v1stroke-2 bg-brain-v1baby-blue-5 flex-shrink-0">
           <div className="flex flex-col flex-1 items-center mt-2 gap-[16px] w-full px-[7px]">
-            <button onClick={onToggle} title="Expand menu" className="w-[40px] h-[40px] flex-shrink-0 flex items-center justify-center rounded-[100px]" style={{ background: "#222737" }}>
+            <button onClick={onToggle} title="Expand menu" className="w-[40px] h-[40px] flex-shrink-0 flex items-center justify-center rounded-pill" style={{ background: "#222737" }}>
               <ExpandIcon />
             </button>
 
             {/* Divider */}
-            <div className="w-full h-px bg-[#1d2132]" />
+            <div className="w-full h-px bg-brain-v1stroke-2" />
 
             {/* Menu group */}
             <div className="flex flex-col gap-[4px] items-center w-full">
               <div className="flex items-center justify-center px-[8px] w-[40px]">
-                <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[#414965] text-[12px] leading-[16px]">
+                <span className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-30 text-[12px] leading-[16px]">
                   Menu
                 </span>
               </div>
@@ -286,13 +286,13 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onLogout }: Props):
                       <button
                         title={count > 0 ? `${label} (${count} new)` : label}
                         data-testid={`nav-collapsed-${label.toLowerCase()}`}
-                        className={`relative flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${active ? "bg-[#0a0c10]" : "hover:bg-[rgba(168,185,244,0.08)]"}`}
+                        className={`relative flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${active ? "bg-brain-v1highlight-dropdown-bg" : "hover:bg-[rgba(168,185,244,0.08)]"}`}
                       >
                         {active ? <ActiveIcon /> : <InactiveIcon />}
                         {count > 0 && (
                           <span
                             data-testid={`badge-collapsed-${label.toLowerCase()}`}
-                            className="absolute top-[2px] right-[2px] size-[8px] rounded-full bg-[#7631ee] ring-2 ring-[#11141b]"
+                            className="absolute top-[2px] right-[2px] size-[8px] rounded-full bg-brain-v1purple ring-2 ring-brain-v1baby-blue-5"
                           />
                         )}
                       </button>
@@ -302,7 +302,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onLogout }: Props):
               </div>
 
               {/* Divider between the primary sections and Settings */}
-              <div className="w-full h-px bg-[#1d2132]" />
+              <div className="w-full h-px bg-brain-v1stroke-2" />
 
               <div className="flex flex-col gap-1 items-center">
                 {OTHER_NAV.map((item) => {
@@ -314,13 +314,13 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onLogout }: Props):
                       <button
                         title={count > 0 ? `${label} (${count} new)` : label}
                         data-testid={`nav-collapsed-${label.toLowerCase()}`}
-                        className={`relative flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${active ? "bg-[#0a0c10]" : "hover:bg-[rgba(168,185,244,0.08)]"}`}
+                        className={`relative flex items-center justify-center w-9 h-9 rounded-xl transition-colors ${active ? "bg-brain-v1highlight-dropdown-bg" : "hover:bg-[rgba(168,185,244,0.08)]"}`}
                       >
                         {active ? <ActiveIcon /> : <InactiveIcon />}
                         {count > 0 && (
                           <span
                             data-testid={`badge-collapsed-${label.toLowerCase()}`}
-                            className="absolute top-[2px] right-[2px] size-[8px] rounded-full bg-[#7631ee] ring-2 ring-[#11141b]"
+                            className="absolute top-[2px] right-[2px] size-[8px] rounded-full bg-brain-v1purple ring-2 ring-brain-v1baby-blue-5"
                           />
                         )}
                       </button>
@@ -331,7 +331,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onLogout }: Props):
             </div>
           </div>
           <div className="flex flex-col items-center gap-2 pb-4 mt-auto pt-4 px-2">
-            <button title="Logout" onClick={() => setShowLogoutConfirm(true)} className="flex items-center justify-center w-9 h-9 bg-[#350011] rounded-full hover:bg-[#4a0018] transition-colors">
+            <button title="Logout" onClick={() => setShowLogoutConfirm(true)} className="flex items-center justify-center w-9 h-9 bg-brain-v1dark-pink-red rounded-full hover:bg-[#4a0018] transition-colors">
               <img className="w-5 h-5" alt="Logout" src={ICONS.logout} />
             </button>
           </div>
@@ -343,7 +343,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onLogout }: Props):
   return (
     <>
       <LogoutConfirmModal show={showLogoutConfirm} onCancel={() => setShowLogoutConfirm(false)} onConfirm={() => { setShowLogoutConfirm(false); onLogout?.(); }} />
-      <nav className="flex flex-col w-[264px] h-full rounded-[16px] border border-solid border-[#1d2132] bg-[#11141b] flex-shrink-0 overflow-hidden">
+      <nav className="flex flex-col w-[264px] h-full rounded-panel border border-solid border-brain-v1stroke-2 bg-brain-v1baby-blue-5 flex-shrink-0 overflow-hidden">
         <div className="flex flex-col flex-1 mx-[7px] mt-[7px] gap-[16px] pb-0 overflow-y-auto min-h-0">
 
           {/* Header: Logo + Collapse button */}
@@ -355,7 +355,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onLogout }: Props):
           {/* Main Menu section */}
           <div className="flex flex-col gap-[4px] items-start relative shrink-0 w-full">
             <div className="flex items-center justify-center px-[8px] relative shrink-0 w-full">
-              <p className="flex-1 min-w-px [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#414965] text-[12px]">Menu</p>
+              <p className="flex-1 min-w-px [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-30 text-[12px]">Menu</p>
             </div>
             <div className="flex flex-col gap-[4px] items-start relative shrink-0 w-full">
               {MAIN_NAV.map((item) => {
@@ -366,7 +366,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onLogout }: Props):
                   <Link key={path} href={path} className="w-full outline-none focus:outline-none">
                     <button
                       data-testid={`nav-${label.toLowerCase()}`}
-                      className="flex gap-[8px] items-center p-[8px] relative rounded-[12px] shrink-0 w-full transition-colors hover:opacity-90"
+                      className="flex gap-[8px] items-center p-[8px] relative rounded-row shrink-0 w-full transition-colors hover:opacity-90"
                       style={{ background: active ? "#0a0c10" : "#11141b" }}
                     >
                       {active ? <ActiveIcon /> : <InactiveIcon />}
@@ -394,7 +394,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onLogout }: Props):
           {/* Other section */}
           <div className="flex flex-col gap-[4px] items-start relative shrink-0 w-full">
             <div className="flex items-center justify-center px-[8px] relative shrink-0 w-full">
-              <p className="flex-1 min-w-px [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[#414965] text-[12px]">Other</p>
+              <p className="flex-1 min-w-px [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-30 text-[12px]">Other</p>
             </div>
             <div className="flex flex-col gap-[4px] items-start relative shrink-0 w-full">
               {OTHER_NAV.map((item) => {
@@ -404,7 +404,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onLogout }: Props):
                   <Link key={path} href={path} className="w-full outline-none focus:outline-none">
                     <button
                       data-testid={`nav-${label.toLowerCase()}`}
-                      className="flex gap-[8px] items-center p-[8px] relative rounded-[12px] shrink-0 w-full transition-colors hover:opacity-90"
+                      className="flex gap-[8px] items-center p-[8px] relative rounded-row shrink-0 w-full transition-colors hover:opacity-90"
                       style={{ background: active ? "#0a0c10" : "#11141b" }}
                     >
                       {active ? <ActiveIcon /> : <InactiveIcon />}
@@ -430,7 +430,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onLogout }: Props):
           <button
             data-testid="button-logout"
             onClick={() => setShowLogoutConfirm(true)}
-            className="flex items-center justify-center gap-[8px] px-[20px] py-[8px] w-full rounded-[100px] hover:opacity-80 transition-opacity"
+            className="flex items-center justify-center gap-[8px] px-[20px] py-[8px] w-full rounded-pill hover:opacity-80 transition-opacity"
             style={{ background: "#350011" }}
           >
             <div className="relative shrink-0 size-[24px]">
@@ -440,7 +440,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onLogout }: Props):
                 </div>
               </div>
             </div>
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#d20344] text-[16px] whitespace-nowrap">Logout</p>
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1pink-red text-[16px] whitespace-nowrap">Logout</p>
           </button>
         </div>
       </nav>

@@ -95,7 +95,7 @@ const AppAlertCard = ({ alert, onDismiss }: { alert: ActiveAlert; onDismiss: () 
       data-testid={`alert-${alert.variant}`}
       onClick={onDismiss}
       onKeyDown={handleKey}
-      className="bg-[#0a0c10] border border-[#1d2132] rounded-[16px] flex gap-[16px] items-start p-[16px] w-[360px] max-w-[calc(100vw-32px)] cursor-pointer transition-transform hover:-translate-y-[1px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#a8b9f4]"
+      className="bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 rounded-panel flex gap-[16px] items-start p-[16px] w-[360px] max-w-[calc(100vw-32px)] cursor-pointer transition-transform hover:-translate-y-[1px] focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-100"
       style={{
         boxShadow:
           "0px 68px 13.5px rgba(0,0,0,0.06), 0px 38px 11.5px rgba(0,0,0,0.2), 0px 17px 8.5px rgba(0,0,0,0.34), 0px 4px 4.5px rgba(0,0,0,0.39)",
@@ -113,7 +113,7 @@ const AppAlertCard = ({ alert, onDismiss }: { alert: ActiveAlert; onDismiss: () 
         {alert.description !== undefined && (
           <p
             data-testid={`alert-desc-${alert.variant}`}
-            className="leading-[20px] w-full text-[#6c779d]"
+            className="leading-[20px] w-full text-brain-v1baby-blue-60"
           >
             {alert.description}
           </p>
@@ -262,7 +262,7 @@ export const AppAlertLink = ({
         onClick();
       }
     }}
-    className="text-[#a8b9f4] underline decoration-solid hover:text-[#c5d2ff]"
+    className="text-brain-v1baby-blue-100 underline decoration-solid hover:text-[#c5d2ff]"
   >
     {children}
   </a>

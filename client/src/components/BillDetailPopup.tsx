@@ -130,18 +130,18 @@ export function BillDetailPopup({
                 type="button"
                 onClick={() => setViewingDoc(true)}
                 data-testid="button-view-invoice-document"
-                className="bg-[#0a0c10] border border-[#1d2132] border-solid flex items-start rounded-[12px] w-full hover:border-[#7631ee]/40 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+                className="bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 border-solid flex items-start rounded-row w-full hover:border-[#7631ee]/40 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
               >
                 <div className="flex flex-col items-center justify-center shrink-0 size-[64px]">
                   <img src={documentIcon} alt="" className="size-[24px]" />
                 </div>
                 <div className="flex flex-1 flex-col items-start justify-center min-w-px self-stretch">
-                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#a8b9f4] text-[16px] w-full text-left">
+                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-100 text-[16px] w-full text-left">
                     View invoice document
                   </p>
                 </div>
                 <div className="flex flex-col items-center justify-center shrink-0 size-[64px]">
-                  <ChevronRight size={24} className="text-[#6c779d]" />
+                  <ChevronRight size={24} className="text-brain-v1baby-blue-60" />
                 </div>
               </button>
 
@@ -164,7 +164,7 @@ export function BillDetailPopup({
                 <SectionLabel>What Happens Next</SectionLabel>
                 {intent ? (
                   <div className="flex flex-col gap-[10px] items-start w-full">
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px] w-full">
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[16px] w-full">
                       {isFlagged
                         ? "Brain proposed this, but flagged it for review. Nothing moves until you approve."
                         : "Brain has proposed this payment. Nothing moves until you approve it."}
@@ -184,7 +184,7 @@ export function BillDetailPopup({
                     </button>
                   </div>
                 ) : (
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[16px] w-full">
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[16px] w-full">
                     {isFlagged
                       ? "This hasn't been proposed yet. The flags above need a human look first. You'll approve before any money moves."
                       : overdue
@@ -196,17 +196,17 @@ export function BillDetailPopup({
             </DetailPopupBody>
 
             {!hidePager && (
-              <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-t border-[#1d2132] border-solid flex flex-col items-start p-[24px] relative shrink-0 w-full">
+              <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-t border-brain-v1stroke-2 border-solid flex flex-col items-start p-[24px] relative shrink-0 w-full">
                 <div className="flex gap-[16px] items-center w-full">
                   <button
                     type="button"
                     disabled={!prevBill}
                     data-testid="button-bill-previous"
                     onClick={() => prevBill && onSelectBill?.(prevBill)}
-                    className="bg-[#222737] flex flex-1 gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] disabled:opacity-60 disabled:cursor-not-allowed transition-opacity"
+                    className="bg-brain-v1baby-blue-15 flex flex-1 gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-pill disabled:opacity-60 disabled:cursor-not-allowed transition-opacity"
                   >
                     <img src={arrowIcon} alt="" className="size-[16px] rotate-180" />
-                    <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">
+                    <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[16px] whitespace-nowrap">
                       Previous
                     </span>
                   </button>
@@ -215,9 +215,9 @@ export function BillDetailPopup({
                     disabled={!nextBill}
                     data-testid="button-bill-next"
                     onClick={() => nextBill && onSelectBill?.(nextBill)}
-                    className="bg-[#222737] flex flex-1 gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-[100px] disabled:opacity-60 disabled:cursor-not-allowed transition-opacity"
+                    className="bg-brain-v1baby-blue-15 flex flex-1 gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-pill disabled:opacity-60 disabled:cursor-not-allowed transition-opacity"
                   >
-                    <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[#6c779d] text-[16px] whitespace-nowrap">
+                    <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[16px] whitespace-nowrap">
                       Next
                     </span>
                     <img src={arrowIcon} alt="" className="size-[16px]" />

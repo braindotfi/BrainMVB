@@ -268,7 +268,7 @@ export function AuditLogSection() {
     <div className="flex flex-col gap-[20px] w-full">
       <div className="flex flex-col gap-[4px] w-full">
         <div className="flex items-center gap-2 min-h-[36px]">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-[#414965] text-[16px]">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-brain-v1baby-blue-30 text-[16px]">
             Audit Log
           </p>
           {/* Suppressed while the feed is unreadable: a count next to a partial
@@ -284,7 +284,7 @@ export function AuditLogSection() {
 
         {feedUnavailable && (
           <p
-            className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[#6c779d] text-[13px] pb-[8px]"
+            className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-brain-v1baby-blue-60 text-[13px] pb-[8px]"
             data-testid="text-audit-scope"
           >
             Brain's audit feed could not be read, so this page cannot say what your history contains.
@@ -308,7 +308,7 @@ export function AuditLogSection() {
 
         {/* Controls */}
         <div className="flex items-center gap-[8px] w-full">
-          <div className="flex-1 min-w-0 flex h-[40px] items-center gap-[8px] p-[8px] rounded-[8px] bg-[#222737]">
+          <div className="flex-1 min-w-0 flex h-[40px] items-center gap-[8px] p-[8px] rounded-[8px] bg-brain-v1baby-blue-15">
             <Search className="flex-shrink-0 size-[24px]" color="#6c779d" strokeWidth={1.8} />
             <input
               data-testid="input-audit-search"
@@ -316,7 +316,7 @@ export function AuditLogSection() {
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search audit log…"
               aria-label="Search audit records"
-              className="flex-1 min-w-0 h-[24px] bg-transparent outline-none [font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] placeholder:text-[#6c779d] text-[14px] leading-[20px]"
+              className="flex-1 min-w-0 h-[24px] bg-transparent outline-none [font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 placeholder:text-brain-v1baby-blue-60 text-[14px] leading-[20px]"
             />
           </div>
 
@@ -340,9 +340,9 @@ export function AuditLogSection() {
                   openMenu(true);
                 }
               }}
-              className="bg-[#222737] rounded-[8px] p-[8px] flex items-center gap-[8px] w-full text-left outline-none hover:bg-[#2a3045] transition-colors focus-visible:ring-2 focus-visible:ring-[#7631EE]"
+              className="bg-brain-v1baby-blue-15 rounded-[8px] p-[8px] flex items-center gap-[8px] w-full text-left outline-none hover:bg-[#2a3045] transition-colors focus-visible:ring-2 focus-visible:ring-brain-v1purple"
             >
-              <span className="flex-1 min-w-0 [font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[14px] leading-[20px] whitespace-nowrap truncate">
+              <span className="flex-1 min-w-0 [font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[14px] leading-[20px] whitespace-nowrap truncate">
                 {activeLabel}
               </span>
               <img src={chevronDownIcon} alt="" aria-hidden="true" className="shrink-0 h-[7px] w-auto" />
@@ -353,7 +353,7 @@ export function AuditLogSection() {
                 aria-label="Record type"
                 aria-activedescendant={`audit-type-option-${FILTER_OPTIONS[activeIndex]?.id ?? filter}`}
                 onKeyDown={onMenuKeyDown}
-                className="absolute left-0 top-[calc(100%+4px)] z-[60] bg-[#0a0c10] border border-[#1d2132] border-solid flex flex-col items-start p-[8px] rounded-[12px] w-[208px] shadow-[0px_68px_13.5px_rgba(0,0,0,0.06),0px_38px_11.5px_rgba(0,0,0,0.2),0px_17px_8.5px_rgba(0,0,0,0.34),0px_4px_4.5px_rgba(0,0,0,0.39)]"
+                className="absolute left-0 top-[calc(100%+4px)] z-[60] bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 border-solid flex flex-col items-start p-[8px] rounded-row w-[208px] shadow-[0px_68px_13.5px_rgba(0,0,0,0.06),0px_38px_11.5px_rgba(0,0,0,0.2),0px_17px_8.5px_rgba(0,0,0,0.34),0px_4px_4.5px_rgba(0,0,0,0.39)]"
               >
                 {FILTER_OPTIONS.map((o, i) => (
                   <button
@@ -367,7 +367,7 @@ export function AuditLogSection() {
                     data-testid={`option-audit-type-${o.id}`}
                     onFocus={() => setActiveIndex(i)}
                     onClick={() => commit(o.id)}
-                    className="flex items-center p-[8px] rounded-[8px] shrink-0 w-full text-left [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[#a8b9f4] text-[14px] whitespace-nowrap outline-none hover:bg-[#222737] focus-visible:bg-[#222737]"
+                    className="flex items-center p-[8px] rounded-[8px] shrink-0 w-full text-left [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[14px] whitespace-nowrap outline-none hover:bg-brain-v1baby-blue-15 focus-visible:bg-brain-v1baby-blue-15"
                   >
                     {o.label}
                   </button>
@@ -380,7 +380,7 @@ export function AuditLogSection() {
 
       {/* Records */}
       <div
-        className="rounded-[16px] overflow-hidden border border-solid border-[#1d2132]"
+        className="rounded-panel overflow-hidden border border-solid border-brain-v1stroke-2"
         style={{ background: "#0a0c10" }}
       >
         {visible.length === 0 ? (
@@ -392,7 +392,7 @@ export function AuditLogSection() {
               {emptyMessage().title}
             </p>
             {emptyMessage().detail && (
-              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[13px] leading-[18px] text-center max-w-[420px]">
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[13px] leading-[18px] text-center max-w-[420px]">
                 {emptyMessage().detail}
               </p>
             )}
@@ -416,7 +416,7 @@ export function AuditLogSection() {
             const actor = humanReadableActor(record.actor);
             return (
               <div key={record.id}>
-                {i > 0 && <div className="h-px bg-[#1d2132] w-full" />}
+                {i > 0 && <div className="h-px bg-brain-v1stroke-2 w-full" />}
                 <button
                   type="button"
                   data-testid={`row-audit-${record.id}`}
@@ -425,7 +425,7 @@ export function AuditLogSection() {
                 >
                   <div className="flex-1 min-w-0 flex flex-col gap-[4px]">
                     <div className="flex items-center gap-[8px] w-full min-w-0">
-                      <span className="[font-family:'Gilroy',sans-serif] font-medium text-[#a8b9f4] text-[16px] leading-[20px] min-w-0 max-w-full basis-auto grow-0 shrink truncate">
+                      <span className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[20px] min-w-0 max-w-full basis-auto grow-0 shrink truncate">
                         {formatText(record.summary)}
                       </span>
                       <RecordPill
@@ -436,7 +436,7 @@ export function AuditLogSection() {
                         {capitalCase(categoryBadge.label)}
                       </RecordPill>
                     </div>
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[#6c779d] text-[14px] leading-[16px]">
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[16px]">
                       {[actor, formatText(record.rowSubtitle ?? ""), record.occurredAtLabel]
                         .filter(Boolean)
                         .join(" · ")}

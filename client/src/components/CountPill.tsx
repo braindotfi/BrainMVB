@@ -30,7 +30,7 @@ export function CountPill({
       style={{ background }}
       data-testid={testId}
     >
-      <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[#0a0c10] text-[11px] text-center whitespace-nowrap">
+      <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-brain-v1highlight-dropdown-bg text-[11px] text-center whitespace-nowrap">
         {children}
       </p>
     </div>
