@@ -71,3 +71,30 @@ instead of banking the tick. Never let a lookup miss turn into a skip: an
 unlocatable record is a failure or an explicit, reasoned exclusion, never a
 `continue`. And prefer a population count over a text-window "per-row" check
 that only looks rigorous -- a +/-200 character slice is not a row association.
+
+
+## Reading a CI step's result out of its log
+
+Two traps, both of which produced a confident wrong answer:
+
+- **The command echo repeats your search string.** A run log prints
+  `##[group]Run test -f x || { echo "...not on this branch - skipping"; }`
+  before the step's real output, so `if "skipping" in log` is true even when
+  the step enforced. Match **exact output lines** (strip the timestamp prefix,
+  compare whole lines), and prefer a positive signal for each branch of the
+  step rather than one string plus an `elif`.
+- **A PR run right after the base changes can use a stale merge commit.**
+  `pull_request` runs check out base-merged-into-head, but the cached test
+  merge commit is not always recomputed before the run is queued: after a
+  workflow change landed on the default branch, 3 of 7 reopened PRs ran the
+  OLD workflow with the new step simply absent. Re-triggering picked it up.
+
+**Why:** both failures look like a passing check. The second is worse: a check
+that is *absent* from a run reports nothing at all, and the PR is green.
+
+**How to apply:** assert the step is present in the job's step list, not just
+that the job passed - `any(s.name == ...)` - and classify each PR by an exact
+output line. When a result contradicts what the branch's contents predict
+(a branch that carries the script "skipping" because the script is missing),
+suspect the instrument before the system. For a guard that must not silently
+vanish, make it a required status check so a missing run blocks the merge.
