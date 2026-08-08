@@ -34,7 +34,7 @@ function LabelValue({ label, value, mono }: { label: string; value: string; mono
         {label}
       </p>
       <p
-        className={`${mono ? "[font-family:'JetBrains_Mono',monospace]" : "[font-family:'Gilroy',sans-serif] font-semibold"} leading-[20px] text-[#c8d4f0] text-[15px] break-words`}
+        className={`${mono ? "[font-family:'JetBrains_Mono',monospace]" : "[font-family:'Gilroy',sans-serif] font-semibold"} leading-[20px] text-brain-v1baby-blue-100 text-[15px] break-words`}
       >
         {value}
       </p>
@@ -104,7 +104,7 @@ function MemberDetailBody({ id }: { id: string }) {
     <div className="flex flex-col gap-[20px] p-[24px]">
       {/* Identity */}
       <div className="flex items-center gap-[14px]">
-        <div className="size-[48px] rounded-full bg-[#161b28] flex items-center justify-center shrink-0">
+        <div className="size-[48px] rounded-full bg-brain-v1stroke-2 flex items-center justify-center shrink-0">
           <span className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[18px]">
             {member.displayName.slice(0, 1).toUpperCase()}
           </span>

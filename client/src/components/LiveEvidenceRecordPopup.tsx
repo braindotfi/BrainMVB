@@ -31,7 +31,7 @@ export function LiveEvidenceRecordPopup({
             <DialogPrimitive.Close
               aria-label="Close"
               data-testid="button-live-evidence-record-close"
-              className="absolute right-[11px] top-[11px] size-[32px] flex items-center justify-center rounded-full bg-brain-v1baby-blue-15 hover:bg-[#2a3050] focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
+              className="absolute right-[11px] top-[11px] size-[32px] flex items-center justify-center rounded-full bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-15-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
             >
               <X size={16} className="text-brain-v1baby-blue-60" />
             </DialogPrimitive.Close>

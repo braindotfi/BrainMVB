@@ -257,7 +257,7 @@ export function auditEventChipClass(type: AuditEventType): string {
     case "trust_revoked":
       return "bg-brain-v1dark-pink-red text-brain-v1pink-red border-[rgba(210,3,68,0.2)]";
     case "postponed":
-      return "bg-[#1a1c24] text-brain-v1baby-blue-60 border-[rgba(108,119,157,0.2)]";
+      return "bg-brain-v1baby-blue-15-muted text-brain-v1baby-blue-60 border-[rgba(108,119,157,0.2)]";
     case "system_activity":
       return "bg-brain-v1baby-blue-15 text-brain-v1baby-blue-60 border-[rgba(108,119,157,0.2)]";
   }

@@ -424,7 +424,7 @@ export const EvidenceLinkRow = ({
       type="button"
       onClick={onClick}
       data-testid={testId}
-      className={`${shell} transition-colors hover:border-[#2a3050] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple`}
+      className={`${shell} transition-colors hover:border-brain-v1stroke-2-hover cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple`}
     >
       {inner}
     </button>
@@ -508,7 +508,7 @@ export const ActionButton = ({
       title={title}
       data-testid={testId}
       style={{ ["--action-bg" as string]: palette.background, color: palette.color }}
-      className={`flex items-center justify-center rounded-pill bg-[var(--action-bg)] [font-family:'Gilroy',sans-serif] font-semibold whitespace-nowrap ${isDestructive ? "transition-colors hover:bg-[#4a0018]" : "transition-opacity hover:opacity-90"} disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple ${ACTION_SIZES[size]}`}
+      className={`flex items-center justify-center rounded-pill bg-[var(--action-bg)] [font-family:'Gilroy',sans-serif] font-semibold whitespace-nowrap ${isDestructive ? "transition-colors hover:bg-brain-v1dark-pink-red-hover" : "transition-opacity hover:opacity-90"} disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple ${ACTION_SIZES[size]}`}
     >
       {label}
     </button>

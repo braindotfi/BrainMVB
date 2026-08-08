@@ -186,7 +186,7 @@ const PillButton = ({ children, onClick, tone = "purple", disabled, testId }: {
       data-testid={testId}
       onClick={onClick}
       disabled={disabled}
-      className={`rounded-full px-4 py-2 bg-[var(--tone-bg)] ${tone === "danger" ? "transition-colors hover:bg-[#4a0018]" : "transition-opacity hover:opacity-80"} disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] whitespace-nowrap`}
+      className={`rounded-full px-4 py-2 bg-[var(--tone-bg)] ${tone === "danger" ? "transition-colors hover:bg-brain-v1dark-pink-red-hover" : "transition-opacity hover:opacity-80"} disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] whitespace-nowrap`}
       style={{ ["--tone-bg" as string]: styles.background, color: styles.color }}
     >
       {children}
@@ -707,7 +707,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
                 data-testid="button-close-detail-modal"
                 onClick={() => setSelectedEvent(null)}
                 aria-label="Close"
-                className="absolute right-[11px] top-[11px] size-[32px] rounded-full flex items-center justify-center bg-brain-v1stroke-2 hover:bg-[#262b3d] transition-colors text-brain-v1baby-blue-60"
+                className="absolute right-[11px] top-[11px] size-[32px] rounded-full flex items-center justify-center bg-brain-v1stroke-2 hover:bg-brain-v1stroke-2-hover transition-colors text-brain-v1baby-blue-60"
               >
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                   <path d="M2 2L10 10M10 2L2 10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
@@ -1484,7 +1484,7 @@ function TenantsSection({ env, onNavigate }: { env: DevEnv; onNavigate: (s: DevS
                 data-testid="button-close-detail-modal"
                 onClick={() => setSelectedTenantId(null)}
                 aria-label="Close"
-                className="absolute right-[11px] top-[11px] size-[32px] rounded-full flex items-center justify-center bg-brain-v1stroke-2 hover:bg-[#262b3d] transition-colors text-brain-v1baby-blue-60"
+                className="absolute right-[11px] top-[11px] size-[32px] rounded-full flex items-center justify-center bg-brain-v1stroke-2 hover:bg-brain-v1stroke-2-hover transition-colors text-brain-v1baby-blue-60"
               >
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                   <path d="M2 2L10 10M10 2L2 10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />

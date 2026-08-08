@@ -73,26 +73,60 @@
   /* Hover partners for the four surfaces above. Canonicalised by #129;
      not yet in the Figma source file — see CLAUDE.md "Hover tokens". */
   --brain-v1baby-blue-15-hover: rgba(44, 50, 71, 1);
+  /* Dimmer sibling of -15, used for the 'postponed' audit chip. Kept as its
+     own value rather than folded into -15: the collapse is a visible
+     lightening (dL* +5.44), not a sub-perceptual one. */
+  --brain-v1baby-blue-15-muted: rgba(26, 28, 36, 1);
   --brain-v1baby-blue-30: rgba(65, 73, 101, 1);
   --brain-v1baby-blue-5: rgba(17, 20, 27, 1);
   --brain-v1baby-blue-60: rgba(108, 119, 157, 1);
+  --brain-v1baby-blue-80: rgba(139, 149, 184, 1);
   --brain-v1dark-dark-purple: rgba(18, 3, 45, 1);
   --brain-v1dark-green: rgba(18, 53, 9, 1);
+  --brain-v1dark-green-hover: rgba(23, 71, 16, 1);
   --brain-v1dark-orange: rgba(74, 35, 0, 1);
   --brain-v1dark-orange-hover: rgba(90, 45, 0, 1);
   --brain-v1dark-pink-red: rgba(53, 0, 17, 1);
+  --brain-v1dark-pink-red-hover: rgba(74, 0, 24, 1);
   --brain-v1dark-purple: rgba(36, 7, 87, 1);
   --brain-v1dark-purple-hover: rgba(46, 10, 110, 1);
+  --brain-v1error-text: rgba(244, 96, 122, 1);
   --brain-v1green: rgba(66, 191, 35, 1);
   --brain-v1headerfooterbg: rgba(6, 7, 10, 1);
+  --brain-v1headerfooterbg-hover: rgba(16, 18, 24, 1);
   --brain-v1highlight-dropdown-bg: rgba(10, 12, 16, 1);
+  --brain-v1item-hover: rgba(21, 25, 38, 1);
   --brain-v1light-orange: rgba(255, 149, 0, 1);
   --brain-v1pink-red: rgba(210, 3, 68, 1);
   --brain-v1purple: rgba(118, 49, 238, 1);
   --brain-v1purple-hover: rgba(132, 66, 245, 1);
+  --brain-v1row-hover: rgba(13, 16, 24, 1);
   --brain-v1stroke-2: rgba(29, 33, 50, 1);
+  --brain-v1stroke-2-hover: rgba(37, 42, 61, 1);
   --brain-v1white: rgba(255, 255, 255, 1);
   --brain-v1white-30: rgba(255, 255, 255, 0.3);
+
+  /* Third-party brand constants. Fixed by the vendor, deliberately
+     outside the product palette -- never reconcile these to brain-v1*. */
+  --brand-telegram: rgba(0, 136, 204, 1);
+  --brand-whatsapp: rgba(7, 94, 84, 1);
+
+  /* doc-paper-*: models a printed/scanned paper document rendered by
+     DocumentViewerPopup. A separate top-level namespace on purpose -- it is
+     a facsimile, not app chrome, and must never be reconciled against the
+     dark brain-v1* palette (nearest-token distances here are meaningless). */
+  --doc-paper-100: rgba(249, 247, 242, 1);
+  --doc-paper-200: rgba(243, 240, 232, 1);
+  --doc-paper-300: rgba(236, 232, 216, 1);
+  --doc-paper-rule-light: rgba(232, 226, 212, 1);
+  --doc-paper-rule: rgba(221, 216, 200, 1);
+  --doc-paper-rule-strong: rgba(216, 210, 190, 1);
+  --doc-paper-ink-300: rgba(138, 122, 96, 1);
+  --doc-paper-ink-400: rgba(122, 106, 80, 1);
+  --doc-paper-ink-500: rgba(90, 80, 64, 1);
+  --doc-paper-ink-700: rgba(58, 46, 30, 1);
+  --doc-paper-ink-800: rgba(42, 32, 16, 1);
+  --doc-paper-ink-900: rgba(26, 18, 5, 1);
   --braindark-purple: rgba(36, 7, 87, 1);
   --brainpurple: rgba(118, 49, 238, 1);
   --shared-colorsbaby-blue-5: rgba(17, 20, 27, 1);

@@ -163,7 +163,7 @@ export const ShareModal = ({ open, onClose }: Props): JSX.Element | null => {
                 onClick={handleCopyLink}
                 data-testid="copy-referral-link"
                 className={`flex items-center justify-center gap-[4px] px-[12px] py-[8px] rounded-pill text-[12px] leading-[16px] [font-family:'Gilroy',sans-serif] font-semibold flex-shrink-0 transition-opacity hover:opacity-80 ${
-                  copied ? "bg-[#0d3320] text-[#22c55e]" : "bg-brain-v1dark-orange text-brain-v1light-orange"
+                  copied ? "bg-brain-v1dark-green text-brain-v1green" : "bg-brain-v1dark-orange text-brain-v1light-orange"
                 }`}
               >
                 {copied ? "Copied!" : <><CopyIcon />Copy</>}
@@ -184,7 +184,7 @@ export const ShareModal = ({ open, onClose }: Props): JSX.Element | null => {
                 onClick={handleCopyCode}
                 data-testid="copy-referral-code"
                 className={`flex items-center justify-center gap-[4px] px-[12px] py-[8px] rounded-pill text-[12px] leading-[16px] [font-family:'Gilroy',sans-serif] font-semibold flex-shrink-0 transition-opacity hover:opacity-80 ${
-                  codeCopied ? "bg-[#0d3320] text-[#22c55e]" : "bg-brain-v1dark-orange text-brain-v1light-orange"
+                  codeCopied ? "bg-brain-v1dark-green text-brain-v1green" : "bg-brain-v1dark-orange text-brain-v1light-orange"
                 }`}
               >
                 {codeCopied ? "Copied!" : <><CopyIcon />Copy</>}
@@ -212,7 +212,7 @@ export const ShareModal = ({ open, onClose }: Props): JSX.Element | null => {
                 data-testid="send-invite-email"
                 className={`flex items-center justify-center gap-[4px] px-[12px] py-[8px] rounded-pill text-[12px] leading-[16px] [font-family:'Gilroy',sans-serif] font-semibold flex-shrink-0 transition-opacity bg-brain-v1dark-orange ${
                   emailSent
-                    ? "bg-[#0d3320] text-[#22c55e]"
+                    ? "bg-brain-v1dark-green text-brain-v1green"
                     : email.trim()
                     ? "text-brain-v1light-orange hover:opacity-80"
                     : "text-brain-v1light-orange opacity-50 cursor-not-allowed"
@@ -239,7 +239,7 @@ export const ShareModal = ({ open, onClose }: Props): JSX.Element | null => {
               </button>
               <button
                 onClick={() => handleSocial(`https://t.me/share/url?url=${encodeURIComponent(REFERRAL_URL)}&text=${encodeURIComponent("Join me on Brain Finance!")}`)}
-                className="bg-[#0088cc] rounded-row p-[8px] hover:opacity-80 transition-opacity flex items-center justify-center"
+                className="bg-brand-telegram rounded-row p-[8px] hover:opacity-80 transition-opacity flex items-center justify-center"
                 data-testid="share-telegram"
                 title="Share on Telegram"
               >
@@ -247,7 +247,7 @@ export const ShareModal = ({ open, onClose }: Props): JSX.Element | null => {
               </button>
               <button
                 onClick={() => handleSocial(`https://wa.me/?text=${encodeURIComponent(`Join me on Brain Finance! ${REFERRAL_URL}`)}`)}
-                className="bg-[#075e54] rounded-row p-[8px] hover:opacity-80 transition-opacity flex items-center justify-center"
+                className="bg-brand-whatsapp rounded-row p-[8px] hover:opacity-80 transition-opacity flex items-center justify-center"
                 data-testid="share-whatsapp"
                 title="Share on WhatsApp"
               >

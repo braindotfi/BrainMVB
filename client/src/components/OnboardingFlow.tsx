@@ -151,7 +151,7 @@ export function OnboardingFlow({ open, onClose, onComplete }: OnboardingFlowProp
 /* Step indicator */
 function StepDots({ total, current }: { total: number; current: number }) {
   return (
-    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-[8px] px-[12px] py-[6px] rounded-full bg-[#1a0d33]">
+    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-[8px] px-[12px] py-[6px] rounded-full bg-brain-v1dark-dark-purple">
       {Array.from({ length: total }).map((_, i) => (
         <span
           key={i}

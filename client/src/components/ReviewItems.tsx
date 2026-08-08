@@ -235,7 +235,7 @@ export const ReviewModal = ({
                 onClick={() => onConfirm(auto)}
                 disabled={busy}
                 data-testid="button-review-confirm"
-                className="flex flex-1 items-center justify-center px-[20px] py-[10px] rounded-pill bg-brain-v1dark-green hover:bg-[#174710] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1green disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-brain-v1dark-green"
+                className="flex flex-1 items-center justify-center px-[20px] py-[10px] rounded-pill bg-brain-v1dark-green hover:bg-brain-v1dark-green-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1green disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-brain-v1dark-green"
               >
                 <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1green text-[16px] whitespace-nowrap">{busy ? "Working…" : item.live ? "Approve" : "Confirm"}</span>
               </button>
@@ -243,7 +243,7 @@ export const ReviewModal = ({
                 onClick={onReject}
                 disabled={busy}
                 data-testid="button-review-reject"
-                className="flex flex-1 items-center justify-center px-[20px] py-[10px] rounded-pill bg-brain-v1dark-pink-red hover:bg-[#4a0018] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1pink-red disabled:opacity-60 disabled:cursor-not-allowed"
+                className="flex flex-1 items-center justify-center px-[20px] py-[10px] rounded-pill bg-brain-v1dark-pink-red hover:bg-brain-v1dark-pink-red-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1pink-red disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1pink-red text-[16px] whitespace-nowrap">Decline</span>
               </button>

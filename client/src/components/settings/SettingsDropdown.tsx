@@ -101,7 +101,7 @@ export function SettingsDropdown({
         aria-label={ariaLabel}
         data-testid={testId}
         onClick={() => onOpenChange(!open)}
-        className="bg-brain-v1baby-blue-15 rounded-[8px] p-[8px] flex items-center gap-[8px] w-full text-left outline-none hover:bg-[#2a3045] transition-colors focus-visible:ring-2 focus-visible:ring-brain-v1purple"
+        className="bg-brain-v1baby-blue-15 rounded-[8px] p-[8px] flex items-center gap-[8px] w-full text-left outline-none hover:bg-brain-v1baby-blue-15-hover transition-colors focus-visible:ring-2 focus-visible:ring-brain-v1purple"
       >
         <span className="flex-1 min-w-0 [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[14px] leading-[20px] whitespace-nowrap truncate">
           {titleCase(selected?.label ?? "")}

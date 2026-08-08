@@ -54,7 +54,7 @@ const KIND_ICON: Record<DocKind, typeof FileText> = {
 
 const STATUS_CHIP: Record<DocStatus, string> = {
   unpaid: "bg-brain-v1dark-orange text-brain-v1light-orange",
-  paid: "bg-[#0a2a0a] text-brain-v1green",
+  paid: "bg-brain-v1dark-green text-brain-v1green",
   held: "bg-brain-v1dark-pink-red text-brain-v1pink-red",
   disputed: "bg-brain-v1dark-pink-red text-brain-v1pink-red",
   cancelled: "bg-brain-v1stroke-2 text-brain-v1baby-blue-60",
@@ -292,77 +292,77 @@ function PaperPane({ doc }: { doc: DocumentRecord }) {
       data-testid="document-paper-pane"
     >
       {/* Letterhead */}
-      <div className="bg-[#f9f7f2] px-[20px] pt-[20px] pb-[16px] flex flex-col gap-[4px]">
+      <div className="bg-doc-paper-100 px-[20px] pt-[20px] pb-[16px] flex flex-col gap-[4px]">
         <div className="flex items-start justify-between gap-[12px]">
           <div>
-            <p className="font-semibold text-[18px] leading-[24px] text-[#1a1205] [font-family:'Gilroy',sans-serif]">
+            <p className="font-semibold text-[18px] leading-[24px] text-doc-paper-ink-900 [font-family:'Gilroy',sans-serif]">
               {partyName}
             </p>
-            <p className="font-medium text-[13px] text-[#5a5040] [font-family:'Gilroy',sans-serif] mt-[2px]">
+            <p className="font-medium text-[13px] text-doc-paper-ink-500 [font-family:'Gilroy',sans-serif] mt-[2px]">
               {doc.id}
             </p>
           </div>
           <div className="text-right shrink-0">
-            <p className="[font-family:'JetBrains_Mono',monospace] font-medium text-[11px] text-[#7a6a50] uppercase">
+            <p className="[font-family:'JetBrains_Mono',monospace] font-medium text-[11px] text-doc-paper-ink-400 uppercase">
               {doc.dateCaption ?? "Date"}
             </p>
-            <p className="[font-family:'JetBrains_Mono',monospace] text-[12px] text-[#3a2e1e]">
+            <p className="[font-family:'JetBrains_Mono',monospace] text-[12px] text-doc-paper-ink-700">
               {doc.dateLabel.replace(/^(Issued|Due|Paid|Effective|Posted)\s+/, "")}
             </p>
             {isContract && doc.effectiveToLabel && (
               <>
-                <p className="[font-family:'JetBrains_Mono',monospace] font-medium text-[11px] text-[#7a6a50] uppercase mt-[6px]">
+                <p className="[font-family:'JetBrains_Mono',monospace] font-medium text-[11px] text-doc-paper-ink-400 uppercase mt-[6px]">
                   Through
                 </p>
-                <p className="[font-family:'JetBrains_Mono',monospace] text-[12px] text-[#3a2e1e]">
+                <p className="[font-family:'JetBrains_Mono',monospace] text-[12px] text-doc-paper-ink-700">
                   {doc.effectiveToLabel}
                 </p>
               </>
             )}
           </div>
         </div>
-        <p className="font-medium text-[12px] text-[#7a6a50] [font-family:'Gilroy',sans-serif] mt-[4px]">
+        <p className="font-medium text-[12px] text-doc-paper-ink-400 [font-family:'Gilroy',sans-serif] mt-[4px]">
           {doc.title}
           {doc.billingPeriod ? ` · ${doc.billingPeriod}` : ""}
         </p>
       </div>
 
       {/* Body */}
-      <div className="bg-[#f3f0e8]">
+      <div className="bg-doc-paper-200">
         {isContract ? (
           <div className="px-[20px] py-[14px] flex flex-col gap-[10px]">
             <div className="flex justify-between items-center">
-              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] text-[#7a6a50]">
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] text-doc-paper-ink-400">
                 Effective from
               </p>
-              <p className="[font-family:'JetBrains_Mono',monospace] text-[12px] text-[#3a2e1e]">
+              <p className="[font-family:'JetBrains_Mono',monospace] text-[12px] text-doc-paper-ink-700">
                 {doc.effectiveFromLabel ?? "-"}
               </p>
             </div>
             <div className="flex justify-between items-center">
-              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] text-[#7a6a50]">
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] text-doc-paper-ink-400">
                 Through
               </p>
-              <p className="[font-family:'JetBrains_Mono',monospace] text-[12px] text-[#3a2e1e]">
+              <p className="[font-family:'JetBrains_Mono',monospace] text-[12px] text-doc-paper-ink-700">
                 {doc.effectiveToLabel ?? "-"}
               </p>
             </div>
             {doc.cadence && (
               <div className="flex justify-between items-center">
-                <p className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] text-[#7a6a50]">
+                <p className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] text-doc-paper-ink-400">
                   Payment cadence
                 </p>
-                <p className="[font-family:'JetBrains_Mono',monospace] text-[12px] text-[#3a2e1e]">
+                <p className="[font-family:'JetBrains_Mono',monospace] text-[12px] text-doc-paper-ink-700">
                   {doc.cadence}
                 </p>
               </div>
             )}
             {typeof doc.amount === "number" && (
-              <div className="flex justify-between items-center pt-[8px] border-t border-[#d8d2be]">
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#1a1205]">
+              <div className="flex justify-between items-center pt-[8px] border-t border-doc-paper-rule-strong">
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-doc-paper-ink-900">
                   Contracted amount
                 </p>
-                <p className="[font-family:'JetBrains_Mono',monospace] font-medium text-[15px] text-[#1a1205]">
+                <p className="[font-family:'JetBrains_Mono',monospace] font-medium text-[15px] text-doc-paper-ink-900">
                   ${fmt(doc.amount)}
                   {doc.cadence ? ` / ${doc.cadence.toLowerCase()}` : ""}
                 </p>
@@ -373,23 +373,23 @@ function PaperPane({ doc }: { doc: DocumentRecord }) {
           <>
             {doc.lineItems && doc.lineItems.length > 0 && (
               <>
-                <div className="flex gap-[8px] px-[20px] py-[8px] border-b border-[#ddd8c8]">
-                  <p className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-[#8a7a60] flex-1">
+                <div className="flex gap-[8px] px-[20px] py-[8px] border-b border-doc-paper-rule">
+                  <p className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-doc-paper-ink-300 flex-1">
                     Description
                   </p>
-                  <p className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-[#8a7a60] w-[80px] text-right">
+                  <p className="[font-family:'JetBrains_Mono',monospace] text-[10px] uppercase text-doc-paper-ink-300 w-[80px] text-right">
                     Amount
                   </p>
                 </div>
                 {doc.lineItems.map((item, idx) => (
                   <div
                     key={idx}
-                    className="flex gap-[8px] px-[20px] py-[10px] border-b border-[#e8e2d4] last:border-b-0"
+                    className="flex gap-[8px] px-[20px] py-[10px] border-b border-doc-paper-rule-light last:border-b-0"
                   >
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] text-[#2a2010] flex-1 leading-[18px]">
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] text-doc-paper-ink-800 flex-1 leading-[18px]">
                       {item.label}
                     </p>
-                    <p className="[font-family:'JetBrains_Mono',monospace] font-medium text-[12px] text-[#2a2010] w-[80px] text-right self-start pt-[1px]">
+                    <p className="[font-family:'JetBrains_Mono',monospace] font-medium text-[12px] text-doc-paper-ink-800 w-[80px] text-right self-start pt-[1px]">
                       ${fmt(item.amount)}
                     </p>
                   </div>
@@ -397,11 +397,11 @@ function PaperPane({ doc }: { doc: DocumentRecord }) {
               </>
             )}
             {typeof doc.amount === "number" && (
-              <div className="px-[20px] py-[12px] bg-[#ece8d8] flex justify-between items-center">
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-[#1a1205]">
+              <div className="px-[20px] py-[12px] bg-doc-paper-300 flex justify-between items-center">
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-doc-paper-ink-900">
                   {doc.kind === "prior_payment" ? "Amount paid" : "Total due"}
                 </p>
-                <p className="[font-family:'JetBrains_Mono',monospace] font-medium text-[15px] text-[#1a1205]">
+                <p className="[font-family:'JetBrains_Mono',monospace] font-medium text-[15px] text-doc-paper-ink-900">
                   ${fmt(doc.amount)}
                 </p>
               </div>
@@ -484,7 +484,7 @@ function BankTransactionPane({ doc }: { doc: DocumentRecord }) {
             </div>
           </div>
           <div
-            className={`flex items-start gap-[10px] p-[12px] rounded-[10px] ${amountsDiffer ? "bg-brain-v1dark-pink-red" : "bg-[#0a2a0a]"}`}
+            className={`flex items-start gap-[10px] p-[12px] rounded-[10px] ${amountsDiffer ? "bg-brain-v1dark-pink-red" : "bg-brain-v1dark-green"}`}
           >
             {amountsDiffer ? (
               <AlertCircle size={15} className="text-brain-v1pink-red shrink-0 mt-[1px]" />
@@ -538,7 +538,7 @@ function CoherenceNote({ doc }: { doc: DocumentRecord }) {
     <div className="flex flex-col gap-[8px] w-full" data-testid="document-coherence-section">
       <SectionLabel>Amount coherence</SectionLabel>
       <div
-        className={`flex items-start gap-[10px] p-[12px] rounded-[10px] ${match ? "bg-[#0a2a0a]" : "bg-brain-v1dark-pink-red"}`}
+        className={`flex items-start gap-[10px] p-[12px] rounded-[10px] ${match ? "bg-brain-v1dark-green" : "bg-brain-v1dark-pink-red"}`}
       >
         {match ? (
           <CheckCircle2 size={15} className="text-brain-v1green shrink-0 mt-[1px]" />
@@ -716,7 +716,7 @@ export function DocumentViewerPopup({
           ) : (
             <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-brain-v1stroke-2 border-b border-solid flex items-center gap-[12px] px-[20px] py-[14px] relative shrink-0 w-full">
               <div className="flex items-center gap-[8px] flex-1 min-w-px">
-                <div className="flex items-center justify-center size-[28px] rounded-[8px] bg-[#0d1523] shrink-0">
+                <div className="flex items-center justify-center size-[28px] rounded-[8px] bg-brain-v1baby-blue-5 shrink-0">
                   <KindIcon size={14} className="text-brain-v1baby-blue-100" />
                 </div>
                 <div className="flex flex-col min-w-px">
@@ -761,7 +761,7 @@ export function DocumentViewerPopup({
                       type="button"
                       onClick={() => setComparing((c) => !c)}
                       data-testid="button-toggle-compare"
-                      className="flex items-center gap-[8px] p-[10px] rounded-[10px] bg-brain-v1highlight-dropdown-bg hover:bg-[#151926] border border-transparent hover:border-[#7631ee]/40 transition-colors w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
+                      className="flex items-center gap-[8px] p-[10px] rounded-[10px] bg-brain-v1highlight-dropdown-bg hover:bg-brain-v1item-hover border border-transparent hover:border-[#7631ee]/40 transition-colors w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
                     >
                       <ArrowLeftRight size={14} className="text-brain-v1purple shrink-0" />
                       <span className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] text-brain-v1baby-blue-100 flex-1 min-w-px">
@@ -781,7 +781,7 @@ export function DocumentViewerPopup({
                     type="button"
                     onClick={() => void openDocumentOriginal(doc)}
                     data-testid="link-open-original"
-                    className="flex items-center gap-[8px] p-[10px] rounded-[10px] bg-brain-v1highlight-dropdown-bg hover:bg-[#151926] border border-transparent hover:border-[#7631ee]/40 transition-colors w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
+                    className="flex items-center gap-[8px] p-[10px] rounded-[10px] bg-brain-v1highlight-dropdown-bg hover:bg-brain-v1item-hover border border-transparent hover:border-[#7631ee]/40 transition-colors w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
                   >
                     <ExternalLink size={14} className="text-brain-v1purple shrink-0" />
                     <span className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] text-brain-v1baby-blue-100 flex-1 min-w-px">

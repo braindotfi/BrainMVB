@@ -731,7 +731,7 @@ export function RulesPanel() {
                   type="button"
                   onClick={cancelCreate}
                   data-testid="button-create-cancel"
-                  className="flex-1 px-[12px] py-[10px] rounded-pill bg-brain-v1stroke-2 hover:bg-[#252a3d] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-brain-v1baby-blue-100"
+                  className="flex-1 px-[12px] py-[10px] rounded-pill bg-brain-v1stroke-2 hover:bg-brain-v1stroke-2-hover transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-brain-v1baby-blue-100"
                 >
                   Not yet
                 </button>

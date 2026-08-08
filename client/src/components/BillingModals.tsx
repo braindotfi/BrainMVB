@@ -347,7 +347,7 @@ export function UpdateCardModal({
                   <span
                     key={b.name}
                     title={b.name}
-                    className="h-[16px] w-[23px] rounded-[2.5px] border border-[#d9d9d9] flex items-center justify-center overflow-hidden"
+                    className="h-[16px] w-[23px] rounded-[2.5px] border border-brain-v1white flex items-center justify-center overflow-hidden"
                     style={{ background: b.bg }}
                   >
                     {b.icon}

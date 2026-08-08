@@ -182,7 +182,7 @@ export function SignupPage() {
       <div className="flex-1 flex items-center justify-center z-10 relative px-4">
         <div className="w-full max-w-[420px] bg-brain-v1baby-blue-5 border border-brain-v1stroke-2 rounded-modal px-7 py-8 shadow-2xl">
           <div className="flex flex-col items-center text-center mb-6">
-            <h1 className="[font-family:'Gilroy',sans-serif] font-semibold text-[#e8eaf0] text-[24px] leading-[32px]">
+            <h1 className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1white text-[24px] leading-[32px]">
               {mode === "login" ? "Welcome Back" : "Create Your Account"}
             </h1>
             <p className="[font-family:'Gilroy',sans-serif] font-normal text-brain-v1baby-blue-60 text-[15px] leading-[22px] mt-1">
@@ -199,7 +199,7 @@ export function SignupPage() {
                 type="button"
                 data-testid="button-google-signin"
                 onClick={loginWithGoogle}
-                className="w-full py-3 px-6 rounded-pill bg-[#131828] hover:bg-[#1a2235] border border-brain-v1stroke-2 hover:border-[#7631ee]/40 transition-colors [font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[15px] flex items-center justify-center gap-3"
+                className="w-full py-3 px-6 rounded-pill bg-brain-v1baby-blue-5 hover:bg-brain-v1stroke-2 border border-brain-v1stroke-2 hover:border-[#7631ee]/40 transition-colors [font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[15px] flex items-center justify-center gap-3"
               >
                 <img src={googleLogo} alt="" className="h-[18px] w-[18px] rounded-full object-contain" />
                 Continue with Google
@@ -226,7 +226,7 @@ export function SignupPage() {
                   onChange={(e) => setCompanyName(e.target.value)}
                   autoComplete="organization"
                   placeholder="Acme Inc."
-                  className="w-full h-[48px] px-4 rounded-2xl bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 focus:border-brain-v1purple outline-none transition-colors [font-family:'Gilroy',sans-serif] text-[#e8eaf0] placeholder:text-brain-v1baby-blue-30 text-[15px]"
+                  className="w-full h-[48px] px-4 rounded-2xl bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 focus:border-brain-v1purple outline-none transition-colors [font-family:'Gilroy',sans-serif] text-brain-v1white placeholder:text-brain-v1baby-blue-30 text-[15px]"
                 />
               </div>
             )}
@@ -242,7 +242,7 @@ export function SignupPage() {
                   onChange={(e) => setName(e.target.value)}
                   autoComplete="name"
                   placeholder="Jane Doe"
-                  className="w-full h-[48px] px-4 rounded-2xl bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 focus:border-brain-v1purple outline-none transition-colors [font-family:'Gilroy',sans-serif] text-[#e8eaf0] placeholder:text-brain-v1baby-blue-30 text-[15px]"
+                  className="w-full h-[48px] px-4 rounded-2xl bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 focus:border-brain-v1purple outline-none transition-colors [font-family:'Gilroy',sans-serif] text-brain-v1white placeholder:text-brain-v1baby-blue-30 text-[15px]"
                 />
               </div>
             )}
@@ -259,7 +259,7 @@ export function SignupPage() {
                   onChange={(e) => setIdentifier(e.target.value)}
                   autoComplete="username"
                   placeholder="yourname or you@example.com"
-                  className="w-full h-[48px] px-4 rounded-2xl bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 focus:border-brain-v1purple outline-none transition-colors [font-family:'Gilroy',sans-serif] text-[#e8eaf0] placeholder:text-brain-v1baby-blue-30 text-[15px]"
+                  className="w-full h-[48px] px-4 rounded-2xl bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 focus:border-brain-v1purple outline-none transition-colors [font-family:'Gilroy',sans-serif] text-brain-v1white placeholder:text-brain-v1baby-blue-30 text-[15px]"
                 />
               </div>
             ) : (
@@ -275,7 +275,7 @@ export function SignupPage() {
                     onChange={(e) => setUsername(e.target.value)}
                     autoComplete="username"
                     placeholder="yourname"
-                    className="w-full h-[48px] px-4 rounded-2xl bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 focus:border-brain-v1purple outline-none transition-colors [font-family:'Gilroy',sans-serif] text-[#e8eaf0] placeholder:text-brain-v1baby-blue-30 text-[15px]"
+                    className="w-full h-[48px] px-4 rounded-2xl bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 focus:border-brain-v1purple outline-none transition-colors [font-family:'Gilroy',sans-serif] text-brain-v1white placeholder:text-brain-v1baby-blue-30 text-[15px]"
                   />
                 </div>
 
@@ -290,7 +290,7 @@ export function SignupPage() {
                     onChange={(e) => setEmail(e.target.value)}
                     autoComplete="email"
                     placeholder="you@example.com"
-                    className="w-full h-[48px] px-4 rounded-2xl bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 focus:border-brain-v1purple outline-none transition-colors [font-family:'Gilroy',sans-serif] text-[#e8eaf0] placeholder:text-brain-v1baby-blue-30 text-[15px]"
+                    className="w-full h-[48px] px-4 rounded-2xl bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 focus:border-brain-v1purple outline-none transition-colors [font-family:'Gilroy',sans-serif] text-brain-v1white placeholder:text-brain-v1baby-blue-30 text-[15px]"
                   />
                 </div>
               </>
@@ -307,12 +307,12 @@ export function SignupPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete={mode === "login" ? "current-password" : "new-password"}
                 placeholder={mode === "register" ? "At least 8 characters" : "Your password"}
-                className="w-full h-[48px] px-4 rounded-2xl bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 focus:border-brain-v1purple outline-none transition-colors [font-family:'Gilroy',sans-serif] text-[#e8eaf0] placeholder:text-brain-v1baby-blue-30 text-[15px]"
+                className="w-full h-[48px] px-4 rounded-2xl bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 focus:border-brain-v1purple outline-none transition-colors [font-family:'Gilroy',sans-serif] text-brain-v1white placeholder:text-brain-v1baby-blue-30 text-[15px]"
               />
             </div>
 
             {error && (
-              <p data-testid="text-auth-error" className="[font-family:'Gilroy',sans-serif] text-[#f4607a] text-[13px] px-1">
+              <p data-testid="text-auth-error" className="[font-family:'Gilroy',sans-serif] text-brain-v1error-text text-[13px] px-1">
                 {error}
               </p>
             )}
@@ -342,7 +342,7 @@ export function SignupPage() {
             data-testid="button-demo-login"
             onClick={handleDemo}
             disabled={submitting}
-            className="w-full py-3 px-6 rounded-pill bg-[#131828] hover:bg-[#1a2235] border border-brain-v1stroke-2 hover:border-[#7631ee]/40 disabled:opacity-60 disabled:cursor-not-allowed transition-colors [font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[15px] flex items-center justify-center gap-3"
+            className="w-full py-3 px-6 rounded-pill bg-brain-v1baby-blue-5 hover:bg-brain-v1stroke-2 border border-brain-v1stroke-2 hover:border-[#7631ee]/40 disabled:opacity-60 disabled:cursor-not-allowed transition-colors [font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[15px] flex items-center justify-center gap-3"
           >
             Continue with Demo
           </button>
@@ -362,7 +362,7 @@ export function SignupPage() {
       </div>
 
       <footer className="flex items-center justify-between px-6 h-14 flex-shrink-0 z-10 relative">
-        <span className="[font-family:'Gilroy',sans-serif] text-[#3a4060] text-sm">
+        <span className="[font-family:'Gilroy',sans-serif] text-brain-v1baby-blue-30 text-sm">
           Copyright © 2026 Brain Finance. All rights reserved.
         </span>
         <img alt="Socials" src="/figmaAssets/socials.svg" className="opacity-40" />
