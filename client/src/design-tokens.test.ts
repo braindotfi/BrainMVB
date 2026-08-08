@@ -285,71 +285,41 @@ const NAMED_TEXT_BASELINE: Record<string, number> = {
   "pages/sections/NavigationMenuSection.tsx": 3,
 };
 
-/** Raw-hex inline text colours still awaiting conversion. Only ever shrinks. */
-const RAW_TEXT_BASELINE: Record<string, number> = {
+/**
+ * Every raw `#414965` in app source, whatever it is painting.
+ *
+ * Deliberately not filtered down to "the ones painting text". Deciding that
+ * from source text means guessing which nearby `color:` / `stroke` / `border`
+ * marker owns a given hex, and a guess that reads one shape wrongly fails
+ * *open* — the site disappears from the count and the ratchet goes green while
+ * the bug ships. Counting every occurrence cannot do that.
+ *
+ * The trade is that a genuinely new border/stroke/fill use also fails, and has
+ * to be added here by hand. That is the intended cost: at 15 occurrences it is
+ * rare, and it forces each new one to be a decision rather than a default.
+ *
+ * Raising an entry is only correct for a NON-text use. Text goes to `#6c779d`,
+ * or `#a8b9f4` if it is copy that has to be read.
+ */
+const RAW_INVENTORY: Record<string, number> = {
+  // Text, still awaiting conversion (task #142) — these three may only shrink.
   "components/FilterChipRow.tsx": 1,
   "components/PayablesTab.tsx": 1,
   "components/ReceivablesTab.tsx": 1,
+  // Legitimate non-text uses: strokes, ring colour, dot fills, comments.
+  "components/AddGoalModal.tsx": 1,
+  "components/DeleteConfirmDialog.tsx": 1,
+  "components/ProposalDetail.tsx": 1,
+  "components/ReviewItems.tsx": 1,
+  "components/SecurityModals.tsx": 1,
+  "components/settings/DevelopersSection.tsx": 1,
+  "components/sources/ExtractStatusBadge.tsx": 1,
+  "pages/RulesPanel.tsx": 1,
+  "pages/SettingsPage.tsx": 3,
+  "pages/VendorsPanel.tsx": 1,
 };
 
 const NAMED_TEXT_RE = /text-brain-v1baby-blue-30(?![\w-])/g;
-
-/**
- * Line indices that sit inside a comment.
- *
- * Tracked per line rather than by stripping, because #131's header records why
- * a naive stripper is unsafe here: `accept="image/*"` opens a block comment as
- * far as a regex is concerned. A block comment is only recognised when `/*` or
- * `{/*` opens the line, which a mid-line string literal never does.
- */
-function commentLines(src: string): Set<number> {
-  const out = new Set<number>();
-  let open = false;
-  src.split("\n").forEach((raw, i) => {
-    const line = raw.trim();
-    if (open) {
-      out.add(i);
-      if (line.includes("*/")) open = false;
-      return;
-    }
-    if (line.startsWith("//") || line.startsWith("*")) {
-      out.add(i);
-      return;
-    }
-    if (line.startsWith("/*") || line.startsWith("{/*")) {
-      out.add(i);
-      if (!line.includes("*/")) open = true;
-    }
-  });
-  return out;
-}
-
-/**
- * Whether a raw `#414965` is painting text.
- *
- * Decided by the nearest preceding marker: a CSS `color:` property means text,
- * while `stroke` / `background` / `borderColor` / a ring colour / a `dot:` fill
- * / a `color=` JSX prop (which the chevron icons use for their stroke) do not.
- * No marker at all is treated as text — that is the `const text = …` shape, and
- * failing toward "this is text" is the safe direction for a contrast rule.
- *
- * `\bcolor\s*:` deliberately will not match inside `backgroundColor:`.
- */
-const TEXT_MARKER_RE = /\bcolor\s*:/g;
-const NON_TEXT_MARKER_RE =
-  /(--tw-ring-color|background(?:Color)?|borderColor|border|stroke|fill|ring|dot|color\s*=)/g;
-
-function paintsText(window: string): boolean {
-  const last = (re: RegExp) => {
-    let idx = -1;
-    for (const m of window.matchAll(re)) idx = m.index ?? idx;
-    return idx;
-  };
-  const nonText = last(NON_TEXT_MARKER_RE);
-  const text = last(TEXT_MARKER_RE);
-  if (nonText === -1 && text === -1) return true;
-  return text > nonText;
-}
 
 /**
  * App source only. This file names both spellings dozens of times in its own
@@ -370,40 +340,14 @@ function countPerFile(pick: (src: string, rel: string) => number) {
 const namedTextUses = () =>
   countPerFile((src) => (src.match(NAMED_TEXT_RE) ?? []).length);
 
-const rawTextUses = () =>
-  countPerFile((src) => {
-    const comments = commentLines(src);
-    let n = 0;
-    for (const m of src.matchAll(/#414965/g)) {
-      const at = m.index ?? 0;
-      const line = src.slice(0, at).split("\n").length - 1;
-      if (comments.has(line)) continue;
-      if (paintsText(src.slice(Math.max(0, at - 240), at))) n += 1;
-    }
-    return n;
-  });
+const rawUses = () =>
+  countPerFile((src) => (src.match(/#414965/g) ?? []).length);
 
 describe("#134 baby-blue-30 is a border colour, never text", () => {
-  it("classifies the raw-hex sites it is asked to judge", () => {
-    // Guards the heuristic itself: if the marker logic breaks, every other
-    // assertion here goes quietly green instead of failing.
-    expect(paintsText('style={{ color: ')).toBe(true);
-    expect(paintsText('const text = active ? "#ff9500" : ')).toBe(true);
-    expect(paintsText('<path stroke=')).toBe(false);
-    expect(paintsText('<ChevronRight color=')).toBe(false);
-    expect(paintsText('style={{ background: ')).toBe(false);
-    expect(paintsText("backgroundColor: p.isNew ? p.placeholder ? ")).toBe(false);
-    expect(paintsText('borderColor: "#1d2132", color: "#a8b9f4", ["--tw-ring-color" as string]: ')).toBe(false);
-    // Nearest marker wins, not first.
-    expect(paintsText('{ background: "#0c0f14", color: ')).toBe(true);
-    expect(paintsText('{ color: "#6c779d", dot: ')).toBe(false);
-  });
-
-  it("the Settings cluster #134 converted stays clean", () => {
+  it("the Settings cluster #134 converted keeps no named text use", () => {
     const named = namedTextUses();
-    const raw = rawTextUses();
-    const dirty = SETTINGS_CLUSTER.filter((f) => named[f] || raw[f]).map(
-      (f) => `${f}  named:${named[f] ?? 0} raw:${raw[f] ?? 0}`,
+    const dirty = SETTINGS_CLUSTER.filter((f) => named[f]).map(
+      (f) => `${f}  ×${named[f]}`,
     );
     expect(
       dirty,
@@ -419,11 +363,12 @@ describe("#134 baby-blue-30 is a border colour, never text", () => {
     ).toEqual(NAMED_TEXT_BASELINE);
   });
 
-  it("no new raw #414965 painting text anywhere", () => {
+  it("every raw #414965 is one this repo already knows about", () => {
     expect(
-      rawTextUses(),
-      'A raw "#414965" is being used as a text colour. Use "#6c779d". ' +
-        "If you removed one, lower the count in RAW_TEXT_BASELINE — never raise it.",
-    ).toEqual(RAW_TEXT_BASELINE);
+      rawUses(),
+      'A raw "#414965" appeared, moved, or was removed. It is a border colour: ' +
+        'if this is text use "#6c779d" (or "#a8b9f4" for copy that has to be read). ' +
+        "If it really is a stroke, ring or dot fill, add it to RAW_INVENTORY.",
+    ).toEqual(RAW_INVENTORY);
   });
 });
