@@ -84,8 +84,8 @@ prohibits the merge". That is a branch rule, not a credential problem.
 `gh pr merge --admin` with a broadly-scoped classic PAT can override it — it has
 merged a PR with `reviewDecision: REVIEW_REQUIRED` and zero reviews. **That is a
 bypass of the review requirement, not a workaround.** Whether it is acceptable is
-the repo owner's call per the standing admin-merge rule (see
-`merge-bypass-rule.md`), never a routine step.
+the repo owner's explicit per-PR call (see `merge-bypass-rule.md` — there is no
+standing bypass, for any category), never a routine step.
 
 **Why this note exists:** a finished CI-green change looked unlandable because one
 credential's 403 was read as the repo's limit, while the credential that could

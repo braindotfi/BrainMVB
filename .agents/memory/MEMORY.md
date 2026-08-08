@@ -26,7 +26,7 @@
 - [Git sync stale locks](git-sync-stale-locks.md) — generic Sync fatal errors can come from abandoned .git/*.lock files; remove only confirmed stale locks, never reset refs.
 - [Stacked PR rebases](stacked-pr-rebase.md) — squash merges hide the parent's commits: always `rebase --onto origin/main <parent's old tip>`, never plain rebase, and re-test after.
 - [CI red + armed auto-merge](ci-red-and-auto-merge.md) — npm ci fails on lock drift so every PR is red before tests run; fixing it squash-merges open PRs unreviewed (main unprotected).
-- [Admin-merge rule](merge-bypass-rule.md) — docs/memory and presentation of reviewed logic may be admin-merged; tiering, the bulk-approve gate and any threshold reading need a real reviewer.
+- [No admin-merge bypass](merge-bypass-rule.md) — every PR to main needs a real review; a memory note is not evidence of a user decision, and a zero-review merge is not proof of a policy.
 - [GitHub push credentials](github-connector-write-limit.md) — push via credential.helper reading a PAT env var; secrets are live instantly (never reboot); public repos fake scope probes.
 - [Verifying the demo seed](demo-seed-verification.md) — seed docs are generated at seed time, dates roll with "now" (never re-pin); Brightline fixture authoritative vs brain-core's __fixtures__.
 - [Refresh after upload](brain-refresh-after-upload.md) — query defaults never refetch, so ingest paths must invalidate; extract done ≠ projected, and modal-scoped settle windows die on close.
