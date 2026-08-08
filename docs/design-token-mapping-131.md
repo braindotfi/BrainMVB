@@ -254,7 +254,7 @@ This is the trap in doing this mapping purely by ΔE, and the reason it is worth
 
 ### Accessibility notes — two pre-existing failures this pass would touch
 
-1. **`#8b95b8` → `brain-v1baby-blue-60` drops 5.60:1 to 3.62:1** (`BrainAssistant.tsx:990`, dashed
+1. **`#8b95b8` → `brain-v1baby-blue-60` drops 5.60:1 to 3.62:1** (`pages/sections/BrainAssistant.tsx:990`, dashed
    placeholder text). That crosses AA in the wrong direction. Options: accept (it is a placeholder,
    arguably not body copy), keep it as a token, or lighten the surface. **Not collapsing this one
    without your call** — flagged rather than decided.
@@ -267,7 +267,7 @@ This is the trap in doing this mapping purely by ΔE, and the reason it is worth
 
 ## 6. Needs a decision — `BrainAssistant` error placeholder, 3 occurrences
 
-`BrainAssistant.tsx:992` is a single element using three raw values found nowhere else:
+`pages/sections/BrainAssistant.tsx:992` is a single element using three raw values found nowhere else:
 
 ```
 bg-[#211c22] border border-dashed border-[#8b5362] text-[#b99aa5]
