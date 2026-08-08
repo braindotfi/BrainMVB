@@ -1408,6 +1408,9 @@ Always `[font-family:'Gilroy',sans-serif]`. The `font-['Gilroy',sans-serif]` for
 same declaration but splits every grep for typography in two; 76 occurrences across 11 files were
 converted so the search term is now reliable.
 
+The Tailwind `font-sans` default is Gilroy, the app's primary UI font. Use JetBrains Mono only for
+amounts and identifiers, and Gridular only for the "brain" wordmark.
+
 ### Fractional pixel values
 Figma exports at a non-1× zoom leak values like `18.75px`, `20.625px`, `16.88px`, `0.938px` — all of
 `DeleteConfirmDialog` was exported at 1.25×. Round on the way in. Sub-pixel borders in particular
