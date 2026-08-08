@@ -1453,15 +1453,22 @@ export function InboxPage() {
             against a value nothing could set. Its own row rather than a fourth
             item in the toolbar: the centre column is ~420px and three dropdowns
             already fill it. No clear button -- "Clear filters" below resets
-            `query` with the rest, and hasActiveFilter already counts it. */}
+            `query` with the rest, and hasActiveFilter already counts it.
+
+            GlobalSearch also renders on this route, so the wording has to keep
+            the two apart. That bar looks across decisions, vendors and accounts
+            and NAVIGATES to one record; this one narrows the list in front of
+            you and changes nothing else. The original copy ("Search vendor,
+            amount or description") predated the global bar and now reads as a
+            second attempt at the same job. */}
         <div className="flex h-[40px] items-center gap-[8px] p-[8px] rounded-[8px] bg-brain-v1baby-blue-15 w-full min-w-0">
           <Search className="shrink-0 size-[20px] text-brain-v1baby-blue-60" strokeWidth={1.8} aria-hidden="true" />
           <input
             type="text"
             value={filters.query}
             onChange={(e) => setFilter("query", e.target.value)}
-            placeholder="Search vendor, amount or description"
-            aria-label="Search decisions"
+            placeholder="Filter these decisions"
+            aria-label="Filter decisions by text"
             data-testid="filter-search"
             className="flex-1 min-w-0 h-[24px] bg-transparent outline-none [font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 placeholder:text-brain-v1baby-blue-60 text-[14px] leading-[20px]"
           />
