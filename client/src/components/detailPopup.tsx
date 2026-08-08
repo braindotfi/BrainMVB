@@ -140,7 +140,7 @@ export function DetailPopupHeader({
             {amount}
           </p>
           <div className="bg-brain-v1baby-blue-15 border border-[rgba(108,119,157,0.2)] border-solid flex items-center justify-center px-[8px] py-[3px] rounded-pill shrink-0">
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[12px] text-center whitespace-nowrap">
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-brain-v1baby-blue-60 text-[12px] text-center whitespace-nowrap">
               {currency}
             </p>
           </div>

@@ -373,7 +373,7 @@ export function ProposalDetail({
                       className={`flex items-center gap-[16px] px-[16px] py-[12px] rounded-row bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 w-full text-left ${clickable ? "hover:bg-brain-v1baby-blue-5 hover:border-[#7631ee]/40 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple" : ""}`}
                     >
                       <div className="flex flex-1 gap-[16px] items-center min-w-px">
-                        <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap px-[8px] py-[3px] rounded-pill bg-brain-v1baby-blue-15 border border-[rgba(108,119,157,0.2)]">
+                        <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap px-[8px] py-[3px] rounded-pill bg-brain-v1baby-blue-15 border border-[rgba(108,119,157,0.2)]">
                           {titleCase(ev.kind.replace("_", " "))}
                         </span>
                         <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-100 text-[16px] whitespace-nowrap">

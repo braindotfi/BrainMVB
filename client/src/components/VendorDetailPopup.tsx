@@ -444,7 +444,7 @@ export function VendorDetailPopup({
                       >
                         <div className="flex flex-col items-center justify-center relative shrink-0 size-[64px]">
                           <div className="bg-brain-v1baby-blue-15 border border-[rgba(108,119,157,0.2)] border-solid content-stretch flex items-center justify-center px-[8px] py-[3px] relative rounded-pill shrink-0">
-                            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[12px] text-center whitespace-nowrap">
+                            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-brain-v1baby-blue-60 text-[12px] text-center whitespace-nowrap">
                               Rule
                             </p>
                           </div>
@@ -504,7 +504,7 @@ export function VendorDetailPopup({
                             className="flex items-center justify-center px-[8px] py-[3px] rounded-pill shrink-0 border border-solid"
                             style={{ background: "#4a2300", borderColor: "rgba(255,149,0,0.2)" }}
                           >
-                            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1light-orange text-[12px] text-center whitespace-nowrap">
+                            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-brain-v1light-orange text-[12px] text-center whitespace-nowrap">
                               Resolved
                             </p>
                           </div>

@@ -23,7 +23,7 @@ export function RecordPill({
 }): JSX.Element {
   return (
     <span
-      className={`${className} inline-flex items-center justify-center gap-[4px] border border-solid rounded-pill px-[8px] py-[2px] [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[12px] text-center whitespace-nowrap shrink-0`}
+      className={`${className} inline-flex items-center justify-center gap-[4px] border border-solid rounded-pill px-[8px] py-[2px] [font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[12px] text-center whitespace-nowrap shrink-0`}
       style={style}
       data-testid={testId}
       title={title}

@@ -171,4 +171,51 @@ for (const [tab, selector, label] of [
   await assertBaseline(label, selector, { optional: true });
 }
 
+/* ── Badge pills ──────────────────────────────────────────────────────────
+   A badge pill is 20px tall: 2px padding + a 14px line + 2px padding + 1px
+   borders. That is not decoration — 20px is exactly the height of the row
+   title line the badge sits on, so a badge that grows drags the whole stack
+   with it.
+
+   This check exists because the typography pass re-led these to 12/16 for
+   pairing-table compliance. Every pill-bearing row silently went 40px -> 42px,
+   and tsc, 1126 unit tests and the design-token scan all stayed green. The row
+   assertions above did catch it, but they report it as a *row* failure, which
+   is one indirection away from the actual cause. This names the cause. */
+await go("/inbox");
+const badges = await page.evaluate(() => {
+  const out = [];
+  for (const el of document.querySelectorAll('[class*="rounded-pill"]')) {
+    const r = el.getBoundingClientRect();
+    if (r.height < 2 || r.width < 2) continue;
+    let t = el;
+    for (const c of el.querySelectorAll("span,p")) {
+      if ((c.textContent ?? "").trim()) { t = c; break; }
+    }
+    const cs = getComputedStyle(el);
+    const ts = getComputedStyle(t);
+    const py = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
+    /* the badge tier only: 12px type with 2px vertical padding. Action pills
+       are also `rounded-pill` but carry 12-16px padding and own their height. */
+    if (Math.round(parseFloat(ts.fontSize)) !== 12 || py !== 4) continue;
+    out.push({
+      h: Math.round(r.height),
+      lh: ts.lineHeight === "normal" ? "none" : Math.round(parseFloat(ts.lineHeight)),
+      text: (el.textContent ?? "").trim().slice(0, 20),
+    });
+  }
+  return out;
+});
+const offSpec = badges.filter((b) => b.h !== 20);
+check(
+  "badge pills are 20px tall (12px/14 + 2px padding + borders)",
+  badges.length > 0 && offSpec.length === 0,
+  badges.length === 0
+    ? "no badge pills rendered on Inbox — evidence gap, not a pass"
+    : `${badges.length} badges, ${offSpec.length} off-spec` +
+      (offSpec.length
+        ? `: ${[...new Set(offSpec.map((b) => `leading-${b.lh} => ${b.h}px`))].slice(0, 3).join(", ")}`
+        : ""),
+);
+
 await finish();

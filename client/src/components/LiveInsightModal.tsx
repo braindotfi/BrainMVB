@@ -295,7 +295,7 @@ export const LiveInsightRow = ({ insight, onClick }: { insight: LiveInsight; onC
       )}
     </div>
     <span
-      className="inline-flex items-center justify-center gap-[5px] border border-solid border-[rgba(108,119,157,0.2)] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] px-[8px] py-[2px] rounded-pill whitespace-nowrap shrink-0 text-brain-v1baby-blue-60 bg-brain-v1baby-blue-15"
+      className="inline-flex items-center justify-center gap-[5px] border border-solid border-[rgba(108,119,157,0.2)] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] px-[8px] py-[2px] rounded-pill whitespace-nowrap shrink-0 text-brain-v1baby-blue-60 bg-brain-v1baby-blue-15"
       data-testid={`pill-live-insight-row-${insight.id}`}
     >
       {INSIGHT_PILL_LABEL}

@@ -175,7 +175,7 @@ export function ChangePlanModal({
                     }}
                   >
                     <StarIcon />
-                    <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-brain-v1dark-orange">Recommended</span>
+                    <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-brain-v1dark-orange">Recommended</span>
                   </span>
                 )}
               </button>

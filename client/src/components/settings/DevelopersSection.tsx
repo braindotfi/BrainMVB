@@ -199,7 +199,7 @@ const PillButton = ({ children, onClick, tone = "purple", disabled, testId }: {
 const StatusBadge = ({ status }: { status: "active" | "revoked" }) => (
   <span
     data-testid={`badge-key-status-${status}`}
-    className="inline-flex items-center justify-center px-[8px] py-[3px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-center whitespace-nowrap border"
+    className="inline-flex items-center justify-center px-[8px] py-[3px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-center whitespace-nowrap border"
     style={status === "active"
       ? { background: "#222737", color: "#a8b9f4", borderColor: "rgba(168,185,244,0.2)" }
       : { background: "#350011", color: "#d20344", borderColor: "rgba(210,3,68,0.2)" }}
@@ -542,7 +542,7 @@ const EndpointRow = ({ path, scope, description }: { path: string; scope: string
     <div className="flex flex-col gap-[16px] w-full" data-testid={`row-endpoint-${slug}`}>
       <div className="flex flex-col gap-[4px] justify-center w-full">
         <div className="flex gap-[12px] items-start w-full flex-wrap">
-          <span className="bg-brain-v1baby-blue-15 border border-[rgba(108,119,157,0.2)] flex items-center justify-center px-[8px] py-[3px] rounded-pill shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[12px] text-center whitespace-nowrap">
+          <span className="bg-brain-v1baby-blue-15 border border-[rgba(108,119,157,0.2)] flex items-center justify-center px-[8px] py-[3px] rounded-pill shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-brain-v1baby-blue-60 text-[12px] text-center whitespace-nowrap">
             GET
           </span>
           <p className="flex-1 min-w-0 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[16px] break-all" data-testid={`text-endpoint-path-${slug}`}>
@@ -550,7 +550,7 @@ const EndpointRow = ({ path, scope, description }: { path: string; scope: string
           </p>
           <span
             data-testid={`badge-endpoint-scope-${slug}`}
-            className="flex items-center justify-center px-[8px] py-[3px] rounded-pill shrink-0 border [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[12px] text-center whitespace-nowrap"
+            className="flex items-center justify-center px-[8px] py-[3px] rounded-pill shrink-0 border [font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[12px] text-center whitespace-nowrap"
             style={scope
               ? { background: "#240757", color: "#7631ee", borderColor: "rgba(118,49,238,0.2)" }
               : { background: "#222737", color: "#6c779d", borderColor: "rgba(108,119,157,0.2)" }}
@@ -697,7 +697,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
               </p>
               {/* Layer badge — left */}
               <div className="absolute flex items-center justify-center left-[23px] top-[17px] bg-brain-v1baby-blue-15 border border-[rgba(108,119,157,0.2)] border-solid px-[8px] py-[3px] rounded-pill">
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[12px] text-center whitespace-nowrap capitalize">
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-brain-v1baby-blue-60 text-[12px] text-center whitespace-nowrap capitalize">
                   {selectedEvent.layer}
                 </p>
               </div>
@@ -1032,7 +1032,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
                     className="flex gap-[12px] items-start w-full text-left cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple rounded-[8px]"
                     data-testid={`row-activity-${ev.id}`}
                   >
-                    <span className="inline-flex items-center justify-center px-[8px] py-[3px] rounded-pill bg-brain-v1baby-blue-15 border border-[rgba(108,119,157,0.2)] [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-60 text-[12px] leading-[16px] whitespace-nowrap shrink-0">
+                    <span className="inline-flex items-center justify-center px-[8px] py-[3px] rounded-pill bg-brain-v1baby-blue-15 border border-[rgba(108,119,157,0.2)] [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-60 text-[12px] leading-[14px] whitespace-nowrap shrink-0">
                       {capitalCase(ev.layer)}
                     </span>
                     <p className="flex-1 min-w-px [font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[20px] break-words group-hover:text-white transition-colors" title={ev.action}>{humanizeAction(ev.action)}</p>

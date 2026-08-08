@@ -1435,7 +1435,10 @@ Two reservations are easy to misread, so they are spelled out:
   13px is drift — those are 14px. 51 sites were moved back.
 - **11px is for badges, not for anything pill-*shaped*.** Read literally, "pills are 11px" shrinks
   real Approve/Decline buttons to 11px. Only the badge tier is 11px; a pill-shaped *action button*
-  is on the body scale at 14px.
+  is on the body scale at 14px. Note the shipped badge components — `RecordPill`, `StatusPill`,
+  `TypeTag`, and the role/method badges in Team and Developers — render at **12px**, not 11px, and
+  were deliberately left there: resizing them changes every pill width in the app. Their leading is
+  pinned by geometry, not by the table — see the badge-pill exemption below.
 
 **Mono keeps 13px as a second legitimate reservation.** JetBrains Mono reads wider and taller than
 Gilroy at the same px, so a 13px mono value sits optically level with the 14px Gilroy label beside
@@ -1504,6 +1507,27 @@ exemption because a mechanical revert keyed on the *value* (14px + leading-16) r
 
 The distinction is the same one that governs pills: **fixed geometry follows the geometry, flow text
 follows the pairing table.**
+
+#### The second exemption: badge pills
+
+**A 12px badge pill keeps `leading-14`.** `RecordPill`, `StatusPill`, `TypeTag` and the role/method
+badges in Team and Developers are built as `2px padding + a 14px line + 2px padding + 1px borders` =
+**20px tall**. That 20px is not arbitrary: it is exactly the height of the 16/20 row title line the
+badge sits on, so a badge that grows drags the whole row stack up with it.
+
+Re-leading them to 12/16 for pairing-table compliance makes them 22px, pushes the title line to 22,
+and takes every pill-bearing record row from 40px to **42px** — Overview, Inbox and the Ledger cash
+flow tab all at once. This is not hypothetical; the first pass did exactly that, to 22 sites across
+12 files.
+
+**What caught it matters more than the bug.** `tsc`, all 1126 unit tests and the design-token scan
+stayed green the entire time, because none of them can see a rendered box. Only
+`scripts/qa-measure-row-heights.mjs`, measuring a real logged-in page, saw the rows at 42px — and
+even that named the *row*, not the pill, which is one indirection away from the cause. A badge-pill
+height check now sits in that same script so the next occurrence names itself.
+
+Note the asymmetry with the record-row exemption above: there the *text* keeps the tighter leading,
+here the *badge* does. Both fall out of the same 20px title line.
 
 A related trap, found in review: `Callout` supplies its leading from a per-tone table
 (`${leading}`), so a pass that appends a literal `leading-[Npx]` to that element puts two competing

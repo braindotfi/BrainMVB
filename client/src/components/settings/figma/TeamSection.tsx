@@ -53,7 +53,7 @@ function RolePill({ role }: { role: MemberRole }) {
   const border = role === "admin" ? "rgba(118,49,238,0.2)" : `${color}33`;
   return (
     <span
-      className="px-[8px] py-[3px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px]"
+      className="px-[8px] py-[3px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px]"
       style={{ background: bg, color, border: `1px solid ${border}` }}
       data-testid={`pill-role-${role}`}
     >
@@ -120,7 +120,7 @@ function MemberRow({ member, inviteActions }: { member: BrainMember; inviteActio
             <RolePill role={member.role} />
             {invited && (
               <span
-                className="px-[8px] py-[3px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px]"
+                className="px-[8px] py-[3px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px]"
                 style={{ background: "rgba(108,119,157,0.1)", color: "#6c779d", border: "1px solid rgba(108,119,157,0.3)" }}
                 data-testid={`pill-invited-${member.id}`}
               >
@@ -129,7 +129,7 @@ function MemberRow({ member, inviteActions }: { member: BrainMember; inviteActio
             )}
             {isBackup && (
               <span
-                className="px-[8px] py-[3px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px]"
+                className="px-[8px] py-[3px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px]"
                 style={{ background: "rgba(255,149,0,0.1)", color: "#ff9500", border: "1px solid rgba(255,149,0,0.3)" }}
                 title={BACKUP_APPROVER_NOTE}
                 data-testid={`pill-backup-${member.id}`}
@@ -139,7 +139,7 @@ function MemberRow({ member, inviteActions }: { member: BrainMember; inviteActio
             )}
             {!member.active && (
               <span
-                className="px-[8px] py-[3px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px]"
+                className="px-[8px] py-[3px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px]"
                 style={{ background: "rgba(210,3,68,0.12)", color: "#d20344", border: "1px solid rgba(210,3,68,0.3)" }}
               >
                 Deactivated

@@ -359,7 +359,7 @@ export function AuditRecordPopup({
                             >
                               <div className="content-stretch flex flex-[1_0_0] gap-[16px] items-center min-w-px relative">
                                 <div className="bg-brain-v1baby-blue-15 border border-[rgba(108,119,157,0.2)] border-solid content-stretch flex items-center justify-center px-[8px] py-[3px] relative rounded-pill shrink-0">
-                                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[12px] text-center whitespace-nowrap">
+                                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-brain-v1baby-blue-60 text-[12px] text-center whitespace-nowrap">
                                     {capitalCase(chipLabel)}
                                   </p>
                                 </div>
@@ -386,7 +386,7 @@ export function AuditRecordPopup({
                           >
                             <div className="content-stretch flex flex-[1_0_0] gap-[16px] items-center min-w-px relative">
                               <div className="bg-brain-v1baby-blue-15 border border-[rgba(108,119,157,0.2)] border-solid content-stretch flex items-center justify-center px-[8px] py-[3px] relative rounded-pill shrink-0">
-                                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[12px] text-center whitespace-nowrap">
+                                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-brain-v1baby-blue-60 text-[12px] text-center whitespace-nowrap">
                                   {capitalCase(chipLabel)}
                                 </p>
                               </div>

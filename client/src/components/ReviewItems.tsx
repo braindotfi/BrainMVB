@@ -33,7 +33,7 @@ export type ReviewItemType = {
    Value  text-14 leading-20 #a8b9f4 (Baby Blue 100) Gilroy Medium. */
 const InfoCell = ({ label, value }: { label: string; value: string }) => (
   <div className="bg-brain-v1highlight-dropdown-bg flex flex-col h-[58px] items-start p-[12px] rounded-panel w-full">
-    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-30 text-[12px] whitespace-nowrap">{label}</p>
+    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-brain-v1baby-blue-30 text-[12px] whitespace-nowrap">{label}</p>
     <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[14px] whitespace-nowrap">{value}</p>
   </div>
 );

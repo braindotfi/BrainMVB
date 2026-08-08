@@ -166,7 +166,7 @@ export const StatusPill = ({
     data-testid={testId}
   >
     <span
-      className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-center whitespace-nowrap"
+      className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-center whitespace-nowrap"
       style={{ color }}
     >
       {capitalCase(label)}
@@ -181,7 +181,7 @@ export const TypeTag = ({ label, testId }: { label: string; testId?: string }) =
     className="inline-flex items-center justify-center bg-brain-v1baby-blue-15 border border-solid border-[rgba(108,119,157,0.2)] px-[8px] py-[2px] rounded-pill shrink-0"
     data-testid={testId}
   >
-    <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-brain-v1baby-blue-60 text-center whitespace-nowrap">
+    <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-brain-v1baby-blue-60 text-center whitespace-nowrap">
       {capitalCase(label)}
     </span>
   </div>
