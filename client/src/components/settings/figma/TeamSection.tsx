@@ -190,7 +190,7 @@ function MemberRow({ member, inviteActions }: { member: BrainMember; inviteActio
           style={
             isBackup
               ? { background: "rgba(255,149,0,0.1)", color: "#ff9500", border: "1px solid rgba(255,149,0,0.3)" }
-              : { background: "#0c0f14", color: "#414965", border: "1px solid #1d2132" }
+              : { background: "#0c0f14", color: "#6c779d", border: "1px solid #1d2132" }
           }
         >
           {isBackup ? "Remove Backup Mark" : "Mark As Backup Approver"}
@@ -343,7 +343,7 @@ function AddMemberDialog({ open, onClose, production }: { open: boolean; onClose
               className="content-stretch flex flex-[1_0_0] items-center justify-center min-w-px px-[16px] py-[8px] relative rounded-pill [font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[14px] whitespace-nowrap transition-colors"
                         style={{
                           background: role === r ? "#240757" : "#0c0f14",
-                          color: role === r ? "#7631ee" : "#414965",
+                          color: role === r ? "#7631ee" : "#6c779d",
                         }}
                       >
                         {ROLE_LABELS[r]}
@@ -364,7 +364,7 @@ function AddMemberDialog({ open, onClose, production }: { open: boolean; onClose
                         className="content-stretch flex items-center justify-center px-[16px] py-[8px] relative rounded-pill shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[14px] whitespace-nowrap transition-colors"
                         style={{
                           background: domains.includes(d) ? "#240757" : "#0c0f14",
-                          color: domains.includes(d) ? "#7631ee" : "#414965",
+                          color: domains.includes(d) ? "#7631ee" : "#6c779d",
                         }}
                       >
                         {DOMAIN_TITLE[d]}
@@ -401,7 +401,7 @@ function AddMemberDialog({ open, onClose, production }: { open: boolean; onClose
                         className="content-stretch flex flex-[1_0_0] items-center justify-center min-w-px px-[16px] py-[8px] relative rounded-pill [font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[14px] whitespace-nowrap transition-colors"
                         style={{
                           background: backup === v ? "#240757" : "#0c0f14",
-                          color: backup === v ? "#7631ee" : "#414965",
+                          color: backup === v ? "#7631ee" : "#6c779d",
                         }}
                       >
                         {label}
@@ -461,7 +461,7 @@ export default function TeamSection() {
       {/* Header + panel: 4px gap, matching Account subpage */}
       <div className="flex flex-col gap-[4px]">
         <div className="flex items-center min-h-[36px]">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-30 text-[16px] leading-[24px]">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-60 text-[16px] leading-[24px]">
             Members
           </p>
         </div>

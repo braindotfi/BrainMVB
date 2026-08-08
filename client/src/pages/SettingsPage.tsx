@@ -290,12 +290,12 @@ const SettingRow = ({
   </div>
 );
 
-/* 16px/24 semibold #414965. Spacing to the card below comes from the
+/* 16px/24 semibold #6c779d. Spacing to the card below comes from the
    parent flex container (flex flex-col gap-[4px]), NOT margin here. */
 const SectionLabel = ({ children }: { children: string }) => (
   <div className="flex items-center min-h-[36px]">
     <p
-      style={{ color: "#414965", fontFamily: "'Gilroy', 'Plus Jakarta Sans', system-ui, sans-serif", fontWeight: 600, fontSize: "16px", lineHeight: "24px" }}
+      style={{ color: "#6c779d", fontFamily: "'Gilroy', 'Plus Jakarta Sans', system-ui, sans-serif", fontWeight: 600, fontSize: "16px", lineHeight: "24px" }}
     >
       {children}
     </p>

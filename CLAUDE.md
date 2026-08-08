@@ -1186,15 +1186,42 @@ the **busy** state full contrast — not to raise every disabled control uniform
 | `#6c779d` | Secondary / muted copy: labels, metadata, IDs, timestamps, placeholders. |
 | `#a8b9f4` | Copy that has to be read: modal body text, headline sentences, values. |
 
-`#414965` on the `#0a0c10` card surface is **2.2:1** — below the 3:1 floor even for large text. It
-had leaked into policy IDs and 22px modal descriptions, where it read as greyed-out/disabled copy.
-`#6c779d` on the same surface is 4.4:1.
+`#414965` as text is **2.08:1 on the page shell `#11141b` and 2.20:1 on cards `#0a0c10`** — below
+the 3:1 floor even for large text. It had leaked into policy IDs and 22px modal descriptions, where
+it read as greyed-out/disabled copy. `#6c779d` gives 4.18:1 and 4.44:1 on those surfaces.
 
-Note this is only *enforced* on the surfaces the fix touched (`RuleDetail`, `RulesPanel`).
-`#414965` is still used as a text colour for Settings section labels
-(`SecuritySection`, `LegalSection`, `NotificationsSection`, `TeamSection`, `AuditLogSection`),
-`CashFlowTab` captions, `AddGoalModal` and `CompanySetupPage`. Those were left alone deliberately —
-converting them is a visible restyle of Settings, not a contrast fix. Don't add new ones.
+Note what that does and does not buy: `#6c779d` clears AA **large** (3:1) but is just short of AA
+**normal** (4.5:1), and most of what it paints — 16px section labels, 13–14px captions — is normal
+text. `brain-v1baby-blue-80` (`#8b95b8`) would give 6.22:1 / 6.61:1. Whether muted copy should move
+there is open (task #143); until it is decided, `#6c779d` stays, for consistency with #128.
+
+**This is now enforced by a scan** — `client/src/design-tokens.test.ts`, under `npm test`.
+
+#128 fixed `RuleDetail` and `RulesPanel`. #134 converted the Settings cluster: the section labels
+(`SecuritySection`, `LegalSection`, `NotificationsSection`, `TeamSection`, `AccountSection`,
+`AuditLogSection`, `SourcesSection`, `DevelopersSection`, `SettingsPage`), `CashFlowTab` captions,
+`AddGoalModal` and `CompanySetupPage` — 32 sites, almost all to `#6c779d`, with the Developers page
+subtitle and the key-hashing explainer to `#a8b9f4` as real body copy.
+
+An earlier version of this note implied Settings was the whole remainder. It was not — it was
+about 28% of it. **72 text uses survive outside Settings**, the largest being
+`DocumentViewerPopup` (14), `AddAccountModal` (9), `SignupPage` (9) and `ProposalDetail` (7).
+They are frozen as per-file counts in the scan's `NAMED_TEXT_BASELINE`: a new one fails the build,
+and removing one fails until you lower the baseline. The count can only go down. Don't add new
+ones, and don't raise a baseline to make a failure go away.
+
+Two spellings, both covered, but by deliberately different rules. The #131 checks above catch
+neither — `text-brain-v1baby-blue-30` is a legitimate token reference, and #131 does not read
+inline `style={{}}` at all.
+
+- **Named class** — counted per file against `NAMED_TEXT_BASELINE`. Exact match, no judgement.
+- **Raw `#414965`** — *every* occurrence is counted against `RAW_INVENTORY`, including the strokes,
+  ring colours and dot fills that are perfectly correct. The scan does not try to work out which
+  ones paint text. Inferring that from source means guessing which nearby `color:` / `stroke` /
+  `border` marker owns a given hex, and a guess that misreads one shape fails **open** — the site
+  vanishes from the count and the check goes green while the bug ships. So a new stroke has to be
+  added to `RAW_INVENTORY` by hand. That is the point: at 15 occurrences it is rare, and it makes
+  each new one a decision. Only ever add a **non-text** use.
 
 ### Destructive buttons share one hover
 Destructive = `brain-v1pink-red` text on a `brain-v1dark-pink-red` background. The hover is

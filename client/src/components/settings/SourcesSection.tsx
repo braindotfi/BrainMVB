@@ -65,7 +65,7 @@ const TableCard = ({ children, testId }: { children: ReactNode; testId?: string 
 
 const SectionLabel = ({ children, testId }: { children: ReactNode; testId?: string }) => (
   <div className="flex items-center min-h-[36px]">
-    <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-30 text-[16px] leading-[24px]" data-testid={testId}>
+    <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-60 text-[16px] leading-[24px]" data-testid={testId}>
       {children}
     </p>
   </div>

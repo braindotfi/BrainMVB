@@ -103,11 +103,11 @@ const Metric = ({
     const parts = formatted.match(/^(.+)\.(\d{2})$/);
     const whole = parts ? parts[1] : formatted;
     const cents = parts ? `.${parts[2]}` : "";
-    const amountColor = value == null ? "#414965" : (colour ?? "#a8b9f4");
+    const amountColor = value == null ? "#6c779d" : (colour ?? "#a8b9f4");
 
     return (
   <div className="bg-brain-v1highlight-dropdown-bg border border-transparent rounded-panel p-[16px] flex flex-col gap-[8px]" data-testid={testId}>
-    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-30 text-[13px] uppercase">
+    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[13px] uppercase">
       {label}
     </p>
     <p
@@ -116,7 +116,7 @@ const Metric = ({
       <span className="font-medium leading-[36px] text-[28px]" style={{ color: amountColor }}>{whole}</span>
       {cents && <span className="font-medium leading-[36px] text-[18px]" style={{ color: amountColor }}>{cents}</span>}
     </p>
-    <p className="[font-family:'Gilroy',sans-serif] font-normal leading-[18px] text-brain-v1baby-blue-30 text-[13px] w-full">{caption}</p>
+    <p className="[font-family:'Gilroy',sans-serif] font-normal leading-[18px] text-brain-v1baby-blue-60 text-[13px] w-full">{caption}</p>
   </div>
     );
   })()

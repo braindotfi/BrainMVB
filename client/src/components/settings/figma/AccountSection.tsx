@@ -204,7 +204,7 @@ export default function AccountSection() {
     <div className="flex flex-col gap-6 w-full">
       <div className="content-stretch flex flex-col gap-[4px] items-start relative shrink-0 w-full">
         <div className="content-stretch flex flex-col justify-center min-h-[36px] items-start relative shrink-0 w-full">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] not-italic relative shrink-0 text-brain-v1baby-blue-30 text-[16px] w-full">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] not-italic relative shrink-0 text-brain-v1baby-blue-60 text-[16px] w-full">
             Your Data
           </p>
         </div>
@@ -308,7 +308,7 @@ export default function AccountSection() {
       </div>
       <div className="content-stretch flex flex-col gap-[4px] items-start relative shrink-0 w-full">
         <div className="content-stretch flex flex-col justify-center min-h-[36px] items-start relative shrink-0 w-full">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] not-italic relative shrink-0 text-brain-v1baby-blue-30 text-[16px] w-full">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] not-italic relative shrink-0 text-brain-v1baby-blue-60 text-[16px] w-full">
             Account
           </p>
         </div>

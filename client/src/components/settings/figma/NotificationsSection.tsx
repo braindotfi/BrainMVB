@@ -48,7 +48,7 @@ export default function NotificationsSection() {
     <div className="flex flex-col gap-[20px] w-full">
       <div className="content-stretch flex flex-col gap-[4px] items-start relative shrink-0 w-full">
         <div className="flex items-center min-h-[36px]">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-brain-v1baby-blue-30 text-[16px]">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-brain-v1baby-blue-60 text-[16px]">
             Notifications
           </p>
         </div>

@@ -220,3 +220,155 @@ describe("#131 design tokens are enforced, not just available", () => {
     }
   });
 });
+
+/* ------------------------------------------------------------------------ *
+ * #134 — `#414965` is a border colour, not a text colour.
+ *
+ * The #131 suite above asks "is this a token?". It cannot ask "is this token
+ * allowed in this role?", so both spellings of this bug pass it: the named
+ * `text-brain-v1baby-blue-30` class is a perfectly valid token reference, and
+ * the raw hex lives in inline style={{}} objects, which #131 documents itself
+ * as not reading (see the header note).
+ *
+ * `#414965` on the `#0a0c10` card surface is 2.2:1 — under the 3:1 floor even
+ * for large text. `#6c779d` is 4.4:1 and is the muted-copy colour; `#a8b9f4`
+ * is for copy that has to be read. Borders, strokes, focus rings and badge
+ * fills keep `#414965`: that is the job the token exists for.
+ *
+ * This is a RATCHET, not a clean-slate rule. #134 converted the Settings
+ * cluster; the rest of the app still holds 72 text uses and converting them is
+ * a separate, visible restyle. So the remaining sites are frozen below as
+ * per-file counts. A new one fails the build; removing one fails the build
+ * until the baseline is lowered to match. The count can only go down.
+ *
+ * Per-file counts rather than file:line because line numbers churn on every
+ * unrelated edit. The trade is that removing one site and adding another in
+ * the same file nets out invisibly — accepted deliberately, and the reason the
+ * Settings cluster is additionally pinned at zero by name below.
+ * ------------------------------------------------------------------------ */
+
+/** Files #134 converted. These must stay clean, not merely not-grow. */
+const SETTINGS_CLUSTER = [
+  "components/settings/figma/SecuritySection.tsx",
+  "components/settings/figma/LegalSection.tsx",
+  "components/settings/figma/NotificationsSection.tsx",
+  "components/settings/figma/AccountSection.tsx",
+  "components/settings/figma/TeamSection.tsx",
+  "components/settings/AuditLogSection.tsx",
+  "components/settings/SourcesSection.tsx",
+  "components/settings/DevelopersSection.tsx",
+  "components/CashFlowTab.tsx",
+  "components/AddGoalModal.tsx",
+  "pages/SettingsPage.tsx",
+  "pages/CompanySetupPage.tsx",
+];
+
+/** Text uses of the named class still awaiting conversion. Only ever shrinks. */
+const NAMED_TEXT_BASELINE: Record<string, number> = {
+  "components/AddAccountModal.tsx": 9,
+  "components/AnchorStatus.tsx": 2,
+  "components/AuditRecordPopup.tsx": 4,
+  "components/ContactUpdateModal.tsx": 1,
+  "components/DocumentViewerPopup.tsx": 14,
+  "components/LiveEvidenceRecordPopup.tsx": 1,
+  "components/LiveInsightModal.tsx": 1,
+  "components/MemberDetailPopup.tsx": 2,
+  "components/ProposalDetail.tsx": 7,
+  "components/ReviewItems.tsx": 1,
+  "components/SecurityModals.tsx": 1,
+  "components/ShareModal.tsx": 4,
+  "pages/FinancesPage.tsx": 1,
+  "pages/HomePage.tsx": 3,
+  "pages/InboxPage.tsx": 1,
+  "pages/SignupPage.tsx": 9,
+  "pages/sections/BrainAssistant.tsx": 5,
+  "pages/sections/NavigationMenuSection.tsx": 3,
+};
+
+/**
+ * Every raw `#414965` in app source, whatever it is painting.
+ *
+ * Deliberately not filtered down to "the ones painting text". Deciding that
+ * from source text means guessing which nearby `color:` / `stroke` / `border`
+ * marker owns a given hex, and a guess that reads one shape wrongly fails
+ * *open* — the site disappears from the count and the ratchet goes green while
+ * the bug ships. Counting every occurrence cannot do that.
+ *
+ * The trade is that a genuinely new border/stroke/fill use also fails, and has
+ * to be added here by hand. That is the intended cost: at 15 occurrences it is
+ * rare, and it forces each new one to be a decision rather than a default.
+ *
+ * Raising an entry is only correct for a NON-text use. Text goes to `#6c779d`,
+ * or `#a8b9f4` if it is copy that has to be read.
+ */
+const RAW_INVENTORY: Record<string, number> = {
+  // Text, still awaiting conversion (task #142) — these three may only shrink.
+  "components/FilterChipRow.tsx": 1,
+  "components/PayablesTab.tsx": 1,
+  "components/ReceivablesTab.tsx": 1,
+  // Legitimate non-text uses: strokes, ring colour, dot fills, comments.
+  "components/AddGoalModal.tsx": 1,
+  "components/DeleteConfirmDialog.tsx": 1,
+  "components/ProposalDetail.tsx": 1,
+  "components/ReviewItems.tsx": 1,
+  "components/SecurityModals.tsx": 1,
+  "components/settings/DevelopersSection.tsx": 1,
+  "components/sources/ExtractStatusBadge.tsx": 1,
+  "pages/RulesPanel.tsx": 1,
+  "pages/SettingsPage.tsx": 3,
+  "pages/VendorsPanel.tsx": 1,
+};
+
+const NAMED_TEXT_RE = /text-brain-v1baby-blue-30(?![\w-])/g;
+
+/**
+ * App source only. This file names both spellings dozens of times in its own
+ * rules and fixtures; counting itself would make the ratchet self-referential.
+ */
+const APP_FILES = FILES.filter((f) => !/\.test\.tsx?$/.test(f));
+
+function countPerFile(pick: (src: string, rel: string) => number) {
+  const out: Record<string, number> = {};
+  for (const f of APP_FILES) {
+    const rel = path.relative(SRC, f).split(path.sep).join("/");
+    const n = pick(readFileSync(f, "utf8"), rel);
+    if (n > 0) out[rel] = n;
+  }
+  return out;
+}
+
+const namedTextUses = () =>
+  countPerFile((src) => (src.match(NAMED_TEXT_RE) ?? []).length);
+
+const rawUses = () =>
+  countPerFile((src) => (src.match(/#414965/g) ?? []).length);
+
+describe("#134 baby-blue-30 is a border colour, never text", () => {
+  it("the Settings cluster #134 converted keeps no named text use", () => {
+    const named = namedTextUses();
+    const dirty = SETTINGS_CLUSTER.filter((f) => named[f]).map(
+      (f) => `${f}  ×${named[f]}`,
+    );
+    expect(
+      dirty,
+      "#414965 is back as a text colour in Settings — use #6c779d, or #a8b9f4 if it is copy that has to be read",
+    ).toEqual([]);
+  });
+
+  it("no new text use of the named class anywhere", () => {
+    expect(
+      namedTextUses(),
+      "text-brain-v1baby-blue-30 is a 2.2:1 contrast failure. Use text-brain-v1baby-blue-60. " +
+        "If you removed one, lower the count in NAMED_TEXT_BASELINE — never raise it.",
+    ).toEqual(NAMED_TEXT_BASELINE);
+  });
+
+  it("every raw #414965 is one this repo already knows about", () => {
+    expect(
+      rawUses(),
+      'A raw "#414965" appeared, moved, or was removed. It is a border colour: ' +
+        'if this is text use "#6c779d" (or "#a8b9f4" for copy that has to be read). ' +
+        "If it really is a stroke, ring or dot fill, add it to RAW_INVENTORY.",
+    ).toEqual(RAW_INVENTORY);
+  });
+});

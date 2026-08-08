@@ -154,11 +154,11 @@ const Card = ({ children, testId }: { children: ReactNode; testId?: string }) =>
   </div>
 );
 
-/* 16px/24 semibold #414965. Spacing to the card below comes from the
+/* 16px/24 semibold #6c779d. Spacing to the card below comes from the
    parent flex container (flex flex-col gap-[4px]), NOT margin here. */
 const SectionLabel = ({ children, testId }: { children: ReactNode; testId?: string }) => (
   <div className="flex items-center min-h-[36px]">
-    <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-30 text-[16px] leading-[24px]" data-testid={testId}>
+    <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-60 text-[16px] leading-[24px]" data-testid={testId}>
       {children}
     </p>
   </div>
@@ -285,7 +285,7 @@ const EnvToggle = ({ env, onChange }: { env: DevEnv; onChange: (e: DevEnv) => vo
         >
           <p
             className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[14px] whitespace-nowrap"
-            style={{ color: isActive ? "#ff9500" : "#414965" }}
+            style={{ color: isActive ? "#ff9500" : "#6c779d" }}
           >
             {e === "live" ? "Live" : "Sandbox"}
           </p>
@@ -859,7 +859,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
           <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-brain-v1baby-blue-100 text-[32px]" data-testid="text-page-title">
             Build on your Brain ledger.
           </p>
-          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-brain-v1baby-blue-30 text-[16px]" data-testid="text-enforcement-disclosure">
+          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-brain-v1baby-blue-100 text-[16px]" data-testid="text-enforcement-disclosure">
             Keys are issued and enforced by brain-core. Start with GET /api/v1/ping.
           </p>
         </div>
@@ -870,7 +870,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
 
       <div className="flex flex-col gap-[4px]">
         <div className="flex h-[24px] items-center">
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-brain-v1baby-blue-30 text-[16px]">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-brain-v1baby-blue-60 text-[16px]">
             Get Started
           </p>
         </div>
@@ -1180,7 +1180,7 @@ function KeysSection({ env }: { env: DevEnv }) {
             </div>
             <PopupSection label="API Key">
               <PopupCodeBox testId="detail-key-masked">{maskKey(k)}</PopupCodeBox>
-              <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-30 text-[14px] leading-[16px] -mt-2">
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[14px] leading-[16px] -mt-2">
                 brain-core stores keys hashed. The full key was shown exactly once, at creation. If it's lost, rotate to get a new one.
               </p>
             </PopupSection>
@@ -1317,7 +1317,7 @@ function KeysSection({ env }: { env: DevEnv }) {
                   </span>
                   <span className="flex flex-col gap-[4px] flex-1 min-w-px">
                     <span className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[16px] leading-[20px]">{s.label}</span>
-                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-30 text-[14px] leading-[16px]">{s.hint}</span>
+                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[16px]">{s.hint}</span>
                   </span>
                 </button>
               );
@@ -1664,7 +1664,7 @@ function TenantsSection({ env, onNavigate }: { env: DevEnv; onNavigate: (s: DevS
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
                 placeholder="Acme Inc."
-                className="rounded-[8px] px-3 py-2 outline-none [font-family:'Gilroy',sans-serif] font-medium text-white placeholder:text-brain-v1baby-blue-30 text-[14px]"
+                className="rounded-[8px] px-3 py-2 outline-none [font-family:'Gilroy',sans-serif] font-medium text-white placeholder:text-brain-v1baby-blue-60 text-[14px]"
                 style={{ background: "#11141b", border: "1px solid #1d2132" }}
               />
             </div>
