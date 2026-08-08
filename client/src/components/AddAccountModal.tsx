@@ -492,7 +492,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep 
                   {truncAddr(activeAddr)}
                 </p>
                 <div className="flex gap-[8px] items-center shrink-0">
-                  <ActionBtn variant="purple" icon="qr"   onClick={() => setQrOpen(true)}     testId="btn-wallet-qr"   title="Show QR code" />
+                  <ActionBtn variant="purple" icon="qr"   onClick={() => setQrOpen(true)}        title="Show QR code" />
                   <ActionBtn variant="orange" icon="copy" onClick={() => handleCopy(activeAddr)} testId="btn-wallet-copy" title="Copy address" />
                 </div>
               </div>
