@@ -75,3 +75,27 @@ with a speculative test-merge commit. Check `merged: true` / `merged_at`, never 
 `git merge-base --is-ancestor <pr-head> origin/main`. If content is on main but the PR is open,
 close the PR as superseded rather than re-merging. To keep work off `main`, commit it on a
 branch with no upstream; anything sitting on local `main` should be treated as already published.
+
+## Auto-checkpoints also author commits *on the branch you are standing on*
+
+Separate hazard from the push behaviour above: a checkpoint is a real git commit, and it
+sweeps in whatever is in the working tree — including files you deliberately left unstaged.
+It lands on the currently checked-out branch, feature branches included.
+
+Per Replit's own docs, checkpoints are Git commits by design and there is **no documented
+setting to disable them or narrow what they capture**. So this cannot be prevented, only
+detected. Do not promise a user that it has been turned off.
+
+Two consequences that both cost real debugging time:
+
+- A branch's contents are not only what you committed. "I left that file untracked" is not a
+  statement you can make truthfully without checking.
+- A local branch can end up *ahead of its remote* without you having pushed. If you then cut a
+  new branch from it, the stray commit is inherited by the child and shows up in the child's PR.
+
+**How to apply:** before every push, diff against the upstream and read it —
+`git log --oneline @{u}..HEAD` and `git diff --stat @{u}..HEAD`. Every commit and every file
+must be one you meant. Check `git branch -vv` for `[ahead N]` before cutting a branch from
+another branch. Stage explicit paths; `git add -A` turns a checkpoint's leftovers into your
+commit. `.gitignore` is the wrong tool here — the files that leak (screenshots, memory notes)
+are legitimate content on the *wrong branch*, not junk.

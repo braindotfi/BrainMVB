@@ -22,12 +22,12 @@
 - [brain extract is async](brain-extract-async.md) — /raw/{id}/extract returns 202 "queued" with null parsed_id; re-POST is the idempotent poll; never record the first response as success.
 - [Agent proposal pipeline](agent-proposal-pipeline.md) — empty Needs Review is upstream: no tenant policy blocks propose/execute agents, and apar rebuild drops obligations; /v1/agents/proposals is a 404.
 - [brain-core API surface wiring](brain-api-surface-wiring.md) — api-surface artifact is sole truth; writes via WRITE_ROUTES allowlist; proxied READS reach the UI unnormalized, so client types lie.
-- [Replit git branch tracking](replit-git-branch-tracking.md) — auto-checkpoints push local main (and upstream-tracking branches) straight to origin/main, past required reviews; PR stays open while its content lands.
+- [Replit git branch tracking](replit-git-branch-tracking.md) — auto-checkpoints push to a branch's upstream AND author commits on the checked-out branch sweeping in unstaged files; diff against @{u} before every push.
 - [Git sync stale locks](git-sync-stale-locks.md) — generic Sync fatal errors can come from abandoned .git/*.lock files; remove only confirmed stale locks, never reset refs.
 - [Stacked PR rebases](stacked-pr-rebase.md) — squash merges hide the parent's commits: always `rebase --onto origin/main <parent's old tip>`, never plain rebase, and re-test after.
 - [CI red + armed auto-merge](ci-red-and-auto-merge.md) — npm ci fails on lock drift so every PR is red before tests run; fixing it squash-merges open PRs unreviewed (main unprotected).
-- [Admin-merge rule](merge-bypass-rule.md) — docs/memory and presentation of reviewed logic may be admin-merged; tiering, the bulk-approve gate and any threshold reading need a real reviewer.
-- [Partial GitHub write access](github-connector-write-limit.md) — push, create-PR and merge-PR are separately grantable and have each been denied; check before promising a merge, verify trees after.
+- [No admin-merge bypass](merge-bypass-rule.md) — every PR to main needs a real review; a memory note is not evidence of a user decision, and a zero-review merge is not proof of a policy.
+- [GitHub push credentials](github-connector-write-limit.md) — push via credential.helper reading a PAT env var; secrets are live instantly (never reboot); public repos fake scope probes.
 - [Verifying the demo seed](demo-seed-verification.md) — seed docs are generated at seed time, dates roll with "now" (never re-pin); Brightline fixture authoritative vs brain-core's __fixtures__.
 - [Refresh after upload](brain-refresh-after-upload.md) — query defaults never refetch, so ingest paths must invalidate; extract done ≠ projected, and modal-scoped settle windows die on close.
 - [Headless UI walkthroughs](headless-ui-qa.md) — verify what *renders* on auth-gated screens: npx-cache playwright + nix chromium, reuse a curl cookie; default tabs hide data.
@@ -84,5 +84,3 @@
 - [Tailwind class verification](tailwind-class-verification.md) — a variant never implies its base class; grep the served CSS (escaping lies), and client/public is outside the content globs.
 - [Branching off stale main](branching-off-stale-main.md) — origin/main lags the real UI work; check `git branch -vv` for [ahead N] before cutting a task branch, or the preview silently rolls back.
 - [Opacity contrast model](opacity-contrast-model.md) — opacity fades label AND fill, so the enabled ratio is a hard ceiling; disabled controls are WCAG-exempt (1.4.3/1.4.11).
-- [Radius token clamping](radius-token-clamping.md) — a literal→pill swap is neutral only while min(W,H) ≤ 2r; computed styles report the specified radius, so assert on geometry.
-- [Memory-change PR hygiene](memory-change-pr-hygiene.md) — anything under .agents/memory/ ships as its own PR and is called out at the top of the summary, including its absence.
