@@ -14,3 +14,4 @@
 # exact failure this file exists to prevent. Confirm the control is genuinely
 # superseded before declaring it.
 button-close-account-popup   proof run for #154 — deliberate removal, declared here to show the allowlist path
+btn-wallet-qr                proof run for #154 — the undeclared half of the same proof; declared here to show the step goes green once the decision is written down
