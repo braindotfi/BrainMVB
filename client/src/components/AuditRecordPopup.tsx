@@ -175,7 +175,7 @@ export function AuditRecordPopup({
 
   const SectionHeader = ({ children }: { children: React.ReactNode }) => (
     <div className="content-stretch flex gap-[8px] items-center relative shrink-0 w-full">
-      <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">
+      <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">
         {children}
       </p>
       <div className="flex-[1_0_0] h-px bg-brain-v1stroke-2 min-w-px" />
@@ -251,7 +251,7 @@ export function AuditRecordPopup({
                                     <div className="mt-[4px] mb-[4px] w-[2px] flex-1 bg-brain-v1stroke-2" />
                                   )}
                                 </div>
-                                <div className="[word-break:break-word] content-stretch flex flex-[1_0_0] flex-col [font-family:'Gilroy',sans-serif] font-medium gap-[8px] items-start justify-center leading-[16px] min-w-px not-italic relative text-[14px]">
+                                <div className="[word-break:break-word] content-stretch flex flex-[1_0_0] flex-col [font-family:'Gilroy',sans-serif] font-medium gap-[8px] items-start justify-center leading-[20px] min-w-px not-italic relative text-[14px]">
                                   <p className="relative shrink-0 text-brain-v1baby-blue-100 w-full">
                                     {actorMember ? (
                                       <button
@@ -359,7 +359,7 @@ export function AuditRecordPopup({
                             >
                               <div className="content-stretch flex flex-[1_0_0] gap-[16px] items-center min-w-px relative">
                                 <div className="bg-brain-v1baby-blue-15 border border-[rgba(108,119,157,0.2)] border-solid content-stretch flex items-center justify-center px-[8px] py-[3px] relative rounded-pill shrink-0">
-                                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-brain-v1baby-blue-60 text-[12px] text-center whitespace-nowrap">
+                                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[12px] text-center whitespace-nowrap">
                                     {capitalCase(chipLabel)}
                                   </p>
                                 </div>
@@ -368,7 +368,7 @@ export function AuditRecordPopup({
                                 </p>
                               </div>
                               {(ruleGone || vendorGone || invoiceGone || proposalGone) && (
-                                <p className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] text-brain-v1baby-blue-30 shrink-0">
+                                <p className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-brain-v1baby-blue-30 shrink-0">
                                   ({link.kind} unavailable)
                                 </p>
                               )}
@@ -386,7 +386,7 @@ export function AuditRecordPopup({
                           >
                             <div className="content-stretch flex flex-[1_0_0] gap-[16px] items-center min-w-px relative">
                               <div className="bg-brain-v1baby-blue-15 border border-[rgba(108,119,157,0.2)] border-solid content-stretch flex items-center justify-center px-[8px] py-[3px] relative rounded-pill shrink-0">
-                                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-brain-v1baby-blue-60 text-[12px] text-center whitespace-nowrap">
+                                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[12px] text-center whitespace-nowrap">
                                   {capitalCase(chipLabel)}
                                 </p>
                               </div>

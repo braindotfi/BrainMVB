@@ -304,7 +304,7 @@ const MetricCard = ({
       {suffix && <span className="font-medium leading-[36px] text-brain-v1baby-blue-60 text-[18px]">{suffix}</span>}
     </p>
     {caption && (
-      <p className={`[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[13px] w-full ${captionClass ?? "text-brain-v1baby-blue-30"}`}>
+      <p className={`[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-[13px] w-full ${captionClass ?? "text-brain-v1baby-blue-30"}`}>
         {caption}
       </p>
     )}
@@ -1194,7 +1194,7 @@ export function HomePage() {
                         type="button"
                         onClick={() => setSelectedOverviewIds(new Set())}
                         data-testid="button-bulk-clear"
-                        className="bg-brain-v1baby-blue-15 flex flex-1 h-[36px] items-center justify-center min-w-px px-[12px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[16px] whitespace-nowrap hover:bg-brain-v1baby-blue-15-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple disabled:opacity-60 disabled:cursor-not-allowed"
+                        className="bg-brain-v1baby-blue-15 flex flex-1 h-[36px] items-center justify-center min-w-px px-[12px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[16px] whitespace-nowrap hover:bg-brain-v1baby-blue-15-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple disabled:opacity-60 disabled:cursor-not-allowed"
                       >
                         Cancel
                       </button>
@@ -1203,7 +1203,7 @@ export function HomePage() {
                         onClick={approveSelectedOverview}
                         disabled={overviewBulkRunning}
                         data-testid="button-bulk-approve"
-                        className="bg-brain-v1dark-orange flex flex-1 h-[36px] items-center justify-center min-w-px px-[12px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1light-orange text-[16px] whitespace-nowrap hover:bg-brain-v1dark-orange-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple disabled:opacity-60 disabled:cursor-not-allowed"
+                        className="bg-brain-v1dark-orange flex flex-1 h-[36px] items-center justify-center min-w-px px-[12px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1light-orange text-[16px] whitespace-nowrap hover:bg-brain-v1dark-orange-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple disabled:opacity-60 disabled:cursor-not-allowed"
                       >
                         {overviewBulkRunning ? "Approving…" : "Approve"}
                       </button>

@@ -138,7 +138,7 @@ export const SectionLabel = ({
   trailing?: React.ReactNode;
 }) => (
   <div className="flex gap-[8px] items-center w-full">
-    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">
+    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">
       {children}
     </p>
     <div className="flex-1 h-px bg-brain-v1stroke-2" />
@@ -303,7 +303,7 @@ export function ProposalDetail({
             <div className="flex flex-col gap-[16px] items-start w-full">
               <SectionLabel
                 trailing={
-                  <span className="[font-family:'JetBrains_Mono',monospace] text-[14px] leading-[14px] text-brain-v1baby-blue-60 whitespace-nowrap" data-testid="text-confidence">
+                  <span className="[font-family:'JetBrains_Mono',monospace] text-[14px] leading-[20px] text-brain-v1baby-blue-60 whitespace-nowrap" data-testid="text-confidence">
                     {proposal.confidence.band} · {confidencePct}%
                   </span>
                 }
@@ -311,7 +311,7 @@ export function ProposalDetail({
                 Confidence
               </SectionLabel>
               {proposal.confidence.caveat && (
-                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-brain-v1baby-blue-60 text-[14px] w-full">
+                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[14px] w-full">
                   {proposal.confidence.caveat}
                 </p>
               )}
@@ -331,13 +331,13 @@ export function ProposalDetail({
                         data-testid={`brain-found-${i}`}
                       >
                         <div className="flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[140px]">
-                          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">
+                          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">
                             {titleCase(fact.label)}
                           </p>
                         </div>
                         <div className="flex flex-1 flex-col items-start justify-center min-w-px px-[12px] py-[8px]">
                           <p
-                            className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[13px]"
+                            className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[14px]"
                             style={{ color: factColor(fact.severity) }}
                           >
                             {fact.value}
@@ -373,7 +373,7 @@ export function ProposalDetail({
                       className={`flex items-center gap-[16px] px-[16px] py-[12px] rounded-row bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 w-full text-left ${clickable ? "hover:bg-brain-v1baby-blue-5 hover:border-[#7631ee]/40 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple" : ""}`}
                     >
                       <div className="flex flex-1 gap-[16px] items-center min-w-px">
-                        <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap px-[8px] py-[3px] rounded-pill bg-brain-v1baby-blue-15 border border-[rgba(108,119,157,0.2)]">
+                        <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap px-[8px] py-[3px] rounded-pill bg-brain-v1baby-blue-15 border border-[rgba(108,119,157,0.2)]">
                           {titleCase(ev.kind.replace("_", " "))}
                         </span>
                         <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-100 text-[16px] whitespace-nowrap">
@@ -404,7 +404,7 @@ export function ProposalDetail({
                       className="flex items-center gap-[8px] p-[10px] rounded-[10px] bg-brain-v1highlight-dropdown-bg hover:bg-brain-v1baby-blue-5 border border-transparent hover:border-[#7631ee]/40 transition-colors w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
                     >
                       <span className="[font-family:'JetBrains_Mono',monospace] text-[10px] text-brain-v1baby-blue-30">{docKindLabel(srcDoc.kind)}</span>
-                      <span className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] text-brain-v1baby-blue-100 flex-1 min-w-px">#{srcDoc.id}</span>
+                      <span className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-brain-v1baby-blue-100 flex-1 min-w-px">#{srcDoc.id}</span>
                       <ChevronRight size={14} className="text-brain-v1baby-blue-30 shrink-0" />
                     </button>
                   );
@@ -542,7 +542,7 @@ export function ProposalDetail({
                   className="flex w-full items-center justify-center gap-[8px] px-[16px] py-[10px] rounded-pill bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 hover:border-[rgba(118,49,238,0.45)] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
                 >
                   <Sparkles size={15} className="text-brain-v1purple shrink-0" />
-                  <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[18px] text-[14px] text-brain-v1baby-blue-100">
+                  <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[14px] text-brain-v1baby-blue-100">
                     Always handle this for me
                   </span>
                 </button>
@@ -746,13 +746,13 @@ function AutoHandledReceipt({
                   className={`flex items-start w-full ${!isLast ? "border-b border-brain-v1stroke-2" : ""}`}
                 >
                   <div className="flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[140px]">
-                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">
                       {titleCase(fact.label)}
                     </p>
                   </div>
                   <div className="flex flex-1 flex-col items-start justify-center min-w-px px-[12px] py-[8px]">
                     <p
-                      className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[13px]"
+                      className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[14px]"
                       style={{ color: factColor(fact.severity) }}
                     >
                       {fact.value}
@@ -780,7 +780,7 @@ function AutoHandledReceipt({
         const cardInner = (
           <>
             <div className="flex items-center gap-[8px] w-full">
-              <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[18px] text-brain-v1baby-blue-100 text-[14px]">
+              <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-100 text-[14px]">
                 {rule.name}
               </span>
             </div>
@@ -822,7 +822,7 @@ function AutoHandledReceipt({
         {paused && (
           <div
             data-testid="text-rule-paused-confirm"
-            className="w-full rounded-[8px] bg-brain-v1dark-green border border-[rgba(66,191,35,0.25)] px-[12px] py-[8px] [font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[18px] text-brain-v1green"
+            className="w-full rounded-[8px] bg-brain-v1dark-green border border-[rgba(66,191,35,0.25)] px-[12px] py-[8px] [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-brain-v1green"
           >
             {rule ? `"${titleCase(rule.name)}" is paused. Brain won't auto-clear payments like this until you turn it back on.` : "Rule paused."}
           </div>
@@ -836,7 +836,7 @@ function AutoHandledReceipt({
             className="flex flex-1 items-center justify-center gap-[8px] px-[12px] py-[10px] rounded-pill bg-brain-v1stroke-2 hover:bg-brain-v1stroke-2-hover transition-colors disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30"
           >
             <PauseCircle size={16} className="text-brain-v1baby-blue-100 shrink-0" />
-            <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[18px] text-[14px] text-brain-v1baby-blue-100 whitespace-nowrap">
+            <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[14px] text-brain-v1baby-blue-100 whitespace-nowrap">
               {paused ? "Rule paused" : "Pause this rule"}
             </span>
           </button>
@@ -848,7 +848,7 @@ function AutoHandledReceipt({
             className="flex flex-1 items-center justify-center gap-[8px] px-[12px] py-[10px] rounded-pill bg-brain-v1dark-purple border border-[rgba(118,49,238,0.35)] hover:bg-brain-v1dark-purple-hover transition-colors disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
           >
             <SlidersHorizontal size={16} className="text-brain-v1purple shrink-0" />
-            <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[18px] text-[14px] text-brain-v1purple whitespace-nowrap">
+            <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[14px] text-brain-v1purple whitespace-nowrap">
               Review rule
             </span>
           </button>
@@ -864,7 +864,7 @@ function AutoHandledReceipt({
             style={{ ["--tw-ring-color" as string]: ALERT }}
           >
             <Flag size={16} className="shrink-0" style={{ color: ALERT }} />
-            <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[18px] text-[14px]" style={{ color: ALERT }}>
+            <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[14px]" style={{ color: ALERT }}>
               Report a problem with this payment
             </span>
           </button>
@@ -873,7 +873,7 @@ function AutoHandledReceipt({
         {/* Step 1: capture a reason. Preset chips + optional free-text note. */}
         {reportStep === "reason" && (
           <div className="w-full rounded-row border border-[rgba(210,3,68,0.3)] bg-brain-v1highlight-dropdown-bg p-[14px] flex flex-col gap-[12px]">
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[18px] text-[14px]" style={{ color: ALERT }}>
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[14px]" style={{ color: ALERT }}>
               What went wrong?
             </p>
             <div className="flex flex-wrap gap-[8px]">
@@ -904,14 +904,14 @@ function AutoHandledReceipt({
               data-testid="input-report-note"
               placeholder="Add a note (optional)..."
               rows={2}
-              className="w-full resize-none rounded-[8px] bg-brain-v1headerfooterbg border border-brain-v1stroke-2 px-[12px] py-[8px] [font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[18px] text-brain-v1baby-blue-100 placeholder:text-brain-v1baby-blue-30 focus:outline-none focus-visible:border-[rgba(210,3,68,0.5)]"
+              className="w-full resize-none rounded-[8px] bg-brain-v1headerfooterbg border border-brain-v1stroke-2 px-[12px] py-[8px] [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-brain-v1baby-blue-100 placeholder:text-brain-v1baby-blue-30 focus:outline-none focus-visible:border-[rgba(210,3,68,0.5)]"
             />
             <div className="flex gap-[10px] items-stretch w-full">
               <button
                 type="button"
                 onClick={() => { setReportStep("idle"); setPreset(""); setNote(""); }}
                 data-testid="button-report-cancel"
-                className="flex-1 px-[12px] py-[8px] rounded-pill bg-brain-v1stroke-2 hover:bg-brain-v1stroke-2-hover transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[13px] text-brain-v1baby-blue-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30"
+                className="flex-1 px-[12px] py-[8px] rounded-pill bg-brain-v1stroke-2 hover:bg-brain-v1stroke-2-hover transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-brain-v1baby-blue-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30"
               >
                 Cancel
               </button>
@@ -920,7 +920,7 @@ function AutoHandledReceipt({
                 disabled={!reasonReady}
                 onClick={() => setReportStep("confirm")}
                 data-testid="button-report-continue"
-                className="flex-1 px-[12px] py-[8px] rounded-pill bg-brain-v1dark-pink-red hover:bg-brain-v1dark-pink-red-hover transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[13px] focus:outline-none focus-visible:ring-2"
+                className="flex-1 px-[12px] py-[8px] rounded-pill bg-brain-v1dark-pink-red hover:bg-brain-v1dark-pink-red-hover transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] focus:outline-none focus-visible:ring-2"
                 style={{ color: ALERT, ["--tw-ring-color" as string]: ALERT }}
               >
                 Continue
@@ -932,7 +932,7 @@ function AutoHandledReceipt({
         {/* Step 2: confirm the safety action. Pausing is NEVER silent. */}
         {reportStep === "confirm" && (
           <div className="w-full rounded-row border border-[rgba(210,3,68,0.3)] bg-brain-v1highlight-dropdown-bg p-[14px] flex flex-col gap-[12px]">
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[18px] text-[14px] text-brain-v1baby-blue-100">
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[14px] text-brain-v1baby-blue-100">
               Want to pause this rule while you review?
             </p>
             <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-brain-v1baby-blue-60 text-[13px]">
@@ -943,7 +943,7 @@ function AutoHandledReceipt({
                 type="button"
                 onClick={() => { setDidPause(true); submit(true); }}
                 data-testid="button-report-pause-review"
-                className="flex w-full items-center justify-center gap-[8px] px-[16px] py-[11px] rounded-pill bg-brain-v1purple hover:bg-brain-v1purple-hover transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
+                className="flex w-full items-center justify-center gap-[8px] px-[16px] py-[11px] rounded-pill bg-brain-v1purple hover:bg-brain-v1purple-hover transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
               >
                 Pause rule and review
               </button>
@@ -951,7 +951,7 @@ function AutoHandledReceipt({
                 type="button"
                 onClick={() => submit(false)}
                 data-testid="button-report-feedback-only"
-                className="flex w-full items-center justify-center gap-[8px] px-[16px] py-[11px] rounded-pill bg-brain-v1stroke-2 hover:bg-brain-v1stroke-2-hover transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-brain-v1baby-blue-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30"
+                className="flex w-full items-center justify-center gap-[8px] px-[16px] py-[11px] rounded-pill bg-brain-v1stroke-2 hover:bg-brain-v1stroke-2-hover transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-brain-v1baby-blue-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30"
               >
                 Just send feedback
               </button>
@@ -959,7 +959,7 @@ function AutoHandledReceipt({
                 type="button"
                 onClick={() => setReportStep("reason")}
                 data-testid="button-report-back"
-                className="self-center mt-[2px] px-[12px] py-[6px] [font-family:'Gilroy',sans-serif] font-medium text-[12px] text-brain-v1baby-blue-60 hover:text-brain-v1baby-blue-100 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30 rounded-pill flex items-center justify-center"
+                className="self-center mt-[2px] px-[12px] py-[6px] [font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-brain-v1baby-blue-60 hover:text-brain-v1baby-blue-100 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30 rounded-pill flex items-center justify-center"
               >
                 Back
               </button>

@@ -33,7 +33,7 @@ export type ReviewItemType = {
    Value  text-14 leading-20 #a8b9f4 (Baby Blue 100) Gilroy Medium. */
 const InfoCell = ({ label, value }: { label: string; value: string }) => (
   <div className="bg-brain-v1highlight-dropdown-bg flex flex-col h-[58px] items-start p-[12px] rounded-panel w-full">
-    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-brain-v1baby-blue-30 text-[12px] whitespace-nowrap">{label}</p>
+    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-30 text-[12px] whitespace-nowrap">{label}</p>
     <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[14px] whitespace-nowrap">{value}</p>
   </div>
 );
@@ -258,7 +258,7 @@ export const ReviewModal = ({
                   disabled={prevDisabled}
                   aria-label="Previous record"
                   data-testid="button-review-prev"
-                  className="flex flex-1 items-center justify-center gap-[8px] px-[20px] py-[8px] rounded-pill bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-15-hover transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-brain-v1baby-blue-60 disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
+                  className="flex flex-1 items-center justify-center gap-[8px] px-[20px] py-[8px] rounded-pill bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-15-hover transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-brain-v1baby-blue-60 disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
                 >
                   <ArrowLeft size={18} />
                   Previous
@@ -269,7 +269,7 @@ export const ReviewModal = ({
                   disabled={nextDisabled}
                   aria-label="Next record"
                   data-testid="button-review-next"
-                  className="flex flex-1 items-center justify-center gap-[8px] px-[20px] py-[8px] rounded-pill bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-15-hover transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[16px] text-brain-v1baby-blue-60 disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
+                  className="flex flex-1 items-center justify-center gap-[8px] px-[20px] py-[8px] rounded-pill bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-15-hover transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-brain-v1baby-blue-60 disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
                 >
                   Next
                   <ArrowRight size={18} />

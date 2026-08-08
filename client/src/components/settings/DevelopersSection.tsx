@@ -199,7 +199,7 @@ const PillButton = ({ children, onClick, tone = "purple", disabled, testId }: {
 const StatusBadge = ({ status }: { status: "active" | "revoked" }) => (
   <span
     data-testid={`badge-key-status-${status}`}
-    className="inline-flex items-center justify-center px-[8px] py-[3px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-center whitespace-nowrap border"
+    className="inline-flex items-center justify-center px-[8px] py-[3px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-center whitespace-nowrap border"
     style={status === "active"
       ? { background: "#222737", color: "#a8b9f4", borderColor: "rgba(168,185,244,0.2)" }
       : { background: "#350011", color: "#d20344", borderColor: "rgba(210,3,68,0.2)" }}
@@ -227,7 +227,7 @@ const KeysUnavailableCard = ({ testId }: { testId?: string }) => (
       <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[20px]">
         The keys API isn't enabled yet
       </p>
-      <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[16px]">
+      <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px]">
         brain-core's API-key service hasn't been switched on for this environment. Keys become
         available here automatically as soon as it is. No action needed on your side.
       </p>
@@ -348,7 +348,7 @@ const PopupShell = ({ title, onClose, children, footer, testId }: {
 const PopupSection = ({ label, children }: { label: string; children: ReactNode }) => (
   <div className="flex flex-col gap-[16px] w-full">
     <div className="flex gap-[8px] items-center w-full">
-      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-60 text-[14px] leading-[14px] whitespace-nowrap">{label}</p>
+      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-60 text-[14px] leading-[20px] whitespace-nowrap">{label}</p>
       <div className="flex-1 min-w-px border-t border-brain-v1stroke-2" />
     </div>
     {children}
@@ -508,8 +508,8 @@ const DetailModal = ({ title, badges, onClose, children, footer, testId }: {
 /* Label/value line inside the detail modal. */
 const DetailRow = ({ label, children, testId }: { label: string; children: ReactNode; testId?: string }) => (
   <div className="flex items-start justify-between gap-4" data-testid={testId}>
-    <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[13px] leading-[18px] flex-shrink-0">{label}</p>
-    <div className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[13px] leading-[18px] text-right min-w-0 break-words">{children}</div>
+    <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px] flex-shrink-0">{label}</p>
+    <div className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[14px] leading-[20px] text-right min-w-0 break-words">{children}</div>
   </div>
 );
 
@@ -542,7 +542,7 @@ const EndpointRow = ({ path, scope, description }: { path: string; scope: string
     <div className="flex flex-col gap-[16px] w-full" data-testid={`row-endpoint-${slug}`}>
       <div className="flex flex-col gap-[4px] justify-center w-full">
         <div className="flex gap-[12px] items-start w-full flex-wrap">
-          <span className="bg-brain-v1baby-blue-15 border border-[rgba(108,119,157,0.2)] flex items-center justify-center px-[8px] py-[3px] rounded-pill shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-brain-v1baby-blue-60 text-[12px] text-center whitespace-nowrap">
+          <span className="bg-brain-v1baby-blue-15 border border-[rgba(108,119,157,0.2)] flex items-center justify-center px-[8px] py-[3px] rounded-pill shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[12px] text-center whitespace-nowrap">
             GET
           </span>
           <p className="flex-1 min-w-0 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[16px] break-all" data-testid={`text-endpoint-path-${slug}`}>
@@ -550,7 +550,7 @@ const EndpointRow = ({ path, scope, description }: { path: string; scope: string
           </p>
           <span
             data-testid={`badge-endpoint-scope-${slug}`}
-            className="flex items-center justify-center px-[8px] py-[3px] rounded-pill shrink-0 border [font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-[12px] text-center whitespace-nowrap"
+            className="flex items-center justify-center px-[8px] py-[3px] rounded-pill shrink-0 border [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[12px] text-center whitespace-nowrap"
             style={scope
               ? { background: "#240757", color: "#7631ee", borderColor: "rgba(118,49,238,0.2)" }
               : { background: "#222737", color: "#6c779d", borderColor: "rgba(108,119,157,0.2)" }}
@@ -558,7 +558,7 @@ const EndpointRow = ({ path, scope, description }: { path: string; scope: string
             {scope ? `Requires ${scope}` : "Any Active Key"}
           </span>
         </div>
-        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px]">{description}</p>
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[14px]">{description}</p>
       </div>
       <div className="bg-brain-v1headerfooterbg border border-brain-v1stroke-2 flex gap-[12px] items-center p-[12px] rounded-row w-full">
         <p className="flex-1 min-w-0 [font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[14px] truncate" data-testid={`text-curl-${slug}`}>
@@ -697,7 +697,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
               </p>
               {/* Layer badge — left */}
               <div className="absolute flex items-center justify-center left-[23px] top-[17px] bg-brain-v1baby-blue-15 border border-[rgba(108,119,157,0.2)] border-solid px-[8px] py-[3px] rounded-pill">
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-brain-v1baby-blue-60 text-[12px] text-center whitespace-nowrap capitalize">
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[12px] text-center whitespace-nowrap capitalize">
                   {selectedEvent.layer}
                 </p>
               </div>
@@ -722,50 +722,50 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
                 {/* Event */}
                 <div className="border-b border-brain-v1stroke-2 flex items-start relative shrink-0 w-full">
                   <div className="flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[140px]">
-                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">Event</p>
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">Event</p>
                   </div>
                   <div className="flex flex-[1_0_0] flex-col items-start justify-center min-w-px px-[12px] py-[8px]" data-testid="detail-activity-action">
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] overflow-hidden text-brain-v1baby-blue-100 text-[13px] text-ellipsis w-full whitespace-nowrap">{selectedEvent.action}</p>
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] overflow-hidden text-brain-v1baby-blue-100 text-[14px] text-ellipsis w-full whitespace-nowrap">{selectedEvent.action}</p>
                   </div>
                 </div>
 
                 {/* When */}
                 <div className="border-b border-brain-v1stroke-2 flex items-start relative shrink-0 w-full">
                   <div className="flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[140px]">
-                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">When</p>
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">When</p>
                   </div>
                   <div className="flex flex-[1_0_0] flex-col items-start justify-center min-w-px px-[12px] py-[8px]" data-testid="detail-activity-when">
-                    <p className="[font-family:'JetBrains_Mono',monospace] leading-[20px] overflow-hidden text-brain-v1baby-blue-100 text-[13px] text-ellipsis w-full whitespace-nowrap">{formatDateTime(selectedEvent.created_at)}</p>
+                    <p className="[font-family:'JetBrains_Mono',monospace] leading-[18px] overflow-hidden text-brain-v1baby-blue-100 text-[13px] text-ellipsis w-full whitespace-nowrap">{formatDateTime(selectedEvent.created_at)}</p>
                   </div>
                 </div>
 
                 {/* Authenticated As */}
                 <div className="border-b border-brain-v1stroke-2 flex items-start relative shrink-0 w-full">
                   <div className="flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[140px]">
-                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">Authenticated As</p>
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">Authenticated As</p>
                   </div>
                   <div className="flex flex-[1_0_0] flex-col items-start justify-center min-w-px px-[12px] py-[8px]" data-testid="detail-activity-actor">
-                    <p className="[font-family:'JetBrains_Mono',monospace] leading-[20px] overflow-hidden text-brain-v1baby-blue-100 text-[13px] text-ellipsis w-full whitespace-nowrap">{selectedEvent.actor}</p>
+                    <p className="[font-family:'JetBrains_Mono',monospace] leading-[18px] overflow-hidden text-brain-v1baby-blue-100 text-[13px] text-ellipsis w-full whitespace-nowrap">{selectedEvent.actor}</p>
                   </div>
                 </div>
 
                 {/* Tenant */}
                 <div className="border-b border-brain-v1stroke-2 flex items-start relative shrink-0 w-full">
                   <div className="flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[140px]">
-                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">Tenant</p>
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">Tenant</p>
                   </div>
                   <div className="flex flex-[1_0_0] flex-col items-start justify-center min-w-px px-[12px] py-[8px]" data-testid="detail-activity-tenant">
-                    <p className="[font-family:'JetBrains_Mono',monospace] leading-[20px] overflow-hidden text-brain-v1baby-blue-100 text-[13px] text-ellipsis w-full whitespace-nowrap">{selectedEvent.tenant_id}</p>
+                    <p className="[font-family:'JetBrains_Mono',monospace] leading-[18px] overflow-hidden text-brain-v1baby-blue-100 text-[13px] text-ellipsis w-full whitespace-nowrap">{selectedEvent.tenant_id}</p>
                   </div>
                 </div>
 
                 {/* Event ID */}
                 <div className={`${str(selectedEvent.inputs, "question") || str(selectedEvent.outputs, "answer") || str(selectedEvent.outputs, "response") ? "border-b border-brain-v1stroke-2" : ""} flex items-start relative shrink-0 w-full`}>
                   <div className="flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[140px]">
-                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">Event ID</p>
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">Event ID</p>
                   </div>
                   <div className="flex flex-[1_0_0] flex-col items-start justify-center min-w-px px-[12px] py-[8px]">
-                    <p className="[font-family:'JetBrains_Mono',monospace] leading-[20px] overflow-hidden text-brain-v1baby-blue-100 text-[13px] text-ellipsis w-full whitespace-nowrap">{selectedEvent.id}</p>
+                    <p className="[font-family:'JetBrains_Mono',monospace] leading-[18px] overflow-hidden text-brain-v1baby-blue-100 text-[13px] text-ellipsis w-full whitespace-nowrap">{selectedEvent.id}</p>
                   </div>
                 </div>
 
@@ -773,10 +773,10 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
                 {str(selectedEvent.inputs, "question") && (
                   <div className={`${str(selectedEvent.outputs, "answer") || str(selectedEvent.outputs, "response") ? "border-b border-brain-v1stroke-2" : ""} flex items-start relative shrink-0 w-full`}>
                     <div className="flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[140px]">
-                      <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">Question</p>
+                      <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">Question</p>
                     </div>
                     <div className="flex flex-[1_0_0] flex-col items-start justify-center min-w-px px-[12px] py-[8px]">
-                      <div className="[font-family:'Gilroy',sans-serif] font-medium h-[99px] leading-[20px] overflow-hidden text-brain-v1baby-blue-100 text-[13px] w-full" data-testid="text-activity-question">
+                      <div className="[font-family:'Gilroy',sans-serif] font-medium h-[99px] leading-[18px] overflow-hidden text-brain-v1baby-blue-100 text-[13px] w-full" data-testid="text-activity-question">
                         {str(selectedEvent.inputs, "question")}
                       </div>
                     </div>
@@ -787,10 +787,10 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
                 {(str(selectedEvent.outputs, "answer") ?? str(selectedEvent.outputs, "response")) && (
                   <div className="flex items-start relative shrink-0 w-full">
                     <div className="flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[140px]">
-                      <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">Response</p>
+                      <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">Response</p>
                     </div>
                     <div className="flex flex-[1_0_0] flex-col items-start justify-center min-w-px px-[12px] py-[8px]">
-                      <div className="[font-family:'Gilroy',sans-serif] font-medium h-[99px] leading-[20px] overflow-hidden text-brain-v1baby-blue-100 text-[13px] w-full" data-testid="text-activity-response">
+                      <div className="[font-family:'Gilroy',sans-serif] font-medium h-[99px] leading-[18px] overflow-hidden text-brain-v1baby-blue-100 text-[13px] w-full" data-testid="text-activity-response">
                         {str(selectedEvent.outputs, "answer") ?? str(selectedEvent.outputs, "response")}
                       </div>
                     </div>
@@ -859,7 +859,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
           <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-brain-v1baby-blue-100 text-[32px]" data-testid="text-page-title">
             Build on your Brain ledger.
           </p>
-          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[22px] text-brain-v1baby-blue-100 text-[16px]" data-testid="text-enforcement-disclosure">
+          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[16px]" data-testid="text-enforcement-disclosure">
             Keys are issued and enforced by brain-core. Start with GET /api/v1/ping.
           </p>
         </div>
@@ -911,7 +911,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
                   </p>
                   {s.state === "unknown" && (
                     <p
-                      className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[13px] leading-[16px]"
+                      className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px]"
                       data-testid={`step-get-started-${i}-unknown`}
                     >
         Couldn't check this. brain-core is unreachable. It may already be done.
@@ -919,7 +919,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
                   )}
                   {s.state === "checking" && (
                     <p
-                      className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[13px] leading-[16px]"
+                      className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px]"
                       data-testid={`step-get-started-${i}-checking`}
                     >
                       Checking…
@@ -1032,7 +1032,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
                     className="flex gap-[12px] items-start w-full text-left cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple rounded-[8px]"
                     data-testid={`row-activity-${ev.id}`}
                   >
-                    <span className="inline-flex items-center justify-center px-[8px] py-[3px] rounded-pill bg-brain-v1baby-blue-15 border border-[rgba(108,119,157,0.2)] [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-60 text-[12px] leading-[14px] whitespace-nowrap shrink-0">
+                    <span className="inline-flex items-center justify-center px-[8px] py-[3px] rounded-pill bg-brain-v1baby-blue-15 border border-[rgba(108,119,157,0.2)] [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-60 text-[12px] leading-[16px] whitespace-nowrap shrink-0">
                       {capitalCase(ev.layer)}
                     </span>
                     <p className="flex-1 min-w-px [font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[20px] break-words group-hover:text-white transition-colors" title={ev.action}>{humanizeAction(ev.action)}</p>
@@ -1180,7 +1180,7 @@ function KeysSection({ env }: { env: DevEnv }) {
             </div>
             <PopupSection label="API Key">
               <PopupCodeBox testId="detail-key-masked">{maskKey(k)}</PopupCodeBox>
-              <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[14px] leading-[16px] -mt-2">
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[14px] leading-[20px] -mt-2">
                 brain-core stores keys hashed. The full key was shown exactly once, at creation. If it's lost, rotate to get a new one.
               </p>
             </PopupSection>
@@ -1239,7 +1239,7 @@ function KeysSection({ env }: { env: DevEnv }) {
           <div className="p-[16px] flex flex-col gap-[16px]">
             <div className="flex flex-col gap-[4px]">
               <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[20px]">Live key issuance is gated</p>
-              <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[16px]">
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px]">
                 {tenantsQ.data?.mode === "production"
                   ? "This workspace runs in production tenancy mode, but no company tenant is linked yet. Live key issuance unlocks once your company tenant is created."
                   : tenantsQ.data?.mode === "durable"
@@ -1317,7 +1317,7 @@ function KeysSection({ env }: { env: DevEnv }) {
                   </span>
                   <span className="flex flex-col gap-[4px] flex-1 min-w-px">
                     <span className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[16px] leading-[20px]">{s.label}</span>
-                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[16px]">{s.hint}</span>
+                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px]">{s.hint}</span>
                   </span>
                 </button>
               );
@@ -1345,7 +1345,7 @@ function KeysSection({ env }: { env: DevEnv }) {
             <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[20px]" data-testid="text-no-keys-title">
               No {env} keys yet
             </p>
-            <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[16px]">
+            <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px]">
               {env === "sandbox"
                 ? "Create one to start calling the API."
                 : "Live keys appear here once issued."}
@@ -1368,7 +1368,7 @@ function KeysSection({ env }: { env: DevEnv }) {
                       <StatusBadge status={k.status} />
                     </div>
                     <div className="flex items-center w-full">
-                      <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[16px] flex-1 min-w-px break-words" data-testid={`text-masked-key-${k.id}`}>{maskKey(k)}</p>
+                      <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px] flex-1 min-w-px break-words" data-testid={`text-masked-key-${k.id}`}>{maskKey(k)}</p>
                     </div>
                   </div>
                   <div className="bg-brain-v1headerfooterbg border border-brain-v1stroke-2 rounded-row flex flex-col w-full overflow-hidden">
@@ -1380,10 +1380,10 @@ function KeysSection({ env }: { env: DevEnv }) {
                     ].map((row, ri, arr) => (
                       <div key={row.label} className={`flex items-start w-full ${ri < arr.length - 1 ? "border-b border-brain-v1stroke-2" : ""}`}>
                         <div className="flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[140px]">
-                          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-60 text-[12px] leading-[20px] whitespace-nowrap">{row.label}</p>
+                          <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-60 text-[12px] leading-[16px] whitespace-nowrap">{row.label}</p>
                         </div>
                         <div className="flex flex-col flex-1 min-w-px items-start justify-center px-[12px] py-[8px]">
-                          <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[13px] leading-[20px] w-full truncate" data-testid={row.testId}>{row.value}</p>
+                          <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[14px] leading-[20px] w-full truncate" data-testid={row.testId}>{row.value}</p>
                         </div>
                       </div>
                     ))}
@@ -1472,7 +1472,7 @@ function TenantsSection({ env, onNavigate }: { env: DevEnv; onNavigate: (s: DevS
                 }}
               >
                 <p
-                  className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] text-center whitespace-nowrap"
+                  className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[14px] text-center whitespace-nowrap"
                   style={{ color: env === "live" ? "#ff9500" : "#a8b9f4" }}
                 >
                   {env === "live" ? "Live" : "Sandbox"}
@@ -1500,30 +1500,30 @@ function TenantsSection({ env, onNavigate }: { env: DevEnv; onNavigate: (s: DevS
                 {/* Tenant ID */}
                 <div className="border-b border-brain-v1stroke-2 flex items-start relative shrink-0 w-full">
                   <div className="flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[140px]">
-                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">Tenant ID</p>
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">Tenant ID</p>
                   </div>
                   <div className="flex flex-[1_0_0] flex-col items-start justify-center min-w-px px-[12px] py-[8px]" data-testid="detail-tenant-id">
-                    <p className="[font-family:'JetBrains_Mono',monospace] leading-[20px] overflow-hidden text-brain-v1baby-blue-100 text-[13px] text-ellipsis w-full whitespace-nowrap">{selectedTenant.id}</p>
+                    <p className="[font-family:'JetBrains_Mono',monospace] leading-[18px] overflow-hidden text-brain-v1baby-blue-100 text-[13px] text-ellipsis w-full whitespace-nowrap">{selectedTenant.id}</p>
                   </div>
                 </div>
                 {/* Environment */}
                 <div className="border-b border-brain-v1stroke-2 flex items-start relative shrink-0 w-full">
                   <div className="flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[140px]">
-                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">Environment</p>
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">Environment</p>
                   </div>
                   <div className="flex flex-[1_0_0] flex-col items-start justify-center min-w-px px-[12px] py-[8px]">
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[13px] w-full">{selectedTenant.environment === "live" ? "Live" : "Sandbox"}</p>
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[14px] w-full">{selectedTenant.environment === "live" ? "Live" : "Sandbox"}</p>
                   </div>
                 </div>
                 {/* Active Keys */}
                 <div className="border-b border-brain-v1stroke-2 flex items-start relative shrink-0 w-full">
                   <div className="flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[140px]">
-                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">Active Keys</p>
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">Active Keys</p>
                   </div>
                   <div className="flex flex-[1_0_0] flex-col items-start justify-center min-w-px px-[12px] py-[8px]" data-testid="detail-tenant-key-count">
                     {/* A failed keys read must not render as "this tenant has 0 keys". */}
                     <p
-                      className="[font-family:'JetBrains_Mono',monospace] leading-[20px] text-brain-v1baby-blue-100 text-[13px] w-full"
+                      className="[font-family:'JetBrains_Mono',monospace] leading-[18px] text-brain-v1baby-blue-100 text-[13px] w-full"
                       data-testid="text-tenant-key-count"
                     >
                       {keysQ.isLoading ? "…" : keysQ.isError ? "Unavailable" : String(tenantKeyCount)}
@@ -1533,10 +1533,10 @@ function TenantsSection({ env, onNavigate }: { env: DevEnv; onNavigate: (s: DevS
                 {/* Created */}
                 <div className={`${selectedTenant.ephemeral ? "border-b border-brain-v1stroke-2" : ""} flex items-start relative shrink-0 w-full`}>
                   <div className="flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[140px]">
-                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">Created</p>
+                    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">Created</p>
                   </div>
                   <div className="flex flex-[1_0_0] flex-col items-start justify-center min-w-px px-[12px] py-[8px]" data-testid="detail-tenant-created">
-                    <p className="[font-family:'JetBrains_Mono',monospace] leading-[20px] text-brain-v1baby-blue-100 text-[13px] w-full">
+                    <p className="[font-family:'JetBrains_Mono',monospace] leading-[18px] text-brain-v1baby-blue-100 text-[13px] w-full">
                       {selectedTenant.ephemeral ? formatRelative(selectedTenant.createdAt) : formatDate(selectedTenant.createdAt)}
                     </p>
                   </div>
@@ -1545,10 +1545,10 @@ function TenantsSection({ env, onNavigate }: { env: DevEnv; onNavigate: (s: DevS
                 {selectedTenant.ephemeral && (
                   <div className="flex items-start relative shrink-0 w-full">
                     <div className="flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[140px]">
-                      <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">Resets In</p>
+                      <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">Resets In</p>
                     </div>
                     <div className="flex flex-[1_0_0] flex-col items-start justify-center min-w-px px-[12px] py-[8px]" data-testid="detail-tenant-expiry">
-                      <p className="[font-family:'JetBrains_Mono',monospace] leading-[20px] text-brain-v1light-orange text-[13px] w-full">{countdown ?? ""}</p>
+                      <p className="[font-family:'JetBrains_Mono',monospace] leading-[18px] text-brain-v1light-orange text-[13px] w-full">{countdown ?? ""}</p>
                     </div>
                   </div>
                 )}
@@ -1563,7 +1563,7 @@ function TenantsSection({ env, onNavigate }: { env: DevEnv; onNavigate: (s: DevS
                       <circle cx="8" cy="5.5" r="0.75" fill="currentColor" />
                       <path d="M8 7.5V11" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
                     </svg>
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px] flex-[1_0_0] min-w-px">
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[14px] flex-[1_0_0] min-w-px">
                       Demo tenants are provisioned fresh per session (~30 minutes). When this one expires, a new tenant is provisioned automatically. IDs and data don't carry over.
                     </p>
                   </div>
@@ -1657,14 +1657,14 @@ function TenantsSection({ env, onNavigate }: { env: DevEnv; onNavigate: (s: DevS
         <Card testId="card-create-tenant">
           <div className="p-4 flex flex-col gap-3">
             <div className="flex flex-col gap-1">
-              <label className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[13px]" htmlFor="company-name">Company name</label>
+              <label className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px]" htmlFor="company-name">Company name</label>
               <input
                 id="company-name"
                 data-testid="input-company-name"
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
                 placeholder="Acme Inc."
-                className="rounded-[8px] px-3 py-2 outline-none [font-family:'Gilroy',sans-serif] font-medium text-white placeholder:text-brain-v1baby-blue-60 text-[14px]"
+                className="rounded-[8px] px-3 py-2 outline-none [font-family:'Gilroy',sans-serif] font-medium text-white placeholder:text-brain-v1baby-blue-60 text-[14px] leading-[20px]"
                 style={{ background: "#11141b", border: "1px solid #1d2132" }}
               />
             </div>
@@ -1873,13 +1873,13 @@ function UsageSection({ env }: { env: DevEnv }) {
                           <div className="flex-1 min-w-px h-[6px] rounded-[3px] bg-brain-v1baby-blue-15 overflow-hidden">
                             <div className="h-full rounded-[3px] bg-brain-v1purple" style={{ width: `${Math.max((a.count / max) * 100, 2)}%` }} />
                           </div>
-                          <p className="[font-family:'JetBrains_Mono',monospace] font-semibold text-brain-v1baby-blue-60 text-[14px] leading-[14px] text-right min-w-[24px] shrink-0">{a.count.toLocaleString()}</p>
+                          <p className="[font-family:'JetBrains_Mono',monospace] font-semibold text-brain-v1baby-blue-60 text-[14px] leading-[20px] text-right min-w-[24px] shrink-0">{a.count.toLocaleString()}</p>
                         </div>
                       </button>
                       {isOpen && (
                         <div className="flex flex-col gap-[16px]" data-testid={`panel-method-daily-${a.action}`}>
                           <div className="flex gap-[8px] items-center w-full">
-                            <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-60 text-[14px] leading-[14px] whitespace-nowrap shrink-0">
+                            <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-60 text-[14px] leading-[20px] whitespace-nowrap shrink-0">
                               <span>Daily requests, last {trend.length} days: </span>
                               <span className="text-brain-v1baby-blue-100">{a.action}</span>
                             </p>
@@ -1939,14 +1939,14 @@ function UsageSection({ env }: { env: DevEnv }) {
                           {k.status === "revoked" && <StatusBadge status="revoked" />}
                         </div>
                         <div className="flex items-center w-full">
-                          <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[16px] flex-1 min-w-px break-words" data-testid={`text-usage-key-masked-${k.id}`}>{maskKey(k)}</p>
+                          <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px] flex-1 min-w-px break-words" data-testid={`text-usage-key-masked-${k.id}`}>{maskKey(k)}</p>
                         </div>
                       </div>
                       <div className="flex gap-[7px] items-center w-full">
                         <div className="flex-1 min-w-px h-[6px] rounded-[3px] bg-brain-v1baby-blue-15 overflow-hidden">
                           <div className="h-full rounded-[3px] bg-brain-v1purple" style={{ width: count > 0 ? `${Math.max((count / max) * 100, 2)}%` : "0%" }} />
                         </div>
-                        <p className="[font-family:'JetBrains_Mono',monospace] font-semibold text-brain-v1baby-blue-60 text-[14px] leading-[14px] text-right min-w-[24px] shrink-0" data-testid={`text-usage-key-count-${k.id}`}>{count.toLocaleString()}</p>
+                        <p className="[font-family:'JetBrains_Mono',monospace] font-semibold text-brain-v1baby-blue-60 text-[14px] leading-[20px] text-right min-w-[24px] shrink-0" data-testid={`text-usage-key-count-${k.id}`}>{count.toLocaleString()}</p>
                       </div>
                     </div>
                   </div>
@@ -2063,7 +2063,7 @@ export function DevelopersSection() {
               aria-controls="developers-panel"
               data-testid={`developers-tab-${id}`}
               onClick={() => setTab(id)}
-              className="px-[8px] py-[8px] whitespace-nowrap text-[14px] leading-[18px] transition-colors"
+              className="px-[8px] py-[8px] whitespace-nowrap text-[14px] leading-[20px] transition-colors"
               style={{
                 fontFamily: "'Gilroy', sans-serif",
                 fontWeight: 500,

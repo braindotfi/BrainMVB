@@ -216,7 +216,7 @@ export function SignupPage() {
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             {mode === "register" && tenancyProduction && (
               <div className="flex flex-col gap-1.5">
-                <label className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[13px] pl-1">
+                <label className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px] pl-1">
                   Company name
                 </label>
                 <input
@@ -232,7 +232,7 @@ export function SignupPage() {
             )}
             {mode === "register" && (
               <div className="flex flex-col gap-1.5">
-                <label className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[13px] pl-1">
+                <label className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px] pl-1">
                   Name
                 </label>
                 <input
@@ -249,7 +249,7 @@ export function SignupPage() {
 
             {mode === "login" ? (
               <div className="flex flex-col gap-1.5">
-                <label className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[13px] pl-1">
+                <label className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px] pl-1">
                   Username or Email
                 </label>
                 <input
@@ -265,7 +265,7 @@ export function SignupPage() {
             ) : (
               <>
                 <div className="flex flex-col gap-1.5">
-                  <label className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[13px] pl-1">
+                  <label className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px] pl-1">
                     Username
                   </label>
                   <input
@@ -280,7 +280,7 @@ export function SignupPage() {
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[13px] pl-1">
+                  <label className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px] pl-1">
                     Email
                   </label>
                   <input
@@ -297,7 +297,7 @@ export function SignupPage() {
             )}
 
             <div className="flex flex-col gap-1.5">
-              <label className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[13px] pl-1">
+              <label className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px] pl-1">
                 Password
               </label>
               <input
@@ -312,7 +312,7 @@ export function SignupPage() {
             </div>
 
             {error && (
-              <p data-testid="text-auth-error" className="[font-family:'Gilroy',sans-serif] text-brain-v1error-text text-[13px] px-1">
+              <p data-testid="text-auth-error" className="[font-family:'Gilroy',sans-serif] text-brain-v1error-text text-[14px] leading-[20px] px-1">
                 {error}
               </p>
             )}
@@ -347,7 +347,7 @@ export function SignupPage() {
             Continue with Demo
           </button>
 
-          <p className="text-center mt-6 [font-family:'Gilroy',sans-serif] text-brain-v1baby-blue-60 text-[14px]">
+          <p className="text-center mt-6 [font-family:'Gilroy',sans-serif] text-brain-v1baby-blue-60 text-[14px] leading-[20px]">
             {mode === "login" ? "Don't have an account?" : "Already have an account?"}{" "}
             <button
               type="button"

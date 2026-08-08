@@ -216,7 +216,7 @@ function AccountPopup({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search"
-              className="bg-transparent flex-1 text-brain-v1baby-blue-60 text-[16px] [font-family:'Gilroy',sans-serif] outline-none placeholder:text-brain-v1baby-blue-60 min-w-0"
+              className="bg-transparent flex-1 text-brain-v1baby-blue-60 text-[16px] leading-[20px] [font-family:'Gilroy',sans-serif] outline-none placeholder:text-brain-v1baby-blue-60 min-w-0"
               data-testid="input-account-search"
             />
           </div>
@@ -238,13 +238,13 @@ function AccountPopup({
                 data-testid={`btn-account-${acc.id}`}
               >
                 <AccountIcon type={acc.type} />
-                <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[32px] whitespace-nowrap">
+                <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[20px] whitespace-nowrap">
                   {acc.name}
                 </p>
               </button>
             ))}
             {filtered.length === 0 && (
-              <p className="px-[8px] py-[8px] text-brain-v1baby-blue-30 text-[14px] [font-family:'Gilroy',sans-serif]">No accounts found</p>
+              <p className="px-[8px] py-[8px] text-brain-v1baby-blue-30 text-[14px] leading-[20px] [font-family:'Gilroy',sans-serif]">No accounts found</p>
             )}
           </div>
         </div>

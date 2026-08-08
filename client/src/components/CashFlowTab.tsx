@@ -107,7 +107,7 @@ const Metric = ({
 
     return (
   <div className="bg-brain-v1highlight-dropdown-bg border border-transparent rounded-panel p-[16px] flex flex-col gap-[8px]" data-testid={testId}>
-    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[13px] uppercase">
+    <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[12px] uppercase">
       {label}
     </p>
     <p
@@ -397,7 +397,7 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
             const secondary = isBill
               ? (
                   <>
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">
                       {dueLabel(row.date || null)}
                     </p>
                     {row.secondaryLabel && (
@@ -405,7 +405,7 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
                         <div className="relative shrink-0 size-[4px]">
                           <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.activity_dot} />
                         </div>
-                        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px] truncate">
+                        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[14px] truncate">
                           {row.secondaryLabel}
                         </p>
                       </>
@@ -414,7 +414,7 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
                 )
               : detailLine(row.sublabel, row.date)
                 ? (
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px] truncate">
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[14px] truncate">
                       {detailLine(row.sublabel, row.date)}
                     </p>
                   )

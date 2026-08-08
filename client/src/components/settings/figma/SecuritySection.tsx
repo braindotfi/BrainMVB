@@ -67,7 +67,7 @@ import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
                   Two-Factor Authentication
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">
                     Not enabled
                   </p>
                 </div>
@@ -110,7 +110,7 @@ import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
                   Session Timeout
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">
                     Auto-lock after inactivity
                   </p>
                 </div>
@@ -168,7 +168,7 @@ import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
                   Login Alerts
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">
                     Not enabled
                   </p>
                 </div>
@@ -211,7 +211,7 @@ import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
                   Login History
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">
                     View recent sign-in activity
                   </p>
                 </div>
@@ -275,7 +275,7 @@ import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
                   Change PIN
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">
                     Update your 6-digit transaction PIN
                   </p>
                 </div>

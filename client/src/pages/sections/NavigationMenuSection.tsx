@@ -27,7 +27,7 @@ const LogoutConfirmModal = ({ show, onCancel, onConfirm }: { show: boolean; onCa
       >
         <div className="flex flex-col gap-[8px] items-center px-[8px] py-[24px] text-center w-full">
           <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[20px] leading-[24px] w-full">Logout</p>
-          <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[16px] w-full">Are you sure you want to logout?</p>
+          <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px] w-full">Are you sure you want to logout?</p>
         </div>
         <div className="flex gap-[8px] items-start p-[8px] w-full">
           <button data-testid="button-logout-cancel" onClick={onCancel} className="flex flex-1 items-center justify-center px-[12px] py-[8px] rounded-pill hover:opacity-80 transition-opacity" style={{ background: "#222737" }}>
@@ -171,7 +171,7 @@ const NotificationBadge = ({ count, testId }: { count: number; testId?: string }
     className="bg-brain-v1purple flex flex-col items-center justify-center min-w-[16px] p-[2px] relative rounded-[4px] shrink-0"
   >
     <p
-      className="[font-family:'Gilroy',sans-serif] font-semibold leading-[12px] text-brain-v1dark-purple text-[12px] text-center whitespace-nowrap"
+      className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1dark-purple text-[12px] text-center whitespace-nowrap"
     >
       {count > 99 ? "99+" : count}
     </p>

@@ -36,7 +36,7 @@ const POPUP_TITLE =
   "[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[20px] leading-[24px] w-full";
 
 const POPUP_BODY =
-  "[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[16px] w-full";
+  "[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px] w-full";
 
 const POPUP_BUTTON_ROW = "flex gap-[8px] items-start p-[8px] w-full";
 
@@ -281,7 +281,7 @@ export default function AccountSection() {
                   Delete My Data
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">
                     How we handle your data
                   </p>
                 </div>

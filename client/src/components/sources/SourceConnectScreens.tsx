@@ -254,7 +254,7 @@ function PlaidConnectButton({
         {label}
       </button>
       {loadError && !isLoading && (
-        <p className="[font-family:'Gilroy',sans-serif] text-[12px] text-brain-v1error-text text-center">
+        <p className="[font-family:'Gilroy',sans-serif] text-[12px] leading-[16px] text-brain-v1error-text text-center">
           {loadError.replace(/^\d+:\s*/, "")}
         </p>
       )}
@@ -347,12 +347,12 @@ export function ProviderPicker({ category }: { category: CategoryId }) {
                 className="size-[32px] rounded-full flex items-center justify-center shrink-0"
                 style={{ background: p.bg, border: p.light ? "1px solid #1d2132" : undefined }}
               >
-                <span className="[font-family:'Gilroy',sans-serif] font-bold text-[12px] leading-none" style={{ color: p.light ? "#11141b" : "#FFFFFF" }}>
+                <span className="[font-family:'Gilroy',sans-serif] font-bold text-[12px] leading-[16px] leading-none" style={{ color: p.light ? "#11141b" : "#FFFFFF" }}>
                   {p.logo}
                 </span>
               </div>
               <div className="flex-1 min-w-0 flex flex-col">
-                <span className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[14px] leading-[18px] truncate">
+                <span className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[14px] leading-[20px] truncate">
                   {p.name}
                 </span>
                 <span
@@ -483,7 +483,7 @@ export function DocumentUpload({ category, onDone }: { category: string; onDone:
           {uploadMut.isPending && (
             <div className="flex items-center gap-[10px] bg-brain-v1highlight-dropdown-bg rounded-[10px] px-[12px] py-[8px]">
               <span className="size-[16px] rounded-full border-2 border-brain-v1purple border-t-transparent animate-spin shrink-0" aria-hidden />
-              <span className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[13px]">Uploading…</span>
+              <span className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px]">Uploading…</span>
             </div>
           )}
         </div>

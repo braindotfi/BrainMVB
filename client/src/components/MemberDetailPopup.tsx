@@ -30,7 +30,7 @@ import {
 function LabelValue({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
     <div className="flex flex-col gap-[4px] rounded-row bg-brain-v1highlight-dropdown-bg p-[12px]">
-      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[14px] text-brain-v1baby-blue-30 text-[12px] uppercase">
+      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-30 text-[12px] uppercase">
         {label}
       </p>
       <p
@@ -50,8 +50,8 @@ function LockedRow({ title, detail }: { title: string; detail: string }) {
         <path d="M5 7V5.5a3 3 0 0 1 6 0V7" stroke="#6c779d" strokeWidth="1.3" strokeLinecap="round" />
       </svg>
       <div className="flex-1 min-w-0">
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[18px] text-brain-v1baby-blue-100 text-[14px]">{title}</p>
-        <p className="mt-[2px] [font-family:'Gilroy',sans-serif] font-medium leading-[17px] text-brain-v1baby-blue-60 text-[13px]">{detail}</p>
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-100 text-[14px]">{title}</p>
+        <p className="mt-[2px] [font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-brain-v1baby-blue-60 text-[13px]">{detail}</p>
       </div>
     </div>
   );
@@ -116,7 +116,7 @@ function MemberDetailBody({ id }: { id: string }) {
             </p>
             {!member.active && (
               <span
-                className="px-[8px] py-[2px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[13px]"
+                className="px-[8px] py-[2px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[14px]"
                 style={{ background: "rgba(210,3,68,0.12)", color: "#d20344", border: "1px solid rgba(210,3,68,0.3)" }}
                 data-testid="badge-member-deactivated"
               >
@@ -139,7 +139,7 @@ function MemberDetailBody({ id }: { id: string }) {
 
       {/* Locked, core-enforced rows */}
       <div className="flex flex-col gap-[8px]">
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-30 text-[12px] uppercase">
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-30 text-[12px] leading-[16px] uppercase">
           Enforced by Brain core
         </p>
         {policy?.selfApprovalBlocked && (

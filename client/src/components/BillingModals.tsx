@@ -157,7 +157,7 @@ export function ChangePlanModal({
                     <p className="font-['JetBrains_Mono',monospace] font-medium text-[26px] leading-[20px] text-right w-[80px]" style={{ color: priceColor }}>
                       {plan.price}
                     </p>
-                    <p className="font-['JetBrains_Mono',monospace] font-medium text-[12px] leading-[20px] w-[26px] text-center" style={{ color: priceColor }}>
+                    <p className="font-['JetBrains_Mono',monospace] font-medium text-[12px] leading-[16px] w-[26px] text-center" style={{ color: priceColor }}>
                       /mo
                     </p>
                   </div>
@@ -175,7 +175,7 @@ export function ChangePlanModal({
                     }}
                   >
                     <StarIcon />
-                    <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-brain-v1dark-orange">Recommended</span>
+                    <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-brain-v1dark-orange">Recommended</span>
                   </span>
                 )}
               </button>
@@ -252,7 +252,7 @@ const CardInput = ({ value, onChange, placeholder, testId, maxLength, inputMode 
 );
 
 const InputLabel = ({ children }: { children: ReactNode }) => (
-  <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[16px] text-brain-v1baby-blue-60 whitespace-nowrap">{children}</p>
+  <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-brain-v1baby-blue-60 whitespace-nowrap">{children}</p>
 );
 
 export function UpdateCardModal({
@@ -284,7 +284,7 @@ export function UpdateCardModal({
         <div className="flex flex-col gap-[32px] p-[24px]">
           <div className="flex flex-col gap-[16px]">
             <div className="flex gap-[8px] items-center w-full">
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[14px] text-brain-v1baby-blue-60 whitespace-nowrap">Payment Method</p>
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-brain-v1baby-blue-60 whitespace-nowrap">Payment Method</p>
               <div className="flex-1 h-px bg-brain-v1stroke-2" />
             </div>
             <p className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-brain-v1baby-blue-100">
@@ -292,7 +292,7 @@ export function UpdateCardModal({
             </p>
             <div className="flex gap-[8px] items-start p-[8px] rounded-row border border-brain-v1stroke-2">
               <InfoCircleIcon />
-              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[16px] text-brain-v1baby-blue-60">
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-brain-v1baby-blue-60">
                 Brain will not collect card numbers or security codes in this form.
               </p>
             </div>
@@ -341,7 +341,7 @@ export function UpdateCardModal({
           </div>
           <div className="flex flex-col gap-[6px]">
             <div className="flex gap-[8px] items-center w-full">
-              <p className="flex-1 [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[16px] text-brain-v1baby-blue-60">Credit Card</p>
+              <p className="flex-1 [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-brain-v1baby-blue-60">Credit Card</p>
               <div className="flex gap-[8px] items-center shrink-0">
                 {CARD_BRANDS.map(b => (
                   <span
@@ -413,7 +413,7 @@ export function CancelSubscriptionModal({
           <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[20px] leading-[24px] w-full">
             Cancel Subscription
           </p>
-          <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[16px] w-full">
+          <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px] w-full">
             Are you sure you want to cancel your subscription?
           </p>
         </div>

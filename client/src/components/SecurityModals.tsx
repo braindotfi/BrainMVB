@@ -435,7 +435,7 @@ export function ChangePinModal({
                 testIdPrefix={`input-pin-${step}`}
               />
               {error && (
-                <p data-testid="text-pin-error" className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[18px] text-brain-v1pink-red w-full">
+                <p data-testid="text-pin-error" className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-brain-v1pink-red w-full">
                   {error}
                 </p>
               )}

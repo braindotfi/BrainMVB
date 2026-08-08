@@ -53,7 +53,7 @@ function RolePill({ role }: { role: MemberRole }) {
   const border = role === "admin" ? "rgba(118,49,238,0.2)" : `${color}33`;
   return (
     <span
-      className="px-[8px] py-[3px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px]"
+      className="px-[8px] py-[3px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px]"
       style={{ background: bg, color, border: `1px solid ${border}` }}
       data-testid={`pill-role-${role}`}
     >
@@ -120,7 +120,7 @@ function MemberRow({ member, inviteActions }: { member: BrainMember; inviteActio
             <RolePill role={member.role} />
             {invited && (
               <span
-                className="px-[8px] py-[3px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px]"
+                className="px-[8px] py-[3px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px]"
                 style={{ background: "rgba(108,119,157,0.1)", color: "#6c779d", border: "1px solid rgba(108,119,157,0.3)" }}
                 data-testid={`pill-invited-${member.id}`}
               >
@@ -129,7 +129,7 @@ function MemberRow({ member, inviteActions }: { member: BrainMember; inviteActio
             )}
             {isBackup && (
               <span
-                className="px-[8px] py-[3px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px]"
+                className="px-[8px] py-[3px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px]"
                 style={{ background: "rgba(255,149,0,0.1)", color: "#ff9500", border: "1px solid rgba(255,149,0,0.3)" }}
                 title={BACKUP_APPROVER_NOTE}
                 data-testid={`pill-backup-${member.id}`}
@@ -139,14 +139,14 @@ function MemberRow({ member, inviteActions }: { member: BrainMember; inviteActio
             )}
             {!member.active && (
               <span
-                className="px-[8px] py-[3px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px]"
+                className="px-[8px] py-[3px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px]"
                 style={{ background: "rgba(210,3,68,0.12)", color: "#d20344", border: "1px solid rgba(210,3,68,0.3)" }}
               >
                 Deactivated
               </span>
             )}
           </div>
-          <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[16px] truncate" data-testid={`text-envelope-${member.id}`}>
+          <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px] truncate" data-testid={`text-envelope-${member.id}`}>
             {envelopeLine(member.approval)}
           </p>
           </div>
@@ -288,12 +288,12 @@ function AddMemberDialog({ open, onClose, production }: { open: boolean; onClose
   };
 
   const fieldCls =
-    "w-full bg-brain-v1baby-blue-15 rounded-[8px] px-[8px] py-[10px] [font-family:'Gilroy',sans-serif] text-[16px] text-white placeholder:text-brain-v1baby-blue-60 outline-none focus:ring-1 focus:ring-brain-v1purple";
+    "w-full bg-brain-v1baby-blue-15 rounded-[8px] px-[8px] py-[10px] [font-family:'Gilroy',sans-serif] text-[16px] leading-[20px] text-white placeholder:text-brain-v1baby-blue-60 outline-none focus:ring-1 focus:ring-brain-v1purple";
 
   const inputLabel = (text: string) => (
     <div className="content-stretch flex flex-col items-start relative shrink-0 w-full">
       <div className="content-stretch flex gap-[8px] items-center relative shrink-0 w-full">
-        <p className="[word-break:break-word] [font-family:'Gilroy',sans-serif] font-semibold leading-[14px] not-italic relative shrink-0 text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">{text}</p>
+        <p className="[word-break:break-word] [font-family:'Gilroy',sans-serif] font-semibold leading-[20px] not-italic relative shrink-0 text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">{text}</p>
         <div className="flex-[1_0_0] h-px min-w-px bg-brain-v1stroke-2 relative" />
       </div>
     </div>
@@ -409,7 +409,7 @@ function AddMemberDialog({ open, onClose, production }: { open: boolean; onClose
                     ))}
                   </div>
                   <p
-                    className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[13px]"
+                    className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-brain-v1baby-blue-60 text-[13px]"
                     data-testid="text-backup-unenforced"
                   >
                     {BACKUP_APPROVER_NOTE}

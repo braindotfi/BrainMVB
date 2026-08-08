@@ -88,14 +88,14 @@ export function WalkthroughStepView({ step, index }: { step: StepContent; index:
               <button
                 type="button"
                 disabled
-                className="px-[12px] py-[6px] rounded-pill bg-brain-v1dark-green [font-family:'Gilroy',sans-serif] font-semibold text-[13px] leading-[16px] text-brain-v1green opacity-50 cursor-default"
+                className="px-[12px] py-[6px] rounded-pill bg-brain-v1dark-green [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-brain-v1green opacity-50 cursor-default"
               >
                 Approve
               </button>
               <button
                 type="button"
                 disabled
-                className="px-[12px] py-[6px] rounded-pill bg-brain-v1dark-pink-red [font-family:'Gilroy',sans-serif] font-semibold text-[13px] leading-[16px] text-brain-v1pink-red opacity-50 cursor-default"
+                className="px-[12px] py-[6px] rounded-pill bg-brain-v1dark-pink-red [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-brain-v1pink-red opacity-50 cursor-default"
               >
                 Decline
               </button>

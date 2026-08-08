@@ -222,7 +222,7 @@ function renderInlineRich(text: string): React.ReactNode {
   return codeParts.map((part, i) => {
     if (part.startsWith("`") && part.endsWith("`")) {
       return (
-        <code key={i} className="bg-brain-v1stroke-2 px-1 py-[1px] rounded-[4px] text-brain-v1baby-blue-100 text-[12px] [font-family:'JetBrains_Mono',monospace]">
+        <code key={i} className="bg-brain-v1stroke-2 px-1 py-[1px] rounded-[4px] text-brain-v1baby-blue-100 text-[12px] leading-[16px] [font-family:'JetBrains_Mono',monospace]">
           {part.slice(1, -1)}
         </code>
       );
@@ -880,13 +880,13 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
 
               {/* Grouped sessions */}
               {filteredGroups.length === 0 && (
-                <div className="px-[8px] py-[6px] [font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px]">
+                <div className="px-[8px] py-[6px] [font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px]">
                   {sessions.length === 0 ? "No conversations yet" : "No conversations found"}
                 </div>
               )}
               {filteredGroups.map((group) => (
                 <div key={group.label} className="flex flex-col gap-[8px] w-full">
-                  <div className="pl-[8px] [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-30 text-[14px] leading-[16px]">
+                  <div className="pl-[8px] [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-30 text-[14px] leading-[20px]">
                     {group.label}
                   </div>
                   {group.items.map((session) => (
@@ -965,7 +965,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                 {msg.dateTag && (
                   <div className="flex items-center justify-center gap-[4px] py-[2px]">
                     <img src={timeIcon} alt="" className="size-[12px] block" />
-                    <span className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-60 text-[12px] leading-[14px]">
+                    <span className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-60 text-[12px] leading-[16px]">
                       {msg.dateTag}
                     </span>
                   </div>
@@ -1113,7 +1113,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                                 else if (resolvedType === "wiki.question") navigate(`/audit-log?record=${s.entityId}`);
                               }}
                               title={s.entityId}
-                              className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1purple text-[11px] leading-[15px] text-left hover:underline block w-full min-w-0 truncate"
+                              className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1purple text-[11px] leading-[14px] text-left hover:underline block w-full min-w-0 truncate"
                             >
                               {text}
                             </button>
@@ -1121,7 +1121,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                             <span
                               key={`${s.entityId}-${i}`}
                               title={s.entityId}
-                              className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[11px] leading-[15px] block w-full min-w-0 truncate"
+                              className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[11px] leading-[14px] block w-full min-w-0 truncate"
                             >
                               {text}
                             </span>

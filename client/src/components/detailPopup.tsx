@@ -56,12 +56,12 @@ export function Row({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="flex items-center w-full border-b border-brain-v1stroke-2 last:border-b-0">
       <div className="flex flex-col justify-center px-[12px] py-[8px] w-[140px] shrink-0">
-        <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[20px] text-brain-v1baby-blue-60">
+        <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-brain-v1baby-blue-60">
           {label}
         </span>
       </div>
       <div className="flex flex-1 flex-col justify-center px-[12px] py-[8px] min-w-px">
-        <span className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[20px] text-brain-v1baby-blue-100 break-all">
+        <span className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-brain-v1baby-blue-100 break-all">
           {value}
         </span>
       </div>
@@ -72,7 +72,7 @@ export function Row({ label, value }: { label: string; value: ReactNode }) {
 export function SectionLabel({ children }: { children: ReactNode }) {
   return (
     <div className="flex gap-[8px] items-center w-full">
-      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[14px] text-brain-v1baby-blue-60 whitespace-nowrap">
+      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-brain-v1baby-blue-60 whitespace-nowrap">
         {children}
       </p>
       <div className="flex-1 h-px bg-brain-v1stroke-2" />
@@ -124,7 +124,7 @@ export function DetailPopupHeader({
               data-testid={chipTestId}
             >
               <p
-                className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] text-center whitespace-nowrap"
+                className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[14px] text-center whitespace-nowrap"
                 style={{ color: chip.color }}
               >
                 {chip.text}
@@ -140,7 +140,7 @@ export function DetailPopupHeader({
             {amount}
           </p>
           <div className="bg-brain-v1baby-blue-15 border border-[rgba(108,119,157,0.2)] border-solid flex items-center justify-center px-[8px] py-[3px] rounded-pill shrink-0">
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-brain-v1baby-blue-60 text-[12px] text-center whitespace-nowrap">
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[12px] text-center whitespace-nowrap">
               {currency}
             </p>
           </div>

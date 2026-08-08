@@ -436,7 +436,7 @@ export function AuditLogSection() {
                         {capitalCase(categoryBadge.label)}
                       </RecordPill>
                     </div>
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[16px]">
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px]">
                       {[actor, formatText(record.rowSubtitle ?? ""), record.occurredAtLabel]
                         .filter(Boolean)
                         .join(" · ")}
