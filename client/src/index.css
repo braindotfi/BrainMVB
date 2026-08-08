@@ -73,6 +73,10 @@
   /* Hover partners for the four surfaces above. Canonicalised by #129;
      not yet in the Figma source file — see CLAUDE.md "Hover tokens". */
   --brain-v1baby-blue-15-hover: rgba(44, 50, 71, 1);
+  /* Dimmer sibling of -15, used for the 'postponed' audit chip. Kept as its
+     own value rather than folded into -15: the collapse is a visible
+     lightening (dL* +5.44), not a sub-perceptual one. */
+  --brain-v1baby-blue-15-muted: rgba(26, 28, 36, 1);
   --brain-v1baby-blue-30: rgba(65, 73, 101, 1);
   --brain-v1baby-blue-5: rgba(17, 20, 27, 1);
   --brain-v1baby-blue-60: rgba(108, 119, 157, 1);

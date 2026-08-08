@@ -10,6 +10,7 @@ module.exports = {
         "brain-v1baby-blue-100": "var(--brain-v1baby-blue-100)",
         "brain-v1baby-blue-15": "var(--brain-v1baby-blue-15)",
         "brain-v1baby-blue-15-hover": "var(--brain-v1baby-blue-15-hover)",
+        "brain-v1baby-blue-15-muted": "var(--brain-v1baby-blue-15-muted)",
         "brain-v1baby-blue-30": "var(--brain-v1baby-blue-30)",
         "brain-v1baby-blue-5": "var(--brain-v1baby-blue-5)",
         "brain-v1baby-blue-60": "var(--brain-v1baby-blue-60)",

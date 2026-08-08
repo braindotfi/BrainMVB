@@ -1224,11 +1224,16 @@ site drifted silently. Now the token name *is* the usage index.
 | `#414965` | `brain-v1baby-blue-30` | | `#123509` | `brain-v1dark-green` |
 | `#d20344` | `brain-v1pink-red` | | `#06070a` | `brain-v1headerfooterbg` |
 | `#8b95b8` | `brain-v1baby-blue-80` | | `#12032d` | `brain-v1dark-dark-purple` |
-| `#f4607a` | `brain-v1error-text` | | | |
+| `#f4607a` | `brain-v1error-text` | | `#1a1c24` | `brain-v1baby-blue-15-muted` |
 
 `brain-v1baby-blue-80` is a ramp step between `-60` and `-100`, minted for assistant body text:
 `-60` on `baby-blue-15` is only **3.37:1**, and `-80` clears AA. `brain-v1error-text` exists
 because `brain-v1pink-red` on a dark surface does not reach AA for body-size text.
+
+`brain-v1baby-blue-15-muted` is the `postponed` audit chip. It is the same role as the
+`system_activity` chip next to it in `auditTypes.ts`, which uses plain `baby-blue-15` — so the two
+are a collapse candidate, but folding them is a **visible** lightening (ΔL\* +5.44), not a
+sub-perceptual one. Named, not merged, pending that call.
 
 ### Radius by concept
 
@@ -1268,7 +1273,8 @@ border colour — reaching for it as a fill is the mistake this split exists to 
    `var(--token)` instead. 531 occurrences across 46 files, deliberately deferred to their own pass.
    The scan below does **not** see these, so a green suite does not mean the app is hex-free.
 2. **SVG `fill` / `stroke` attributes** that are not driven by `currentColor`.
-3. **Comments quoting a Figma spec** — the hex is the citation, keep it. The scan strips comments.
+3. **Comments quoting a Figma spec** — the hex is the citation, keep it. A bare `#1d2132` in prose
+   is not a class and the scan does not match it, so comments are left alone rather than stripped.
 4. **Opacity modifiers.** `hover:border-[#7631ee]/40` must stay raw. Our tokens resolve to a full
    `rgba()` behind `var()`, and Tailwind 3 cannot inject an alpha channel into that — converting it
    silently drops the 40%. Supporting `/40` would mean restating every token as bare channels with
@@ -1278,15 +1284,22 @@ border colour — reaching for it as a fill is the mistake this split exists to 
 
 `client/src/design-tokens.test.ts` runs under `npm test` and fails the build on:
 
-- any `[#hex]` in a class string;
+- any raw hex in a class string — bare, or hidden in an arbitrary property;
+- any **opaque** `rgb()`/`rgba()` standing in for a hex, which is the obvious way around the rule;
 - any raw `12/16/24/100px` radius (the four named ones — every *other* px value is a later pass and
   is deliberately not ratcheted here);
 - any `brain-v1*` / `brand-*` / `doc-paper-*` class naming a token that does not exist — Tailwind
-  drops unknown classes silently, so a typo renders nothing and passes review;
-- `index.css` and `tailwind.config.ts` drifting apart, which produces a declared-but-unusable token.
+  drops unknown classes silently, so a typo renders nothing and still passes review;
+- `index.css` and `tailwind.config.ts` drifting apart **in either direction** — a declared token
+  that is unusable as a class, or a registered class pointing at a variable that does not exist.
 
-The `/NN` exception is allowed **only** for a hex that is already a token, and the suite separately
-pins the set of values using it to `{#7631ee}` — so a brand-new colour cannot slip in behind a `/40`.
+Partial alpha stays legitimate, because Tailwind 3 cannot apply an alpha channel to a `var()`
+colour — but only over a base colour that is **already a token**, and the suite separately pins the
+set of values using the `/NN` form to `{#7631ee}`. A brand-new colour cannot arrive behind a `/40`.
+
+**It scans `.ts` as well as `.tsx`.** Class strings are not only in components: `auditTypes.ts`
+returns them from a `switch`, and a `.tsx`-only scan reported a clean sweep while a raw hex sat
+there. If you add a rule like this, check what the glob does *not* open.
 
 ### Two namespaces sit outside `brain-v1*` on purpose
 
