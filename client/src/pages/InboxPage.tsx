@@ -101,6 +101,7 @@ import {
   type BulkCandidate,
 } from "@/lib/bulkApprove";
 import { CountPill } from "@/components/CountPill";
+import { Button } from "@/components/ui/button";
 
 /* ── Audit records → timeline facets ──────────────────────────────────────────
    The six tabs are gone. Where a tab used to answer "which list does this belong
@@ -1609,24 +1610,24 @@ export function InboxPage() {
             {/* Footer — Cancel / Approve Selected */}
             <div className="border-t border-brain-v1dark-purple bg-brain-v1dark-dark-purple flex flex-col items-start p-[16px] w-full">
               <div className="flex gap-[16px] items-center w-full">
-                <button
-                  type="button"
+                <Button
+                  variant="secondary"
                   onClick={() => setSelectedIds(new Set())}
                   disabled={bulkRunning}
                   data-testid="button-bulk-clear"
-                  className="bg-brain-v1baby-blue-15 flex flex-1 h-[36px] items-center justify-center min-w-px px-[12px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[16px] whitespace-nowrap hover:bg-brain-v1baby-blue-15-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="flex-1 min-w-px"
                 >
                   Cancel
-                </button>
-                <button
-                  type="button"
+                </Button>
+                <Button
+                  variant="warning"
                   onClick={() => void approveSelected()}
                   disabled={bulkRunning}
                   data-testid="button-bulk-approve"
-                  className="bg-brain-v1dark-orange flex flex-1 h-[36px] items-center justify-center min-w-px px-[12px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1light-orange text-[16px] whitespace-nowrap hover:bg-brain-v1dark-orange-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="flex-1 min-w-px"
                 >
                   {bulkRunning ? "Approving\u2026" : "Approve"}
-                </button>
+                </Button>
               </div>
             </div>
           </div>

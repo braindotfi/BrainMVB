@@ -26,6 +26,7 @@ import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import { AccountDetailPopup } from "@/components/AccountDetailPopup";
 import { TransactionDetailPopup } from "@/components/TransactionDetailPopup";
 import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
+import { Button } from "@/components/ui/button";
 import {
   BankConnect,
   ProviderPicker,
@@ -157,17 +158,17 @@ function SourceRow({
           </p>
         </div>
         {onRemove && !confirming && (
-          <button
-            type="button"
+          <Button
+            variant="secondary"
+            size="compact"
             onClick={(e) => {
               e.stopPropagation();
               setConfirming(true);
             }}
             data-testid={removeTestId}
-            className="shrink-0 rounded-full px-[14px] py-[6px] bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-15-hover transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-60 text-[12px] leading-[16px]"
           >
             Remove
-          </button>
+          </Button>
         )}
       </div>
 
@@ -423,16 +424,15 @@ export function SourcesSection() {
         >
           {sourceCountCaption(shown, allStates)}
         </p>
-        <button
-          type="button"
+        <Button
+          variant="warning"
           onClick={() => setFormOpen((v) => !v)}
           data-testid="button-add-source"
           aria-expanded={formOpen}
-          className="shrink-0 rounded-full px-[16px] py-[8px] bg-brain-v1dark-orange hover:opacity-90 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1light-orange text-[14px] leading-[20px] whitespace-nowrap flex items-center justify-center gap-[2px]"
         >
           {!formOpen && <Plus className="relative shrink-0 size-[16px] text-brain-v1light-orange" />}
           {formOpen ? "Cancel" : "Add Source"}
-        </button>
+        </Button>
       </div>
 
       {formOpen && (

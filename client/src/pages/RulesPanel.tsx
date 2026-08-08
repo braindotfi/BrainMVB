@@ -10,6 +10,7 @@ import {
   Lock,
 } from "lucide-react";
 import { FilterChipRow } from "@/components/FilterChipRow";
+import { Button } from "@/components/ui/button";
 import closeIcon from "@assets/Close_1783293571882.png";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import shieldKeyIcon from "@assets/Normal_1783346551915.png";
@@ -375,31 +376,34 @@ function SuggestionCard({
         {/* Action buttons row: Accept + Edit on left, Dismiss on right. */}
         <div className="flex items-start justify-between relative shrink-0 w-full">
           <div className="flex gap-[16px] items-center relative shrink-0">
-            <button
-              type="button"
+            <Button
+              variant="primary"
+              size="compact"
               onClick={onAccept}
               data-testid={`button-accept-suggestion-${suggestion.id}`}
-              className="bg-brain-v1dark-purple content-stretch flex items-center justify-center px-[12px] py-[8px] relative rounded-pill shrink-0 w-[140px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-brain-v1purple focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
+              className="w-[140px]"
             >
               Accept
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              variant="secondary"
+              size="compact"
               onClick={onTweak}
               data-testid={`button-tweak-suggestion-${suggestion.id}`}
-              className="bg-brain-v1baby-blue-15 content-stretch flex items-center justify-center px-[12px] py-[8px] relative rounded-pill shrink-0 w-[140px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-brain-v1baby-blue-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30"
+              className="w-[140px]"
             >
               Edit
-            </button>
+            </Button>
           </div>
-          <button
-            type="button"
+          <Button
+            variant="subtle"
+            size="compact"
             onClick={onDismiss}
             data-testid={`button-dismiss-suggestion-${suggestion.id}`}
-            className="bg-brain-v1baby-blue-5 content-stretch flex items-center justify-center px-[12px] py-[8px] relative rounded-pill shrink-0 w-[140px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-brain-v1baby-blue-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30"
+            className="w-[140px]"
           >
             Dismiss
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -727,22 +731,22 @@ export function RulesPanel() {
                 Saved to your rules to guide Brain&apos;s reviews. Your enforced policy stays the signed Active Brain policy above until this is applied to it.
               </p>
               <div className="flex gap-[10px] items-stretch w-full pt-[2px]">
-                <button
-                  type="button"
+                <Button
+                  variant="secondary"
+                  className="flex-1"
                   onClick={cancelCreate}
                   data-testid="button-create-cancel"
-                  className="flex-1 px-[12px] py-[10px] rounded-pill bg-brain-v1stroke-2 hover:bg-brain-v1stroke-2-hover transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-brain-v1baby-blue-100"
                 >
                   Not yet
-                </button>
-                <button
-                  type="button"
+                </Button>
+                <Button
+                  variant="cta"
+                  className="flex-1"
                   onClick={onConfirmCreate}
                   data-testid="button-create-confirm"
-                  className="flex-1 px-[12px] py-[10px] rounded-pill bg-brain-v1purple hover:bg-brain-v1purple-hover transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-white"
                 >
                   Create rule
-                </button>
+                </Button>
               </div>
             </div>
           )}
@@ -963,23 +967,23 @@ export function RulesPanel() {
                 </div>
                <div className="backdrop-blur-[10px] border-t border-brain-v1stroke-2 border-solid flex flex-col items-start p-[16px] w-full">
                  <div className="flex gap-[16px] items-center w-full">
-                <button
-                  type="button"
+                <Button
+                  variant="secondary"
+                  className="flex-1"
                   onClick={resetBuilder}
                   data-testid="button-builder-cancel"
-                   className="flex-1 h-[36px] px-[12px] rounded-pill bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-15-hover transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-brain-v1baby-blue-60"
                 >
                   Cancel
-                </button>
-                <button
-                  type="button"
+                </Button>
+                <Button
+                  variant="warning"
+                  className="flex-1"
                   disabled={!builderValid}
                   onClick={() => setPendingCreate(buildDraft())}
                   data-testid="button-builder-create"
-                   className="flex-1 h-[36px] px-[12px] rounded-pill bg-brain-v1dark-orange hover:bg-brain-v1dark-orange-hover disabled:opacity-60 disabled:cursor-not-allowed transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-brain-v1light-orange"
                 >
                    Create Rule
-                </button>
+                </Button>
                  </div>
               </div>
             </div>

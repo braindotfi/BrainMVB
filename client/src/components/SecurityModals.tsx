@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import closeIcon from "@assets/Close_1783293571882.png";
+import { Button } from "@/components/ui/button";
 
 /* ─── Security modals ───────────────────────────────────────
    LoginHistoryModal:  recent sign-in sessions + sign-out-others.
@@ -22,7 +23,7 @@ const RoundIconButton = ({ children, onClick, label, testId }: { children: React
     aria-label={label}
     data-testid={testId}
     onClick={onClick}
-    className="size-[32px] rounded-full flex items-center justify-center hover-elevate"
+    className="size-[32px] rounded-pill flex items-center justify-center hover-elevate"
     style={{ background: "#1d2132" }}
   >
     {children}
@@ -46,16 +47,16 @@ const Header = ({ title, onClose, onBack, testIdPrefix }: { title: string; onClo
 );
 
 const PrimaryButton = ({ children, onClick, disabled, testId }: { children: ReactNode; onClick: () => void; disabled?: boolean; testId: string }) => (
-  <button
-    type="button"
+  <Button
+    variant="warning"
+    size="large"
     onClick={onClick}
     disabled={disabled}
     data-testid={testId}
-    className="w-full rounded-full px-6 py-3 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed hover-elevate"
-    style={{ background: "#4a2300", color: "#ff9500", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "18px", lineHeight: "24px" }}
+    className="w-full"
   >
     {children}
-  </button>
+  </Button>
 );
 
 const ShellRoot = ({ open, onOpenChange, testId, description, width = 400, children }: {
@@ -244,17 +245,15 @@ export function LoginHistoryModal({
             </div>
 
             {/* Sign Out button - Figma 4569:61467 */}
-            <button
-              type="button"
+            <Button
+              variant="destructive"
+              className="w-full"
               data-testid="button-signout-others"
               onClick={signOutAll}
               disabled={!sessions.some((s) => !s.current)}
-              className="flex flex-1 w-full items-center justify-center bg-brain-v1dark-pink-red hover:bg-brain-v1dark-pink-red-hover rounded-pill px-[20px] py-[10px] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              <span className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-brain-v1pink-red whitespace-nowrap">
-                Sign Out of All Devices
-              </span>
-            </button>
+              Sign Out of All Devices
+            </Button>
           </div>
         </Dialog.Content>
       </Dialog.Portal>
@@ -442,17 +441,16 @@ export function ChangePinModal({
             </div>
 
             <div className="mt-[24px] flex items-center w-[322px]">
-              <button
-                type="button"
+              <Button
+                variant="warning"
+                size="large"
+                className="flex-1 min-w-0"
                 data-testid="button-change-pin-advance"
                 disabled={!canAdvance}
                 onClick={advance}
-                className="flex-1 min-w-0 flex items-center justify-center bg-brain-v1dark-orange rounded-pill px-[24px] py-[12px] disabled:opacity-60 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
               >
-                <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[18px] leading-[24px] text-brain-v1light-orange whitespace-nowrap">
-                  {copy.cta}
-                </span>
-              </button>
+                {copy.cta}
+              </Button>
             </div>
           </div>
         </Dialog.Content>

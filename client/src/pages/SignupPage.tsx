@@ -3,6 +3,7 @@ import { useAuth } from "@/lib/authContext";
 import { useLocation, useRoute } from "wouter";
 import googleLogo from "@assets/pngtree-google-internet-icon-vector-png-image_9183287_1784767118256.png";
 import brainLogo from "@assets/BrainLogo_1781769246241.png";
+import { Button } from "@/components/ui/button";
 
 type Mode = "login" | "register";
 
@@ -195,15 +196,16 @@ export function SignupPage() {
           {/* Google OAuth */}
           {googleEnabled && (
             <>
-              <button
-                type="button"
+              <Button
+                variant="subtle"
+                size="large"
                 data-testid="button-google-signin"
                 onClick={loginWithGoogle}
-                className="w-full py-3 px-6 rounded-pill bg-brain-v1baby-blue-5 hover:bg-brain-v1stroke-2 border border-brain-v1stroke-2 hover:border-[#7631ee]/40 transition-colors [font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[20px] flex items-center justify-center gap-3"
+                className="w-full border border-brain-v1stroke-2 hover:border-[#7631ee]/40"
               >
                 <img src={googleLogo} alt="" className="h-[18px] w-[18px] rounded-full object-contain" />
                 Continue with Google
-              </button>
+              </Button>
 
               <div className="flex items-center gap-3 w-full my-5">
                 <div className="flex-1 h-px bg-brain-v1stroke-2" />
@@ -317,17 +319,19 @@ export function SignupPage() {
               </p>
             )}
 
-            <button
+            <Button
               type="submit"
+              variant="cta"
+              size="large"
               data-testid="button-submit-auth"
               disabled={submitting}
-              className="w-full h-[48px] mt-1 rounded-pill bg-brain-v1purple hover:bg-brain-v1purple-hover disabled:opacity-60 disabled:cursor-not-allowed transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-white text-[16px] leading-[20px] flex items-center justify-center gap-2"
+              className="w-full mt-1"
             >
               {submitting && (
                 <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
               )}
               {mode === "login" ? "Sign In" : "Create Account"}
-            </button>
+            </Button>
           </form>
 
           {/* Demo access - explore the app without creating an account */}
@@ -337,15 +341,16 @@ export function SignupPage() {
             <div className="flex-1 h-px bg-brain-v1stroke-2" />
           </div>
 
-          <button
-            type="button"
+          <Button
+            variant="subtle"
+            size="large"
             data-testid="button-demo-login"
             onClick={handleDemo}
             disabled={submitting}
-            className="w-full py-3 px-6 rounded-pill bg-brain-v1baby-blue-5 hover:bg-brain-v1stroke-2 border border-brain-v1stroke-2 hover:border-[#7631ee]/40 disabled:opacity-60 disabled:cursor-not-allowed transition-colors [font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[20px] flex items-center justify-center gap-3"
+            className="w-full border border-brain-v1stroke-2 hover:border-[#7631ee]/40"
           >
             Continue with Demo
-          </button>
+          </Button>
 
           <p className="text-center mt-6 [font-family:'Gilroy',sans-serif] text-brain-v1baby-blue-60 text-[14px] leading-[20px]">
             {mode === "login" ? "Don't have an account?" : "Already have an account?"}{" "}

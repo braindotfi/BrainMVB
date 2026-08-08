@@ -7,6 +7,7 @@ import { useCurrency } from "@/lib/useCurrency";
 import { AlertCallout } from "@/components/Callout";
 import { CardActions } from "@/components/ProposalCardParts";
 import { useCardTransition } from "@/lib/cardTransition";
+import { Button } from "@/components/ui/button";
 
 export type ReviewItemType = {
   id: number | string;
@@ -231,49 +232,51 @@ export const ReviewModal = ({
                 full-width rule every other record card closes with. */}
             <CardActions testId="divider-review-actions">
               <div className="flex gap-[16px] items-start w-full">
-              <button
+              <Button
+                variant="success"
                 onClick={() => onConfirm(auto)}
                 disabled={busy}
                 data-testid="button-review-confirm"
-                className="flex flex-1 items-center justify-center px-[20px] py-[10px] rounded-pill bg-brain-v1dark-green hover:bg-brain-v1dark-green-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1green disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-brain-v1dark-green"
+                className="flex-1"
               >
-                <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1green text-[16px] whitespace-nowrap">{busy ? "Working…" : item.live ? "Approve" : "Confirm"}</span>
-              </button>
-              <button
+                {busy ? "Working…" : item.live ? "Approve" : "Confirm"}
+              </Button>
+              <Button
+                variant="destructive"
                 onClick={onReject}
                 disabled={busy}
                 data-testid="button-review-reject"
-                className="flex flex-1 items-center justify-center px-[20px] py-[10px] rounded-pill bg-brain-v1dark-pink-red hover:bg-brain-v1dark-pink-red-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1pink-red disabled:opacity-60 disabled:cursor-not-allowed"
+                className="flex-1"
               >
-                <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1pink-red text-[16px] whitespace-nowrap">Decline</span>
-              </button>
+                Decline
+              </Button>
               </div>
             </CardActions>
 
             {hasPager && (
               <div className="border-t border-brain-v1stroke-2 pt-[16px] flex gap-[16px] items-center w-full">
-                <button
-                  type="button"
+                <Button
+                  variant="secondary"
                   onClick={onPrev}
                   disabled={prevDisabled}
                   aria-label="Previous record"
                   data-testid="button-review-prev"
-                  className="flex flex-1 items-center justify-center gap-[8px] px-[20px] py-[8px] rounded-pill bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-15-hover transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-brain-v1baby-blue-60 disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
+                  className="flex-1"
                 >
                   <ArrowLeft size={18} />
                   Previous
-                </button>
-                <button
-                  type="button"
+                </Button>
+                <Button
+                  variant="secondary"
                   onClick={onNext}
                   disabled={nextDisabled}
                   aria-label="Next record"
                   data-testid="button-review-next"
-                  className="flex flex-1 items-center justify-center gap-[8px] px-[20px] py-[8px] rounded-pill bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-15-hover transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-brain-v1baby-blue-60 disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
+                  className="flex-1"
                 >
                   Next
                   <ArrowRight size={18} />
-                </button>
+                </Button>
               </div>
             )}
           </div>

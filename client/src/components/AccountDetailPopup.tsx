@@ -5,6 +5,7 @@ import { useCurrency } from "@/lib/useCurrency";
 import arrowIcon from "@assets/arrow_1783201262245.png";
 import closeIcon from "@assets/Close_1783293571882.png";
 import { InfoIcon } from "@/components/Callout";
+import { Button } from "@/components/ui/button";
 
 /* ── Read-only Account detail popup ───────────────────────────────────────────────────────────
    Centered modal (DialogPrimitive) pixel-matched to Figma "Account Details"
@@ -276,30 +277,26 @@ export function AccountDetailPopup({
               {!hidePager && (
                 <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-t border-brain-v1stroke-2 border-solid flex flex-col items-start p-[24px] relative shrink-0 w-full">
                   <div className="flex gap-[16px] items-center w-full">
-                    <button
-                      type="button"
+                    <Button
+                      variant="secondary"
                       disabled={!prevAccount}
                       data-testid="button-account-previous"
                       onClick={() => prevAccount && onSelectAccount?.(prevAccount.id)}
-                      className="bg-brain-v1baby-blue-15 flex flex-1 gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-pill disabled:opacity-60 disabled:cursor-not-allowed transition-opacity"
+                      className="flex-1"
                     >
                       <img src={arrowIcon} alt="" className="size-[16px] rotate-180" />
-                      <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[16px] whitespace-nowrap">
-                        Previous
-                      </span>
-                    </button>
-                    <button
-                      type="button"
+                      Previous
+                    </Button>
+                    <Button
+                      variant="secondary"
                       disabled={!nextAccount}
                       data-testid="button-account-next"
                       onClick={() => nextAccount && onSelectAccount?.(nextAccount.id)}
-                      className="bg-brain-v1baby-blue-15 flex flex-1 gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-pill disabled:opacity-60 disabled:cursor-not-allowed transition-opacity"
+                      className="flex-1"
                     >
-                      <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[16px] whitespace-nowrap">
-                        Next
-                      </span>
+                      Next
                       <img src={arrowIcon} alt="" className="size-[16px]" />
-                    </button>
+                    </Button>
                   </div>
                 </div>
               )}

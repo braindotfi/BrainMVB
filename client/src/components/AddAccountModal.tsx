@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { ADD_MONEY_ICONS as ICON } from "@/assets/add-money-icons";
+import { Button } from "@/components/ui/button";
 
 // ── Data ──────────────────────────────────────────────────────────────────────
 type AccountType = "wallet" | "bank" | "agent";
@@ -150,16 +151,15 @@ function QRPopup({
         <p className="[font-family:'JetBrains_Mono',monospace] font-medium text-white text-[20px] leading-[24px] whitespace-nowrap">
           {truncAddr(address)}
         </p>
-        <button
+        <Button
+          variant="warning"
+          className="w-full"
           onClick={onCopy}
-          className="bg-brain-v1dark-orange flex gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-pill w-full hover:opacity-80 transition-opacity"
           data-testid="btn-qr-copy"
         >
           <img alt="" src={ICON.copyIcon} className="block shrink-0" style={{ width: 24, height: 24 }} />
-          <span className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1light-orange text-[16px] leading-[20px] whitespace-nowrap">
-            {copied ? "Copied!" : "Copy Address"}
-          </span>
-        </button>
+          {copied ? "Copied!" : "Copy Address"}
+        </Button>
       </div>
     </div>
   );
@@ -405,21 +405,25 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep 
 
           {/* Cancel + Next buttons */}
           <div className="flex gap-[16px] items-center px-[39px] pt-[24px] pb-[32px]">
-            <button
+            <Button
+              variant="secondary"
+              size="large"
+              className="flex-1"
               onClick={handleClose}
-              className="bg-brain-v1baby-blue-15 flex-1 h-[48px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-60 text-[18px] leading-[24px] hover:opacity-80 transition-opacity flex items-center justify-center"
               data-testid="btn-add-cancel"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="warning"
+              size="large"
+              className="flex-1"
               onClick={() => selected && setStep(selected.type)}
               disabled={!selected}
-              className={`bg-brain-v1dark-orange flex-1 h-[48px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1light-orange text-[18px] leading-[24px] transition-opacity flex items-center justify-center ${selected ? "opacity-100 hover:opacity-80 cursor-pointer" : "opacity-50 cursor-not-allowed"}`}
               data-testid="btn-add-next"
             >
               Next
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -506,13 +510,15 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep 
 
           {/* Close button */}
           <div className="px-[39px] pt-[24px] pb-[32px]">
-            <button
+            <Button
+              variant="warning"
+              size="large"
+              className="w-full"
               onClick={handleClose}
-              className="bg-brain-v1dark-orange h-[48px] w-full rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1light-orange text-[18px] leading-[24px] hover:opacity-80 transition-opacity flex items-center justify-center"
               data-testid="btn-wallet-close"
             >
               Close
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -609,13 +615,15 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep 
 
           {/* Close button */}
           <div className="px-[39px] pt-[24px] pb-[32px]">
-            <button
+            <Button
+              variant="warning"
+              size="large"
+              className="w-full"
               onClick={handleClose}
-              className="bg-brain-v1dark-orange h-[48px] w-full rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1light-orange text-[18px] leading-[24px] hover:opacity-80 transition-opacity flex items-center justify-center"
               data-testid="btn-bank-close"
             >
               Close
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -701,13 +709,15 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep 
 
         {/* Close button */}
         <div className="px-[39px] pt-[24px] pb-[32px]">
-          <button
+          <Button
+            variant="warning"
+            size="large"
+            className="w-full"
             onClick={handleClose}
-            className="bg-brain-v1dark-orange h-[48px] w-full rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1light-orange text-[18px] leading-[24px] hover:opacity-80 transition-opacity flex items-center justify-center"
             data-testid="btn-agent-close"
           >
             Close
-          </button>
+          </Button>
         </div>
       </div>
     </div>

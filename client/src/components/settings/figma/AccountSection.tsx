@@ -3,6 +3,7 @@ import { SUB } from "@/assets/sub-icons";
 import { useAuth } from "@/lib/authContext";
 import { useToast } from "@/hooks/use-toast";
 import { useAppAlert } from "@/components/AppAlert";
+import { Button } from "@/components/ui/button";
 
 function parseBalance(raw?: string): number {
   if (!raw) return 0;
@@ -40,16 +41,6 @@ const POPUP_BODY =
 
 const POPUP_BUTTON_ROW = "flex gap-[8px] items-start p-[8px] w-full";
 
-const POPUP_BUTTON_NEUTRAL =
-  "flex-1 min-w-px flex items-center justify-center px-[12px] py-[8px] rounded-pill " +
-  "bg-brain-v1baby-blue-15 disabled:opacity-60 disabled:cursor-not-allowed " +
-  "[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-60 text-[14px] leading-[20px] whitespace-nowrap";
-
-const POPUP_BUTTON_DESTRUCTIVE =
-  "flex-1 min-w-px flex items-center justify-center px-[12px] py-[8px] rounded-pill " +
-  "bg-brain-v1dark-pink-red hover:bg-brain-v1dark-pink-red-hover transition-colors disabled:opacity-60 disabled:cursor-not-allowed " +
-  "[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1pink-red text-[14px] leading-[20px] whitespace-nowrap";
-
 function ConfirmCloseModal({ onCancel, onConfirm, isDeleting }: { onCancel: () => void; onConfirm: () => void; isDeleting: boolean }) {
   return (
     <div
@@ -68,22 +59,24 @@ function ConfirmCloseModal({ onCancel, onConfirm, isDeleting }: { onCancel: () =
         </p>
       </div>
       <div className={POPUP_BUTTON_ROW}>
-        <button
+        <Button
+          variant="secondary"
           onClick={onCancel}
           disabled={isDeleting}
           data-testid="button-close-account-cancel"
-          className={POPUP_BUTTON_NEUTRAL}
+          className="flex-1 min-w-px"
         >
           Cancel
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="destructive"
           onClick={onConfirm}
           disabled={isDeleting}
           data-testid="button-close-account-confirm"
-          className={POPUP_BUTTON_DESTRUCTIVE}
+          className="flex-1 min-w-px"
         >
           {isDeleting ? "Deleting…" : "Confirm"}
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -107,22 +100,24 @@ function ConfirmDeleteDataModal({ onCancel, onConfirm, isDeleting }: { onCancel:
         </p>
       </div>
       <div className={POPUP_BUTTON_ROW}>
-        <button
+        <Button
+          variant="secondary"
           onClick={onCancel}
           disabled={isDeleting}
           data-testid="button-delete-data-cancel"
-          className={POPUP_BUTTON_NEUTRAL}
+          className="flex-1 min-w-px"
         >
           Cancel
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="destructive"
           onClick={onConfirm}
           disabled={isDeleting}
           data-testid="button-delete-data-confirm"
-          className={POPUP_BUTTON_DESTRUCTIVE}
+          className="flex-1 min-w-px"
         >
           {isDeleting ? "Deleting…" : "Confirm"}
-        </button>
+        </Button>
       </div>
     </div>
   );

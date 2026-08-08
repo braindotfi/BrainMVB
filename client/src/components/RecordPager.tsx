@@ -1,4 +1,5 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 /* ── Record pager ─────────────────────────────────────────────────────────────
    Prev/Next arrows shown in a detail popup header so the user can cycle through
@@ -14,9 +15,6 @@ interface RecordPagerProps {
   testIdPrefix: string;
 }
 
-const BTN =
-  "bg-brain-v1baby-blue-15 flex flex-1 gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-pill hover:bg-brain-v1baby-blue-15-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple shrink-0 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-brain-v1baby-blue-15";
-
 export function RecordPager({
   onPrev,
   onNext,
@@ -26,32 +24,28 @@ export function RecordPager({
 }: RecordPagerProps) {
   return (
     <div className="flex gap-[16px] items-center w-full">
-      <button
-        type="button"
+      <Button
+        variant="secondary"
         onClick={onPrev}
         disabled={disabledPrev}
         aria-label="Previous record"
         data-testid={`button-${testIdPrefix}-prev`}
-        className={BTN}
+        className="flex-1"
       >
         <ChevronLeft size={16} className="text-brain-v1baby-blue-60" />
-        <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[16px] whitespace-nowrap">
-          Previous
-        </span>
-      </button>
-      <button
-        type="button"
+        Previous
+      </Button>
+      <Button
+        variant="secondary"
         onClick={onNext}
         disabled={disabledNext}
         aria-label="Next record"
         data-testid={`button-${testIdPrefix}-next`}
-        className={BTN}
+        className="flex-1"
       >
-        <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[16px] whitespace-nowrap">
-          Next
-        </span>
+        Next
         <ChevronRight size={16} className="text-brain-v1baby-blue-60" />
-      </button>
+      </Button>
     </div>
   );
 }

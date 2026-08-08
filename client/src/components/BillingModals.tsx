@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { SiVisa, SiMastercard, SiAmericanexpress, SiDiscover } from "react-icons/si";
 import closeIcon from "@assets/Close_1783293571882.png";
+import { Button } from "@/components/ui/button";
 
 /* ─── Billing-related modals (Figma: Change Plan 6107:17186,
    Add Card No Processor 6106:68345, Add Card Default 6112:69061) ───
@@ -182,18 +183,15 @@ export function ChangePlanModal({
             );
           })}
         </div>
-        <button
-          type="button"
+        <Button
+          variant="warning"
           data-testid="button-change-plan-confirm"
           onClick={() => onConfirm(selected)}
           disabled={isCurrent}
-          className="w-full flex items-center justify-center px-[20px] py-[10px] rounded-full hover-elevate disabled:opacity-60 disabled:cursor-not-allowed"
-          style={{ background: "#4a2300" }}
+          className="w-full"
         >
-          <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-brain-v1light-orange whitespace-nowrap">
-            {isCurrent ? "Already On This Plan" : `Switch To ${selectedPlan?.name}`}
-          </span>
-        </button>
+          {isCurrent ? "Already On This Plan" : `Switch To ${selectedPlan?.name}`}
+        </Button>
       </div>
     </ModalShell>
   );
@@ -303,15 +301,14 @@ export function UpdateCardModal({
               Add Stripe Elements or another tokenizing widget before enabling card updates.
             </p>
           </div>
-          <button
-            type="button"
+          <Button
+            variant="warning"
             data-testid="button-update-card-save"
             disabled
-            className="w-full flex items-center justify-center px-[20px] py-[10px] rounded-full opacity-50 cursor-not-allowed"
-            style={{ background: "#4a2300" }}
+            className="w-full"
           >
-            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-brain-v1light-orange whitespace-nowrap">Processor Required</span>
-          </button>
+            Processor Required
+          </Button>
         </div>
       </ModalShell>
     );
@@ -371,16 +368,15 @@ export function UpdateCardModal({
             </div>
           </div>
         </div>
-        <button
-          type="button"
+        <Button
+          variant="primary"
           data-testid="button-update-card-save"
           disabled={!valid}
           onClick={() => onConfirm(digits.slice(-4))}
-          className="w-full flex items-center justify-center px-[20px] py-[10px] rounded-full hover-elevate disabled:opacity-60 disabled:cursor-not-allowed"
-          style={{ background: "#240757" }}
+          className="w-full"
         >
-          <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-brain-v1purple whitespace-nowrap">Add This Card</span>
-        </button>
+          Add This Card
+        </Button>
       </div>
     </ModalShell>
   );
@@ -418,22 +414,22 @@ export function CancelSubscriptionModal({
           </p>
         </div>
         <div className="flex gap-[8px] items-start p-[8px] w-full">
-          <button
+          <Button
+            variant="secondary"
+            className="flex-1"
             data-testid="button-cancel-sub-dismiss"
             onClick={onCancel}
-            className="flex flex-1 items-center justify-center px-[12px] py-[8px] rounded-pill hover:opacity-80 transition-opacity"
-            style={{ background: "#222737" }}
           >
-            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-60 text-[14px] leading-[20px] whitespace-nowrap">Cancel</span>
-          </button>
-          <button
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            className="flex-1"
             data-testid="button-cancel-sub-confirm"
             onClick={onConfirm}
-            className="flex flex-1 items-center justify-center px-[12px] py-[8px] rounded-pill hover:opacity-80 transition-opacity"
-            style={{ background: "#350011" }}
           >
-            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1pink-red text-[14px] leading-[20px] whitespace-nowrap">Confirm</span>
-          </button>
+            Confirm
+          </Button>
         </div>
       </div>
     </div>

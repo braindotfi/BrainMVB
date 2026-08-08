@@ -21,6 +21,7 @@ function titleCase(str: string) {
     });
 }
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
 import {
   ArrowLeft,
   ChevronDown,
@@ -39,7 +40,6 @@ import deleteIcon from "@assets/delete_1783376650313.png";
 import pauseIcon from "@assets/pause_1783376736546.png";
 import { AlertCallout, InfoIcon, PolicyCallout } from "@/components/Callout";
 
-const ALERT = "#d20344";
 
 /* Rule detail: the destination of "Report a problem → pause and review".
    #D20344 is reserved for problem/alert accents ONLY; affirmative actions use
@@ -67,14 +67,14 @@ export function RuleDetail() {
         <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[18px] leading-[24px]">
           Loading policy rule…
         </p>
-        <button
-          type="button"
+        <Button
+          variant="primary"
           onClick={() => navigate("/ledger?tab=rules&rules=default")}
           data-testid="button-back-to-rules"
-          className="flex items-center justify-center gap-[8px] px-[16px] py-[10px] rounded-pill bg-brain-v1dark-purple border border-[rgba(118,49,238,0.35)] hover:bg-brain-v1dark-purple-hover transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-brain-v1purple"
+          className="border border-[rgba(118,49,238,0.35)]"
         >
           <ArrowLeft size={16} /> Back
-        </button>
+        </Button>
       </div>
     );
   }
@@ -92,14 +92,14 @@ export function RuleDetail() {
         <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[18px] leading-[24px]">
           {isPolicy ? "This policy rule is not available right now." : "This rule no longer exists."}
         </p>
-        <button
-          type="button"
+        <Button
+          variant="primary"
           onClick={() => navigate(isPolicy ? "/ledger?tab=rules&rules=default" : "/ledger?tab=rules")}
           data-testid="button-back-to-rules"
-          className="flex items-center justify-center gap-[8px] px-[16px] py-[10px] rounded-pill bg-brain-v1dark-purple border border-[rgba(118,49,238,0.35)] hover:bg-brain-v1dark-purple-hover transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-brain-v1purple"
+          className="border border-[rgba(118,49,238,0.35)]"
         >
           <ArrowLeft size={16} /> Back
-        </button>
+        </Button>
       </div>
     );
   }
@@ -148,8 +148,9 @@ export function RuleDetail() {
           {/* Back button. Routes to the correct tab based on rule type.
               Policy rules render their own back pill inside PolicyDetailHeader. */}
           {!isPolicy && (
-            <button
-              type="button"
+            <Button
+              variant="secondary"
+              size="compact"
               onClick={() => {
                 let tab = "default";
                 if (rule) {
@@ -161,10 +162,10 @@ export function RuleDetail() {
                 navigate(`/ledger?tab=rules&rules=${tab}`);
               }}
               data-testid="button-back-to-rules"
-              className="flex items-center justify-center gap-[4px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-brain-v1baby-blue-60 hover:text-brain-v1baby-blue-100 bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-15-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30 rounded-pill px-[12px] py-[8px]"
+              className="hover:text-brain-v1baby-blue-100"
             >
               <ArrowLeft size={16} /> Back
-            </button>
+            </Button>
           )}
 
           {isPolicy && policyRule ? (
@@ -231,29 +232,23 @@ export function RuleDetail() {
                 Rule Status
               </p>
               <div className="flex items-center gap-[8px]">
-                <button
-                  type="button"
+                <Button
+                  variant={rule.active ? "warning" : "success"}
+                  size="compact"
                   onClick={() => (rule.active ? pauseRule(rule.id) : setResumeModalOpen(true))}
                   data-testid="button-toggle-rule"
-                  className="flex items-center justify-center gap-[4px] px-[12px] py-[8px] rounded-pill transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] focus:outline-none focus-visible:ring-2"
-                  style={
-                    rule.active
-                      ? { backgroundColor: "#4a2300", color: "#ff9500", ["--tw-ring-color" as string]: "#ff9500" }
-                      : { backgroundColor: "#123509", color: "#42bf23", ["--tw-ring-color" as string]: "#42bf23" }
-                  }
                 >
                   <img src={rule.active ? pauseIcon : playIcon} alt="" className="shrink-0 size-[16px]" />
                   {rule.active ? "Pause Rule" : "Resume Rule"}
-                </button>
-                <button
-                  type="button"
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="compact"
                   onClick={() => setConfirmingDelete(true)}
                   data-testid="button-delete-rule"
-                  className="flex items-center justify-center gap-[4px] px-[12px] py-[8px] rounded-pill bg-brain-v1dark-pink-red hover:bg-brain-v1dark-pink-red-hover transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] focus:outline-none focus-visible:ring-2"
-                  style={{ color: ALERT, ["--tw-ring-color" as string]: ALERT }}
                 >
                   <img src={deleteIcon} alt="" className="shrink-0 size-[16px]" /> Delete Rule
-                </button>
+                </Button>
               </div>
             </div>
 
@@ -300,22 +295,24 @@ export function RuleDetail() {
                   </DialogPrimitive.Description>
 
                   <div className="flex gap-[16px] items-center w-full">
-                    <button
-                      type="button"
+                    <Button
+                      variant="secondary"
+                      size="large"
+                      className="flex-1"
                       onClick={() => setResumeModalOpen(false)}
                       data-testid="button-resume-cancel"
-                      className="flex-1 px-[24px] py-[12px] rounded-pill bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-15-hover transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[18px] leading-[24px] text-brain-v1baby-blue-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30"
                     >
                       Keep Paused
-                    </button>
-                    <button
-                      type="button"
+                    </Button>
+                    <Button
+                      variant="success"
+                      size="large"
+                      className="flex-1"
                       onClick={onResume}
                       data-testid="button-resume-confirm"
-                      className="flex-1 px-[24px] py-[12px] rounded-pill bg-brain-v1dark-green hover:bg-brain-v1dark-green-hover transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[18px] leading-[24px] text-brain-v1green focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1green"
                     >
                       Resume
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </DialogPrimitive.Content>
@@ -356,22 +353,22 @@ export function RuleDetail() {
                   </DialogPrimitive.Description>
 
                   <div className="flex gap-[15px] items-center w-full">
-                    <button
-                      type="button"
+                    <Button
+                      variant="secondary"
                       onClick={() => setConfirmingDelete(false)}
                       data-testid="button-delete-cancel"
-                      className="w-[150px] h-[45px] shrink-0 px-[22.5px] rounded-pill bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-15-hover transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold leading-[22.5px] text-[16.88px] text-brain-v1baby-blue-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30"
+                      className="w-[150px]"
                     >
                       Cancel
-                    </button>
-                    <button
-                      type="button"
+                    </Button>
+                    <Button
+                      variant="destructive"
                       onClick={onDelete}
                       data-testid="button-delete-confirm"
-                      className="w-[150px] h-[45px] shrink-0 px-[22.5px] rounded-pill bg-brain-v1dark-pink-red hover:bg-brain-v1dark-pink-red-hover transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold leading-[22.5px] text-[16.88px] text-brain-v1pink-red focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1pink-red"
+                      className="w-[150px]"
                     >
                       Delete
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </DialogPrimitive.Content>
@@ -579,14 +576,14 @@ function ReportCard({
                 {report.note}
               </p>
             )}
-            <button
-              type="button"
+            <Button
+              variant="secondary"
+              size="compact"
               onClick={() => onOpenReceipt(report.proposalId)}
               data-testid={`button-report-receipt-${report.id}`}
-              className="shrink-0 flex items-center justify-center px-[12px] py-[8px] rounded-pill bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-15-hover transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-brain-v1baby-blue-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30"
             >
               View the Receipt
-            </button>
+            </Button>
           </div>
         </>
       )}
@@ -650,14 +647,15 @@ function AmountRow({
         >
           {format(value)}
         </span>
-        <button
-          type="button"
+        <Button
+          variant="secondary"
+          size="compact"
           onClick={onEditStart}
           data-testid={testIdEdit}
-          className="w-[80px] flex items-center justify-center px-[12px] py-[8px] rounded-pill bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-15-hover transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-brain-v1baby-blue-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30"
+          className="w-[80px]"
         >
           Edit
-        </button>
+        </Button>
       </div>
     );
   }
@@ -682,22 +680,24 @@ function AmountRow({
         </div>
       </div>
       <div className="flex gap-[8px] items-center shrink-0">
-        <button
-          type="button"
+        <Button
+          variant="subtle"
+          size="compact"
           onClick={onCancel}
           data-testid={testIdCancel}
-          className="w-[80px] flex items-center justify-center px-[12px] py-[8px] rounded-pill bg-brain-v1baby-blue-5 hover:bg-brain-v1stroke-2 transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-brain-v1baby-blue-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30"
+          className="w-[80px]"
         >
           Cancel
-        </button>
-        <button
-          type="button"
+        </Button>
+        <Button
+          variant="success"
+          size="compact"
           onClick={onSave}
           data-testid={testIdSave}
-          className="w-[80px] flex items-center justify-center px-[12px] py-[8px] rounded-pill bg-brain-v1dark-green hover:bg-brain-v1dark-green-hover transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-brain-v1green focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1green"
+          className="w-[80px]"
         >
           Save
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -718,14 +718,15 @@ function PolicyDetailHeader({ rule }: { rule: PolicyContentRule }) {
   return (
     <div className="content-stretch flex flex-col gap-[24px] items-start relative shrink-0 w-full">
       {/* Back button, same pill style as automations/guardrails/suggested tabs */}
-      <button
-        type="button"
+      <Button
+        variant="secondary"
+        size="compact"
         onClick={() => navigate("/ledger?tab=rules&rules=default")}
         data-testid="button-back-to-rules"
-        className="flex items-center justify-center gap-[4px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-brain-v1baby-blue-60 hover:text-brain-v1baby-blue-100 bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-15-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30 rounded-pill px-[12px] py-[8px]"
+        className="hover:text-brain-v1baby-blue-100"
       >
         <ArrowLeft size={16} /> Back
-      </button>
+      </Button>
 
       {/* Title + Read-Only tag + subtitle + policy-id. Same spacing/format as automations/guardrails/suggested */}
       <div className="flex items-start gap-[12px] w-full">

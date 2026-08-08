@@ -3,6 +3,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import closeIcon from "@assets/Close_1783293571882.png";
 import { useQuery } from "@tanstack/react-query";
 import { formatThousandsInput, parseAmt, stripCommas } from "@/lib/formatters";
+import { Button } from "@/components/ui/button";
 
 /* AddGoalModal, Figma 4074:65865 ("New Goal").
    Same modal chrome as the Review popup (440px, rounded-24,
@@ -433,8 +434,9 @@ export const AddGoalModal = ({ open, onOpenChange, onCreate, isSubmitting }: Pro
             </div>
 
             {/* Create button */}
-            <button
-              type="button"
+            <Button
+              variant="success"
+              className="w-full"
               data-testid="button-add-goal-create"
               disabled={isSubmitting}
               onClick={() => {
@@ -444,12 +446,9 @@ export const AddGoalModal = ({ open, onOpenChange, onCreate, isSubmitting }: Pro
                 }
                 onCreate({ category, name, amount: stripCommas(amount), timeline, priority });
               }}
-              className="flex items-center justify-center px-[20px] py-[10px] rounded-pill bg-brain-v1dark-green hover:bg-brain-v1dark-green-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1green w-full disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1green text-[16px] whitespace-nowrap">
-                {isSubmitting ? "Creating…" : "Create"}
-              </span>
-            </button>
+              {isSubmitting ? "Creating…" : "Create"}
+            </Button>
           </div>
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>

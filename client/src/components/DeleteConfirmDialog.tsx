@@ -1,5 +1,6 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import closeIcon from "@assets/Close_1783293571882.png";
+import { Button } from "@/components/ui/button";
 
 /**
  * DeleteConfirmDialog — standalone confirmation modal matching the compact
@@ -80,26 +81,26 @@ export function DeleteConfirmDialog({
               {body}
             </p>
 
-            {/* Buttons — fixed 150px width, gap-[15px], 16px/22px semibold. */}
+            {/* Buttons — fixed 150px width, gap-[15px]. Size and type come
+                from the primitive: 40px / 14px, the one confirm-pair size. */}
             <div className="flex gap-[15px] items-center w-full">
-              <button
-                type="button"
+              <Button
+                variant="secondary"
+                className="w-[150px]"
                 onClick={onCancel}
                 data-testid={cancelTestId}
-                className="flex shrink-0 h-[45px] items-center justify-center px-[22px] rounded-pill hover:opacity-80 transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-60 text-[16px] leading-[20px] w-[150px] focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
-                style={{ background: "#222737" }}
               >
                 {cancelLabel}
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                variant="destructive"
+                className="w-[150px]"
                 disabled={busy}
                 onClick={onConfirm}
                 data-testid={confirmTestId}
-                className="flex shrink-0 h-[45px] items-center justify-center px-[22px] rounded-pill bg-brain-v1dark-pink-red hover:bg-brain-v1dark-pink-red-hover disabled:opacity-60 disabled:cursor-not-allowed transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1pink-red text-[16px] leading-[20px] w-[150px] focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1pink-red"
               >
                 {busy ? "Working…" : confirmLabel}
-              </button>
+              </Button>
             </div>
           </div>
         </DialogPrimitive.Content>

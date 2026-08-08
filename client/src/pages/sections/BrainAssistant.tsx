@@ -8,6 +8,7 @@ import {
   Search,
   SquarePen,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { TransactionDetailPopup } from "@/components/TransactionDetailPopup";
 import { AccountDetailPopup } from "@/components/AccountDetailPopup";
 import { BillDetailPopup, type BrainInvoiceDTO } from "@/components/BillDetailPopup";
@@ -1202,15 +1203,16 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
             <Plus className="size-[18px]" color="#a8b9f4" strokeWidth={2} />
           </button>
           <div className="flex items-center gap-[8px]">
-            <button
+            <Button
+              variant="cta"
+              size="iconCompact"
               data-testid="button-assistant-send"
               onClick={() => sendMessage(draft)}
               disabled={!draft.trim() || sending || authLoading || isTransitioning || !user}
-              className="size-[32px] rounded-full bg-brain-v1purple flex items-center justify-center transition-opacity disabled:opacity-60 disabled:cursor-not-allowed hover:opacity-90"
               title="Send"
             >
-              <ArrowUp className="size-[18px]" color="#ffffff" strokeWidth={2.4} />
-            </button>
+              <ArrowUp color="#ffffff" strokeWidth={2.4} />
+            </Button>
           </div>
         </div>
       </div>

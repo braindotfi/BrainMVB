@@ -26,6 +26,7 @@ import approveIconSrc from "@assets/figma_icons/inline/outcome_approve.png";
 import editIconSrc from "@assets/figma_icons/inline/outcome_edit.png";
 import rejectIconSrc from "@assets/figma_icons/inline/outcome_reject.png";
 import { capitalCase } from "@/lib/displayLabels";
+import { Button } from "@/components/ui/button";
 
 /* ── Section heading ──────────────────────────────────────────────────────────
    Label, then a hairline rule that fills the remaining width, then an optional
@@ -454,25 +455,21 @@ export const HeadingValue = ({ children, testId }: { children: ReactNode; testId
 
 /* ── Decision buttons ────────────────────────────────────────────────────────
    Approve / Postpone / Reject in the frame; in the live card the SET comes from
-   available_decisions, so only the palette is fixed here. */
+   available_decisions, so the tone maps onto the shared Button primitive's
+   named intents (approve → success, reject → destructive, neutral → secondary). */
 export type ActionTone = "approve" | "reject" | "neutral" | "acknowledge";
 
-const ACTION_TONES: Record<ActionTone, { background: string; color: string }> = {
-  approve: { background: "#123509", color: "#42bf23" },
-  reject: { background: "#350011", color: "#d20344" },
-  neutral: { background: "#222737", color: "#6c779d" },
-  acknowledge: { background: "#123509", color: "#42bf23" },
+const ACTION_VARIANTS: Record<ActionTone, "success" | "destructive" | "secondary"> = {
+  approve: "success",
+  reject: "destructive",
+  neutral: "secondary",
+  acknowledge: "success",
 };
 
 /* `full` fills the card footer (the detail sheets); `compact` sits inline at the
    end of a list row, where a flex-1 button would eat the row. Same palette either
    way — a row's Approve must not read as a different control from the sheet's. */
 export type ActionSize = "full" | "compact";
-
-const ACTION_SIZES: Record<ActionSize, string> = {
-  full: "flex-1 min-w-px px-[20px] py-[10px] text-[16px] leading-[20px]",
-  compact: "shrink-0 px-[14px] py-[6px] text-[14px] leading-[20px]",
-};
 
 export const ActionButton = ({
   label,
@@ -490,30 +487,23 @@ export const ActionButton = ({
   disabled?: boolean;
   title?: string;
   testId?: string;
-}) => {
-  const palette = ACTION_TONES[tone];
-  /* Destructive actions share the app-wide #4a0018 hover. The background has to be
-     applied as a class (through a CSS var) rather than inline, because an inline
-     `background` always outranks a `hover:bg-*` utility. */
-  const isDestructive = tone === "reject";
-  return (
-    <button
-      type="button"
-      onClick={(event) => {
-        event.stopPropagation();
-        onClick?.();
-      }}
-      onKeyDown={(event) => event.stopPropagation()}
-      disabled={disabled}
-      title={title}
-      data-testid={testId}
-      style={{ ["--action-bg" as string]: palette.background, color: palette.color }}
-      className={`flex items-center justify-center rounded-pill bg-[var(--action-bg)] [font-family:'Gilroy',sans-serif] font-semibold whitespace-nowrap ${isDestructive ? "transition-colors hover:bg-brain-v1dark-pink-red-hover" : "transition-opacity hover:opacity-90"} disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple ${ACTION_SIZES[size]}`}
-    >
-      {label}
-    </button>
-  );
-};
+}) => (
+  <Button
+    variant={ACTION_VARIANTS[tone]}
+    size={size === "full" ? "default" : "compact"}
+    onClick={(event) => {
+      event.stopPropagation();
+      onClick?.();
+    }}
+    onKeyDown={(event) => event.stopPropagation()}
+    disabled={disabled}
+    title={title}
+    data-testid={testId}
+    className={size === "full" ? "flex-1 min-w-px" : ""}
+  >
+    {label}
+  </Button>
+);
 
 export const ActionRow = ({ children, testId }: { children: ReactNode; testId?: string }) => (
   <div className="flex gap-[8px] items-center w-full" data-testid={testId}>
@@ -545,26 +535,26 @@ export const PagerFooter = ({
       </span>
     )}
     <div className="flex gap-[16px] items-center w-full">
-      <button
-        type="button"
+      <Button
+        variant="secondary"
         onClick={onPrev}
         disabled={!hasPrev}
         data-testid="button-proposal-prev"
-        className="flex flex-1 min-w-px gap-[8px] items-center justify-center bg-brain-v1baby-blue-15 px-[20px] py-[8px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-brain-v1baby-blue-60 whitespace-nowrap transition-opacity hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
+        className="flex-1 min-w-px"
       >
         <ChevronLeft size={24} className="shrink-0" aria-hidden="true" />
         Previous
-      </button>
-      <button
-        type="button"
+      </Button>
+      <Button
+        variant="secondary"
         onClick={onNext}
         disabled={!hasNext}
         data-testid="button-proposal-next"
-        className="flex flex-1 min-w-px gap-[8px] items-center justify-center bg-brain-v1baby-blue-15 px-[20px] py-[8px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-brain-v1baby-blue-60 whitespace-nowrap transition-opacity hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
+        className="flex-1 min-w-px"
       >
         Next
         <ChevronRight size={24} className="shrink-0" aria-hidden="true" />
-      </button>
+      </Button>
     </div>
   </div>
 );

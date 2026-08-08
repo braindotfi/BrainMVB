@@ -25,6 +25,7 @@ import { RecordPager } from "./RecordPager";
 import { matchCannedPrompt } from "@shared/cannedPrompts";
 import { anchorFromInclusionProof, type BrainAuditEventDetail } from "@/lib/brainAudit";
 import { capitalCase } from "@/lib/displayLabels";
+import { Button } from "@/components/ui/button";
 
 export function AuditRecordPopup({
   record,
@@ -421,17 +422,16 @@ export function AuditRecordPopup({
                 anchor state. Disabled (not hidden) until a real tx hash backs it;
                 the caption explains why. Sits above the pager when both exist. */}
             <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-brain-v1stroke-2 border-t border-solid flex flex-col gap-[12px] items-start p-[24px] shrink-0 w-full">
-              <button
-                type="button"
+              <Button
+                variant="primary"
                 onClick={handleVerify}
                 disabled={!isAnchored}
                 title={isAnchored || isNotRecorded ? undefined : "On-chain verification opens once this record is anchored."}
                 data-testid="button-verify-on-chain"
-                className="flex items-center justify-center gap-[6px] px-[20px] py-[10px] rounded-pill transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] w-full disabled:opacity-60 disabled:cursor-not-allowed enabled:hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
-                style={{ background: "#240757", color: "#7631ee" }}
+                className="w-full"
               >
                 Verify On-Chain
-              </button>
+              </Button>
               {!isAnchored && !isNotRecorded && (
                 <p data-testid="text-verify-pending-caption" className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-brain-v1baby-blue-60">
                   On-chain verification opens once anchored.
@@ -443,26 +443,26 @@ export function AuditRecordPopup({
             {hasPager && (
               <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-brain-v1stroke-2 border-t border-solid flex flex-col items-start p-[24px] shrink-0 w-full">
                 <div className="flex gap-[16px] items-center w-full">
-                  <button
-                    type="button"
+                  <Button
+                    variant="secondary"
                     onClick={onPrev}
                     disabled={hasPrev === undefined ? pagerDisabled : !hasPrev}
                     data-testid="button-audit-record-prev"
-                    className="bg-brain-v1baby-blue-15 flex-1 flex gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-pill disabled:opacity-60 disabled:cursor-not-allowed hover:bg-brain-v1baby-blue-15-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
+                    className="flex-1"
                   >
                     <ChevronLeft size={24} className="text-brain-v1baby-blue-60 shrink-0" />
-                    <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[16px] whitespace-nowrap">Previous</span>
-                  </button>
-                  <button
-                    type="button"
+                    Previous
+                  </Button>
+                  <Button
+                    variant="secondary"
                     onClick={onNext}
                     disabled={hasNext === undefined ? pagerDisabled : !hasNext}
                     data-testid="button-audit-record-next"
-                    className="bg-brain-v1baby-blue-15 flex-1 flex gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-pill disabled:opacity-60 disabled:cursor-not-allowed hover:bg-brain-v1baby-blue-15-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
+                    className="flex-1"
                   >
-                    <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[16px] whitespace-nowrap">Next</span>
+                    Next
                     <ChevronRight size={24} className="text-brain-v1baby-blue-60 shrink-0" />
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}

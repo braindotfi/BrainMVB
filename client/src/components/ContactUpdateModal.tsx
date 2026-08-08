@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import closeIcon from "@assets/Close_1783293571882.png";
 import { useAppAlert } from "@/components/AppAlert";
+import { Button } from "@/components/ui/button";
 
 /* ─── Contact Update Modal ──────────────────────────────────
    Two-step flow for email and phone number changes.
@@ -31,7 +32,7 @@ const RoundIconButton = ({ children, onClick, label, testId }: { children: React
     aria-label={label}
     data-testid={testId}
     onClick={onClick}
-    className="size-[32px] rounded-full flex items-center justify-center hover-elevate"
+    className="size-[32px] rounded-pill flex items-center justify-center hover-elevate"
     style={{ background: "#1d2132" }}
   >
     {children}
@@ -374,40 +375,35 @@ export function ContactUpdateModal({
 
             <div className="mt-[24px] flex items-center w-[322px]">
               {step === "enter" ? (
-                <button
-                  type="button"
+                <Button
+                  variant="warning"
+                  size="large"
+                  className="flex-1 min-w-0"
                   data-testid={`button-contact-verify-${type}`}
                   disabled={!canVerify}
                   onClick={advanceToVerify}
-                  className="flex-1 min-w-0 flex items-center justify-center bg-brain-v1dark-orange rounded-pill px-[24px] py-[12px] disabled:opacity-60 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
                 >
-                  <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[18px] leading-[24px] text-brain-v1light-orange whitespace-nowrap">
-                    Verify
-                  </span>
-                </button>
+                  Verify
+                </Button>
               ) : (
                 <div className="flex gap-[8px] w-full">
-                  <button
-                    type="button"
+                  <Button
+                    variant="secondary"
+                    className="flex-1 min-w-0"
                     data-testid={`button-verify-resend-${type}`}
                     onClick={resend}
-                    className="flex-1 min-w-0 flex items-center justify-center bg-brain-v1baby-blue-15 rounded-pill px-[16px] py-[10px] hover:opacity-90 transition-opacity"
                   >
-                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-brain-v1baby-blue-100 whitespace-nowrap">
-                      Resend
-                    </span>
-                  </button>
-                  <button
-                    type="button"
+                    Resend
+                  </Button>
+                  <Button
+                    variant="success"
+                    className="flex-1 min-w-0"
                     data-testid={`button-verify-confirm-${type}`}
                     disabled={code.length !== CODE_LEN}
                     onClick={confirm}
-                    className="flex-1 min-w-0 flex items-center justify-center bg-brain-v1green rounded-pill px-[16px] py-[10px] disabled:opacity-60 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
                   >
-                    <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-brain-v1white whitespace-nowrap">
-                      Confirm
-                    </span>
-                  </button>
+                    Confirm
+                  </Button>
                 </div>
               )}
             </div>

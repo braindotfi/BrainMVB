@@ -21,6 +21,7 @@ import { resolveDocument } from "@/lib/openDocumentDetail";
 import { resolveProposal } from "@/lib/openProposalDetail";
 import { useCurrency } from "@/lib/useCurrency";
 import { InfoIcon } from "@/components/Callout";
+import { Button } from "@/components/ui/button";
 
 /* ── Document / Record EVIDENCE Viewer ────────────────────────────────────────
    ONE read only viewer for every kind of evidence Brain surfaces behind a
@@ -265,17 +266,14 @@ function InvoicePane({ doc }: { doc: DocumentRecord }) {
 
       {/* Open Original in Source System — no icon per Figma */}
       {(doc.documentHref || doc.rawId) && (
-        <button
-          type="button"
+        <Button
+          variant="primary"
           onClick={() => void openDocumentOriginal(doc)}
           data-testid="link-open-original"
-          className="flex items-center justify-center px-[20px] py-[10px] rounded-pill w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple transition-opacity hover:opacity-80"
-          style={{ background: "#240757" }}
+          className="w-full"
         >
-          <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px]" style={{ color: "#7631ee" }}>
-            Open Original in Source System
-          </span>
-        </button>
+          Open Original in Source System
+        </Button>
       )}
     </div>
   );

@@ -18,6 +18,7 @@ import { queryClient } from "@/lib/queryClient";
 import type { Vendor, VendorTier } from "@/lib/vendorTypes";
 import { VendorDetailPopup } from "@/components/VendorDetailPopup";
 import { FilterChipRow } from "@/components/FilterChipRow";
+import { Button } from "@/components/ui/button";
 import { Plus, ChevronDown } from "lucide-react";
 import { AlertCallout, UnavailableDataBox } from "@/components/Callout";
 import closeIcon from "@assets/Close_1783293571882.png";
@@ -201,24 +202,24 @@ function SubmitConfirmDialog({
           </DialogPrimitive.Title>
 
           <div className="flex gap-[8px] items-center p-[8px]">
-            <button
-              type="button"
+            <Button
+              variant="secondary"
+              size="compact"
+              className="flex-1 min-w-0"
               onClick={onCancel}
-              className="flex flex-1 items-center justify-center min-w-px px-[12px] py-[8px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
-              style={{ background: "#222737" }}
             >
               Cancel
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              variant="success"
+              size="compact"
+              className="flex-1 min-w-0"
               onClick={onConfirm}
               disabled={busy}
               data-testid="button-confirm-submit-vendor"
-              className="flex flex-1 items-center justify-center min-w-px px-[12px] py-[8px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1green text-[12px] whitespace-nowrap hover:opacity-80 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1green"
-              style={{ background: "#123509" }}
             >
               {busy ? "Submitting…" : "Confirm"}
-            </button>
+            </Button>
           </div>
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
@@ -678,16 +679,15 @@ export function VendorsPanel() {
                   <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-brain-v1baby-blue-60 text-[20px] flex-1 min-w-px relative">
                     Add a new {segmentNounSingular} in plain English
                   </p>
-                  <button
-                    type="button"
+                  <Button
+                    variant="warning"
+                    size="compact"
                     onClick={() => setAddOpen(true)}
                     data-testid="button-add-vendor"
-                    className="flex gap-[4px] items-center justify-center px-[12px] py-[8px] rounded-pill shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1light-orange text-[12px] whitespace-nowrap hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
-                    style={{ background: "#4a2300" }}
                   >
-                    <Plus className="size-[16px] shrink-0" />
+                    <Plus />
                     Add {segmentNounTitle}
-                  </button>
+                  </Button>
                 </div>
               ) : (
                 /* Expanded: sentence-style form — matches Figma 6199:70745 exactly */
@@ -745,16 +745,17 @@ export function VendorsPanel() {
                   </div>
                   <div className="backdrop-blur-[10px] border-t border-brain-v1stroke-2 border-solid flex flex-col items-start p-[16px] w-full">
                     <div className="flex gap-[16px] items-center w-full">
-                      <button
-                        type="button"
+                      <Button
+                        variant="secondary"
+                        className="flex-1"
                         onClick={resetAddVendor}
                         data-testid="button-add-vendor-cancel"
-                        className="flex-1 h-[36px] px-[12px] rounded-pill bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-15-hover transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-brain-v1baby-blue-60"
                       >
                         Cancel
-                      </button>
-                      <button
-                        type="button"
+                      </Button>
+                      <Button
+                        variant="warning"
+                        className="flex-1"
                         onClick={() => {
                           if (!vendorName.trim()) { setError(`${segmentNounTitle} name is required.`); return; }
                           setError(null);
@@ -762,10 +763,9 @@ export function VendorsPanel() {
                         }}
                         disabled={!vendorName.trim()}
                         data-testid="button-submit-vendor"
-                        className="flex-1 h-[36px] px-[12px] rounded-pill bg-brain-v1dark-orange hover:bg-brain-v1dark-orange-hover disabled:opacity-60 disabled:cursor-not-allowed transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-brain-v1light-orange"
                       >
                         Submit for Verification
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -918,18 +918,17 @@ export function VendorsPanel() {
                   offering to confirm more rows than it acts on is a lie. */}
               {segment === "customer" && effectiveTab === "Needs Review" &&
                bulkConfirmable.length > 0 && (
-                <button
-                  type="button"
+                <Button
+                  variant="success"
+                  className="w-full"
                   onClick={handleBulkConfirm}
                   disabled={bulkBusy || trustBusy}
                   data-testid="button-bulk-confirm-customers"
-                  className="flex items-center justify-center px-[16px] py-[8px] rounded-pill w-full [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] disabled:opacity-60 disabled:cursor-not-allowed hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
-                  style={{ background: "#0d2214", color: "#42bf23" }}
                 >
                   {bulkBusy
                     ? "Confirming..."
                     : `Confirm All ${bulkConfirmable.length} Customers`}
-                </button>
+                </Button>
               )}
 
               <div

@@ -10,6 +10,7 @@ import {
   type WalkthroughStep,
 } from "@/lib/onboardingWalkthrough";
 import { WalkthroughStepView } from "./onboarding/WalkthroughStep";
+import { Button } from "@/components/ui/button";
 
 interface OnboardingFlowProps {
   open: boolean;
@@ -89,7 +90,7 @@ export function OnboardingFlow({ open, onClose, onComplete }: OnboardingFlowProp
                 onClick={goBack}
                 aria-label="Back"
                 data-testid="button-onboarding-back"
-                className="absolute left-[11px] top-[11px] size-[32px] rounded-full bg-brain-v1baby-blue-15 flex items-center justify-center hover:bg-brain-v1baby-blue-15-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
+                className="absolute left-[11px] top-[11px] size-[32px] rounded-pill bg-brain-v1baby-blue-15 flex items-center justify-center hover:bg-brain-v1baby-blue-15-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
               >
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                   <path d="M7.5 1.5L3 6L7.5 10.5" stroke="#a8b9f4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -119,26 +120,22 @@ export function OnboardingFlow({ open, onClose, onComplete }: OnboardingFlowProp
               <WalkthroughStepView step={shown} index={step} />
 
               <div className="flex gap-[16px] items-stretch w-full">
-                <button
-                  type="button"
+                <Button
+                  variant="secondary"
+                  className="flex-1"
                   onClick={onClose}
                   data-testid="button-onboarding-skip"
-                  className="flex flex-1 items-center justify-center px-[20px] py-[10px] rounded-pill bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-15-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
                 >
-                  <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[16px] whitespace-nowrap">
-                    Skip
-                  </span>
-                </button>
-                <button
-                  type="button"
+                  Skip
+                </Button>
+                <Button
+                  variant="warning"
+                  className="flex-1"
                   onClick={goNext}
                   data-testid="button-onboarding-continue"
-                  className="flex flex-1 items-center justify-center px-[20px] py-[10px] rounded-pill bg-brain-v1dark-orange hover:bg-brain-v1dark-orange-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1light-orange"
                 >
-                  <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1light-orange text-[16px] whitespace-nowrap">
-                    {isLast ? "Got it. Take me to Brain" : "Next"}
-                  </span>
-                </button>
+                  {isLast ? "Got it. Take me to Brain" : "Next"}
+                </Button>
               </div>
             </div>
           </div>
