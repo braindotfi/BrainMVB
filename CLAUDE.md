@@ -1310,6 +1310,53 @@ or 40px or whose glyph is not 16px — `[&_svg]:size-4` would resize the artwork
 
 Forcing a row onto a button primitive makes the row worse. That is the test.
 
+## Modal shell standard
+
+Every modal in the app shares the same frame; only the **width** varies by purpose.
+
+### The shell
+
+| property | value |
+|---|---|
+| overlay | `bg-black/60 backdrop-blur-[2px]` |
+| background | `bg-brain-v1baby-blue-5` (`#11141b`) |
+| border | `border border-brain-v1stroke-2 border-solid` (`#1d2132`) |
+| radius | `rounded-modal` (24px) |
+| shadow | `shadow-[0_24px_60px_rgba(0,0,0,0.6)]` |
+| z-index | `z-50` (z-[60] only for dialogs that must float above another modal) |
+| title bar | `h-[56px] backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-brain-v1stroke-2` |
+| close button | 32px `DialogPrimitive.Close`, close icon PNG, `right-[12px] top-[12px]` |
+| Portal | always use `DialogPrimitive.Portal` — never render a modal outside the portal |
+
+All modals use **Radix Dialog** (`@radix-ui/react-dialog`) for focus trapping, `aria-modal`,
+Esc-to-close, and overlay-click-to-close. Hand-rolled `<div>` overlays are not permitted.
+
+### Width variants
+
+| variant | width | use |
+|---|---|---|
+| **standard** | `w-[480px]` | record detail popups (account, bill, transaction, vendor, audit, proposal, review…) |
+| **form** | `w-[400px]` | single-purpose form dialogs (contact update, billing, security pin, goals…) |
+| **compact** | `w-[375px]` | destructive confirmation dialogs only (`DeleteConfirmDialog`) |
+
+All variants add `max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)]` for mobile safety.
+
+### Shared shell component
+
+`client/src/components/detailPopup.tsx` exports `DetailPopupShell` — the canonical Radix
+wrapper for detail popups. Pass `widthClass` to use a non-default width. Billing, security,
+and contact-update modals have their own local `ModalShell`/`ShellRoot` helpers that already
+conform to this standard. **Do not introduce a fourth shell pattern** — extend one of these.
+
+### Adding a new modal
+
+1. Use `DetailPopupShell` (detail content) or the local shell helper in the appropriate
+   sibling file (form / confirm content).
+2. Pick the width variant from the table above.
+3. Title bar: centered `DialogPrimitive.Title` + close button at right.
+4. Add a `DialogPrimitive.Description` (may be `className="sr-only"`) for screen readers.
+5. Verify focus traps and overlay close work before shipping.
+
 ## Design tokens are the standard — raw hex in a class string is a bug
 
 `client/src/index.css` defines the colour and radius variables; `tailwind.config.ts` maps each one

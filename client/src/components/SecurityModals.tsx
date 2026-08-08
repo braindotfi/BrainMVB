@@ -31,7 +31,7 @@ const RoundIconButton = ({ children, onClick, label, testId }: { children: React
 );
 
 const Header = ({ title, onClose, onBack, testIdPrefix }: { title: string; onClose: () => void; onBack?: () => void; testIdPrefix: string }) => (
-  <div className="relative h-[56px] flex items-center justify-center border-b border-brain-v1stroke-2">
+  <div className="relative h-[56px] flex items-center justify-center border-b border-brain-v1stroke-2 backdrop-blur-[10px]" style={{ background: "rgba(17,20,27,0.8)" }}>
     {onBack && (
       <div className="absolute left-[11px] top-1/2 -translate-y-1/2">
         <RoundIconButton label="Back" testId={`button-${testIdPrefix}-back`} onClick={onBack}><BackIcon /></RoundIconButton>
@@ -69,11 +69,11 @@ const ShellRoot = ({ open, onOpenChange, testId, description, width = 400, child
 }) => (
   <Dialog.Root open={open} onOpenChange={onOpenChange}>
     <Dialog.Portal>
-      <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm data-[state=open]:animate-in data-[state=open]:fade-in-0" />
+      <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=open]:fade-in-0" />
       <Dialog.Content
         data-testid={`modal-${testId}`}
-        style={{ background: "#0a0c10", width }}
-        className="fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 rounded-modal border border-brain-v1stroke-2 overflow-hidden focus:outline-none data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
+        style={{ width }}
+        className="fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 bg-brain-v1baby-blue-5 rounded-modal border border-brain-v1stroke-2 overflow-hidden shadow-[0_24px_60px_rgba(0,0,0,0.6)] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] focus:outline-none data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
       >
         <Dialog.Description className="sr-only">{description}</Dialog.Description>
         {children}
