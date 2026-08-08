@@ -101,7 +101,7 @@ module.exports = {
         "space-grotesk": ['"Space Grotesk"', "sans-serif"],
         mono: ['"JetBrains Mono"', "ui-monospace", "monospace"],
         sans: [
-          '"Plus Jakarta Sans"',
+          '"Gilroy"',
           "ui-sans-serif",
           "system-ui",
           "sans-serif",
