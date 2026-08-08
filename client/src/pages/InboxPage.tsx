@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import chevronDownIcon from "@/assets/chevron_down_dropdown.png";
 import { useLocation, useSearch } from "wouter";
+import { Search } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ReviewModal, type ReviewItemType } from "@/components/ReviewItems";
 import { ProposalDetail, type ProposalAction } from "@/components/ProposalDetail";
@@ -1445,6 +1446,27 @@ export function InboxPage() {
 
          {/* Filter toolbar — closed controls stay compact; the open menu follows
              Figma node 6191:69205 exactly. */}
+        <div className="flex flex-col gap-[12px] w-full min-w-0">
+
+        {/* Search. The predicate, the `query` field and its tests all survived a
+            merge that deleted only the control, so this filter has been running
+            against a value nothing could set. Its own row rather than a fourth
+            item in the toolbar: the centre column is ~420px and three dropdowns
+            already fill it. No clear button -- "Clear filters" below resets
+            `query` with the rest, and hasActiveFilter already counts it. */}
+        <div className="flex h-[40px] items-center gap-[8px] p-[8px] rounded-[8px] bg-brain-v1baby-blue-15 w-full min-w-0">
+          <Search className="shrink-0 size-[20px] text-brain-v1baby-blue-60" strokeWidth={1.8} aria-hidden="true" />
+          <input
+            type="text"
+            value={filters.query}
+            onChange={(e) => setFilter("query", e.target.value)}
+            placeholder="Search vendor, amount or description"
+            aria-label="Search decisions"
+            data-testid="filter-search"
+            className="flex-1 min-w-0 h-[24px] bg-transparent outline-none [font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 placeholder:text-brain-v1baby-blue-60 text-[14px] leading-[20px]"
+          />
+        </div>
+
         <div className="flex flex-row gap-[24px]">
           {([
             {
@@ -1481,6 +1503,7 @@ export function InboxPage() {
               onOpenChange={(nextOpen) => setOpenDropdown(nextOpen ? testId : null)}
             />
           ))}
+        </div>
         </div>
       </div>
 

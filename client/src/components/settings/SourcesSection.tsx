@@ -391,6 +391,18 @@ export function SourcesSection() {
 
   return (
     <div className="flex flex-col gap-[16px]">
+      {/* The second sentence is the reason this line exists. This is the screen
+          where someone hands Brain access to their financial data, and the
+          question in their head is what that access lets it do. Saying it here,
+          next to the button, is worth more than saying it correctly elsewhere. */}
+      <p
+        className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[14px]"
+        data-testid="text-sources-subhead"
+      >
+        What Brain reads to build your financial picture. Adding a source never lets Brain move
+        money — that still runs through Rules and Decisions.
+      </p>
+
       {/* Toolbar: the count is a claim about completeness, so it carries its own
           qualifier whenever a feed failed or has not answered yet. */}
       <div className="flex items-center justify-between gap-[12px] min-h-[36px]">

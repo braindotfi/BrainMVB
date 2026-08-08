@@ -188,6 +188,11 @@ const AuditNavIcon = ({ active }: { active: boolean }) => (
    at the widths this shell actually renders (see the item-7 notes). */
 const NAV_ITEMS: { id: Section; label: string; Icon: ComponentType<{ active: boolean }> }[] = [
   { id: "profile",       label: "Profile",           Icon: ProfileNavIcon  },
+  /* Removed by the same stale-branch merge that took the approvals row. The
+     section itself was never removed -- it stayed in VALID_SECTIONS and kept
+     rendering -- so the tab has been reachable by URL but not by clicking, and
+     NotifNavIcon has been sitting here unused. */
+  { id: "notifications", label: "Notifications",     Icon: NotifNavIcon    },
   { id: "team",          label: "Team",              Icon: TeamNavIcon     },
   { id: "billing",       label: "Billing",           Icon: BillingNavIcon  },
   { id: "sources",       label: "Sources",           Icon: SourcesNavIcon  },
