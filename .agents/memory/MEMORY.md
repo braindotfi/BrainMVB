@@ -90,3 +90,4 @@
 - [Deleted merged feature refs](deleted-merged-feature-ref.md) — after PR merge branch deletion, Git pane UNKNOWN_REF is fixed by recreating the same remote ref; preserve local commits and untracked uploads.
 - [Live insight card structure](live-insight-card-structure.md) — read-only ledger insights reuse the agent-card rhythm with honest observational sections, never invented decision content.
 - [Unified record pager](unified-record-pager.md) — Prev/Next must walk the rendered row list, not each source queue; spread props hide a modal that ignores per-direction state.
+- [Hex→token mapping](hex-to-token-mapping.md) — ΔE finds candidates but can't decide them: resolve base/hover pairs together, and contrast-check every text collapse.

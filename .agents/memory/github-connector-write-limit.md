@@ -91,3 +91,27 @@ standing bypass, for any category), never a routine step.
 credential's 403 was read as the repo's limit, while the credential that could
 land it was already configured for pushes. Then reaching for `--admin` quietly
 turned an access question into a governance one.
+
+    ## Git push and the REST API are separate credentials
+
+    `git push` over the HTTPS remote can fail with "Invalid username or token. Password
+    authentication is not supported for Git operations" — and `gh` return `HTTP 401: Bad
+    credentials` — while the Replit **GitHub connector** is `added` and its REST API accepts
+    writes perfectly. Re-authorising the connector does **not** fix `git push`; the git
+    credential helper is not wired to it.
+
+    **A push failure is therefore not proof you cannot write.** Land the commit through the
+    connector API instead — no local branch required:
+
+    1. `GET  /repos/{o}/{r}/git/ref/heads/main` → base sha
+    2. `POST /repos/{o}/{r}/git/refs` → create `refs/heads/<branch>`
+    3. `PUT  /repos/{o}/{r}/contents/<path>` with `{ content: <base64>, branch }`
+    4. `POST /repos/{o}/{r}/pulls`
+
+    through `listConnections("github")` → `conn.proxyFetch(path, init)` inside `"use impure"`.
+
+    **Verify afterwards.** The API creates a *different* commit from any local one you made,
+    so the local branch and origin diverge even when the content is identical. Compare
+    `git hash-object <file>` with `git rev-parse origin/<branch>:<file>` — matching blob shas
+    prove the content landed intact.
+    
