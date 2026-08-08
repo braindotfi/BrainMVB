@@ -36,25 +36,23 @@ Note that tab-switching needs explicit clicks — most list screens default to a
 tab that is empty even when the other tabs are full, so a single screenshot per route will
 under-report the data that exists.
 
-## Mint a session instead of provisioning a tenant
+## Reuse a session instead of provisioning a tenant
 
-`QA_COOKIE` does not have to come from a fresh login. Logging in via "Continue with Demo"
-provisions a whole production tenant (non-idempotent, founder-email-unique) just to look at a
-screen, and the new tenant then seeds asynchronously so the first pass under-reports.
+Do **not** log in through "Continue with Demo" just to look at a screen. It provisions a whole
+production tenant (non-idempotent, founder-email-unique), and that tenant then seeds
+asynchronously, so the first pass under-reports anyway.
 
-Reuse an existing demo user instead: insert a row into `user_sessions` (connect-pg-simple,
-`sess` is JSON holding `{cookie:{...}, userId}`), then build the cookie value the way
-express-session does — the raw sid alone gets you `{"error":"Not authenticated"}`:
+`QA_COOKIE` does not have to come from a fresh login — an existing demo user's session works.
 
-```
-s:<sid>.<base64 HMAC-SHA256 of sid keyed by SESSION_SECRET, trailing '=' stripped>
-```
+**The shortcut for obtaining one is deliberately not written down here.** It is an authentication
+bypass, and this directory is committed alongside the application code, so it travels with every
+clone and fork of the repo. Ask the repo owner for the current procedure.
 
-**Why:** an unsigned cookie is silently ignored rather than rejected, so it reads as an auth bug
-rather than a formatting one.
+<!-- TODO(owner): replace the line above with the out-of-repo location once one exists. -->
 
-**How to apply:** write the cookie to a file and pass it as `QA_COOKIE="$(cat …)"`. Never echo it
-— it is a live credential. Give the row a short `expire` and delete it when the run is done.
+**How to apply:** however you obtain it, treat the value as a live credential — write it to a file
+rather than into a shell variable or an env var you might echo, never print it, give the session a
+short expiry, and delete it as soon as the run finishes.
 
 ## A freshly provisioned demo tenant seeds asynchronously
 
