@@ -99,3 +99,30 @@ must be one you meant. Check `git branch -vv` for `[ahead N]` before cutting a b
 another branch. Stage explicit paths; `git add -A` turns a checkpoint's leftovers into your
 commit. `.gitignore` is the wrong tool here — the files that leak (screenshots, memory notes)
 are legitimate content on the *wrong branch*, not junk.
+
+### Mid-task, `HEAD` is not your baseline — and `git diff` goes quietly empty
+
+The consequence above has a second edge that costs a whole debugging cycle. A checkpoint can land
+*while you are still working*, so the changes you have not committed yourself are already committed
+for you. `git diff` and `git diff HEAD` then report **nothing**, and `git show HEAD:<file>` returns
+your own edited version rather than the state you started from.
+
+This is silent and it looks like a bug in your own tooling. A script that reconstructs "what did I
+change" by comparing the working tree against `HEAD` returns zero matches, which reads as "my edit
+never applied" — the opposite of what happened.
+
+**Why:** the checkpoint is an ordinary commit on the checked-out branch, so it moves `HEAD` forward
+onto your in-progress work. Nothing announces it.
+
+**How to apply:** for any multi-step pass where you need to reason about your own cumulative diff —
+a mechanical refactor, a restyle, a codemod — resolve the baseline *once, explicitly*, and compare
+against that SHA rather than `HEAD`:
+
+```
+BASE=$(git merge-base HEAD origin/main)
+git diff "$BASE" -- <paths>
+```
+
+Re-derive it rather than pasting a SHA from earlier in the session; the branch point is stable even
+though `HEAD` is not. If a diff you expect to be large comes back empty, check `git log --oneline -3`
+for a checkpoint commit before doubting the edit.
