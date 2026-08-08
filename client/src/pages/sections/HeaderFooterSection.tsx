@@ -10,7 +10,7 @@ export const HeaderFooterSection = (): JSX.Element => {
         />
         <div className="w-fit mt-[-1.00px] [font-family:'Gilroy',sans-serif] font-normal text-transparent text-[28px] leading-7 whitespace-nowrap">
           <span className="text-brain-v1purple">br</span>
-          <span className="text-[#ffffff] leading-[0.1px]">ai</span>
+          <span className="text-brain-v1white leading-[0.1px]">ai</span>
           <span className="text-brain-v1purple">n</span>
         </div>
       </div>

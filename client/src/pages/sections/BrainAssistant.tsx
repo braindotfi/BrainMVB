@@ -222,7 +222,7 @@ function renderInlineRich(text: string): React.ReactNode {
   return codeParts.map((part, i) => {
     if (part.startsWith("`") && part.endsWith("`")) {
       return (
-        <code key={i} className="bg-[#1a1e2e] px-1 py-[1px] rounded-[4px] text-brain-v1baby-blue-100 text-[12px] [font-family:'JetBrains_Mono',monospace]">
+        <code key={i} className="bg-brain-v1stroke-2 px-1 py-[1px] rounded-[4px] text-brain-v1baby-blue-100 text-[12px] [font-family:'JetBrains_Mono',monospace]">
           {part.slice(1, -1)}
         </code>
       );
@@ -987,9 +987,9 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                       msg.role === "user"
                         ? "bg-brain-v1purple text-white text-right"
                         : msg.answerStatus === "no_answer"
-                          ? "bg-[#1b1e2a] border border-dashed border-brain-v1baby-blue-60 text-[#8b95b8] text-left"
+                          ? "bg-brain-v1stroke-2 border border-dashed border-brain-v1baby-blue-60 text-brain-v1baby-blue-80 text-left"
                           : msg.answerStatus === "error"
-                            ? "bg-[#211c22] border border-dashed border-[#8b5362] text-[#b99aa5] text-left"
+                            ? "bg-brain-v1dark-pink-red border border-dashed border-brain-v1pink-red text-brain-v1error-text text-left"
                           : "bg-brain-v1baby-blue-15 text-brain-v1baby-blue-60 text-left"
                     }`}
                   >
@@ -1150,7 +1150,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
             key={`${i}-${q}`}
             data-testid={`button-suggested-${q.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`}
             onClick={() => sendMessage(q)}
-            className="flex-shrink-0 bg-brain-v1baby-blue-15 px-[12px] py-[8px] rounded-pill transition-colors hover:bg-[#2a3145] [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[12px] leading-[16px] whitespace-nowrap"
+            className="flex-shrink-0 bg-brain-v1baby-blue-15 px-[12px] py-[8px] rounded-pill transition-colors hover:bg-brain-v1baby-blue-15-hover [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[12px] leading-[16px] whitespace-nowrap"
           >
             {q}
           </button>
@@ -1190,7 +1190,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
             data-testid="button-assistant-attach"
             onClick={() => fileInputRef.current?.click()}
             disabled={uploadDoc.isPending}
-            className="size-[32px] rounded-full bg-brain-v1baby-blue-15 flex items-center justify-center transition-colors hover:bg-[#2a3145] disabled:opacity-60 disabled:cursor-not-allowed"
+            className="size-[32px] rounded-full bg-brain-v1baby-blue-15 flex items-center justify-center transition-colors hover:bg-brain-v1baby-blue-15-hover disabled:opacity-60 disabled:cursor-not-allowed"
             title="Attach a document"
           >
             <Plus className="size-[18px]" color="#a8b9f4" strokeWidth={2} />

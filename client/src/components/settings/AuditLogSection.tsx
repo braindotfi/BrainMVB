@@ -340,7 +340,7 @@ export function AuditLogSection() {
                   openMenu(true);
                 }
               }}
-              className="bg-brain-v1baby-blue-15 rounded-[8px] p-[8px] flex items-center gap-[8px] w-full text-left outline-none hover:bg-[#2a3045] transition-colors focus-visible:ring-2 focus-visible:ring-brain-v1purple"
+              className="bg-brain-v1baby-blue-15 rounded-[8px] p-[8px] flex items-center gap-[8px] w-full text-left outline-none hover:bg-brain-v1baby-blue-15-hover transition-colors focus-visible:ring-2 focus-visible:ring-brain-v1purple"
             >
               <span className="flex-1 min-w-0 [font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[14px] leading-[20px] whitespace-nowrap truncate">
                 {activeLabel}
@@ -421,7 +421,7 @@ export function AuditLogSection() {
                   type="button"
                   data-testid={`row-audit-${record.id}`}
                   onClick={() => setActiveRecord(record)}
-                  className="w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-[#0d1018] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px]"
+                  className="w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-brain-v1row-hover transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px]"
                 >
                   <div className="flex-1 min-w-0 flex flex-col gap-[4px]">
                     <div className="flex items-center gap-[8px] w-full min-w-0">

@@ -254,7 +254,7 @@ function PlaidConnectButton({
         {label}
       </button>
       {loadError && !isLoading && (
-        <p className="[font-family:'Gilroy',sans-serif] text-[12px] text-[#fca5a5] text-center">
+        <p className="[font-family:'Gilroy',sans-serif] text-[12px] text-brain-v1error-text text-center">
           {loadError.replace(/^\d+:\s*/, "")}
         </p>
       )}

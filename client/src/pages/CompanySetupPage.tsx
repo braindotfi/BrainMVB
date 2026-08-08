@@ -12,7 +12,7 @@ import brainLogo from "@assets/BrainLogo_1781769246241.png";
    consumed after the explicit "Join" confirm below. */
 
 const inputCls =
-  "w-full h-[48px] px-4 rounded-2xl bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 focus:border-brain-v1purple outline-none transition-colors [font-family:'Gilroy',sans-serif] text-[#e8eaf0] placeholder:text-brain-v1baby-blue-30 text-[15px]";
+  "w-full h-[48px] px-4 rounded-2xl bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 focus:border-brain-v1purple outline-none transition-colors [font-family:'Gilroy',sans-serif] text-brain-v1white placeholder:text-brain-v1baby-blue-30 text-[15px]";
 const primaryBtn =
   "w-full h-[48px] rounded-2xl bg-brain-v1purple hover:bg-brain-v1purple-hover disabled:opacity-60 disabled:cursor-not-allowed transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-white text-[15px] flex items-center justify-center gap-2";
 
@@ -176,7 +176,7 @@ export function CompanySetupPage() {
       <div className="flex-1 flex items-center justify-center z-10 relative px-4">
         <div className="w-full max-w-[440px] bg-brain-v1baby-blue-5 border border-brain-v1stroke-2 rounded-modal px-7 py-8 shadow-2xl">
           <div className="flex flex-col items-center text-center mb-6">
-            <h1 className="[font-family:'Gilroy',sans-serif] font-semibold text-[#e8eaf0] text-[24px] leading-[32px]">
+            <h1 className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1white text-[24px] leading-[32px]">
               Set Up Your Company
             </h1>
             <p className="[font-family:'Gilroy',sans-serif] font-normal text-brain-v1baby-blue-60 text-[15px] leading-[22px] mt-1">
@@ -206,7 +206,7 @@ export function CompanySetupPage() {
                 />
               </div>
               {error && (
-                <p data-testid="text-company-setup-error" className="[font-family:'Gilroy',sans-serif] text-[#f4607a] text-[13px] px-1">
+                <p data-testid="text-company-setup-error" className="[font-family:'Gilroy',sans-serif] text-brain-v1error-text text-[13px] px-1">
                   {error}
                 </p>
               )}
@@ -238,7 +238,7 @@ export function CompanySetupPage() {
                 invite was meant for you.
               </p>
               {error && (
-                <p data-testid="text-company-setup-error" className="[font-family:'Gilroy',sans-serif] text-[#f4607a] text-[13px] px-1">
+                <p data-testid="text-company-setup-error" className="[font-family:'Gilroy',sans-serif] text-brain-v1error-text text-[13px] px-1">
                   {error}
                 </p>
               )}
@@ -264,7 +264,7 @@ export function CompanySetupPage() {
       </div>
 
       <footer className="flex items-center justify-between px-6 h-14 flex-shrink-0 z-10 relative">
-        <span className="[font-family:'Gilroy',sans-serif] text-[#3a4060] text-sm">
+        <span className="[font-family:'Gilroy',sans-serif] text-brain-v1baby-blue-30 text-sm">
           Copyright © 2026 Brain Finance. All rights reserved.
         </span>
         <img alt="Socials" src="/figmaAssets/socials.svg" className="opacity-40" />

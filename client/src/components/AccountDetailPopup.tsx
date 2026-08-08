@@ -225,7 +225,7 @@ export function AccountDetailPopup({
                             onKeyDown={(e) => {
                               if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpenTransaction(t.id); }
                             }}
-                            className="flex gap-[12px] items-center p-[10px] rounded-[8px] bg-brain-v1highlight-dropdown-bg border border-transparent transition-colors hover:bg-[#151926] hover:border-brain-v1stroke-2 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple w-full"
+                            className="flex gap-[12px] items-center p-[10px] rounded-[8px] bg-brain-v1highlight-dropdown-bg border border-transparent transition-colors hover:bg-brain-v1item-hover hover:border-brain-v1stroke-2 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple w-full"
                           >
                             <div className="flex flex-1 flex-col min-w-px">
                               <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-brain-v1baby-blue-100 truncate">{label}</p>

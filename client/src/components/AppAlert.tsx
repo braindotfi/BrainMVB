@@ -262,7 +262,7 @@ export const AppAlertLink = ({
         onClick();
       }
     }}
-    className="text-brain-v1baby-blue-100 underline decoration-solid hover:text-[#c5d2ff]"
+    className="text-brain-v1baby-blue-100 underline decoration-solid hover:text-brain-v1baby-blue-100"
   >
     {children}
   </a>

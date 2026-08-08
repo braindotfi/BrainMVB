@@ -102,7 +102,7 @@ export function LiveInsightModal({
             <DialogPrimitive.Close
               data-testid="button-live-insight-close"
               aria-label="Close"
-              className="absolute right-[11px] top-[11px] size-[32px] flex items-center justify-center rounded-full bg-brain-v1baby-blue-15 hover:bg-[#2a3050] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
+              className="absolute right-[11px] top-[11px] size-[32px] flex items-center justify-center rounded-full bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-15-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
             >
               <X size={16} className="text-brain-v1baby-blue-60" />
             </DialogPrimitive.Close>

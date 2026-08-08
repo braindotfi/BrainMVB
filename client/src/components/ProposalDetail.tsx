@@ -797,7 +797,7 @@ function AutoHandledReceipt({
                 type="button"
                 onClick={() => onReviewRule?.(proposal)}
                 data-testid="button-rule-card"
-                className="w-full rounded-row border border-brain-v1stroke-2 bg-brain-v1highlight-dropdown-bg p-[14px] flex flex-col gap-[10px] text-left hover:border-[#7631ee]/40 hover:bg-[#0d0f16] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
+                className="w-full rounded-row border border-brain-v1stroke-2 bg-brain-v1highlight-dropdown-bg p-[14px] flex flex-col gap-[10px] text-left hover:border-[#7631ee]/40 hover:bg-brain-v1row-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
               >
                 {cardInner}
               </button>
@@ -833,7 +833,7 @@ function AutoHandledReceipt({
             disabled={paused}
             onClick={() => onPauseRule?.(proposal)}
             data-testid="button-pause-rule"
-            className="flex flex-1 items-center justify-center gap-[8px] px-[12px] py-[10px] rounded-pill bg-brain-v1stroke-2 hover:bg-[#252a3d] transition-colors disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30"
+            className="flex flex-1 items-center justify-center gap-[8px] px-[12px] py-[10px] rounded-pill bg-brain-v1stroke-2 hover:bg-brain-v1stroke-2-hover transition-colors disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30"
           >
             <PauseCircle size={16} className="text-brain-v1baby-blue-100 shrink-0" />
             <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[18px] text-[14px] text-brain-v1baby-blue-100 whitespace-nowrap">
@@ -860,7 +860,7 @@ function AutoHandledReceipt({
             type="button"
             onClick={() => setReportStep("reason")}
             data-testid="button-report-problem"
-            className="flex w-full items-center justify-center gap-[8px] px-[16px] py-[12px] rounded-pill bg-brain-v1dark-pink-red hover:bg-[#4a0018] transition-colors focus:outline-none focus-visible:ring-2"
+            className="flex w-full items-center justify-center gap-[8px] px-[16px] py-[12px] rounded-pill bg-brain-v1dark-pink-red hover:bg-brain-v1dark-pink-red-hover transition-colors focus:outline-none focus-visible:ring-2"
             style={{ ["--tw-ring-color" as string]: ALERT }}
           >
             <Flag size={16} className="shrink-0" style={{ color: ALERT }} />
@@ -911,7 +911,7 @@ function AutoHandledReceipt({
                 type="button"
                 onClick={() => { setReportStep("idle"); setPreset(""); setNote(""); }}
                 data-testid="button-report-cancel"
-                className="flex-1 px-[12px] py-[8px] rounded-pill bg-brain-v1stroke-2 hover:bg-[#252a3d] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[13px] text-brain-v1baby-blue-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30"
+                className="flex-1 px-[12px] py-[8px] rounded-pill bg-brain-v1stroke-2 hover:bg-brain-v1stroke-2-hover transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[13px] text-brain-v1baby-blue-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30"
               >
                 Cancel
               </button>
@@ -920,7 +920,7 @@ function AutoHandledReceipt({
                 disabled={!reasonReady}
                 onClick={() => setReportStep("confirm")}
                 data-testid="button-report-continue"
-                className="flex-1 px-[12px] py-[8px] rounded-pill bg-brain-v1dark-pink-red hover:bg-[#4a0018] transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[13px] focus:outline-none focus-visible:ring-2"
+                className="flex-1 px-[12px] py-[8px] rounded-pill bg-brain-v1dark-pink-red hover:bg-brain-v1dark-pink-red-hover transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[13px] focus:outline-none focus-visible:ring-2"
                 style={{ color: ALERT, ["--tw-ring-color" as string]: ALERT }}
               >
                 Continue
@@ -951,7 +951,7 @@ function AutoHandledReceipt({
                 type="button"
                 onClick={() => submit(false)}
                 data-testid="button-report-feedback-only"
-                className="flex w-full items-center justify-center gap-[8px] px-[16px] py-[11px] rounded-pill bg-brain-v1stroke-2 hover:bg-[#252a3d] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-brain-v1baby-blue-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30"
+                className="flex w-full items-center justify-center gap-[8px] px-[16px] py-[11px] rounded-pill bg-brain-v1stroke-2 hover:bg-brain-v1stroke-2-hover transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] text-brain-v1baby-blue-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30"
               >
                 Just send feedback
               </button>
@@ -1000,9 +1000,9 @@ function ActionButton({
      All: rounded-pill SemiBold 16px. */
   const styles =
     variant === "approve"
-      ? "bg-brain-v1dark-green hover:bg-[#194d0d] focus-visible:ring-brain-v1green text-brain-v1green"
+      ? "bg-brain-v1dark-green hover:bg-brain-v1dark-green-hover focus-visible:ring-brain-v1green text-brain-v1green"
       : variant === "reject"
-        ? "bg-brain-v1dark-pink-red hover:bg-[#4a0018] focus-visible:ring-brain-v1pink-red text-brain-v1pink-red"
+        ? "bg-brain-v1dark-pink-red hover:bg-brain-v1dark-pink-red-hover focus-visible:ring-brain-v1pink-red text-brain-v1pink-red"
         : "bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-15-hover focus-visible:ring-brain-v1baby-blue-30 text-brain-v1baby-blue-60";
   return (
     <button

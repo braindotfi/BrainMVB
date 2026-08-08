@@ -1177,9 +1177,9 @@ Note this is only *enforced* on the surfaces the fix touched (`RuleDetail`, `Rul
 converting them is a visible restyle of Settings, not a contrast fix. Don't add new ones.
 
 ### Destructive buttons share one hover
-Destructive = `#d20344` text on a `#350011` background. The hover is **always** `#4a0018`, with
-`transition-colors`. Not `hover:opacity-80`, not "no hover at all" (which is what Delete Rule
-shipped with).
+Destructive = `brain-v1pink-red` text on a `brain-v1dark-pink-red` background. The hover is
+**always** `brain-v1dark-pink-red-hover`. Not `hover:opacity-80`, not "no hover at all" (which is
+what Delete Rule shipped with). Always with `transition-colors`.
 
 The trap: several destructive buttons set their background through an **inline `style`**, and an
 inline `background` always outranks a `hover:bg-*` utility — so adding the hover class appears to
@@ -1188,7 +1188,7 @@ palette, pass it as a CSS custom property and let the class consume it:
 
 ```tsx
 style={{ ["--action-bg" as string]: palette.background, color: palette.color }}
-className="bg-[var(--action-bg)] hover:bg-[#4a0018] transition-colors"
+className="bg-[var(--action-bg)] hover:bg-brain-v1dark-pink-red-hover transition-colors"
 ```
 
 `ProposalCardParts.ActionButton` and `DevelopersSection.PillButton` both use this pattern.
@@ -1223,7 +1223,12 @@ site drifted silently. Now the token name *is* the usage index.
 | `#222737` | `brain-v1baby-blue-15` | | `#350011` | `brain-v1dark-pink-red` |
 | `#414965` | `brain-v1baby-blue-30` | | `#123509` | `brain-v1dark-green` |
 | `#d20344` | `brain-v1pink-red` | | `#06070a` | `brain-v1headerfooterbg` |
-| | | | `#12032d` | `brain-v1dark-dark-purple` |
+| `#8b95b8` | `brain-v1baby-blue-80` | | `#12032d` | `brain-v1dark-dark-purple` |
+| `#f4607a` | `brain-v1error-text` | | | |
+
+`brain-v1baby-blue-80` is a ramp step between `-60` and `-100`, minted for assistant body text:
+`-60` on `baby-blue-15` is only **3.37:1**, and `-80` clears AA. `brain-v1error-text` exists
+because `brain-v1pink-red` on a dark surface does not reach AA for body-size text.
 
 ### Radius by concept
 
@@ -1235,21 +1240,63 @@ they diverge, and 100px is what the app already shipped.
 
 ### Hover tokens are not in Figma yet
 
-`brain-v1baby-blue-15-hover`, `brain-v1dark-purple-hover`, `brain-v1dark-orange-hover` and
-`brain-v1purple-hover` were canonicalised in-app; the Figma source file has no hover states for these
-four surfaces. They are named here so the "no raw hex" rule holds without an exception list — but if
-Figma later publishes its own hover values, these are the names to reconcile.
+Ten hover tokens were canonicalised in-app; the Figma source file has no hover states for these
+surfaces. They are named here so the "no raw hex" rule holds without an exception list — if Figma
+later publishes its own hover values, these are the names to reconcile.
+
+| Token | Hex | Partners |
+| --- | --- | --- |
+| `brain-v1baby-blue-15-hover` | `#2c3247` | `baby-blue-15` fills |
+| `brain-v1purple-hover` | `#8442f5` | `purple` CTAs |
+| `brain-v1dark-purple-hover` | `#2e0a6e` | `dark-purple` secondary fills |
+| `brain-v1dark-orange-hover` | `#5a2d00` | `dark-orange` amber fills |
+| `brain-v1dark-pink-red-hover` | `#4a0018` | `dark-pink-red` destructive fills |
+| `brain-v1dark-green-hover` | `#174710` | `dark-green` approve fills |
+| `brain-v1headerfooterbg-hover` | `#101218` | `headerfooterbg` chrome |
+| `brain-v1stroke-2-hover` | `#252a3d` | `stroke-2` **borders** |
+| `brain-v1row-hover` | `#0d1018` | rows in a divided stack |
+| `brain-v1item-hover` | `#151926` | borderless items gaining an outline |
+
+The last two both sit on `brain-v1highlight-dropdown-bg` and are **not** interchangeable:
+`item-hover` is a ~4× stronger lift than `row-hover`. Use `row-hover` for a row inside a divided
+list, `item-hover` for a standalone item that also gains a border on hover. `stroke-2-hover` is a
+border colour — reaching for it as a fill is the mistake this split exists to prevent.
 
 ### Where raw hex is still legitimate
 
 1. **Inline `style={{}}` and JS object literals.** A Tailwind class cannot reach them; they need
-   `var(--token)` instead. ~550 sites, deliberately deferred to their own pass.
+   `var(--token)` instead. 531 occurrences across 46 files, deliberately deferred to their own pass.
+   The scan below does **not** see these, so a green suite does not mean the app is hex-free.
 2. **SVG `fill` / `stroke` attributes** that are not driven by `currentColor`.
-3. **Comments quoting a Figma spec** — the hex is the citation, keep it.
+3. **Comments quoting a Figma spec** — the hex is the citation, keep it. The scan strips comments.
 4. **Opacity modifiers.** `hover:border-[#7631ee]/40` must stay raw. Our tokens resolve to a full
    `rgba()` behind `var()`, and Tailwind 3 cannot inject an alpha channel into that — converting it
-   silently drops the 40%. Supporting `/40` would mean restating all 25 tokens as bare channels with
+   silently drops the 40%. Supporting `/40` would mean restating every token as bare channels with
    an `<alpha-value>` placeholder. 8 sites rely on this; leave them.
+
+### The rule is enforced, not just documented
+
+`client/src/design-tokens.test.ts` runs under `npm test` and fails the build on:
+
+- any `[#hex]` in a class string;
+- any raw `12/16/24/100px` radius (the four named ones — every *other* px value is a later pass and
+  is deliberately not ratcheted here);
+- any `brain-v1*` / `brand-*` / `doc-paper-*` class naming a token that does not exist — Tailwind
+  drops unknown classes silently, so a typo renders nothing and passes review;
+- `index.css` and `tailwind.config.ts` drifting apart, which produces a declared-but-unusable token.
+
+The `/NN` exception is allowed **only** for a hex that is already a token, and the suite separately
+pins the set of values using it to `{#7631ee}` — so a brand-new colour cannot slip in behind a `/40`.
+
+### Two namespaces sit outside `brain-v1*` on purpose
+
+- **`brand-*`** (`brand-whatsapp`, `brand-telegram`) — third-party brand colours, fixed by the
+  vendor. Never reconcile them to a near neighbour in the product palette; they are not ours.
+- **`doc-paper-*`** (12 values) — the printed-document facsimile in `DocumentViewerPopup`: cream
+  surfaces, sepia ink, faint rules. Nearest-token distance against a dark UI palette is meaningless
+  here, so these are never collapsed into `brain-v1*`. Every one of the 12 is used only in that
+  component. Six ink values for one document is more than it needs, but reducing them is a design
+  judgement about a facsimile, not a drift cleanup.
 
 ## One value per role
 
@@ -1260,7 +1307,17 @@ now single values. **Before introducing a new hex, grep for a sibling within a f
 | Role | Canonical | Was also |
 | --- | --- | --- |
 | Amber / warning | `#ff9500` | `#ff9400` |
-| Neutral hover grey | `#2c3247` | `#2a3040`, `#2a3046`, `#2b3145` |
+| Neutral hover grey | `#2c3247` | `#2a3040`, `#2a3046`, `#2b3145`, `#2a3050`, `#2a3045`, `#2a3145` |
+| Border hover | `#252a3d` | `#262b3d`, `#2a3050` *(as a border only)* |
+| Row hover | `#0d1018` | `#0d0f16` |
+| Approve fill hover | `#174710` | `#173e0b`, `#194d0d` |
+| Approve fill | `#123509` | `#0d3320`, `#0a2a0a`, `#0f2f1c` |
+| Approve accent | `#42bf23` | `#22c55e`, `#4ade80` |
+| Card stroke | `#1d2132` | `#1a2235`, `#161b28`, `#1a1e2e`, `#1b1e2a` |
+| Page background | `#11141b` | `#131828`, `#0d1523` |
+| White | `#ffffff` | `#e8eaf0`, `#d9d9d9`, `#fff` |
+| Light-on-dark text | `#a8b9f4` | `#c5d2ff`, `#c8d4f0` |
+| Error text | `#f4607a` | `#fca5a5` |
 | Amber fill | `#4a2300` | `#3a2600`, `#3a2500` |
 | Amber fill hover | `#5a2d00` | `#5a2b00`, `#5a2c00` |
 | Purple secondary fill | `#240757` (hover `#2e0a6e`) | hover `#2e0a6b` |
@@ -1273,9 +1330,16 @@ Collapsing the amber badge fill keeps `#ff9500` at **6.24:1** (was 6.55:1), stil
 **`#11141b` and `#0a0c10` are NOT duplicates.** They are the page background and the card surface;
 the whole card system reads off that difference. Never merge them.
 
-**`#2a2010` is not an amber control colour.** It is body text inside the light "paper" document
-facsimile in `DocumentViewerPopup`, which has its own cream palette (`#e8e2d4` rules, `#8a7a60`
-labels). It only looks like a dark amber.
+**`doc-paper-ink-800` (`#2a2010`) is not an amber control colour.** It is body text inside the light
+"paper" document facsimile in `DocumentViewerPopup`, which has its own cream palette
+(`doc-paper-rule-light` rules, `doc-paper-ink-300` labels). It only looks like a dark amber. This is
+exactly why that palette is namespaced away from `brain-v1*`.
+
+**`#2a3050` split rather than collapsed.** Seven fill hovers became `brain-v1baby-blue-15-hover`,
+but `ProposalCardParts` used the same value as a *border* hover, and that one became
+`brain-v1stroke-2-hover`. One value serving two roles is drift even when the value agrees — the
+fill sites shifted by ΔE 7.57 while holding lightness (ΔL\* +0.33), so this reads as a chroma
+correction, not a visible change.
 
 ### Font-family syntax
 Always `[font-family:'Gilroy',sans-serif]`. The `font-['Gilroy',sans-serif]` form compiles to the

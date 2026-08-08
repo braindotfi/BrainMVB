@@ -249,7 +249,7 @@ export function RuleDetail() {
                   type="button"
                   onClick={() => setConfirmingDelete(true)}
                   data-testid="button-delete-rule"
-                  className="flex items-center justify-center gap-[4px] px-[12px] py-[8px] rounded-pill bg-brain-v1dark-pink-red hover:bg-[#4a0018] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] focus:outline-none focus-visible:ring-2"
+                  className="flex items-center justify-center gap-[4px] px-[12px] py-[8px] rounded-pill bg-brain-v1dark-pink-red hover:bg-brain-v1dark-pink-red-hover transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] focus:outline-none focus-visible:ring-2"
                   style={{ color: ALERT, ["--tw-ring-color" as string]: ALERT }}
                 >
                   <img src={deleteIcon} alt="" className="shrink-0 size-[16px]" /> Delete Rule
@@ -312,7 +312,7 @@ export function RuleDetail() {
                       type="button"
                       onClick={onResume}
                       data-testid="button-resume-confirm"
-                      className="flex-1 px-[24px] py-[12px] rounded-pill bg-brain-v1dark-green hover:bg-[#174710] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[18px] text-brain-v1green focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1green"
+                      className="flex-1 px-[24px] py-[12px] rounded-pill bg-brain-v1dark-green hover:bg-brain-v1dark-green-hover transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[18px] text-brain-v1green focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1green"
                     >
                       Resume
                     </button>
@@ -368,7 +368,7 @@ export function RuleDetail() {
                       type="button"
                       onClick={onDelete}
                       data-testid="button-delete-confirm"
-                      className="w-[150px] h-[45px] shrink-0 px-[22.5px] rounded-pill bg-brain-v1dark-pink-red hover:bg-[#4a0018] transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold leading-[22.5px] text-[16.88px] text-brain-v1pink-red focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1pink-red"
+                      className="w-[150px] h-[45px] shrink-0 px-[22.5px] rounded-pill bg-brain-v1dark-pink-red hover:bg-brain-v1dark-pink-red-hover transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold leading-[22.5px] text-[16.88px] text-brain-v1pink-red focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1pink-red"
                     >
                       Delete
                     </button>
@@ -694,7 +694,7 @@ function AmountRow({
           type="button"
           onClick={onSave}
           data-testid={testIdSave}
-          className="w-[80px] flex items-center justify-center px-[12px] py-[8px] rounded-pill bg-brain-v1dark-green hover:bg-[#173e0b] transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-brain-v1green focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1green"
+          className="w-[80px] flex items-center justify-center px-[12px] py-[8px] rounded-pill bg-brain-v1dark-green hover:bg-brain-v1dark-green-hover transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] text-brain-v1green focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1green"
         >
           Save
         </button>

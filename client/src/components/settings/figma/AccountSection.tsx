@@ -47,7 +47,7 @@ const POPUP_BUTTON_NEUTRAL =
 
 const POPUP_BUTTON_DESTRUCTIVE =
   "flex-1 min-w-px flex items-center justify-center px-[12px] py-[8px] rounded-pill " +
-  "bg-brain-v1dark-pink-red hover:bg-[#4a0018] transition-colors disabled:opacity-60 disabled:cursor-not-allowed " +
+  "bg-brain-v1dark-pink-red hover:bg-brain-v1dark-pink-red-hover transition-colors disabled:opacity-60 disabled:cursor-not-allowed " +
   "[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1pink-red text-[14px] leading-[20px] whitespace-nowrap";
 
 function ConfirmCloseModal({ onCancel, onConfirm, isDeleting }: { onCancel: () => void; onConfirm: () => void; isDeleting: boolean }) {

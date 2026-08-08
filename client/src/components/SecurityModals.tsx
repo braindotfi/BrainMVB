@@ -249,7 +249,7 @@ export function LoginHistoryModal({
               data-testid="button-signout-others"
               onClick={signOutAll}
               disabled={!sessions.some((s) => !s.current)}
-              className="flex flex-1 w-full items-center justify-center bg-brain-v1dark-pink-red hover:bg-[#4a0018] rounded-pill px-[20px] py-[10px] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              className="flex flex-1 w-full items-center justify-center bg-brain-v1dark-pink-red hover:bg-brain-v1dark-pink-red-hover rounded-pill px-[20px] py-[10px] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
             >
               <span className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-brain-v1pink-red whitespace-nowrap">
                 Sign Out of All Devices

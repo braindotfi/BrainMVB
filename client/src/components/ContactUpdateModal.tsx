@@ -148,7 +148,7 @@ function CountrySelector({ value, onChange }: { value: string; onChange: (v: str
         className="w-full flex items-center gap-[8px] bg-brain-v1baby-blue-15 rounded-[8px] px-[8px] py-[10px] outline-none focus:ring-1 focus:ring-brain-v1purple"
       >
         <span className="text-[16px] leading-[20px]">{selected.flag}</span>
-        <span className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-[#fff]">
+        <span className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-brain-v1white">
           {selected.code}
         </span>
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="ml-auto shrink-0">
@@ -404,7 +404,7 @@ export function ContactUpdateModal({
                     onClick={confirm}
                     className="flex-1 min-w-0 flex items-center justify-center bg-brain-v1green rounded-pill px-[16px] py-[10px] disabled:opacity-60 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
                   >
-                    <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-[#fff] whitespace-nowrap">
+                    <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-brain-v1white whitespace-nowrap">
                       Confirm
                     </span>
                   </button>

@@ -372,7 +372,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep 
             <div className="relative">
               <button
                 onClick={() => setPopupOpen((v) => !v)}
-                className="bg-brain-v1baby-blue-15 flex gap-[8px] h-[56px] items-center px-[16px] rounded-panel w-full hover:bg-[#2a3050] transition-colors"
+                className="bg-brain-v1baby-blue-15 flex gap-[8px] h-[56px] items-center px-[16px] rounded-panel w-full hover:bg-brain-v1baby-blue-15-hover transition-colors"
                 data-testid="btn-select-account"
               >
                 {selected ? (
@@ -464,7 +464,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep 
             <div className="relative">
               <button
                 onClick={() => { setPopupOpen((v) => !v); }}
-                className="bg-brain-v1baby-blue-15 flex gap-[8px] h-[56px] items-center px-[16px] rounded-panel w-full hover:bg-[#2a3050] transition-colors"
+                className="bg-brain-v1baby-blue-15 flex gap-[8px] h-[56px] items-center px-[16px] rounded-panel w-full hover:bg-brain-v1baby-blue-15-hover transition-colors"
                 data-testid="btn-account-row"
               >
                 <AccountIcon type="wallet" />
@@ -547,7 +547,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep 
             <div className="relative">
               <button
                 onClick={() => setPopupOpen((v) => !v)}
-                className="bg-brain-v1baby-blue-15 flex gap-[8px] h-[56px] items-center px-[16px] rounded-panel w-full hover:bg-[#2a3050] transition-colors"
+                className="bg-brain-v1baby-blue-15 flex gap-[8px] h-[56px] items-center px-[16px] rounded-panel w-full hover:bg-brain-v1baby-blue-15-hover transition-colors"
                 data-testid="btn-account-row-bank"
               >
                 <AccountIcon type="bank" />
@@ -659,7 +659,7 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep 
           <div className="relative">
             <button
               onClick={() => setPopupOpen((v) => !v)}
-              className="bg-brain-v1baby-blue-15 flex gap-[8px] h-[56px] items-center px-[16px] rounded-panel w-full hover:bg-[#2a3050] transition-colors"
+              className="bg-brain-v1baby-blue-15 flex gap-[8px] h-[56px] items-center px-[16px] rounded-panel w-full hover:bg-brain-v1baby-blue-15-hover transition-colors"
               data-testid="btn-account-row-agent"
             >
               <AccountIcon type="agent" />
