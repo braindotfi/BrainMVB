@@ -55,6 +55,27 @@ Tell for a real redesign: the successor exists and the capability is reachable
 another way. Classify each id on its own; a surface that was later deleted on
 purpose can still have dropped a capability the successor never picked up.
 
+### Find the commit that actually removed it
+
+Before restoring, run `git log -S'<test-id>' -- <file>` and read the result as a
+list of commits where the count *changed*, not a list of deletions. The commit
+that added it and the commit that removed it both appear.
+
+**Why:** a plausible superseding change can land the same day. Here a "one search
+bar over decisions, vendors and accounts" commit arrived hours from the sync
+merge that dropped an inbox search input, which reads exactly like deliberate
+consolidation — restoring would then have re-added a control someone had
+consciously removed. It had not: the consolidation commit never touched that
+file at all, and the removal came only from the sync merge.
+
+**How to apply:** confirm the id existed at the removing commit's parent
+(`git show <sha>^:<file>`), and check whether the suspected superseding commit
+touched the file (`git show <sha> --stat -- <file>`). An empty stat is the
+answer. When a real successor does exist, compare *jobs* rather than surfaces —
+a bar that searches across entities and navigates to a record does not do the
+job of a filter that narrows the list in place, so both can be correct; give
+them wording that tells the reader which one they want.
+
 ## Recovering it
 
 **Never `git revert` the squash.** It mixed the deletion with genuine work, so a
