@@ -11,6 +11,29 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The UI-removal guard diffs against the merge base, which a shallow
+          # clone does not contain.
+          fetch-depth: 0
+
+      # Fails a merge that silently deletes shipped UI. Removing UI stays
+      # allowed - it just has to be declared in scripts/ui-removals-allowed.txt.
+      #
+      # Runs BEFORE the install steps on purpose: it needs only git and the
+      # preinstalled node, so it still reports when npm ci is red on lockfile
+      # drift. A check that only runs on good days would have caught none of
+      # the removals that prompted it.
+      #
+      # The test -f guard exists because pull_request events run the workflow
+      # from the MERGE tree: branches cut before the script exists would fail
+      # with MODULE_NOT_FOUND wearing this step's name, which reads like the
+      # guard catching something. It self-skips there, and starts enforcing on
+      # every PR the moment the script lands on main.
+      - name: Check for silently removed UI
+        if: github.event_name == 'pull_request'
+        run: |
+          test -f scripts/check-removed-ui.mjs || { echo "guard script not on this branch yet - skipping"; exit 0; }
+          node scripts/check-removed-ui.mjs "origin/${{ github.base_ref }}"
 
       - uses: actions/setup-node@v4
         with:
