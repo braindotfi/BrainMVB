@@ -12,24 +12,26 @@ before it ships or is restored. Read the rules back over the wire and look at
 `execute` and the `when` clause. Do not verify it against the product's
 self-description, the onboarding copy, or a fixture.
 
-**Why:** the product's stated stance and its provisioned policy disagree. The
-stance is propose-only. The policy that ships with a fresh tenant carries an
-`execute:"auto"` rule for outbound payments below a five-figure amount to
-approved counterparties. Those payments run through Rules and never become a
-Decision, so any copy promising a human step is false for the most common
-payment path — and false in the direction that makes someone trust the system
-more than they should. A reviewer caught one such sentence; the live read was
-what settled it, because both sides of the argument sounded plausible from the
-code alone.
+**Why:** it is tempting to settle this from the policy document, and that is
+wrong in BOTH directions. A policy rule reading `execute: "auto"` -- and a live
+evaluate returning `outcome: allow` with `required_approvers: []` -- does NOT
+mean anything runs unattended: the payment intent was still created as
+`pending_approval` and still asked a human to approve. `allow` means "no extra
+confirmation required", not "no human involved". Reading the policy alone once
+led to deleting a true reassurance ("you decide") and replacing it with copy
+that advertised an automatic path nobody could demonstrate -- inventing a
+capability, which is the same failure as overpromising safety, just pointed the
+other way.
 
-**How to apply:** when writing, restoring, or reviewing copy on any screen that
-touches payment authority, fetch the approval policy for a signed-in session and
-enumerate the rules. If any payment-scoped rule has `execute:"auto"`, then:
+**How to apply:** do not verify from the policy document. **Exercise the path**
+on a live tenant and observe the record it produces: propose the action and read
+the resulting status and its approval evidence. Only a state you actually
+produced is evidence about behaviour. If you cannot produce the state your copy
+describes, the copy does not get to describe it.
 
-- "runs through Rules **and Decisions**" is false — the auto path skips Decisions
-- "you decide" / "nothing ships without you" is false
-- what remains true, and is usually the real question anyway, is the *capability*
-  boundary: granting data access is not granting spending authority
+What survives on policy evidence alone is the narrower *capability* boundary --
+granting data access is not granting spending authority -- which is usually the
+question being asked anyway.
 
 Prefer pointing the reader at the screen where the authority is visible over
 asserting what the authority does. A sentence that sends someone to look is
@@ -40,3 +42,21 @@ still true after the policy changes; a sentence that quotes the behaviour is not
 The Inbox footer still says "Brain proposes. You decide. A separate execution
 service settles." That predates this rule and is the same class of claim. If you
 are in that file for another reason, it needs the same treatment.
+
+
+## Statuses reached by two different paths
+
+A terminal status is not provenance. Here `approved` is reached both by a human
+approving and (allegedly) by policy clearing, so any UI that classifies on status
+alone will describe some human decisions as automatic. The distinguishing
+evidence is the approval record: a non-empty `approval_ids` means a person acted,
+whatever the status says.
+
+**Why:** one screen ended up showing two rows for the same payment -- "no human
+approval was required" beside "Approved by <name> after review". The false row is
+the one that reads like a system guarantee.
+
+**How to apply:** classify records by the evidence that distinguishes the paths,
+never by a status both paths share. If no record can be shown to reach the
+"automatic" state without a human, render that surface empty rather than letting
+it borrow human decisions to look populated.
