@@ -28,6 +28,7 @@ import { SourcesSection } from "@/components/settings/SourcesSection";
 import { DevelopersSection } from "@/components/settings/DevelopersSection";
 import { AuditLogSection } from "@/components/settings/AuditLogSection";
 import { useNav } from "@/lib/navContext";
+import { useBrainPolicy, autoApproveLimitFromPolicy, groupPolicyAmount } from "@/lib/brainPolicy";
 import SecurityFigma from "@/components/settings/figma/SecuritySection";
 import NotificationsFigma from "@/components/settings/figma/NotificationsSection";
 import TeamFigma from "@/components/settings/figma/TeamSection";
@@ -443,6 +444,13 @@ function ProfileSection() {
   const [currencyOpen, setCurrencyOpen] = useState(false);
   const currencyRef = useRef<HTMLDivElement>(null);
 
+  /* Auto-approve limit. This is a money-authorization figure, so the three
+     states below are kept apart on purpose: an unreachable policy must never
+     render as "no limit configured", which reads as "nothing is automated" and
+     is the most dangerous thing this row could get wrong. */
+  const policy = useBrainPolicy();
+  const autoLimit = autoApproveLimitFromPolicy(policy.facts);
+
   useEffect(() => {
     if (!currencyOpen) return;
     const handler = (e: MouseEvent) => {
@@ -644,6 +652,83 @@ function ProfileSection() {
             useCircleIcon
           />
         </div>
+      </div>
+
+      {/* Approvals — read from the live policy, and read-only.
+          Changing it needs `policy/compose` + `policy/sign`, scopes this app's
+          token does not hold, so there is no control here pretending otherwise. */}
+      <div className="flex flex-col gap-[4px]">
+        <SectionLabel>Approvals</SectionLabel>
+        <Card noBorder>
+          <SettingRow
+            icon={
+              <RowIcon>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M12 3.5l7 3v5c0 4.2-2.9 7.6-7 9-4.1-1.4-7-4.8-7-9v-5l7-3z" stroke="#a8b9f4" strokeWidth="1.5" strokeLinejoin="round" />
+                  <path d="M9 12l2.2 2.2L15.5 10" stroke="#a8b9f4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </RowIcon>
+            }
+            label="Auto-Approve Limit"
+            sublabel={
+              policy.isLoading
+                ? "Reading your approval policy…"
+                : policy.isError
+                  ? "Brain could not read your approval policy. This limit is unknown, not absent."
+                  : autoLimit === null
+                    ? "No approval policy is active on this tenant yet."
+                    : autoLimit.kind === "limit"
+                      ? "Payments at or below this run without waiting for a person."
+                      : autoLimit.kind === "conditional"
+                        ? "Automatic approval applies only under specific conditions, not a flat amount."
+                        : "Nothing runs automatically. Every payment waits for an approver."
+            }
+            testId="setting-row-auto-approve-limit"
+            right={
+              /* The error state keeps its own fill and stroke so "Unknown" cannot be
+                 mistaken for a real figure. Alpha values are spelled raw because
+                 Tailwind 3 cannot apply an alpha channel to a var() colour; both
+                 base colours are tokens (brain-v1light-orange). */
+              <div
+                className={`shrink-0 rounded-[8px] px-[12px] py-[8px] border border-solid ${
+                  policy.isError
+                    ? "bg-[rgba(255,149,0,0.1)] border-[rgba(255,149,0,0.3)]"
+                    : "bg-brain-v1baby-blue-15 border-transparent"
+                }`}
+                data-testid="text-auto-approve-limit"
+              >
+                <p
+                  className={`[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] whitespace-nowrap ${
+                    policy.isError
+                      ? "text-brain-v1light-orange"
+                      : policy.isLoading
+                        ? "text-brain-v1baby-blue-60"
+                        : "text-brain-v1white"
+                  }`}
+                >
+                  {policy.isLoading
+                    ? "Checking…"
+                    : policy.isError
+                      ? "Unknown"
+                      : autoLimit === null
+                        ? "No policy"
+                        : autoLimit.kind === "limit"
+                          ? `${groupPolicyAmount(autoLimit.value)} ${autoLimit.currency}`
+                          : autoLimit.kind === "conditional"
+                            ? "Conditional"
+                            : "None"}
+                </p>
+              </div>
+            }
+          />
+        </Card>
+        <p
+          className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[13px] leading-[18px] px-1"
+          data-testid="text-auto-approve-readonly"
+        >
+          Shown as your Brain policy has it. Editing an approval limit requires a signed
+          policy change, which cannot be made from this screen yet.
+        </p>
       </div>
 
       {/* Replay the first-run walkthrough. Clearing the flag and returning Home
