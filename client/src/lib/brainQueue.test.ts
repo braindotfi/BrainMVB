@@ -1,5 +1,52 @@
 import { describe, it, expect } from "vitest";
-import { selectMoneyPathIntentIds } from "./brainQueue";
+import { selectMoneyPathIntentIds, isAutoCleared, type BrainPaymentIntent } from "./brainQueue";
+
+/**
+ * Provenance of a cleared payment. These pin the fix for the bug where the
+ * Inbox told an operator a payment they had personally approved was "Approved
+ * automatically — no human approval was required", because `approved` is the
+ * terminal status of both the human and the automatic path.
+ */
+describe("isAutoCleared", () => {
+  const intent = (over: Partial<BrainPaymentIntent>): BrainPaymentIntent => ({
+    id: "pi_1",
+    action_type: "ach_outbound",
+    destination_counterparty_id: "cp_1",
+    amount: "19400.00000000",
+    currency: "USD",
+    status: "approved",
+    created_at: "2026-08-08T21:42:55.617Z",
+    approval_ids: [],
+    ...over,
+  });
+
+  it("treats a cleared intent with no approval record as automatic", () => {
+    expect(isAutoCleared(intent({ status: "approved", approval_ids: [] }))).toBe(true);
+    expect(isAutoCleared(intent({ status: "proposed", approval_ids: [] }))).toBe(true);
+  });
+
+  it("never calls a HUMAN-approved payment automatic (the reported bug)", () => {
+    // Reproduced live: propose -> policy allow -> pending_approval -> a person
+    // approves -> status "approved" WITH an appr_ record.
+    expect(isAutoCleared(intent({ status: "approved", approval_ids: ["appr_01KZHNA124"] }))).toBe(
+      false,
+    );
+  });
+
+  it("fails closed when the approval field is missing or not an array", () => {
+    // Absent evidence is unknown provenance, never proof that nobody approved.
+    expect(isAutoCleared(intent({ approval_ids: undefined }))).toBe(false);
+    expect(isAutoCleared(intent({ approval_ids: null }))).toBe(false);
+    expect(isAutoCleared(intent({ approval_ids: "appr_1" as unknown as string[] }))).toBe(false);
+  });
+
+  it("excludes statuses that are not a clearance", () => {
+    // core's real initial state for a proposed payment — it is awaiting a human.
+    expect(isAutoCleared(intent({ status: "pending_approval" }))).toBe(false);
+    expect(isAutoCleared(intent({ status: "executed" }))).toBe(false);
+    expect(isAutoCleared(intent({ status: "rejected" }))).toBe(false);
+  });
+});
 
 /**
  * The PaymentIntent queue's list source. brain-core has NO tenant-scoped

@@ -58,6 +58,43 @@ export interface BrainPaymentIntent {
    *  `created_by_agent_id` is null or the lookup misses (Brain_API_Specification.yaml
    *  GET /payment-intents/{id}). */
   agent?: { display_name: string } | null;
+  /** Approval records brain-core attached to this intent. A NON-EMPTY array is
+   *  positive evidence that a person approved it — the array holds real
+   *  `appr_…` ids and the approver's identity hangs off them. */
+  approval_ids?: string[] | null;
+}
+
+/**
+ * Did this payment clear WITHOUT a human — i.e. may it honestly be shown as
+ * "Approved automatically"?
+ *
+ * Status alone cannot answer this, and reading it that way shipped a real bug:
+ * `approved` is the terminal status of BOTH paths. A human approving an intent
+ * moves it to `approved` with a real `approval_ids: ["appr_…"]`, and the queue
+ * used to keep every `proposed | approved` intent, so the Inbox showed a
+ * payment a named person had just approved under "Approved automatically —
+ * no human approval was required", directly beside the audit row naming the
+ * approver. The distinguishing evidence is the approval record, not the status.
+ *
+ * Three-way, and it fails CLOSED:
+ *   - approval evidence present  → a person acted. Never automatic.
+ *   - approval evidence ABSENT   → unknown, not "nobody approved it". An older
+ *     core, a narrower projection or a dropped field must not be read as proof
+ *     of unattended clearing, so this is excluded too.
+ *   - an empty array on a cleared status → the only case that is real evidence
+ *     of no approval.
+ *
+ * The cost of excluding is nil: a human-approved payment still surfaces through
+ * the audit projection, which describes it truthfully. The cost of including
+ * wrongly is an audit trail that contradicts itself on a money-movement record.
+ */
+export function isAutoCleared(intent: BrainPaymentIntent): boolean {
+  // Statuses brain-core's mapper derives "auto" from (services/execution/src/
+  // actions/mapper.ts:17-19). "executed" is later and separate; "pending_approval"
+  // is core's real initial state for a proposed payment and is not a clearance.
+  if (intent.status !== "proposed" && intent.status !== "approved") return false;
+  if (!Array.isArray(intent.approval_ids)) return false;
+  return intent.approval_ids.length === 0;
 }
 
 interface CounterpartyLite {
@@ -166,9 +203,10 @@ export function useBrainAutoApproved() {
   const intents = details
     .map((q) => q.data)
     .filter((d): d is BrainPaymentIntent => d !== undefined)
-    // Only the statuses "auto" actually maps from — a detail fetch racing a
-    // status change (e.g. executed between the two calls) shouldn't show stale.
-    .filter((d) => d.status === "proposed" || d.status === "approved");
+    // Provenance, not status — see isAutoCleared. This also handles the stale
+    // case the old status check was aiming at (a detail fetch racing a status
+    // change), since anything that is not a clearance is excluded.
+    .filter(isAutoCleared);
 
   const nameOf = (id: string) => counterparties.data?.counterparties.find((c) => c.id === id)?.name ?? undefined;
 
