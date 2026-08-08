@@ -35,61 +35,23 @@ export function parseClockTime(t: string): number {
   return h * 60 + parseInt(m[2], 10);
 }
 
-/** Map an auto-handled proposal (an "Approved Automatically" receipt) onto an activity item. */
-export function autoHandledToActivity(p: Proposal): ActivityItemData {
-  const settled = p.rowSubtitle.match(/settled\s+(.+)$/i);
-  return {
-    id: p.id,
-    type: "paid",
-    title: `Paid ${p.counterparty ?? p.title}`,
-    meta1: "Approved automatically",
-    meta2: p.rule?.name ?? "your standing rule",
-    amount: `$${(p.amount ?? 0).toLocaleString()}`,
-    time: settled ? settled[1] : "Today",
-    linkTo: `/review?receipt=${p.id}`,
-    proposal: p,
-  };
-}
-
-/** Convert the same live auto-approved proposal used by Inbox into an Audit
- * record. Keeping this mapper beside the other cross-surface converters makes
- * Audit Log's Auto-Approved tab show the identical records without inventing a
- * second data source. */
-export function autoApprovedToAuditRecord(p: Proposal): AuditRecord {
-  const occurredAtMs = p.sourceCreatedAt ? Date.parse(p.sourceCreatedAt) : Number.NaN;
-  const occurredAtLabel = Number.isFinite(occurredAtMs)
-    ? new Date(occurredAtMs).toLocaleString("en-US", {
-        month: "short",
-        day: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: true,
-        timeZoneName: "short",
-      })
-    : "Unknown time";
-  return {
-    id: p.id,
-    eventType: "auto_approved",
-    summary: p.title,
-    counterparty: p.counterparty,
-    amount: p.amount,
-    actor: "system",
-    occurredAtLabel,
-    occurredAtMs: Number.isFinite(occurredAtMs) ? occurredAtMs : 0,
-    lifecycle: [
-      {
-        label: "Approved automatically by policy",
-        timestamp: occurredAtLabel,
-        kind: "ok",
-      },
-    ],
-    linked: [],
-    anchor: { status: "pending_next_batch", auditId: p.id },
-    proposalId: p.id,
-    invoiceId: p.invoiceId,
-    rowSubtitle: p.rowSubtitle,
-  };
-}
+/* REMOVED: autoHandledToActivity and autoApprovedToAuditRecord.
+ *
+ * Two converters that stamped `actor: "system"`, `eventType: "auto_approved"`
+ * and "Approved automatically by policy" onto any Proposal handed to them. They
+ * had no callers anywhere in the app.
+ *
+ * They are deleted rather than left dormant because they take an ALREADY-MAPPED
+ * Proposal, which no longer carries the approval record, so they cannot tell an
+ * automatic clearance from a human one — the mistake that put "no human
+ * approval was required" on a payment a named person had just approved. Wiring
+ * either of them into Activity or the Audit Log would reintroduce that claim on
+ * a new surface, and being dead code, no test would have caught it.
+ *
+ * If a surface needs auto-approved records, select them with isAutoCleared()
+ * in client/src/lib/brainQueue.ts, which classifies on the intent's approval
+ * evidence and fails closed when that evidence is missing.
+ */
 
 /** Map a client-side review-status override (executing / executed / rejected / postponed)
     into an activity item so the Activity page reflects user decisions made on
