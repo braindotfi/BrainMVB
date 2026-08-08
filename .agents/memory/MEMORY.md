@@ -22,7 +22,7 @@
 - [brain extract is async](brain-extract-async.md) — /raw/{id}/extract returns 202 "queued" with null parsed_id; re-POST is the idempotent poll; never record the first response as success.
 - [Agent proposal pipeline](agent-proposal-pipeline.md) — empty Needs Review is upstream: no tenant policy blocks propose/execute agents, and apar rebuild drops obligations; /v1/agents/proposals is a 404.
 - [brain-core API surface wiring](brain-api-surface-wiring.md) — api-surface artifact is sole truth; writes via WRITE_ROUTES allowlist; proxied READS reach the UI unnormalized, so client types lie.
-- [Replit git branch tracking](replit-git-branch-tracking.md) — auto-checkpoints push local main (and upstream-tracking branches) straight to origin/main, past required reviews; PR stays open while its content lands.
+- [Replit git branch tracking](replit-git-branch-tracking.md) — auto-checkpoints push to a branch's upstream AND author commits on the checked-out branch sweeping in unstaged files; diff against @{u} before every push.
 - [Git sync stale locks](git-sync-stale-locks.md) — generic Sync fatal errors can come from abandoned .git/*.lock files; remove only confirmed stale locks, never reset refs.
 - [Stacked PR rebases](stacked-pr-rebase.md) — squash merges hide the parent's commits: always `rebase --onto origin/main <parent's old tip>`, never plain rebase, and re-test after.
 - [CI red + armed auto-merge](ci-red-and-auto-merge.md) — npm ci fails on lock drift so every PR is red before tests run; fixing it squash-merges open PRs unreviewed (main unprotected).
