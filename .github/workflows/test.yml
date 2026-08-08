@@ -6,34 +6,37 @@ on:
   pull_request:
 
 jobs:
+  # Separate job so GitHub treats the guard as an independently required
+  # check-run. When this job is required in branch protection, a PR whose
+  # run was built from a cached merge commit (and therefore has no ui-guard
+  # job at all) is blocked with "Expected — Waiting", not silently green.
+  #
+  # The test -f guard exists because pull_request events run the workflow
+  # from the MERGE tree: branches cut before the script exists would fail
+  # with MODULE_NOT_FOUND wearing this step's name. It self-skips there
+  # (job conclusion = success), and starts enforcing the moment the script
+  # lands on main.
+  ui-guard:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Must be a full clone: the guard diffs HEAD against the merge
+          # base, which a shallow clone does not contain.
+          fetch-depth: 0
+
+      - name: Check for silently removed UI
+        run: |
+          test -f scripts/check-removed-ui.mjs || { echo "guard script not on this branch yet - skipping"; exit 0; }
+          node scripts/check-removed-ui.mjs "origin/${{ github.base_ref }}"
+
   vitest:
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          # The UI-removal guard diffs against the merge base, which a shallow
-          # clone does not contain.
-          fetch-depth: 0
-
-      # Fails a merge that silently deletes shipped UI. Removing UI stays
-      # allowed - it just has to be declared in scripts/ui-removals-allowed.txt.
-      #
-      # Runs BEFORE the install steps on purpose: it needs only git and the
-      # preinstalled node, so it still reports when npm ci is red on lockfile
-      # drift. A check that only runs on good days would have caught none of
-      # the removals that prompted it.
-      #
-      # The test -f guard exists because pull_request events run the workflow
-      # from the MERGE tree: branches cut before the script exists would fail
-      # with MODULE_NOT_FOUND wearing this step's name, which reads like the
-      # guard catching something. It self-skips there, and starts enforcing on
-      # every PR the moment the script lands on main.
-      - name: Check for silently removed UI
-        if: github.event_name == 'pull_request'
-        run: |
-          test -f scripts/check-removed-ui.mjs || { echo "guard script not on this branch yet - skipping"; exit 0; }
-          node scripts/check-removed-ui.mjs "origin/${{ github.base_ref }}"
 
       - uses: actions/setup-node@v4
         with:
