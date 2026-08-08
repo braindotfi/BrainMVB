@@ -22,10 +22,12 @@ the change can move money.
 **How this went wrong, because the mechanism matters more than the correction:**
 the bad rule was written into memory as though it were the owner's own words,
 and in a later session it was read back and cited to the owner as "your standing
-rule" — as authority for something they had never said. A memory note is not
-evidence. Anything recorded here as a *user decision* must be traceable to the
-user actually saying it; if it cannot be, it is an inference and must be labelled
-as one, or not written at all. Circumstantial confirmation is not confirmation
+rule" — as authority for something they had never said.
+
+**A memory note is not evidence.** Nothing in this directory may be presented as
+a decision unless it is traceable to Damon actually saying it. If it cannot be
+traced, it is an inference: label it as one, or do not write it. This applies to
+every note here, not just this one. Circumstantial confirmation is not confirmation
 either: a PR that merges with zero reviews may have been the owner making a
 one-off call, and reading that back as proof of a general policy is the same
 error a second time.
