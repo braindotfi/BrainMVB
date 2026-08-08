@@ -53,3 +53,29 @@ The `origin` remote carries no credentials and plain `git push` fails with
 "Password authentication is not supported". Push with an auth header built from the
 push token rather than embedding it in the remote URL, and redact it from any
 command output.
+
+## A CI step that calls a repo script breaks every PR older than the script
+
+For `pull_request` events GitHub resolves the workflow from the **merge tree**
+(head merged into base), so the YAML *and* every script it invokes must exist in
+that tree. Adding a step to the base branch while its script still sits on an
+unmerged branch fails every other open PR with `MODULE_NOT_FOUND`.
+
+**Why:** the failure impersonates the guard doing its job — a red check with the
+guard's own step name — when it actually means the guard is absent. With several
+PRs open at once that reads as "the new check found problems everywhere", and the
+natural response is to weaken or remove the check.
+
+**How to apply:** make the invocation self-skipping, so ordering stops mattering
+and it begins enforcing the moment the script lands:
+
+```yaml
+run: |
+  test -f scripts/<script>.mjs || { echo "not on this branch yet — skipping"; exit 0; }
+  node scripts/<script>.mjs "origin/${{ github.base_ref }}"
+```
+
+Steps that need git history (anything computing a merge-base) also need
+`fetch-depth: 0` on the checkout, and belong *before* the install steps when CI
+is red at dependency install — a guard that only runs after a passing `npm ci`
+reports nothing on exactly the branches that need it.
