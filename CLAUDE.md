@@ -1510,15 +1510,22 @@ follows the pairing table.**
 
 #### The second exemption: badge pills
 
-**A 12px badge pill keeps `leading-14`.** `RecordPill`, `StatusPill`, `TypeTag` and the role/method
-badges in Team and Developers are built as `2px padding + a 14px line + 2px padding + 1px borders` =
-**20px tall**. That 20px is not arbitrary: it is exactly the height of the 16/20 row title line the
-badge sits on, so a badge that grows drags the whole row stack up with it.
+**A 12px badge pill keeps `leading-14`.** A badge's height is its own vertical padding plus that
+14px line plus 1px borders, and **the padding differs by component** — do not assume one number:
 
-Re-leading them to 12/16 for pairing-table compliance makes them 22px, pushes the title line to 22,
-and takes every pill-bearing record row from 40px to **42px** — Overview, Inbox and the Ledger cash
-flow tab all at once. This is not hypothetical; the first pass did exactly that, to 22 sites across
-12 files.
+| Component | Padding | Height |
+| --- | --- | --- |
+| `RecordPill`, `TypeTag` | `py-[2px]` | 20px |
+| Team role/state, Developers status/method/layer | `py-[3px]` | 22px |
+| `StatusPill` | `py-[4px]` | 24px |
+
+Re-leading any of them to 12/16 adds 2px to whatever that height is.
+
+**The 20px case is the one with teeth.** 20px is exactly the height of the 16/20 row title line that
+`RecordPill` sits on, so growing it to 22px pushes the title line to 22 and takes every pill-bearing
+record row from 40px to **42px** — Overview, Inbox and the Ledger cash flow tab at once. The other
+badges are not in a row stack; they are simply pinned to their frames, and grow in place. All of
+them were 12/14 before the typography pass and all 22 are back.
 
 **What caught it matters more than the bug.** `tsc`, all 1126 unit tests and the design-token scan
 stayed green the entire time, because none of them can see a rendered box. Only
