@@ -45,3 +45,29 @@ that real drift would break (e.g. the per-employee banded rates must nearly expl
 remittance on their own, and no individual withholding may fall outside a believable
 percentage of gross). When a figure genuinely is solved backwards, say so in a comment and
 name the tautology you deliberately did not write.
+
+
+## A check must prove it can fail
+
+Before trusting a green run, ask what it would take for it to go red *on this
+data*. Two shapes recur, and both printed ALL CHECKS PASSED while asserting
+nothing:
+
+- a per-record loop that `continue`s when it cannot locate the record. The skip
+  path is silent, and it triggers exactly when the fix under test changes what
+  is on screen -- so the assertion dies at the moment it becomes relevant.
+- a population assertion on a dataset containing no instance of the thing being
+  guarded (`0 bad rows out of 0 candidates`).
+
+**Why:** a suite whose strongest assertion never executed is worse than no
+suite, because it is quoted as evidence. This bit twice in one sitting: once
+skipping past an unresolvable name, once nearly filing a bug from filter logic
+after checking a default tab that hid the record.
+
+**How to apply:** gate the run on a *witness* -- assert first that the data
+contains a record the OLD (buggy) rule would have gotten wrong, and only then
+assert the new behaviour. If no witness exists, say NOT PRODUCIBLE out loud
+instead of banking the tick. Never let a lookup miss turn into a skip: an
+unlocatable record is a failure or an explicit, reasoned exclusion, never a
+`continue`. And prefer a population count over a text-window "per-row" check
+that only looks rigorous -- a +/-200 character slice is not a row association.

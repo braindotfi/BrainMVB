@@ -36,7 +36,7 @@
 - [Proposal evidence refs](brain-proposal-evidence-refs.md) — refs come bare AND as `wiki:` URIs; wiki refs are context not subject; `pd_`/`evt_` never resolve; probe live, don't trust mocks.
 - [Assistant tier order](assistant-tier-order.md) — the local deterministic tier answers before core's wiki route, so core-side audit traces legitimately show zero wiki.question events.
 - [Assistant answer status](assistant-answer-status.md) — refusals arrive as HTTP 200 prose; non-chat surfaces must check answered AND wording, never cache one; evidence ≠ answer.
-- [Guarding generated fixtures](generated-fixture-guards.md) — generated PDF/XLSX can't be hash-pinned (random /ID, zip mtimes); read facts back via PDF /Keywords; avoid tautological asserts.
+- [Guarding generated fixtures](generated-fixture-guards.md) — can't hash-pin generated PDF/XLSX; and a check must prove it CAN fail: witness-gate it, never `continue` past a missing record.
 - [Proposal presentation contract](brain-proposal-presentation-contract.md) — doc's action table is aspirational: bind to available_decisions; policy_id null; core puts raw ids in prose; band ≠ pct.
 - [brain-core list caps & by-id](brain-list-endpoint-caps.md) — list reads cap silently (20 rows, no cursor) so bulk prefetch needs a by-id fallback; obligations by-id is 404; no email/reminder/message data exists.
 - [Proposal card design system](proposal-card-design-system.md) — card built only from shared primitives; display vs source currency for anything quoted to a third party; never round a shown value through Number().
