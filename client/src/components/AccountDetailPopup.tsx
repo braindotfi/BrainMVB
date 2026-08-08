@@ -159,7 +159,6 @@ export function AccountDetailPopup({
             </DialogPrimitive.Title>
             <DialogPrimitive.Close
               className="absolute right-[12px] top-[12px] size-[32px] p-0 hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
-              data-testid="button-close-account-popup"
             >
               <img src={closeIcon} alt="" className="size-[32px] rounded-full" />
             </DialogPrimitive.Close>
