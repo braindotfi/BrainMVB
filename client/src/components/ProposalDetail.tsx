@@ -3,6 +3,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import closeIcon from "@assets/Close_1783293571882.png";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { CardActions } from "@/components/ProposalCardParts";
+import { Button } from "@/components/ui/button";
 import { useCardTransition } from "@/lib/cardTransition";
 import {
   Receipt,
@@ -559,26 +560,26 @@ export function ProposalDetail({
           {onPrev && onNext && (
             <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-brain-v1stroke-2 border-solid border-t content-stretch flex flex-col items-start p-[24px] relative shrink-0 w-full">
               <div className="content-stretch flex gap-[16px] items-center relative shrink-0 w-full">
-                <button
-                  type="button"
+                <Button
+                  variant="secondary"
                   onClick={onPrev}
                   disabled={hasPrev === undefined ? pagerDisabled : !hasPrev}
                   data-testid="button-proposal-prev"
-                  className="flex-[1_0_0] flex items-center justify-center gap-[8px] min-w-px px-[20px] py-[8px] rounded-pill bg-brain-v1baby-blue-15 text-brain-v1baby-blue-60 hover:bg-brain-v1baby-blue-15-hover transition-colors disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-brain-v1baby-blue-15 focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
+                  className="flex-1 min-w-px"
                 >
                   <ArrowLeft size={16} className="shrink-0" />
-                  <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px]">Previous</span>
-                </button>
-                <button
-                  type="button"
+                  Previous
+                </Button>
+                <Button
+                  variant="secondary"
                   onClick={onNext}
                   disabled={hasNext === undefined ? pagerDisabled : !hasNext}
                   data-testid="button-proposal-next"
-                  className="flex-[1_0_0] flex items-center justify-center gap-[8px] min-w-px px-[20px] py-[8px] rounded-pill bg-brain-v1baby-blue-15 text-brain-v1baby-blue-60 hover:bg-brain-v1baby-blue-15-hover transition-colors disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-brain-v1baby-blue-15 focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
+                  className="flex-1 min-w-px"
                 >
-                  <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px]">Next</span>
+                  Next
                   <ArrowRight size={16} className="shrink-0" />
-                </button>
+                </Button>
               </div>
             </div>
           )}
@@ -828,46 +829,39 @@ function AutoHandledReceipt({
           </div>
         )}
         <div className="flex gap-[10px] items-stretch w-full">
-          <button
-            type="button"
+          <Button
+            variant="secondary"
             disabled={paused}
             onClick={() => onPauseRule?.(proposal)}
             data-testid="button-pause-rule"
-            className="flex flex-1 items-center justify-center gap-[8px] px-[12px] py-[10px] rounded-pill bg-brain-v1stroke-2 hover:bg-brain-v1stroke-2-hover transition-colors disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30"
+            className="flex-1 text-brain-v1baby-blue-100"
           >
             <PauseCircle size={16} className="text-brain-v1baby-blue-100 shrink-0" />
-            <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[14px] text-brain-v1baby-blue-100 whitespace-nowrap">
-              {paused ? "Rule paused" : "Pause this rule"}
-            </span>
-          </button>
-          <button
-            type="button"
+            {paused ? "Rule paused" : "Pause this rule"}
+          </Button>
+          <Button
+            variant="primary"
             disabled={!ruleResolves}
             onClick={() => onReviewRule?.(proposal)}
             data-testid="button-review-rule"
-            className="flex flex-1 items-center justify-center gap-[8px] px-[12px] py-[10px] rounded-pill bg-brain-v1dark-purple border border-[rgba(118,49,238,0.35)] hover:bg-brain-v1dark-purple-hover transition-colors disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
+            className="flex-1 border border-[rgba(118,49,238,0.35)]"
           >
             <SlidersHorizontal size={16} className="text-brain-v1purple shrink-0" />
-            <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[14px] text-brain-v1purple whitespace-nowrap">
-              Review rule
-            </span>
-          </button>
+            Review rule
+          </Button>
         </div>
 
         {/* Report a problem: the escape hatch. #D20344 is the ONLY red here. */}
         {reportStep === "idle" && (
-          <button
-            type="button"
+          <Button
+            variant="destructive"
             onClick={() => setReportStep("reason")}
             data-testid="button-report-problem"
-            className="flex w-full items-center justify-center gap-[8px] px-[16px] py-[12px] rounded-pill bg-brain-v1dark-pink-red hover:bg-brain-v1dark-pink-red-hover transition-colors focus:outline-none focus-visible:ring-2"
-            style={{ ["--tw-ring-color" as string]: ALERT }}
+            className="w-full"
           >
-            <Flag size={16} className="shrink-0" style={{ color: ALERT }} />
-            <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[14px]" style={{ color: ALERT }}>
-              Report a problem with this payment
-            </span>
-          </button>
+            <Flag size={16} className="shrink-0" />
+            Report a problem with this payment
+          </Button>
         )}
 
         {/* Step 1: capture a reason. Preset chips + optional free-text note. */}
@@ -907,24 +901,23 @@ function AutoHandledReceipt({
               className="w-full resize-none rounded-[8px] bg-brain-v1headerfooterbg border border-brain-v1stroke-2 px-[12px] py-[8px] [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-brain-v1baby-blue-100 placeholder:text-brain-v1baby-blue-30 focus:outline-none focus-visible:border-[rgba(210,3,68,0.5)]"
             />
             <div className="flex gap-[10px] items-stretch w-full">
-              <button
-                type="button"
+              <Button
+                variant="secondary"
                 onClick={() => { setReportStep("idle"); setPreset(""); setNote(""); }}
                 data-testid="button-report-cancel"
-                className="flex-1 px-[12px] py-[8px] rounded-pill bg-brain-v1stroke-2 hover:bg-brain-v1stroke-2-hover transition-colors flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-brain-v1baby-blue-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30"
+                className="flex-1 text-brain-v1baby-blue-100"
               >
                 Cancel
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                variant="destructive"
                 disabled={!reasonReady}
                 onClick={() => setReportStep("confirm")}
                 data-testid="button-report-continue"
-                className="flex-1 px-[12px] py-[8px] rounded-pill bg-brain-v1dark-pink-red hover:bg-brain-v1dark-pink-red-hover transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] focus:outline-none focus-visible:ring-2"
-                style={{ color: ALERT, ["--tw-ring-color" as string]: ALERT }}
+                className="flex-1"
               >
                 Continue
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -939,22 +932,22 @@ function AutoHandledReceipt({
               Pausing{rule ? ` "${titleCase(rule.name)}"` : " the rule"} stops it from auto-clearing new payments and flags similar pending items for your review, so one bad auto-approval can't silently repeat. Sending feedback only logs the report and leaves the rule running.
             </p>
             <div className="flex flex-col gap-[8px] w-full">
-              <button
-                type="button"
+              <Button
+                variant="cta"
                 onClick={() => { setDidPause(true); submit(true); }}
                 data-testid="button-report-pause-review"
-                className="flex w-full items-center justify-center gap-[8px] px-[16px] py-[11px] rounded-pill bg-brain-v1purple hover:bg-brain-v1purple-hover transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
+                className="w-full"
               >
                 Pause rule and review
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                variant="secondary"
                 onClick={() => submit(false)}
                 data-testid="button-report-feedback-only"
-                className="flex w-full items-center justify-center gap-[8px] px-[16px] py-[11px] rounded-pill bg-brain-v1stroke-2 hover:bg-brain-v1stroke-2-hover transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-brain-v1baby-blue-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30"
+                className="w-full text-brain-v1baby-blue-100"
               >
                 Just send feedback
-              </button>
+              </Button>
               <button
                 type="button"
                 onClick={() => setReportStep("reason")}
@@ -995,25 +988,18 @@ function ActionButton({
   variant: "approve" | "reject" | "postpone";
   testId: string;
 }) {
-  /* Per Figma: Reject = dark-red bg / alert-red text,
-     Postpone/Edit = neutral gray bg / muted text, Approve = dark-green bg / green text.
-     All: rounded-pill SemiBold 16px. */
-  const styles =
-    variant === "approve"
-      ? "bg-brain-v1dark-green hover:bg-brain-v1dark-green-hover focus-visible:ring-brain-v1green text-brain-v1green"
-      : variant === "reject"
-        ? "bg-brain-v1dark-pink-red hover:bg-brain-v1dark-pink-red-hover focus-visible:ring-brain-v1pink-red text-brain-v1pink-red"
-        : "bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-15-hover focus-visible:ring-brain-v1baby-blue-30 text-brain-v1baby-blue-60";
+  /* Per Figma: Reject = destructive, Postpone/Edit = neutral (secondary),
+     Approve = success. All render as the 40px action pill via the primitive. */
+  const buttonVariant =
+    variant === "approve" ? "success" : variant === "reject" ? "destructive" : "secondary";
   return (
-    <button
-      type="button"
+    <Button
+      variant={buttonVariant}
       onClick={onClick}
       data-testid={testId}
-      className={`flex flex-1 items-center justify-center px-[20px] py-[10px] rounded-pill transition-colors focus:outline-none focus-visible:ring-2 ${styles}`}
+      className="flex-1"
     >
-      <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[16px] whitespace-nowrap">
-        {label}
-      </span>
-    </button>
+      {label}
+    </Button>
   );
 }

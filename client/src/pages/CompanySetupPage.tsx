@@ -4,6 +4,7 @@ import { useLocation, useRoute } from "wouter";
 import { useAuth } from "@/lib/authContext";
 import { queryClient } from "@/lib/queryClient";
 import brainLogo from "@assets/BrainLogo_1781769246241.png";
+import { Button } from "@/components/ui/button";
 
 /* Production tenancy (Phase 2). Shown when the logged-in user has a platform account but
    no brain-core tenant membership (NoTenantError / linked:false). Membership must come
@@ -13,8 +14,6 @@ import brainLogo from "@assets/BrainLogo_1781769246241.png";
 
 const inputCls =
   "w-full h-[48px] px-4 rounded-2xl bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 focus:border-brain-v1purple outline-none transition-colors [font-family:'Gilroy',sans-serif] text-brain-v1white placeholder:text-brain-v1baby-blue-60 text-[16px] leading-[20px]";
-const primaryBtn =
-  "w-full h-[48px] rounded-2xl bg-brain-v1purple hover:bg-brain-v1purple-hover disabled:opacity-60 disabled:cursor-not-allowed transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-white text-[16px] leading-[20px] flex items-center justify-center gap-2";
 
 /** Pull a bare invite token out of a pasted link or raw token. */
 function extractInviteToken(raw: string): string {
@@ -210,10 +209,10 @@ export function CompanySetupPage() {
                   {error}
                 </p>
               )}
-              <button type="submit" disabled={busy} data-testid="button-create-company" className={primaryBtn}>
+              <Button type="submit" variant="cta" size="large" disabled={busy} data-testid="button-create-company" className="w-full">
                 {busy && <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
                 Create company
-              </button>
+              </Button>
               <p className="text-center text-brain-v1baby-blue-60 text-xs [font-family:'Gilroy',sans-serif]">
                 You'll be the company's first admin.
               </p>
@@ -242,10 +241,10 @@ export function CompanySetupPage() {
                   {error}
                 </p>
               )}
-              <button type="submit" disabled={busy} data-testid="button-join-company" className={primaryBtn}>
+              <Button type="submit" variant="cta" size="large" disabled={busy} data-testid="button-join-company" className="w-full">
                 {busy && <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
                 Join company
-              </button>
+              </Button>
             </form>
           )}
 

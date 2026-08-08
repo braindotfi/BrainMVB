@@ -30,6 +30,7 @@ import {
   trustTitleKind,
 } from "@/lib/brainVendors";
 import { openRuleDetail, resolveRule } from "@/lib/openRuleDetail";
+import { Button } from "@/components/ui/button";
 import closeIcon from "@assets/Close_1783293571882.png";
 import { AlertCallout, InfoIcon } from "@/components/Callout";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
@@ -102,28 +103,25 @@ function TrustButton({
   label,
   onClick,
   busy,
-  color,
-  background,
+  variant,
   testId,
 }: {
   label: string;
   onClick: () => void;
   busy?: boolean;
-  color: string;
-  background: string;
+  variant: "success" | "warning" | "secondary";
   testId: string;
 }) {
   return (
-    <button
-      type="button"
+    <Button
+      variant={variant}
+      className="w-full"
       disabled={busy}
       onClick={onClick}
       data-testid={testId}
-      className="flex items-center justify-center px-[20px] py-[10px] rounded-pill w-full disabled:opacity-60 disabled:cursor-not-allowed [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
-      style={{ background, color }}
     >
       {busy ? "Working..." : label}
-    </button>
+    </Button>
   );
 }
 
@@ -559,20 +557,18 @@ export function VendorDetailPopup({
                     label="Pause"
                     onClick={() => onPause?.(vendor.id)}
                     busy={trustBusy}
-                    color="#ff9500"
-                    background="#4a2300"
+                    variant="warning"
                     testId="button-pause-trust"
                   />
-                  <button
-                    type="button"
+                  <Button
+                    variant="destructive"
+                    className="w-full"
                     onClick={() => setConfirmingDelete(true)}
                     disabled={trustBusy}
-                    className="flex items-center justify-center px-[20px] py-[8px] rounded-pill hover:opacity-80 disabled:opacity-60 disabled:cursor-not-allowed transition-opacity [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-brain-v1baby-blue-60 w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
-                    style={{ background: "#350011", color: "#d20344" }}
                     data-testid="button-delete-vendor"
                   >
                     Delete {nounTitle}
-                  </button>
+                  </Button>
                 </div>
               )}
 
@@ -591,16 +587,14 @@ export function VendorDetailPopup({
                     label={grantLabel}
                     onClick={() => onGrant?.(vendor.id)}
                     busy={trustBusy}
-                    color="#42bf23"
-                    background="#123509"
+                    variant="success"
                     testId="button-grant-trust"
                   />
                   <TrustButton
                     label="Pause"
                     onClick={() => onPause?.(vendor.id)}
                     busy={trustBusy}
-                    color="#ff9500"
-                    background="#4a2300"
+                    variant="warning"
                     testId="button-pause-counterparty"
                   />
                 </div>
@@ -614,24 +608,21 @@ export function VendorDetailPopup({
                     label={grantLabel}
                     onClick={() => onGrant?.(vendor.id)}
                     busy={trustBusy}
-                    color="#42bf23"
-                    background="#123509"
+                    variant="success"
                     testId="button-grant-trust"
                   />
                   <TrustButton
                     label="Pause"
                     onClick={() => onPause?.(vendor.id)}
                     busy={trustBusy}
-                    color="#ff9500"
-                    background="#4a2300"
+                    variant="warning"
                     testId="button-pause-counterparty"
                   />
                   <TrustButton
                     label="No action"
                     onClick={() => onAcknowledge?.(vendor.id)}
                     busy={trustBusy}
-                    color="#6c779d"
-                    background="#1d2132"
+                    variant="secondary"
                     testId="button-acknowledge-counterparty"
                   />
                 </div>
@@ -653,16 +644,14 @@ export function VendorDetailPopup({
                       label={restoreLabel}
                       onClick={() => onRestore?.(vendor.id)}
                       busy={trustBusy}
-                      color="#42bf23"
-                      background="#123509"
+                    variant="success"
                       testId="button-restore-trust"
                     />
                     <TrustButton
                       label="No action"
                       onClick={() => onAcknowledge?.(vendor.id)}
                       busy={trustBusy}
-                      color="#6c779d"
-                      background="#1d2132"
+                    variant="secondary"
                       testId="button-acknowledge-counterparty"
                     />
                   </div>
@@ -675,16 +664,14 @@ export function VendorDetailPopup({
                       label={grantLabel}
                       onClick={() => onGrant?.(vendor.id)}
                       busy={trustBusy}
-                      color="#42bf23"
-                      background="#123509"
+                    variant="success"
                       testId="button-grant-trust"
                     />
                     <TrustButton
                       label="No action"
                       onClick={() => onAcknowledge?.(vendor.id)}
                       busy={trustBusy}
-                      color="#6c779d"
-                      background="#1d2132"
+                    variant="secondary"
                       testId="button-acknowledge-counterparty"
                     />
                   </div>
@@ -702,24 +689,21 @@ export function VendorDetailPopup({
                     label={grantLabel}
                     onClick={() => onGrant?.(vendor.id)}
                     busy={trustBusy}
-                    color="#42bf23"
-                    background="#123509"
+                    variant="success"
                     testId="button-grant-trust"
                   />
                   <TrustButton
                     label="Pause"
                     onClick={() => onPause?.(vendor.id)}
                     busy={trustBusy}
-                    color="#ff9500"
-                    background="#4a2300"
+                    variant="warning"
                     testId="button-pause-counterparty"
                   />
                   <TrustButton
                     label="No action"
                     onClick={() => onAcknowledge?.(vendor.id)}
                     busy={trustBusy}
-                    color="#6c779d"
-                    background="#1d2132"
+                    variant="secondary"
                     testId="button-acknowledge-counterparty"
                   />
                 </div>
@@ -732,30 +716,26 @@ export function VendorDetailPopup({
           {(onPrev || onNext) && (
             <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-t border-brain-v1stroke-2 border-solid flex flex-col items-start p-[24px] relative shrink-0 w-full">
               <div className="flex gap-[16px] items-center w-full">
-                <button
-                  type="button"
+                <Button
+                  variant="secondary"
+                  className="flex-1"
                   disabled={pagerDisabled || !onPrev}
                   data-testid="button-vendor-previous"
                   onClick={onPrev}
-                  className="bg-brain-v1baby-blue-15 flex flex-1 gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-pill disabled:opacity-60 disabled:cursor-not-allowed transition-opacity"
                 >
-                  <ChevronLeft size={16} className="text-brain-v1baby-blue-60 shrink-0" />
-                  <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[16px] whitespace-nowrap">
-                    Previous
-                  </span>
-                </button>
-                <button
-                  type="button"
+                  <ChevronLeft className="text-brain-v1baby-blue-60" />
+                  <span className="whitespace-nowrap">Previous</span>
+                </Button>
+                <Button
+                  variant="secondary"
+                  className="flex-1"
                   disabled={pagerDisabled || !onNext}
                   data-testid="button-vendor-next"
                   onClick={onNext}
-                  className="bg-brain-v1baby-blue-15 flex flex-1 gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-pill disabled:opacity-60 disabled:cursor-not-allowed transition-opacity"
                 >
-                  <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[16px] whitespace-nowrap">
-                    Next
-                  </span>
-                  <ChevronRight size={16} className="text-brain-v1baby-blue-60 shrink-0" />
-                </button>
+                  <span className="whitespace-nowrap">Next</span>
+                  <ChevronRight className="text-brain-v1baby-blue-60" />
+                </Button>
               </div>
             </div>
           )}

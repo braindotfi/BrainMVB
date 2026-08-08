@@ -1240,6 +1240,76 @@ className="bg-[var(--action-bg)] hover:bg-brain-v1dark-pink-red-hover transition
 
 `ProposalCardParts.ActionButton` and `DevelopersSection.PillButton` both use this pattern.
 
+## Buttons — reach for the primitive, not a `<button>`
+
+`client/src/components/ui/button.tsx` is the button. A hand-rolled `<button>` is now the
+exception and needs a reason from the list at the bottom of this section.
+
+### Two families, and only one of them is solid
+
+Every intent is **tonal** — a dark tinted fill carrying bright tinted text — except `cta`,
+which is the single solid treatment.
+
+| variant | fill → text | use |
+|---|---|---|
+| `cta` | `purple` → `white` | the ONE highest-emphasis action on a screen. Two `cta`s means one is wrong. |
+| `primary` | `dark-purple` → `purple` | the main action where a solid CTA would shout |
+| `secondary` | `baby-blue-15` → `baby-blue-60` | the workhorse |
+| `subtle` | `baby-blue-5` → `baby-blue-60` | the receding half of a pair — Dismiss beside Accept |
+| `destructive` | `dark-pink-red` → `pink-red` | delete, revoke, sign out everywhere |
+| `success` | `dark-green` → `green` | confirm, grant, resume |
+| `warning` | `dark-orange` → `light-orange` | the app's default "go ahead" accent |
+| `ghost` | none → `baby-blue-60` | actions that must not read as a control until hovered |
+
+`outline` and the `default` alias exist only for the vendored shadcn files in `ui/`.
+
+`stroke-2` (`#1d2132`) is **not** a button fill. It sits 5 units from `baby-blue-15`
+(`#222737`), which no eye resolves — text buttons that used it are now `secondary`.
+
+### Size is padding plus the line box
+
+| size | height | how | type |
+|---|---|---|---|
+| `compact` | 32px | `py-6 px-12` | 14/20 |
+| `default` | 40px | `py-10 px-20` | 14/20 |
+| `large` | 48px | `h-48 px-24` | 16/24 |
+| `icon` / `iconCompact` | 40 / 32px square | — | — |
+
+**36px is retired.** It and 40px were the same action pill rendered two ways; keeping both
+would re-encode the drift under nicer names. 40px also matches the 40px record-row stack.
+
+**Never put `text-[Npx]` or `leading-[Npx]` on a `<Button>`.** The size owns typography, and
+this is what keeps buttons on the type scale: 16px is reserved for controls ≥44px tall, so
+`large` is the only 16px button. **There is no 18px button tier** — the seven that existed
+were all 48px controls and are now `large`.
+
+Because the line box is 20px at both 14px and 16px, correcting a button's type does **not**
+move its box. Type and height are independent decisions here.
+
+### Layout is not a variant
+
+A modal footer pair that fills its row is the same 40px button with `className="flex-1"`.
+Widths, margins and positioning all go through `className`. The three separate modal
+confirm/cancel geometries (45px fixed, 40px `flex-1`, 36px `flex-1`) are one size now.
+
+### What the primitive already gives you
+
+`rounded-pill`, `font-semibold`, Gilroy, `transition-colors`, an 8px icon gap with 16px
+icons, `focus-visible:ring-2 ring-brain-v1purple` (the app's convention — not shadcn's
+`ring-1 ring-ring`), and the one disabled treatment. Delete all of those from call sites.
+
+It also defaults to `type="button"`. A `<button>` inside a `<form>` defaults to *submit*, so
+when migrating one that relied on that, pass `type="submit"` explicitly.
+
+### Still legitimately hand-rolled
+
+Clickable list/table **rows** and selection cards, tabs, filter chips, toggles and segmented
+controls, dropdown/listbox items, text links with no fill, brand-coloured buttons (Google,
+X, Telegram, WhatsApp, the wallet gradient), and icon-only squares that are not exactly 32
+or 40px or whose glyph is not 16px — `[&_svg]:size-4` would resize the artwork.
+
+Forcing a row onto a button primitive makes the row worse. That is the test.
+
 ## Design tokens are the standard — raw hex in a class string is a bug
 
 `client/src/index.css` defines the colour and radius variables; `tailwind.config.ts` maps each one

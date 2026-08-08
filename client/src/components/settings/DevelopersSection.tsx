@@ -27,6 +27,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAppAlert } from "@/components/AppAlert";
 import { usePlanId, PLAN_RATE_LIMITS } from "@/lib/planStore";
 import { AlertCallout, PolicyCallout } from "@/components/Callout";
+import { Button } from "@/components/ui/button";
 import stepOneIcon from "@assets/1_1785602525964.png";
 import stepTwoIcon from "@assets/2_1785602525965.png";
 import stepThreeIcon from "@assets/3_1785602525965.png";
@@ -175,22 +176,16 @@ const PillButton = ({ children, onClick, tone = "purple", disabled, testId }: {
   disabled?: boolean;
   testId?: string;
 }) => {
-  const styles = {
-    purple: { background: "#240757", color: "#a8b9f4" },
-    neutral: { background: "#222737", color: "#6c779d" },
-    danger: { background: "#350011", color: "#d20344" },
-  }[tone];
+  const variant = tone === "purple" ? "primary" : tone === "danger" ? "destructive" : "secondary";
   return (
-    <button
-      type="button"
+    <Button
+      variant={variant}
       data-testid={testId}
       onClick={onClick}
       disabled={disabled}
-      className={`rounded-full px-4 py-2 bg-[var(--tone-bg)] ${tone === "danger" ? "transition-colors hover:bg-brain-v1dark-pink-red-hover" : "transition-opacity hover:opacity-80"} disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] whitespace-nowrap`}
-      style={{ ["--tone-bg" as string]: styles.background, color: styles.color }}
     >
       {children}
-    </button>
+    </Button>
   );
 };
 
@@ -326,7 +321,7 @@ const PopupShell = ({ title, onClose, children, footer, testId }: {
             data-testid="button-close-popup"
             onClick={onClose}
             aria-label="Close"
-            className="absolute right-[11px] top-[11px] size-[32px] rounded-full bg-brain-v1baby-blue-15 flex items-center justify-center hover:bg-brain-v1baby-blue-15-hover transition-colors text-brain-v1baby-blue-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
+            className="absolute right-[11px] top-[11px] size-[32px] rounded-pill bg-brain-v1baby-blue-15 flex items-center justify-center hover:bg-brain-v1baby-blue-15-hover transition-colors text-brain-v1baby-blue-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
               <path d="M2 2L10 10M10 2L2 10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
@@ -389,7 +384,7 @@ const PlaintextKeyModal = ({ plaintext, onClose }: { plaintext: string; onClose:
             data-testid="button-close-popup"
             onClick={onClose}
             aria-label="Close"
-            className="absolute right-[11px] top-[11px] size-[32px] rounded-full bg-brain-v1baby-blue-15 flex items-center justify-center hover:bg-brain-v1baby-blue-15-hover transition-colors text-brain-v1baby-blue-60 focus:outline-none"
+            className="absolute right-[11px] top-[11px] size-[32px] rounded-pill bg-brain-v1baby-blue-15 flex items-center justify-center hover:bg-brain-v1baby-blue-15-hover transition-colors text-brain-v1baby-blue-60 focus:outline-none"
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
               <path d="M2 2L10 10M10 2L2 10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
@@ -416,16 +411,16 @@ const PlaintextKeyModal = ({ plaintext, onClose }: { plaintext: string; onClose:
         {/* ── Footer row 1: Copy Key ── */}
         <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-t border-brain-v1stroke-2 border-solid flex flex-col items-start p-[24px] relative shrink-0 w-full">
           <div className="flex items-center relative shrink-0 w-full">
-            <button
-              type="button"
+            <Button
+              variant="primary"
               data-testid="button-copy-key"
               onClick={async () => {
                 try { await navigator.clipboard.writeText(plaintext); setCopied(true); } catch { /* clipboard unavailable */ }
               }}
-              className="bg-brain-v1dark-purple hover:bg-brain-v1dark-purple-hover transition-colors flex flex-[1_0_0] items-center justify-center min-w-px px-[20px] py-[10px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1purple text-[14px] leading-[20px] whitespace-nowrap focus:outline-none"
+              className="flex-1 min-w-px"
             >
               {copied ? "Copied!" : "Copy Key"}
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -491,7 +486,7 @@ const DetailModal = ({ title, badges, onClose, children, footer, testId }: {
             data-testid="button-close-detail-modal"
             onClick={onClose}
             aria-label="Close"
-            className="flex-shrink-0 size-[28px] rounded-full flex items-center justify-center hover:bg-brain-v1stroke-2 transition-colors text-brain-v1baby-blue-60"
+            className="flex-shrink-0 size-[28px] rounded-pill flex items-center justify-center hover:bg-brain-v1stroke-2 transition-colors text-brain-v1baby-blue-60"
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
               <path d="M2 2L10 10M10 2L2 10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
@@ -802,8 +797,8 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
             {/* ── Footer row 1: View this event on the Inbox timeline ── */}
             <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-t border-brain-v1stroke-2 border-solid flex flex-col items-start p-[24px] relative shrink-0 w-full">
               <div className="flex items-center relative shrink-0 w-full">
-                <button
-                  type="button"
+                <Button
+                  variant="warning"
                   data-testid="button-open-audit-log"
                   onClick={() => {
                     /* The old /audit-log page is retired — settled history lives on the
@@ -813,10 +808,10 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
                     setSelectedEvent(null);
                     navigate(`/inbox?record=${encodeURIComponent(eventId)}`);
                   }}
-                  className="bg-brain-v1dark-orange flex flex-[1_0_0] items-center justify-center min-w-px px-[20px] py-[10px] relative rounded-pill [font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1light-orange text-[14px] whitespace-nowrap hover:opacity-90 transition-colors"
+                  className="flex-1 min-w-px"
                 >
                   View In Inbox
-                </button>
+                </Button>
               </div>
             </div>
 
@@ -927,27 +922,27 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
                   )}
                 </div>
                 {i === 0 && (
-                  <button
-                    type="button"
+                  <Button
+                    variant="primary"
+                    size="compact"
                     data-testid="button-overview-add-tenant"
                     onClick={() => onNavigate("tenants")}
-                    className="bg-brain-v1dark-purple flex gap-[2px] items-center justify-center px-[14px] py-[6px] rounded-pill shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1purple text-[12px] whitespace-nowrap hover:bg-brain-v1dark-purple-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
                   >
                     <Plus className="relative shrink-0 size-[16px] text-brain-v1purple" />
                     Add Tenant
-                  </button>
+                  </Button>
                 )}
                 {i === 1 && (
-                  <button
-                    type="button"
+                  <Button
+                    variant="primary"
+                    size="compact"
                     data-testid="button-overview-create-key"
                     onClick={() => onNavigate("keys")}
                     disabled={!hasTenant}
-                    className="bg-brain-v1dark-purple flex gap-[2px] items-center justify-center px-[14px] py-[6px] rounded-pill shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1purple text-[12px] whitespace-nowrap hover:bg-brain-v1dark-purple-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     <Plus className="relative shrink-0 size-[16px] text-brain-v1purple" />
                     Create Key
-                  </button>
+                  </Button>
                 )}
               </div>
             </div>
@@ -1217,8 +1212,9 @@ function KeysSection({ env }: { env: DevEnv }) {
       <div className="flex flex-col gap-[4px] shrink-0">
         <div className="flex min-h-[36px] items-center justify-between gap-4">
           <SectionLabel testId="text-page-title">{env === "live" ? "Live Keys" : "Sandbox Keys"}</SectionLabel>
-          <button
-            type="button"
+          <Button
+            variant="primary"
+            size="compact"
             data-testid="button-new-key"
               onClick={() => {
                 if (env === "live" && !liveAvailable) {
@@ -1227,11 +1223,10 @@ function KeysSection({ env }: { env: DevEnv }) {
                 }
                 setShowCreate(true);
               }}
-              className="bg-brain-v1dark-purple flex gap-[2px] items-center justify-center px-[14px] py-[6px] rounded-pill shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1purple text-[12px] whitespace-nowrap hover:bg-brain-v1dark-purple-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
             >
               <Plus className="relative shrink-0 size-[16px] text-brain-v1purple" />
               Create Key
-            </button>
+            </Button>
         </div>
 
         {env === "live" && !liveAvailable && (
@@ -1247,14 +1242,15 @@ function KeysSection({ env }: { env: DevEnv }) {
                     : "This workspace runs in demo mode: your tenant is provisioned fresh per session, so live keys can't be issued. Live key issuance unlocks when the platform runs in production tenancy mode."}
               </p>
             </div>
-            <button
-              type="button"
+            <Button
+              variant="secondary"
+              size="compact"
               data-testid="button-request-live-access"
               onClick={() => alert.success("Request noted", "Live access is enabled when your workspace has a production tenant.")}
-              className="bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-15-hover transition-colors flex items-center justify-center px-[12px] py-[8px] rounded-pill self-start [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-60 text-[12px] leading-[16px] whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
+              className="self-start"
             >
               Request Access
-            </button>
+            </Button>
           </div>
         </Card>
       )}
@@ -1265,15 +1261,15 @@ function KeysSection({ env }: { env: DevEnv }) {
           onClose={() => setShowCreate(false)}
           testId="modal-create-key"
           footer={
-            <button
-              type="button"
+            <Button
+              variant="warning"
               data-testid="button-create-key"
               onClick={() => createMut.mutate()}
               disabled={createMut.isPending || name.trim().length === 0 || scopes.length === 0}
-              className="w-full bg-brain-v1dark-orange hover:bg-brain-v1dark-orange-hover transition-colors flex items-center justify-center px-[20px] py-[10px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1light-orange text-[14px] leading-[20px] focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full"
             >
               {createMut.isPending ? "Creating…" : "Create Key"}
-            </button>
+            </Button>
           }
         >
           <PopupSection label="Key Name">
@@ -1574,14 +1570,14 @@ function TenantsSection({ env, onNavigate }: { env: DevEnv; onNavigate: (s: DevS
             {/* ── Footer row 1: View API Keys ── */}
             <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-t border-brain-v1stroke-2 border-solid flex flex-col items-start p-[24px] relative shrink-0 w-full">
               <div className="flex items-center relative shrink-0 w-full">
-                <button
-                  type="button"
+                <Button
+                  variant="warning"
                   data-testid="button-tenant-view-keys"
                   onClick={() => { setSelectedTenantId(null); onNavigate("keys"); }}
-                  className="bg-brain-v1dark-orange flex flex-[1_0_0] items-center justify-center min-w-px px-[20px] py-[10px] relative rounded-pill [font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1light-orange text-[14px] whitespace-nowrap hover:opacity-90 transition-colors"
+                  className="flex-1 min-w-px"
                 >
                   View API Keys
-                </button>
+                </Button>
               </div>
             </div>
             {/* ── Footer row 2: Previous / Next ── */}
@@ -1620,8 +1616,9 @@ function TenantsSection({ env, onNavigate }: { env: DevEnv; onNavigate: (s: DevS
       <div className="flex min-h-[36px] items-center justify-between gap-4">
         <SectionLabel testId="text-page-title">Tenants</SectionLabel>
         {(
-          <button
-            type="button"
+          <Button
+            variant="primary"
+            size="compact"
             data-testid="button-create-tenant"
             onClick={() => {
               if (data?.canCreate) {
@@ -1645,11 +1642,10 @@ function TenantsSection({ env, onNavigate }: { env: DevEnv; onNavigate: (s: DevS
                 );
               }
             }}
-            className="bg-brain-v1dark-purple flex gap-[2px] items-center justify-center px-[14px] py-[6px] rounded-pill shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1purple text-[12px] whitespace-nowrap hover:bg-brain-v1dark-purple-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
           >
             {!showCreate && <Plus className="relative shrink-0 size-[16px] text-brain-v1purple" />}
             {showCreate ? "Cancel" : "Create Tenant"}
-          </button>
+          </Button>
         )}
       </div>
 

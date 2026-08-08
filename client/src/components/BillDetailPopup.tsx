@@ -13,6 +13,7 @@ import {
   daysToDue,
   dueChip,
 } from "@/components/detailPopup";
+import { Button } from "@/components/ui/button";
 import { useCurrency } from "@/lib/useCurrency";
 import { useIntents } from "@/lib/intentsStore";
 import { toBrainInvoiceDocument } from "@/lib/brainInvoiceDocument";
@@ -198,30 +199,26 @@ export function BillDetailPopup({
             {!hidePager && (
               <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-t border-brain-v1stroke-2 border-solid flex flex-col items-start p-[24px] relative shrink-0 w-full">
                 <div className="flex gap-[16px] items-center w-full">
-                  <button
-                    type="button"
+                  <Button
+                    variant="secondary"
+                    className="flex-1"
                     disabled={!prevBill}
                     data-testid="button-bill-previous"
                     onClick={() => prevBill && onSelectBill?.(prevBill)}
-                    className="bg-brain-v1baby-blue-15 flex flex-1 gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-pill disabled:opacity-60 disabled:cursor-not-allowed transition-opacity"
                   >
                     <img src={arrowIcon} alt="" className="size-[16px] rotate-180" />
-                    <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[16px] whitespace-nowrap">
-                      Previous
-                    </span>
-                  </button>
-                  <button
-                    type="button"
+                    <span className="whitespace-nowrap">Previous</span>
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    className="flex-1"
                     disabled={!nextBill}
                     data-testid="button-bill-next"
                     onClick={() => nextBill && onSelectBill?.(nextBill)}
-                    className="bg-brain-v1baby-blue-15 flex flex-1 gap-[8px] items-center justify-center px-[20px] py-[8px] rounded-pill disabled:opacity-60 disabled:cursor-not-allowed transition-opacity"
                   >
-                    <span className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[16px] whitespace-nowrap">
-                      Next
-                    </span>
+                    <span className="whitespace-nowrap">Next</span>
                     <img src={arrowIcon} alt="" className="size-[16px]" />
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}

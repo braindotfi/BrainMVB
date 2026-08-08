@@ -15,6 +15,7 @@ import closeIcon from "@assets/Close_1783293571882.png";
 import memberIcon from "@assets/member_1783635675512.png";
 import arrowButton from "@assets/Button_1783635877872.png";
 import { AlertCallout, MutedCallout } from "@/components/Callout";
+import { Button } from "@/components/ui/button";
 import {
   ROLE_LABELS,
   envelopeLine,
@@ -158,25 +159,24 @@ function MemberRow({ member, inviteActions }: { member: BrainMember; inviteActio
       <div className="flex flex-wrap gap-[8px] items-center pl-[48px]">
         {invited && inviteActions && (
           <>
-            <button
-              type="button"
+            <Button
+              variant="primary"
+              size="compact"
               disabled={busy !== null}
               onClick={() => inviteCall("resend")}
               data-testid={`button-resend-invite-${member.id}`}
-              className="rounded-pill bg-brain-v1dark-purple px-[12px] py-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1purple text-[12px] leading-[16px] hover:bg-brain-v1dark-purple-hover transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center"
             >
               {busy === "resend" ? "Resending…" : "Resend Invite"}
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              variant="destructive"
+              size="compact"
               disabled={busy !== null}
               onClick={() => inviteCall("revoke")}
               data-testid={`button-revoke-invite-${member.id}`}
-              className="rounded-pill px-[12px] py-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center"
-              style={{ background: "rgba(210,3,68,0.08)", color: "#d20344", border: "1px solid rgba(210,3,68,0.3)" }}
             >
               {busy === "revoke" ? "Revoking…" : "Revoke Invite"}
-            </button>
+            </Button>
           </>
         )}
         {/* UI-only mark; the label below the list says so once for the whole card. */}
@@ -422,15 +422,15 @@ function AddMemberDialog({ open, onClose, production }: { open: boolean; onClose
               <AlertCallout testId="text-add-member-error">{error}</AlertCallout>
             )}
 
-            <button
-              type="button"
+            <Button
+              variant="warning"
               onClick={submit}
               disabled={busy}
               data-testid="button-submit-member"
-              className="w-full bg-brain-v1dark-orange hover:bg-brain-v1dark-orange-hover transition-colors flex items-center justify-center px-[20px] py-[10px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1light-orange text-[14px] leading-[20px] disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full"
             >
               {busy ? "Adding…" : "Add Member"}
-            </button>
+            </Button>
           </div>
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
@@ -493,15 +493,15 @@ export default function TeamSection() {
         </div>
       </div>
 
-      <button
-        type="button"
+      <Button
+        variant="primary"
         onClick={() => setAddOpen(true)}
         data-testid="button-add-member"
-        className="self-start rounded-pill bg-brain-v1dark-purple px-[14px] py-[8px] [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1purple text-[14px] leading-[20px] hover:bg-brain-v1dark-purple-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple flex items-center justify-center gap-[2px]"
+        className="self-start"
       >
         <Plus className="relative shrink-0 size-[16px] text-brain-v1purple" />
         {production ? "Invite Member" : "Add Member"}
-      </button>
+      </Button>
 
       {/* Escalation — shown for shape, inert in substance.
           Two reasons it cannot be wired: there is no scheduler or notification

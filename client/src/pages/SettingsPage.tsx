@@ -36,6 +36,7 @@ import LegalFigma from "@/components/settings/figma/LegalSection";
 import AccountFigma from "@/components/settings/figma/AccountSection";
 import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
 import { Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 /* ─── Section type ───────────────────────────────────────── */
 type Section =
@@ -541,7 +542,9 @@ function ProfileSection() {
           </div>
 
           {/* Edit button, Figma 3695:40062: amber pill #4a2300 / #ff9500 */}
-          <button
+          <Button
+            variant="warning"
+            className="flex-shrink-0"
             data-testid="button-edit-profile"
             onClick={() => {
               if (editing) {
@@ -550,7 +553,6 @@ function ProfileSection() {
               }
               setEditing(v => !v);
             }}
-            className="bg-brain-v1dark-orange flex gap-[8px] items-center justify-center px-[14px] py-[8px] rounded-pill hover:opacity-90 transition-opacity flex-shrink-0"
           >
             <div className="overflow-clip relative shrink-0 size-[16px]">
               <div className="absolute inset-[13.87%_13.87%_12.5%_12.5%]">
@@ -564,10 +566,10 @@ function ProfileSection() {
                 </div>
               </div>
             </div>
-            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1light-orange text-[14px] leading-[20px] whitespace-nowrap">
+            <span className="[font-family:'Gilroy',sans-serif] font-semibold whitespace-nowrap">
               {editing ? "Save" : "Edit"}
             </span>
-          </button>
+          </Button>
         </div>
       </Card>
 
@@ -759,17 +761,17 @@ function ProfileSection() {
             sublabel="How your rules decide what runs automatically, and what always waits for you."
             testId="setting-row-replay-onboarding"
             right={
-              <button
-                type="button"
+              <Button
+                variant="secondary"
+                className="text-brain-v1baby-blue-100"
                 data-testid="button-replay-onboarding"
                 onClick={() => {
                   clearOnboarding(user?.id);
                   navigate("/");
                 }}
-                className="shrink-0 rounded-pill px-[14px] py-[8px] bg-brain-v1baby-blue-15 hover:bg-brain-v1baby-blue-15-hover transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-brain-v1baby-blue-100 whitespace-nowrap"
               >
                 Replay
-              </button>
+              </Button>
             }
           />
         </Card>
@@ -850,15 +852,13 @@ function BillingSection() {
               )}
             </div>
             <div className="flex flex-col items-end gap-2 flex-shrink-0">
-              <button
-                type="button"
+              <Button
+                variant="primary"
                 data-testid="button-upgrade-plan"
                 onClick={() => setChangePlanOpen(true)}
-                className="rounded-pill px-[14px] py-[8px] hover-elevate"
-                style={{ background: "#240757", color: "#7631ee", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "14px", lineHeight: "20px", whiteSpace: "nowrap" }}
               >
-                  {plan ? "Change Plan" : "Choose A Plan"}
-              </button>
+                {plan ? "Change Plan" : "Choose A Plan"}
+              </Button>
               {plan && !cancelled && (
                 <button
                   type="button"
@@ -917,16 +917,15 @@ function BillingSection() {
                 )}
               </div>
             </div>
-            <button
-              type="button"
+            <Button
+              variant="primary"
+              className="flex-shrink-0"
               data-testid="button-update-card"
               onClick={() => setUpdateCardOpen(true)}
-              className="rounded-pill px-[14px] py-[8px] hover-elevate flex-shrink-0 flex items-center justify-center gap-[2px]"
-              style={{ background: "#240757", color: "#7631ee", fontFamily: "'Gilroy', sans-serif", fontWeight: 600, fontSize: "14px", lineHeight: "20px", whiteSpace: "nowrap" }}
             >
-              {!cardLast4 && <Plus className="relative shrink-0 size-[16px] text-brain-v1purple" />}
+              {!cardLast4 && <Plus className="relative shrink-0 size-[16px]" />}
               {cardLast4 ? "Update Card" : "Add Card"}
-            </button>
+            </Button>
           </div>
         </Card>
       </div>

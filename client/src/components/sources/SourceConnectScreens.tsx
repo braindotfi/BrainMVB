@@ -22,6 +22,7 @@ import paymentsIcon from "@assets/payments_1783619257499.png";
 import docsIcon from "@assets/docs_1783621224017.png";
 import { AlertCallout, MutedCallout, InfoIcon } from "@/components/Callout";
 import { useAuth } from "@/lib/authContext";
+import { Button } from "@/components/ui/button";
 
 /* ──────────────────────────────────────────────────────────────────────────
  *  Source connect screens - the mechanisms for attaching a data source to Brain.
@@ -236,23 +237,23 @@ function PlaidConnectButton({
 
   return (
     <div className="flex flex-col gap-[8px]">
-      <button
-        type="button"
+      <Button
+        variant="cta"
+        size="large"
+        className="w-full"
         onClick={() => open()}
         disabled={disabled}
         data-testid="button-plaid-connect"
-        className="flex items-center justify-center gap-[10px] h-[48px] rounded-row [font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
-        style={{ background: "#7631EE", color: "#FFFFFF" }}
       >
         {isExchanging || isLoading ? (
           <span className="size-[16px] rounded-full border-2 border-white/40 border-t-white animate-spin" aria-hidden />
         ) : (
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
             <path d="M3 7h18M3 12h18M3 17h12" stroke="#FFFFFF" strokeWidth="2.2" strokeLinecap="round" />
           </svg>
         )}
         {label}
-      </button>
+      </Button>
       {loadError && !isLoading && (
         <p className="[font-family:'Gilroy',sans-serif] text-[12px] leading-[16px] text-brain-v1error-text text-center">
           {loadError.replace(/^\d+:\s*/, "")}

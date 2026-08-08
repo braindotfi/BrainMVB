@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useLocation, Link } from "wouter";
 import { ICONS } from "@/assets/figma-icons";
 import { useIntents } from "@/lib/intentsStore";
+import { Button } from "@/components/ui/button";
 
 interface Props {
   collapsed: boolean;
@@ -30,12 +31,8 @@ const LogoutConfirmModal = ({ show, onCancel, onConfirm }: { show: boolean; onCa
           <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px] w-full">Are you sure you want to logout?</p>
         </div>
         <div className="flex gap-[8px] items-start p-[8px] w-full">
-          <button data-testid="button-logout-cancel" onClick={onCancel} className="flex flex-1 items-center justify-center px-[12px] py-[8px] rounded-pill hover:opacity-80 transition-opacity" style={{ background: "#222737" }}>
-            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-60 text-[12px] leading-[16px] whitespace-nowrap">Cancel</span>
-          </button>
-          <button data-testid="button-logout-confirm" onClick={onConfirm} className="flex flex-1 items-center justify-center px-[12px] py-[8px] rounded-pill hover:opacity-80 transition-opacity" style={{ background: "#350011" }}>
-            <span className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1pink-red text-[12px] leading-[16px] whitespace-nowrap">Confirm</span>
-          </button>
+          <Button variant="secondary" className="flex-1" data-testid="button-logout-cancel" onClick={onCancel}>Cancel</Button>
+          <Button variant="destructive" className="flex-1" data-testid="button-logout-confirm" onClick={onConfirm}>Confirm</Button>
         </div>
       </div>
     </div>
@@ -427,11 +424,11 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onLogout }: Props):
             which made "what Brain reads from" feel like a flow rather than a
             place. */}
         <div className="flex flex-col gap-[8px] mx-[7px] mb-[7px] shrink-0">
-          <button
+          <Button
+            variant="destructive"
+            className="w-full"
             data-testid="button-logout"
             onClick={() => setShowLogoutConfirm(true)}
-            className="flex items-center justify-center gap-[8px] px-[20px] py-[8px] w-full rounded-pill hover:opacity-80 transition-opacity"
-            style={{ background: "#350011" }}
           >
             <div className="relative shrink-0 size-[24px]">
               <div className="absolute inset-[16.67%]">
@@ -440,8 +437,8 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onLogout }: Props):
                 </div>
               </div>
             </div>
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1pink-red text-[16px] whitespace-nowrap">Logout</p>
-          </button>
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] whitespace-nowrap">Logout</p>
+          </Button>
         </div>
       </nav>
     </>

@@ -73,7 +73,7 @@ export function WalletButton() {
             <button
               onClick={handleSIWE}
               disabled={signing}
-              className="text-xs px-2 py-0.5 rounded-full transition-colors"
+              className="text-xs px-2 py-0.5 rounded-pill transition-colors"
               style={{ background: "#7631ee", color: "white", opacity: signing ? 0.6 : 1 }}
             >
               {signing ? "Signing…" : "Sign In"}
@@ -100,7 +100,7 @@ export function WalletButton() {
         <button
           onClick={openConnectModal}
           data-testid="connect-wallet-btn"
-          className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all hover:opacity-90"
+          className="flex items-center gap-2 px-4 py-2 rounded-pill text-sm font-semibold transition-all hover:opacity-90"
           style={{
             background: "linear-gradient(135deg, #7631ee 0%, #9d5cf5 100%)",
             color: "white",
