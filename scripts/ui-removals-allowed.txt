@@ -13,3 +13,4 @@
 # If you are adding a line here only to make the check pass, stop -- that is the
 # exact failure this file exists to prevent. Confirm the control is genuinely
 # superseded before declaring it.
+button-close-account-popup   proof run for #154 — deliberate removal, declared here to show the allowlist path
