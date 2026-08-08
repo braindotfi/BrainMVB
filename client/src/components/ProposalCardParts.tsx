@@ -209,7 +209,7 @@ const Callout = ({
     <div className="flex flex-1 gap-[8px] items-start min-w-px">
       <img src={icon} alt="" aria-hidden="true" className="size-[16px] shrink-0" />
       <p
-        className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[16px] flex-1 min-w-px"
+        className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] flex-1 min-w-px"
         style={{ color: tone.color }}
       >
         {children}

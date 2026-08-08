@@ -1413,8 +1413,12 @@ amounts and identifiers, and Gridular only for the "brain" wordmark.
 
 ### The type scale
 
-Five sizes carry the whole app. Anything outside this list is drift — grep for a sibling before
-introducing one.
+Five sizes carry the app's **UI text** — labels, body, metadata, row titles, controls. A new size in
+that range is drift; grep for a sibling before introducing one.
+
+Above them sits a small **display tier** for page titles and hero figures (20, 22, 32px, and the
+28/40px KPI numerals). Those are deliberate and are not covered by the five-size rule, but they still
+obey the pairing requirement below — every arbitrary size declares a line-height.
 
 | Size | Role |
 | --- | --- |
@@ -1482,12 +1486,30 @@ body or label text uses `leading-20`.**
 Do not flatten these into one rule. Every list in the app presents a record the same way — a 16/20
 medium title, a 4px gap, a 14/16 medium subtext — and `20 + 4 + 16 = 40px` is what makes every row
 in every list the same height. Applying the 14→20 pairing literally re-leads 72 of those subtexts
-and grows every list row in the app by 4px. `rowFormatting.test.ts` and
-`scripts/qa-measure-row-heights.mjs` both guard the 40px stack; if you are changing a row's leading
-and one of them goes red, the guard is right.
+and grows every list row in the app by 4px.
+
+**What actually guards this, precisely** — because "it's covered by tests" is the claim most likely
+to rot here. `rowFormatting.test.ts` source-inspects *two* rows (the Audit Log row and the RuleDetail
+report card) plus one Sources gap. `scripts/qa-measure-row-heights.mjs` measures the baseline row on
+Overview, Inbox and Ledger at runtime. **Between them they sample the convention; they do not cover
+all 72 sites.** A red guard is real evidence — if you change a row's leading and one trips, the guard
+is right — but a green suite is *not* proof the exemption still holds everywhere. Check the row you
+touched.
+
+The counterpart mistake is just as easy and was made on the first pass: **flow prose that happens to
+sit at 14/16 is not exempt.** Seven wrapping paragraphs across `ProposalCardParts`,
+`AccountDetailPopup`, `AddGoalModal`, `BillingModals` and `NavigationMenuSection` were swept into the
+exemption because a mechanical revert keyed on the *value* (14px + leading-16) rather than the
+*role*. If the text wraps and is not the second line of a row stack, it takes `leading-20`.
 
 The distinction is the same one that governs pills: **fixed geometry follows the geometry, flow text
 follows the pairing table.**
+
+A related trap, found in review: `Callout` supplies its leading from a per-tone table
+(`${leading}`), so a pass that appends a literal `leading-[Npx]` to that element puts two competing
+classes on one node. Class order in the string does not decide the winner — CSS source order does —
+so the tone table silently stops being authoritative. **Before adding a leading to a className, check
+whether an interpolated variable already carries one.**
 
 #### Named Tailwind sizes are fine
 

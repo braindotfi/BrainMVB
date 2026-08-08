@@ -146,7 +146,7 @@ const RecommendationCard = ({ category }: { category: string }) => {
         <p
           data-testid="text-goal-recommendation"
           className={
-            "flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[14px] text-brain-v1baby-blue-60 " +
+            "flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[14px] text-brain-v1baby-blue-60 " +
             (isLoading ? "italic" : "")
           }
         >
@@ -426,7 +426,7 @@ export const AddGoalModal = ({ open, onOpenChange, onCreate, isSubmitting }: Pro
 
             {/* Policy banner */}
             <div className="bg-brain-v1dark-purple border border-[rgba(118,49,238,0.2)] border-solid flex items-center p-[8px] rounded-[8px] w-full">
-              <p className="flex-1 [font-family:'Gilroy',sans-serif] leading-[16px] text-brain-v1purple text-[14px]">
+              <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1purple text-[14px]">
                 <span className="font-medium">You can change any of this later. P</span>
                 <span className="font-semibold">olicy v3 will apply.</span>
               </p>

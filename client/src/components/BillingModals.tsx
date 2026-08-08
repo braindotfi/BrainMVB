@@ -292,7 +292,7 @@ export function UpdateCardModal({
             </p>
             <div className="flex gap-[8px] items-start p-[8px] rounded-row border border-brain-v1stroke-2">
               <InfoCircleIcon />
-              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[16px] text-brain-v1baby-blue-60">
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-brain-v1baby-blue-60">
                 Brain will not collect card numbers or security codes in this form.
               </p>
             </div>
@@ -413,7 +413,7 @@ export function CancelSubscriptionModal({
           <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[20px] leading-[24px] w-full">
             Cancel Subscription
           </p>
-          <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[16px] w-full">
+          <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px] w-full">
             Are you sure you want to cancel your subscription?
           </p>
         </div>

@@ -266,7 +266,7 @@ export function AccountDetailPopup({
                 <div className="border border-brain-v1stroke-2 border-solid rounded-row w-full">
                   <div className="flex items-start gap-[8px] p-[8px] w-full">
                     <InfoIcon color="#6c779d" className="mt-[2px]" />
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px] flex-1 min-w-px">
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[14px] flex-1 min-w-px">
                       A read only view. Brain reads this balance from your ledger; your bank owns the account.
                     </p>
                   </div>

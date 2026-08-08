@@ -159,7 +159,7 @@ function CalloutFrame({
           {title && (
             <p className={`${FONT} font-semibold leading-[16px] ${text} text-[14px]`}>{title}</p>
           )}
-          <div className={`${FONT} font-medium ${leading} ${text} text-[14px] leading-[20px] [word-break:break-word]`}>
+          <div className={`${FONT} font-medium ${leading} ${text} text-[14px] [word-break:break-word]`}>
             {children}
           </div>
         </div>
