@@ -1,0 +1,14 @@
+{
+  "flow": "Rules → Automations → Rule Detail",
+  "startPath": "/ledger?tab=rules&rules=automations",
+  "ruleId": "auto-clear-subscription-from-figma-mr7zfyxy",
+  "finalUrl": "http://127.0.0.1:5000/rules/auto-clear-subscription-from-figma-mr7zfyxy",
+  "ruleName": "Auto-clear subscription from Figma",
+  "statusPillPresent": true,
+  "tokenChecks": {
+    "count": 60,
+    "mismatches": []
+  },
+  "writes": [],
+  "consoleErrors": []
+}
