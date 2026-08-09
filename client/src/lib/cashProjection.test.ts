@@ -206,3 +206,45 @@ describe("cashProjectionView — the lowest point", () => {
     expect(v.lowest?.amount).toBe(-400);
   });
 });
+
+describe("cashProjectionView — the floor includes today", () => {
+  /* The floor is a cash-risk statement. Seeding it from the first EVENT rather
+     than from today's balance let the callout quote a later, higher figure as
+     the "lowest point" — understating exactly the risk the card exists to show. */
+  it("keeps today's balance as the low when every event is an inflow", () => {
+    const v = view({
+      startingBalance: 1000,
+      invoices: [inv({ id: "inv_a", amount_due: "500.00", due_date: inDays(3) })],
+    });
+    expect(v.kind).toBe("rows");
+    expect(v.lowest?.amount).toBe(1000);
+    expect(v.lowest?.date).toBe(inDays(0));
+  });
+
+  it("reports an already-overdrawn account rather than the best day ahead", () => {
+    const v = view({
+      startingBalance: -250,
+      invoices: [inv({ id: "inv_a", amount_due: "500.00", due_date: inDays(5) })],
+    });
+    expect(v.lowest?.amount).toBe(-250);
+  });
+
+  it("still hands the low to an event that genuinely beats today", () => {
+    const v = view({
+      startingBalance: 1000,
+      obligations: [obl({ id: "obl_a", amount_due: "400.00", due_date: inDays(2) })],
+    });
+    expect(v.lowest?.amount).toBe(600);
+    expect(v.lowest?.date).toBe(inDays(2));
+  });
+
+  /* The confirmed-only floor is the one quoted as a guaranteed worst case, so a
+     projected inflow must never be able to lift it above today's balance. */
+  it("holds the confirmed-only floor at today when only projected money arrives", () => {
+    const v = view({
+      startingBalance: 800,
+      invoices: [inv({ id: "inv_a", amount_due: "5000.00", due_date: inDays(4) })],
+    });
+    expect(v.lowestConfirmedOnly?.amount).toBe(800);
+  });
+});

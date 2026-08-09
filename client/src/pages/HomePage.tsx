@@ -49,7 +49,7 @@ import { arAgingView, AR_STALE_DAYS } from "@/lib/arAging";
 import { concentrationView } from "@/lib/cashConcentration";
 import { cashProjectionView, PROJECTION_DAYS } from "@/lib/cashProjection";
 import { CashProjectionCard } from "@/components/CashProjectionCard";
-import type { BrainAccountDTO } from "@/lib/brainAccounts";
+import { accountsTotalView, type BrainAccountDTO } from "@/lib/brainAccounts";
 import type { RawInvoice } from "@/lib/receivables";
 import type { RawObligation } from "@/lib/brainObligations";
 import { apiRequest } from "@/lib/queryClient";
@@ -1007,16 +1007,49 @@ export function HomePage() {
   /* The full DTO, not just `current_balance`: bank concentration needs each
      account's institution and type, and a second query for the same rows would
      let the total and the concentration figure disagree. */
-  const { data: brainAccounts, isError: brainAccountsError } = useQuery<{ accounts?: BrainAccountDTO[] }>({
-    queryKey: ["/api/brain/ledger/accounts"],
-    retry: false,
-  });
-  const liveTotal =
-    brainAccounts?.accounts && brainAccounts.accounts.length > 0
-      ? brainAccounts.accounts.reduce((sum, a) => sum + (a.current_balance != null ? Number(a.current_balance) || 0 : 0), 0)
-      : null;
+  /* Every page. This was a single unpaged fetch, so a capped account list would
+     have quietly become a smaller balance — and this figure is also the cash
+     projection's opening balance, so the understatement would propagate. */
+  const accountsRead = usePagedLedgerRead<BrainAccountDTO>("/api/brain/ledger/accounts", "accounts");
+  const accountsTotal = useMemo(
+    () =>
+      accountsTotalView({
+        failed: accountsRead.failed,
+        read: accountsRead.read,
+        displayCurrency: currency,
+      }),
+    [accountsRead.failed, accountsRead.read, currency],
+  );
+  const liveTotal = accountsTotal.kind === "value" ? accountsTotal.total : null;
   // No live ledger total → honest placeholder, never a fabricated figure (was "$86,993.42").
   const totalFormatted = liveTotal !== null ? format(liveTotal) : "-";
+
+  /* The caption carries what the figure cannot: which currency it covers, and
+     what was left out of it. Without this the card would show a smaller number
+     than the tenant's real holdings with no explanation. */
+  const totalCaption = useMemo(() => {
+    const left = accountsTotal.excludedCurrencies.join(", ");
+    const n = accountsTotal.excludedCount;
+    const plural = n === 1 ? "account" : "accounts";
+    switch (accountsTotal.kind) {
+      case "failed":
+        return "Couldn't read your accounts. This is a connection problem, not an empty balance.";
+      case "loading":
+        return "Reading your accounts…";
+      case "incomplete":
+        return "Part of your account list couldn't be read, so a total would understate this.";
+      case "none":
+        return "No accounts connected yet. Add one in Settings, under Sources.";
+      case "no_matching_currency":
+        return `No ${currency} accounts. Your ${n} ${plural} are held in ${left}, which can't be converted.`;
+      case "unreadable":
+        return "Your accounts didn't report a balance.";
+      case "value":
+        return n > 0
+          ? `Across your ${currency} accounts. Excludes ${n} ${plural} held in ${left} — there's no conversion rate.`
+          : "Across bank, digital, and agent accounts.";
+    }
+  }, [accountsTotal, currency]);
   const totalParts = totalFormatted.match(/^(.+)\.(\d{2})$/);
   const totalWhole = totalParts ? totalParts[1] : totalFormatted;
   const totalCents = totalParts ? `.${totalParts[2]}` : "";
@@ -1123,8 +1156,15 @@ export function HomePage() {
     [invoicesRead.failed, invoicesRead.read, asOf],
   );
   const concentration = useMemo(
-    () => concentrationView({ failed: brainAccountsError, accounts: brainAccounts?.accounts ?? null }),
-    [brainAccountsError, brainAccounts],
+    () =>
+      concentrationView({
+        /* A partial account list makes the denominator too small, which
+           OVERSTATES concentration — the one direction that would raise a false
+           alarm. Refuse the same way a failed read does. */
+        failed: accountsRead.failed || (accountsRead.read != null && !accountsRead.read.complete),
+        accounts: accountsRead.read?.rows ?? null,
+      }),
+    [accountsRead.failed, accountsRead.read],
   );
   const projection = useMemo(
     () =>
@@ -1252,7 +1292,7 @@ export function HomePage() {
                 label="Money in all accounts"
                 whole={totalWhole}
                 cents={totalCents}
-                caption="Across bank, digital, and agent accounts."
+                caption={totalCaption}
                 onClick={() => navigate("/ledger?tab=accounts")}
                 testId="card-metric-accounts"
               />

@@ -201,8 +201,22 @@ export function cashProjectionView(input: {
   let running = startingBalance;
   let confirmedOnly = startingBalance;
   const events: CashEvent[] = [];
-  let lowest: CashProjectionView["lowest"] = null;
-  let lowestConfirmedOnly: CashProjectionView["lowestConfirmedOnly"] = null;
+  /* Seed both troughs with TODAY's balance, not null.
+     The floor is a cash-risk statement, and the lowest point in the window can
+     be the opening balance itself — when every scheduled event is an inflow, or
+     when the account is already overdrawn. Starting from null let the callout
+     skip day zero and quote a later, higher figure as the "lowest point", which
+     understates exactly the risk the card exists to show. Comparisons below are
+     strictly-less, so an event has to actually beat today to take the label. */
+  let lowest: CashProjectionView["lowest"] = {
+    amount: startingBalance,
+    date: windowStart,
+    label: "Opening balance",
+  };
+  let lowestConfirmedOnly: CashProjectionView["lowestConfirmedOnly"] = {
+    amount: startingBalance,
+    date: windowStart,
+  };
   let hasProjectedInflow = false;
 
   for (const p of pending) {

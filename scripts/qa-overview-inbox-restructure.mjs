@@ -93,6 +93,42 @@ await page.goto(`${base}/`, { waitUntil: "domcontentloaded" });
 const secondary = page.locator('[data-testid="grid-home-secondary-metrics"]');
 check("Overview renders the secondary metric grid", await settle(secondary));
 
+/* ── The headline total must not add up different currencies ──────────────────
+   This tenant holds two USD bank accounts and an ETH smart account, and there
+   is no FX rate anywhere in the app. The total therefore covers ONE currency and
+   has to say what it left out — otherwise it shows a smaller number than the
+   tenant's real holdings with no explanation, which reads as a wrong balance.
+
+   Graded against the concentration card, which independently detects the mixed
+   currencies. Tying the two together means this check cannot pass by accident on
+   a single-currency tenant: it only demands the disclosure when a second
+   currency is actually present. */
+const accountsCard = page.locator('[data-testid="card-metric-accounts"]');
+await settle(accountsCard);
+const accountsText = (await accountsCard.innerText()).replace(/\s+/g, " ").trim();
+const concentrationText = (await page.locator('[data-testid="card-metric-bank-concentration"]').innerText().catch(() => ""))
+  .replace(/\s+/g, " ")
+  .trim();
+const tenantIsMixedCurrency = /more than one currency/i.test(concentrationText);
+console.log(`accounts card >>> ${accountsText}`);
+
+if (tenantIsMixedCurrency) {
+  check(
+    "a mixed-currency tenant's total names the currency it covers and what it excludes",
+    /Excludes \d+ account/i.test(accountsText) && /\bUSD\b|\bEUR\b/.test(accountsText),
+    accountsText,
+  );
+  /* The old total summed ETH units into the dollar figure. That exact number is
+     gone, so the presence of a plain unexplained total is itself the regression. */
+  check(
+    "the total is no longer a bare cross-currency sum",
+    !/Across bank, digital, and agent accounts\./.test(accountsText),
+    accountsText,
+  );
+} else {
+  skip("the mixed-currency disclosure on the accounts total", "this tenant holds one currency, so there is nothing to exclude");
+}
+
 /* The projection card must always resolve to exactly ONE honest state: a chart,
    or a named reason there isn't one. Two at once, or none, is the bug. */
 const projectionStates = {

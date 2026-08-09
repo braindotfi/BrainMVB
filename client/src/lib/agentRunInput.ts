@@ -143,12 +143,28 @@ export function useMissingEvidenceItems() {
     retry: false,
   });
   const events = query.data?.events;
+  /* Truncation is whatever the FEED says it is, not what a row count implies.
+     A short page with a live cursor is still an unfinished read — brain-core is
+     free to return fewer rows than asked for and hand back a cursor — and
+     treating that as complete lets the Inbox print "nothing needs your
+     attention" over stalled runs it never fetched. The row-count check stays as
+     a backstop for a response that omits the cursor field entirely, where a
+     full page is the only evidence of more. */
   return {
     items: missingEvidenceItems(events),
     isError: query.isError,
     isLoading: query.isLoading,
-    isTruncated: (events?.length ?? 0) >= AUDIT_EVENTS_LIMIT,
+    isTruncated: feedIsTruncated(events, query.data?.next_cursor),
   };
+}
+
+/** Exported so the cursor rule is assertable without mounting the hook. */
+export function feedIsTruncated(
+  events: readonly BrainAuditEvent[] | undefined,
+  nextCursor: string | null | undefined,
+): boolean {
+  if (typeof nextCursor === "string" && nextCursor.length > 0) return true;
+  return (events?.length ?? 0) >= AUDIT_EVENTS_LIMIT;
 }
 
 /* ── plain language ──────────────────────────────────────────────────────── */
