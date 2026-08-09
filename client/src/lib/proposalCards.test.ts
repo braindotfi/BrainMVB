@@ -718,6 +718,63 @@ describe("buildProposalHeaderCopy", () => {
     });
     expect(titleCaseLabel("high risk")).toBe("High Risk");
   });
+
+  it("falls back to the resolved narrative, not the bare agent name, when there's no subject or headline", () => {
+    // Exactly the compliance/notify_only shape: no subject, no presentation.headline,
+    // so every one of these previously rendered an identical, indistinguishable
+    // "Compliance" row title regardless of what each finding was actually about.
+    const proposal = {
+      id: "pr_compliance",
+      type: "compliance",
+      created_at: "2026-07-29T00:00:00.000Z",
+      status: "pending",
+      risk_band: "high",
+      confidence: 0.94,
+      mode: "notify_only",
+      narrative: "Compliance review found policy_violation with high severity.",
+      evidence: [],
+      agent: { id: "agent_compliance", kind: "compliance", display_name: "Compliance" },
+      payment_intent_id: null,
+      action_type: null,
+      subject: null,
+      presentation: null,
+      key_facts: null,
+      resolved_refs: null,
+    } as any;
+
+    const formatText = (value: string) => value;
+    expect(buildProposalHeaderCopy(proposal, "Compliance", formatText)).toEqual({
+      title: "Compliance review found policy violation with high severity.",
+      text: "Proposed by Compliance",
+    });
+  });
+
+  it("still falls back to the agent name when there's no subject, headline, OR narrative", () => {
+    const proposal = {
+      id: "pr_bare",
+      type: "compliance",
+      created_at: "2026-07-29T00:00:00.000Z",
+      status: "pending",
+      risk_band: "high",
+      confidence: 0.94,
+      mode: "notify_only",
+      narrative: null,
+      evidence: [],
+      agent: { id: "agent_compliance", kind: "compliance", display_name: "Compliance" },
+      payment_intent_id: null,
+      action_type: null,
+      subject: null,
+      presentation: null,
+      key_facts: null,
+      resolved_refs: null,
+    } as any;
+
+    const formatText = (value: string) => value;
+    expect(buildProposalHeaderCopy(proposal, "Compliance", formatText)).toEqual({
+      title: "Compliance",
+      text: "Proposed by Compliance",
+    });
+  });
 });
 
 describe("buildRefDisplayMap", () => {
