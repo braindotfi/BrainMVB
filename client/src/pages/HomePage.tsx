@@ -45,6 +45,12 @@ import { TierSections, type TierRowAction, type TierRowModel } from "@/component
 import { buildProposalHeaderCopy, buildDecisionButtons } from "@/lib/proposalCards";
 import { payablesView } from "@/lib/liabilities";
 import { usePagedLedgerRead, ledgerFigureCaption } from "@/lib/ledgerRead";
+import { arAgingView, AR_STALE_DAYS } from "@/lib/arAging";
+import { concentrationView } from "@/lib/cashConcentration";
+import { cashProjectionView, PROJECTION_DAYS } from "@/lib/cashProjection";
+import { CashProjectionCard } from "@/components/CashProjectionCard";
+import type { BrainAccountDTO } from "@/lib/brainAccounts";
+import type { RawInvoice } from "@/lib/receivables";
 import type { RawObligation } from "@/lib/brainObligations";
 import { apiRequest } from "@/lib/queryClient";
 import { mapApprovalRejection, parseCoreError, type ApprovalRejection } from "@/lib/approvalRejections";
@@ -267,6 +273,7 @@ const MetricCard = ({
   suffix,
   caption,
   captionClass,
+  valueTone = "figure",
   onClick,
   testId,
 }: {
@@ -276,6 +283,14 @@ const MetricCard = ({
   suffix?: string;
   caption?: string;
   captionClass?: string;
+  /**
+   * `figure` is the 28px monospace treatment every numeric card uses. `text` is
+   * for the cards whose answer is a statement rather than a number ("Not
+   * applicable"): 28px mono words overflow the ~420px centre column outright,
+   * and setting prose in a figure face reads as a value the tenant can compare.
+   * The 36px leading is kept either way so the grid rows stay aligned.
+   */
+  valueTone?: "figure" | "text";
   onClick?: () => void;
   testId: string;
 }) => (
@@ -299,8 +314,16 @@ const MetricCard = ({
       : {})}
   >
     <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-30 text-[12px] uppercase">{label}</p>
-    <p className="[font-family:'JetBrains_Mono',monospace] leading-[0] relative shrink-0 text-brain-v1baby-blue-100 text-[0px] w-full whitespace-nowrap">
-      <span className="font-medium leading-[36px] text-[28px]">{whole}</span>
+    <p
+      className={`leading-[0] relative shrink-0 text-brain-v1baby-blue-100 text-[0px] w-full ${
+        valueTone === "text"
+          ? "[font-family:'Gilroy',sans-serif]"
+          : "[font-family:'JetBrains_Mono',monospace] whitespace-nowrap"
+      }`}
+    >
+      <span className={valueTone === "text" ? "font-semibold leading-[36px] text-[20px]" : "font-medium leading-[36px] text-[28px]"}>
+        {whole}
+      </span>
       {cents && <span className="font-medium leading-[36px] text-brain-v1baby-blue-60 text-[18px]">{cents}</span>}
       {suffix && <span className="font-medium leading-[36px] text-brain-v1baby-blue-60 text-[18px]">{suffix}</span>}
     </p>
@@ -882,6 +905,23 @@ export function HomePage() {
       }),
     [overviewRows],
   );
+
+  /* One line for "how much is waiting on me", counted off the rows actually
+     rendered below rather than off each source queue separately — the sources
+     overlap, and summing them reports work that isn't on screen. Split by tier
+     because "3 urgent" and "3 to look at when you can" are not the same news;
+     Insights are excluded, since nothing is being asked of the tenant there. */
+  const pendingSummary = useMemo(() => {
+    const urgent = pagerRows.filter((row) => row.tier === "urgent").length;
+    const waiting = pagerRows.filter((row) => row.tier === "waiting").length;
+    const total = urgent + waiting;
+    if (total === 0) return null;
+    const parts: string[] = [];
+    if (urgent > 0) parts.push(`${urgent} urgent`);
+    if (waiting > 0) parts.push(`${waiting} waiting on you`);
+    return { total, urgent, text: `${total} ${total === 1 ? "item needs" : "items need"} your attention`, detail: parts.join(" · ") };
+  }, [pagerRows]);
+
   const pagerEntries: PagerEntry[] = pagerRows
     .filter((row) => row.onOpenDetail)
     .map((row) => ({ id: row.id, open: row.onOpenDetail! }));
@@ -964,7 +1004,10 @@ export function HomePage() {
 
   // "Money in all accounts" total from brain-core's Ledger (via the BFF proxy).
   // Falls back to the static figure when brain-core is unreachable/unconfigured.
-  const { data: brainAccounts } = useQuery<{ accounts?: { current_balance?: string | null }[] }>({
+  /* The full DTO, not just `current_balance`: bank concentration needs each
+     account's institution and type, and a second query for the same rows would
+     let the total and the concentration figure disagree. */
+  const { data: brainAccounts, isError: brainAccountsError } = useQuery<{ accounts?: BrainAccountDTO[] }>({
     queryKey: ["/api/brain/ledger/accounts"],
     retry: false,
   });
@@ -1044,13 +1087,121 @@ export function HomePage() {
      Only defined while money is actually going out. A non-negative net flow has no
      burn to divide by, so the card says that in words rather than printing "∞", a
      huge meaningless number, or a figure that silently flips sign. */
-  const runway = useMemo(() => {
-    if (liveTotal === null || netMonthly === null) return { value: "-", caption: "Connect accounts to see runway." };
-    if (netMonthly >= 0) return { value: "-", caption: "No net burn. Cash flow is positive." };
+  /* Three states, and they must not look alike. "-" used to mean all three, so a
+     tenant whose cash flow is POSITIVE — the good outcome — saw the same dash as
+     one whose accounts had failed to load, and read it as broken. Positive flow
+     now says so in words and in green; only genuinely absent data keeps the dash. */
+  const runway = useMemo<{ value: string; caption: string; tone: "figure" | "text"; captionClass?: string }>(() => {
+    if (liveTotal === null || netMonthly === null) {
+      return { value: "-", caption: "Connect accounts to see runway.", tone: "figure" };
+    }
+    if (netMonthly >= 0) {
+      return {
+        value: "Not applicable",
+        caption: "Cash flow is positive — there's no burn to run out of.",
+        tone: "text",
+        captionClass: "text-brain-v1green",
+      };
+    }
     const months = liveTotal / Math.abs(netMonthly);
-    if (!Number.isFinite(months) || months < 0) return { value: "-", caption: "Not enough data yet." };
-    return { value: `${Math.floor(months)} mo`, caption: "At the current net burn." };
+    if (!Number.isFinite(months) || months < 0) return { value: "-", caption: "Not enough data yet.", tone: "figure" };
+    return { value: `${Math.floor(months)} mo`, caption: "At the current net burn.", tone: "figure" };
   }, [liveTotal, netMonthly]);
+
+  /* ── Secondary indicators ──────────────────────────────────────────────────
+     Invoices back BOTH the AR-aging card and the projected inflows, read once
+     here and shared, so the two surfaces cannot disagree about what's outstanding. */
+  const invoicesRead = usePagedLedgerRead<RawInvoice>("/api/brain/ledger/invoices", "invoices");
+
+  /* Pinned at mount. A fresh Date() on every render would recompute the whole
+     projection continuously and let a row silently cross the 90-day boundary
+     mid-session; a reload is the honest refresh point for a day-grained figure. */
+  const asOf = useMemo(() => new Date(), []);
+
+  const arAging = useMemo(
+    () => arAgingView({ failed: invoicesRead.failed, read: invoicesRead.read, now: asOf }),
+    [invoicesRead.failed, invoicesRead.read, asOf],
+  );
+  const concentration = useMemo(
+    () => concentrationView({ failed: brainAccountsError, accounts: brainAccounts?.accounts ?? null }),
+    [brainAccountsError, brainAccounts],
+  );
+  const projection = useMemo(
+    () =>
+      cashProjectionView({
+        failed: obligationsRead.failed || invoicesRead.failed,
+        startingBalance: liveTotal,
+        obligations: obligationsRead.read,
+        invoices: invoicesRead.read,
+        now: asOf,
+      }),
+    [obligationsRead.failed, obligationsRead.read, invoicesRead.failed, invoicesRead.read, liveTotal, asOf],
+  );
+
+  /* AR over 90 days. The percentage is the point — a big number on a big book is
+     a different problem from the same number on a small one — so the card leads
+     with the amount and captions it with the share plus the single oldest debtor.
+     Only the id is available for that debtor today; name resolution needs a
+     lookup this feed doesn't offer. */
+  const arStale = useMemo(() => {
+    switch (arAging.kind) {
+      case "failed":
+        return { whole: "-", cents: "", caption: "Couldn't read your invoices." };
+      case "loading":
+        return { whole: "-", cents: "", caption: "Reading your invoices…" };
+      case "unreadable":
+        return { whole: "-", cents: "", caption: "Part of your ledger couldn't be read, so a share would mislead." };
+      case "none":
+        return { whole: format(0), cents: "", caption: `Nothing outstanding beyond ${AR_STALE_DAYS} days.` };
+      default: {
+        const formatted = format(arAging.staleAmount ?? 0);
+        const parts = formatted.match(/^(.+)\.(\d{2})$/);
+        const share =
+          arAging.pctOfTotalAr !== null ? `${Math.round(arAging.pctOfTotalAr * 100)}% of all receivables. ` : "";
+        const worst = arAging.worst;
+        const oldest = worst ? `Oldest: ${worst.counterparty_id ?? "unknown customer"}, ${worst.days} days overdue.` : "";
+        return {
+          whole: parts ? parts[1] : formatted,
+          cents: parts ? `.${parts[2]}` : "",
+          caption: `${share}${oldest}`.trim(),
+        };
+      }
+    }
+  }, [arAging, format]);
+
+  /* Bank concentration. Reported as a share rather than a balance because the
+     risk is the ratio: $2M in one account is fine at $10M total and existential
+     at $2.1M. */
+  const bankConcentration = useMemo(() => {
+    switch (concentration.kind) {
+      case "failed":
+        return { whole: "-", caption: "Couldn't read your accounts.", captionClass: undefined };
+      case "loading":
+        return { whole: "-", caption: "Reading your accounts…", captionClass: undefined };
+      case "none":
+        return { whole: "-", caption: "No cash accounts connected yet.", captionClass: undefined };
+      case "unreadable":
+        return { whole: "-", caption: "Your accounts didn't report balances.", captionClass: undefined };
+      case "mixed_currency":
+        return {
+          whole: "-",
+          caption: "Balances span more than one currency, so a single share would be meaningless.",
+          captionClass: undefined,
+        };
+      default: {
+        const pct = Math.round((concentration.pct ?? 0) * 100);
+        const spread =
+          concentration.bucketCount === 1
+            ? "All of your cash is in one place."
+            : `Spread across ${concentration.bucketCount} institutions.`;
+        return {
+          whole: `${pct}%`,
+          caption: `In ${concentration.largestLabel}. ${spread}`,
+          captionClass: concentration.warn ? "text-brain-v1light-orange" : undefined,
+        };
+      }
+    }
+  }, [concentration]);
 
   // Show onboarding once per signed-in user, on first visit to the home screen.
   const onboardingKey = onboardingKeyFor(user?.id);
@@ -1116,7 +1267,9 @@ export function HomePage() {
               <MetricCard
                 label="Runway"
                 whole={runway.value}
+                valueTone={runway.tone}
                 caption={runway.caption}
+                captionClass={runway.captionClass}
                 testId="card-metric-runway"
               />
               <MetricCard
@@ -1128,6 +1281,35 @@ export function HomePage() {
                 testId="card-metric-liabilities"
               />
             </div>
+
+            {/* Second row: the two indicators that say whether the headline
+                figures are healthy, rather than restating them. Same auto-fit
+                sizing — never viewport breakpoints — because this grid sits in
+                the same narrow centre column. */}
+            <div
+              className="grid gap-[16px] w-full"
+              style={{ gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}
+              data-testid="grid-home-secondary-metrics"
+            >
+              <MetricCard
+                label={`AR over ${AR_STALE_DAYS} days`}
+                whole={arStale.whole}
+                cents={arStale.cents}
+                caption={arStale.caption}
+                onClick={() => navigate("/ledger?tab=receivables")}
+                testId="card-metric-ar-aging"
+              />
+              <MetricCard
+                label="Largest cash holding"
+                whole={bankConcentration.whole}
+                caption={bankConcentration.caption}
+                captionClass={bankConcentration.captionClass}
+                onClick={() => navigate("/ledger?tab=accounts")}
+                testId="card-metric-bank-concentration"
+              />
+            </div>
+
+            <CashProjectionCard view={projection} format={format} horizonDays={PROJECTION_DAYS} />
 
             {/* brain-core's ledger-grounded read, deliberately OUTSIDE the cash-flow
                 card. Sat inside it, its month-to-date figure read as a contradiction
@@ -1141,7 +1323,34 @@ export function HomePage() {
             </p>
 
             {/* Divider */}
-            <div className="h-px relative shrink-0 w-full mb-[26px]" style={{ background: "#1d2132" }} />
+            <div className="h-px relative shrink-0 w-full" style={{ background: "#1d2132" }} />
+
+            {/* What's waiting, in one line, immediately above the queue it counts.
+                Hidden entirely when nothing is pending — a permanent "0 items"
+                badge trains people to stop reading the row. */}
+            {pendingSummary && (
+              <div
+                className={`flex items-center gap-[10px] px-[16px] py-[12px] rounded-panel border border-solid w-full ${
+                  pendingSummary.urgent > 0
+                    ? "bg-brain-v1dark-pink-red border-[rgba(210,3,68,0.2)]"
+                    : "bg-brain-v1highlight-dropdown-bg border-brain-v1stroke-2"
+                }`}
+                data-testid="row-home-pending-summary"
+              >
+                <div
+                  className="size-[8px] rounded-full shrink-0"
+                  style={{ background: pendingSummary.urgent > 0 ? "#d20344" : "#ff9500" }}
+                />
+                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[16px] text-brain-v1baby-blue-100">
+                  {pendingSummary.text}
+                </p>
+                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[14px] text-brain-v1baby-blue-60">
+                  {pendingSummary.detail}
+                </p>
+              </div>
+            )}
+
+            <div className="mb-[26px]" />
 
             {/* The decision queue: ONE single-column list split into Urgent /
                 Waiting on you / Insights, with each row's own actions inline.

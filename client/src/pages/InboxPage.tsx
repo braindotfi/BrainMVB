@@ -45,6 +45,8 @@ import { pagerState, stepPager, type PagerEntry } from "@/lib/unifiedPager";
 import { AuditRecordPopup } from "@/components/AuditRecordPopup";
 import type { AuditRecord, AuditEventType } from "@/lib/auditTypes";
 import { auditEventLabel, auditEventChipClass, isAssistantActivity, isSystemActivity, humanReadableActor } from "@/lib/auditTypes";
+import { useMissingEvidenceItems, describeMissingEvidence, refKindLabel } from "@/lib/agentRunInput";
+import { formatRelativeTime } from "@/lib/sourceRows";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { mapApprovalRejection, parseCoreError, type ApprovalRejection } from "@/lib/approvalRejections";
@@ -57,7 +59,8 @@ import {
 } from "@/lib/rulesStore";
 import { useReviewStatuses, setReviewStatus } from "@/lib/reviewStatusStore";
 import { acknowledgeInsight, useAcknowledgedRecords } from "@/lib/acknowledgedStore";
-import { TierRow, type TierRowModel, type TierRowAction, type TierRowStatusPill } from "@/components/TierRowList";
+import { TierRow, RowSection, type TierRowModel, type TierRowAction, type TierRowStatusPill } from "@/components/TierRowList";
+import { orderRowsForDisplay } from "@/lib/tierRowOrder";
 import {
   auditStatusPill,
   PILL_APPROVED,
@@ -1071,6 +1074,55 @@ export function InboxPage() {
   const resolvedItems   = useMemo(() => items.filter((it) => it.tier === "decided"),  [items]);
   const tabItems        = activeTab === "Unresolved" ? unresolvedItems : resolvedItems;
 
+  /* ── Needs your input ───────────────────────────────────────────────────────
+     Agent runs that reached a terminal `missing_evidence` outcome. These are not
+     proposals — nothing is being suggested and there is nothing to approve. Work
+     simply stopped, and until now it stopped silently: the run left an audit
+     event and no surface read it.
+
+     Shipped deliberately reduced. Entity refs render as raw brain-core ids
+     because resolving them needs either a batch lookup this feed doesn't offer
+     or denormalization at emission time, and every row carries the same generic
+     action rather than a per-field guess at where the fix lives. Both are
+     tracked as follow-ups; a wrong deep link would be worse than a plain one. */
+  const {
+    items: missingEvidence,
+    isError: missingEvidenceError,
+    isTruncated: missingEvidenceTruncated,
+  } = useMissingEvidenceItems();
+  const nowMs = useMemo(() => Date.now(), []);
+
+  const inputRows = useMemo<TierRowModel[]>(
+    () =>
+      missingEvidence.map((entry) => ({
+        id: `missing-evidence-${entry.id}`,
+        /* Amber, not red. A stalled run is real work not happening, but nothing
+           is mid-flight and no money is at risk this minute. */
+        tier: "waiting" as const,
+        title: describeMissingEvidence(entry),
+        badge: { label: "Agent blocked", className: TAG_AGENT },
+        subtitle:
+          entry.entityRefs.length > 0
+            ? entry.entityRefs.map((ref) => `${refKindLabel(ref)}: ${ref}`).join(" · ")
+            : undefined,
+        note: formatRelativeTime(entry.createdAt, nowMs) ?? undefined,
+        actions: [
+          {
+            id: "view-audit",
+            label: "View in Audit Log",
+            /* Neutral, not `acknowledge` — that tone renders as a green success
+               button, and nothing here has been resolved by looking at it. */
+            tone: "neutral" as const,
+            onClick: () => navigate("/settings?section=audit"),
+          },
+        ],
+        /* No checkbox, ever. Bulk approve batches decisions, and there is no
+           decision here to batch. */
+        testIdPrefix: "row-agent-input",
+      })),
+    [missingEvidence, nowMs, navigate],
+  );
+
   const visibleItems = useMemo(() => applyDecisionFilters(tabItems, filters), [tabItems, filters]);
   const availableTypes = useMemo(() => typeOptions(tabItems), [tabItems]);
   const filtering = hasActiveFilter(filters);
@@ -1419,6 +1471,41 @@ export function InboxPage() {
     };
   };
 
+  /* ── The three named sections ───────────────────────────────────────────────
+     Split on `kind`, the taxonomy this file already carries: a "proposal" is a
+     record Brain is asking you to decide, a "detection" is a ledger-derived
+     observation with nothing proposed. Deriving the split from an existing field
+     rather than a new one means a row cannot appear under "Needs your decision"
+     while its buttons say otherwise.
+
+     Tier is NOT lost by regrouping: rows stay in tier order inside each section
+     and every row keeps its own accent bar, so urgency still reads down the list. */
+  const decisionRows = useMemo(
+    () => orderRowsForDisplay(visibleItems.filter((it) => it.kind === "proposal").map(toRow)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- toRow closes over live handler state and is rebuilt every render by design
+    [visibleItems, toRow],
+  );
+  const awarenessRows = useMemo(
+    () => orderRowsForDisplay(visibleItems.filter((it) => it.kind === "detection").map(toRow)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- see above
+    [visibleItems, toRow],
+  );
+
+  /* Filters are built from the facets of `items`, and missing-evidence rows are
+     not in `items` — they have no type, amount or decision status to match on.
+     Rather than drop the section (silently under-reporting stuck agents) or
+     pretend it was filtered, it stays and says the filter doesn't reach it. */
+  const inputSectionCaption = [
+    filtering ? "Filters don't apply to this section." : null,
+    missingEvidenceTruncated
+      ? "Showing the most recent audit events only — an older stalled run may not appear here."
+      : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const unresolvedEmpty = activeTab === "Unresolved" && visibleItems.length === 0 && inputRows.length === 0;
+
   /* Three different silences, three different sentences. "No decisions match this
      filter" after the user narrowed the list is information; the same words on an
      unfiltered empty queue would read as a fault. */
@@ -1523,7 +1610,9 @@ export function InboxPage() {
             the badge is always honest even when a filter hides rows. */}
         <FilterChipRow
           chips={[
-            { value: "Unresolved", label: "Unresolved", count: unresolvedItems.length },
+            /* Includes stalled runs: they are unresolved things asking something
+               of you, and a tab badge that omits them under-reports the queue. */
+            { value: "Unresolved", label: "Unresolved", count: unresolvedItems.length + inputRows.length },
             { value: "Resolved",   label: "Resolved",   count: resolvedItems.length   },
           ]}
           value={activeTab}
@@ -1543,10 +1632,16 @@ export function InboxPage() {
         {/* Count row + clear-filter link */}
         <div className="flex items-center gap-[8px] w-full min-h-[20px]">
           <div className="size-[6px] rounded-full shrink-0 bg-brain-v1baby-blue-60" />
+          {/* "Decisions" is only true of the Resolved tab now. Unresolved also
+              carries stalled agent runs, which are not decisions and are not in
+              `visibleItems` — leaving the old label and count there put the word
+              "Decisions 3" directly above four rows. */}
           <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[12px] uppercase tracking-[0.4px] whitespace-nowrap">
-            Decisions
+            {activeTab === "Unresolved" ? "Awaiting you" : "Decisions"}
           </p>
-          <CountPill testId="text-decision-count">{visibleItems.length}</CountPill>
+          <CountPill testId="text-decision-count">
+            {activeTab === "Unresolved" ? visibleItems.length + inputRows.length : visibleItems.length}
+          </CountPill>
           {filtering && (
             <button
               type="button"
@@ -1633,7 +1728,7 @@ export function InboxPage() {
           </div>
         )}
 
-        {visibleItems.length === 0 ? (
+        {(activeTab === "Unresolved" ? unresolvedEmpty : visibleItems.length === 0) ? (
           decisionsUnreachable ? (
             <UnavailableDataBox testId="text-decisions-empty">{emptyText}</UnavailableDataBox>
           ) : (
@@ -1646,7 +1741,49 @@ export function InboxPage() {
               </p>
             </div>
           )
+        ) : activeTab === "Unresolved" ? (
+          /* Grouped by what each section ASKS OF YOU. An empty section renders
+             nothing at all — three "nothing here" boxes on a quiet day trains
+             people to stop reading the page. */
+          <div className="flex flex-col gap-[26px] w-full">
+            {decisionRows.length > 0 && (
+              <RowSection
+                title="Needs your decision"
+                accent="#d20344"
+                rows={decisionRows}
+                testId="section-needs-decision"
+                headingTestId="heading-needs-decision"
+              />
+            )}
+            {missingEvidenceError ? (
+              <UnavailableDataBox testId="text-needs-input-unavailable">
+                Couldn't check whether any agent is waiting on information from you. This is a connection problem, not an all-clear.
+              </UnavailableDataBox>
+            ) : (
+              inputRows.length > 0 && (
+                <RowSection
+                  title="Needs your input"
+                  accent="#ff9500"
+                  rows={inputRows}
+                  caption={inputSectionCaption || undefined}
+                  testId="section-needs-input"
+                  headingTestId="heading-needs-input"
+                />
+              )
+            )}
+            {awarenessRows.length > 0 && (
+              <RowSection
+                title="For your awareness"
+                accent="#a8b9f4"
+                rows={awarenessRows}
+                testId="section-for-awareness"
+                headingTestId="heading-for-awareness"
+              />
+            )}
+          </div>
         ) : (
+          /* Resolved is history, not a queue: nothing is being asked of anyone,
+             so the "needs your …" grouping would be meaningless here. */
           <div className="shrink-0 flex flex-col w-full rounded-row border border-solid border-brain-v1stroke-2 bg-brain-v1highlight-dropdown-bg overflow-hidden">
             <div className="flex flex-col w-full">
               {visibleItems.map((item) => (

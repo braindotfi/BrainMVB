@@ -925,6 +925,41 @@ compiler-enforced, so adding a type upstream breaks the build instead of falling
 decision and were being stranded in the Audit Log. Advisory types route through the same shared
 card — there is no fallback view.
 
+### The Inbox is grouped by what it asks of you, not by derived tier
+
+The Unresolved tab renders three named sections via the shared `RowSection` (the chrome
+`TierSection` also uses — do not hand-roll a second copy):
+
+| Section | Source | Rows |
+|---|---|---|
+| **Needs your decision** | `items` where `kind === "proposal"` | decidable records; bulk-approve checkboxes live here and **only** here |
+| **Needs your input** | `agent.run.missing_evidence` audit events, via `useMissingEvidenceItems` | agent runs that stopped; no checkbox, exactly one action |
+| **For your awareness** | `items` where `kind === "detection"` | ledger-derived observations; nothing proposed |
+
+`kind` is the split, because it is the field the row's own buttons already derive from — a
+row cannot land under "Needs your decision" while its controls disagree. Tier is not lost:
+rows stay in `orderRowsForDisplay` order inside each section and keep their accent bar.
+
+**Resolved is deliberately NOT sectioned.** It is history; nothing is being asked, so a
+"needs you" grouping there would be a lie. Applying the new grouping to it is the obvious
+wrong follow-up.
+
+Three consequences worth knowing before editing this page:
+
+- **`inputRows` are not in `items`.** They have no type, amount or decision status, so
+  `applyDecisionFilters` cannot reach them. The section stays visible while a filter is
+  active and says the filter doesn't apply, rather than vanishing (which would silently
+  under-report stalled agents).
+- **Counts include them.** The Unresolved tab badge and the "Awaiting you" count row both
+  add `inputRows.length`. The count row's label switches to "Decisions" only on Resolved —
+  a stalled run is not a decision, and the old fixed label sat above rows it didn't describe.
+- **The audit feed is capped** (`AUDIT_EVENTS_LIMIT`). At the cap the section captions that
+  it is showing recent events only; an absent row is not proof no agent is stuck.
+
+Shipped with two known gaps, both deliberate and tracked: entity refs render as raw
+brain-core ids (`cp_01K…`) behind a kind label, and every row offers the same generic
+"View in Audit Log" rather than routing per missing-field type.
+
 ## Currency formatting — one formatter, and never pre-format on the server
 Amounts were rendering as `42000.00`. Root cause was **two diverged private copies** of the
 same helper: BrainAssistant's matched a `USD 18600` prefix but never applied the FX rate,
@@ -1695,7 +1730,8 @@ Never leave the user wondering what to do when there *is* something they can do.
 | RulesPanel → Suggested | empty | "Nothing suggested yet. Brain will show these as it spots patterns." |
 | RuleDetail → Reported Problems | empty | "No problems reported on this rule yet." |
 | RuleDetail → History | empty | "Nothing recorded yet." |
-| InboxPage → Unresolved | empty | "Nothing needs your attention right now. Brain is keeping things moving." |
+| InboxPage → Unresolved | empty | "Nothing needs your attention right now. Brain is keeping things moving." (only when the decision, input AND awareness sections are all empty) |
+| InboxPage → Needs your input | unreachable | "Couldn't check whether any agent is waiting on information from you. This is a connection problem, not an all-clear." |
 | InboxPage → Resolved | empty | "No resolved decisions yet." |
 | InboxPage → Filtered | filtered | "No {tab} decisions match this filter." |
 | VendorsPanel → Needs Review | empty | "Nothing to review. New and risky {noun} show up here automatically." |
