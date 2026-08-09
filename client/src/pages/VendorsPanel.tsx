@@ -21,6 +21,7 @@ import { FilterChipRow } from "@/components/FilterChipRow";
 import { Button } from "@/components/ui/button";
 import { Plus, ChevronDown } from "lucide-react";
 import { AlertCallout, UnavailableDataBox } from "@/components/Callout";
+import { Divider } from "@/components/LedgerWidgets";
 import closeIcon from "@assets/Close_1783293571882.png";
 import { CountPill } from "@/components/CountPill";
 import { RecordPill } from "@/components/RecordPill";
@@ -48,7 +49,6 @@ const TAB_TIER: Record<VendorTab, VendorTier> = {
   Informational: "informational",
 };
 
-const Divider = () => <div className="h-px shrink-0 w-full" style={{ background: "#1d2132" }} />;
 
 /* ── Vendor categories (from Figma dropdown) ─────────────────────────────── */
 const VENDOR_CATEGORIES = [

@@ -1,3 +1,4 @@
+- [WidgetPanel primitive](widget-panel-primitive.md) — sole shared panel chrome; WidgetCard=header+panel; noBorder only when Figma shows no stroke; DevelopersSection now has the border it was silently missing.
 - [Brain URL split (demo vs production)](brain-url-split.md) — demo → staging, real users → prod; per-request AsyncLocalStorage; every new proxy handler must wrap with withBrainBaseUrl(baseUrl, …).
 - [Add Source ingestion wizard](add-source-wizard.md) — source-agnostic connector modal; docs persist metadata only; route-ordering + screen-stack constraints.
 - [Source-to-account resolution](source-account-resolution.md) — source rows open Account Details only after a real upstream ledger-account link is validated.

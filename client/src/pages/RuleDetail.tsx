@@ -39,6 +39,7 @@ import playIcon from "@assets/play_1783376650313.png";
 import deleteIcon from "@assets/delete_1783376650313.png";
 import pauseIcon from "@assets/pause_1783376736546.png";
 import { AlertCallout, InfoIcon, PolicyCallout } from "@/components/Callout";
+import { Divider, WidgetPanel } from "@/components/LedgerWidgets";
 
 
 /* Rule detail: the destination of "Report a problem → pause and review".
@@ -226,7 +227,7 @@ export function RuleDetail() {
           </div>
 
           {/* Rule status: Pause/Resume + Delete. Matches Figma's "Rule Status" card. */}
-          <div className="w-full rounded-panel bg-brain-v1highlight-dropdown-bg p-[16px] flex flex-col gap-[12px]">
+          <WidgetPanel><div className="p-[16px] flex flex-col gap-[12px]">
             <div className="flex items-center justify-between gap-[16px] flex-wrap">
               <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-brain-v1baby-blue-60 text-[20px]">
                 Rule Status
@@ -252,7 +253,7 @@ export function RuleDetail() {
               </div>
             </div>
 
-          </div>
+          </div></WidgetPanel>
 
           {/* Paused-from-report banner: orange accent. Matches Figma's flagged banner under Rule Status. */}
           {pausedFromReport && (
@@ -377,7 +378,7 @@ export function RuleDetail() {
 
           {/* Trusted vendors: allowlist removal. Matches Figma's "Popup - Search Results" panel. */}
           {rule.allowlist && rule.allowlist.length > 0 && (
-            <div className="w-full rounded-panel bg-brain-v1highlight-dropdown-bg overflow-hidden flex flex-col">
+            <WidgetPanel>
               <div className="flex items-center gap-[8px] px-[16px] py-[14px] border-b border-brain-v1stroke-2">
                 <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-100 text-[20px]">
                   Trusted Vendors
@@ -398,12 +399,12 @@ export function RuleDetail() {
                   </div>
                 ))}
               </div>
-            </div>
+            </WidgetPanel>
           )}
 
           {/* Amount: threshold / cap edit. Matches Figma's "Amount" panel. */}
           {(typeof rule.threshold === "number" || typeof rule.cap === "number") && (
-            <div className="w-full rounded-panel bg-brain-v1highlight-dropdown-bg overflow-hidden flex flex-col">
+            <WidgetPanel>
               <div className="flex items-center px-[16px] py-[14px] border-b border-brain-v1stroke-2">
                 <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-100 text-[20px]">
                   Amount
@@ -450,11 +451,11 @@ export function RuleDetail() {
                   />
                 )}
               </div>
-            </div>
+            </WidgetPanel>
           )}
 
           {/* Reported problems: accordion trail. Matches Figma's "Reported Problems" panel. */}
-          <div className="w-full rounded-panel bg-brain-v1highlight-dropdown-bg overflow-hidden flex flex-col">
+          <WidgetPanel>
             <div className="flex items-center gap-[8px] px-[16px] py-[14px] border-b border-brain-v1stroke-2">
               <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-100 text-[20px]">
                 Reported Problems
@@ -474,10 +475,10 @@ export function RuleDetail() {
                 ))
               )}
             </div>
-          </div>
+          </WidgetPanel>
 
           {/* History: created/paused/resumed trail. Matches Figma's panel pattern. */}
-          <div className="w-full rounded-panel bg-brain-v1highlight-dropdown-bg overflow-hidden flex flex-col">
+          <WidgetPanel>
             <div className="flex items-center gap-[8px] px-[16px] py-[14px] border-b border-brain-v1stroke-2">
               <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-100 text-[20px]">
                 History
@@ -497,7 +498,7 @@ export function RuleDetail() {
                 ))
               )}
             </div>
-          </div>
+          </WidgetPanel>
 
             </>
           )}
@@ -767,7 +768,7 @@ function PolicyDetailBody({ rule }: { rule: PolicyContentRule }) {
   return (
     <div className="content-stretch flex flex-col gap-[16px] items-start relative shrink-0 w-full">
       {/* DSL fields panel - matches Figma "Popup - Search Results" */}
-      <div className="bg-brain-v1highlight-dropdown-bg content-stretch flex flex-col items-start overflow-clip relative rounded-panel shrink-0 w-full">
+      <WidgetPanel>
         {/* Panel header */}
         <div className="bg-brain-v1highlight-dropdown-bg border-brain-v1stroke-2 border-b border-solid content-stretch flex items-center justify-between px-[16px] py-[14px] relative shrink-0 w-full">
           <div className="content-stretch flex flex-[1_0_0] items-center min-w-px relative">
@@ -794,7 +795,7 @@ function PolicyDetailBody({ rule }: { rule: PolicyContentRule }) {
               </div>
             </div>
 
-            <div className="h-px shrink-0 w-full" style={{ background: "#1d2132" }} />
+            <Divider />
 
             {/* Applies To row */}
             <div className="bg-brain-v1highlight-dropdown-bg content-stretch flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
@@ -810,7 +811,7 @@ function PolicyDetailBody({ rule }: { rule: PolicyContentRule }) {
               </div>
             </div>
 
-            <div className="h-px shrink-0 w-full" style={{ background: "#1d2132" }} />
+            <Divider />
 
             {/* When row */}
             <div className="bg-brain-v1highlight-dropdown-bg content-stretch flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
@@ -826,7 +827,7 @@ function PolicyDetailBody({ rule }: { rule: PolicyContentRule }) {
               </div>
             </div>
 
-            <div className="h-px shrink-0 w-full" style={{ background: "#1d2132" }} />
+            <Divider />
 
             {/* Execute row */}
             <div className="bg-brain-v1highlight-dropdown-bg content-stretch flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
@@ -844,7 +845,7 @@ function PolicyDetailBody({ rule }: { rule: PolicyContentRule }) {
 
             {hasRequire && (
               <>
-                <div className="h-px shrink-0 w-full" style={{ background: "#1d2132" }} />
+                <Divider />
                 <div className="bg-brain-v1highlight-dropdown-bg content-stretch flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
                   <div className="content-stretch flex flex-col items-start justify-center relative shrink-0 w-[160px]">
                     <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[16px] whitespace-nowrap">
@@ -861,7 +862,7 @@ function PolicyDetailBody({ rule }: { rule: PolicyContentRule }) {
             )}
           </div>
         </div>
-      </div>
+      </WidgetPanel>
 
       {/* Info banner — moved below the table; matches Inbox purple style */}
       <PolicyCallout testId="text-policy-info">

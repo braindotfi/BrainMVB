@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { WidgetPanel } from "@/components/LedgerWidgets";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -48,20 +49,16 @@ import {
    duplicate lists. */
 
 /* ─── Shared primitives (matching the Settings card + label patterns) ─── */
+
+/** Wizard/form panel — borderless per Figma (sources add-flow sits inside a
+ *  bordered parent; the inner panel does not add a second stroke). */
 const Card = ({ children, testId }: { children: ReactNode; testId?: string }) => (
-  <div data-testid={testId} className="rounded-panel overflow-hidden" style={{ background: "#0a0c10" }}>
-    {children}
-  </div>
+  <WidgetPanel testId={testId} noBorder>{children}</WidgetPanel>
 );
 
+/** Data table panel — always bordered (matches Sources table Figma frame). */
 const TableCard = ({ children, testId }: { children: ReactNode; testId?: string }) => (
-  <div
-    data-testid={testId}
-    className="rounded-panel overflow-hidden border border-solid border-brain-v1stroke-2"
-    style={{ background: "#0a0c10" }}
-  >
-    {children}
-  </div>
+  <WidgetPanel testId={testId}>{children}</WidgetPanel>
 );
 
 const SectionLabel = ({ children, testId }: { children: ReactNode; testId?: string }) => (

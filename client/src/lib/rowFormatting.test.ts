@@ -62,13 +62,15 @@ describe("the count pill is declared once", () => {
   it("the surfaces that show a count render it through the shared component", () => {
     // Each of these had its own copy of the markup before; the Audit Log had
     // drifted to a pill-shaped outline badge at a different size entirely.
+    // Note: RulesPanel.tsx no longer directly renders CountPill — it passes
+    // `count` to WidgetHeader (in LedgerWidgets.tsx), which renders CountPill.
+    // LedgerWidgets.tsx remains on the list and covers that rendering path.
     const callSites = [
       "../components/LedgerWidgets.tsx",
       "../components/TierRowList.tsx",
       "../components/settings/AuditLogSection.tsx",
       "../pages/VendorsPanel.tsx",
       "../pages/InboxPage.tsx",
-      "../pages/RulesPanel.tsx",
     ];
     for (const f of callSites) {
       expect(read(f), `${f} must import the shared pill`).toContain(
