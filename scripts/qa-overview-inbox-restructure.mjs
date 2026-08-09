@@ -199,6 +199,124 @@ if (shown[0] === "chart") {
     skip("the horizontal event strip", `only ${events} event(s) scheduled in this window`);
   }
 
+  /* ── Tapping an event opens the record it names ────────────────────────────
+     The strip names a specific ledger record — "Invoice AR-BIGCO-001, Aug 24" —
+     and naming it used to be all it did. What is checked here is not that a
+     popup appears (a popup showing the wrong record also appears) but that the
+     record it shows is the SAME one the Ledger opens for that debt. Those are
+     two independent code paths onto one record, and they are exactly the pair
+     that can drift apart without either screen looking wrong on its own. */
+  if (events > 0) {
+    const openable = page.locator('[data-testid^="row-cash-event-"][data-openable="true"]');
+    const openableCount = await openable.count();
+    check(
+      "every event drawn on the strip can be opened",
+      openableCount === events,
+      `${openableCount} of ${events} openable`,
+    );
+
+    if (openableCount > 0) {
+      /* Deliberately the payable branch: it is the one with a choice to get
+         wrong (invoice-backed opens the bill, uninvoiced opens the payable). */
+      const oblChip = page.locator('[data-testid^="row-cash-event-obl:"][data-openable="true"]').first();
+      const chipId = (await oblChip.count())
+        ? (await oblChip.getAttribute("data-testid")).replace("row-cash-event-", "")
+        : null;
+
+      if (chipId) {
+        const trigger = page.locator(`[data-testid="button-cash-event-${chipId}"]`);
+        /* A real control, not a div with a click handler: keyboard users reach
+           the strip too, and `Enter` is the cheapest proof it is focusable. */
+        await trigger.focus();
+        await page.keyboard.press("Enter");
+        await page.waitForTimeout(1200);
+
+        const dialog = page.locator('[role="dialog"]');
+        const opened = (await dialog.count()) > 0;
+        check("pressing Enter on an event opens its record", opened);
+
+        let chipRecord = "";
+        if (opened) {
+          chipRecord = (await dialog.first().innerText()).replace(/\s+/g, " ").trim();
+          /* No pager. The list the user is looking at is the strip, which
+             interleaves payables with customer invoices; each popup can only
+             step through one of those, so Previous/Next here would skip every
+             event of the other kind sitting right beside it on screen. */
+          const pagers = await page
+            .locator('[data-testid="button-payable-prev"], [data-testid="button-bill-previous"]')
+            .count();
+          check("no Previous/Next is offered for a list the strip does not have", pagers === 0);
+          await page.keyboard.press("Escape");
+          await page.waitForTimeout(600);
+          check("Escape closes it again", (await page.locator('[role="dialog"]').count()) === 0);
+        }
+
+        /* The identity check. Payables rows are keyed by index, not by id, so
+           the counterpart row is found by opening rows until one yields the
+           same record — which is also what makes a mismatch detectable rather
+           than just unfound. */
+        const chipSource = /Source ([A-Za-z0-9_]+)/.exec(chipRecord)?.[1];
+        if (chipSource) {
+          await page.goto(`${base}/ledger?tab=payables`, { waitUntil: "domcontentloaded" });
+          const ledgerRows = page.locator(
+            '[data-testid^="row-obligation-"]:not([data-testid="row-obligation-totals"])',
+          );
+          await settle(ledgerRows, 12, 1000);
+          /* The payables read walks a cursor, so rows keep arriving after the
+             first one paints. Scanning at first paint searches a list that does
+             not contain the row yet and reports a disagreement between the two
+             surfaces that is really just a half-finished read. Wait for the
+             count to stop moving. */
+          for (let stable = 0, last = -1; stable < 3; ) {
+            const n = await ledgerRows.count();
+            stable = n === last ? stable + 1 : 0;
+            last = n;
+            await page.waitForTimeout(1000);
+          }
+          const norm = (t) => t.replace(/Previous|Next/g, "").replace(/\s+/g, " ").trim();
+          let ledgerRecord = null;
+          const ledgerRowCount = await ledgerRows.count();
+          for (let i = 0; i < ledgerRowCount; i++) {
+            await ledgerRows.nth(i).click();
+            await page.waitForTimeout(800);
+            /* Normalised BEFORE the regex: the popup's raw innerText separates
+               "Source" from the id with a newline, so a pattern expecting a
+               space silently matches nothing and every row looks like a
+               mismatch. */
+            const t = norm((await page.locator('[role="dialog"]').first().innerText().catch(() => "")) ?? "");
+            await page.keyboard.press("Escape");
+            await page.waitForTimeout(300);
+            if (/Source ([A-Za-z0-9_]+)/.exec(t)?.[1] === chipSource) {
+              ledgerRecord = t;
+              break;
+            }
+          }
+          if (ledgerRecord) {
+            check(
+              "the record opened from Overview is the record the Ledger opens",
+              norm(ledgerRecord) === norm(chipRecord),
+              norm(ledgerRecord) === norm(chipRecord) ? chipSource : `chip="${norm(chipRecord).slice(0, 120)}"`,
+            );
+          } else {
+            /* Not a pass. The chip claims to point at a payable; if no payables
+               row opens that record, the two surfaces already disagree. */
+            check(
+              "the record opened from Overview is the record the Ledger opens",
+              false,
+              `no Payables row opened ${chipSource}`,
+            );
+          }
+          await page.goto(`${base}/`, { waitUntil: "domcontentloaded" });
+          await settle(page.locator('[data-testid="list-cash-projection-events"]'), 12, 1000);
+        } else {
+          skip("the chip-vs-Ledger identity check", "the opened record printed no source id to match on");
+        }
+      } else {
+        skip("opening an event's record", "no obligation-backed event is scheduled in this window");
+      }
+    }
+  }
+
   const floor = page.locator('[data-testid="callout-cash-projection-floor"]');
   if (await floor.isVisible().catch(() => false)) {
     check("the floor callout names a figure", /\d/.test(await floor.innerText()));

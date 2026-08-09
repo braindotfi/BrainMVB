@@ -68,22 +68,35 @@ function Shell({ children }: { children: React.ReactNode }) {
 function EventChip({
   event,
   format,
+  onOpen,
 }: {
   event: CashEvent;
   format: (n: number) => string;
+  /**
+   * Opens the record this event stands for. Absent when the record could not be
+   * resolved from the loaded feeds — see below for why that is rendered as a
+   * plain chip rather than a control that fails on activation.
+   */
+  onOpen?: () => void;
 }) {
   const confirmed = event.certainty === "confirmed";
   const outflow = event.amount < 0;
-  return (
-    <li
-      className={`flex flex-col gap-[2px] shrink-0 w-[136px] px-[10px] py-[8px] rounded-[8px] border ${
-        confirmed
-          ? "border-solid border-brain-v1stroke-2 bg-brain-v1baby-blue-5"
-          : "border-dashed border-[rgba(255,149,0,0.3)] bg-[rgba(255,149,0,0.08)]"
-      }`}
-      data-testid={`row-cash-event-${event.id}`}
-      data-certainty={event.certainty}
-    >
+  const openable = onOpen != null;
+
+  const frame = `flex flex-col gap-[2px] w-[136px] px-[10px] py-[8px] rounded-[8px] border text-left ${
+    confirmed
+      ? "border-solid border-brain-v1stroke-2 bg-brain-v1baby-blue-5"
+      : "border-dashed border-[rgba(255,149,0,0.3)] bg-[rgba(255,149,0,0.08)]"
+  }`;
+
+  /* Read out in the order the chip is read: when, how sure, how much, what.
+     The visual chip conveys direction with a sign and a colour, neither of
+     which survives into a screen reader, so the words carry it instead. */
+  const spokenAmount = `${outflow ? "money out" : "money in"} ${format(Math.abs(event.amount))}`;
+  const label = `${shortDate(event.date)}, ${confirmed ? "confirmed" : "projected"}, ${spokenAmount}, ${event.label}`;
+
+  const body = (
+    <>
       <div className="flex items-center gap-[6px] w-full">
         <span className={`${MONO} text-[12px] text-brain-v1baby-blue-60 shrink-0`}>{shortDate(event.date)}</span>
         <span
@@ -107,6 +120,38 @@ function EventChip({
       >
         {event.label}
       </span>
+    </>
+  );
+
+  /* An unresolvable event stays a plain chip.
+     The alternative — a button everywhere, which no-ops or opens an empty shell
+     when the record is missing — is worse than not offering it: the tenant
+     cannot tell "nothing to see" from "this screen is broken", and a keyboard
+     user still lands on it. Losing the affordance IS the signal. */
+  return (
+    <li
+      className="shrink-0"
+      data-testid={`row-cash-event-${event.id}`}
+      data-certainty={event.certainty}
+      data-openable={openable ? "true" : "false"}
+    >
+      {openable ? (
+        <button
+          type="button"
+          onClick={onOpen}
+          aria-label={`${label}. Open record`}
+          data-testid={`button-cash-event-${event.id}`}
+          className={`${frame} cursor-pointer transition-colors hover:border-brain-v1purple focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple`}
+        >
+          {body}
+        </button>
+      ) : (
+        /* Still announced — the event is real information even when its record
+           cannot be reached — but not as something that can be activated. */
+        <div className={frame} role="group" aria-label={label} title="This record isn't available to open">
+          {body}
+        </div>
+      )}
     </li>
   );
 }
@@ -115,11 +160,21 @@ export function CashProjectionCard({
   view,
   format,
   horizonDays,
+  openableEventIds,
+  onOpenEvent,
 }: {
   view: CashProjectionView;
   /** Currency formatter from the host page, so this card can't drift from the metrics. */
   format: (n: number) => string;
   horizonDays: number;
+  /**
+   * Event ids whose underlying record the host page can actually open. The card
+   * does not resolve records itself — it holds no feeds — so tappability is
+   * decided by the page and passed in. Omitted entirely (the Ledger's own
+   * preview, a test) means no chip is a control, which is the safe default.
+   */
+  openableEventIds?: ReadonlySet<string>;
+  onOpenEvent?: (event: CashEvent) => void;
 }) {
   /* Axis ticks, abbreviated to fit. The currency symbol is taken from the
      injected `format` rather than hardcoded, so a tenant reading in EUR does
@@ -346,7 +401,12 @@ export function CashProjectionCard({
         aria-label="Scheduled cash events, in date order"
       >
         {view.events.map((e) => (
-          <EventChip key={e.id} event={e} format={format} />
+          <EventChip
+            key={e.id}
+            event={e}
+            format={format}
+            onOpen={onOpenEvent && openableEventIds?.has(e.id) ? () => onOpenEvent(e) : undefined}
+          />
         ))}
       </ul>
     </Shell>

@@ -28,8 +28,13 @@ import { payablesView } from "@/lib/liabilities";
 import { usePagedLedgerRead, ledgerFigureCaption } from "@/lib/ledgerRead";
 import { arAgingView, AR_STALE_DAYS } from "@/lib/arAging";
 import { concentrationView } from "@/lib/cashConcentration";
-import { cashProjectionView, PROJECTION_DAYS } from "@/lib/cashProjection";
+import { cashProjectionView, PROJECTION_DAYS, type CashEvent } from "@/lib/cashProjection";
 import { CashProjectionCard } from "@/components/CashProjectionCard";
+import { cashEventRecordIndex, type CashEventRecord } from "@/lib/cashEventRecords";
+import { BillDetailPopup, type BrainInvoiceDTO } from "@/components/BillDetailPopup";
+import { PayableDetailPopup } from "@/components/PayableDetailPopup";
+import { ReceivableDetailPopup } from "@/components/ReceivableDetailPopup";
+import type { CounterpartiesLiteResponse } from "@/components/LedgerWidgets";
 import { accountsTotalView, type BrainAccountDTO } from "@/lib/brainAccounts";
 import type { RawInvoice } from "@/lib/receivables";
 import type { RawObligation } from "@/lib/brainObligations";
@@ -726,6 +731,56 @@ export function HomePage() {
       }),
     [accountsRead.failed, accountsRead.read],
   );
+  /* ── Opening the record behind a projection event ──────────────────────────
+     The strip under the chart is the only place on this page where a specific
+     ledger record is named, and until now naming it was all it did: the user
+     read "Invoice AR-0042, Aug 20" and then had to go find that invoice on
+     another page to see anything about it.
+
+     Two extra reads make the same popups the Ledger opens available here. Both
+     share their query keys with the Ledger tabs, so this costs no additional
+     request once either page has been visited:
+       - the invoice DTO feed, needed ONLY to find the bill behind a payable.
+         The projection's own invoice read is the raw feed, whose fields are all
+         `unknown`; handing those to a popup that expects strings is exactly the
+         kind of lie the raw types exist to prevent.
+       - counterparties, so a record opened from here is titled with the same
+         name the Ledger row would show rather than "Unidentified counterparty". */
+  const billsQ = useQuery<{ invoices?: BrainInvoiceDTO[] }>({
+    queryKey: ["/api/brain/ledger/invoices"],
+    retry: false,
+  });
+  const cpQ = useQuery<CounterpartiesLiteResponse>({
+    queryKey: ["/api/brain/ledger/counterparties"],
+    retry: false,
+  });
+
+  const eventRecords = useMemo(
+    () =>
+      cashEventRecordIndex({
+        obligations: obligationsRead.read?.rows ?? null,
+        invoices: invoicesRead.read?.rows ?? null,
+        bills: billsQ.data?.invoices ?? null,
+      }),
+    [obligationsRead.read, invoicesRead.read, billsQ.data],
+  );
+
+  /* The card holds no feeds, so it cannot decide tappability itself. */
+  const openableEventIds = useMemo(() => new Set(eventRecords.keys()), [eventRecords]);
+
+  /* One slot for all three popups: an event resolves to exactly one record, and
+     separate state per kind would allow two open at once. */
+  const [openRecord, setOpenRecord] = useState<CashEventRecord | null>(null);
+  const openEventRecord = (e: CashEvent) => {
+    const record = eventRecords.get(e.id);
+    /* Guarded rather than assumed: the chip's affordance is computed from the
+       same map, but a feed can settle between paint and click. */
+    if (record) setOpenRecord(record);
+  };
+
+  const counterpartyName = (id: string | null): string | null =>
+    (id && cpQ.data?.counterparties.find((c) => c.id === id)?.name) || null;
+
   const projection = useMemo(
     () =>
       cashProjectionView({
@@ -979,7 +1034,13 @@ export function HomePage() {
               </button>
             )}
 
-            <CashProjectionCard view={projection} format={format} horizonDays={PROJECTION_DAYS} />
+            <CashProjectionCard
+              view={projection}
+              format={format}
+              horizonDays={PROJECTION_DAYS}
+              openableEventIds={openableEventIds}
+              onOpenEvent={openEventRecord}
+            />
 
             {/* Your Goals - hidden for now */}
             {/* <GoalsSection /> */}
@@ -991,6 +1052,41 @@ export function HomePage() {
         open={showOnboarding}
         onClose={finishOnboarding}
         onComplete={finishOnboarding}
+      />
+
+      {/* Records opened from the cash-projection strip. The SAME popups the
+          Ledger opens, deliberately — a second detail view of a payable would be
+          a second place for its wording to go stale.
+
+          No pager on any of them. Previous/Next walks the list the user is
+          looking at, and the list here is the strip: payables and customer
+          invoices interleaved in date order. Each popup can only step through
+          one of those types, so paging would quietly skip every event of the
+          other kind — the user would tap Next on the Aug 13 bill and land past
+          the Aug 20 invoice sitting right beside it on screen. */}
+      <BillDetailPopup
+        bill={openRecord?.kind === "bill" ? openRecord.bill : null}
+        vendorName={
+          (openRecord?.kind === "bill" ? counterpartyName(openRecord.obligation.counterparty_id) : null) ??
+          "Unidentified counterparty"
+        }
+        hidePager
+        onClose={() => setOpenRecord(null)}
+      />
+      <PayableDetailPopup
+        payable={openRecord?.kind === "payable" ? openRecord.payable : null}
+        counterpartyName={openRecord?.kind === "payable" ? counterpartyName(openRecord.payable.counterparty_id) : null}
+        invoicesUnknown={openRecord?.kind === "payable" ? openRecord.invoicesUnknown : undefined}
+        hidePager
+        onClose={() => setOpenRecord(null)}
+      />
+      <ReceivableDetailPopup
+        receivable={openRecord?.kind === "receivable" ? openRecord.receivable : null}
+        counterpartyName={
+          openRecord?.kind === "receivable" ? counterpartyName(openRecord.receivable.counterparty_id) : null
+        }
+        hidePager
+        onClose={() => setOpenRecord(null)}
       />
 
     </div>

@@ -43,6 +43,22 @@ export const PROJECTION_DAYS = 21;
 export const CASH_EVENT_BASIS =
   "Confirmed = scheduled obligations (payroll, tax, bills). Projected = outstanding customer invoices, not yet received.";
 
+/**
+ * How a `CashEvent.id` names the record it came from.
+ *
+ * The id is not decoration: the chip on Overview is tappable BECAUSE the event
+ * still knows which ledger record it stands for, and `cashEventRecords.ts`
+ * reads these prefixes back to find it. Exported so the writer below and that
+ * reader cannot drift into two different spellings — a silent drift here does
+ * not throw, it just makes every chip of one kind stop opening.
+ */
+export const CASH_EVENT_PREFIX = {
+  /** A payable from GET /ledger/obligations. */
+  obligation: "obl:",
+  /** A customer invoice (AR) from GET /ledger/invoices. */
+  invoice: "inv:",
+} as const;
+
 export type CashEventCertainty = "confirmed" | "projected";
 
 export interface CashEvent {
@@ -165,7 +181,7 @@ export function cashProjectionView(input: {
     const amount = Number(o.amount_due) || 0;
     if (amount === 0) continue;
     pending.push({
-      id: `obl:${o.id}`,
+      id: `${CASH_EVENT_PREFIX.obligation}${o.id}`,
       day,
       date: isoDay(new Date(day * MS_PER_DAY)),
       label: o.kind ? o.kind.replace(/_/g, " ") : "Scheduled obligation",
@@ -181,7 +197,7 @@ export function cashProjectionView(input: {
     if (day === null || day < today || day > today + horizon) continue;
     if (r.outstanding === 0) continue;
     pending.push({
-      id: `inv:${r.id}`,
+      id: `${CASH_EVENT_PREFIX.invoice}${r.id}`,
       day,
       date: isoDay(new Date(day * MS_PER_DAY)),
       label: r.invoice_number ? `Invoice ${r.invoice_number}` : "Customer invoice",
