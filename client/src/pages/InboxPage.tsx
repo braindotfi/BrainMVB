@@ -1573,7 +1573,7 @@ export function InboxPage() {
             "eligible" meant. */}
         {selection.count >= 2 && selection.limit && (
           <div
-            className="bg-brain-v1dark-dark-purple flex flex-col overflow-hidden rounded-panel shrink-0 w-full"
+            className="order-first bg-brain-v1dark-dark-purple flex flex-col overflow-hidden rounded-panel shrink-0 w-full"
             data-testid="bulk-bar"
           >
             {/* Body — count metric + Brain Observed sentence */}
