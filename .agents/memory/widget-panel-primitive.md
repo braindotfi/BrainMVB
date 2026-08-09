@@ -12,12 +12,20 @@ All card/panel chrome lives in `client/src/components/LedgerWidgets.tsx`. Never 
 | `WidgetCard` | `WidgetHeader` + `WidgetPanel` composed together. Used by all Ledger tabs. |
 | `Divider` | Full-width 1px separator at `#1d2132`. Import from LedgerWidgets; never inline. |
 
-**Surface inventory (all now migrated):**
+**Surface inventory (all migrated and merged):**
 - Ledger tabs (CashFlowTab, PayablesTab, ReceivablesTab) — `WidgetCard` ✓ (were already correct)
 - RulesPanel — `WidgetPanel` for Section/PolicySection/SuggestionCard; `WidgetHeader` for the Rules header row
 - RuleDetail — `WidgetPanel` for all 6 inner panels (adds previously missing borders)
 - SettingsPage — `<WidgetPanel noBorder>` (borderless per Figma; intentional)
 - DevelopersSection — `<WidgetPanel>` (adds the border the local Card was silently omitting)
+- SourcesSection — `<WidgetPanel noBorder>` for wizard/form panel, `<WidgetPanel>` for data TableCard
+- VendorsPanel — local Divider removed; imports from LedgerWidgets
+
+**Live walkthrough result (PR #130):** 9/10 DevelopersSection cards confirmed direct (KeysUnavailableCard
+path not rendered on a demo tenant with the keys API online — structurally covered). Rule Definition
+panel in RuleDetail confirmed with border and Dividers. 5 sibling RuleDetail panels (Rule Status,
+Trusted Vendors, Amount, Reported Problems, History) unreachable on a fresh demo tenant (no
+user-created rules) — inferred from identical structural edit pattern.
 
 **Why:** Before this migration each surface had a local `Card` or hand-rolled div that copied the panel chrome. DevelopersSection and RuleDetail were silently missing the border token, causing visual inconsistency.
 
