@@ -76,6 +76,33 @@ describe("an incomplete read", () => {
   });
 });
 
+describe("a read that hasn't answered yet", () => {
+  /* The KPI cards beside this line resolve fast, so an empty space next to them
+     reads as an answer. Both of the wrong answers are available here: silence
+     (all-clear) and a subtotal that will change under the reader. */
+  it("says it is still checking rather than rendering nothing", () => {
+    const s = pendingAttentionSummary(counts({ loading: true }));
+    expect(s).not.toBeNull();
+    expect(s?.tone).toBe("loading");
+    expect(s?.text).toMatch(/checking/i);
+  });
+
+  it("does not print a running subtotal", () => {
+    const s = pendingAttentionSummary(counts({ urgent: 1, waiting: 2, loading: true }));
+    expect(s?.text).not.toMatch(/\d/);
+  });
+
+  it("outranks the failure wording, because a slow read is not a broken one", () => {
+    const s = pendingAttentionSummary(counts({ loading: true, incomplete: true }));
+    expect(s?.tone).toBe("loading");
+    expect(s?.text).not.toMatch(/couldn't check/i);
+  });
+
+  it("stops saying it once the reads land", () => {
+    expect(pendingAttentionSummary(counts({ waiting: 1, loading: false }))?.tone).toBe("normal");
+  });
+});
+
 describe("Overview wires the summary to every feed it depends on", () => {
   /* The honesty rules above are only worth anything if the page actually passes
      `incomplete: true` when a read fails. Each of these is a distinct feed
@@ -86,7 +113,9 @@ describe("Overview wires the summary to every feed it depends on", () => {
 
   for (const feed of [
     "liveNeedsReviewError",
+    "liveNeedsReviewTruncated",
     "liveProposalsError",
+    "liveProposalsTruncated",
     "missingEvidence.isError",
     "missingEvidence.isTruncated",
     "decided.isError",
@@ -106,5 +135,32 @@ describe("Overview wires the summary to every feed it depends on", () => {
 
   it("hands the count to the shared function instead of phrasing it inline", () => {
     expect(src).toContain("pendingAttentionSummary({");
+  });
+
+  /* Silence during load is the same lie as silence during a failure, so every
+     contributing read has to be able to hold the line back. */
+  const loadingFlag = src.slice(src.indexOf("const stillReading ="), src.indexOf("const pendingSummary"));
+  for (const feed of [
+    "liveNeedsReviewLoading",
+    "liveProposalsLoading",
+    "missingEvidence.isLoading",
+    "decided.isLoading",
+  ]) {
+    it(`waits for ${feed}`, () => {
+      expect(loadingFlag).toContain(feed);
+    });
+  }
+  it("is reading the actual loading expression", () => {
+    expect(loadingFlag.length).toBeGreaterThan(40);
+    expect(loadingFlag).toContain("||");
+  });
+
+  /* A payment intent proposed in this session is also in the durable queue once
+     core has it. Counting both makes Overview say two where the Inbox says one,
+     and the Inbox drops the durable copy on exactly this rule. */
+  it("counts a session intent once, not once per source", () => {
+    expect(src).toContain("!sessionIntentIds.has(p.id)");
+    expect(src).toContain("durableNeedsReview.length");
+    expect(src).not.toContain("waiting + pendingSessionIntents + liveNeedsReview.length");
   });
 });

@@ -10,23 +10,26 @@
  * pure function is what lets every one of those cases be asserted directly,
  * including the two that only appear when something is broken.
  *
- * ## The four states
+ * ## The five states
  *
- * | reads       | work found | result                                        |
- * |-------------|-----------|------------------------------------------------|
- * | complete    | none      | `null` — render nothing                         |
- * | complete    | some      | "N items need your attention"                   |
- * | incomplete  | some      | "At least N …" plus a line naming the gap       |
- * | incomplete  | none      | an explicit "couldn't check" row                |
+ * | reads        | work found | result                                       |
+ * |--------------|------------|----------------------------------------------|
+ * | still coming | any        | "Checking what's waiting on you…"             |
+ * | complete     | none       | `null` — render nothing                       |
+ * | complete     | some       | "N items need your attention"                 |
+ * | incomplete   | some       | "At least N …" plus a line naming the gap     |
+ * | incomplete   | none       | an explicit "couldn't check" row              |
  *
- * The last row is the important one. Hiding the line when the total is zero is
- * right when zero is a fact and dangerous when it is an artefact — an absent
- * alert reads as an all-clear, and "nothing is waiting on you" is the single
- * most consequential thing this product can say wrongly. So a failed read is
- * never allowed to look like a quiet day.
+ * The last two rows are the important ones. Hiding the line when the total is
+ * zero is right when zero is a fact and dangerous when it is an artefact — an
+ * absent alert reads as an all-clear, and "nothing is waiting on you" is the
+ * single most consequential thing this product can say wrongly. So neither a
+ * failed read nor an unfinished one is allowed to look like a quiet day: the
+ * surrounding KPI cards resolve fast, so a blank space beside them reads as an
+ * answer rather than as a page that has not finished asking.
  */
 
-export type PendingAttentionTone = "urgent" | "normal" | "partial" | "unknown";
+export type PendingAttentionTone = "urgent" | "normal" | "partial" | "unknown" | "loading";
 
 export interface PendingAttentionCounts {
   /** Proposals whose tier is `urgent` — a writable decision plus materiality. */
@@ -41,6 +44,8 @@ export interface PendingAttentionCounts {
    * evidence that there isn't one.
    */
   incomplete: boolean;
+  /** True while any contributing read is still in flight. */
+  loading?: boolean;
 }
 
 export interface PendingAttentionSummary {
@@ -60,8 +65,22 @@ export function pendingAttentionSummary({
   waiting,
   input,
   incomplete,
+  loading = false,
 }: PendingAttentionCounts): PendingAttentionSummary | null {
   const total = urgent + waiting + input;
+
+  /* Checked before anything else, INCLUDING a non-zero total: a partial count
+     drawn mid-load is a number that will change under the reader, and this line
+     is the one people use to decide they are done. */
+  if (loading) {
+    return {
+      total,
+      urgent: 0,
+      tone: "loading",
+      text: "Checking what's waiting on you…",
+      detail: "",
+    };
+  }
 
   if (total === 0) {
     if (!incomplete) return null;

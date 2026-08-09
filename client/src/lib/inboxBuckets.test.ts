@@ -48,6 +48,14 @@ describe("where the source field still matters", () => {
     expect(inboxBucket(rec({ kind: "detection", actionable: true }))).toBe("awareness");
   });
 
+  /* No detection publishes a writable approve today. If one ever does, the row
+     will draw Approve/Reject from that same list — so the section has to follow
+     the buttons rather than stranding them under "For your awareness". */
+  it("yields to a published decision list even on a detection", () => {
+    expect(inboxBucket(rec({ kind: "detection", liveDecisions: [d("approve")] }))).toBe("approval");
+    expect(inboxBucket(rec({ kind: "detection", liveDecisions: [d("acknowledge")] }))).toBe("awareness");
+  });
+
   it("rows with no published list fall back to whether buttons were drawn", () => {
     expect(inboxBucket(rec({ actionable: true }))).toBe("approval");
     expect(inboxBucket(rec({ actionable: false }))).toBe("awareness");

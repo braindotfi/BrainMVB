@@ -444,6 +444,11 @@ export function HomePage() {
     () => intents.filter((i) => i.outcome === "confirm" && !i.declined && i.approvalState !== "approved").length,
     [intents],
   );
+  /* An intent proposed in THIS session is also in the durable queue below once
+     core has it. The Inbox drops the durable copy on exactly this rule; without
+     the same exclusion here the same pending payment is one row over there and
+     two items in the count on this page. */
+  const sessionIntentIds = useMemo(() => new Set(intents.map((i) => i.intentId)), [intents]);
 
   /* "Brain Did" (approved + auto-approved audit events) is deliberately NOT on
      Overview any more. Overview is what Brain is *waiting on*; a record that has
@@ -456,10 +461,24 @@ export function HomePage() {
      (reconciliation, subscriptions, disputes, cash flow) are NOT read here at
      all — they are awareness records, they were never part of this count, and
      the Inbox is where they render. */
-  const { proposals: liveNeedsReview, isError: liveNeedsReviewError } = useBrainReviewQueue();
+  const {
+    proposals: liveNeedsReview,
+    isError: liveNeedsReviewError,
+    isLoading: liveNeedsReviewLoading,
+    isTruncated: liveNeedsReviewTruncated,
+  } = useBrainReviewQueue();
+  const durableNeedsReview = useMemo(
+    () => liveNeedsReview.filter((p) => !sessionIntentIds.has(p.id)),
+    [liveNeedsReview, sessionIntentIds],
+  );
 
   /* Live brain-core agent proposals (GET /v1/proposals) needing a decision. */
-  const { proposals: liveProposals, isError: liveProposalsError } = useBrainProposals();
+  const {
+    proposals: liveProposals,
+    isError: liveProposalsError,
+    isLoading: liveProposalsLoading,
+    isTruncated: liveProposalsTruncated,
+  } = useBrainProposals();
   const needsReviewProposals = useMemo(() => liveProposals.filter(isNeedsReview), [liveProposals]);
   /* Tier order is retained even though nothing is rendered from this list any
      more: `deriveProposalTier` returning null is how a proposal with no writable
@@ -502,11 +521,17 @@ export function HomePage() {
      the audit cap an absent stalled run is not evidence there isn't one. */
   const incompleteRead =
     liveNeedsReviewError ||
+    liveNeedsReviewTruncated ||
     liveProposalsError ||
+    liveProposalsTruncated ||
     missingEvidence.isError ||
     missingEvidence.isTruncated ||
     decided.isError ||
     decided.isTruncated;
+  /* Until every one of these has answered, the total is a running subtotal.
+     Printing it would show a number that changes under the reader, and showing
+     nothing would read as an all-clear — so the line says it is still asking. */
+  const stillReading = liveNeedsReviewLoading || liveProposalsLoading || missingEvidence.isLoading || decided.isLoading;
 
   const pendingSummary = useMemo(() => {
     let urgent = 0;
@@ -520,18 +545,20 @@ export function HomePage() {
     /* Both payment-intent feeds land in "waiting" — see tierForPaymentIntent. */
     return pendingAttentionSummary({
       urgent,
-      waiting: waiting + pendingSessionIntents + liveNeedsReview.length,
+      waiting: waiting + pendingSessionIntents + durableNeedsReview.length,
       input: missingEvidenceCount,
       incomplete: incompleteRead,
+      loading: stillReading,
     });
   }, [
     tieredProposals,
     tierThresholds,
     decidedIds,
     pendingSessionIntents,
-    liveNeedsReview.length,
+    durableNeedsReview.length,
     missingEvidenceCount,
     incompleteRead,
+    stillReading,
   ]);
 
 
@@ -926,7 +953,10 @@ export function HomePage() {
                       background:
                         pendingSummary.tone === "urgent"
                           ? "#d20344"
-                          : pendingSummary.tone === "unknown"
+                          : /* Grey for both "we don't know yet" cases: still
+                               reading, and read but failed. Amber would claim
+                               there is something to act on. */
+                            pendingSummary.tone === "unknown" || pendingSummary.tone === "loading"
                             ? "#6c779d"
                             : "#ff9500",
                     }}
@@ -941,9 +971,11 @@ export function HomePage() {
                     Open Inbox
                   </span>
                 </div>
-                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[14px] text-brain-v1baby-blue-60 pl-[18px] w-full">
-                  {pendingSummary.detail}
-                </p>
+                {pendingSummary.detail && (
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[14px] text-brain-v1baby-blue-60 pl-[18px] w-full">
+                    {pendingSummary.detail}
+                  </p>
+                )}
               </button>
             )}
 

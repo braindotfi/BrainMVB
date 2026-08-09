@@ -27,13 +27,17 @@ const PROPOSALS_QUERY_KEY = "/api/brain/proposals?limit=100";
 
 interface ProposalsPage {
   proposals: { payment_intent_id: string | null }[];
+  next_cursor?: string | null;
 }
+
+/** The fan-out cap, exported so a caller can tell it was hit. */
+export const INTENT_FAN_OUT_CAP = 25;
 
 /** The money-path payment_intent_ids on a /proposals page, de-duplicated and
  *  capped so a large page can't fan out unboundedly. Exported for tests. */
 export function selectMoneyPathIntentIds(
   proposals: { payment_intent_id: string | null }[],
-  cap = 25,
+  cap = INTENT_FAN_OUT_CAP,
 ): string[] {
   const ids = new Set<string>();
   for (const p of proposals) {
@@ -116,7 +120,17 @@ export function useBrainReviewQueue() {
     retry: false,
     refetchOnWindowFocus: true,
   });
-  const pendingIds = selectMoneyPathIntentIds(list.data?.proposals ?? []);
+  const page = list.data?.proposals ?? [];
+  const pendingIds = selectMoneyPathIntentIds(page);
+  /* Two independent ways this queue can be SHORT rather than complete, both
+     silent: core can page the proposals list, and the id fan-out above stops at
+     a cap. Either one means an unread pending approval, so a caller that prints
+     a total has to be able to hedge it. Counted before the status filter, which
+     legitimately removes rows. */
+  const distinctMoneyPathIds = new Set(page.filter((p) => p.payment_intent_id).map((p) => p.payment_intent_id)).size;
+  const isTruncated =
+    (typeof list.data?.next_cursor === "string" && list.data.next_cursor.length > 0) ||
+    distinctMoneyPathIds > pendingIds.length;
 
   // Fan out to the full record per candidate. useQueries (not useQuery-in-a-
   // loop, which breaks Rules of Hooks once the id list's length changes)
@@ -162,6 +176,7 @@ export function useBrainReviewQueue() {
        dropping it from `intents` below removes a row the operator is on the
        hook for — silently, and only ever downwards. Counterparty lookup is
        excluded on purpose: losing it costs a display name, not a row. */
+    isTruncated,
     isError: list.isError || details.some((d) => d.isError),
     proposals: intents.map((i) => mapIntentToProposal(i, nameOf(i.destination_counterparty_id))),
   };

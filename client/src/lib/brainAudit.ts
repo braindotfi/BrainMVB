@@ -754,6 +754,10 @@ export function useDecidedProposalIds() {
   return {
     ids: decidedProposalIdsFromEvents(events),
     isError: query.isError,
+    /* An unanswered read is not an empty one. Without this a counting surface
+       treats the first frame as "nothing has been decided", which inflates its
+       total before the feed lands and then silently corrects itself. */
+    isLoading: query.isLoading,
     isTruncated: feedIsTruncated(events, query.data?.next_cursor),
   };
 }

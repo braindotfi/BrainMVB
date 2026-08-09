@@ -37,20 +37,27 @@ export interface BucketableRecord {
 export type InboxBucket = "approval" | "awareness";
 
 export function inboxBucket(item: BucketableRecord): InboxBucket {
-  /* Ledger-derived observations propose nothing by construction. */
-  if (item.kind === "detection") return "awareness";
+  /* A published decision list is the authority, whatever the source field says
+     — including when it is EMPTY, which means nothing may be written.
 
-  /* When core published a decision list, it is the authority — including when
-     it published an EMPTY one, which means nothing may be written and the row
-     is awareness whatever its source field says. */
+     It is checked FIRST, ahead of the `kind: "detection"` shortcut below, and
+     that ordering is the point rather than an accident. The row's own action
+     buttons are built from this same list, so a detection that ever gained a
+     writable approve would render Approve/Reject under a heading that says the
+     row is only for information — the exact heading-versus-buttons split this
+     function exists to close, just pointing the other way. Today no detection
+     publishes one; if that changes, the section follows the buttons. */
   if (item.liveDecisions) {
     return item.liveDecisions.some((d) => d.writable && (d.id === "approve" || d.id === "reject"))
       ? "approval"
       : "awareness";
   }
 
-  /* Rows with no per-record decision list (payment intents, in-session rows):
-     `actionable` is this surface's own record of whether it draws Approve /
-     Reject, so grouping by it asks the same question one level up. */
+  /* Ledger-derived observations with no published list propose nothing. */
+  if (item.kind === "detection") return "awareness";
+
+  /* Everything else (payment intents, in-session rows): `actionable` is this
+     surface's own record of whether it draws Approve / Reject, so grouping by
+     it asks the same question one level up. */
   return item.actionable ? "approval" : "awareness";
 }

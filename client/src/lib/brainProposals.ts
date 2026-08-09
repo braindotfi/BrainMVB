@@ -244,7 +244,13 @@ export function selectNonFinancialProposals(items: BrainProposal[]): BrainPropos
 /** All proposals. The list already returns full detail records (no extra
  *  fields live on GET /proposals/{id} that aren't on the list row), so no
  *  fan-out is needed here unlike brainQueue.ts's PaymentIntent queue. */
-export function useBrainProposals(): { isLoading: boolean; isError: boolean; proposals: BrainProposal[] } {
+export function useBrainProposals(): {
+  isLoading: boolean;
+  isError: boolean;
+  /** True when core paged the list, so `proposals` is a prefix and not the whole queue. */
+  isTruncated: boolean;
+  proposals: BrainProposal[];
+} {
   const list = useQuery<ListProposalsResponse>({
     // ponytail: caps at 100 rows; add next_cursor paging when a non-payment
     // proposal producer ships and volume can exceed one page
@@ -265,6 +271,10 @@ export function useBrainProposals(): { isLoading: boolean; isError: boolean; pro
        indistinguishable from an empty queue, and on an approvals surface that
        reads as an all-clear. */
     isError: list.isError,
+    /* A cursor means there is another page nobody read. Surfaced for the same
+       reason as isError: a caller printing a total has to be able to say the
+       number is a floor rather than quietly reporting a prefix as the whole. */
+    isTruncated: typeof list.data?.next_cursor === "string" && list.data.next_cursor.length > 0,
     // Money-path rows (payment_intent_id != null) are excluded here - see
     // selectNonFinancialProposals for why approving them on this surface
     // would be a blind second approval path that executes a real payment.
