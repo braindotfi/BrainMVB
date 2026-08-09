@@ -33,6 +33,7 @@ import {
   isDecidableProposal,
   buildDecisionButtons,
   buildProposalHeaderCopy,
+  proposalInvoiceIdentity,
   type DecisionButton,
 } from "@/lib/proposalCards";
 import { LiveProposalModal, AGENT_DISPLAY_NAME } from "@/components/AgentProposalModal";
@@ -817,6 +818,21 @@ export function InboxPage() {
        forecast, etc. — GET /v1/proposals via the BFF). The tag carries the
        originating agent's identity; the "Why:" line is the agent's own
        narrative — omitted when the record carries none (honest omission). */
+    /* One invoice, several live proposals — confirmed against a live tenant, not
+       inferred: brain-core's collections agent re-proposes an open invoice on
+       every sweep, and those runs overlap the proposals a tenant is seeded with,
+       so two records citing the same invoice id sit in the queue at once. They
+       are separate approvals (approving one leaves the other pending upstream),
+       so neither may be suppressed. The rows instead say they share a document,
+       grouped on the invoice ID each one cites. */
+    const proposalsPerInvoice = new Map<string, number>();
+    for (const p of needsReviewProposals) {
+      if (decidedProposalIds.has(p.id)) continue;
+      const identity = proposalInvoiceIdentity(p);
+      if (!identity) continue;
+      proposalsPerInvoice.set(identity.key, (proposalsPerInvoice.get(identity.key) ?? 0) + 1);
+    }
+
     for (const p of needsReviewProposals) {
       /* Skip proposals the audit log already confirms as decided — brain-core
          never removes them from the feed, so without this guard both the live
@@ -831,7 +847,15 @@ export function InboxPage() {
       const pillName = agentBadgeLabel(agentKey);
         const decisions = buildDecisionButtons(p.available_decisions, p.presentation?.actions);
       const headerCopy = buildProposalHeaderCopy(p, agentName, formatText);
-      const proposalPresentation = liveProposalRow(headerCopy, pillName);
+      const identity = proposalInvoiceIdentity(p);
+      const shared = identity ? (proposalsPerInvoice.get(identity.key) ?? 1) - 1 : 0;
+      /* Counted, never ordered: the sibling could sort anywhere in the list, so
+         the row claims only that another open proposal exists on the document. */
+      const sharedNote =
+        shared > 0
+          ? `${shared === 1 ? "1 other open proposal" : `${shared} other open proposals`} on ${identity?.code ? `invoice ${identity.code}` : "the same invoice"}`
+          : undefined;
+      const proposalPresentation = liveProposalRow(headerCopy, pillName, sharedNote);
       push({
         id: p.id,
         kind: "proposal",

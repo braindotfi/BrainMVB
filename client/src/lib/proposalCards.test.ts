@@ -25,6 +25,7 @@ import {
   titleCaseDecisionLabel,
   titleCaseLabel,
   buildProposalHeaderCopy,
+  proposalInvoiceIdentity,
 } from "./proposalCards";
 import type { ProposalEvidenceItem } from "./brainProposals";
 
@@ -774,6 +775,122 @@ describe("buildProposalHeaderCopy", () => {
       title: "Compliance",
       text: "Proposed by Compliance",
     });
+  });
+
+  /* Shape taken from a live tenant: the collections agent cited INV-1027 only
+     through its wiki page, and the "invoice" evidence item pointed at the
+     OBLIGATION id with no code or amount on it. The row went out as a bare
+     "Wayne Enterprises" next to a second proposal on the same invoice that did
+     carry the caption, so one document produced two rows that looked unrelated. */
+  it("captions from key_facts when the invoice is only cited as context", () => {
+    const proposal = {
+      id: "prop_wayne",
+      type: "collections",
+      status: "pending",
+      mode: "propose",
+      narrative: "Wayne Enterprises has 4300.00000000 USD outstanding on invoice INV-1027.",
+      evidence: [
+        { kind: "wiki", ref: "wiki:/invoices/inv_01KZKGQ7FZK86XRWFWCJDZRCQM", context: true, code: "INV-1027", facts: [] },
+        { kind: "counterparty", ref: "cp_01KZKGQ7FX6H5BVFGVEAD31TB4", context: false, display: "Wayne Enterprises", facts: [] },
+        { kind: "obligation", ref: "obl_01KZKGQ7FY81CDQPQZZXJVGEEJ", context: false, facts: [] },
+      ],
+      subject: { label: "Counterparty", display: "Wayne Enterprises" },
+      presentation: { headline: "Receivable is 108 days overdue for Wayne Enterprises.", key_facts: null },
+      key_facts: [
+        { label: "Invoice Number", value: "INV-1027" },
+        { label: "Amount Due", value: "4300.00000000" },
+        { label: "Currency", value: "USD" },
+      ],
+      resolved_refs: null,
+    } as any;
+
+    const formatText = (value: string) => (value === "USD 4300.00000000" ? "$4,300.00" : value);
+    expect(buildProposalHeaderCopy(proposal, "Collections", formatText)).toEqual({
+      title: "Receivable is 108 days overdue for Wayne Enterprises.",
+      text: "Wayne Enterprises · INV-1027 · $4,300.00",
+    });
+  });
+
+  it("prefers the cited record's own amount over key_facts", () => {
+    const proposal = {
+      id: "prop_direct",
+      type: "collections",
+      status: "pending",
+      mode: "propose",
+      narrative: null,
+      evidence: [
+        {
+          kind: "invoice",
+          ref: "inv_01KZKGPW1QFKQ61MZGETKKZRTH",
+          context: false,
+          code: "AR-STARTUPX-001",
+          amount: { value: "8000.00000000", currency: "USD" },
+          facts: [],
+        },
+      ],
+      subject: { label: "Counterparty", display: "StartupX" },
+      presentation: { headline: "Review collections outreach for StartupX", key_facts: null },
+      /* Deliberately contradicts the evidence: the document's own figure wins. */
+      key_facts: [
+        { label: "Invoice Number", value: "AR-OTHER-999" },
+        { label: "Amount Due", value: "1.00" },
+        { label: "Currency", value: "USD" },
+      ],
+      resolved_refs: null,
+    } as any;
+
+    const formatText = (value: string) => (value === "USD 8000.00000000" ? "$8,000.00" : value);
+    expect(buildProposalHeaderCopy(proposal, "Collections", formatText).text).toBe(
+      "StartupX · AR-STARTUPX-001 · $8,000.00",
+    );
+  });
+});
+
+/* Two live proposals on one invoice is a real brain-core state, not a render
+   bug: the collections agent re-proposes an open invoice on each sweep and its
+   output overlaps the seeded proposals. Both are separately approvable, so the
+   Inbox groups them by the record they cite instead of hiding either. */
+describe("proposalInvoiceIdentity", () => {
+  const build = (evidence: unknown[], keyFacts: unknown[] | null = null) =>
+    ({ id: "p", evidence, key_facts: keyFacts, presentation: null } as any);
+
+  it("groups a directly cited invoice and a wiki-cited one under the same id", () => {
+    const direct = build([
+      { kind: "invoice", ref: "inv_01KZKGPW1QFKQ61MZGETKKZRTH", context: false, code: "AR-STARTUPX-001", facts: [] },
+    ]);
+    const viaWiki = build([
+      { kind: "wiki", ref: "wiki:/invoices/inv_01KZKGPW1QFKQ61MZGETKKZRTH", context: true, code: "AR-STARTUPX-001", facts: [] },
+      { kind: "obligation", ref: "obl_01KZKGPW1QFKQ61MZGETKKZRTX", context: false, facts: [] },
+    ]);
+    expect(proposalInvoiceIdentity(direct)?.key).toBe("inv_01KZKGPW1QFKQ61MZGETKKZRTH");
+    expect(proposalInvoiceIdentity(viaWiki)?.key).toBe(proposalInvoiceIdentity(direct)?.key);
+    expect(proposalInvoiceIdentity(viaWiki)?.code).toBe("AR-STARTUPX-001");
+  });
+
+  it("never groups on a counterparty/amount resemblance", () => {
+    /* Same customer, same figure, two different invoices — a customer billed the
+       same amount twice is two debts, and merging them would hide one. */
+    const first = build([
+      { kind: "invoice", ref: "inv_AAA", context: false, code: "INV-1", amount: { value: "4300.00", currency: "USD" }, facts: [] },
+      { kind: "counterparty", ref: "cp_1", context: false, display: "Wayne Enterprises", facts: [] },
+    ]);
+    const second = build([
+      { kind: "invoice", ref: "inv_BBB", context: false, code: "INV-2", amount: { value: "4300.00", currency: "USD" }, facts: [] },
+      { kind: "counterparty", ref: "cp_1", context: false, display: "Wayne Enterprises", facts: [] },
+    ]);
+    expect(proposalInvoiceIdentity(first)?.key).not.toBe(proposalInvoiceIdentity(second)?.key);
+  });
+
+  it("falls back to the document number, and yields nothing when no document is named", () => {
+    expect(proposalInvoiceIdentity(build([], [{ label: "Invoice Number", value: "INV-1027" }]))).toEqual({
+      key: "code:INV-1027",
+      code: "INV-1027",
+    });
+    /* A vendor-risk proposal cites no invoice at all: it must not group with
+       every other invoice-less proposal under one "unknown" bucket. */
+    expect(
+      proposalInvoiceIdentity(build([{ kind: "counterparty", ref: "cp_1", context: false, facts: [] }])),
+    ).toBeNull();
   });
 });
 

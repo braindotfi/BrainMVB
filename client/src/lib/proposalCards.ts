@@ -99,6 +99,59 @@ export function buildProposalHeadline(evidence: ProposalEvidenceItem[]): {
 }
 
 /**
+ * The same caption, recovered from the proposal's own key facts.
+ *
+ * Only the labels brain-core's collections runs actually emit are read, and the
+ * amount is passed through as the string it arrived as — parsing it into a
+ * number here would round a figure that is quoted to a customer.
+ */
+function invoiceFactsHeadline(facts: ResolvedKeyFact[]): { code: string | null; amount: ProposalAmount | null } | null {
+  const value = (label: string) => facts.find((f) => f.label === label)?.value?.trim() || null;
+  const code = value("Invoice Number");
+  const due = value("Amount Due");
+  const currency = value("Currency");
+  const amount = due && currency ? { value: due, currency } : null;
+  if (!code && !amount) return null;
+  return { code, amount };
+}
+
+/**
+ * The invoice a proposal is ABOUT, as an identity rather than a description.
+ *
+ * brain-core's collections agent re-proposes an open invoice on every sweep, and
+ * those runs overlap the proposals a tenant is seeded with, so one invoice
+ * legitimately carries several live proposals at once. Grouping them needs the
+ * record id they cite — never a counterparty/amount resemblance, which would
+ * merge two genuinely different debts the moment a customer is billed twice for
+ * the same sum.
+ */
+export function proposalInvoiceIdentity(
+  proposal: BrainProposal,
+): { key: string; code: string | null } | null {
+  const evidence = proposal.evidence ?? [];
+  const facts = proposal.key_facts ?? keyFactsFromPresentation(proposal.presentation?.key_facts);
+  const factCode = facts.find((f) => f.label === "Invoice Number")?.value?.trim() || null;
+
+  /* A direct citation is the strongest claim: the proposal names the record. */
+  const direct = evidence.find(
+    (e) => !e.context && e.kind === "invoice" && /^inv_[0-9A-Z]+$/i.test(String(e.ref ?? "")),
+  );
+  if (direct) return { key: String(direct.ref), code: direct.code ?? factCode };
+
+  /* Other runs cite the invoice only through its wiki page. That is the same
+     record id arriving by another route, so it still groups — but it stays out
+     of the caption above, where a background citation cannot speak for the card. */
+  for (const e of evidence) {
+    const viaWiki = /^wiki:\/invoices\/(inv_[0-9A-Z]+)$/i.exec(String(e.ref ?? ""));
+    if (viaWiki) return { key: viaWiki[1], code: e.code ?? factCode };
+  }
+
+  /* No id anywhere: the document number is weaker (it is unique per issuer, not
+     globally) but it is still an identifier of one document, not a resemblance. */
+  return factCode ? { key: `code:${factCode}`, code: factCode } : null;
+}
+
+/**
  * Flatten BFF-resolved evidence into de-duplicated, prioritised detail rows.
  *
  * `subjectName` is already shown in the card header, so the row that merely
@@ -471,16 +524,26 @@ export function buildProposalHeaderCopy(
 ): ProposalHeaderCopy {
   const evidence = proposal.evidence ?? [];
   const subjectName = proposal.subject?.display ?? null;
-  const headline = buildProposalHeadline(evidence);
-  const headlineText = [
-    headline.code,
-    headline.amount ? formatText(`${headline.amount.currency} ${headline.amount.value}`) : null,
-  ].filter(Boolean).join(" · ");
   const resolvedFacts = proposal.key_facts ?? keyFactsFromPresentation(proposal.presentation?.key_facts);
+  const headline = buildProposalHeadline(evidence);
+  /* Some collections runs cite their invoice only as a context (wiki) reference,
+     which cannot caption the card — so the same invoice produced a row reading
+     "Wayne Enterprises · INV-1027 · $4,300.00" on one sweep and a bare
+     "Wayne Enterprises" on the next, making two live proposals about one invoice
+     look like a rendering fault. key_facts is the proposal's OWN summary of the
+     record it is about (not a citation of something it read), so it names the
+     document when the evidence list will not. */
+  const factHeadline = headline.code ? null : invoiceFactsHeadline(resolvedFacts);
+  const shownCode = headline.code ?? factHeadline?.code ?? null;
+  const shownAmount = headline.amount ?? factHeadline?.amount ?? null;
+  const headlineText = [
+    shownCode,
+    shownAmount ? formatText(`${shownAmount.currency} ${shownAmount.value}`) : null,
+  ].filter(Boolean).join(" · ");
   const refDisplays = buildRefDisplayMap(resolvedFacts, evidence, proposal.resolved_refs);
   const resolvedHeadline = resolveHeadlineText(proposal.presentation?.headline, refDisplays);
   const cardHeadline = resolvedHeadline
-    ? formatText(applyCurrencyToBareAmounts(resolvedHeadline, headline.amount?.currency ?? null))
+    ? formatText(applyCurrencyToBareAmounts(resolvedHeadline, shownAmount?.currency ?? null))
     : null;
   /* notify_only findings (compliance today) carry no subject/presentation.headline
      at all, so every row previously fell through to the bare agentName ("Compliance"

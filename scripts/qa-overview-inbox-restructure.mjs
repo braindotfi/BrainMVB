@@ -327,6 +327,84 @@ if (hasDecision) {
     rowsWithNoDecision === 0,
     `${rowsWithNoDecision} of ${rows} had neither`,
   );
+  /* One invoice, several live proposals. brain-core's collections agent
+     re-proposes an open invoice on every sweep and its output overlaps the
+     proposals a tenant is seeded with, so the queue genuinely holds two
+     approvable records citing the same document — they are NOT a double render,
+     and hiding either would leave a pending record invisible. The rows must say
+     so. The witness comes from the feed's own invoice ids, never from a
+     counterparty/amount resemblance, which would call two real debts one. */
+  const siblingGroups = await page.evaluate(async () => {
+    const res = await fetch("/api/brain/proposals?limit=100", { headers: { Accept: "application/json" } });
+    if (!res.ok) return { error: res.status, groups: [] };
+    const { proposals = [] } = await res.json();
+    const groups = new Map();
+    for (const p of proposals) {
+      if (!String(p.status ?? "").startsWith("pending")) continue;
+      const evidence = p.evidence ?? [];
+      const direct = evidence.find((e) => !e.context && e.kind === "invoice" && /^inv_[0-9A-Z]+$/i.test(String(e.ref ?? "")));
+      const viaWiki = evidence
+        .map((e) => /^wiki:\/invoices\/(inv_[0-9A-Z]+)$/i.exec(String(e.ref ?? ""))?.[1])
+        .find(Boolean);
+      const key = direct ? String(direct.ref) : viaWiki;
+      if (!key) continue;
+      groups.set(key, [...(groups.get(key) ?? []), p.id]);
+    }
+    return { error: null, groups: [...groups.entries()].filter(([, ids]) => ids.length > 1) };
+  });
+
+  if (siblingGroups.error) {
+    skip("the shared-invoice notice", `the proposal feed answered ${siblingGroups.error}, so no witness could be read`);
+  } else if (siblingGroups.groups.length === 0) {
+    skip(
+      "the shared-invoice notice",
+      "no invoice on this tenant carries two live proposals yet — the collections agent re-proposes on a later sweep",
+    );
+  } else {
+    /* The claim on each row is checked against the OTHER rows actually in the
+       list, so it fails both ways: a missing notice on a pair, and a notice
+       counting a sibling that is no longer there (brain-core leaves a decided
+       proposal in the feed, and the Inbox drops it — the count must drop too).
+       This reads an unfiltered list; a filtered one would legitimately show
+       fewer rows than the queue holds. */
+    let mismatch = "";
+    let checkedGroups = 0;
+    let collapsed = 0;
+    for (const [invoice, group] of siblingGroups.groups) {
+      const present = [];
+      for (const id of group) {
+        const row = page.locator(`[data-testid="row-decision-${id}"]`);
+        if (await row.isVisible().catch(() => false)) present.push({ id, row });
+      }
+      if (present.length === 0) continue;
+      if (present.length === 1 && group.length > 1) collapsed++;
+      checkedGroups++;
+      for (const { id, row } of present) {
+        const text = (await row.innerText()).replace(/\s+/g, " ");
+        const claimed = /(\d+) other open proposals? on /i.exec(text);
+        const expected = present.length - 1;
+        const said = claimed ? Number(claimed[1]) : 0;
+        if (said !== expected) {
+          mismatch = `${id} on ${invoice} says ${said}, ${expected} other row(s) rendered — "${text.slice(0, 120)}"`;
+        }
+      }
+    }
+    if (checkedGroups === 0) {
+      skip("the shared-invoice notice", "every proposal sharing an invoice had already been decided by the time the list rendered");
+    } else {
+      check(
+        "a row sharing an invoice says how many other proposals are open on it",
+        !mismatch,
+        mismatch || `${checkedGroups} invoice(s) with more than one live proposal`,
+      );
+      /* Saying so must never become hiding: both records stay approvable. */
+      check(
+        "no proposal is dropped for sharing an invoice with another",
+        collapsed === 0,
+        `${collapsed} group(s) rendered a single row`,
+      );
+    }
+  }
 } else {
   skip("the decision section", "fresh tenant surfaced no undecided proposals");
 }
