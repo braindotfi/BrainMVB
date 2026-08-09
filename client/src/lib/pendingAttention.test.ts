@@ -1,0 +1,110 @@
+import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { pendingAttentionSummary } from "./pendingAttention";
+
+const counts = (over: Partial<Parameters<typeof pendingAttentionSummary>[0]> = {}) => ({
+  urgent: 0,
+  waiting: 0,
+  input: 0,
+  incomplete: false,
+  ...over,
+});
+
+describe("a complete read", () => {
+  it("renders nothing when nothing is waiting", () => {
+    expect(pendingAttentionSummary(counts())).toBeNull();
+  });
+
+  it("counts approvals and inputs together, because both are work asked of you", () => {
+    const s = pendingAttentionSummary(counts({ urgent: 1, waiting: 2, input: 3 }));
+    expect(s?.total).toBe(6);
+    expect(s?.text).toBe("6 items need your attention");
+  });
+
+  it("agrees with itself about singular and plural", () => {
+    expect(pendingAttentionSummary(counts({ waiting: 1 }))?.text).toBe("1 item needs your attention");
+    expect(pendingAttentionSummary(counts({ waiting: 2 }))?.text).toBe("2 items need your attention");
+  });
+
+  it("names the breakdown, and omits the tiers that are empty", () => {
+    const s = pendingAttentionSummary(counts({ urgent: 2, input: 1 }));
+    expect(s?.detail).toBe("2 urgent · 1 needing your input");
+    expect(s?.detail).not.toContain("waiting on you");
+  });
+
+  it("reads urgent only when something urgent is in it", () => {
+    expect(pendingAttentionSummary(counts({ urgent: 1 }))?.tone).toBe("urgent");
+    expect(pendingAttentionSummary(counts({ waiting: 4 }))?.tone).toBe("normal");
+    expect(pendingAttentionSummary(counts({ input: 4 }))?.tone).toBe("normal");
+  });
+});
+
+describe("an incomplete read", () => {
+  /* The count is a floor. Printing it bare would be a claim the page cannot
+     support, and this line is the one people use to decide they are done. */
+  it("hedges the headline rather than printing a confident total", () => {
+    const s = pendingAttentionSummary(counts({ waiting: 3, incomplete: true }));
+    expect(s?.text).toBe("At least 3 items need your attention");
+  });
+
+  it("says in the detail line that something couldn't be read", () => {
+    const s = pendingAttentionSummary(counts({ urgent: 1, incomplete: true }));
+    expect(s?.detail).toContain("1 urgent");
+    expect(s?.detail).toMatch(/couldn't be read/);
+  });
+
+  it("still lets a known-urgent item colour the row", () => {
+    /* A feed timing out does not make a material payment less material — but
+       the wording, not the colour, is what carries the uncertainty. */
+    const s = pendingAttentionSummary(counts({ urgent: 1, incomplete: true }));
+    expect(s?.urgent).toBe(1);
+    expect(s?.text.startsWith("At least")).toBe(true);
+  });
+
+  it("never hides itself when it found nothing, because zero is not a fact here", () => {
+    const s = pendingAttentionSummary(counts({ incomplete: true }));
+    expect(s).not.toBeNull();
+    expect(s?.tone).toBe("unknown");
+    expect(s?.text).toMatch(/couldn't check/i);
+    /* An empty queue and an unreadable one must not produce the same sentence:
+       one of them means "you're done" and the other means "nobody looked". */
+    expect(s?.text).not.toBe(pendingAttentionSummary(counts({ waiting: 1 }))?.text);
+  });
+
+  it("says the zero-with-errors case is a connection problem, in those words", () => {
+    expect(pendingAttentionSummary(counts({ incomplete: true }))?.detail).toMatch(/connection problem/i);
+  });
+});
+
+describe("Overview wires the summary to every feed it depends on", () => {
+  /* The honesty rules above are only worth anything if the page actually passes
+     `incomplete: true` when a read fails. Each of these is a distinct feed
+     behind the count, and dropping one from the OR is silent — the line simply
+     goes back to sounding certain. */
+  const src = readFileSync("client/src/pages/HomePage.tsx", "utf8");
+  const flag = src.slice(src.indexOf("const incompleteRead ="), src.indexOf("const pendingSummary"));
+
+  for (const feed of [
+    "liveNeedsReviewError",
+    "liveProposalsError",
+    "missingEvidence.isError",
+    "missingEvidence.isTruncated",
+    "decided.isError",
+    "decided.isTruncated",
+  ]) {
+    it(`treats ${feed} as a reason to hedge`, () => {
+      expect(flag).toContain(feed);
+    });
+  }
+
+  /* Proof the slice above is the real expression and not an empty string that
+     would make every assertion in this block pass for free. */
+  it("is reading the actual expression", () => {
+    expect(flag.length).toBeGreaterThan(40);
+    expect(flag).toContain("||");
+  });
+
+  it("hands the count to the shared function instead of phrasing it inline", () => {
+    expect(src).toContain("pendingAttentionSummary({");
+  });
+});

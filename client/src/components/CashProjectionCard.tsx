@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Area, AreaChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { WidgetCard, Divider } from "@/components/LedgerWidgets";
 import { UnavailableDataBox } from "@/components/Callout";
-import { CASH_EVENT_BASIS, type CashProjectionView } from "@/lib/cashProjection";
+import { CASH_EVENT_BASIS, type CashEvent, type CashProjectionView } from "@/lib/cashProjection";
 
 /**
  * Overview's cash projection.
@@ -53,20 +53,61 @@ function Shell({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Certainty chip. Confirmed reads neutral-solid; Projected reads provisional. */
-function CertaintyChip({ certainty }: { certainty: "confirmed" | "projected" }) {
-  const confirmed = certainty === "confirmed";
+/**
+ * One scheduled event, as a chip in the strip under the chart.
+ *
+ * Laid out left-to-right in date order so the strip reads along the same axis
+ * as the plot above it: the third chip is the third inflection in the line. A
+ * vertical list makes the reader re-derive that mapping every time.
+ *
+ * Certainty is drawn the way the chart draws it — solid for confirmed, dashed
+ * for projected, matching the dashed floor track — but the word is printed too.
+ * A border style is not a label, and "is this money actually coming?" is the
+ * one thing on this card nobody should have to infer from a stroke pattern.
+ */
+function EventChip({
+  event,
+  format,
+}: {
+  event: CashEvent;
+  format: (n: number) => string;
+}) {
+  const confirmed = event.certainty === "confirmed";
+  const outflow = event.amount < 0;
   return (
-    <span
-      className={`[font-family:'Gilroy',sans-serif] font-semibold text-[11px] leading-[14px] uppercase px-[6px] py-[2px] rounded-[4px] border border-solid whitespace-nowrap ${
+    <li
+      className={`flex flex-col gap-[2px] shrink-0 w-[136px] px-[10px] py-[8px] rounded-[8px] border ${
         confirmed
-          ? "text-brain-v1baby-blue-100 border-brain-v1stroke-2 bg-brain-v1baby-blue-5"
-          : "text-brain-v1light-orange border-[rgba(255,149,0,0.3)] bg-[rgba(255,149,0,0.08)]"
+          ? "border-solid border-brain-v1stroke-2 bg-brain-v1baby-blue-5"
+          : "border-dashed border-[rgba(255,149,0,0.3)] bg-[rgba(255,149,0,0.08)]"
       }`}
-      data-testid={`chip-cash-${certainty}`}
+      data-testid={`row-cash-event-${event.id}`}
+      data-certainty={event.certainty}
     >
-      {confirmed ? "Confirmed" : "Projected"}
-    </span>
+      <div className="flex items-center gap-[6px] w-full">
+        <span className={`${MONO} text-[12px] text-brain-v1baby-blue-60 shrink-0`}>{shortDate(event.date)}</span>
+        <span
+          className={`[font-family:'Gilroy',sans-serif] font-semibold text-[10px] leading-[14px] uppercase whitespace-nowrap ${
+            confirmed ? "text-brain-v1baby-blue-60" : "text-brain-v1light-orange"
+          }`}
+          data-testid={`chip-cash-${event.certainty}`}
+        >
+          {confirmed ? "Confirmed" : "Projected"}
+        </span>
+      </div>
+      <span className={`${MONO} ${outflow ? "text-brain-v1baby-blue-100" : "text-brain-v1green"}`}>
+        {outflow ? "-" : "+"}
+        {format(Math.abs(event.amount))}
+      </span>
+      {/* `title` because the label is the one field that genuinely can't fit —
+          counterparty names run long and the chip is fixed-width by design. */}
+      <span
+        className={`${BODY} text-[12px] leading-[16px] text-brain-v1baby-blue-60 w-full truncate capitalize`}
+        title={event.label}
+      >
+        {event.label}
+      </span>
+    </li>
   );
 }
 
@@ -291,23 +332,21 @@ export function CashProjectionCard({
 
       <Divider />
 
-      <ul className="flex flex-col w-full" data-testid="list-cash-projection-events">
+      {/* The event strip: chart order, left to right, one chip per event.
+          Scrolls horizontally rather than wrapping — wrapping would break the
+          date sequence across rows and cost the alignment with the plot, which
+          is the only reason this is a strip and not a list. The next chip is
+          left partly visible at this column width, which is the scroll cue. */}
+      <p className={`${LABEL} w-full`}>
+        {view.events.length === 1 ? "1 scheduled event" : `${view.events.length} scheduled events`}
+      </p>
+      <ul
+        className="flex gap-[8px] w-full overflow-x-auto pb-[4px]"
+        data-testid="list-cash-projection-events"
+        aria-label="Scheduled cash events, in date order"
+      >
         {view.events.map((e) => (
-          <li
-            key={e.id}
-            className="flex items-center gap-[8px] py-[8px] w-full"
-            data-testid={`row-cash-event-${e.id}`}
-          >
-            <span className={`${MONO} text-brain-v1baby-blue-60 w-[52px] shrink-0`}>{shortDate(e.date)}</span>
-            <span className={`${BODY} text-brain-v1baby-blue-100 flex-1 min-w-0 truncate capitalize`}>{e.label}</span>
-            <CertaintyChip certainty={e.certainty} />
-            <span
-              className={`${MONO} shrink-0 ${e.amount < 0 ? "text-brain-v1baby-blue-100" : "text-brain-v1green"}`}
-            >
-              {e.amount < 0 ? "-" : "+"}
-              {format(Math.abs(e.amount))}
-            </span>
-          </li>
+          <EventChip key={e.id} event={e} format={format} />
         ))}
       </ul>
     </Shell>

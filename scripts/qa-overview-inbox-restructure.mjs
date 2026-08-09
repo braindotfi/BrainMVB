@@ -73,10 +73,23 @@ const skip = (label, why) => {
  * matches one row three or four times, and any count taken from it is silently
  * a multiple of the truth. Excluding the known suffixes keeps counts honest.
  */
-const rowRoots = (prefix) =>
-  page.locator(
-    `[data-testid^="${prefix}-"]:not([data-testid$="-select"]):not([data-testid$="-badge"]):not([data-testid*="-action-"])`,
-  );
+const ROW_ROOT_SELECTOR = (prefix) =>
+  `[data-testid^="${prefix}-"]:not([data-testid$="-select"]):not([data-testid$="-badge"]):not([data-testid*="-action-"])`;
+
+/**
+ * Rows anywhere on the page.
+ *
+ * NOT section-scoped, and that matters: `toRow` stamps the SAME `row-decision`
+ * prefix on every record it builds, so approval rows and awareness rows are
+ * indistinguishable by testid. A bare prefix count is therefore a count of both
+ * sections, which is right for "does Overview list any rows at all" and wrong
+ * for anything asserting what is IN a section — use rowRootsIn for those.
+ */
+const rowRoots = (prefix) => page.locator(ROW_ROOT_SELECTOR(prefix));
+
+/** Rows inside one named section. */
+const rowRootsIn = (sectionTestId, prefix) =>
+  page.locator(`[data-testid="${sectionTestId}"]`).locator(ROW_ROOT_SELECTOR(prefix));
 
 const settle = async (locator, tries = 30, gap = 2000) => {
   for (let i = 0; i < tries; i++) {
@@ -163,8 +176,28 @@ if (shown[0] === "chart") {
     basis.replace(/\s+/g, " ").slice(0, 120),
   );
 
-  const events = await page.locator('[data-testid^="row-cash-event-"]').count();
+  const eventChips = page.locator('[data-testid^="row-cash-event-"]');
+  const events = await eventChips.count();
   check("a drawn projection lists the events behind it", events > 0, `${events} events`);
+
+  /* The strip has to read along the same axis as the plot above it — that
+     alignment is the only reason it is a strip and not a list, so "is it
+     actually horizontal" is the check, not "does it have a class". */
+  if (events >= 2) {
+    const a = await eventChips.nth(0).boundingBox();
+    const b = await eventChips.nth(1).boundingBox();
+    check(
+      "the events read left to right, in one row",
+      a && b && b.x > a.x && Math.abs(b.y - a.y) < 4,
+      a && b ? `first(${Math.round(a.x)},${Math.round(a.y)}) second(${Math.round(b.x)},${Math.round(b.y)})` : "no boxes",
+    );
+    /* Certainty is drawn AND written. A dashed border on its own is not a
+       label, and this is the field that decides whether the money is real. */
+    const chipText = (await eventChips.first().innerText()).replace(/\s+/g, " ").trim();
+    check("each event says whether it is confirmed or projected", /confirmed|projected/i.test(chipText), chipText);
+  } else {
+    skip("the horizontal event strip", `only ${events} event(s) scheduled in this window`);
+  }
 
   const floor = page.locator('[data-testid="callout-cash-projection-floor"]');
   if (await floor.isVisible().catch(() => false)) {
@@ -176,7 +209,73 @@ if (shown[0] === "chart") {
   skip("the drawn-projection checks", `card resolved to "${shown[0] ?? "none"}" on a fresh tenant`);
 }
 
+/* ── Overview must not be a second Inbox ──────────────────────────────────────
+   The restructure's whole claim is that Overview COUNTS and the Inbox LISTS. A
+   row list, a bulk bar or a detail modal reappearing here is the duplication
+   coming back, and it would look entirely reasonable on screen — two plausible
+   screens showing the same queue is exactly the failure that shipped before. */
+const overviewRowRoots = await rowRoots("row-decision").count();
+check("Overview lists no decision rows of its own", overviewRowRoots === 0, `${overviewRowRoots} rows`);
+const overviewTierSections = await page.locator('[data-testid^="tier-section-"]').count();
+check("Overview renders no tier sections", overviewTierSections === 0, `${overviewTierSections} sections`);
+const overviewBulkBar = await page.locator('[data-testid="bulk-bar"]').count();
+check("Overview offers no bulk approve", overviewBulkBar === 0, `${overviewBulkBar} bars`);
+
+/* ── Reading order ────────────────────────────────────────────────────────────
+   Figures first, then Brain's read of them, then what is waiting, then the
+   forecast. Asserted on rendered geometry rather than on source order, because
+   flex/grid ordering can move a node without the JSX moving. */
+const topOf = async (sel) => {
+  const box = await page.locator(sel).first().boundingBox().catch(() => null);
+  return box ? box.y : null;
+};
+const yMetrics = await topOf('[data-testid="grid-home-secondary-metrics"]');
+const yInsight = await topOf('[data-testid="text-home-cash-insight"]');
+const ySummary = await topOf('[data-testid="row-home-pending-summary"]');
+const yProjection = await topOf('[data-testid="chart-cash-projection"], [data-testid="text-cash-projection-empty"], [data-testid="text-cash-projection-no-balance"]');
+
+if (yMetrics !== null && yInsight !== null && yProjection !== null) {
+  check("the metric grids come before Brain's read of them", yMetrics < yInsight, `${yMetrics} < ${yInsight}`);
+  check("the cash projection card is last, not first", yInsight < yProjection, `${yInsight} < ${yProjection}`);
+  if (ySummary !== null) {
+    check("what's waiting sits above the projection card", ySummary < yProjection, `${ySummary} < ${yProjection}`);
+    check("what's waiting sits below the metric grids", yMetrics < ySummary, `${yMetrics} < ${ySummary}`);
+  }
+} else {
+  skip("the Overview reading-order checks", "one of the ordered elements did not render on this tenant");
+}
+
+/* ── The summary line ─────────────────────────────────────────────────────────
+   Two states are legitimate: a count, or nothing at all. What is NOT legitimate
+   is silence while a feed is failing, and that state cannot be conjured on a
+   healthy tenant — so the absent case is only accepted after confirming the
+   Inbox agrees there is nothing outstanding. */
+const summary = page.locator('[data-testid="row-home-pending-summary"]');
+const summaryVisible = await summary.isVisible().catch(() => false);
+let overviewTotal = null;
+if (summaryVisible) {
+  const text = (await summary.innerText()).replace(/\s+/g, " ").trim();
+  console.log(`summary >>> ${text}`);
+  check("the summary line states a count", /\d+ items? needs? your attention|couldn't check/i.test(text), text);
+  check("the summary line is a control, not a paragraph", (await summary.evaluate((el) => el.tagName)) === "BUTTON");
+  const m = /(\d+) items? needs? your attention/i.exec(text);
+  overviewTotal = m ? Number(m[1]) : null;
+  /* "At least N" is the honest form when a feed was short. Both are acceptable;
+     a bare N while something failed is not, and that is unit-tested. */
+  if (/at least/i.test(text)) console.log("       (hedged — a contributing feed was unreadable or capped)");
+} else {
+  skip("the summary line's content", "nothing is waiting on this tenant, so the row is correctly absent");
+}
+
 await page.screenshot({ path: "/tmp/qa-overview-restructure.png", fullPage: true });
+
+/* Clicking it must reach the queue it counts. A count with no way through is
+   the worst of both designs: it tells you there is work and then strands you. */
+if (summaryVisible) {
+  await summary.click();
+  await page.waitForTimeout(1500);
+  check("the summary line opens the Inbox", new URL(page.url()).pathname === "/inbox", page.url());
+}
 
 /* ── Inbox ────────────────────────────────────────────────────────────────── */
 
@@ -200,9 +299,34 @@ console.log(`sections — decision:${hasDecision} input:${hasInput} awareness:${
    even though every row still works. */
 if (hasDecision) {
   const h = await page.locator('[data-testid="heading-needs-decision"]').innerText();
-  check("the decision section is labelled", /needs your decision/i.test(h), h);
-  const rows = await rowRoots("row-decision").count();
-  check("the decision section holds rows", rows > 0, `${rows} rows`);
+  check("the approval section is labelled", /needs your approval/i.test(h), h);
+  const decisionRows = rowRootsIn("section-needs-decision", "row-decision");
+  const rows = await decisionRows.count();
+  check("the approval section holds rows", rows > 0, `${rows} rows`);
+
+  /* The rebucketing rule, checked where it can actually fail: every row under a
+     heading that asks for approval must offer one. An acknowledge-only record
+     landing here is the bug this section split was written to remove, and it
+     renders perfectly — a tidy row under a heading that is lying about it. */
+  let acknowledgeOnlyRows = 0;
+  let rowsWithNoDecision = 0;
+  for (let i = 0; i < rows; i++) {
+    const labels = await decisionRows.nth(i).locator("button").allInnerTexts();
+    const flat = labels.join(" ").toLowerCase();
+    const decides = /approve|reject|decline/.test(flat);
+    if (!decides) rowsWithNoDecision++;
+    if (/acknowledge/.test(flat) && !decides) acknowledgeOnlyRows++;
+  }
+  check(
+    "no acknowledge-only record sits under the approval heading",
+    acknowledgeOnlyRows === 0,
+    `${acknowledgeOnlyRows} of ${rows}`,
+  );
+  check(
+    "every row in the approval section offers an approve or a reject",
+    rowsWithNoDecision === 0,
+    `${rowsWithNoDecision} of ${rows} had neither`,
+  );
 } else {
   skip("the decision section", "fresh tenant surfaced no undecided proposals");
 }
@@ -239,6 +363,17 @@ if (hasInput) {
 if (hasAwareness) {
   const h = await page.locator('[data-testid="heading-for-awareness"]').innerText();
   check("the awareness section is labelled", /for your awareness/i.test(h), h);
+
+  /* The other half of the rule. Awareness rows may carry Acknowledge — that is
+     a write, but it records that you saw something rather than deciding it —
+     and must never carry an approve or a reject. */
+  const awarenessSection = page.locator('[data-testid="section-for-awareness"]');
+  const awarenessButtons = (await awarenessSection.locator("button").allInnerTexts()).join(" ").toLowerCase();
+  check(
+    "nothing in the awareness section asks to be approved or rejected",
+    !/approve|reject|decline/.test(awarenessButtons),
+    awarenessButtons.slice(0, 120) || "(no buttons)",
+  );
   const boxes = await page
     .locator('[data-testid="section-for-awareness"]')
     .locator('input[type="checkbox"]')
@@ -246,6 +381,42 @@ if (hasAwareness) {
   check("no row in the awareness section is bulk-selectable", boxes === 0, `${boxes} checkboxes`);
 } else {
   skip("the awareness section", "fresh tenant surfaced no detections");
+}
+
+/* ── The two screens must agree ───────────────────────────────────────────────
+   Overview prints one number that stands in for this page. If it counts a
+   different set — awareness rows included, decided proposals not subtracted —
+   both screens still look right on their own and only a tenant comparing them
+   would ever find out. */
+const inboxCountText = await page.locator('[data-testid="text-decision-count"]').innerText().catch(() => "");
+const inboxCount = /^\d+$/.test(inboxCountText.trim()) ? Number(inboxCountText.trim()) : null;
+if (overviewTotal !== null && inboxCount !== null) {
+  check(
+    "Overview's total matches the Inbox's awaiting-you count",
+    overviewTotal === inboxCount,
+    `overview ${overviewTotal} vs inbox ${inboxCount}`,
+  );
+} else if (!summaryVisible && inboxCount === 0) {
+  check("an absent summary line agrees with an empty Inbox", true, "both zero");
+} else {
+  skip(
+    "the Overview/Inbox count agreement",
+    `overview total ${overviewTotal ?? "unread"}, inbox count ${inboxCount ?? "unread"} — one side hedged or did not render`,
+  );
+}
+
+/* The count row must not silently include awareness rows: those are not asking
+   the tenant for anything, and Overview does not count them. */
+const approvalRowCount = await rowRootsIn("section-needs-decision", "row-decision").count();
+const inputRowCount = await rowRoots("row-agent-input").count();
+if (inboxCount !== null) {
+  check(
+    "the awaiting-you count is exactly the approval and input rows",
+    inboxCount === approvalRowCount + inputRowCount,
+    `${inboxCount} vs ${approvalRowCount}+${inputRowCount}`,
+  );
+} else {
+  skip("the awaiting-you count composition", "the count pill did not render");
 }
 
 await page.screenshot({ path: "/tmp/qa-inbox-restructure.png", fullPage: true });

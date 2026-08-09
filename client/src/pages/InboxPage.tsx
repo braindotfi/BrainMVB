@@ -61,6 +61,7 @@ import { useReviewStatuses, setReviewStatus } from "@/lib/reviewStatusStore";
 import { acknowledgeInsight, useAcknowledgedRecords } from "@/lib/acknowledgedStore";
 import { TierRow, RowSection, type TierRowModel, type TierRowAction, type TierRowStatusPill } from "@/components/TierRowList";
 import { orderRowsForDisplay } from "@/lib/tierRowOrder";
+import { inboxBucket } from "@/lib/inboxBuckets";
 import {
   auditStatusPill,
   PILL_APPROVED,
@@ -1472,21 +1473,26 @@ export function InboxPage() {
   };
 
   /* ── The three named sections ───────────────────────────────────────────────
-     Split on `kind`, the taxonomy this file already carries: a "proposal" is a
-     record Brain is asking you to decide, a "detection" is a ledger-derived
-     observation with nothing proposed. Deriving the split from an existing field
-     rather than a new one means a row cannot appear under "Needs your decision"
-     while its buttons say otherwise.
+     Split on what the record can actually DO, not on where it came from.
+
+     `kind` looks like the taxonomy for this, and the split used to use it, but
+     it is stamped per source: every agent proposal is pushed as
+     kind: "proposal" regardless of what brain-core will accept for it. A
+     notify_only fraud or compliance finding offers `acknowledge` and nothing
+     else, and it was landing under "Needs your decision" above a single
+     Acknowledge button — a heading demanding a decision over a row that has
+     none to give. Sorting by outcome type instead means the heading and the
+     buttons cannot disagree, because they now read the same field.
 
      Tier is NOT lost by regrouping: rows stay in tier order inside each section
      and every row keeps its own accent bar, so urgency still reads down the list. */
   const decisionRows = useMemo(
-    () => orderRowsForDisplay(visibleItems.filter((it) => it.kind === "proposal").map(toRow)),
+    () => orderRowsForDisplay(visibleItems.filter((it) => inboxBucket(it) === "approval").map(toRow)),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- toRow closes over live handler state and is rebuilt every render by design
     [visibleItems, toRow],
   );
   const awarenessRows = useMemo(
-    () => orderRowsForDisplay(visibleItems.filter((it) => it.kind === "detection").map(toRow)),
+    () => orderRowsForDisplay(visibleItems.filter((it) => inboxBucket(it) === "awareness").map(toRow)),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- see above
     [visibleItems, toRow],
   );
@@ -1632,15 +1638,21 @@ export function InboxPage() {
         {/* Count row + clear-filter link */}
         <div className="flex items-center gap-[8px] w-full min-h-[20px]">
           <div className="size-[6px] rounded-full shrink-0 bg-brain-v1baby-blue-60" />
-          {/* "Decisions" is only true of the Resolved tab now. Unresolved also
-              carries stalled agent runs, which are not decisions and are not in
+          {/* "Decisions" is only true of the Resolved tab. Unresolved also carries
+              stalled agent runs, which are not decisions and are not in
               `visibleItems` — leaving the old label and count there put the word
-              "Decisions 3" directly above four rows. */}
+              "Decisions 3" directly above four rows.
+
+              What "Awaiting you" counts is approvals + inputs: the two sections
+              that are asking the tenant for something. Awareness rows sit below
+              and are deliberately excluded — counting them here would inflate a
+              number Overview also prints, and the two would then disagree about
+              how much work is outstanding. */}
           <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[12px] uppercase tracking-[0.4px] whitespace-nowrap">
             {activeTab === "Unresolved" ? "Awaiting you" : "Decisions"}
           </p>
           <CountPill testId="text-decision-count">
-            {activeTab === "Unresolved" ? visibleItems.length + inputRows.length : visibleItems.length}
+            {activeTab === "Unresolved" ? decisionRows.length + inputRows.length : visibleItems.length}
           </CountPill>
           {filtering && (
             <button
@@ -1748,7 +1760,7 @@ export function InboxPage() {
           <div className="flex flex-col gap-[26px] w-full">
             {decisionRows.length > 0 && (
               <RowSection
-                title="Needs your decision"
+                title="Needs your approval"
                 accent="#d20344"
                 rows={decisionRows}
                 testId="section-needs-decision"

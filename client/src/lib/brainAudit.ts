@@ -691,10 +691,71 @@ export function localQuestionToRecord(q: AssistantQuestion): AuditRecord {
  *  Surfaces that show a total must say so — see `atEventLimit` below. */
 export const AUDIT_EVENTS_LIMIT = 100;
 
+/** Has the audit read stopped short of the whole trail?
+ *
+ *  Truncation is whatever the FEED says it is, not what a row count implies. A
+ *  short page with a live cursor is still an unfinished read — brain-core is
+ *  free to return fewer rows than asked for and hand back a cursor — and
+ *  treating that as complete lets a surface print "nothing needs your
+ *  attention" over records it never fetched. The row-count check stays as a
+ *  backstop for a response that omits the cursor field entirely, where a full
+ *  page is the only evidence of more.
+ *
+ *  Lives here, next to the limit it compares against, because three surfaces
+ *  now share this one read and a second copy of the rule would drift. */
+export function feedIsTruncated(
+  events: readonly BrainAuditEvent[] | undefined,
+  nextCursor: string | null | undefined,
+): boolean {
+  if (typeof nextCursor === "string" && nextCursor.length > 0) return true;
+  return (events?.length ?? 0) >= AUDIT_EVENTS_LIMIT;
+}
+
 /** Minimal proposal shape needed to recover the agent type key for decided records. */
 export interface ProposalForTracking {
   id: string;
   type: string;
+}
+
+/** Proposal ids the audit feed already shows as decided.
+ *
+ *  brain-core never drops a decided proposal from GET /v1/proposals — it only
+ *  writes an audit event — so any surface that counts pending proposals has to
+ *  subtract these or it reports work that is already done. The Inbox suppresses
+ *  the live copy on exactly this rule; extracted here so a counting surface can
+ *  apply the same one without building the full record list.
+ */
+export function decidedProposalIdsFromEvents(
+  events: readonly BrainAuditEvent[] | null | undefined,
+): Set<string> {
+  const out = new Set<string>();
+  for (const e of events ?? []) {
+    if (e.action !== "proposal.decided") continue;
+    const id = e.inputs?.proposal_id;
+    if (typeof id === "string" && id) out.add(id);
+  }
+  return out;
+}
+
+/**
+ * The decided-proposal set plus whether the read behind it can be trusted.
+ *
+ * Shares its query key with `useBrainAuditRecords` and `useMissingEvidenceItems`,
+ * so mounting it costs no extra request. `isError`/`isTruncated` are returned
+ * rather than swallowed: an unread or capped feed means the set is a floor, not
+ * a fact, and a caller subtracting it would silently over-count.
+ */
+export function useDecidedProposalIds() {
+  const query = useQuery<AuditEventsResponse>({
+    queryKey: [`/api/brain/audit/events?limit=${AUDIT_EVENTS_LIMIT}`],
+    retry: false,
+  });
+  const events = query.data?.events;
+  return {
+    ids: decidedProposalIdsFromEvents(events),
+    isError: query.isError,
+    isTruncated: feedIsTruncated(events, query.data?.next_cursor),
+  };
 }
 
 export function useBrainAuditRecords(proposals?: ProposalForTracking[]) {

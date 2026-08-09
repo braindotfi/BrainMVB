@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { OnboardingFlow } from "@/components/OnboardingFlow";
 import { AddGoalModal, type AddGoalPayload } from "@/components/AddGoalModal";
@@ -11,38 +11,19 @@ import { useCurrency } from "@/lib/useCurrency";
 import { type CurrencyCode } from "@/lib/currencyContext";
 import { useToast } from "@/hooks/use-toast";
 import { useBrainReviewQueue } from "@/lib/brainQueue";
+import { pendingAttentionSummary } from "@/lib/pendingAttention";
+import { useDecidedProposalIds } from "@/lib/brainAudit";
+import { useMissingEvidenceItems } from "@/lib/agentRunInput";
 import { useIntents } from "@/lib/intentsStore";
-import { intentToReview } from "@/lib/intentToReview";
-import {
-  useBrainReconciliationInsights,
-  useBrainSubscriptionInsights,
-  useBrainDisputeInsights,
-  useBrainCashFlowInsight,
-  type LiveInsight,
-} from "@/lib/brainAgentSurfaces";
-import { LiveInsightModal } from "@/components/LiveInsightModal";
-import { sessionIntentRow, queueIntentRow, liveProposalRow, insightRow } from "@/lib/recordRows";
-import { orderRowsForDisplay } from "@/lib/tierRowOrder";
-import { pagerState, stepPager, type PagerEntry } from "@/lib/unifiedPager";
 import {
   useBrainProposals,
-  useDecideProposal,
   isNeedsReview,
-  agentKeyForProposalType,
-  type BrainProposal,
-  type ProposalDecision,
 } from "@/lib/brainProposals";
-import { LiveProposalModal, AGENT_DISPLAY_NAME } from "@/components/AgentProposalModal";
-import { agentBadgeLabel } from "@/lib/agentProposals";
 import {
   deriveProposalTier,
   thresholdsFromRules,
-  tierForPaymentIntent,
-  tierForReadOnlyInsight,
   TIER_ORDER,
 } from "@/lib/proposalTiers";
-import { TierSections, type TierRowAction, type TierRowModel } from "@/components/TierRowList";
-import { buildProposalHeaderCopy, buildDecisionButtons } from "@/lib/proposalCards";
 import { payablesView } from "@/lib/liabilities";
 import { usePagedLedgerRead, ledgerFigureCaption } from "@/lib/ledgerRead";
 import { arAgingView, AR_STALE_DAYS } from "@/lib/arAging";
@@ -52,36 +33,10 @@ import { CashProjectionCard } from "@/components/CashProjectionCard";
 import { accountsTotalView, type BrainAccountDTO } from "@/lib/brainAccounts";
 import type { RawInvoice } from "@/lib/receivables";
 import type { RawObligation } from "@/lib/brainObligations";
-import { apiRequest } from "@/lib/queryClient";
-import { mapApprovalRejection, parseCoreError, type ApprovalRejection } from "@/lib/approvalRejections";
-import { ProposalDetail, type ProposalAction } from "@/components/ProposalDetail";
-import { ReviewModal, type ReviewItemType } from "@/components/ReviewItems";
-import type { Proposal } from "@/lib/proposalTypes";
-import { openRuleDetail } from "@/lib/openRuleDetail";
-import { decisionTypeLabel } from "@/lib/decisionFilters";
-import { useBrainPolicy } from "@/lib/brainPolicy";
-import {
-  bulkCandidateFrom,
-  bulkLimitFor,
-  elevatedThresholdsFromPolicy,
-  isBlockedByType,
-  isBulkEligible,
-  resolveBulkSelection,
-  runBulkApprove,
-  type BulkCandidate,
-} from "@/lib/bulkApprove";
 import {
   useRules,
   hydrateUserRules,
-  pauseRule as storePauseRule,
-  reportProblem as storeReportProblem,
-  sendFeedback as storeSendFeedback,
-  setRuleDraft,
 } from "@/lib/rulesStore";
-import { useReviewStatuses } from "@/lib/reviewStatusStore";
-import { useAcknowledgedRecords, acknowledgeInsight } from "@/lib/acknowledgedStore";
-import { AlertCallout } from "@/components/Callout";
-import { Button } from "@/components/ui/button";
 
 /* Your Goals (Figma 3882:43037), progress bars per goal */
 type GoalRow = {
@@ -467,20 +422,7 @@ export function HomePage() {
   const [, navigate] = useLocation();
   const [showOnboarding, setShowOnboarding] = useState(false);
 
-  /* Records opened directly from Home widgets. Each popup keeps its own
-     section-specific sibling queue so Previous/Next stays within the card
-     type the user tapped. */
-  const [selectedReview, setSelectedReview] = useState<Proposal | null>(null);
-  const reviewStatuses = useReviewStatuses();
-
   const rules = useRules();
-  const ruleOf = (p: Proposal) =>
-    p.rule ? rules.find((r) => r.id === p.rule!.id || r.policyId === p.rule!.policyId) : undefined;
-  const isRulePaused = (p: Proposal): boolean => {
-    const r = ruleOf(p);
-    return r ? !r.active : p.rule ? !p.rule.active : false;
-  };
-
   /* Overview needs the tenant's rules for more than the paused-rule badge: their
      configured limits are what promote an `elevated` proposal into Urgent. Without
      this the store stays empty here (only RulesPage hydrated it) and no proposal
@@ -494,96 +436,14 @@ export function HomePage() {
      empty and nothing is promoted on materiality. */
   const tierThresholds = useMemo(() => thresholdsFromRules(rules), [rules]);
 
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const invalidateLiveQueue = () => {
-    void queryClient.invalidateQueries({ predicate: (q) => typeof q.queryKey[0] === "string" && q.queryKey[0].startsWith("/api/brain/proposals") });
-    void queryClient.invalidateQueries({ predicate: (q) => typeof q.queryKey[0] === "string" && q.queryKey[0].startsWith("/api/brain/payment-intents/") });
-  };
-  const approveLive = useMutation<unknown, Error, string>({
-    mutationFn: async (id: string) => {
-      const res = await fetch(`/api/brain/payment-intents/${id}/approve`, { method: "POST", credentials: "include" });
-      const body = await res.json().catch(() => undefined);
-      if (!res.ok) throw new Error(mapApprovalRejection(parseCoreError(body)).detail);
-      return body;
-    },
-    onSuccess: () => { setSelectedReview(null); invalidateLiveQueue(); },
-    onError: (err) => toast({ title: "Couldn't approve", description: err.message, variant: "destructive" }),
-  });
-  const rejectLive = useMutation<unknown, Error, string>({
-    mutationFn: async (id: string) => {
-      const res = await apiRequest("POST", "/api/brain/reject", { payment_intent_id: id, reason: "Declined by operator" });
-      return res.json();
-    },
-    onSuccess: () => { setSelectedReview(null); invalidateLiveQueue(); },
-    onError: (err) => toast({ title: "Couldn't reject", description: err.message, variant: "destructive" }),
-  });
-
-  const handleReviewAction = (action: ProposalAction) => {
-    if (!selectedReview) return;
-    /* selectedReview is only ever set from the LIVE brain-core queue. Always
-       ask core directly, never flip a client-side status for a live intent. */
-    if (action === "approve") approveLive.mutate(selectedReview.id);
-    else if (action === "reject") rejectLive.mutate(selectedReview.id);
-    // postpone/verifyFirst have no brain-core equivalent for a live intent. No-op.
-  };
-
-  /* Session-scoped intents (same browser session as the Inbox). Mirroring the
-     Inbox pattern: these render in Brain Detected and open a ReviewModal. */
-  const { intents, markDeclined, setApprovalState } = useIntents();
-  const sessionReviews = useMemo(
-    () => intents.filter((i) => i.outcome === "confirm" && !i.declined && i.approvalState !== "approved").map((r) => intentToReview(r, format)),
-    [intents, format],
+  /* Session-scoped payment intents (same browser session as the Inbox). Only
+     the COUNT is needed here now — the rows themselves, and the approve/reject
+     path, belong to the Inbox. */
+  const { intents } = useIntents();
+  const pendingSessionIntents = useMemo(
+    () => intents.filter((i) => i.outcome === "confirm" && !i.declined && i.approvalState !== "approved").length,
+    [intents],
   );
-  const [selectedLiveIntent, setSelectedLiveIntent] = useState<ReviewItemType | null>(null);
-  const [liveRejection, setLiveRejection] = useState<ApprovalRejection | null>(null);
-  const [approvingIntentId, setApprovingIntentId] = useState<string | null>(null);
-  const rejectIntent = useMutation<unknown, Error, string>({
-    mutationFn: async (intentId: string) => {
-      const res = await apiRequest("POST", "/api/brain/reject", { payment_intent_id: intentId, reason: "Declined by operator" });
-      return res.json();
-    },
-    /* Announce the RESULT, not the click. The modal used to toast "Rejected"
-       before the request was even sent, so a failed reject still reported
-       success. Both the modal and the inline row action share this path now, so
-       a failure has to say so in one place. */
-    onSuccess: (_d, intentId) => {
-      markDeclined(intentId);
-      toast({ title: "Rejected", description: "The payment has been rejected.", variant: "default" });
-    },
-    onError: (err) => {
-      toast({ title: "Couldn't reject the payment", description: err.message, variant: "destructive" });
-    },
-  });
-  const approveIntent = async (intentId: string, surfaceRejection: boolean) => {
-    setApprovingIntentId(intentId);
-    setLiveRejection(null);
-    try {
-      const res = await fetch(`/api/brain/payment-intents/${intentId}/approve`, { method: "POST", credentials: "include" });
-      const body = await res.json().catch(() => undefined);
-      if (!res.ok) {
-        const rej = mapApprovalRejection(parseCoreError(body));
-        if (surfaceRejection) setLiveRejection(rej);
-        else toast({ title: rej.title, description: rej.detail, variant: "destructive" });
-        return;
-      }
-      const status: string = body?.intent?.status ?? "";
-      if (status === "awaiting_second_approval" || status === "pending_approval") {
-        setApprovalState(intentId, "awaiting_second");
-        toast({ title: "Approval recorded", description: "One more approver is needed before this can settle.", variant: "default" });
-      } else {
-        setApprovalState(intentId, "approved");
-        toast({ title: "Payment approved", description: "Brain core accepted the approval. It will settle shortly.", variant: "default" });
-      }
-      setSelectedLiveIntent(null);
-    } catch {
-      const rej: ApprovalRejection = { reason: "network_error", title: "Couldn't reach Brain core", detail: "The approval didn't go through. Check your connection and try again. Nothing was changed." };
-      if (surfaceRejection) setLiveRejection(rej);
-      else toast({ title: rej.title, description: rej.detail, variant: "destructive" });
-    } finally {
-      setApprovingIntentId(null);
-    }
-  };
 
   /* "Brain Did" (approved + auto-approved audit events) is deliberately NOT on
      Overview any more. Overview is what Brain is *waiting on*; a record that has
@@ -591,55 +451,19 @@ export function HomePage() {
      rows that do. Nothing is lost — those same records are on Decisions under the
      Approved / Auto-approved statuses, and in full on the Audit Log. */
 
-  /* What Brain is advising for review: live brain-core
-     PaymentIntents needing approval, plus read-only live Ledger facts
-     (reconciliation matches, subscription/disputed obligations, cash flow -
-     see brainAgentSurfaces.ts) that have no proposal lifecycle of their own
-     yet. Tapping a payment-intent row opens the actionable review sheet;
-     tapping an insight row opens the read-only LiveInsightModal. */
+  /* Live brain-core PaymentIntents needing approval. Counted, not listed: the
+     rows and the approve/reject path are the Inbox's. Read-only Ledger facts
+     (reconciliation, subscriptions, disputes, cash flow) are NOT read here at
+     all — they are awareness records, they were never part of this count, and
+     the Inbox is where they render. */
   const { proposals: liveNeedsReview, isError: liveNeedsReviewError } = useBrainReviewQueue();
-  const { insights: reconInsights, isError: reconError } = useBrainReconciliationInsights();
-  const { insights: subscriptionInsights, isError: subscriptionError } = useBrainSubscriptionInsights();
-  const { insights: disputeInsights, isError: disputeError } = useBrainDisputeInsights();
-  const { insight: cashFlowInsight, isError: cashFlowError } = useBrainCashFlowInsight();
-  const [selectedInsight, setSelectedInsight] = useState<LiveInsight | null>(null);
-  /* Which Overview ROW currently has a detail surface open. The four surfaces
-     hold four unrelated record types, so the row id is the only handle the
-     shared pager can compare across them. */
-  const [openRowId, setOpenRowId] = useState<string | null>(null);
-  /** The open surface arrived via Previous/Next rather than a row tap. */
-  const [steppedViaPager, setSteppedViaPager] = useState(false);
-  const acknowledgedRecords = useAcknowledgedRecords();
-  const acknowledgedInsightIds = useMemo(
-    () => new Set(acknowledgedRecords.map((record) => record.id.replace("local-acknowledged-", ""))),
-    [acknowledgedRecords],
-  );
-  const liveInsights: LiveInsight[] = useMemo(
-    () => [...reconInsights, ...subscriptionInsights, ...disputeInsights, ...(cashFlowInsight ? [cashFlowInsight] : [])]
-      .filter((insight) => !acknowledgedInsightIds.has(insight.id)),
-    [reconInsights, subscriptionInsights, disputeInsights, cashFlowInsight, acknowledgedInsightIds],
-  );
-  /* Mirrors InboxPage's pending-acknowledgement set so the button disables
-     immediately without waiting for the store write to propagate. */
-  const [pendingAcknowledgedIds, setPendingAcknowledgedIds] = useState<Set<string>>(() => new Set());
-  const acknowledgeInsightRow = (insight: LiveInsight) => {
-    const key = insight.id;
-    if (pendingAcknowledgedIds.has(key) || acknowledgedInsightIds.has(key)) return;
-    setPendingAcknowledgedIds((prev) => new Set(prev).add(key));
-    window.setTimeout(() => {
-      acknowledgeInsight(insight);
-      setPendingAcknowledgedIds((prev) => { const next = new Set(prev); next.delete(key); return next; });
-    }, 250);
-  };
 
-  /* Live brain-core agent proposals (GET /v1/proposals) needing a decision -
-     merged into the same "Brain Detected" widget as the live payment queue
-     and read-only insights above. */
+  /* Live brain-core agent proposals (GET /v1/proposals) needing a decision. */
   const { proposals: liveProposals, isError: liveProposalsError } = useBrainProposals();
   const needsReviewProposals = useMemo(() => liveProposals.filter(isNeedsReview), [liveProposals]);
-  /* The proposals Overview actually shows, in the order the tiers render them, so
-     the detail modal's Previous/Next walks exactly what's on screen — a pager that
-     steps onto a row the user can't see reads as a bug. */
+  /* Tier order is retained even though nothing is rendered from this list any
+     more: `deriveProposalTier` returning null is how a proposal with no writable
+     decision is excluded, and the count below re-derives per row. */
   const tieredProposals = useMemo(() => {
     const withTier = needsReviewProposals.flatMap((p) => {
       const tier = deriveProposalTier(p, { thresholds: tierThresholds });
@@ -647,360 +471,69 @@ export function HomePage() {
     });
     return TIER_ORDER.flatMap((tier) => withTier.filter((e) => e.tier === tier).map((e) => e.proposal));
   }, [needsReviewProposals, tierThresholds]);
-  const [selectedProposal, setSelectedProposal] = useState<BrainProposal | null>(null);
+  /* ── What's waiting on you, as ONE line ────────────────────────────────────
+     Overview counts; the Inbox lists. This page used to render the same queue
+     the Inbox does, which left two screens competing to be the place you work
+     from — and two chances for them to disagree about what is pending. The
+     rows, their inline actions, the bulk-approve bar and the four detail
+     surfaces now live on /inbox and only there.
 
-  /* Bulk-selection state for Overview rows. Mirrors InboxPage's pattern so rows
-     carry a working checkbox; the approve-all bar is a follow-on feature. */
-  const [selectedOverviewIds, setSelectedOverviewIds] = useState<Set<string>>(new Set());
-  const toggleOverviewSelect = (id: string) =>
-    setSelectedOverviewIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
-  const policy = useBrainPolicy();
-  const policyElevation = useMemo(() => elevatedThresholdsFromPolicy(policy.facts), [policy.facts]);
-  const overviewBulkCandidates = useMemo<BulkCandidate[]>(
-    () =>
-      tieredProposals.map((proposal) => {
-        const decisions = buildDecisionButtons(
-          proposal.available_decisions,
-          proposal.presentation?.actions ?? null,
-        );
-        return bulkCandidateFrom(
-          `proposal-${proposal.id}`,
-          proposal,
-          decisions.some((decision) => decision.id === "approve" && decision.writable),
-        );
-      }),
-    [tieredProposals],
-  );
-  const overviewLimitOf = useMemo(
-    () => (candidate: BulkCandidate) => bulkLimitFor(candidate.type, candidate.category, policyElevation, tierThresholds),
-    [policyElevation, tierThresholds],
-  );
-  const overviewEligible = useMemo(
-    () => overviewBulkCandidates.filter((candidate) => isBulkEligible(candidate, overviewLimitOf(candidate))),
-    [overviewBulkCandidates, overviewLimitOf],
-  );
-  const overviewCandidateById = useMemo(
-    () => new Map(overviewEligible.map((candidate) => [candidate.id, candidate])),
-    [overviewEligible],
-  );
-  const overviewSelection = useMemo(
-    () => resolveBulkSelection(overviewEligible, selectedOverviewIds, overviewLimitOf),
-    [overviewEligible, selectedOverviewIds, overviewLimitOf],
-  );
-  const overviewBatchIds = useMemo(() => new Set(overviewSelection.ids), [overviewSelection.ids]);
-  const [overviewBulkRunning, setOverviewBulkRunning] = useState(false);
+     The count has to match what the Inbox will actually show, so it applies the
+     Inbox's rules rather than inventing its own:
+       • payment intents — session-scoped and the durable review queue — which
+         always tier as "waiting" (see tierForPaymentIntent),
+       • agent proposals carrying a writable approve/reject. Acknowledge-only
+         records tier as `insight` and belong under For Your Awareness, so they
+         are deliberately NOT counted as something to decide,
+       • minus proposals the audit feed already shows as decided: brain-core
+         keeps decided rows in /v1/proposals and the Inbox suppresses them,
+       • plus stalled agent runs — Needs Your Input — which are unresolved work
+         asking something of the tenant.
 
-  const decideProposal = useDecideProposal();
-
-  /* Every row Overview shows, as ONE list. Tier decides which section it lands in
-     (proposalTiers.ts); the record's own decisions decide its buttons. The rows
-     carry their actions INLINE so an item can be cleared without opening anything —
-     that is the whole point of the screen. `View full detail` still opens the same
-     sheet as before for anyone who wants the evidence first. */
-  /* Same contract as the Decisions timeline: every feed that contributes a row
-     must be able to say it failed, or "Nothing needs your review right now"
-     becomes a lie told in exactly the conditions where it is most costly. Adding
-     a source to overviewRows means adding its error flag here. */
-  const overviewUnreachable =
+     Honesty rule, the same one every other figure on this page follows: if a
+     contributing feed failed, or the capped audit read stopped short, the
+     number is a FLOOR and has to say so. A confident total assembled from an
+     incomplete read is the one failure mode that reads as good news. */
+  const decided = useDecidedProposalIds();
+  const missingEvidence = useMissingEvidenceItems();
+  const decidedIds = decided.ids;
+  const missingEvidenceCount = missingEvidence.items.length;
+  /* Anything that could be hiding work from the count. Truncation counts: at
+     the audit cap an absent stalled run is not evidence there isn't one. */
+  const incompleteRead =
     liveNeedsReviewError ||
     liveProposalsError ||
-    reconError ||
-    subscriptionError ||
-    disputeError ||
-    cashFlowError;
+    missingEvidence.isError ||
+    missingEvidence.isTruncated ||
+    decided.isError ||
+    decided.isTruncated;
 
-  const overviewRows: TierRowModel[] = useMemo(() => {
-    const testIdPrefix = "row-overview";
-    /* Title, pill and second line for every row below come from recordRows.ts,
-       which the Inbox uses too. Overview decides what a row can DO; it does not
-       get its own opinion about what the record SAYS. */
-    const fmt = { format, formatText };
-
-    // Session-scoped intents — title is specific; description is the "Why:".
-    const sessionRows: TierRowModel[] = sessionReviews.map((r) => {
-      const intentId = r.live ? r.intentId ?? null : null;
-      return {
-        /* Source-scoped. A session intent and a review-queue PaymentIntent can
-           carry the SAME underlying id, and all four sources share one React key
-           space and one test-id namespace in this list. */
-        id: `session-${String(r.intentId ?? r.id)}`,
-        tier: tierForPaymentIntent(),
-        ...sessionIntentRow(r, fmt),
-        /* Session payment intents do not carry the policy category and threshold
-           fields required by the shared bulk-approval guard, matching Inbox. */
-        select: undefined,
-        testIdPrefix,
-        onOpenDetail: () => setSelectedLiveIntent(r),
-        /* No intent id means there is nothing to POST to. The row still opens its
-           sheet; it just doesn't offer buttons that would silently do nothing. */
-        actions: intentId
-          ? [
-              {
-                id: "approve",
-                label: "Approve",
-                tone: "approve" as const,
-                disabled: approvingIntentId !== null,
-                onClick: () => void approveIntent(intentId, false),
-              },
-              {
-                id: "reject",
-                label: "Reject",
-                tone: "reject" as const,
-                disabled: approvingIntentId !== null || rejectIntent.isPending,
-                onClick: () => rejectIntent.mutate(intentId),
-              },
-            ]
-          : [],
-      };
-    });
-
-    // PaymentIntents from the live review queue — title is already specific
-    // (e.g. "Quick Pay Solutions scored 1.00 vendor risk…"); rationale is the
-    // "Why:" line shown in Inbox.
-    const queueBusy = approveLive.isPending || rejectLive.isPending;
-    const queueRows: TierRowModel[] = liveNeedsReview.map((p) => ({
-      id: `queue-${p.id}`,
-      tier: tierForPaymentIntent(),
-      ...queueIntentRow(p, fmt),
-      /* Durable payment-intent rows do not carry a policy category in this
-         surface, so they are not bulk-selectable, matching Inbox. */
-      select: undefined,
-      testIdPrefix,
-      onOpenDetail: () => setSelectedReview(p),
-      actions: [
-        { id: "reject", label: "Reject", tone: "reject" as const, disabled: queueBusy, onClick: () => rejectLive.mutate(p.id) },
-        { id: "approve", label: "Approve", tone: "approve" as const, disabled: queueBusy, onClick: () => approveLive.mutate(p.id) },
-      ],
-    }));
-
-    /* Read-only ledger insights — one Acknowledge action, matching the Inbox.
-       Acknowledging removes the row from the active queue without making it
-       disappear from the Audit Log. */
-    const insightRows: TierRowModel[] = liveInsights.map((i) => {
-      const done = pendingAcknowledgedIds.has(i.id) || acknowledgedInsightIds.has(i.id);
-      return {
-        id: `insight-${i.id}`,
-        tier: tierForReadOnlyInsight(),
-        ...insightRow(i, fmt),
-        testIdPrefix,
-        onOpenDetail: () => setSelectedInsight(i),
-        actions: [
-          {
-            id: "acknowledge",
-            label: done ? "Acknowledged" : "Acknowledge",
-            tone: "acknowledge" as const,
-            disabled: done,
-            onClick: () => acknowledgeInsightRow(i),
-          },
-        ],
-      };
-    });
-
-    // Brain-core agent proposals (collections, vendor risk, etc.) — narrative is
-    // the specific "Why:" text shown in Inbox; agent display name is the category.
-    /* Tier comes from each record's own `available_decisions` + `risk_band`
-       (proposalTiers.ts), never from its type. A record offering no decision this
-       app can submit is dropped rather than shown under a tier that promises an
-       action Overview can't deliver. */
-    const proposalRows: TierRowModel[] = tieredProposals.flatMap((p) => {
-      /* Same thresholds the `tieredProposals` memo used — if these two disagreed,
-         a row's heading and its position in the pager would come apart. */
+  const pendingSummary = useMemo(() => {
+    let urgent = 0;
+    let waiting = 0;
+    for (const p of tieredProposals) {
+      if (decidedIds.has(p.id)) continue;
       const tier = deriveProposalTier(p, { thresholds: tierThresholds });
-      if (!tier) return [];
-      /* Match InboxPage: prefer the display name brain-core attaches to the
-         proposal record itself; fall back to the local AGENT_DISPLAY_NAME map. */
-      const agentName = p.agent?.display_name || AGENT_DISPLAY_NAME[agentKeyForProposalType(p.type)];
-      const headerCopy = buildProposalHeaderCopy(p, agentName, formatText);
-      /* Exactly the decision set the detail sheet renders, from the same builder.
-         A decision brain-core won't accept is shown DISABLED rather than dropped,
-         so the row never looks like it offers fewer options than the sheet does. */
-      const actions: TierRowAction[] = buildDecisionButtons(
-        p.available_decisions,
-        p.presentation?.actions ?? null,
-      ).map((d) => ({
-        id: d.id,
-        label: d.label,
-        tone: d.tone,
-        disabled: !d.writable || decideProposal.isPending,
-        title: d.writable ? d.meaning ?? undefined : "Brain core can't accept this decision yet.",
-        onClick: () => decideProposal.mutate({ id: p.id, decision: d.id as ProposalDecision }),
-      }));
-      /* Badge = agent name pill (same as InboxPage pillName logic) */
-      const agentKey = agentKeyForProposalType(p.type);
-      const pillName = agentBadgeLabel(agentKey);
-      const rowId = `proposal-${p.id}`;
-      const candidate = overviewCandidateById.get(rowId);
-      const blocked = candidate ? isBlockedByType(candidate, overviewSelection.type) : false;
-      return [{
-        id: rowId,
-        tier,
-        ...liveProposalRow(headerCopy, pillName),
-        /* Vendor risk doesn't require a human approval decision — no checkbox */
-        select: candidate && p.type !== "vendor_risk"
-          ? {
-              checked: overviewBatchIds.has(rowId),
-              disabled: overviewBulkRunning || blocked,
-              title: blocked
-                ? `Bulk approval covers one type at a time. Clear the selection to choose ${decisionTypeLabel(candidate.type ?? "").toLowerCase()} items instead.`
-                : undefined,
-              label: `Select for bulk approval: ${headerCopy.title}`,
-              onChange: () => toggleOverviewSelect(rowId),
-            }
-          : undefined,
-        testIdPrefix,
-        onOpenDetail: () => setSelectedProposal(p),
-        actions,
-      }];
+      if (tier === "urgent") urgent++;
+      else if (tier === "waiting") waiting++;
+    }
+    /* Both payment-intent feeds land in "waiting" — see tierForPaymentIntent. */
+    return pendingAttentionSummary({
+      urgent,
+      waiting: waiting + pendingSessionIntents + liveNeedsReview.length,
+      input: missingEvidenceCount,
+      incomplete: incompleteRead,
     });
-
-    /* Ordered the way TierSections draws them, because the pager walks this
-       same list — see tierRowOrder.ts. Built order is by source; drawn order is
-       by tier, and the two disagreeing left the Insights rows unreachable from
-       Next. */
-    return orderRowsForDisplay([...sessionRows, ...queueRows, ...insightRows, ...proposalRows]);
   }, [
-    liveNeedsReview,
-    sessionReviews,
-    liveInsights,
     tieredProposals,
     tierThresholds,
-    formatText,
-    approvingIntentId,
-    approveLive.isPending,
-    rejectLive.isPending,
-    rejectIntent.isPending,
-    decideProposal.isPending,
-    selectedOverviewIds,
-    overviewCandidateById,
-    overviewSelection.type,
-    overviewBatchIds,
-    overviewBulkRunning,
-    pendingAcknowledgedIds,
-    acknowledgedInsightIds,
+    decidedIds,
+    pendingSessionIntents,
+    liveNeedsReview.length,
+    missingEvidenceCount,
+    incompleteRead,
   ]);
 
-  /* One pager across the whole Overview list. Every openable row participates in
-     display order, whichever of the four surfaces it opens, so Previous/Next
-     mean "the next row you can see" instead of "the next row from this same
-     source" — which used to strand the user at the edge of whichever of the four
-     queues they had happened to open. Rows are re-wrapped rather than each
-     `onOpenDetail` recording the id itself, so a row added later cannot join the
-     list while silently opting out of the pager. */
-  const pagerRows: TierRowModel[] = useMemo(
-    () =>
-      overviewRows.map((row) => {
-        const openDetail = row.onOpenDetail;
-        if (!openDetail) return row;
-        return {
-          ...row,
-          onOpenDetail: () => {
-            setOpenRowId(row.id);
-            openDetail();
-          },
-        };
-      }),
-    [overviewRows],
-  );
-
-  /* One line for "how much is waiting on me", counted off the rows actually
-     rendered below rather than off each source queue separately — the sources
-     overlap, and summing them reports work that isn't on screen. Split by tier
-     because "3 urgent" and "3 to look at when you can" are not the same news;
-     Insights are excluded, since nothing is being asked of the tenant there. */
-  const pendingSummary = useMemo(() => {
-    const urgent = pagerRows.filter((row) => row.tier === "urgent").length;
-    const waiting = pagerRows.filter((row) => row.tier === "waiting").length;
-    const total = urgent + waiting;
-    if (total === 0) return null;
-    const parts: string[] = [];
-    if (urgent > 0) parts.push(`${urgent} urgent`);
-    if (waiting > 0) parts.push(`${waiting} waiting on you`);
-    return { total, urgent, text: `${total} ${total === 1 ? "item needs" : "items need"} your attention`, detail: parts.join(" · ") };
-  }, [pagerRows]);
-
-  const pagerEntries: PagerEntry[] = pagerRows
-    .filter((row) => row.onOpenDetail)
-    .map((row) => ({ id: row.id, open: row.onOpenDetail! }));
-  const pager = pagerState(pagerEntries, openRowId);
-  const closeOpenSurface = () => {
-    setSelectedInsight(null);
-    setSelectedProposal(null);
-    setSelectedReview(null);
-    setSelectedLiveIntent(null);
-    setLiveRejection(null);
-  };
-  const stepRow = (delta: 1 | -1) => {
-    /* Stepping closes one dialog and opens another; the surface that opens must
-       know it is a step, not a fresh open, so it can skip the entrance
-       animation. Cleared below once nothing is open. */
-    setSteppedViaPager(true);
-    stepPager(pagerEntries, openRowId, delta, closeOpenSurface);
-  };
-  /* Reset off the SURFACES, not off openRowId: an action that closes a card
-     (approve, acknowledge, follow a link out) does not always clear the open row
-     id, and a flag left set would silence the next card the user opens by hand. */
-  const anySurfaceOpen =
-    selectedInsight !== null || selectedProposal !== null || selectedReview !== null || selectedLiveIntent !== null;
-  useEffect(() => {
-    if (!anySurfaceOpen) setSteppedViaPager(false);
-  }, [anySurfaceOpen]);
-  /* Every surface below shares these, so the pager reads the same everywhere. */
-  const pagerProps = {
-    onPrev: () => stepRow(-1),
-    onNext: () => stepRow(1),
-    hasPrev: pager.hasPrev,
-    hasNext: pager.hasNext,
-    pagerStep: steppedViaPager,
-  };
-
-  const overviewProposalByRowId = useMemo<Map<string, BrainProposal>>(
-    () => new Map(tieredProposals.map((proposal) => [`proposal-${proposal.id}`, proposal])),
-    [tieredProposals],
-  );
-
-  const approveSelectedOverview = async () => {
-    if (overviewSelection.count < 2 || overviewBulkRunning) return;
-    setOverviewBulkRunning(true);
-    const attempted = [...overviewSelection.ids];
-    const outcome = await runBulkApprove(attempted, async (rowId) => {
-      const proposal = overviewProposalByRowId.get(rowId);
-      if (!proposal) throw new Error("This item is no longer on screen.");
-      await decideProposal.mutateAsync({ id: proposal.id, decision: "approve" });
-    });
-
-    setSelectedOverviewIds((current) => {
-      const next = new Set(current);
-      for (const id of outcome.approved) next.delete(id);
-      return next;
-    });
-    setOverviewBulkRunning(false);
-
-    const selectionLabel = overviewSelection.type
-      ? decisionTypeLabel(overviewSelection.type).toLowerCase()
-      : "";
-    if (outcome.failed.length === 0) {
-      toast({
-        title: `Approved ${outcome.approved.length} ${selectionLabel} items`,
-        description: "Each one was approved individually and recorded in the audit log.",
-      });
-    } else if (outcome.approved.length === 0) {
-      toast({
-        title: "Nothing was approved",
-        description: outcome.failed[0].message,
-        variant: "destructive",
-      });
-    } else {
-      toast({
-        title: `Approved ${outcome.approved.length} of ${attempted.length}`,
-        description: `${outcome.failed.length} couldn’t be approved and ${outcome.failed.length === 1 ? "is" : "are"} still selected. ${outcome.failed[0].message}`,
-        variant: "destructive",
-      });
-    }
-  };
 
   // "Money in all accounts" total from brain-core's Ledger (via the BFF proxy).
   // Falls back to the static figure when brain-core is unreachable/unconfigured.
@@ -1349,12 +882,13 @@ export function HomePage() {
               />
             </div>
 
-            <CashProjectionCard view={projection} format={format} horizonDays={PROJECTION_DAYS} />
-
-            {/* brain-core's ledger-grounded read, deliberately OUTSIDE the cash-flow
-                card. Sat inside it, its month-to-date figure read as a contradiction
-                of the card's trailing monthly average rather than a second fact about
-                a different period. Both numbers are real; only the framing was wrong. */}
+            {/* brain-core's ledger-grounded read of the figures directly above.
+                This is LIVE output, not leftover copy — when brain-core has no
+                read it says "No spending insight available yet". It used to sit
+                between the projection card and the divider, where its
+                month-to-date figure read as a second, contradictory forecast of
+                the same window. Moved up against the metrics it actually
+                comments on: trailing spend, not the projection horizon. */}
             <p
               className={`[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[16px] w-full ${insightLine.colorClass}`}
               data-testid="text-home-cash-insight"
@@ -1365,112 +899,55 @@ export function HomePage() {
             {/* Divider */}
             <div className="h-px relative shrink-0 w-full" style={{ background: "#1d2132" }} />
 
-            {/* What's waiting, in one line, immediately above the queue it counts.
-                Hidden entirely when nothing is pending — a permanent "0 items"
-                badge trains people to stop reading the row. */}
+            {/* What's waiting on you: a COUNT and a way in, never the items
+                themselves. Overview listing them too was the duplication this
+                restructure exists to remove — the itemized queue, its inline
+                actions and its detail surfaces all live on /inbox now.
+
+                Hidden entirely when nothing is pending AND every feed was read
+                — a permanent "0 items" badge trains people to stop reading the
+                row. It is NOT hidden when a read failed: see pendingSummary. */}
             {pendingSummary && (
-              <div
-                className={`flex items-center gap-[10px] px-[16px] py-[12px] rounded-panel border border-solid w-full ${
-                  pendingSummary.urgent > 0
-                    ? "bg-brain-v1dark-pink-red border-[rgba(210,3,68,0.2)]"
-                    : "bg-brain-v1highlight-dropdown-bg border-brain-v1stroke-2"
-                }`}
+              <button
+                type="button"
+                onClick={() => navigate("/inbox")}
                 data-testid="row-home-pending-summary"
+                aria-label={`${pendingSummary.text}. Open the Inbox.`}
+                className={`flex flex-col gap-[4px] px-[16px] py-[12px] rounded-panel border border-solid w-full text-left transition-colors outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple ${
+                  pendingSummary.tone === "urgent"
+                    ? "bg-brain-v1dark-pink-red border-[rgba(210,3,68,0.2)] hover:border-[rgba(210,3,68,0.45)]"
+                    : "bg-brain-v1highlight-dropdown-bg border-brain-v1stroke-2 hover:border-brain-v1purple"
+                }`}
               >
-                <div
-                  className="size-[8px] rounded-full shrink-0"
-                  style={{ background: pendingSummary.urgent > 0 ? "#d20344" : "#ff9500" }}
-                />
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[16px] text-brain-v1baby-blue-100">
-                  {pendingSummary.text}
-                </p>
-                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[14px] text-brain-v1baby-blue-60">
+                <div className="flex items-center gap-[10px] w-full min-w-0">
+                  <div
+                    className="size-[8px] rounded-full shrink-0"
+                    style={{
+                      background:
+                        pendingSummary.tone === "urgent"
+                          ? "#d20344"
+                          : pendingSummary.tone === "unknown"
+                            ? "#6c779d"
+                            : "#ff9500",
+                    }}
+                  />
+                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[16px] text-brain-v1baby-blue-100 flex-1 min-w-0">
+                    {pendingSummary.text}
+                  </p>
+                  <span
+                    className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[14px] text-brain-v1purple shrink-0"
+                    aria-hidden="true"
+                  >
+                    Open Inbox
+                  </span>
+                </div>
+                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[14px] text-brain-v1baby-blue-60 pl-[18px] w-full">
                   {pendingSummary.detail}
                 </p>
-              </div>
+              </button>
             )}
 
-            <div className="mb-[26px]" />
-
-            {/* The decision queue: ONE single-column list split into Urgent /
-                Waiting on you / Insights, with each row's own actions inline.
-                Replaces the "Brain Detected" / "Brain Did" two-panel split. */}
-            <>
-              {overviewUnreachable && overviewRows.length > 0 && (
-                <AlertCallout testId="banner-overview-incomplete" className="mb-[12px]">
-                  Some items couldn’t be loaded, so this list may be incomplete.
-                </AlertCallout>
-              )}
-              {overviewSelection.count >= 2 && overviewSelection.limit && (
-                <div
-                  className="bg-brain-v1dark-dark-purple flex flex-col overflow-hidden rounded-panel shrink-0 w-full mb-[12px]"
-                  data-testid="bulk-bar"
-                >
-                  {/* Body — count metric + Brain Observed sentence */}
-                  <div className="flex flex-col items-start p-[16px] w-full">
-                    <div className="bg-brain-v1dark-purple flex gap-[26px] items-start overflow-hidden px-[32px] py-[16px] rounded-panel w-full">
-                      {/* Left: Number Selected */}
-                      <div className="flex flex-col gap-[4px] items-start justify-center shrink-0 w-[128px]">
-                        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1purple text-[16px]">
-                          Number Selected
-                        </p>
-                        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[48px] text-[40px] text-white" data-testid="bulk-bar-count">
-                          {overviewSelection.count}
-                        </p>
-                      </div>
-                      {/* Hairline vertical divider */}
-                      <div className="w-px self-stretch shrink-0 bg-brain-v1dark-dark-purple" />
-                      {/* Right: Brain Observed */}
-                      <div className="flex min-w-0 flex-1 flex-col gap-[4px] items-start justify-center">
-                        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1purple text-[16px]">
-                          Brain Observed
-                        </p>
-                        <p
-                          className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[16px] text-white w-full min-w-0"
-                          data-testid="bulk-bar-summary"
-                        >
-                          {`All ${overviewSelection.type ? decisionTypeLabel(overviewSelection.type).toLowerCase() : ""}, each under ${format(overviewSelection.limit.value)} `}
-                          {overviewSelection.limit.source === "rule"
-                            ? "limit from your own rule."
-                            : "limit above which Brain needs a second approver."}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  {/* Footer — Cancel / Approve Selected */}
-                  <div className="border-t border-brain-v1dark-purple bg-brain-v1dark-dark-purple flex flex-col items-start p-[16px] w-full">
-                    <div className="flex gap-[16px] items-center w-full">
-                      <Button
-                        variant="secondary"
-                        className="flex-1 min-w-px"
-                        onClick={() => setSelectedOverviewIds(new Set())}
-                        data-testid="button-bulk-clear"
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        variant="warning"
-                        className="flex-1 min-w-px"
-                        onClick={approveSelectedOverview}
-                        disabled={overviewBulkRunning}
-                        data-testid="button-bulk-approve"
-                      >
-                        {overviewBulkRunning ? "Approving…" : "Approve"}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              )}
-              <TierSections
-                rows={pagerRows}
-                unavailable={overviewUnreachable}
-                emptyMessage={
-                  overviewUnreachable
-                    ? "Brain couldn’t load what needs your review. This is a connection problem, not an empty queue."
-                    : "Nothing needs your review right now."
-                }
-              />
-            </>
+            <CashProjectionCard view={projection} format={format} horizonDays={PROJECTION_DAYS} />
 
             {/* Your Goals - hidden for now */}
             {/* <GoalsSection /> */}
@@ -1482,89 +959,6 @@ export function HomePage() {
         open={showOnboarding}
         onClose={finishOnboarding}
         onComplete={finishOnboarding}
-      />
-
-      {/* Brain Detected - read-only live Ledger insight (reconciliation/subscription/dispute/cash flow) */}
-      <LiveInsightModal
-        insight={selectedInsight}
-        open={selectedInsight !== null}
-        onOpenChange={(o) => { if (!o) { setSelectedInsight(null); setOpenRowId(null); } }}
-        {...pagerProps}
-        onAcknowledge={selectedInsight ? () => acknowledgeInsightRow(selectedInsight) : undefined}
-        acknowledged={
-          selectedInsight !== null &&
-          (acknowledgedInsightIds.has(selectedInsight.id) || pendingAcknowledgedIds.has(selectedInsight.id))
-        }
-      />
-
-      {/* Brain Detected - live brain-core agent proposal */}
-      <LiveProposalModal
-        proposal={selectedProposal}
-        open={selectedProposal !== null}
-        onOpenChange={(o) => { if (!o) { setSelectedProposal(null); setOpenRowId(null); } }}
-        {...pagerProps}
-        position={pager.position ?? undefined}
-      />
-
-      {/* Brain Detected - proposal sheet, opened in place */}
-      <ProposalDetail
-        proposal={selectedReview}
-        currentStatus={selectedReview ? (reviewStatuses[selectedReview.id] ?? selectedReview.status) : undefined}
-        open={selectedReview !== null}
-        onOpenChange={(o) => { if (!o) { setSelectedReview(null); setOpenRowId(null); } }}
-        {...pagerProps}
-        onAction={handleReviewAction}
-        rulePaused={selectedReview ? isRulePaused(selectedReview) : undefined}
-        onPauseRule={(p) => { const r = ruleOf(p); if (r) storePauseRule(r.id); }}
-        onReviewRule={(p) => {
-          setSelectedReview(null);
-          openRuleDetail(p.rule?.id, navigate);
-        }}
-        onAlwaysHandle={(p) => {
-          setRuleDraft({
-            kind: "automation",
-            name: p.counterparty ? `Auto clear ${p.counterparty}` : "Auto clear this payment",
-            category: "bill",
-            agent: p.agent,
-            cap: typeof p.amount === "number" ? Math.ceil(p.amount / 50) * 50 : undefined,
-            allowlist: p.counterparty ? [p.counterparty] : [],
-          });
-          setSelectedReview(null);
-          navigate("/ledger?tab=rules&create=1");
-        }}
-        onReportProblem={(p, report) => {
-          const r = ruleOf(p);
-          if (!r) return;
-          if (report.pause) {
-            storeReportProblem(r.id, { proposalId: p.id, reason: report.reason, note: report.note });
-            setSelectedReview(null);
-            openRuleDetail(r.id, navigate);
-          } else {
-            storeSendFeedback(r.id, { proposalId: p.id, reason: report.reason, note: report.note });
-          }
-        }}
-      />
-
-      {/* Brain Detected - session-scoped PaymentIntent review (mirrors Inbox) */}
-      <ReviewModal
-        item={selectedLiveIntent}
-        open={selectedLiveIntent !== null}
-        onOpenChange={(o) => { if (!o) { setSelectedLiveIntent(null); setLiveRejection(null); setOpenRowId(null); } }}
-        onConfirm={() => {
-          if (selectedLiveIntent?.live && selectedLiveIntent.intentId) void approveIntent(selectedLiveIntent.intentId, true);
-          else setSelectedLiveIntent(null);
-        }}
-        onReject={() => {
-          if (selectedLiveIntent?.live && selectedLiveIntent.intentId) {
-            // The toast now comes from the mutation's own onSuccess/onError.
-            rejectIntent.mutate(selectedLiveIntent.intentId);
-          }
-          setSelectedLiveIntent(null);
-          setLiveRejection(null);
-        }}
-        {...pagerProps}
-        busy={approvingIntentId !== null}
-        rejection={liveRejection}
       />
 
     </div>

@@ -47,11 +47,17 @@ describe("orderRowsForDisplay", () => {
   });
 });
 
-describe("Overview builds its pager from the display order", () => {
+describe("the Inbox builds its pager from the display order", () => {
   it("orders its rows through the shared helper", () => {
+    const src = readFileSync("client/src/pages/InboxPage.tsx", "utf8");
+    /* The Inbox's rows feed BOTH the sections and the unified pager, so
+       ordering them at the source is what keeps the two in step. Overview no
+       longer has rows or a pager — it renders a count and a link. */
+    expect(src).toContain("orderRowsForDisplay(");
+  });
+
+  it("leaves Overview out of it, because Overview has no rows to order", () => {
     const src = readFileSync("client/src/pages/HomePage.tsx", "utf8");
-    /* Overview's rows feed BOTH TierSections and the unified pager from one
-       memo, so ordering them at the source is what keeps the two in step. */
-    expect(src).toMatch(/orderRowsForDisplay\(\s*\[/);
+    expect(src).not.toContain("orderRowsForDisplay");
   });
 });
