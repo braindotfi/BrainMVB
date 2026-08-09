@@ -1678,6 +1678,19 @@ fix that; only the gate can. Specifically:
 4. **A deletion is a claim.** If a control disappears, the PR body has to say
    which control and why. "Sync" is not a reason.
 
+## Shared panel primitives
+
+All card/panel chrome lives in `client/src/components/LedgerWidgets.tsx`. Never create a local copy.
+
+| Component | When to use |
+|---|---|
+| `WidgetPanel` | Any bordered panel shell (`bg #0a0c10`, border `#1d2132`, radius 16). Pass `noBorder` only when Figma explicitly shows no border. |
+| `WidgetHeader` | The dot + uppercase title + optional count row. Accepts `children` for metadata that follows the count (e.g. version/quorum text). |
+| `WidgetCard` | `WidgetHeader` + `WidgetPanel` composed together. Used by all Ledger tabs. |
+| `Divider` | Full-width 1px separator at `#1d2132`. Import from LedgerWidgets; do not inline. |
+
+SettingsPage panels are `<WidgetPanel noBorder>` — borderless per Figma, intentional. DevelopersSection panels are `<WidgetPanel>` (with border). RuleDetail inner panels (Rule Status, Trusted Vendors, Amount, Reported Problems, History, Rule Definition) are all `<WidgetPanel>`.
+
 `scripts/check-removed-ui.mjs` enforces the mechanical part of this: a
 `data-testid` / `testId` present on the base ref and absent from the branch is a
 failure until it is declared in `scripts/ui-removals-allowed.txt`. Run it before

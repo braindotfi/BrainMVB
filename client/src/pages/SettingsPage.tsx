@@ -37,6 +37,7 @@ import AccountFigma from "@/components/settings/figma/AccountSection";
 import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { WidgetPanel } from "@/components/LedgerWidgets";
 
 /* ─── Section type ───────────────────────────────────────── */
 type Section =
@@ -206,14 +207,6 @@ const NAV_ITEMS: { id: Section; label: string; Icon: ComponentType<{ active: boo
 ];
 
 /* ─── Shared primitives ─────────────────────────────────── */
-const Card = ({ children, noBorder }: { children: React.ReactNode; noBorder?: boolean }) => (
-  <div
-    className={`rounded-panel overflow-hidden ${noBorder ? "" : "border border-brain-v1stroke-2"}`}
-    style={{ background: "#0a0c10" }}
-  >
-    {children}
-  </div>
-);
 
 const Divider = () => <div className="h-px bg-brain-v1stroke-2 mx-4" />;
 
@@ -477,7 +470,7 @@ function ProfileSection() {
   return (
     <div className="flex flex-col gap-5">
       {/* Profile header card, borderless per Figma */}
-      <Card noBorder>
+      <WidgetPanel noBorder>
         <div className="flex items-center gap-4 p-4">
           <button
             type="button"
@@ -571,12 +564,12 @@ function ProfileSection() {
             </span>
           </Button>
         </div>
-      </Card>
+      </WidgetPanel>
 
       {/* Identity card, borderless per Figma 3957:43974 */}
       <div className="flex flex-col gap-[4px]">
         <SectionLabel>Identity</SectionLabel>
-        <Card noBorder>
+        <WidgetPanel noBorder>
           <SettingRow
             icon={<RowCircleIcon src={ICONS.settings_kyc_icon} inset="20.83% 12.5%" innerInset="-7.14% -5.56%" />}
             label="Email"
@@ -604,7 +597,7 @@ function ProfileSection() {
             }
             useCircleIcon
           />
-        </Card>
+        </WidgetPanel>
       </div>
 
       {/* Two-step email / phone update modals */}
@@ -670,7 +663,7 @@ function ProfileSection() {
           token does not hold, so there is no control here pretending otherwise. */}
       <div className="flex flex-col gap-[4px]">
         <SectionLabel>Approvals</SectionLabel>
-        <Card noBorder>
+        <WidgetPanel noBorder>
           <SettingRow
             icon={
               <RowIcon>
@@ -732,7 +725,7 @@ function ProfileSection() {
               </div>
             }
           />
-        </Card>
+        </WidgetPanel>
         <p
           className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[13px] leading-[18px] px-1"
           data-testid="text-auto-approve-readonly"
@@ -747,7 +740,7 @@ function ProfileSection() {
           the flow, so the two paths can never drift apart. */}
       <div className="flex flex-col gap-[4px]">
         <SectionLabel>Getting Started</SectionLabel>
-        <Card noBorder>
+        <WidgetPanel noBorder>
           <SettingRow
             icon={
               <RowIcon>
@@ -774,7 +767,7 @@ function ProfileSection() {
               </Button>
             }
           />
-        </Card>
+        </WidgetPanel>
       </div>
 
     </div>
@@ -810,7 +803,7 @@ function BillingSection() {
       {/* Current plan summary card */}
       <div className="flex flex-col gap-[4px]">
         <SectionLabel>Current Plan</SectionLabel>
-        <Card noBorder>
+        <WidgetPanel noBorder>
           <div className="p-4 flex items-center gap-4">
             <div className="flex-1 min-w-0 flex flex-col gap-[4px] justify-center">
               <div className="flex items-center gap-2">
@@ -872,13 +865,13 @@ function BillingSection() {
               )}
             </div>
           </div>
-        </Card>
+        </WidgetPanel>
       </div>
 
       {/* Payment method card */}
       <div className="flex flex-col gap-[4px]">
         <SectionLabel>Payment Method</SectionLabel>
-        <Card noBorder>
+        <WidgetPanel noBorder>
           <div className="p-4 flex items-center gap-4">
             <div className="flex-1 min-w-0 flex items-center gap-[12px]">
               <div
@@ -927,13 +920,13 @@ function BillingSection() {
               {cardLast4 ? "Update Card" : "Add Card"}
             </Button>
           </div>
-        </Card>
+        </WidgetPanel>
       </div>
 
       {/* Invoice history */}
       <div className="flex flex-col gap-[4px]">
         <SectionLabel>Invoice History</SectionLabel>
-        <Card noBorder>
+        <WidgetPanel noBorder>
           <div className="p-4 flex flex-col items-center justify-center gap-[12px]">
             <div
               className="size-[40px] rounded-full flex items-center justify-center"
@@ -949,7 +942,7 @@ function BillingSection() {
               No billing history
             </p>
           </div>
-        </Card>
+        </WidgetPanel>
       </div>
 
       <ChangePlanModal
