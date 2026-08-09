@@ -101,3 +101,4 @@
 - [Primitive migration delegation](primitive-migration-delegation.md) — tell agents to leave unmappable values and report them; the leftovers are the missing spec (tonal vs solid families).
 - [Modal shell standard](modal-shell-standard.md) — 480/400/375px variants; blur-sm≠blur-[2px]; AgentProposalModal was a hidden 520px popup; Radix mandatory for all modals.
 - [Empty-state standard](empty-state-standard.md) — px-[16px] py-[12px] in-panel geometry; "No X yet" vs "Nothing X yet" voice split; "Couldn't load" leads errors.
+- [Outcome-not-source bucketing](outcome-not-source-bucketing.md) — group a queue by the decisions a record accepts, never a per-feed `kind`; published list outranks source, even when empty.
