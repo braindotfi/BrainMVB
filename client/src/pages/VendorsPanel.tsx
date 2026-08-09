@@ -940,18 +940,14 @@ export function VendorsPanel() {
                     <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative shrink-0 w-full">
                       <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-brain-v1baby-blue-60 text-[16px]">
                         {effectiveTab === "Needs Review" &&
-                          `Nothing to review. New and risk-flagged ${segmentNoun} appear here.`}
+                          `Nothing to review. New and risky ${segmentNoun} show up here automatically.`}
                         {effectiveTab === "Trusted" &&
-                          `No ${trustedLabel.toLowerCase()} ${segmentNoun} yet. ${
-                            segment === "vendor"
-                              ? "Trust a vendor from the Needs Review tab."
-                              : "Confirm a customer from the Needs Review tab."
-                          }`}
+                          `No ${trustedLabel.toLowerCase()} ${segmentNoun} yet. Trust or confirm one from the Needs Review tab.`}
                         {/* No Suggested or Informational copy: those chips are
                             only rendered while their bucket has rows, so an
                             empty list is unreachable for both. Restore a line
                             here if that changes. */}
-                        {effectiveTab === "Paused" && `No paused ${segmentNoun}.`}
+                        {effectiveTab === "Paused" && "Nothing paused."}
                       </p>
                     </div>
                   ) : (

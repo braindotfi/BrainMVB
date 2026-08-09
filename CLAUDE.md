@@ -1648,6 +1648,108 @@ description, as three sibling `<p>`s in a `gap-[4px]` column. Overview previousl
 in its own flex row and used a `leading-[0] text-[0px]` parent to kill whitespace between the
 greeting's spans.
 
+## Empty-state copy and frame geometry standard
+
+### Frame geometry
+
+Two frame shapes exist. Use the right one — never mix.
+
+**In-panel row** (empty state sits *inside* a section/card that already provides the border):
+```
+px-[16px] py-[12px] rounded-[8px]
+```
+No additional border or background — the parent card provides the visual boundary.
+Text: `text-brain-v1baby-blue-60 text-[16px] leading-[20px] font-medium` for content panels;
+`text-brain-v1baby-blue-60 text-[13px] leading-[18px]` for sidebar / small-panel contexts.
+
+**Standalone card** (empty state *is* the card, replacing a list that has no outer panel):
+```
+flex items-center px-[16px] py-[20px] w-full rounded-row border border-solid border-brain-v1stroke-2 bg-brain-v1highlight-dropdown-bg
+```
+Used in InboxPage and TierRowList — already consistent; do not change.
+
+**Error / unavailable**: always use `UnavailableDataBox` (from `Callout.tsx`).
+It has its own geometry (`rounded-[8px] border`) and forces orange text.
+
+Never use `style={{ color: "#6c779d" }}` — use the `text-brain-v1baby-blue-60` token.
+
+### Copy standard
+
+**Category A — truly empty (data exists but list is genuinely empty)**
+
+Two voice rules, mutually exclusive:
+- **"No X yet"** for named/countable collections (accounts, vendors, members, rules, keys, decisions).
+- **"Nothing X yet"** for activity/event feeds (history, suggestions, recorded activity, conversations).
+
+One structure rule: if a concrete next action exists, append it as a second sentence.
+Examples: "No automations yet. Add one using the builder above."
+Never leave the user wondering what to do when there *is* something they can do.
+
+| Surface | State | Copy |
+|---|---|---|
+| FinancesPage → Accounts | empty | "No accounts connected yet. Add one in Settings, under Sources." |
+| RulesPanel → AlwaysOn policy | empty | "No policy rules yet." |
+| RulesPanel → Trusted vendors | empty | "No trusted vendors yet." |
+| RulesPanel → Automations | empty | "No automations yet. Add one using the builder above." |
+| RulesPanel → Guardrails | empty | "No guardrails yet. Add one using the builder above." |
+| RulesPanel → Suggested | empty | "Nothing suggested yet. Brain will show these as it spots patterns." |
+| RuleDetail → Reported Problems | empty | "No problems reported on this rule yet." |
+| RuleDetail → History | empty | "Nothing recorded yet." |
+| InboxPage → Unresolved | empty | "Nothing needs your attention right now. Brain is keeping things moving." |
+| InboxPage → Resolved | empty | "No resolved decisions yet." |
+| InboxPage → Filtered | filtered | "No {tab} decisions match this filter." |
+| VendorsPanel → Needs Review | empty | "Nothing to review. New and risky {noun} show up here automatically." |
+| VendorsPanel → Trusted | empty | "No {trustedLabel} {noun} yet. Trust or confirm one from the Needs Review tab." |
+| VendorsPanel → Paused | empty | "Nothing paused." |
+| BrainAssistant → Sessions | empty | "Nothing here yet." |
+| BrainAssistant → Sessions | search miss | "Nothing matches." |
+| AuditLogSection | empty | "No audit records yet." |
+| AuditLogSection | search miss | "No records match your search." |
+| AuditLogSection | type-filtered | "No system, assistant, or decision records here." |
+| DevelopersSection → Activity | empty | "Nothing recorded yet. API calls show up here as events." |
+| DevelopersSection → Tenants (prod) | empty | "No tenant linked yet. Create your company to get a tenant." |
+| DevelopersSection → Tenants (non-prod) | empty | "No tenant available." |
+| SecurityModals → Sessions | empty | "No other active sessions." |
+| TeamSection → Members | empty | "No members yet." |
+| SourcesSection → Accounts | empty | "No accounts connected yet." |
+| SourcesSection → Documents | empty | "No documents uploaded yet." |
+
+**Category B — error / unavailable (data failed to load)**
+
+Every error entry keeps the "this is a failure, not emptiness" reassurance — never drop it silently.
+Lead with "Couldn't load …" (one declarative sentence). Add a second sentence when the
+"empty vs. unavailable" distinction is high-stakes to the user.
+
+| Surface | Copy |
+|---|---|
+| FinancesPage → Accounts | "Couldn't load your accounts. This list may be incomplete. It doesn't mean you have none." |
+| PayablesTab | "Couldn't load your payables. This list may be incomplete. It doesn't mean you owe nothing." |
+| ReceivablesTab | "Couldn't load your receivables. This list may be incomplete. It doesn't mean nobody owes you anything." |
+| PayableDetailPopup → invoices | "Couldn't load your invoices. Whether one backs this payable is unknown…" |
+| AccountDetailPopup → accounts | "Couldn't load your accounts. This account can't be shown right now — it hasn't been removed from your ledger." |
+| RulesPanel → AlwaysOn policy | "Couldn't load your active policy from Brain right now." |
+| RulesPanel → Trusted vendors | "Couldn't load vendors. This list may be incomplete." |
+| InboxPage → decisions | "Brain couldn't load your decisions. This is a connection problem, not an empty queue. Don't read it as nothing to approve." |
+| InboxPage → partial load | "Some decisions couldn't be loaded, so this list may be incomplete." |
+| AuditLogSection | "Brain couldn't read your audit history." + detail "This list is unavailable, not empty." |
+| DevelopersSection → Activity | "Couldn't load activity. Brain core may be unavailable. This isn't the same as no activity." |
+| DevelopersSection → Keys | "Couldn't load keys. Brain core may be unavailable." |
+| DevelopersSection → Key usage | "Couldn't load key usage. Brain core may be unavailable." |
+| DevelopersSection → Tenants | "Couldn't load tenants. Brain core may be unavailable." |
+| SettingsPage → Approval policy | "Couldn't read your approval policy. This limit is unknown, not absent." |
+| TeamSection → Members | "Couldn't load team members." |
+| SourcesSection → list | "Couldn't load this list. Connected items are still connected. This just failed to load." |
+| SourcesSection → banner | "Couldn't load {feed}. Connected items are still connected — this just failed to load." |
+| MemberDetailPopup | "This member is no longer available." |
+
+### Checklist for new empty states
+
+1. Pick the frame: in-panel row (`px-[16px] py-[12px] rounded-[8px]`) or standalone card.
+2. Pick the voice: "No X yet" (collection) or "Nothing X yet" (activity feed).
+3. Add a next-action sentence if there is a concrete thing the user can do.
+4. For error states: use `UnavailableDataBox`, lead with "Couldn't load …".
+5. No inline `style={{ color: "…" }}` — use `text-brain-v1baby-blue-60` or `text-brain-v1light-orange`.
+
 ## Merging to main — the review gate
 
 Three merges have silently deleted finished work. Each was a long-lived "sync"

@@ -231,7 +231,7 @@ const KeysUnavailableCard = ({ testId }: { testId?: string }) => (
 );
 
 const EmptyRow = ({ children, testId }: { children: ReactNode; testId?: string }) => (
-  <div className="p-4" data-testid={testId}>
+  <div className="px-[16px] py-[12px] rounded-[8px]" data-testid={testId}>
     <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px]">{children}</p>
   </div>
 );
@@ -1012,10 +1012,10 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
             /* "We could not read the log" is not "nothing happened". The second
                claim is the one a developer acts on when a call seems to vanish. */
             <EmptyRow testId="row-activity-unavailable">
-              Couldn't load activity. brain-core may be unavailable. This is not the same as no activity.
+              Couldn't load activity. Brain core may be unavailable. This isn't the same as no activity.
             </EmptyRow>
           ) : !activityQ.data?.events?.length ? (
-            <EmptyRow>No recorded activity yet. Calls appear here as brain-core audit events.</EmptyRow>
+            <EmptyRow>Nothing recorded yet. API calls show up here as events.</EmptyRow>
           ) : (
             <div className="flex flex-col gap-[16px] p-[16px]">
               {activityQ.data.events.slice(0, 8).map((ev, i) => (
@@ -1335,7 +1335,7 @@ function KeysSection({ env }: { env: DevEnv }) {
           {keysQ.isLoading ? (
             <EmptyRow>Loading keys…</EmptyRow>
           ) : keysQ.isError ? (
-            <EmptyRow>Couldn't load keys. brain-core may be unavailable.</EmptyRow>
+            <EmptyRow>Couldn't load keys. Brain core may be unavailable.</EmptyRow>
           ) : keys.length === 0 ? (
           <div className="p-[16px] flex flex-col gap-[4px]">
             <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[20px]" data-testid="text-no-keys-title">
@@ -1684,7 +1684,7 @@ function TenantsSection({ env, onNavigate }: { env: DevEnv; onNavigate: (s: DevS
         {tenantsQ.isLoading ? (
           <EmptyRow>Loading tenants…</EmptyRow>
         ) : tenantsQ.isError ? (
-          <EmptyRow>Couldn't load tenants. brain-core may be unavailable.</EmptyRow>
+          <EmptyRow>Couldn't load tenants. Brain core may be unavailable.</EmptyRow>
         ) : !data?.tenants.length ? (
           <EmptyRow>
             {data?.mode === "production"
@@ -1917,7 +1917,7 @@ function UsageSection({ env }: { env: DevEnv }) {
           {keysQ.isLoading || keyUsageQ.isLoading ? (
             <EmptyRow>Loading key usage…</EmptyRow>
           ) : keysQ.isError || keyUsageQ.isError ? (
-            <EmptyRow>Key usage is unavailable right now.</EmptyRow>
+            <EmptyRow>Couldn't load key usage. Brain core may be unavailable.</EmptyRow>
           ) : !envKeys.length ? (
             <EmptyRow>No {env} API keys yet. Create one under API Keys.</EmptyRow>
           ) : (

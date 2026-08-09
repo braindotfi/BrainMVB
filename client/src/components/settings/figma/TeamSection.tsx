@@ -475,7 +475,7 @@ export default function TeamSection() {
         {isError && (
           <div className="flex gap-[16px] h-[40px] items-center">
             <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1pink-red text-[16px]" data-testid="text-members-error">
-              Couldn't load your team from Brain core.
+              Couldn't load team members.
             </p>
           </div>
         )}

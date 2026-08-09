@@ -333,7 +333,7 @@ export function FinancesPage() {
             {accounts.length === 0 && (
               accountsFailed ? (
                 <UnavailableDataBox testId="text-accounts-unavailable">
-                  Your accounts couldn't be loaded just now, so this list is empty for the wrong reason. It isn't a sign that you have no accounts.
+                  Couldn't load your accounts. This list may be incomplete. It doesn't mean you have none.
                 </UnavailableDataBox>
               ) : (
               <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative rounded-[8px] shrink-0 w-full bg-brain-v1highlight-dropdown-bg">
@@ -341,8 +341,7 @@ export function FinancesPage() {
                     same "No connected accounts yet" as a genuinely empty one, which
                     tells someone with accounts that they have none. */}
                 <p
-                  className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[16px]"
-                  style={{ color: "#6c779d" }}
+                  className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-[16px] text-brain-v1baby-blue-60"
                   data-testid={
                     accountsLoading
                       ? "text-accounts-loading"
@@ -351,7 +350,7 @@ export function FinancesPage() {
                 >
                   {accountsLoading
                     ? "Loading your accounts from the ledger…"
-                    : "No connected accounts yet. Link an account to see your balances here."}
+                    : "No accounts connected yet. Add one in Settings, under Sources."}
                 </p>
               </div>
               )
