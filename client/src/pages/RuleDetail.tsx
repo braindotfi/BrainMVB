@@ -462,7 +462,7 @@ export function RuleDetail() {
             </div>
             <div className="flex flex-col gap-[8px] p-[8px]">
               {reports.length === 0 ? (
-                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-brain-v1baby-blue-60 text-[13px] p-[8px]">
+                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-brain-v1baby-blue-60 text-[13px] px-[8px] py-[4px]">
                   No problems reported on this rule yet.
                 </p>
               ) : (
@@ -485,8 +485,8 @@ export function RuleDetail() {
             </div>
             <div className="flex flex-col gap-[8px] p-[8px]">
               {history.length === 0 ? (
-                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-brain-v1baby-blue-60 text-[13px] p-[8px]">
-                  No history recorded for this rule yet.
+                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-brain-v1baby-blue-60 text-[13px] px-[8px] py-[4px]">
+                  Nothing recorded yet.
                 </p>
               ) : (
                 [...history].reverse().map((h, i) => (

@@ -685,7 +685,7 @@ function ProfileSection() {
               policy.isLoading
                 ? "Reading your approval policy…"
                 : limitUnreadable
-                  ? "Brain could not read your approval policy. This limit is unknown, not absent."
+                  ? "Couldn't read your approval policy. This limit is unknown, not absent."
                   : autoLimit === null
                     ? "No approval policy is active on this tenant yet."
                     : autoLimit.kind === "limit"

@@ -131,7 +131,7 @@ export function PayableDetailPopup({
                 data-testid="text-payable-next"
               >
                 {invoicesUnknown
-                  ? "Your invoices couldn't be loaded just now, so whether one backs this payable is unknown. It is still counted in what you owe and tracked for its due date."
+                  ? "Couldn't load your invoices. Whether one backs this payable is unknown. It is still counted in what you owe and tracked for its due date."
                   : "Brain proposes payments from invoices, and this payable has none on file, so there is nothing to approve here. It is counted in what you owe and tracked for its due date."}
               </p>
             </div>

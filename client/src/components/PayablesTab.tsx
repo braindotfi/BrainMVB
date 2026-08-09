@@ -99,8 +99,7 @@ export function PayablesTab({ format }: { format: Format }): JSX.Element {
     <WidgetCard title="Payables" count={kind === "loading" ? undefined : rows.length}>
       {kind === "failed" ? (
         <UnavailableDataBox testId="text-obligations-unavailable">
-          Your payables couldn't be loaded just now, so this list is empty for the wrong reason.
-          It isn't a sign that you owe nothing.
+          Couldn't load your payables. This list may be incomplete. It doesn't mean you owe nothing.
         </UnavailableDataBox>
       ) : kind === "loading" ? (
         <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative shrink-0 w-full bg-brain-v1highlight-dropdown-bg">

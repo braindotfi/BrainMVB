@@ -888,7 +888,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
               {/* Grouped sessions */}
               {filteredGroups.length === 0 && (
                 <div className="px-[8px] py-[6px] [font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px]">
-                  {sessions.length === 0 ? "No conversations yet" : "No conversations found"}
+                  {sessions.length === 0 ? "Nothing here yet." : "Nothing matches."}
                 </div>
               )}
               {filteredGroups.map((group) => (

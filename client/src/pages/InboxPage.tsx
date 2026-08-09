@@ -1423,7 +1423,7 @@ export function InboxPage() {
      filter" after the user narrowed the list is information; the same words on an
      unfiltered empty queue would read as a fault. */
   const emptyText = decisionsUnreachable
-    ? "Brain couldn\u2019t load your decisions. This is a connection problem, not an empty queue \u2014 don\u2019t read it as \u201cnothing to approve\u201d."
+    ? "Brain couldn't load your decisions. This is a connection problem, not an empty queue. Don't read it as nothing to approve."
     : filtering
     ? `No ${activeTab.toLowerCase()} decisions match this filter.`
     : liveQueueLoading
