@@ -482,9 +482,15 @@ export function buildProposalHeaderCopy(
   const cardHeadline = resolvedHeadline
     ? formatText(applyCurrencyToBareAmounts(resolvedHeadline, headline.amount?.currency ?? null))
     : null;
+  /* notify_only findings (compliance today) carry no subject/presentation.headline
+     at all, so every row previously fell through to the bare agentName ("Compliance"
+     for all of them, indistinguishable in a list). resolveProseText is the same
+     ref-resolving treatment already used for the modal's "Why" narrative, so this
+     stays consistent with that rendering rather than showing raw unresolved text. */
+  const resolvedNarrative = resolveProseText(proposal.narrative, refDisplays);
 
   return {
-    title: cardHeadline ?? subjectName ?? agentName,
+    title: cardHeadline ?? subjectName ?? resolvedNarrative ?? agentName,
     text:
       [cardHeadline && subjectName ? subjectName : null, headlineText].filter(Boolean).join(" · ") ||
       (subjectName ? `${proposal.subject!.label} · ${agentName}` : `Proposed by ${agentName}`),
