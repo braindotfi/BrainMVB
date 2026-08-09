@@ -390,7 +390,13 @@ if (hasDecision) {
       }
     }
     if (checkedGroups === 0) {
-      skip("the shared-invoice notice", "every proposal sharing an invoice had already been decided by the time the list rendered");
+      /* Not a pass: the feed named proposals sharing an invoice and none of them
+         reached the list. That is legitimate when they were decided between the
+         read and the render, but it is not evidence the notice works. */
+      skip(
+        "the shared-invoice notice",
+        `${siblingGroups.groups.length} invoice(s) share a live proposal in the feed but none of those rows rendered — unproven on this run`,
+      );
     } else {
       check(
         "a row sharing an invoice says how many other proposals are open on it",

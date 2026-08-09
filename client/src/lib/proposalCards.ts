@@ -102,8 +102,11 @@ export function buildProposalHeadline(evidence: ProposalEvidenceItem[]): {
  * The same caption, recovered from the proposal's own key facts.
  *
  * Only the labels brain-core's collections runs actually emit are read, and the
- * amount is passed through as the string it arrived as — parsing it into a
- * number here would round a figure that is quoted to a customer.
+ * amount is handed back as the `{ value, currency }` string pair the evidence
+ * path produces, so the caller renders it through exactly the same formatter as
+ * a cited amount. This caption cannot become a second, differently-rounded
+ * rendering of the same figure — whatever the display rules are, both halves of
+ * the fallback obey them identically.
  */
 function invoiceFactsHeadline(facts: ResolvedKeyFact[]): { code: string | null; amount: ProposalAmount | null } | null {
   const value = (label: string) => facts.find((f) => f.label === label)?.value?.trim() || null;
@@ -146,9 +149,11 @@ export function proposalInvoiceIdentity(
     if (viaWiki) return { key: viaWiki[1], code: e.code ?? factCode };
   }
 
-  /* No id anywhere: the document number is weaker (it is unique per issuer, not
-     globally) but it is still an identifier of one document, not a resemblance. */
-  return factCode ? { key: `code:${factCode}`, code: factCode } : null;
+  /* No record id anywhere: NOT grouped. A document number is unique per issuer,
+     not per book — two vendors can both send an "INV-001" — so grouping on it
+     would tell an approver that two unrelated bills are one document. An
+     ungrouped row is merely quiet; that one would be wrong. */
+  return null;
 }
 
 /**

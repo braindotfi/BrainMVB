@@ -881,11 +881,11 @@ describe("proposalInvoiceIdentity", () => {
     expect(proposalInvoiceIdentity(first)?.key).not.toBe(proposalInvoiceIdentity(second)?.key);
   });
 
-  it("falls back to the document number, and yields nothing when no document is named", () => {
-    expect(proposalInvoiceIdentity(build([], [{ label: "Invoice Number", value: "INV-1027" }]))).toEqual({
-      key: "code:INV-1027",
-      code: "INV-1027",
-    });
+  it("groups on a record id only — never on a document number or on nothing at all", () => {
+    /* An invoice NUMBER is unique per issuer, not per book: two vendors can both
+       send an "INV-001". Grouping on it would tell an approver that two
+       unrelated bills are one document. */
+    expect(proposalInvoiceIdentity(build([], [{ label: "Invoice Number", value: "INV-1027" }]))).toBeNull();
     /* A vendor-risk proposal cites no invoice at all: it must not group with
        every other invoice-less proposal under one "unknown" bucket. */
     expect(
