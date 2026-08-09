@@ -728,11 +728,28 @@ export interface ProposalForTracking {
 export function decidedProposalIdsFromEvents(
   events: readonly BrainAuditEvent[] | null | undefined,
 ): Set<string> {
+  /* This is EFFECTIVE state, not a tally of decision events, because `undo` is
+     one of the four decisions a proposal can receive (ProposalDecision) and it
+     puts the record back in front of the tenant. Treating every
+     `proposal.decided` as terminal would let the original approve/reject go on
+     suppressing a proposal that an undo had reopened — the record would be
+     live, awaiting a decision, and invisible on both the Inbox and the Overview
+     count that subtracts this set.
+
+     So the feed is replayed oldest-first and each decision overwrites the last:
+     a terminal decision hides the live copy, an undo puts it back, and a
+     re-decision after that hides it again. brain-core returns newest-first, so
+     the sort is what makes "last decision wins" mean the latest one. */
+  const decisions = (events ?? [])
+    .filter((e) => e.action === "proposal.decided" && typeof e.inputs?.proposal_id === "string" && e.inputs.proposal_id)
+    .slice()
+    .sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at));
+
   const out = new Set<string>();
-  for (const e of events ?? []) {
-    if (e.action !== "proposal.decided") continue;
-    const id = e.inputs?.proposal_id;
-    if (typeof id === "string" && id) out.add(id);
+  for (const e of decisions) {
+    const id = e.inputs.proposal_id as string;
+    if (e.inputs?.decision === "undo") out.delete(id);
+    else out.add(id);
   }
   return out;
 }

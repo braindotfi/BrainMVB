@@ -609,6 +609,277 @@ if (injectedVisible) {
   await page.screenshot({ path: "/tmp/qa-inbox-needs-input.png", fullPage: true });
 }
 
+/* ── A creation event must never hide a live record ───────────────────────────
+   The Inbox hides a proposal when the audit feed shows it DECIDED, because
+   brain-core leaves decided rows in GET /proposals. The id it matches on lives
+   in `inputs.proposal_id` — and so does the id on `agent.action.proposed`, the
+   event every proposal is born with. If the suppression ever widened from
+   `proposal.decided` to "any event quoting an id", every record would vanish
+   for as long as its own creation event sat inside the audit page, and since
+   that page is capped, WHICH records vanished would drift as the tenant aged.
+
+   That is not a hypothetical: it is what this run's own investigation first
+   (wrongly) concluded was happening, and the reason it could not be settled by
+   reading the code was that nothing pinned the behaviour. This pins it, in the
+   live page, against a row that is really on screen. */
+await page.unrouteAll?.({ behavior: "ignoreErrors" }).catch(() => {});
+await page.goto(`${base}/inbox`, { waitUntil: "domcontentloaded" });
+await settle(rowRoots("row-decision"), 20, 1500);
+
+/* Row ROOTS only. A bare prefix match also returns the `-select`, `-badge` and
+   `-action-*` children, so stripping the prefix off those yields ids like
+   `prop_X-select` — a witness that is not a row, and whose visibility says
+   nothing about whether the record was suppressed. */
+const rowIds = [
+  ...new Set(
+    await rowRoots("row-decision").evaluateAll((els) => els.map((e) => e.dataset.testid)),
+  ),
+]
+  .map((t) => t.replace(/^row-decision-/, ""))
+  .filter((id) => /^prop_[A-Za-z0-9]+$/.test(id));
+
+if (rowIds.length === 0) {
+  skip(
+    "the creation-event suppression guard",
+    "no live agent proposal is on screen, so there is no row whose disappearance would prove anything",
+  );
+} else {
+  const victim = rowIds[0];
+  console.log(`creation-event witness: ${victim}`);
+  await page.route("**/api/brain/audit/events*", async (route) => {
+    const res = await route.fetch();
+    let body;
+    try {
+      body = await res.json();
+    } catch {
+      body = { events: [], next_cursor: null };
+    }
+    const real = Array.isArray(body?.events) ? body.events : [];
+    /* Shaped exactly as brain-core emits it — same action, same field, same
+       nesting. A witness that differs in shape proves nothing about the real one. */
+    const born = {
+      id: "evt_qa_agent_action_proposed",
+      tenant_id: real[0]?.tenant_id ?? "tnt_qa",
+      layer: "agent",
+      actor: "compliance",
+      action: "agent.action.proposed",
+      event_type: "system_activity",
+      inputs: { action_kind: "agent_action", proposal_id: victim },
+      outputs: { status: "pending", outcome: "confirm" },
+      policy_version: null,
+      event_hash: "qa-witness-proposed",
+      prev_event_hash: null,
+      created_at: new Date().toISOString(),
+    };
+    await route.fulfill({
+      status: 200,
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ ...body, events: [born, ...real] }),
+    });
+  });
+
+  await page.goto(`${base}/inbox`, { waitUntil: "domcontentloaded" });
+  await settle(rowRoots("row-decision"), 20, 1500);
+  await page.waitForTimeout(1500);
+  const stillThere = await page.locator(`[data-testid="row-decision-${victim}"]`).first().isVisible().catch(() => false);
+  check(
+    "an agent.action.proposed event does NOT hide the record it created",
+    stillThere,
+    stillThere ? victim : `${victim} disappeared once its own creation event was in the feed`,
+  );
+}
+
+/* ── An acknowledge-only record belongs under "For your awareness" ────────────
+   The section only renders when it has rows, so on a tenant that happens to
+   hold none, its absence is indistinguishable from it being broken — which is
+   exactly how a wrong diagnosis got made here once. When the tenant supplies a
+   real acknowledge-only record the check runs against that; when it does not,
+   one is injected into the proposals read and the run SAYS SO, because a
+   synthetic witness proves the rendering path and not the tenant's data. */
+await page.unrouteAll?.({ behavior: "ignoreErrors" }).catch(() => {});
+
+const ackOnly = (p) =>
+  p.status === "pending" &&
+  Array.isArray(p.available_decisions) &&
+  p.available_decisions.length > 0 &&
+  p.available_decisions.some((d) => d?.id === "acknowledge") &&
+  !p.available_decisions.some((d) => d?.id === "approve" || d?.id === "reject");
+
+const WITNESS_ID = "prop_qa_ack_only_witness";
+let ackWitnessId = null;
+let ackInjected = false;
+
+await page.route("**/api/brain/proposals**", async (route) => {
+  const res = await route.fetch();
+  let body;
+  try {
+    body = await res.json();
+  } catch {
+    return route.fulfill({ response: res });
+  }
+  if (!Array.isArray(body?.proposals)) return route.fulfill({ response: res });
+
+  const real = body.proposals.find(ackOnly);
+  if (real) {
+    ackWitnessId = real.id;
+    return route.fulfill({ response: res, body: JSON.stringify(body) });
+  }
+  ackWitnessId = WITNESS_ID;
+  ackInjected = true;
+  /* Cloned from a real row so every field the card reads is shaped as core
+     shapes it; only the decision list and identity are ours. */
+  const template = body.proposals[0] ?? {};
+  const witness = {
+    ...template,
+    id: WITNESS_ID,
+    type: "compliance",
+    status: "pending",
+    mode: "notify_only",
+    payment_intent_id: null,
+    available_decisions: [{ id: "acknowledge" }],
+    presentation: { ...(template.presentation ?? {}), actions: null },
+  };
+  return route.fulfill({
+    status: 200,
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ ...body, proposals: [...body.proposals, witness] }),
+  });
+});
+
+await page.goto(`${base}/inbox`, { waitUntil: "domcontentloaded" });
+await settle(rowRoots("row-decision"), 20, 1500);
+await page.waitForTimeout(1500);
+
+if (!ackWitnessId) {
+  skip("the acknowledge-only routing rule", "the proposals read never resolved, so no witness was available");
+} else {
+  console.log(
+    ackInjected
+      ? `acknowledge-only witness: INJECTED (${WITNESS_ID}) — this tenant published none of its own`
+      : `acknowledge-only witness: live record ${ackWitnessId}`,
+  );
+
+  const inAwareness = page.locator(
+    `[data-testid="section-for-awareness"] [data-testid="row-decision-${ackWitnessId}"]`,
+  );
+  const rendered = (await page.locator(`[data-testid="row-decision-${ackWitnessId}"]`).count()) > 0;
+  check("an acknowledge-only record is not dropped from the Inbox", rendered, ackWitnessId);
+  check(
+    "an acknowledge-only record renders under For your awareness",
+    (await inAwareness.count()) > 0,
+    ackInjected ? "injected witness" : "live record",
+  );
+
+  /* The heading and the buttons must answer the same question — the whole
+     reason the split reads available_decisions instead of the source field. */
+  if (rendered) {
+    const row = page.locator(`[data-testid="row-decision-${ackWitnessId}"]`).first();
+    const labels = (await row.locator("button").allInnerTexts()).join(" ").toLowerCase();
+    check(
+      "an acknowledge-only record is never offered Approve or Reject",
+      !/approve|reject|decline/.test(labels),
+      labels.slice(0, 120) || "(no buttons)",
+    );
+  }
+
+  await page.screenshot({ path: "/tmp/qa-inbox-awareness.png", fullPage: true });
+}
+
+await page.unrouteAll?.({ behavior: "ignoreErrors" }).catch(() => {});
+
+/* ── A capped read must say the count is a floor ──────────────────────────────
+   Both feeds behind the Inbox page silently: the proposals read asks for 100
+   rows and the audit read for 100 events, and brain-core answers with a page
+   and a cursor. No demo tenant reaches either cap, so this state cannot be
+   reached by waiting — but a tenant in production would reach it while the page
+   went on printing a bare number. The cursor is handed back here so the wiring
+   from `isTruncated` to the sentence is proven, not just unit-tested. */
+/* The negative runs FIRST, against the untouched tenant. Running it after the
+   stub instead looked like a bug in the banner and was actually the browser
+   replaying the stubbed response from its own cache — the check has to be made
+   somewhere no interception has ever answered this URL. */
+await page.goto(`${base}/inbox`, { waitUntil: "domcontentloaded" });
+await settle(rowRoots("row-decision"), 20, 1500);
+await page.waitForTimeout(1200);
+check(
+  "a complete read shows no completeness hedge",
+  (await page.locator('[data-testid="banner-decisions-partial"]').count()) === 0,
+);
+
+await page.route("**/api/brain/proposals**", async (route) => {
+  const res = await route.fetch();
+  let body;
+  try {
+    body = await res.json();
+  } catch {
+    return route.fulfill({ response: res });
+  }
+  if (!Array.isArray(body?.proposals)) return route.fulfill({ response: res });
+  return route.fulfill({
+    status: 200,
+    headers: { "content-type": "application/json", "cache-control": "no-store" },
+    body: JSON.stringify({ ...body, next_cursor: "qa_more_records_exist" }),
+  });
+});
+
+await page.goto(`${base}/inbox`, { waitUntil: "domcontentloaded" });
+await settle(rowRoots("row-decision"), 20, 1500);
+await page.waitForTimeout(1200);
+
+const partialBanner = page.locator('[data-testid="banner-decisions-partial"]');
+const partialShown = await partialBanner.first().isVisible().catch(() => false);
+check("a cursor on the proposals read is disclosed above the count", partialShown);
+if (partialShown) {
+  const text = (await partialBanner.first().innerText()).replace(/\s+/g, " ").trim();
+  console.log("partial banner >>>", text);
+  /* It has to name the DIRECTION of the error. "May be incomplete" would leave
+     the reader unable to tell a missing record from a stale one. */
+  check("the notice says the count is a floor, not a total", /floor/i.test(text), text.slice(0, 160));
+}
+
+/* The audit cap is the OTHER direction and has to be detected differently: the
+   decided-proposal set is subtracted from the list, so a capped audit read
+   leaves settled records on it. Critically, this fixture returns a SHORT page
+   WITH a cursor — the state a length>=limit test cannot see, and the reason
+   this reads the cursor rather than counting rows. */
+await page.unrouteAll?.({ behavior: "ignoreErrors" }).catch(() => {});
+await page.route("**/api/brain/audit/events*", async (route) => {
+  const res = await route.fetch();
+  let body;
+  try {
+    body = await res.json();
+  } catch {
+    return route.fulfill({ response: res });
+  }
+  const real = Array.isArray(body?.events) ? body.events : [];
+  return route.fulfill({
+    status: 200,
+    headers: { "content-type": "application/json", "cache-control": "no-store" },
+    body: JSON.stringify({ ...body, events: real.slice(0, 3), next_cursor: "qa_more_events_exist" }),
+  });
+});
+
+await page.goto(`${base}/inbox`, { waitUntil: "domcontentloaded" });
+await settle(rowRoots("row-decision"), 20, 1500);
+await page.waitForTimeout(1200);
+
+const auditBanner = page.locator('[data-testid="banner-decisions-partial"]');
+const auditShown = await auditBanner.first().isVisible().catch(() => false);
+check("a short audit page carrying a cursor is still disclosed", auditShown);
+if (auditShown) {
+  const text = (await auditBanner.first().innerText()).replace(/\s+/g, " ").trim();
+  console.log("audit banner >>>", text);
+  /* Must describe an OVER-count. Saying "records aren't shown" here would point
+     the reader at missing work when the truth is the opposite. */
+  check(
+    "the audit notice warns of a settled record still listed, not of missing ones",
+    /already decided may still be listed/i.test(text) && !/floor/i.test(text),
+    text.slice(0, 160),
+  );
+}
+
+await page.unrouteAll?.({ behavior: "ignoreErrors" }).catch(() => {});
+
 if (skipped.length > 0) {
   console.log(`\n${skipped.length} check(s) were NOT proven on this tenant:`);
   for (const s of skipped) console.log(`  - ${s}`);

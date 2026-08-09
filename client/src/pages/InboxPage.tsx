@@ -40,7 +40,8 @@ import { LiveProposalModal, AGENT_DISPLAY_NAME } from "@/components/AgentProposa
 import type { AgentKey } from "@/lib/agentProposals";
 import { agentBadgeLabel } from "@/lib/agentProposals";
 import { capitalCase } from "@/lib/displayLabels";
-import { useBrainAuditRecords, registerProposalAgentKey } from "@/lib/brainAudit";
+import { useBrainAuditRecords, registerProposalAgentKey, useDecidedProposalIds } from "@/lib/brainAudit";
+import { inboxCompletenessNotice } from "@/lib/inboxCompleteness";
 import { inboxTapTarget } from "@/lib/inboxTap";
 import { pagerState, stepPager, type PagerEntry } from "@/lib/unifiedPager";
 import { AuditRecordPopup } from "@/components/AuditRecordPopup";
@@ -493,6 +494,11 @@ export function InboxPage() {
     proposals: liveProposals,
     isLoading: liveProposalsLoading,
     isError: liveProposalsError,
+    /* A cursor on the proposals read means unresolved records exist that this
+       page never fetched. Surfaced rather than dropped: the count below is
+       printed as a bare number, and a prefix shown as a total is the same lie
+       as an empty queue shown for an unreachable one. */
+    isTruncated: liveProposalsTruncated,
   } = useBrainProposals();
   const inboxSourcesLoading =
     liveQueueLoading ||
@@ -536,6 +542,15 @@ export function InboxPage() {
      Passing only needsReviewProposals made a reload lose "collections" and
      fall back to the generic execution-agent name ("Demo Payment Agent"). */
   const { records: auditRecords, isError: auditError } = useBrainAuditRecords(liveProposals);
+  /* The set of proposals the audit trail shows as settled, and how far it can be
+     trusted. Deliberately NOT re-derived from `auditRecords` here: this set is a
+     hide switch, so it has to model effective state — `undo` is a decision that
+     REOPENS a record, and a set built by scanning mapped records for a proposal
+     reference would keep suppressing a proposal an undo had put back in front of
+     the tenant. useDecidedProposalIds replays the decisions in order and is the
+     same rule the Overview count subtracts, so the two screens cannot disagree.
+     It shares a query key with the read above, so this costs no extra request. */
+  const { ids: decidedIds, isTruncated: auditTruncated } = useDecidedProposalIds();
 
   /* ── Live approve / reject (durable brain-core queue rows) ─────────────── */
   const queryClient = useQueryClient();
@@ -758,10 +773,21 @@ export function InboxPage() {
        it gets decided — it only adds an audit record. Without this guard a
        proposal and its settled audit record both appear simultaneously (the user
        sees two rows for the same invoice). Build a set of proposal IDs that the
-       audit log already confirms as decided so we can suppress the live copy. */
-    const decidedProposalIds = new Set(
-      auditRecords.flatMap((r) => (r.proposalId ? [r.proposalId] : [])),
-    );
+       audit log already confirms as decided so we can suppress the live copy.
+
+       Two properties this set MUST keep, because it is a hide switch:
+
+       1. Decisions only. `record.proposalId` is populated for `proposal.decided`
+          and for nothing else — deliberately not for `agent.action.proposed`,
+          which quotes the same id in the same field the moment an agent files a
+          proposal. Sourcing this from "any audit record mentioning an id" would
+          hide every record while its own creation event was still in the page.
+       2. Fail open. The audit read is capped (AUDIT_EVENTS_LIMIT), so this set
+          is a FLOOR, not a fact. A decision that fell outside the window simply
+          is not in it, which leaves an already-settled row on the list — the
+          harmless direction. It can never remove a record nobody decided.
+          `auditTruncated` above turns that into a sentence for the user. */
+    const decidedProposalIds = decidedIds;
 
     /* Needs you: session-scoped §6-gated intents (decidable). */
     for (const item of liveReviews) {
@@ -1536,6 +1562,14 @@ export function InboxPage() {
 
   const unresolvedEmpty = activeTab === "Unresolved" && visibleItems.length === 0 && inputRows.length === 0;
 
+  /* Whether the counts above the rows are totals or floors. */
+  const completenessNotice = inboxCompletenessNotice({
+    tab: activeTab,
+    proposalsTruncated: liveProposalsTruncated,
+    auditTruncated,
+    unreachable: decisionsUnreachable,
+  });
+
   /* Three different silences, three different sentences. "No decisions match this
      filter" after the user narrowed the list is information; the same words on an
      unfiltered empty queue would read as a fault. */
@@ -1696,6 +1730,14 @@ export function InboxPage() {
           <UnavailableDataBox testId="banner-decisions-incomplete">
             Some decisions couldn’t be loaded, so this list may be incomplete.
           </UnavailableDataBox>
+        )}
+
+        {/* The other way a count lies. Above says a feed FAILED; this says a feed
+            answered with a page. Both leave the number beside it untrustworthy,
+            in opposite directions, so they are separate sentences from
+            inboxCompletenessNotice rather than one shared hedge. */}
+        {completenessNotice && (
+          <UnavailableDataBox testId="banner-decisions-partial">{completenessNotice}</UnavailableDataBox>
         )}
 
         {/* Bulk bar. Appears at two, matching the prototype — one selected item is
