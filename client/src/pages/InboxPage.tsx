@@ -81,7 +81,7 @@ import {
   hasActiveFilter,
   typeOptions,
   EMPTY_FILTERS,
-  PRIORITY_OPTIONS,
+  RECOMMENDATION_OPTIONS,
   STATUS_OPTIONS,
   type DecisionFacets,
   type DecisionFilterState,
@@ -1560,7 +1560,21 @@ export function InboxPage() {
     .filter(Boolean)
     .join(" ");
 
-  const unresolvedEmpty = activeTab === "Unresolved" && visibleItems.length === 0 && inputRows.length === 0;
+  /* Which sections to show based on the recommendation filter.
+     An empty filter means "all". The inputRows section lives outside
+     visibleItems so it must be gated here rather than via matchesFilters. */
+  const rec = filters.recommendation;
+  const showApproval  = rec.length === 0 || rec.includes("approval");
+  const showInput     = rec.length === 0 || rec.includes("input");
+  const showAwareness = rec.length === 0 || rec.includes("awareness");
+
+  const unresolvedEmpty =
+    activeTab === "Unresolved" &&
+    (showApproval  ? visibleItems.filter((it) => inboxBucket(it) === "approval").length  === 0 : true) &&
+    (showInput     ? inputRows.length === 0 : true) &&
+    (showAwareness ? visibleItems.filter((it) => inboxBucket(it) === "awareness").length === 0 : true) &&
+    visibleItems.length === 0 &&
+    inputRows.length === 0;
 
   /* Whether the counts above the rows are totals or floors. */
   const completenessNotice = inboxCompletenessNotice({
@@ -1629,11 +1643,11 @@ export function InboxPage() {
         <div className="flex flex-row gap-[24px]">
           {([
             {
-              values: filters.priority,
-              onChange: (v: string[]) => setFilter("priority", v as DecisionFilterState["priority"]),
-              label: "Filter by priority",
-              testId: "filter-priority",
-              options: [{ value: "all", label: "All Priorities" }, ...PRIORITY_OPTIONS],
+              values: filters.recommendation,
+              onChange: (v: string[]) => setFilter("recommendation", v as DecisionFilterState["recommendation"]),
+              label: "Filter by recommendation",
+              testId: "filter-recommendation",
+              options: [{ value: "all", label: "All Recommendations" }, ...RECOMMENDATION_OPTIONS],
             },
             {
               values: filters.status,
@@ -1693,15 +1707,11 @@ export function InboxPage() {
             outer container separating this block from the chip strip. */}
         <div className="flex flex-col gap-[10px] items-start w-full">
 
-        {/* Count row + clear-filter link */}
+        {/* Clear-filter link — only row in this area now that the label and
+            count pill have been removed. Keep the dot so the visual rhythm of
+            the list header is preserved even when no filter is active. */}
         <div className="flex items-center gap-[8px] w-full min-h-[20px]">
           <div className="size-[6px] rounded-full shrink-0 bg-brain-v1baby-blue-60" />
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[12px] uppercase tracking-[0.4px] whitespace-nowrap">
-            Decisions
-          </p>
-          <CountPill testId="text-decision-count">
-            {activeTab === "Unresolved" ? decisionRows.length + inputRows.length : visibleItems.length}
-          </CountPill>
           {filtering && (
             <button
               type="button"
@@ -1814,7 +1824,7 @@ export function InboxPage() {
              nothing at all — three "nothing here" boxes on a quiet day trains
              people to stop reading the page. */
           <div className="flex flex-col gap-[26px] w-full">
-            {decisionRows.length > 0 && (
+            {showApproval && decisionRows.length > 0 && (
               <RowSection
                 title="Needs your approval"
                 accent="#d20344"
@@ -1823,7 +1833,7 @@ export function InboxPage() {
                 headingTestId="heading-needs-decision"
               />
             )}
-            {missingEvidenceError ? (
+            {showInput && (missingEvidenceError ? (
               <UnavailableDataBox testId="text-needs-input-unavailable">
                 Couldn't check whether any agent is waiting on information from you. This is a connection problem, not an all-clear.
               </UnavailableDataBox>
@@ -1838,8 +1848,8 @@ export function InboxPage() {
                   headingTestId="heading-needs-input"
                 />
               )
-            )}
-            {awarenessRows.length > 0 && (
+            ))}
+            {showAwareness && awarenessRows.length > 0 && (
               <RowSection
                 title="For your awareness"
                 accent="#a8b9f4"
