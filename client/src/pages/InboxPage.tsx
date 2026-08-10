@@ -47,8 +47,17 @@ import { pagerState, stepPager, type PagerEntry } from "@/lib/unifiedPager";
 import { AuditRecordPopup } from "@/components/AuditRecordPopup";
 import type { AuditRecord, AuditEventType } from "@/lib/auditTypes";
 import { auditEventLabel, auditEventChipClass, isAssistantActivity, isSystemActivity, humanReadableActor } from "@/lib/auditTypes";
-import { useMissingEvidenceItems, describeMissingEvidence, refKindLabel, type MissingEvidenceItem } from "@/lib/agentRunInput";
+import {
+  useMissingEvidenceItems,
+  agentKeyFromAction,
+  buildInputRowTitle,
+  buildInputRowSubtitle,
+  inputRowActionLabel,
+  inputRowFixPath,
+  type MissingEvidenceItem,
+} from "@/lib/agentRunInput";
 import { MissingEvidenceModal } from "@/components/MissingEvidenceModal";
+import { useBrainVendors } from "@/lib/brainVendors";
 import { formatRelativeTime } from "@/lib/sourceRows";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -1143,34 +1152,62 @@ export function InboxPage() {
   const {
     items: missingEvidence,
     isError: missingEvidenceError,
-    isTruncated: missingEvidenceTruncated,
   } = useMissingEvidenceItems();
   const nowMs = useMemo(() => Date.now(), []);
 
+  /* Counterparty id → display name. Shared with inputRows so titles can say
+     "Vendor risk check blocked — couldn't classify Brightline Systems Inc. as a
+     vendor" rather than repeating the same generic sentence for every run. */
+  const { vendors } = useBrainVendors();
+  const vendorNameMap = useMemo(
+    () => new Map(vendors.map((v) => [v.id, v.name])),
+    [vendors],
+  );
+
   const inputRows = useMemo<TierRowModel[]>(
     () =>
-      missingEvidence.map((entry) => ({
-        id: `missing-evidence-${entry.id}`,
-        /* Amber, not red. A stalled run is real work not happening, but nothing
-           is mid-flight and no money is at risk this minute. */
-        tier: "waiting" as const,
-        title: describeMissingEvidence(entry),
-        badge: { label: "Agent blocked", className: TAG_AGENT },
-        subtitle:
-          entry.entityRefs.length > 0
-            ? entry.entityRefs.map((ref) => `${refKindLabel(ref)}: ${ref}`).join(" · ")
-            : undefined,
-        note: formatRelativeTime(entry.createdAt, nowMs) ?? undefined,
-        /* Row tap opens the detail modal. The "View in Audit Log" action is
-           replaced by the modal's own secondary link so the row itself has a
-           primary destination. */
-        onOpenDetail: () => setSelectedInputItem(entry),
-        actions: [],
-        /* No checkbox, ever. Bulk approve batches decisions, and there is no
-           decision here to batch. */
-        testIdPrefix: "row-agent-input",
-      })),
-    [missingEvidence, nowMs, navigate],
+      missingEvidence.map((entry) => {
+        /* Derive the agent key from the attempted action so the badge chip can
+           say "Vendor Risk Agent" / "Payment Agent" instead of "Agent blocked". */
+        const agentKey = agentKeyFromAction(entry.attemptedAction);
+        const primaryField = entry.missingFields[0];
+        const fixPath = inputRowFixPath(entry);
+        return {
+          id: `missing-evidence-${entry.id}`,
+          /* Amber, not red. A stalled run is real work not happening, but nothing
+             is mid-flight and no money is at risk this minute. */
+          tier: "waiting" as const,
+          /* Interpolated title naming the real counterparty from entity_refs.
+             Previously this called describeMissingEvidence which never read
+             entity_refs, producing identical titles for every run of the same
+             agent — the template bug confirmed in the accompanying notes. */
+          title: buildInputRowTitle(entry, vendorNameMap),
+          /* Agent-specific badge label ("Vendor Risk Agent", "Payment Agent", …)
+             in place of the previous generic "Agent blocked" on every row. */
+          badge: { label: agentBadgeLabel(agentKey), className: TAG_AGENT },
+          /* Three-part subtitle: {entity name} · {run/trigger ID} · Missing: {field} */
+          subtitle: buildInputRowSubtitle(entry, vendorNameMap),
+          note: formatRelativeTime(entry.createdAt, nowMs) ?? undefined,
+          /* Row tap opens the detail modal. */
+          onOpenDetail: () => setSelectedInputItem(entry),
+          /* Primary action button — label derives from the specific missing field;
+             destination is confirmed for the common fields, falls back to the audit
+             log for field types whose remediation page isn't confirmed yet (see
+             inputRowActionLabel and inputRowFixPath comments for the split). */
+          actions: [
+            {
+              id: "fix",
+              label: inputRowActionLabel(primaryField),
+              tone: "acknowledge" as const,
+              onClick: () => navigate(fixPath),
+            },
+          ],
+          /* No checkbox, ever. Bulk approve batches decisions, and there is no
+             decision here to batch. */
+          testIdPrefix: "row-agent-input",
+        };
+      }),
+    [missingEvidence, vendorNameMap, nowMs, navigate],
   );
 
   const visibleItems = useMemo(() => applyDecisionFilters(tabItems, filters), [tabItems, filters]);
@@ -1550,14 +1587,9 @@ export function InboxPage() {
      not in `items` — they have no type, amount or decision status to match on.
      Rather than drop the section (silently under-reporting stuck agents) or
      pretend it was filtered, it stays and says the filter doesn't reach it. */
-  const inputSectionCaption = [
-    filtering ? "Filters don't apply to this section." : null,
-    missingEvidenceTruncated
-      ? "Showing the most recent audit events only — an older stalled run may not appear here."
-      : null,
-  ]
-    .filter(Boolean)
-    .join(" ");
+  /* Caption removed: the truncation notice ("Showing the most recent audit
+     events only…") was removed per spec — the section header is sufficient. */
+  const inputSectionCaption = filtering ? "Filters don't apply to this section." : "";
 
   /* Which sections to show based on the recommendation filter.
      An empty filter means "all". The inputRows section lives outside

@@ -250,3 +250,191 @@ export function refKindLabel(ref: string): string {
   const prefix = ref.split("_")[0]?.toLowerCase() ?? "";
   return REF_KIND_LABEL[prefix] ?? "Reference";
 }
+
+/* ── Row-level rendering helpers (added to fix template bug) ─────────────────
+   Previously describeMissingEvidence built the title from attemptedAction +
+   missingFields ONLY — entity_refs were never read, so three vendor-risk runs
+   against three different counterparties rendered identically. The helpers below
+   carry a nameMap (cp_id → display name) so titles and subtitles can name the
+   real entity involved. */
+
+/**
+ * Maps a brain-core `action` string (e.g. "vendor_risk.assess") to the AgentKey
+ * used by agentBadgeLabel, so rows can show "Vendor Risk Agent" instead of the
+ * generic "Agent blocked" label.
+ */
+export function agentKeyFromAction(action: string | null): string {
+  if (!action) return "agent";
+  const MAP: Record<string, string> = {
+    "payment.execute":      "payment",
+    "payment.schedule":     "payment",
+    "collections.remind":   "collections",
+    "reconciliation.match": "reconciliation",
+    "treasury.sweep":       "treasury",
+    "vendor_risk.assess":   "vendor_risk",
+    "fraud.review":         "fraud_anomaly",
+    "cash_forecast.project":"cash_forecast",
+  };
+  if (MAP[action]) return MAP[action];
+  // Best-effort: first segment ("bill_management.approve" → "bill_management")
+  return action.split(".")[0] ?? "agent";
+}
+
+/**
+ * Builds a per-row title that names the real counterparty/entity from entity_refs.
+ *
+ * nameMap maps cp_ ids to their display names. When the ref isn't in the map the
+ * raw id is used rather than omitting the name entirely — a raw id is still more
+ * informative than a sentence that applies equally to every run of the same type.
+ *
+ * Template bug this fixes: describeMissingEvidence never read entity_refs, so three
+ * vendor_risk.assess runs on three different counterparties all rendered the same
+ * title, making them look like duplicate rows.
+ */
+export function buildInputRowTitle(
+  item: MissingEvidenceItem,
+  nameMap: Map<string, string>,
+): string {
+  const agentKey = agentKeyFromAction(item.attemptedAction);
+  const primaryField = item.missingFields[0];
+
+  // Resolve the primary counterparty, if one exists in entity_refs
+  const cpRef = item.entityRefs.find((r) => r.startsWith("cp_"));
+  const entityName = cpRef ? (nameMap.get(cpRef) ?? cpRef) : null;
+
+  switch (agentKey) {
+    case "vendor_risk":
+      return entityName
+        ? `Vendor risk check blocked — couldn't classify ${entityName} as a vendor`
+        : `Vendor risk check blocked — ${humanizeField(primaryField ?? "required information")} missing`;
+
+    case "payment":
+      return entityName
+        ? `Payment blocked for ${entityName} — missing ${humanizeField(primaryField ?? "payment information")}`
+        : `Payment blocked — missing ${humanizeField(primaryField ?? "payment information")}`;
+
+    case "collections":
+      return entityName
+        ? `Collections reminder blocked for ${entityName} — missing ${humanizeField(primaryField ?? "contact information")}`
+        : `Collections reminder blocked — missing ${humanizeField(primaryField ?? "contact information")}`;
+
+    case "reconciliation":
+      return `Transaction matching blocked — missing ${humanizeField(primaryField ?? "transaction record")}`;
+
+    case "treasury":
+      return `Treasury action blocked — missing ${humanizeField(primaryField ?? "account balance")}`;
+
+    case "fraud_anomaly":
+      return `Fraud review blocked — missing ${humanizeField(primaryField ?? "transaction record")}`;
+
+    case "cash_forecast":
+      return `Cash forecast blocked — missing ${humanizeField(primaryField ?? "account balance")}`;
+
+    default: {
+      const label = agentKey.replace(/_/g, " ");
+      return entityName
+        ? `${label} blocked for ${entityName} — missing ${humanizeField(primaryField ?? "required information")}`
+        : `${label} blocked — missing ${humanizeField(primaryField ?? "required information")}`;
+    }
+  }
+}
+
+/**
+ * Builds a three-part subtitle: "{Entity name} · {reference ID} · Missing: {field}".
+ *
+ * - Entity name: cp_ ref resolved to a display name (or kind:id for other ref types).
+ * - Reference ID: runId when present; triggerEvent otherwise; omitted when neither exists.
+ *   Long IDs are truncated after 20 chars to keep the row scannable.
+ * - Missing field: human label for the first (or only) missing field.
+ *
+ * Any segment whose value is absent is dropped rather than shown blank.
+ */
+export function buildInputRowSubtitle(
+  item: MissingEvidenceItem,
+  nameMap: Map<string, string>,
+): string | undefined {
+  const parts: string[] = [];
+
+  // Entity name segment
+  const cpRef = item.entityRefs.find((r) => r.startsWith("cp_"));
+  if (cpRef) {
+    parts.push(nameMap.get(cpRef) ?? `${refKindLabel(cpRef)}: ${cpRef}`);
+  } else if (item.entityRefs.length > 0) {
+    const ref = item.entityRefs[0];
+    parts.push(`${refKindLabel(ref)}: ${ref}`);
+  }
+
+  // Reference ID segment — prefer runId (stable across re-runs)
+  const refId = item.runId ?? item.triggerEvent ?? null;
+  if (refId) {
+    const short = refId.length > 20 ? `${refId.slice(0, 20)}…` : refId;
+    parts.push(short);
+  }
+
+  // Missing field segment
+  const fieldLabel = item.missingFields.map(humanizeField).join(", ");
+  if (fieldLabel) parts.push(`Missing: ${fieldLabel}`);
+
+  return parts.length > 0 ? parts.join(" · ") : undefined;
+}
+
+/**
+ * Label for the primary action button on a "Needs Your Input" row.
+ *
+ * ROUTING STATUS — confirmed destinations are wired in MissingEvidenceModal /
+ * inputRowFixPath; unconfirmed field types navigate to the audit log as a safe
+ * fallback rather than guessing:
+ *
+ *   CONFIRMED:  counterparty, tax_id, contact_email, payment_destination → counterparty panel
+ *               invoice → /ledger?tab=payables
+ *               balance, account_balance → /ledger?tab=accounts
+ *
+ *   NOT YET CONFIRMED (uses audit-log fallback):
+ *               bank_account, payment_method — no confirmed settings surface
+ *               transaction_record, transaction — reconciliation tab not confirmed
+ *               all other/unknown fields
+ */
+export function inputRowActionLabel(field: string | undefined): string {
+  switch (field) {
+    case "counterparty":        return "Confirm Vendor Details";
+    case "tax_id":              return "Add Tax ID";
+    case "contact_email":       return "Add Contact Email";
+    case "payment_destination": return "Add Payment Info";
+    case "invoice":             return "Link Invoice";
+    case "balance":
+    case "account_balance":     return "Refresh Account Balance";
+    // NOT YET CONFIRMED — button appears but routes to audit log:
+    case "bank_account":        return "Add Banking Info";
+    case "payment_method":      return "Add Payment Method";
+    case "transaction_record":
+    case "transaction":         return "Find Transaction";
+    default:                    return "Resolve";
+  }
+}
+
+/**
+ * Navigate path for the primary row action button.
+ *
+ * Mirrors the confirmed/unconfirmed split in inputRowActionLabel. Unconfirmed
+ * field types route to the audit log rather than a plausible-but-wrong page.
+ */
+export function inputRowFixPath(item: MissingEvidenceItem): string {
+  const cpRef = item.entityRefs.find((r) => r.startsWith("cp_"));
+  switch (item.missingFields[0]) {
+    case "counterparty":
+    case "tax_id":
+    case "contact_email":
+    case "payment_destination":
+      return cpRef
+        ? `/ledger?tab=counterparties&vendor=${encodeURIComponent(cpRef)}`
+        : "/ledger?tab=counterparties";
+    case "invoice":
+      return "/ledger?tab=payables";
+    case "balance":
+    case "account_balance":
+      return "/ledger?tab=accounts";
+    // NOT YET CONFIRMED — safe fallback:
+    default:
+      return "/settings?section=audit";
+  }
+}
