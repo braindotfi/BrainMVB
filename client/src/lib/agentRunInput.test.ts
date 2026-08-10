@@ -227,7 +227,9 @@ describe("buildInputRowTitle — distinct counterparty names for different runs"
 
   it("vendor_risk run names the real counterparty from entity_refs", () => {
     const title = buildInputRowTitle(inputItem(), nameMap);
-    expect(title).toContain("Brightline Systems Inc.");
+    expect(title).toBe("Vendor risk check blocked — couldn't classify Brightline Systems Inc. as a vendor");
+    expect(title[0]).toBe(title[0].toUpperCase());
+    expect(title).not.toMatch(/Vendor Risk|Vendor risk Check/);
   });
 
   it("collections run names the counterparty and field", () => {
@@ -303,7 +305,7 @@ describe("inputRowActionLabel — field-specific labels, never a static 'Resolve
   // The previous behaviour was a static "Resolve" button label regardless of
   // what field was missing. Each known field type now maps to an actionable label.
   const knownFields: Array<[string, string]> = [
-    ["counterparty",        "Confirm Vendor Details"],
+    ["counterparty",        "Add Vendor"],
     ["tax_id",              "Add Tax ID"],
     ["contact_email",       "Add Contact Email"],
     ["payment_destination", "Add Payment Info"],

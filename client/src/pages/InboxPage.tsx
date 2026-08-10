@@ -57,7 +57,6 @@ import {
 } from "@/lib/agentRunInput";
 import { MissingEvidenceModal } from "@/components/MissingEvidenceModal";
 import { useBrainVendors } from "@/lib/brainVendors";
-import { formatRelativeTime } from "@/lib/sourceRows";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { mapApprovalRejection, parseCoreError, type ApprovalRejection } from "@/lib/approvalRejections";
@@ -1145,10 +1144,8 @@ export function InboxPage() {
     items: missingEvidence,
     isError: missingEvidenceError,
   } = useMissingEvidenceItems();
-  const nowMs = useMemo(() => Date.now(), []);
-
   /* Counterparty id → display name. Shared with inputRows so titles can say
-     "Vendor risk check blocked — couldn't classify Brightline Systems Inc. as a
+      "Vendor risk check blocked — couldn't classify Brightline Systems Inc. as a
      vendor" rather than repeating the same generic sentence for every run. */
   const { vendors } = useBrainVendors();
   const vendorNameMap = useMemo(
@@ -1177,9 +1174,8 @@ export function InboxPage() {
           /* Agent-specific badge label ("Vendor Risk Agent", "Payment Agent", …)
              in place of the previous generic "Agent blocked" on every row. */
           badge: { label: agentBadgeLabel(agentKey), className: TAG_AGENT },
-          /* Three-part subtitle: {entity name} · {run/trigger ID} · Missing: {field} */
+          /* Subtitle carries the entity, reference, and missing field context. */
           subtitle: buildInputRowSubtitle(entry, vendorNameMap),
-          note: formatRelativeTime(entry.createdAt, nowMs) ?? undefined,
           /* Row tap opens the detail modal. */
           onOpenDetail: () => setSelectedInputItem(entry),
           /* Primary action button — label derives from the specific missing field;
@@ -1190,7 +1186,7 @@ export function InboxPage() {
             {
               id: "fix",
               label: inputRowActionLabel(primaryField),
-              tone: "acknowledge" as const,
+              tone: "warning" as const,
               onClick: () => navigate(fixPath),
             },
           ],
@@ -1199,7 +1195,7 @@ export function InboxPage() {
           testIdPrefix: "row-agent-input",
         };
       }),
-    [missingEvidence, vendorNameMap, nowMs, navigate],
+    [missingEvidence, vendorNameMap, navigate],
   );
 
   const visibleItems = useMemo(() => applyDecisionFilters(tabItems, filters), [tabItems, filters]);

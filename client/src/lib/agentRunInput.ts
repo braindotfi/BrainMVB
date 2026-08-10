@@ -272,6 +272,11 @@ export function agentKeyFromAction(action: string | null): string {
   return action.split(".")[0] ?? "agent";
 }
 
+/** Keep row headlines sentence case without changing resolved entity names. */
+function sentenceCaseTitle(title: string): string {
+  return title ? `${title[0].toUpperCase()}${title.slice(1)}` : title;
+}
+
 /**
  * Builds a per-row title that names the real counterparty/entity from entity_refs.
  *
@@ -296,37 +301,37 @@ export function buildInputRowTitle(
 
   switch (agentKey) {
     case "vendor_risk":
-      return entityName
-        ? `Vendor risk check blocked — couldn't classify ${entityName} as a vendor`
-        : `Vendor risk check blocked — ${humanizeField(primaryField ?? "required information")} missing`;
+      return sentenceCaseTitle(entityName
+        ? `vendor risk check blocked — couldn't classify ${entityName} as a vendor`
+        : `vendor risk check blocked — ${humanizeField(primaryField ?? "required information")} missing`);
 
     case "payment":
-      return entityName
-        ? `Payment blocked for ${entityName} — missing ${humanizeField(primaryField ?? "payment information")}`
-        : `Payment blocked — missing ${humanizeField(primaryField ?? "payment information")}`;
+      return sentenceCaseTitle(entityName
+        ? `payment blocked for ${entityName} — missing ${humanizeField(primaryField ?? "payment information")}`
+        : `payment blocked — missing ${humanizeField(primaryField ?? "payment information")}`);
 
     case "collections":
-      return entityName
-        ? `Collections reminder blocked for ${entityName} — missing ${humanizeField(primaryField ?? "contact information")}`
-        : `Collections reminder blocked — missing ${humanizeField(primaryField ?? "contact information")}`;
+      return sentenceCaseTitle(entityName
+        ? `collections reminder blocked for ${entityName} — missing ${humanizeField(primaryField ?? "contact information")}`
+        : `collections reminder blocked — missing ${humanizeField(primaryField ?? "contact information")}`);
 
     case "reconciliation":
-      return `Transaction matching blocked — missing ${humanizeField(primaryField ?? "transaction record")}`;
+      return sentenceCaseTitle(`transaction matching blocked — missing ${humanizeField(primaryField ?? "transaction record")}`);
 
     case "treasury":
-      return `Treasury action blocked — missing ${humanizeField(primaryField ?? "account balance")}`;
+      return sentenceCaseTitle(`treasury action blocked — missing ${humanizeField(primaryField ?? "account balance")}`);
 
     case "fraud_anomaly":
-      return `Fraud review blocked — missing ${humanizeField(primaryField ?? "transaction record")}`;
+      return sentenceCaseTitle(`fraud review blocked — missing ${humanizeField(primaryField ?? "transaction record")}`);
 
     case "cash_forecast":
-      return `Cash forecast blocked — missing ${humanizeField(primaryField ?? "account balance")}`;
+      return sentenceCaseTitle(`cash forecast blocked — missing ${humanizeField(primaryField ?? "account balance")}`);
 
     default: {
       const label = agentKey.replace(/_/g, " ");
-      return entityName
+      return sentenceCaseTitle(entityName
         ? `${label} blocked for ${entityName} — missing ${humanizeField(primaryField ?? "required information")}`
-        : `${label} blocked — missing ${humanizeField(primaryField ?? "required information")}`;
+        : `${label} blocked — missing ${humanizeField(primaryField ?? "required information")}`);
     }
   }
 }
@@ -389,7 +394,7 @@ export function buildInputRowSubtitle(
  */
 export function inputRowActionLabel(field: string | undefined): string {
   switch (field) {
-    case "counterparty":        return "Confirm Vendor Details";
+    case "counterparty":        return "Add Vendor";
     case "tax_id":              return "Add Tax ID";
     case "contact_email":       return "Add Contact Email";
     case "payment_destination": return "Add Payment Info";

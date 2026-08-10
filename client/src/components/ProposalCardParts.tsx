@@ -457,13 +457,14 @@ export const HeadingValue = ({ children, testId }: { children: ReactNode; testId
    Approve / Postpone / Reject in the frame; in the live card the SET comes from
    available_decisions, so the tone maps onto the shared Button primitive's
    named intents (approve → success, reject → destructive, neutral → secondary). */
-export type ActionTone = "approve" | "reject" | "neutral" | "acknowledge";
+export type ActionTone = "approve" | "reject" | "neutral" | "acknowledge" | "warning";
 
-const ACTION_VARIANTS: Record<ActionTone, "success" | "destructive" | "secondary"> = {
+const ACTION_VARIANTS: Record<ActionTone, "success" | "destructive" | "secondary" | "warning"> = {
   approve: "success",
   reject: "destructive",
   neutral: "secondary",
   acknowledge: "success",
+  warning: "warning",
 };
 
 /* `full` fills the card footer (the detail sheets); `compact` sits inline at the
