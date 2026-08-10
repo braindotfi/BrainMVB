@@ -68,6 +68,46 @@ interface AuditEventsResponse {
   next_cursor: string | null;
 }
 
+const MAX_AUDIT_PAGES = 50;
+
+/** Read the complete audit feed. `next_cursor` is passed back as `after`, which
+ * is the pagination contract exposed by the BFF for `/audit/events`. */
+export async function fetchAllBrainAuditEvents(signal?: AbortSignal): Promise<AuditEventsResponse> {
+  const events: BrainAuditEvent[] = [];
+  const followed = new Set<string>();
+  let after: string | null = null;
+
+  for (let page = 0; page < MAX_AUDIT_PAGES; page++) {
+    const params = new URLSearchParams({ limit: String(AUDIT_EVENTS_LIMIT) });
+    if (after) params.set("after", after);
+    const response = await fetch(`/api/brain/audit/events?${params.toString()}`, {
+      credentials: "include",
+      signal,
+    });
+    if (!response.ok) {
+      const detail = (await response.text().catch(() => "")) || response.statusText;
+      throw new Error(`${response.status}: ${detail}`);
+    }
+    const body = (await response.json()) as Partial<AuditEventsResponse>;
+    if (!Array.isArray(body.events)) {
+      throw new Error("Brain audit response did not contain an events array.");
+    }
+    events.push(...body.events);
+
+    const next = typeof body.next_cursor === "string" && body.next_cursor.length > 0
+      ? body.next_cursor
+      : null;
+    if (!next) return { events, next_cursor: null };
+    if (followed.has(next)) {
+      throw new Error("Brain audit pagination did not advance.");
+    }
+    followed.add(next);
+    after = next;
+  }
+
+  throw new Error("Brain audit feed exceeded the maximum page count.");
+}
+
 export interface BrainAnchor {
   merkle_root: string;
   event_count: number;
@@ -685,31 +725,8 @@ export function localQuestionToRecord(q: AssistantQuestion): AuditRecord {
   };
 }
 
-/** How many events a single audit read asks brain-core for. The endpoint pages
- *  with a cursor this app does not follow, so a response of exactly this many
- *  events means "there are at least this many", never "this is all of them".
- *  Surfaces that show a total must say so — see `atEventLimit` below. */
+/** How many events to request per audit page. */
 export const AUDIT_EVENTS_LIMIT = 100;
-
-/** Has the audit read stopped short of the whole trail?
- *
- *  Truncation is whatever the FEED says it is, not what a row count implies. A
- *  short page with a live cursor is still an unfinished read — brain-core is
- *  free to return fewer rows than asked for and hand back a cursor — and
- *  treating that as complete lets a surface print "nothing needs your
- *  attention" over records it never fetched. The row-count check stays as a
- *  backstop for a response that omits the cursor field entirely, where a full
- *  page is the only evidence of more.
- *
- *  Lives here, next to the limit it compares against, because three surfaces
- *  now share this one read and a second copy of the rule would drift. */
-export function feedIsTruncated(
-  events: readonly BrainAuditEvent[] | undefined,
-  nextCursor: string | null | undefined,
-): boolean {
-  if (typeof nextCursor === "string" && nextCursor.length > 0) return true;
-  return (events?.length ?? 0) >= AUDIT_EVENTS_LIMIT;
-}
 
 /** Minimal proposal shape needed to recover the agent type key for decided records. */
 export interface ProposalForTracking {
@@ -755,27 +772,22 @@ export function decidedProposalIdsFromEvents(
 }
 
 /**
- * The decided-proposal set plus whether the read behind it can be trusted.
+ * The decided-proposal set from the complete audit feed.
  *
  * Shares its query key with `useBrainAuditRecords` and `useMissingEvidenceItems`,
- * so mounting it costs no extra request. `isError`/`isTruncated` are returned
- * rather than swallowed: an unread or capped feed means the set is a floor, not
- * a fact, and a caller subtracting it would silently over-count.
+ * so mounting it costs no extra request.
  */
 export function useDecidedProposalIds() {
   const query = useQuery<AuditEventsResponse>({
     queryKey: [`/api/brain/audit/events?limit=${AUDIT_EVENTS_LIMIT}`],
+    queryFn: ({ signal }) => fetchAllBrainAuditEvents(signal),
     retry: false,
   });
   const events = query.data?.events;
   return {
     ids: decidedProposalIdsFromEvents(events),
     isError: query.isError,
-    /* An unanswered read is not an empty one. Without this a counting surface
-       treats the first frame as "nothing has been decided", which inflates its
-       total before the feed lands and then silently corrects itself. */
     isLoading: query.isLoading,
-    isTruncated: feedIsTruncated(events, query.data?.next_cursor),
   };
 }
 
@@ -801,6 +813,7 @@ export function useBrainAuditRecords(proposals?: ProposalForTracking[]) {
 
   const events = useQuery<AuditEventsResponse>({
     queryKey: [`/api/brain/audit/events?limit=${AUDIT_EVENTS_LIMIT}`],
+    queryFn: ({ signal }) => fetchAllBrainAuditEvents(signal),
     retry: false,
   });
   const anchor = useQuery<BrainAnchor>({
@@ -898,11 +911,8 @@ export function useBrainAuditRecords(proposals?: ProposalForTracking[]) {
     isLoading: events.isLoading || anchor.isLoading || localQuestions.isLoading,
     isError: events.isError,
     records,
-    /* Raw count from brain-core's page, BEFORE local assistant-question rows are
-       merged in. Only this number can be compared against AUDIT_EVENTS_LIMIT:
-       the cap applies to the /audit/events read alone, so measuring the merged
-       list would let a couple of local rows push a short page over the line and
-       make the UI claim there is more history than there is. */
+    /* Raw count from the complete brain-core feed, BEFORE local assistant-question
+       rows are merged in. */
     eventCount: events.data?.events.length ?? 0,
   };
 }

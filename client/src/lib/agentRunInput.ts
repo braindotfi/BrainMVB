@@ -32,12 +32,7 @@
  */
 
 import { useQuery } from "@tanstack/react-query";
-import { AUDIT_EVENTS_LIMIT, feedIsTruncated, type BrainAuditEvent } from "./brainAudit";
-
-/* Re-exported so the cursor rule stays assertable from here, where its only
-   consumer lived before three surfaces needed it. Definition moved next to
-   AUDIT_EVENTS_LIMIT in brainAudit.ts — one rule, one copy. */
-export { feedIsTruncated };
+import { AUDIT_EVENTS_LIMIT, fetchAllBrainAuditEvents, type BrainAuditEvent } from "./brainAudit";
 
 /** brain-core's action string for the terminal outcome this section renders. */
 export const MISSING_EVIDENCE_ACTION = "agent.run.missing_evidence";
@@ -138,13 +133,11 @@ export function missingEvidenceItems(events: readonly BrainAuditEvent[] | null |
  * feed, not a second fetch, and a divergent key would double the request AND let
  * the two surfaces show different snapshots of the same events.
  *
- * `isTruncated` matters because that feed is capped. At the cap, an absent row
- * is not evidence that no agent is stuck — it may simply be older than the last
- * hundred events, and the section has to say so rather than read as "all clear".
  */
 export function useMissingEvidenceItems() {
   const query = useQuery<{ events: BrainAuditEvent[]; next_cursor: string | null }>({
     queryKey: [`/api/brain/audit/events?limit=${AUDIT_EVENTS_LIMIT}`],
+    queryFn: ({ signal }) => fetchAllBrainAuditEvents(signal),
     retry: false,
   });
   const events = query.data?.events;
@@ -152,7 +145,6 @@ export function useMissingEvidenceItems() {
     items: missingEvidenceItems(events),
     isError: query.isError,
     isLoading: query.isLoading,
-    isTruncated: feedIsTruncated(events, query.data?.next_cursor),
   };
 }
 

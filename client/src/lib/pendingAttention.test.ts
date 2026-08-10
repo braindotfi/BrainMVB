@@ -40,9 +40,7 @@ describe("a complete read", () => {
 });
 
 describe("an incomplete read", () => {
-  /* The count is a floor. Printing it bare would be a claim the page cannot
-     support, and this line is the one people use to decide they are done. */
-  it("hedges the headline rather than printing a confident total", () => {
+  it("still reports a failed-read state without claiming an empty queue", () => {
     const s = pendingAttentionSummary(counts({ waiting: 3, incomplete: true }));
     expect(s?.text).toBe("At least 3 items need your attention");
   });
@@ -104,22 +102,16 @@ describe("a read that hasn't answered yet", () => {
 });
 
 describe("Overview wires the summary to every feed it depends on", () => {
-  /* The honesty rules above are only worth anything if the page actually passes
-     `incomplete: true` when a read fails. Each of these is a distinct feed
-     behind the count, and dropping one from the OR is silent — the line simply
-     goes back to sounding certain. */
+  /* The page must pass `incomplete: true` when a read fails. Successful list
+     reads are complete cursor walks and no longer contribute truncation flags. */
   const src = readFileSync("client/src/pages/HomePage.tsx", "utf8");
   const flag = src.slice(src.indexOf("const incompleteRead ="), src.indexOf("const pendingSummary"));
 
   for (const feed of [
     "liveNeedsReviewError",
-    "liveNeedsReviewTruncated",
     "liveProposalsError",
-    "liveProposalsTruncated",
     "missingEvidence.isError",
-    "missingEvidence.isTruncated",
     "decided.isError",
-    "decided.isTruncated",
   ]) {
     it(`treats ${feed} as a reason to hedge`, () => {
       expect(flag).toContain(feed);

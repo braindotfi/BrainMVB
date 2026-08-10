@@ -41,7 +41,6 @@ import type { AgentKey } from "@/lib/agentProposals";
 import { agentBadgeLabel } from "@/lib/agentProposals";
 import { capitalCase } from "@/lib/displayLabels";
 import { useBrainAuditRecords, registerProposalAgentKey, useDecidedProposalIds } from "@/lib/brainAudit";
-import { inboxCompletenessNotice } from "@/lib/inboxCompleteness";
 import { inboxTapTarget } from "@/lib/inboxTap";
 import { pagerState, stepPager, type PagerEntry } from "@/lib/unifiedPager";
 import { AuditRecordPopup } from "@/components/AuditRecordPopup";
@@ -506,11 +505,6 @@ export function InboxPage() {
     proposals: liveProposals,
     isLoading: liveProposalsLoading,
     isError: liveProposalsError,
-    /* A cursor on the proposals read means unresolved records exist that this
-       page never fetched. Surfaced rather than dropped: the count below is
-       printed as a bare number, and a prefix shown as a total is the same lie
-       as an empty queue shown for an unreachable one. */
-    isTruncated: liveProposalsTruncated,
   } = useBrainProposals();
   const inboxSourcesLoading =
     liveQueueLoading ||
@@ -563,7 +557,7 @@ export function InboxPage() {
      the tenant. useDecidedProposalIds replays the decisions in order and is the
      same rule the Overview count subtracts, so the two screens cannot disagree.
      It shares a query key with the read above, so this costs no extra request. */
-  const { ids: decidedIds, isTruncated: auditTruncated } = useDecidedProposalIds();
+  const { ids: decidedIds } = useDecidedProposalIds();
 
   /* ── Live approve / reject (durable brain-core queue rows) ─────────────── */
   const queryClient = useQueryClient();
@@ -795,11 +789,9 @@ export function InboxPage() {
           which quotes the same id in the same field the moment an agent files a
           proposal. Sourcing this from "any audit record mentioning an id" would
           hide every record while its own creation event was still in the page.
-       2. Fail open. The audit read is capped (AUDIT_EVENTS_LIMIT), so this set
-          is a FLOOR, not a fact. A decision that fell outside the window simply
-          is not in it, which leaves an already-settled row on the list — the
-          harmless direction. It can never remove a record nobody decided.
-          `auditTruncated` above turns that into a sentence for the user. */
+        2. Fail open. If the audit read fails, this set remains empty and the
+           live proposal stays visible rather than being hidden accidentally.
+           Successful audit reads are complete cursor walks. */
     const decidedProposalIds = decidedIds;
 
     /* Needs you: session-scoped §6-gated intents (decidable). */
@@ -1607,14 +1599,6 @@ export function InboxPage() {
     visibleItems.length === 0 &&
     inputRows.length === 0;
 
-  /* Whether the counts above the rows are totals or floors. */
-  const completenessNotice = inboxCompletenessNotice({
-    tab: activeTab,
-    proposalsTruncated: liveProposalsTruncated,
-    auditTruncated,
-    unreachable: decisionsUnreachable,
-  });
-
   /* Three different silences, three different sentences. "No decisions match this
      filter" after the user narrowed the list is information; the same words on an
      unfiltered empty queue would read as a fault. */
@@ -1759,14 +1743,6 @@ export function InboxPage() {
           <UnavailableDataBox testId="banner-decisions-incomplete">
             Some decisions couldn’t be loaded, so this list may be incomplete.
           </UnavailableDataBox>
-        )}
-
-        {/* The other way a count lies. Above says a feed FAILED; this says a feed
-            answered with a page. Both leave the number beside it untrustworthy,
-            in opposite directions, so they are separate sentences from
-            inboxCompletenessNotice rather than one shared hedge. */}
-        {completenessNotice && (
-          <UnavailableDataBox testId="banner-decisions-partial">{completenessNotice}</UnavailableDataBox>
         )}
 
         {/* Bulk bar. Appears at two, matching the prototype — one selected item is

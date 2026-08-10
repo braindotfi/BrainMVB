@@ -470,7 +470,6 @@ export function HomePage() {
     proposals: liveNeedsReview,
     isError: liveNeedsReviewError,
     isLoading: liveNeedsReviewLoading,
-    isTruncated: liveNeedsReviewTruncated,
   } = useBrainReviewQueue();
   const durableNeedsReview = useMemo(
     () => liveNeedsReview.filter((p) => !sessionIntentIds.has(p.id)),
@@ -482,7 +481,6 @@ export function HomePage() {
     proposals: liveProposals,
     isError: liveProposalsError,
     isLoading: liveProposalsLoading,
-    isTruncated: liveProposalsTruncated,
   } = useBrainProposals();
   const needsReviewProposals = useMemo(() => liveProposals.filter(isNeedsReview), [liveProposals]);
   /* Tier order is retained even though nothing is rendered from this list any
@@ -514,25 +512,18 @@ export function HomePage() {
        • plus stalled agent runs — Needs Your Input — which are unresolved work
          asking something of the tenant.
 
-     Honesty rule, the same one every other figure on this page follows: if a
-     contributing feed failed, or the capped audit read stopped short, the
-     number is a FLOOR and has to say so. A confident total assembled from an
-     incomplete read is the one failure mode that reads as good news. */
+     Honesty rule: a failed contributing feed is never treated as an empty queue. */
   const decided = useDecidedProposalIds();
   const missingEvidence = useMissingEvidenceItems();
   const decidedIds = decided.ids;
   const missingEvidenceCount = missingEvidence.items.length;
-  /* Anything that could be hiding work from the count. Truncation counts: at
-     the audit cap an absent stalled run is not evidence there isn't one. */
+   /* Failed reads are the only incomplete state now: every successful list read
+      follows its cursor to the end before contributing to this count. */
   const incompleteRead =
     liveNeedsReviewError ||
-    liveNeedsReviewTruncated ||
     liveProposalsError ||
-    liveProposalsTruncated ||
     missingEvidence.isError ||
-    missingEvidence.isTruncated ||
-    decided.isError ||
-    decided.isTruncated;
+     decided.isError;
   /* Until every one of these has answered, the total is a running subtotal.
      Printing it would show a number that changes under the reader, and showing
      nothing would read as an all-clear — so the line says it is still asking. */

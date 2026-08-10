@@ -1,5 +1,6 @@
 import { useQuery, useQueries } from "@tanstack/react-query";
 import type { Proposal, ProposalStatus } from "./proposalTypes";
+import { fetchAllBrainProposals, type ListProposalsResponse } from "./brainProposals";
 
 /* ── Durable "Needs Review" queue - live brain-core PaymentIntents ─────────
    brain-core has no bulk list of full PaymentIntents, and no tenant-scoped
@@ -25,24 +26,14 @@ import type { Proposal, ProposalStatus } from "./proposalTypes";
 /** Same key brainProposals.ts uses, so the two surfaces share one fetch. */
 const PROPOSALS_QUERY_KEY = "/api/brain/proposals?limit=100";
 
-interface ProposalsPage {
-  proposals: { payment_intent_id: string | null }[];
-  next_cursor?: string | null;
-}
-
-/** The fan-out cap, exported so a caller can tell it was hit. */
-export const INTENT_FAN_OUT_CAP = 25;
-
-/** The money-path payment_intent_ids on a /proposals page, de-duplicated and
- *  capped so a large page can't fan out unboundedly. Exported for tests. */
+/** The money-path payment_intent_ids on the complete proposals feed,
+ * de-duplicated. Every returned id gets its detail read. */
 export function selectMoneyPathIntentIds(
   proposals: { payment_intent_id: string | null }[],
-  cap = INTENT_FAN_OUT_CAP,
 ): string[] {
   const ids = new Set<string>();
   for (const p of proposals) {
     if (p.payment_intent_id) ids.add(p.payment_intent_id);
-    if (ids.size >= cap) break;
   }
   return [...ids];
 }
@@ -115,23 +106,14 @@ interface CounterpartiesLiteResponse {
  * only knows about intents proposed in THIS browser session).
  */
 export function useBrainReviewQueue() {
-  const list = useQuery<ProposalsPage>({
+  const list = useQuery<ListProposalsResponse>({
     queryKey: [PROPOSALS_QUERY_KEY],
+    queryFn: ({ signal }) => fetchAllBrainProposals(signal),
     retry: false,
     refetchOnWindowFocus: true,
   });
   const page = list.data?.proposals ?? [];
   const pendingIds = selectMoneyPathIntentIds(page);
-  /* Two independent ways this queue can be SHORT rather than complete, both
-     silent: core can page the proposals list, and the id fan-out above stops at
-     a cap. Either one means an unread pending approval, so a caller that prints
-     a total has to be able to hedge it. Counted before the status filter, which
-     legitimately removes rows. */
-  const distinctMoneyPathIds = new Set(page.filter((p) => p.payment_intent_id).map((p) => p.payment_intent_id)).size;
-  const isTruncated =
-    (typeof list.data?.next_cursor === "string" && list.data.next_cursor.length > 0) ||
-    distinctMoneyPathIds > pendingIds.length;
-
   // Fan out to the full record per candidate. useQueries (not useQuery-in-a-
   // loop, which breaks Rules of Hooks once the id list's length changes)
   // dedupes/caches each by its own key.
@@ -176,7 +158,6 @@ export function useBrainReviewQueue() {
        dropping it from `intents` below removes a row the operator is on the
        hook for — silently, and only ever downwards. Counterparty lookup is
        excluded on purpose: losing it costs a display name, not a row. */
-    isTruncated,
     isError: list.isError || details.some((d) => d.isError),
     proposals: intents.map((i) => mapIntentToProposal(i, nameOf(i.destination_counterparty_id))),
   };
@@ -192,8 +173,9 @@ export function useBrainReviewQueue() {
  * "paid" — see mapIntentToAutoApprovedProposal below.
  */
 export function useBrainAutoApproved() {
-  const list = useQuery<ProposalsPage>({
+  const list = useQuery<ListProposalsResponse>({
     queryKey: [PROPOSALS_QUERY_KEY],
+    queryFn: ({ signal }) => fetchAllBrainProposals(signal),
     retry: false,
     refetchOnWindowFocus: true,
   });

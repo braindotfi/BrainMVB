@@ -4,7 +4,6 @@ import {
   missingEvidenceItems,
   describeMissingEvidence,
   refKindLabel,
-  feedIsTruncated,
   humanizeField,
   MISSING_EVIDENCE_ACTION,
   agentKeyFromAction,
@@ -15,7 +14,6 @@ import {
   type MissingEvidenceItem,
 } from "./agentRunInput";
 import { agentBadgeLabel } from "./agentProposals";
-import { AUDIT_EVENTS_LIMIT } from "./brainAudit";
 import type { BrainAuditEvent } from "./brainAudit";
 
 function event(over: Partial<BrainAuditEvent> = {}): BrainAuditEvent {
@@ -386,32 +384,3 @@ describe("inputRowFixPath — navigation path per missing field", () => {
   });
 });
 
-describe("feedIsTruncated", () => {
-  const events = (n: number) => Array.from({ length: n }, () => ({}) as never);
-
-  /* A short page with a live cursor is still an unfinished read. Inferring
-     completeness from the row count let the Inbox print "nothing needs your
-     attention" over stalled runs it had never fetched. */
-  it("trusts a cursor over the row count", () => {
-    expect(feedIsTruncated(events(3), "cur_abc")).toBe(true);
-  });
-
-  it("treats an explicit null cursor on a short page as complete", () => {
-    expect(feedIsTruncated(events(3), null)).toBe(false);
-  });
-
-  it("treats an empty-string cursor as no cursor", () => {
-    expect(feedIsTruncated(events(3), "")).toBe(false);
-  });
-
-  /* An absent next_cursor field is not the same as an explicit null — it is no
-     information at all, so a full page is the only remaining evidence. */
-  it("falls back to the row count when the response omits the cursor", () => {
-    expect(feedIsTruncated(events(AUDIT_EVENTS_LIMIT), undefined)).toBe(true);
-    expect(feedIsTruncated(events(5), undefined)).toBe(false);
-  });
-
-  it("does not call an absent feed truncated", () => {
-    expect(feedIsTruncated(undefined, undefined)).toBe(false);
-  });
-});
