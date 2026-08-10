@@ -388,10 +388,11 @@ export function buildInputRowSubtitle(
  *   CONFIRMED:  counterparty, tax_id, contact_email, payment_destination → counterparty panel
  *               invoice → /ledger?tab=payables
  *               balance, account_balance → /ledger?tab=accounts
+ *               bank_account → /settings?section=sources  (add/link a bank account)
+ *               payment_method → /settings?section=billing  (add a card / payment method)
+ *               transaction_record, transaction → /ledger?tab=cash-flow
  *
- *   NOT YET CONFIRMED (uses audit-log fallback):
- *               bank_account, payment_method — no confirmed settings surface
- *               transaction_record, transaction — reconciliation tab not confirmed
+ *   UNCONFIRMED (uses audit-log fallback):
  *               all other/unknown fields
  */
 export function inputRowActionLabel(field: string | undefined): string {
@@ -403,7 +404,6 @@ export function inputRowActionLabel(field: string | undefined): string {
     case "invoice":             return "Link Invoice";
     case "balance":
     case "account_balance":     return "Refresh Account Balance";
-    // NOT YET CONFIRMED — button appears but routes to audit log:
     case "bank_account":        return "Add Banking Info";
     case "payment_method":      return "Add Payment Method";
     case "transaction_record":
@@ -433,7 +433,13 @@ export function inputRowFixPath(item: MissingEvidenceItem): string {
     case "balance":
     case "account_balance":
       return "/ledger?tab=accounts";
-    // NOT YET CONFIRMED — safe fallback:
+    case "bank_account":
+      return "/settings?section=sources";
+    case "payment_method":
+      return "/settings?section=billing";
+    case "transaction_record":
+    case "transaction":
+      return "/ledger?tab=cash-flow";
     default:
       return "/settings?section=audit";
   }

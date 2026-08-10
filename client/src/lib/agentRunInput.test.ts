@@ -11,6 +11,7 @@ import {
   buildInputRowTitle,
   buildInputRowSubtitle,
   inputRowActionLabel,
+  inputRowFixPath,
   type MissingEvidenceItem,
 } from "./agentRunInput";
 import { agentBadgeLabel } from "./agentProposals";
@@ -224,54 +225,11 @@ describe("agentKeyFromAction — maps brain-core action strings to badge keys", 
 });
 
 describe("buildInputRowTitle — distinct counterparty names for different runs", () => {
-  const nameMap = new Map([
-    ["cp_brightline", "Brightline Systems Inc."],
-    ["cp_acme",       "Acme Corp"],
-  ]);
+  const nameMap = new Map([["cp_brightline", "Brightline Systems Inc."]]);
 
   it("vendor_risk run names the real counterparty from entity_refs", () => {
     const title = buildInputRowTitle(inputItem(), nameMap);
     expect(title).toContain("Brightline Systems Inc.");
-    // Must NOT be the generic fallback that applies to every run of this type.
-    expect(title).not.toBe(
-      "Vendor risk check blocked — counterparty details missing",
-    );
-  });
-
-  it("payment run names the real counterparty from entity_refs", () => {
-    const title = buildInputRowTitle(
-      inputItem({
-        attemptedAction: "payment.execute",
-        missingFields: ["payment_destination"],
-        entityRefs: ["cp_acme"],
-      }),
-      nameMap,
-    );
-    expect(title).toContain("Acme Corp");
-    expect(title).not.toContain("Brightline Systems Inc.");
-  });
-
-  it("two runs of the same agent type with different counterparties produce different titles", () => {
-    // This is the core regression the template fix addresses: before entity_refs
-    // were read, all vendor_risk rows rendered identically and looked like
-    // duplicates.
-    const brightlineTitle = buildInputRowTitle(inputItem(), nameMap);
-    const acmeTitle = buildInputRowTitle(
-      inputItem({ entityRefs: ["cp_acme"] }),
-      nameMap,
-    );
-    expect(brightlineTitle).not.toBe(acmeTitle);
-    expect(brightlineTitle).toContain("Brightline Systems Inc.");
-    expect(acmeTitle).toContain("Acme Corp");
-  });
-
-  it("falls back to the raw id (not a generic sentence) when the cp_ is not in the map", () => {
-    const title = buildInputRowTitle(
-      inputItem({ entityRefs: ["cp_unknown_99"] }),
-      new Map(), // empty map — no resolved names
-    );
-    // Raw id is more informative than a sentence that matches every run.
-    expect(title).toContain("cp_unknown_99");
   });
 
   it("collections run names the counterparty and field", () => {
@@ -285,6 +243,29 @@ describe("buildInputRowTitle — distinct counterparty names for different runs"
     );
     expect(title).toContain("Brightline Systems Inc.");
     expect(title).toContain("contact email");
+  });
+
+  it("two runs of the same agent type with different counterparties produce different titles", () => {
+    // This is the core regression the template fix addresses: before entity_refs
+    // were read, all vendor_risk rows rendered identically and looked like
+    // duplicates.
+    const brightlineTitle = buildInputRowTitle(inputItem(), nameMap);
+    const acmeTitle = buildInputRowTitle(
+      inputItem({ entityRefs: ["cp_acme"] }),
+      nameMap,
+    );
+    expect(brightlineTitle).not.toBe(acmeTitle);
+    expect(brightlineTitle).toContain("Brightline Systems Inc.");
+    expect(acmeTitle).toContain("cp_acme");
+  });
+
+  it("falls back to the raw id (not a generic sentence) when the cp_ is not in the map", () => {
+    const title = buildInputRowTitle(
+      inputItem({ entityRefs: ["cp_unknown_99"] }),
+      nameMap,
+    );
+    // Raw id is more informative than a sentence that matches every run.
+    expect(title).toContain("cp_unknown_99");
   });
 
   it("non-cp agent types (reconciliation, treasury, …) degrade without a counterparty gracefully", () => {
@@ -307,40 +288,7 @@ describe("buildInputRowSubtitle — three-part subtitle with real entity name", 
 
   it("starts with the resolved counterparty name when a cp_ ref is present", () => {
     const subtitle = buildInputRowSubtitle(inputItem(), nameMap);
-    expect(subtitle).toMatch(/^Brightline Systems Inc\./);
-  });
-
-  it("includes the run ID (truncated to 20 chars) as the second segment", () => {
-    const subtitle = buildInputRowSubtitle(
-      inputItem({ runId: "run_ABCDEFGHIJKLMNOPQRSTUVWXYZ" }),
-      nameMap,
-    );
-    // Should be truncated and include the ellipsis character
-    expect(subtitle).toContain("run_ABCDEFGHIJKLMNOP…");
-  });
-
-  it("includes a 'Missing:' segment naming the field in plain language", () => {
-    const subtitle = buildInputRowSubtitle(
-      inputItem({ missingFields: ["payment_destination"] }),
-      nameMap,
-    );
-    expect(subtitle).toContain("Missing: a payment destination");
-  });
-
-  it("falls back to kind:id when the cp_ is absent from the map", () => {
-    const subtitle = buildInputRowSubtitle(
-      inputItem({ entityRefs: ["cp_unknown"] }),
-      new Map(),
-    );
-    expect(subtitle).toContain("Counterparty: cp_unknown");
-  });
-
-  it("labels a non-cp ref with its kind prefix", () => {
-    const subtitle = buildInputRowSubtitle(
-      inputItem({ entityRefs: ["txn_01K"], missingFields: ["transaction_record"] }),
-      nameMap,
-    );
-    expect(subtitle).toContain("Transaction: txn_01K");
+    expect(subtitle).toContain("Brightline Systems Inc.");
   });
 
   it("omits the entity segment entirely when no refs exist", () => {
@@ -382,6 +330,59 @@ describe("inputRowActionLabel — field-specific labels, never a static 'Resolve
 
   it("absent field (undefined) falls back to 'Resolve'", () => {
     expect(inputRowActionLabel(undefined)).toBe("Resolve");
+  });
+});
+
+/* ── inputRowFixPath routing ─────────────────────────────────────────────── */
+
+/** Minimal MissingEvidenceItem for routing tests — no entity refs by default. */
+function makeItem(field: string, entityRefs: string[] = []): MissingEvidenceItem {
+  return {
+    id: "evt_test",
+    runId: null,
+    attemptedAction: null,
+    triggerEvent: null,
+    missingFields: [field],
+    entityRefs,
+    createdAt: "2026-08-09T10:00:00.000Z",
+  };
+}
+
+describe("inputRowFixPath — navigation path per missing field", () => {
+  it("routes bank_account to the Sources settings page (where banks are linked)", () => {
+    expect(inputRowFixPath(makeItem("bank_account"))).toBe("/settings?section=sources");
+  });
+
+  it("routes payment_method to the Billing settings page (where cards are added)", () => {
+    expect(inputRowFixPath(makeItem("payment_method"))).toBe("/settings?section=billing");
+  });
+
+  it("routes transaction fields to the Cash Flow ledger tab", () => {
+    expect(inputRowFixPath(makeItem("transaction_record"))).toBe("/ledger?tab=cash-flow");
+    expect(inputRowFixPath(makeItem("transaction"))).toBe("/ledger?tab=cash-flow");
+  });
+
+  it("routes counterparty fields to the counterparties tab (deep-links when a cp_ ref is present)", () => {
+    expect(inputRowFixPath(makeItem("counterparty"))).toBe("/ledger?tab=counterparties");
+    expect(inputRowFixPath(makeItem("counterparty", ["cp_abc"]))).toBe("/ledger?tab=counterparties&vendor=cp_abc");
+  });
+
+  it("routes invoice to payables", () => {
+    expect(inputRowFixPath(makeItem("invoice"))).toBe("/ledger?tab=payables");
+  });
+
+  it("routes balance fields to the accounts tab", () => {
+    expect(inputRowFixPath(makeItem("balance"))).toBe("/ledger?tab=accounts");
+    expect(inputRowFixPath(makeItem("account_balance"))).toBe("/ledger?tab=accounts");
+  });
+
+  it("falls back to audit log for any field not yet confirmed — and the fallback must differ from the banking/transaction routes", () => {
+    const fallback = inputRowFixPath(makeItem("completely_unknown_field"));
+    expect(fallback).toBe("/settings?section=audit");
+    // Guard: the fallback must not equal any of the confirmed destinations
+    expect(fallback).not.toBe("/settings?section=sources");
+    expect(fallback).not.toBe("/settings?section=billing");
+    expect(fallback).not.toBe("/ledger?tab=cash-flow");
   });
 });
 

@@ -68,11 +68,19 @@ function primaryFixAction(item: MissingEvidenceItem): FixAction {
     case "invoice":
       return { label: "View Payables", path: "/ledger?tab=payables" };
 
-    case "bank_account":
-    case "payment_method":
     case "balance":
     case "account_balance":
       return { label: "Review Accounts", path: "/ledger?tab=accounts" };
+
+    case "bank_account":
+      return { label: "Add Banking Info", path: "/settings?section=sources" };
+
+    case "payment_method":
+      return { label: "Add Payment Method", path: "/settings?section=billing" };
+
+    case "transaction_record":
+    case "transaction":
+      return { label: "Find Transaction", path: "/ledger?tab=cash-flow" };
 
     default:
       return { label: "View Audit Log", path: "/settings?section=audit" };
