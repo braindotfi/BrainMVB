@@ -62,6 +62,7 @@ describe("parseMissingEvidence — which events become rows", () => {
     expect(item?.entityRefs).toEqual([]);
   });
 });
+
 describe("parseMissingEvidence — entity refs", () => {
   const withRefs = (refs: unknown) =>
     parseMissingEvidence(event({ outputs: { missing_required_evidence: ["balance"], entity_refs: refs } }))?.entityRefs;
@@ -83,6 +84,7 @@ describe("parseMissingEvidence — entity refs", () => {
     expect(withRefs(["cp_01K", null, 42, {}, { ref: "" }])).toEqual(["cp_01K"]);
   });
 });
+
 describe("missingEvidenceItems", () => {
   it("keeps only usable rows and orders them newest first", () => {
     const items = missingEvidenceItems([
@@ -381,4 +383,3 @@ describe("inputRowFixPath — navigation path per missing field", () => {
     expect(fallback).not.toBe("/ledger?tab=cash-flow");
   });
 });
-
