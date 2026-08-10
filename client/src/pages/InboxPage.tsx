@@ -1696,18 +1696,8 @@ export function InboxPage() {
         {/* Count row + clear-filter link */}
         <div className="flex items-center gap-[8px] w-full min-h-[20px]">
           <div className="size-[6px] rounded-full shrink-0 bg-brain-v1baby-blue-60" />
-          {/* "Decisions" is only true of the Resolved tab. Unresolved also carries
-              stalled agent runs, which are not decisions and are not in
-              `visibleItems` — leaving the old label and count there put the word
-              "Decisions 3" directly above four rows.
-
-              What "Awaiting you" counts is approvals + inputs: the two sections
-              that are asking the tenant for something. Awareness rows sit below
-              and are deliberately excluded — counting them here would inflate a
-              number Overview also prints, and the two would then disagree about
-              how much work is outstanding. */}
           <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[12px] uppercase tracking-[0.4px] whitespace-nowrap">
-            {activeTab === "Unresolved" ? "Awaiting you" : "Decisions"}
+            Decisions
           </p>
           <CountPill testId="text-decision-count">
             {activeTab === "Unresolved" ? decisionRows.length + inputRows.length : visibleItems.length}
