@@ -47,7 +47,8 @@ import { pagerState, stepPager, type PagerEntry } from "@/lib/unifiedPager";
 import { AuditRecordPopup } from "@/components/AuditRecordPopup";
 import type { AuditRecord, AuditEventType } from "@/lib/auditTypes";
 import { auditEventLabel, auditEventChipClass, isAssistantActivity, isSystemActivity, humanReadableActor } from "@/lib/auditTypes";
-import { useMissingEvidenceItems, describeMissingEvidence, refKindLabel } from "@/lib/agentRunInput";
+import { useMissingEvidenceItems, describeMissingEvidence, refKindLabel, type MissingEvidenceItem } from "@/lib/agentRunInput";
+import { MissingEvidenceModal } from "@/components/MissingEvidenceModal";
 import { formatRelativeTime } from "@/lib/sourceRows";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -527,6 +528,7 @@ export function InboxPage() {
   // read model carries no decider-identity field (no `decided_by`), so there's
   // no honest way to tell an agent decision from a human one here.
   const [selectedProposal, setSelectedProposal] = useState<BrainProposal | null>(null);
+  const [selectedInputItem, setSelectedInputItem] = useState<MissingEvidenceItem | null>(null);
   /* Which timeline ROW currently has a detail surface open. The five surfaces
      below hold five unrelated record types, so the row id is the only handle
      the shared pager can compare across them. */
@@ -1159,16 +1161,11 @@ export function InboxPage() {
             ? entry.entityRefs.map((ref) => `${refKindLabel(ref)}: ${ref}`).join(" · ")
             : undefined,
         note: formatRelativeTime(entry.createdAt, nowMs) ?? undefined,
-        actions: [
-          {
-            id: "view-audit",
-            label: "View in Audit Log",
-            /* Neutral, not `acknowledge` — that tone renders as a green success
-               button, and nothing here has been resolved by looking at it. */
-            tone: "neutral" as const,
-            onClick: () => navigate("/settings?section=audit"),
-          },
-        ],
+        /* Row tap opens the detail modal. The "View in Audit Log" action is
+           replaced by the modal's own secondary link so the row itself has a
+           primary destination. */
+        onOpenDetail: () => setSelectedInputItem(entry),
+        actions: [],
         /* No checkbox, ever. Bulk approve batches decisions, and there is no
            decision here to batch. */
         testIdPrefix: "row-agent-input",
@@ -1978,6 +1975,15 @@ export function InboxPage() {
         onOpenChange={(o) => { if (!o) { setSelectedProposal(null); setOpenItemId(null); } }}
         {...pagerProps}
         position={pager.position ?? undefined}
+      />
+
+      {/* Blocked-run detail — "Needs Your Input" rows open this instead of
+          navigating to the Audit Log. No pager: input rows are outside the
+          unified pager queue (they are a separate feed with a different shape). */}
+      <MissingEvidenceModal
+        item={selectedInputItem}
+        open={selectedInputItem !== null}
+        onOpenChange={(o) => { if (!o) setSelectedInputItem(null); }}
       />
     </div>
   );
