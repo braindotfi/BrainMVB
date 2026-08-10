@@ -530,7 +530,9 @@ export function InboxPage() {
   // read model carries no decider-identity field (no `decided_by`), so there's
   // no honest way to tell an agent decision from a human one here.
   const [selectedProposal, setSelectedProposal] = useState<BrainProposal | null>(null);
-  const [selectedInputItem, setSelectedInputItem] = useState<MissingEvidenceItem | null>(null);
+  /* Track by index so the pager can step through missingEvidence in order.
+     Derived item is the one at that index (null when no modal is open). */
+  const [selectedInputIdx, setSelectedInputIdx] = useState<number | null>(null);
   /* Which timeline ROW currently has a detail surface open. The five surfaces
      below hold five unrelated record types, so the row id is the only handle
      the shared pager can compare across them. */
@@ -1144,6 +1146,8 @@ export function InboxPage() {
     items: missingEvidence,
     isError: missingEvidenceError,
   } = useMissingEvidenceItems();
+  /* Derived from the index so the pager can step through the list. */
+  const selectedInputItem = selectedInputIdx !== null ? (missingEvidence[selectedInputIdx] ?? null) : null;
   /* Counterparty id → display name. Shared with inputRows so titles can say
       "Vendor risk check blocked — couldn't classify Brightline Systems Inc. as a
      vendor" rather than repeating the same generic sentence for every run. */
@@ -1155,7 +1159,7 @@ export function InboxPage() {
 
   const inputRows = useMemo<TierRowModel[]>(
     () =>
-      missingEvidence.map((entry) => {
+      missingEvidence.map((entry, idx) => {
         /* Derive the agent key from the attempted action so the badge chip can
            say "Vendor Risk Agent" / "Payment Agent" instead of "Agent blocked". */
         const agentKey = agentKeyFromAction(entry.attemptedAction);
@@ -1177,7 +1181,7 @@ export function InboxPage() {
           /* Subtitle carries the entity, reference, and missing field context. */
           subtitle: buildInputRowSubtitle(entry, vendorNameMap),
           /* Row tap opens the detail modal. */
-          onOpenDetail: () => setSelectedInputItem(entry),
+          onOpenDetail: () => setSelectedInputIdx(idx),
           /* Primary action button — label derives from the specific missing field;
              destination is confirmed for the common fields, falls back to the audit
              log for field types whose remediation page isn't confirmed yet (see
@@ -1981,13 +1985,23 @@ export function InboxPage() {
         position={pager.position ?? undefined}
       />
 
-      {/* Blocked-run detail — "Needs Your Input" rows open this instead of
-          navigating to the Audit Log. No pager: input rows are outside the
-          unified pager queue (they are a separate feed with a different shape). */}
+      {/* Blocked-run detail — "Needs Your Input" rows open this.
+          Previous / Next pages through missingEvidence in newest-first order,
+          matching the list order the user sees in the Needs Your Input section. */}
       <MissingEvidenceModal
         item={selectedInputItem}
-        open={selectedInputItem !== null}
-        onOpenChange={(o) => { if (!o) setSelectedInputItem(null); }}
+        open={selectedInputIdx !== null}
+        onOpenChange={(o) => { if (!o) setSelectedInputIdx(null); }}
+        vendorNameMap={vendorNameMap}
+        hasPrev={selectedInputIdx !== null && selectedInputIdx > 0}
+        hasNext={selectedInputIdx !== null && selectedInputIdx < missingEvidence.length - 1}
+        onPrev={() => setSelectedInputIdx((i) => (i !== null && i > 0 ? i - 1 : i))}
+        onNext={() => setSelectedInputIdx((i) => (i !== null && i < missingEvidence.length - 1 ? i + 1 : i))}
+        position={
+          selectedInputIdx !== null && missingEvidence.length > 1
+            ? `${selectedInputIdx + 1} of ${missingEvidence.length}`
+            : undefined
+        }
       />
     </div>
   );

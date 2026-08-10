@@ -1,17 +1,20 @@
 /**
  * Detail card for a "Needs Your Input" row — an agent run that stopped because
- * a required fact was absent. Reuses the same Radix Dialog shell and
- * ProposalCardParts primitives as AgentProposalModal, but the content is
- * specific to a blocked-run outcome:
+ * a required fact was absent.
  *
- *   - No confidence bar (Brain didn't produce a recommendation)
- *   - No message draft (nothing to approve or send)
+ * Shell matches AgentProposalModal exactly: same header, hero, CardBody section
+ * rhythm, CardActions footer, and optional PagerFooter. Content differs:
+ *
+ *   - Amber "Blocked" status pill (not a risk-level pill)
+ *   - Real agent name in the header (not generic "Brain Agent")
+ *   - Context subtitle under the headline (entity · ref · field)
+ *   - "Status" section fills the confidence slot with an honest amber line
+ *   - No confidence bar — Brain didn't produce one, so none is shown
  *   - "Why This Is Blocked" replaces "Why Brain Suggested This"
- *   - Linked Evidence carries both existing entity refs AND a "Missing" row
- *     for each absent field — same visual list, different affordance
- *   - Actions: one primary "fix" button (routes to wherever the missing data
- *     lives) and a "Dismiss" secondary that just closes the card
- *   - Small "View raw audit event" link near the bottom
+ *   - Details table omits Run ID (raw technical value, lives in audit link)
+ *   - Linked Evidence keeps existing refs + amber "Missing" rows with "+Add" buttons
+ *   - Footer: "Remind later" (secondary) + field-specific orange primary action
+ *   - Optional Previous / Next pager matching the approval modal's footer
  */
 
 import { useLocation } from "wouter";
@@ -25,15 +28,20 @@ import {
   CardActions,
   StatusPill,
   EvidenceLinkRow,
-  KeyFactsTable,
   ActionButton,
   ActionRow,
+  PagerFooter,
 } from "./ProposalCardParts";
 import {
   type MissingEvidenceItem,
   humanizeField,
   refKindLabel,
+  agentKeyFromAction,
+  inputRowActionLabel,
+  inputRowFixPath,
+  buildInputRowSubtitle,
 } from "@/lib/agentRunInput";
+import { AGENT_DISPLAY_NAME } from "@/lib/agentProposals";
 
 /* ── Amber palette (matches TAG_AGENT / the "Needs your input" section accent) */
 const AMBER_PILL = {
@@ -42,10 +50,46 @@ const AMBER_PILL = {
   border: "rgba(255,149,0,0.25)",
 };
 
+/* ── Agent display name ──────────────────────────────────────────────────────
+   Derives the human name from the audit event's attempted action, matching how
+   the approval modal reads its agent name from proposal.type. Unknown actions
+   degrade to "Brain" rather than showing a raw action string in the title. */
+function agentDisplayName(item: MissingEvidenceItem): string {
+  const key = agentKeyFromAction(item.attemptedAction);
+  return (AGENT_DISPLAY_NAME as Record<string, string>)[key] ?? "Brain";
+}
+
+/* ── Headline ────────────────────────────────────────────────────────────────
+   One sentence naming what Brain was doing and what it couldn't find.
+   Uses the same sentence-case pattern as the row title in TierRowList. */
+function buildHeadline(item: MissingEvidenceItem): string {
+  const PHRASES: Record<string, string> = {
+    "payment.execute":      "Payment blocked",
+    "payment.schedule":     "Payment scheduling blocked",
+    "collections.remind":   "Collections reminder blocked",
+    "reconciliation.match": "Transaction matching blocked",
+    "treasury.sweep":       "Treasury action blocked",
+    "vendor_risk.assess":   "Vendor risk check blocked",
+    "fraud.review":         "Fraud review blocked",
+    "cash_forecast.project":"Cash forecast blocked",
+  };
+  const prefix = item.attemptedAction
+    ? (PHRASES[item.attemptedAction] ?? "Action blocked")
+    : "Action blocked";
+  const fields = item.missingFields
+    .map(humanizeField)
+    .reduce<string>((acc, f, i, arr) => {
+      if (i === 0) return `couldn't find ${f}`;
+      if (i === arr.length - 1) return `${acc} or ${f}`;
+      return `${acc}, ${f}`;
+    }, "");
+  return `${prefix} — ${fields}`;
+}
+
 /* ── Routing ─────────────────────────────────────────────────────────────────
-   Routes to wherever the missing field is actually managed. When a
-   counterparty ref is present it deep-links to that counterparty's panel so
-   the tenant lands on the right record rather than a list. */
+   Routes to wherever the missing field is actually managed. Delegates to the
+   shared inputRowFixPath helper so the row CTA and the modal CTA never drift
+   apart. Label also matches the row's inputRowActionLabel for consistency. */
 
 interface FixAction {
   label: string;
@@ -53,43 +97,16 @@ interface FixAction {
 }
 
 function primaryFixAction(item: MissingEvidenceItem): FixAction {
-  const cpRef = item.entityRefs.find((r) => r.startsWith("cp_"));
   const field = item.missingFields[0];
-
-  switch (field) {
-    case "counterparty":
-    case "tax_id":
-    case "contact_email":
-    case "payment_destination":
-      return cpRef
-        ? { label: "Review Counterparty", path: `/ledger?tab=counterparties&vendor=${encodeURIComponent(cpRef)}` }
-        : { label: "Review Counterparties", path: "/ledger?tab=counterparties" };
-
-    case "invoice":
-      return { label: "View Payables", path: "/ledger?tab=payables" };
-
-    case "balance":
-    case "account_balance":
-      return { label: "Review Accounts", path: "/ledger?tab=accounts" };
-
-    case "bank_account":
-      return { label: "Add Banking Info", path: "/settings?section=sources" };
-
-    case "payment_method":
-      return { label: "Add Payment Method", path: "/settings?section=billing" };
-
-    case "transaction_record":
-    case "transaction":
-      return { label: "Find Transaction", path: "/ledger?tab=cash-flow" };
-
-    default:
-      return { label: "View Audit Log", path: "/settings?section=audit" };
-  }
+  return {
+    label: inputRowActionLabel(field),
+    path: inputRowFixPath(item),
+  };
 }
 
-/** Route for a single missing field — shown on the per-row "Add" affordance. */
+/** Route for a single missing field — shown on the per-row "+Add" affordance. */
 function fieldFixPath(field: string, item: MissingEvidenceItem): string {
-  return primaryFixAction({ ...item, missingFields: [field] }).path;
+  return inputRowFixPath({ ...item, missingFields: [field] });
 }
 
 /* ── Plain-language "Why" copy ───────────────────────────────────────────────
@@ -109,14 +126,14 @@ function buildWhyBlocked(item: MissingEvidenceItem): string {
   const action = item.attemptedAction;
   const actionPhrase = (() => {
     const PHRASES: Record<string, string> = {
-      "payment.execute": "execute a payment",
-      "payment.schedule": "schedule a payment",
-      "collections.remind": "send a collections reminder",
+      "payment.execute":      "execute a payment",
+      "payment.schedule":     "schedule a payment",
+      "collections.remind":   "send a collections reminder",
       "reconciliation.match": "match a transaction",
-      "treasury.sweep": "move cash between accounts",
-      "vendor_risk.assess": "assess vendor risk",
-      "fraud.review": "review a transaction for fraud",
-      "cash_forecast.project": "update the cash forecast",
+      "treasury.sweep":       "move cash between accounts",
+      "vendor_risk.assess":   "assess vendor risk",
+      "fraud.review":         "review a transaction for fraud",
+      "cash_forecast.project":"update the cash forecast",
     };
     return action ? (PHRASES[action] ?? `run ${action}`) : "complete this action";
   })();
@@ -130,8 +147,8 @@ function buildWhyBlocked(item: MissingEvidenceItem): string {
 }
 
 /* ── Details table ───────────────────────────────────────────────────────────
-   Shows the run's key facts. Missing fields render with "(missing)" appended
-   so they are visually distinct without relying on colour alone. */
+   Shows the run's human-readable facts. Run ID is intentionally excluded — it
+   is a raw technical value that belongs in the audit event, not this table. */
 
 function buildDetailsRows(
   item: MissingEvidenceItem,
@@ -147,16 +164,14 @@ function buildDetailsRows(
   for (const field of item.missingFields) {
     rows.push({ label: humanizeField(field), value: "(missing)", mono: false });
   }
-  if (item.runId) {
-    rows.push({ label: "Run ID", value: item.runId, mono: true });
-  }
+  // Run ID deliberately excluded — see module header.
   return rows;
 }
 
 /* ── "Missing" evidence row ──────────────────────────────────────────────────
-   Same shell as EvidenceLinkRow but with an amber "Missing" tag and a
-   "+ Add" affordance in place of the chevron. The button navigates to wherever
-   that field can be supplied. */
+   Same shell as EvidenceLinkRow but with an amber "Missing" tag and a proper
+   "+Add" button (not a bare text link) so the affordance reads as clearly
+   actionable at the same visual weight as the tappable evidence rows above it. */
 
 const MissingFieldRow = ({
   field,
@@ -187,16 +202,37 @@ const MissingFieldRow = ({
       </p>
     </div>
 
-    {/* Add affordance */}
+    {/* "+Add" — styled as a proper small button, not a bare text link */}
     <button
       type="button"
       onClick={() => onNavigate(fieldFixPath(field, item))}
       data-testid={testId ? `${testId}-add` : undefined}
-      className="inline-flex items-center gap-[4px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-brain-v1light-orange hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple rounded-[4px] shrink-0"
+      className="inline-flex items-center gap-[4px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] bg-brain-v1dark-orange text-brain-v1light-orange hover:bg-brain-v1dark-orange-hover px-[8px] py-[4px] rounded-pill transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
     >
       <Plus size={12} aria-hidden="true" />
       Add
     </button>
+  </div>
+);
+
+/* ── Amber status line (fills the confidence slot) ───────────────────────────
+   The approval modal has a Confidence bar with a percentage here. A blocked run
+   produced no score — skipping the slot entirely reads as broken next to the
+   approval card's fully-populated version, so we replace it with an honest
+   amber line that explains why. No numeric value is shown. */
+const StatusLine = () => (
+  <div
+    className="flex items-center gap-[8px] w-full bg-[rgba(255,149,0,0.06)] border border-solid border-[rgba(255,149,0,0.2)] rounded-row px-[12px] py-[8px]"
+    data-testid="box-missing-evidence-status"
+  >
+    <div
+      className="size-[8px] rounded-full shrink-0"
+      style={{ background: "#ff9500" }}
+      aria-hidden="true"
+    />
+    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[18px] text-brain-v1light-orange flex-1 min-w-px">
+      Brain stopped before producing a recommendation — no confidence score applies to a blocked run.
+    </p>
   </div>
 );
 
@@ -206,19 +242,35 @@ export function MissingEvidenceModal({
   item,
   open,
   onOpenChange,
+  vendorNameMap,
+  onPrev,
+  onNext,
+  hasPrev = false,
+  hasNext = false,
+  position,
 }: {
   item: MissingEvidenceItem | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  vendorNameMap?: Map<string, string>;
+  onPrev?: () => void;
+  onNext?: () => void;
+  hasPrev?: boolean;
+  hasNext?: boolean;
+  position?: string;
 }) {
   const [, navigate] = useLocation();
   const transition = useCardTransition(open);
 
   if (!item) return null;
 
+  const agentName  = agentDisplayName(item);
+  const headline   = buildHeadline(item);
+  const subtitle   = buildInputRowSubtitle(item, vendorNameMap ?? new Map());
   const whyBlocked = buildWhyBlocked(item);
   const detailRows = buildDetailsRows(item);
-  const fixAction = primaryFixAction(item);
+  const fixAction  = primaryFixAction(item);
+  const showPager  = Boolean(onPrev && onNext);
 
   const auditTs = (() => {
     try {
@@ -234,6 +286,11 @@ export function MissingEvidenceModal({
     }
   })();
 
+  const closeAndNavigate = (path: string) => {
+    navigate(path);
+    onOpenChange(false);
+  };
+
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
@@ -244,15 +301,15 @@ export function MissingEvidenceModal({
         <DialogPrimitive.Content
           aria-describedby={undefined}
           data-testid="missing-evidence-modal"
-          className={`fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-brain-v1baby-blue-5 border border-brain-v1stroke-2 border-solid flex flex-col items-start overflow-hidden rounded-modal w-[480px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none ${transition.card}`}
+          className={`fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-brain-v1baby-blue-5 border border-brain-v1stroke-2 border-solid flex flex-col items-start overflow-hidden rounded-modal w-[520px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none ${transition.card}`}
         >
-          {/* Header */}
+          {/* Header — real agent name centered, close at right. Matches approval modal exactly. */}
           <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-brain-v1stroke-2 border-solid h-[56px] relative shrink-0 w-full flex items-center justify-center px-[16px]">
             <DialogPrimitive.Title
               className="[font-family:'Gilroy',sans-serif] font-semibold text-[20px] leading-[24px] text-brain-v1baby-blue-100 text-center whitespace-nowrap"
               data-testid="text-missing-evidence-title"
             >
-              Brain Agent
+              {agentName}
             </DialogPrimitive.Title>
             <DialogPrimitive.Close
               aria-label="Close"
@@ -264,33 +321,44 @@ export function MissingEvidenceModal({
           </div>
 
           <div className="flex flex-col items-start w-full overflow-y-auto">
-            {/* Hero — amber pill, then the blocker statement */}
+            {/* Hero — amber "Blocked" pill, then headline + context subtitle.
+                Matches the approval modal's hero: pill, then a flex-col gap-8 group
+                with a 20/28 title and a 16/20 muted subtitle beneath it. */}
             <div className="border-b border-brain-v1stroke-2 border-solid flex flex-col gap-[8px] items-start p-[24px] shrink-0 w-full">
               <StatusPill
-                label="Missing Info"
+                label="Blocked"
                 color={AMBER_PILL.color}
                 background={AMBER_PILL.bg}
                 border={AMBER_PILL.border}
                 testId="pill-missing-evidence-status"
               />
-              <p
-                className="[font-family:'Gilroy',sans-serif] font-semibold text-[20px] leading-[28px] text-brain-v1baby-blue-100 w-full"
-                data-testid="text-missing-evidence-headline"
-              >
-                {/* describeMissingEvidence is the row title; use it as the modal
-                    headline too so the two surfaces always agree on what happened. */}
-                {item.missingFields
-                  .map(humanizeField)
-                  .reduce<string>((acc, f, i, arr) => {
-                    if (i === 0) return `Blocked — couldn't find ${f}`;
-                    if (i === arr.length - 1) return `${acc} or ${f}`;
-                    return `${acc}, ${f}`;
-                  }, "Blocked")}
-              </p>
+              <div className="flex flex-col gap-[8px] items-start w-full">
+                <p
+                  className="[font-family:'Gilroy',sans-serif] font-semibold text-[20px] leading-[28px] text-brain-v1baby-blue-100 w-full"
+                  data-testid="text-missing-evidence-headline"
+                >
+                  {headline}
+                </p>
+                {subtitle && (
+                  <p
+                    className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-brain-v1baby-blue-60 w-full"
+                    data-testid="text-missing-evidence-subtitle"
+                  >
+                    {subtitle}
+                  </p>
+                )}
+              </div>
             </div>
 
             <CardBody>
-              {/* Why This Is Blocked — plain-language explanation */}
+              {/* Status — fills the confidence slot so the card reads as complete
+                  next to the approval card. No numeric value — this run didn't
+                  produce one, so a percentage would be fabricated. */}
+              <CardSection title="Status" testId="section-missing-evidence-status">
+                <StatusLine />
+              </CardSection>
+
+              {/* Why This Is Blocked — plain-language explanation, kept as-is */}
               <CardSection title="Why This Is Blocked" testId="section-missing-evidence-why">
                 <p
                   className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-brain-v1baby-blue-60 w-full"
@@ -300,7 +368,9 @@ export function MissingEvidenceModal({
                 </p>
               </CardSection>
 
-              {/* Details — run facts; missing fields appear with "(missing)" value */}
+              {/* Details — human-readable run facts only. Run ID omitted — it's a
+                  raw technical id that belongs in the audit event link below, not
+                  here alongside Attempted action and the missing field values. */}
               {detailRows.length > 0 && (
                 <CardSection title="Details" testId="section-missing-evidence-details">
                   <div
@@ -328,7 +398,7 @@ export function MissingEvidenceModal({
                             <p
                               className={`text-[14px] leading-[20px] break-words w-full ${
                                 isMissing
-                                   ? "[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1light-orange"
+                                  ? "[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1light-orange"
                                   : row.mono
                                     ? "[font-family:'JetBrains_Mono',monospace] text-brain-v1baby-blue-100"
                                     : "[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100"
@@ -344,9 +414,9 @@ export function MissingEvidenceModal({
                 </CardSection>
               )}
 
-              {/* Linked Evidence — existing entity refs + a "Missing" row per
-                  absent field. The two lists stay separate so existing evidence
-                  is never visually confused with the gap. */}
+              {/* Linked Evidence — existing entity refs + an amber "Missing" row for
+                  each absent field. The two lists are kept separate so existing
+                  evidence is never visually confused with the gap. */}
               {(item.entityRefs.length > 0 || item.missingFields.length > 0) && (
                 <CardSection title="Linked Evidence" gap={8} testId="section-missing-evidence-evidence">
                   <div
@@ -358,14 +428,11 @@ export function MissingEvidenceModal({
                         key={ref}
                         label={ref}
                         kind={refKindLabel(ref)}
-                        /* Navigate to the record's own panel — reuse the same
-                           deep-link pattern as VendorsPanel and AuditRecordPopup. */
                         onClick={() => {
                           if (ref.startsWith("cp_")) {
-                            navigate(
+                            closeAndNavigate(
                               `/ledger?tab=counterparties&vendor=${encodeURIComponent(ref)}`,
                             );
-                            onOpenChange(false);
                           }
                           // Other ref types (obl, inv, txn) don't yet have a
                           // by-id deep-link; tapping keeps the modal open.
@@ -379,10 +446,7 @@ export function MissingEvidenceModal({
                         key={field}
                         field={field}
                         item={item}
-                        onNavigate={(path) => {
-                          navigate(path);
-                          onOpenChange(false);
-                        }}
+                        onNavigate={(path) => closeAndNavigate(path)}
                         testId={`tile-missing-evidence-missing-${i}`}
                       />
                     ))}
@@ -402,14 +466,13 @@ export function MissingEvidenceModal({
                 </p>
               </CardSection>
 
-              {/* Raw audit event link — secondary, near the bottom */}
+              {/* Raw audit event link — secondary, near the bottom. Kept here (not
+                  promoted to a primary button) because it's the right place for
+                  technical/raw values like Run ID and the raw event payload. */}
               <div className="flex items-center w-full">
                 <button
                   type="button"
-                  onClick={() => {
-                    navigate("/settings?section=audit");
-                    onOpenChange(false);
-                  }}
+                  onClick={() => closeAndNavigate("/settings?section=audit")}
                   data-testid="link-missing-evidence-audit"
                   className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-brain-v1baby-blue-60 hover:text-brain-v1baby-blue-100 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple rounded-[4px]"
                 >
@@ -417,28 +480,42 @@ export function MissingEvidenceModal({
                 </button>
               </div>
 
+              {/* Footer buttons — match the approval modal's Reject/Approve layout:
+                  two full-width buttons, same size, side by side.
+                  "Remind later" = secondary (grey), same shape as Reject.
+                  Primary action = warning (orange), same shape as Approve, with a
+                  field-specific label from inputRowActionLabel. If a destination
+                  isn't confirmed for a given field type yet, inputRowFixPath falls
+                  back to the audit log and the label reads "Resolve" — both honest. */}
               <CardActions testId="actions-missing-evidence">
                 <ActionRow testId="row-missing-evidence-actions">
                   <ActionButton
-                    label={fixAction.label}
+                    label="Remind later"
                     tone="neutral"
-                    onClick={() => {
-                      navigate(fixAction.path);
-                      onOpenChange(false);
-                    }}
-                    testId="button-missing-evidence-fix"
+                    onClick={() => onOpenChange(false)}
+                    testId="button-missing-evidence-remind"
                   />
                   <ActionButton
-                    label="Dismiss"
-                    tone="neutral"
-                    size="compact"
-                    onClick={() => onOpenChange(false)}
-                    testId="button-missing-evidence-dismiss"
+                    label={fixAction.label}
+                    tone="warning"
+                    onClick={() => closeAndNavigate(fixAction.path)}
+                    testId="button-missing-evidence-fix"
                   />
                 </ActionRow>
               </CardActions>
             </CardBody>
           </div>
+
+          {/* Previous / Next — same footer as approval modal, same position */}
+          {showPager && (
+            <PagerFooter
+              onPrev={onPrev!}
+              onNext={onNext!}
+              hasPrev={hasPrev}
+              hasNext={hasNext}
+              position={position}
+            />
+          )}
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
