@@ -26,8 +26,11 @@ import {
   CardBody,
   CardSection,
   CardActions,
+  CardText,
+  KeyFactsTable,
   StatusPill,
   EvidenceLinkRow,
+  TypeTag,
   ActionButton,
   ActionRow,
   PagerFooter,
@@ -83,7 +86,7 @@ function buildHeadline(item: MissingEvidenceItem): string {
       if (i === arr.length - 1) return `${acc} or ${f}`;
       return `${acc}, ${f}`;
     }, "");
-  return `${prefix} — ${fields}`;
+  return `${prefix}: ${fields}`;
 }
 
 /* ── Routing ─────────────────────────────────────────────────────────────────
@@ -141,7 +144,7 @@ function buildWhyBlocked(item: MissingEvidenceItem): string {
   return (
     `Brain attempted to ${actionPhrase} but stopped before reaching a decision ` +
     `because it couldn't find ${fieldList}. ` +
-    `This run will not retry automatically — once the missing information is in Brain, ` +
+      `This run will not retry automatically. Once the missing information is in Brain, ` +
     `the next matching trigger will proceed normally.`
   );
 }
@@ -185,19 +188,15 @@ const MissingFieldRow = ({
   testId?: string;
 }) => (
   <div
-    className="bg-brain-v1highlight-dropdown-bg border border-solid border-[rgba(255,149,0,0.25)] rounded-row px-[16px] py-[12px] flex gap-[16px] items-center w-full"
+    className="bg-brain-v1highlight-dropdown-bg border border-solid border-brain-v1stroke-2 rounded-row px-[16px] py-[12px] flex gap-[16px] items-center w-full"
     data-testid={testId}
   >
     {/* Amber "Missing" type tag */}
-    <div className="inline-flex items-center justify-center bg-[rgba(255,149,0,0.08)] border border-solid border-[rgba(255,149,0,0.25)] px-[8px] py-[2px] rounded-pill shrink-0">
-      <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-brain-v1light-orange text-center whitespace-nowrap">
-        Missing
-      </span>
-    </div>
+    <TypeTag label="Missing" tone="warning" testId={testId ? `${testId}-kind` : undefined} />
 
     {/* Field name */}
     <div className="flex flex-1 items-center min-w-px">
-      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-brain-v1baby-blue-60 truncate">
+      <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-brain-v1baby-blue-100 truncate">
         {humanizeField(field)}
       </p>
     </div>
@@ -231,7 +230,7 @@ const StatusLine = () => (
       aria-hidden="true"
     />
     <p className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[18px] text-brain-v1light-orange flex-1 min-w-px">
-      Brain stopped before producing a recommendation — no confidence score applies to a blocked run.
+       Brain stopped before producing a recommendation. No confidence score applies to a blocked run.
     </p>
   </div>
 );
@@ -360,12 +359,9 @@ export function MissingEvidenceModal({
 
               {/* Why This Is Blocked — plain-language explanation, kept as-is */}
               <CardSection title="Why This Is Blocked" testId="section-missing-evidence-why">
-                <p
-                  className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-brain-v1baby-blue-60 w-full"
-                  data-testid="text-missing-evidence-why"
-                >
+                <CardText testId="text-missing-evidence-why">
                   {whyBlocked}
-                </p>
+                </CardText>
               </CardSection>
 
               {/* Details — human-readable run facts only. Run ID omitted — it's a
@@ -373,44 +369,7 @@ export function MissingEvidenceModal({
                   here alongside Attempted action and the missing field values. */}
               {detailRows.length > 0 && (
                 <CardSection title="Details" testId="section-missing-evidence-details">
-                  <div
-                    className="bg-brain-v1highlight-dropdown-bg border border-solid border-brain-v1stroke-2 rounded-row w-full flex flex-col overflow-hidden"
-                    data-testid="list-missing-evidence-details"
-                  >
-                    {detailRows.map((row, i) => {
-                      const isMissing = row.value === "(missing)";
-                      return (
-                        <div
-                          key={`${row.label}-${i}`}
-                          className={`flex items-start w-full ${
-                            i < detailRows.length - 1
-                              ? "border-b border-solid border-brain-v1stroke-2"
-                              : ""
-                          }`}
-                          data-testid={`detail-missing-evidence-${row.label.toLowerCase().replace(/\s+/g, "-")}`}
-                        >
-                          <div className="flex flex-col items-start justify-center px-[12px] py-[8px] shrink-0 w-[160px]">
-                            <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-brain-v1baby-blue-60">
-                              {row.label}
-                            </p>
-                          </div>
-                          <div className="flex flex-1 flex-col items-start justify-center min-w-px px-[12px] py-[8px]">
-                            <p
-                              className={`text-[14px] leading-[20px] break-words w-full ${
-                                isMissing
-                                  ? "[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1light-orange"
-                                  : row.mono
-                                    ? "[font-family:'JetBrains_Mono',monospace] text-brain-v1baby-blue-100"
-                                    : "[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100"
-                              }`}
-                            >
-                              {row.value}
-                            </p>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                  <KeyFactsTable rows={detailRows} testId="list-missing-evidence-details" />
                 </CardSection>
               )}
 
@@ -456,14 +415,11 @@ export function MissingEvidenceModal({
 
               {/* What Happens Next — honest: no auto-retry */}
               <CardSection title="What Happens Next" testId="section-missing-evidence-next">
-                <p
-                  className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-brain-v1baby-blue-60 w-full"
-                  data-testid="text-missing-evidence-next"
-                >
+                <CardText testId="text-missing-evidence-next">
                   Once the missing information is in Brain, the next matching event will
-                  trigger this agent normally. Blocked runs don't re-trigger on their
-                  own — resolving the data alone won't restart this run.
-                </p>
+                  trigger this agent normally. Blocked runs do not re-trigger on their
+                  own. Resolving the data alone will not restart this run.
+                </CardText>
               </CardSection>
 
               {/* Raw audit event link — secondary, near the bottom. Kept here (not

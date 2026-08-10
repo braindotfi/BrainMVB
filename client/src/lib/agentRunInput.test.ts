@@ -227,7 +227,7 @@ describe("buildInputRowTitle — distinct counterparty names for different runs"
 
   it("vendor_risk run names the real counterparty from entity_refs", () => {
     const title = buildInputRowTitle(inputItem(), nameMap);
-    expect(title).toBe("Vendor risk check blocked — couldn't classify Brightline Systems Inc. as a vendor");
+    expect(title).toBe("Vendor risk check blocked: couldn't classify Brightline Systems Inc. as a vendor");
     expect(title[0]).toBe(title[0].toUpperCase());
     expect(title).not.toMatch(/Vendor Risk|Vendor risk Check/);
   });

@@ -177,12 +177,28 @@ export const StatusPill = ({
 
 /** Small caption pill used on evidence rows ("Payment", "Invoice").
  *  20px tall in the frame (2px padding + 14px line + 2px padding + 1px borders). */
-export const TypeTag = ({ label, testId }: { label: string; testId?: string }) => (
+export const TypeTag = ({
+  label,
+  testId,
+  tone = "neutral",
+}: {
+  label: string;
+  testId?: string;
+  tone?: "neutral" | "warning";
+}) => (
   <div
-    className="inline-flex items-center justify-center bg-brain-v1baby-blue-15 border border-solid border-[rgba(108,119,157,0.2)] px-[8px] py-[2px] rounded-pill shrink-0"
+    className={`inline-flex items-center justify-center px-[8px] py-[2px] rounded-pill shrink-0 ${
+      tone === "warning"
+        ? "bg-[rgba(255,149,0,0.08)] border border-solid border-[rgba(255,149,0,0.25)]"
+        : "bg-brain-v1baby-blue-15 border border-solid border-[rgba(108,119,157,0.2)]"
+    }`}
     data-testid={testId}
   >
-    <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-brain-v1baby-blue-60 text-center whitespace-nowrap">
+    <span
+      className={`[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-center whitespace-nowrap ${
+        tone === "warning" ? "text-brain-v1light-orange" : "text-brain-v1baby-blue-60"
+      }`}
+    >
       {capitalCase(label)}
     </span>
   </div>

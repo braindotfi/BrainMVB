@@ -302,36 +302,36 @@ export function buildInputRowTitle(
   switch (agentKey) {
     case "vendor_risk":
       return sentenceCaseTitle(entityName
-        ? `vendor risk check blocked — couldn't classify ${entityName} as a vendor`
-        : `vendor risk check blocked — ${humanizeField(primaryField ?? "required information")} missing`);
+        ? `vendor risk check blocked: couldn't classify ${entityName} as a vendor`
+        : `vendor risk check blocked: ${humanizeField(primaryField ?? "required information")} missing`);
 
     case "payment":
       return sentenceCaseTitle(entityName
-        ? `payment blocked for ${entityName} — missing ${humanizeField(primaryField ?? "payment information")}`
-        : `payment blocked — missing ${humanizeField(primaryField ?? "payment information")}`);
+        ? `payment blocked for ${entityName}: missing ${humanizeField(primaryField ?? "payment information")}`
+        : `payment blocked: missing ${humanizeField(primaryField ?? "payment information")}`);
 
     case "collections":
       return sentenceCaseTitle(entityName
-        ? `collections reminder blocked for ${entityName} — missing ${humanizeField(primaryField ?? "contact information")}`
-        : `collections reminder blocked — missing ${humanizeField(primaryField ?? "contact information")}`);
+        ? `collections reminder blocked for ${entityName}: missing ${humanizeField(primaryField ?? "contact information")}`
+        : `collections reminder blocked: missing ${humanizeField(primaryField ?? "contact information")}`);
 
     case "reconciliation":
-      return sentenceCaseTitle(`transaction matching blocked — missing ${humanizeField(primaryField ?? "transaction record")}`);
+      return sentenceCaseTitle(`transaction matching blocked: missing ${humanizeField(primaryField ?? "transaction record")}`);
 
     case "treasury":
-      return sentenceCaseTitle(`treasury action blocked — missing ${humanizeField(primaryField ?? "account balance")}`);
+      return sentenceCaseTitle(`treasury action blocked: missing ${humanizeField(primaryField ?? "account balance")}`);
 
     case "fraud_anomaly":
-      return sentenceCaseTitle(`fraud review blocked — missing ${humanizeField(primaryField ?? "transaction record")}`);
+      return sentenceCaseTitle(`fraud review blocked: missing ${humanizeField(primaryField ?? "transaction record")}`);
 
     case "cash_forecast":
-      return sentenceCaseTitle(`cash forecast blocked — missing ${humanizeField(primaryField ?? "account balance")}`);
+      return sentenceCaseTitle(`cash forecast blocked: missing ${humanizeField(primaryField ?? "account balance")}`);
 
     default: {
       const label = agentKey.replace(/_/g, " ");
       return sentenceCaseTitle(entityName
-        ? `${label} blocked for ${entityName} — missing ${humanizeField(primaryField ?? "required information")}`
-        : `${label} blocked — missing ${humanizeField(primaryField ?? "required information")}`);
+        ? `${label} blocked for ${entityName}: missing ${humanizeField(primaryField ?? "required information")}`
+        : `${label} blocked: missing ${humanizeField(primaryField ?? "required information")}`);
     }
   }
 }
