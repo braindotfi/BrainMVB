@@ -381,10 +381,6 @@ export function CashProjectionCard({
         </div>
       )}
 
-      <p className={`${BODY} text-brain-v1baby-blue-60`} data-testid="text-cash-projection-basis">
-        {CASH_EVENT_BASIS}
-      </p>
-
       <Divider />
 
       {/* The event strip: chart order, left to right, one chip per event.
@@ -409,6 +405,10 @@ export function CashProjectionCard({
           />
         ))}
       </ul>
+
+      <p className={`${BODY} text-brain-v1baby-blue-60`} data-testid="text-cash-projection-basis">
+        {CASH_EVENT_BASIS}
+      </p>
     </Shell>
   );
 }
