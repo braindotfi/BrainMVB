@@ -119,6 +119,13 @@ export interface DecisionFacets {
 
 export interface DecisionFilterState {
   /**
+   * Legacy priority facet retained for callers that still construct the
+   * pre-recommendation filter shape. The Inbox UI uses `recommendation` for
+   * section visibility, but row-level priority filtering remains harmless and
+   * keeps the pure filter contract backwards-compatible.
+   */
+  priority?: readonly RowTier[];
+  /**
    * Which inbox sections to show. Empty means "all recommendations".
    * Filtering is applied at the section display level (show/hide whole sections)
    * rather than at the individual-row level, because the three sections map to
@@ -141,7 +148,13 @@ export const EMPTY_FILTERS: DecisionFilterState = {
 };
 
 export function hasActiveFilter(f: DecisionFilterState): boolean {
-  return f.recommendation.length > 0 || f.status.length > 0 || f.type.length > 0 || f.query.trim() !== "";
+  return (
+    (f.priority?.length ?? 0) > 0 ||
+    f.recommendation.length > 0 ||
+    f.status.length > 0 ||
+    f.type.length > 0 ||
+    f.query.trim() !== ""
+  );
 }
 
 /** Build the search haystack once, at row-build time. */
@@ -160,6 +173,7 @@ export function matchesQuery(search: string, query: string): boolean {
 }
 
 export function matchesFilters(row: DecisionFacets, f: DecisionFilterState): boolean {
+  if (f.priority && f.priority.length > 0 && !f.priority.includes(row.tier)) return false;
   // recommendation filters at the section level (show/hide whole sections in the
   // page), not at the individual row level — so no per-row check here.
   if (f.status.length > 0 && !f.status.includes(row.status)) return false;

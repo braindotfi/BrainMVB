@@ -175,7 +175,7 @@ const MissingFieldRow = ({
   >
     {/* Amber "Missing" type tag */}
     <div className="inline-flex items-center justify-center bg-[rgba(255,149,0,0.08)] border border-solid border-[rgba(255,149,0,0.25)] px-[8px] py-[2px] rounded-pill shrink-0">
-      <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-[#ff9500] text-center whitespace-nowrap">
+      <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-brain-v1light-orange text-center whitespace-nowrap">
         Missing
       </span>
     </div>
@@ -192,7 +192,7 @@ const MissingFieldRow = ({
       type="button"
       onClick={() => onNavigate(fieldFixPath(field, item))}
       data-testid={testId ? `${testId}-add` : undefined}
-      className="inline-flex items-center gap-[4px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-[#ff9500] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple rounded-[4px] shrink-0"
+      className="inline-flex items-center gap-[4px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-brain-v1light-orange hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple rounded-[4px] shrink-0"
     >
       <Plus size={12} aria-hidden="true" />
       Add
@@ -328,7 +328,7 @@ export function MissingEvidenceModal({
                             <p
                               className={`text-[14px] leading-[20px] break-words w-full ${
                                 isMissing
-                                  ? "[font-family:'Gilroy',sans-serif] font-semibold text-[#ff9500]"
+                                   ? "[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1light-orange"
                                   : row.mono
                                     ? "[font-family:'JetBrains_Mono',monospace] text-brain-v1baby-blue-100"
                                     : "[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100"

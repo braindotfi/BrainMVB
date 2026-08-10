@@ -96,6 +96,6 @@ describe("the Inbox actually sorts on this", () => {
      awareness rows again the two screens would disagree about how much is
      outstanding, and neither would look wrong on its own. */
   it("counts only the two sections that ask the tenant for something", () => {
-    expect(src).toContain("decisionRows.length + inputRows.length");
+    expect(src).toContain("unresolvedItems.length + inputRows.length");
   });
 });
