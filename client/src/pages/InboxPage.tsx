@@ -303,6 +303,7 @@ function InboxDropdown({
   testId,
   open,
   onOpenChange,
+  width = "w-[120px]",
 }: {
   values: readonly string[];
   options: readonly InboxDropdownOption[];
@@ -311,6 +312,7 @@ function InboxDropdown({
   testId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  width?: string;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const closeTimerRef = useRef<number | null>(null);
@@ -366,7 +368,7 @@ function InboxDropdown({
   return (
     <div
       ref={rootRef}
-      className="relative w-[120px] shrink-0"
+      className={`relative ${width} shrink-0`}
       onPointerEnter={cancelClose}
       onPointerLeave={() => {
         if (open) scheduleClose();
@@ -1640,7 +1642,7 @@ export function InboxPage() {
           />
         </div>
 
-        <div className="flex flex-row gap-[24px]">
+        <div className="flex flex-row gap-[24px] items-center">
           {([
             {
               values: filters.recommendation,
@@ -1648,6 +1650,7 @@ export function InboxPage() {
               label: "Filter by recommendation",
               testId: "filter-recommendation",
               options: [{ value: "all", label: "All Recommendations" }, ...RECOMMENDATION_OPTIONS],
+              width: "w-[196px]",
             },
             {
               values: filters.status,
@@ -1655,6 +1658,7 @@ export function InboxPage() {
               label: "Filter by status",
               testId: "filter-status",
               options: [{ value: "all", label: "All Status" }, ...STATUS_OPTIONS],
+              width: undefined,
             },
             {
               values: filters.type,
@@ -1663,8 +1667,9 @@ export function InboxPage() {
               testId: "filter-type",
               /* Types from rows present so the filter is never vacuously empty. */
               options: [{ value: "all", label: "All Types" }, ...availableTypes],
+              width: undefined,
             },
-          ] as const).map(({ values, onChange, label, testId, options }) => (
+          ] as const).map(({ values, onChange, label, testId, options, width }) => (
             <InboxDropdown
               key={testId}
               values={values}
@@ -1674,8 +1679,19 @@ export function InboxPage() {
               options={options}
               open={openDropdown === testId}
               onOpenChange={(nextOpen) => setOpenDropdown(nextOpen ? testId : null)}
+              width={width}
             />
           ))}
+          {filtering && (
+            <button
+              type="button"
+              onClick={() => setFilters(EMPTY_FILTERS)}
+              data-testid="button-clear-filters"
+              className="ml-auto [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1purple text-[12px] hover:underline outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple rounded-[4px] shrink-0"
+            >
+              Clear filters
+            </button>
+          )}
         </div>
         </div>
       </div>
@@ -1707,22 +1723,6 @@ export function InboxPage() {
             outer container separating this block from the chip strip. */}
         <div className="flex flex-col gap-[10px] items-start w-full">
 
-        {/* Clear-filter link — only row in this area now that the label and
-            count pill have been removed. Keep the dot so the visual rhythm of
-            the list header is preserved even when no filter is active. */}
-        <div className="flex items-center gap-[8px] w-full min-h-[20px]">
-          <div className="size-[6px] rounded-full shrink-0 bg-brain-v1baby-blue-60" />
-          {filtering && (
-            <button
-              type="button"
-              onClick={() => setFilters(EMPTY_FILTERS)}
-              data-testid="button-clear-filters"
-              className="ml-auto [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1purple text-[12px] hover:underline outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple rounded-[4px]"
-            >
-              Clear filters
-            </button>
-          )}
-        </div>
 
         {/* A partial list is as misleading as a wrongly-empty one — say so above
             the rows rather than letting the count imply completeness. */}
