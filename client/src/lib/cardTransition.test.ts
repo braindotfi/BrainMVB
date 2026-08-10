@@ -21,7 +21,10 @@ const PAGED_SURFACES = [
   "client/src/components/AuditRecordPopup.tsx",
 ];
 
-const PAGES = ["client/src/pages/HomePage.tsx", "client/src/pages/InboxPage.tsx"];
+/* Only the Inbox opens paged surfaces now. Overview has no detail modals at
+   all, so there is no pager for it to quiet — asserting the pager wiring there
+   would have been asserting on dead code. */
+const PAGES = ["client/src/pages/InboxPage.tsx"];
 
 describe("cardTransitionClasses", () => {
   it("animates a card the user opened themselves", () => {
@@ -98,5 +101,25 @@ describe("card action areas", () => {
     expect(decl).toContain("-mx-[24px]");
     expect(decl).toContain("pt-[24px]");
     expect(decl).toContain("border-t");
+  });
+});
+
+describe("Overview opens no paged surface", () => {
+  /* A modal returning to Overview brings the pager back with it, and the pager
+     is what re-creates the second copy of the queue. */
+  it("mounts none of the paged surfaces", () => {
+    const src = readFileSync("client/src/pages/HomePage.tsx", "utf8");
+    for (const surface of ["<ReviewModal", "<ProposalDetail", "<LiveProposalModal", "<LiveInsightModal", "<AuditRecordPopup"]) {
+      expect(src).not.toContain(surface);
+    }
+  });
+
+  /* The same probe finds four of these on the page that does open them, so a
+     clean Overview is not just a mis-spelled search. */
+  it("is looking for surface tags that a page with modals really contains", () => {
+    const inbox = readFileSync("client/src/pages/InboxPage.tsx", "utf8");
+    const found = ["<ReviewModal", "<ProposalDetail", "<LiveProposalModal", "<LiveInsightModal", "<AuditRecordPopup"]
+      .filter((surface) => inbox.includes(surface));
+    expect(found.length).toBeGreaterThanOrEqual(4);
   });
 });

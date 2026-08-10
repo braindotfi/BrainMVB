@@ -126,7 +126,6 @@ export function statusOverrideToAuditRecord(
     lifecycle: [{ label: summary, timestamp: occurredAtLabel, kind: status === "rejected" ? "alert" : "ok", actor }],
     linked: [],
     anchor: { status: "pending_next_batch", auditId: `${proposal.id}--audit-${status}` },
-    proposalId: proposal.id,
   };
 }
 

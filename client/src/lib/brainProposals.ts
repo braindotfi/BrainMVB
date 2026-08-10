@@ -206,9 +206,51 @@ export interface BrainProposal {
   resolved_refs?: Record<string, string> | null;
 }
 
-interface ListProposalsResponse {
+export interface ListProposalsResponse {
   proposals: BrainProposal[];
   next_cursor: string | null;
+}
+
+const PROPOSALS_PAGE_SIZE = 100;
+const MAX_PROPOSAL_PAGES = 50;
+
+/** Read the complete proposals feed. Brain-core returns a cursor when the
+ * merged proposal/payment-intent list spans more than one page. A partial
+ * response must fail the query rather than render as a complete queue. */
+export async function fetchAllBrainProposals(signal?: AbortSignal): Promise<ListProposalsResponse> {
+  const proposals: BrainProposal[] = [];
+  const followed = new Set<string>();
+  let cursor: string | null = null;
+
+  for (let page = 0; page < MAX_PROPOSAL_PAGES; page++) {
+    const params = new URLSearchParams({ limit: String(PROPOSALS_PAGE_SIZE) });
+    if (cursor) params.set("cursor", cursor);
+    const response = await fetch(`/api/brain/proposals?${params.toString()}`, {
+      credentials: "include",
+      signal,
+    });
+    if (!response.ok) {
+      const detail = (await response.text().catch(() => "")) || response.statusText;
+      throw new Error(`${response.status}: ${detail}`);
+    }
+    const body = (await response.json()) as Partial<ListProposalsResponse>;
+    if (!Array.isArray(body.proposals)) {
+      throw new Error("Brain proposals response did not contain a proposals array.");
+    }
+    proposals.push(...body.proposals);
+
+    const next = typeof body.next_cursor === "string" && body.next_cursor.length > 0
+      ? body.next_cursor
+      : null;
+    if (!next) return { proposals, next_cursor: null };
+    if (followed.has(next)) {
+      throw new Error("Brain proposals pagination did not advance.");
+    }
+    followed.add(next);
+    cursor = next;
+  }
+
+  throw new Error("Brain proposals feed exceeded the maximum page count.");
 }
 
 /** `type` -> the client's AgentKey (agentProposals.ts) is now the identity
@@ -244,11 +286,14 @@ export function selectNonFinancialProposals(items: BrainProposal[]): BrainPropos
 /** All proposals. The list already returns full detail records (no extra
  *  fields live on GET /proposals/{id} that aren't on the list row), so no
  *  fan-out is needed here unlike brainQueue.ts's PaymentIntent queue. */
-export function useBrainProposals(): { isLoading: boolean; isError: boolean; proposals: BrainProposal[] } {
+export function useBrainProposals(): {
+  isLoading: boolean;
+  isError: boolean;
+  proposals: BrainProposal[];
+} {
   const list = useQuery<ListProposalsResponse>({
-    // ponytail: caps at 100 rows; add next_cursor paging when a non-payment
-    // proposal producer ships and volume can exceed one page
     queryKey: ["/api/brain/proposals?limit=100"],
+    queryFn: ({ signal }) => fetchAllBrainProposals(signal),
     retry: false,
     /* Focus refetch, deliberately without an interval. This is a shared work
        queue: a proposal decided by a teammate stays actionable here until

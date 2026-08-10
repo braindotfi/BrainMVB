@@ -28,14 +28,17 @@ export type RowTier = ProposalTier | "decided";
 /** Fixed render order: what needs attention first, history last. */
 export const ROW_TIER_ORDER: readonly RowTier[] = ["urgent", "waiting", "insight", "decided"] as const;
 
-/** Priority filter options, labelled as the rest of the app labels these tiers.
- *  (The prototype says "Action needed" / "Informational"; we keep Overview's
- *  wording so one taxonomy covers both surfaces.) */
-export const PRIORITY_OPTIONS: readonly { value: RowTier; label: string }[] = [
-  { value: "urgent", label: "Urgent" },
-  { value: "waiting", label: "Waiting on you" },
-  { value: "insight", label: "Insights" },
-  { value: "decided", label: "Already decided" },
+/**
+ * The three visible sections of the Unresolved inbox, used as recommendation
+ * filter values. "input" is the stalled-agent section (Needs Your Input), which
+ * lives outside `visibleItems` and is shown/hidden at the section level.
+ */
+export type RecommendationBucket = "approval" | "input" | "awareness";
+
+export const RECOMMENDATION_OPTIONS: readonly { value: RecommendationBucket; label: string }[] = [
+  { value: "approval",  label: "Needs Your Approval" },
+  { value: "input",     label: "Needs Your Input" },
+  { value: "awareness", label: "For Your Awareness" },
 ] as const;
 
 export type DecisionStatus = "pending" | "approved" | "auto-approved" | "declined" | "informational";
@@ -115,8 +118,21 @@ export interface DecisionFacets {
 }
 
 export interface DecisionFilterState {
-  /** Empty means "all priorities". Multiple selected values use OR semantics. */
-  priority: readonly RowTier[];
+  /**
+   * Legacy priority facet retained for callers that still construct the
+   * pre-recommendation filter shape. The Inbox UI uses `recommendation` for
+   * section visibility, but row-level priority filtering remains harmless and
+   * keeps the pure filter contract backwards-compatible.
+   */
+  priority?: readonly RowTier[];
+  /**
+   * Which inbox sections to show. Empty means "all recommendations".
+   * Filtering is applied at the section display level (show/hide whole sections)
+   * rather than at the individual-row level, because the three sections map to
+   * mutually exclusive record categories and "Needs Your Input" lives outside the
+   * main visibleItems feed entirely. Multiple selected values use OR semantics.
+   */
+  recommendation: readonly RecommendationBucket[];
   /** Empty means "all statuses". Multiple selected values use OR semantics. */
   status: readonly DecisionStatus[];
   /** Empty means "all types". Multiple selected values use OR semantics. */
@@ -125,14 +141,20 @@ export interface DecisionFilterState {
 }
 
 export const EMPTY_FILTERS: DecisionFilterState = {
-  priority: [],
+  recommendation: [],
   status: [],
   type: [],
   query: "",
 };
 
 export function hasActiveFilter(f: DecisionFilterState): boolean {
-  return f.priority.length > 0 || f.status.length > 0 || f.type.length > 0 || f.query.trim() !== "";
+  return (
+    (f.priority?.length ?? 0) > 0 ||
+    f.recommendation.length > 0 ||
+    f.status.length > 0 ||
+    f.type.length > 0 ||
+    f.query.trim() !== ""
+  );
 }
 
 /** Build the search haystack once, at row-build time. */
@@ -151,7 +173,9 @@ export function matchesQuery(search: string, query: string): boolean {
 }
 
 export function matchesFilters(row: DecisionFacets, f: DecisionFilterState): boolean {
-  if (f.priority.length > 0 && !f.priority.includes(row.tier)) return false;
+  if (f.priority && f.priority.length > 0 && !f.priority.includes(row.tier)) return false;
+  // recommendation filters at the section level (show/hide whole sections in the
+  // page), not at the individual row level — so no per-row check here.
   if (f.status.length > 0 && !f.status.includes(row.status)) return false;
   if (
     f.type.length > 0 &&

@@ -51,7 +51,10 @@ const intent = (over: Partial<ReviewItemType> = {}): ReviewItemType => ({
   ...over,
 });
 
-const PAGES = ["client/src/pages/HomePage.tsx", "client/src/pages/InboxPage.tsx"];
+/* The Inbox is the ONLY page that lists live records. Overview used to render
+   the same rows and is deliberately down to a count now — see the Overview
+   guard at the bottom of this file, which fails if the rows come back. */
+const PAGES = ["client/src/pages/InboxPage.tsx"];
 
 describe("the row pill", () => {
   /* One colour, one meaning. A second pill colour in a list of pending records
@@ -140,7 +143,7 @@ describe("amounts", () => {
   });
 });
 
-describe("both pages go through the shared presenters", () => {
+describe("the record pages go through the shared presenters", () => {
   for (const page of PAGES) {
     it(`${page} builds its live rows from recordRows`, () => {
       const src = readFileSync(page, "utf8");
@@ -158,4 +161,26 @@ describe("both pages go through the shared presenters", () => {
       expect(ownPill.length + usedForLiveRows.length).toBe(0);
     });
   }
+});
+
+describe("Overview does not list records", () => {
+  /* The whole point of the Overview/Inbox split: one screen counts, the other
+     one works the queue. A row presenter reappearing on Overview means the
+     duplication is back, and no rendering test would call that a failure — both
+     screens would simply show the same list again. */
+  it("builds no live rows of its own", () => {
+    const src = readFileSync("client/src/pages/HomePage.tsx", "utf8");
+    for (const fn of ["sessionIntentRow(", "queueIntentRow(", "liveProposalRow(", "insightRow("]) {
+      expect(src).not.toContain(fn);
+    }
+  });
+
+  /* Proof the check above can fail: the presenters it looks for are real names
+     the Inbox does use, so a passing Overview is a fact about Overview. */
+  it("is checking for presenter names that exist in a page that has rows", () => {
+    const inbox = readFileSync("client/src/pages/InboxPage.tsx", "utf8");
+    for (const fn of ["sessionIntentRow(", "queueIntentRow(", "liveProposalRow(", "insightRow("]) {
+      expect(inbox).toContain(fn);
+    }
+  });
 });

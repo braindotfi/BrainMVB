@@ -263,37 +263,79 @@ export const TierRow = ({ row }: { row: TierRowModel }) => {
   );
 };
 
-export const TierSection = ({ tier, rows }: { tier: ProposalTier; rows: TierRowModel[] }) => {
-  const meta = TIER_META[tier];
-  const accent = TIER_ACCENT[tier];
-  return (
-    <div className="flex flex-col gap-[10px] items-start w-full" data-testid={`tier-section-${tier}`}>
-      <div className="flex gap-[8px] items-center w-full">
-        <div className="size-[6px] rounded-full shrink-0" style={{ background: accent }} />
-        <p
-          className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[12px] uppercase tracking-[0.4px] whitespace-nowrap"
-          style={{ color: accent }}
-          data-testid={`tier-heading-${tier}`}
-        >
-          {meta.title}
+/**
+ * The section chrome — accent dot, uppercase heading, count pill, optional note,
+ * and the bordered row panel underneath.
+ *
+ * Extracted from `TierSection` because Inbox now groups by what a section ASKS
+ * OF YOU ("Needs your decision" / "Needs your input" / "For your awareness")
+ * rather than by derived tier, while Overview still groups by tier. Both shapes
+ * are the same object visually, and two hand-maintained copies of this chrome
+ * would drift the moment one gets a spacing fix.
+ *
+ * `caption` differs from `note`: a note is a short aside on the same line, a
+ * caption is a full line beneath the heading, used where a section has to
+ * explain what it is withholding (e.g. a capped feed).
+ */
+export const RowSection = ({
+  title,
+  accent,
+  rows,
+  note,
+  caption,
+  testId,
+  headingTestId,
+}: {
+  title: string;
+  accent: string;
+  rows: TierRowModel[];
+  note?: string;
+  caption?: string;
+  testId: string;
+  headingTestId?: string;
+}) => (
+  <div className="flex flex-col gap-[10px] items-start w-full" data-testid={testId}>
+    <div className="flex gap-[8px] items-center w-full">
+      <div className="size-[6px] rounded-full shrink-0" style={{ background: accent }} />
+      <p
+        className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[12px] uppercase tracking-[0.4px] whitespace-nowrap"
+        style={{ color: accent }}
+        data-testid={headingTestId}
+      >
+        {title}
+      </p>
+      <CountPill background={accent}>{rows.length}</CountPill>
+      {note && (
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[12px] truncate">
+          Note: {note}
         </p>
-        <CountPill background={accent}>{rows.length}</CountPill>
-        {meta.note && (
-          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[12px] truncate">
-            Note: {meta.note}
-          </p>
-        )}
-      </div>
-      <div className="flex flex-col w-full rounded-row border border-solid border-brain-v1stroke-2 bg-brain-v1highlight-dropdown-bg overflow-hidden">
-        <div className="flex flex-col w-full">
-          {rows.map((row) => (
-            <TierRow key={row.id} row={row} />
-          ))}
-        </div>
+      )}
+    </div>
+    {caption && (
+      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-brain-v1baby-blue-60 text-[13px] w-full">
+        {caption}
+      </p>
+    )}
+    <div className="flex flex-col w-full rounded-row border border-solid border-brain-v1stroke-2 bg-brain-v1highlight-dropdown-bg overflow-hidden">
+      <div className="flex flex-col w-full">
+        {rows.map((row) => (
+          <TierRow key={row.id} row={row} />
+        ))}
       </div>
     </div>
-  );
-};
+  </div>
+);
+
+export const TierSection = ({ tier, rows }: { tier: ProposalTier; rows: TierRowModel[] }) => (
+  <RowSection
+    title={TIER_META[tier].title}
+    accent={TIER_ACCENT[tier]}
+    rows={rows}
+    note={TIER_META[tier].note}
+    testId={`tier-section-${tier}`}
+    headingTestId={`tier-heading-${tier}`}
+  />
+);
 
 /**
  * Every non-empty tier, in fixed order.

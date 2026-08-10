@@ -72,9 +72,9 @@ describe("selectMoneyPathIntentIds", () => {
     ).toEqual(["pi_1"]);
   });
 
-  it("caps the fan-out so a large page can't issue unbounded detail fetches", () => {
+  it("keeps every money-path id from a large complete feed", () => {
     const page = Array.from({ length: 100 }, (_, i) => ({ payment_intent_id: `pi_${i}` }));
-    expect(selectMoneyPathIntentIds(page, 25)).toHaveLength(25);
+    expect(selectMoneyPathIntentIds(page)).toHaveLength(100);
   });
 
   it("returns nothing for an all-non-financial page", () => {

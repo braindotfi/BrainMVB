@@ -68,6 +68,46 @@ interface AuditEventsResponse {
   next_cursor: string | null;
 }
 
+const MAX_AUDIT_PAGES = 50;
+
+/** Read the complete audit feed. `next_cursor` is passed back as `after`, which
+ * is the pagination contract exposed by the BFF for `/audit/events`. */
+export async function fetchAllBrainAuditEvents(signal?: AbortSignal): Promise<AuditEventsResponse> {
+  const events: BrainAuditEvent[] = [];
+  const followed = new Set<string>();
+  let after: string | null = null;
+
+  for (let page = 0; page < MAX_AUDIT_PAGES; page++) {
+    const params = new URLSearchParams({ limit: String(AUDIT_EVENTS_LIMIT) });
+    if (after) params.set("after", after);
+    const response = await fetch(`/api/brain/audit/events?${params.toString()}`, {
+      credentials: "include",
+      signal,
+    });
+    if (!response.ok) {
+      const detail = (await response.text().catch(() => "")) || response.statusText;
+      throw new Error(`${response.status}: ${detail}`);
+    }
+    const body = (await response.json()) as Partial<AuditEventsResponse>;
+    if (!Array.isArray(body.events)) {
+      throw new Error("Brain audit response did not contain an events array.");
+    }
+    events.push(...body.events);
+
+    const next = typeof body.next_cursor === "string" && body.next_cursor.length > 0
+      ? body.next_cursor
+      : null;
+    if (!next) return { events, next_cursor: null };
+    if (followed.has(next)) {
+      throw new Error("Brain audit pagination did not advance.");
+    }
+    followed.add(next);
+    after = next;
+  }
+
+  throw new Error("Brain audit feed exceeded the maximum page count.");
+}
+
 export interface BrainAnchor {
   merkle_root: string;
   event_count: number;
@@ -685,16 +725,70 @@ export function localQuestionToRecord(q: AssistantQuestion): AuditRecord {
   };
 }
 
-/** How many events a single audit read asks brain-core for. The endpoint pages
- *  with a cursor this app does not follow, so a response of exactly this many
- *  events means "there are at least this many", never "this is all of them".
- *  Surfaces that show a total must say so — see `atEventLimit` below. */
+/** How many events to request per audit page. */
 export const AUDIT_EVENTS_LIMIT = 100;
 
 /** Minimal proposal shape needed to recover the agent type key for decided records. */
 export interface ProposalForTracking {
   id: string;
   type: string;
+}
+
+/** Proposal ids the audit feed already shows as decided.
+ *
+ *  brain-core never drops a decided proposal from GET /v1/proposals — it only
+ *  writes an audit event — so any surface that counts pending proposals has to
+ *  subtract these or it reports work that is already done. The Inbox suppresses
+ *  the live copy on exactly this rule; extracted here so a counting surface can
+ *  apply the same one without building the full record list.
+ */
+export function decidedProposalIdsFromEvents(
+  events: readonly BrainAuditEvent[] | null | undefined,
+): Set<string> {
+  /* This is EFFECTIVE state, not a tally of decision events, because `undo` is
+     one of the four decisions a proposal can receive (ProposalDecision) and it
+     puts the record back in front of the tenant. Treating every
+     `proposal.decided` as terminal would let the original approve/reject go on
+     suppressing a proposal that an undo had reopened — the record would be
+     live, awaiting a decision, and invisible on both the Inbox and the Overview
+     count that subtracts this set.
+
+     So the feed is replayed oldest-first and each decision overwrites the last:
+     a terminal decision hides the live copy, an undo puts it back, and a
+     re-decision after that hides it again. brain-core returns newest-first, so
+     the sort is what makes "last decision wins" mean the latest one. */
+  const decisions = (events ?? [])
+    .filter((e) => e.action === "proposal.decided" && typeof e.inputs?.proposal_id === "string" && e.inputs.proposal_id)
+    .slice()
+    .sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at));
+
+  const out = new Set<string>();
+  for (const e of decisions) {
+    const id = e.inputs.proposal_id as string;
+    if (e.inputs?.decision === "undo") out.delete(id);
+    else out.add(id);
+  }
+  return out;
+}
+
+/**
+ * The decided-proposal set from the complete audit feed.
+ *
+ * Shares its query key with `useBrainAuditRecords` and `useMissingEvidenceItems`,
+ * so mounting it costs no extra request.
+ */
+export function useDecidedProposalIds() {
+  const query = useQuery<AuditEventsResponse>({
+    queryKey: [`/api/brain/audit/events?limit=${AUDIT_EVENTS_LIMIT}`],
+    queryFn: ({ signal }) => fetchAllBrainAuditEvents(signal),
+    retry: false,
+  });
+  const events = query.data?.events;
+  return {
+    ids: decidedProposalIdsFromEvents(events),
+    isError: query.isError,
+    isLoading: query.isLoading,
+  };
 }
 
 export function useBrainAuditRecords(proposals?: ProposalForTracking[]) {
@@ -719,6 +813,7 @@ export function useBrainAuditRecords(proposals?: ProposalForTracking[]) {
 
   const events = useQuery<AuditEventsResponse>({
     queryKey: [`/api/brain/audit/events?limit=${AUDIT_EVENTS_LIMIT}`],
+    queryFn: ({ signal }) => fetchAllBrainAuditEvents(signal),
     retry: false,
   });
   const anchor = useQuery<BrainAnchor>({
@@ -816,11 +911,8 @@ export function useBrainAuditRecords(proposals?: ProposalForTracking[]) {
     isLoading: events.isLoading || anchor.isLoading || localQuestions.isLoading,
     isError: events.isError,
     records,
-    /* Raw count from brain-core's page, BEFORE local assistant-question rows are
-       merged in. Only this number can be compared against AUDIT_EVENTS_LIMIT:
-       the cap applies to the /audit/events read alone, so measuring the merged
-       list would let a couple of local rows push a short page over the line and
-       make the UI claim there is more history than there is. */
+    /* Raw count from the complete brain-core feed, BEFORE local assistant-question
+       rows are merged in. */
     eventCount: events.data?.events.length ?? 0,
   };
 }
