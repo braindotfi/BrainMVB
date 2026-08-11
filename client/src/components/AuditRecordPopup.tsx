@@ -176,9 +176,17 @@ export function AuditRecordPopup({
     );
   };
 
-  const SectionHeader = ({ children }: { children: React.ReactNode }) => (
-    <div className="content-stretch flex gap-[8px] items-center relative shrink-0 w-full">
-      <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">
+  const SectionHeader = ({
+    children,
+    compact = false,
+  }: {
+    children: React.ReactNode;
+    compact?: boolean;
+  }) => (
+    <div className={`content-stretch flex gap-[8px] items-center relative shrink-0 w-full${compact ? " h-[14px]" : ""}`}>
+      <p className={`[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-60 whitespace-nowrap ${
+        compact ? "leading-[14px] text-[12px]" : "leading-[20px] text-[14px]"
+      }`}>
         {children}
       </p>
       <div className="flex-[1_0_0] h-px bg-brain-v1stroke-2 min-w-px" />
@@ -232,7 +240,7 @@ export function AuditRecordPopup({
               {record.lifecycle.length > 0 && (
                 <div className="relative shrink-0 w-full">
                   <div className="bg-clip-padding border-0 border-[transparent] border-solid content-stretch flex flex-col gap-[16px] items-start relative size-full">
-                    <SectionHeader>Decision Lifecycle</SectionHeader>
+                    <SectionHeader compact>Decision Lifecycle</SectionHeader>
                     <div className="bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 border-solid content-stretch flex flex-col items-start relative rounded-row shrink-0 w-full">
                       <div className="content-stretch flex items-start p-[16px] relative shrink-0 w-full">
                         <div className="content-stretch flex flex-[1_0_0] flex-col items-start min-w-px relative">
