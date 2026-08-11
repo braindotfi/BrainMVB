@@ -411,9 +411,9 @@ export function AuditLogSection() {
                   type="button"
                   data-testid={`row-audit-${record.id}`}
                   onClick={() => setActiveRecord(record)}
-                  className="settings-record w-full text-left px-4 flex items-center gap-[16px] hover:bg-brain-v1row-hover transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px]"
+                  className="w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-brain-v1row-hover transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px]"
                 >
-                  <div className="settings-record-copy flex-1 min-w-0 flex flex-col gap-[4px]">
+                  <div className="flex-1 min-w-0 flex flex-col gap-[4px]">
                     <div className="flex items-center gap-[8px] w-full min-w-0">
                       <span className="settings-record-title min-w-0 max-w-full basis-auto grow-0 shrink truncate">
                         {formatText(record.summary)}

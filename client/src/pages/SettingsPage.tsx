@@ -249,10 +249,10 @@ const SettingRow = ({
   <div
     data-testid={testId ?? `setting-row-${label.toLowerCase().replace(/\s+/g, "-")}`}
     onClick={onClick}
-    className={`settings-record flex items-center gap-[16px] px-[16px] h-[40px] ${onClick ? "cursor-pointer hover:bg-brain-v1row-hover transition-colors" : ""}`}
+    className={`flex items-center gap-3 px-4 py-3 ${onClick ? "cursor-pointer hover:bg-brain-v1row-hover transition-colors" : ""}`}
   >
     {useCircleIcon ? icon : <RowIcon danger={danger}>{icon}</RowIcon>}
-    <div className="settings-record-copy flex-1 min-w-0">
+    <div className="flex-1 min-w-0">
       {/* One type ramp for every row, regardless of which icon treatment it
           uses. `useCircleIcon` used to fork the typography too, which left
           Auto-Approve Limit and Welcome Walkthrough on an older 15px/12px pair
