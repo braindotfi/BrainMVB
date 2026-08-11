@@ -22,7 +22,7 @@ const openExternal = (url: string) => {
             onClick={() => openExternal(TERMS_URL)}
             data-testid="button-terms-of-service"
             aria-label="Open Terms of Service"
-            className="settings-record content-stretch flex gap-[16px] h-[52px] items-center relative shrink-0 w-full text-left cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30 rounded-[4px]"
+            className="settings-record content-stretch flex gap-[16px] h-[72px] items-center relative shrink-0 w-full text-left cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30 rounded-[4px]"
           >
             <div className="settings-record-content content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
               <div className="relative rounded-pill shrink-0 size-[40px]">
@@ -75,7 +75,7 @@ const openExternal = (url: string) => {
             onClick={() => openExternal(PRIVACY_URL)}
             data-testid="button-privacy-policy"
             aria-label="Open Privacy Policy"
-            className="settings-record content-stretch flex gap-[16px] h-[52px] items-center relative shrink-0 w-full text-left cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30 rounded-[4px]"
+            className="settings-record content-stretch flex gap-[16px] h-[72px] items-center relative shrink-0 w-full text-left cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30 rounded-[4px]"
           >
             <div className="settings-record-content content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
               <div className="relative rounded-pill shrink-0 size-[40px]">
@@ -123,7 +123,7 @@ const openExternal = (url: string) => {
               <img alt="" className="block max-w-none size-full" src={SUB["10beff8b"]} />
             </div>
           </div>
-          <div className="settings-record content-stretch flex gap-[16px] h-[52px] items-center relative shrink-0 w-full">
+          <div className="settings-record content-stretch flex gap-[16px] h-[72px] items-center relative shrink-0 w-full">
             <div className="settings-record-content content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
               <div className="relative rounded-pill shrink-0 size-[40px]">
                 <div className="absolute left-0 size-[40px] top-0">

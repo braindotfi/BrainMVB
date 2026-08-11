@@ -142,7 +142,7 @@ function SourceRow({
           onOpenAccount?.();
         }
       } : undefined}
-      className={`flex flex-col gap-[8px] px-[16px] py-[6px] ${last ? "" : "border-b border-brain-v1stroke-2"} ${clickable ? "cursor-pointer transition-colors hover:bg-brain-v1baby-blue-5 focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple focus-visible:ring-inset" : ""}`}
+      className={`flex flex-col gap-[8px] px-[16px] py-[16px] ${last ? "" : "border-b border-brain-v1stroke-2"} ${clickable ? "cursor-pointer transition-colors hover:bg-brain-v1baby-blue-5 focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple focus-visible:ring-inset" : ""}`}
     >
       <div className="flex items-center gap-[12px]">
         {/* 4px between title and subtext — the record spacing used everywhere else. */}

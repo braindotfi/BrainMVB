@@ -176,7 +176,7 @@ export const TierRow = ({ row }: { row: TierRowModel }) => {
 
   return (
     <div
-      className={`flex flex-col sm:flex-row gap-[12px] items-start sm:items-center justify-between px-[16px] py-[6px] w-full transition-colors border-b border-solid border-brain-v1stroke-2 last:border-b-0 ${
+      className={`flex flex-col sm:flex-row gap-[12px] items-start sm:items-center justify-between px-[16px] py-[16px] w-full transition-colors border-b border-solid border-brain-v1stroke-2 last:border-b-0 ${
         accent ? "border-l-[3px]" : ""
       } ${row.onOpenDetail ? "cursor-pointer" : ""}`}
       style={{

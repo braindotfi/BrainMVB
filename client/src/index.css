@@ -58,7 +58,7 @@
     display: flex;
     align-items: center;
     gap: 16px;
-    height: 52px;
+    height: 72px;
     width: 100%;
     flex-shrink: 0;
   }

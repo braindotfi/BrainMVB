@@ -251,7 +251,7 @@ const SettingRow = ({
   <div
     data-testid={testId ?? `setting-row-${label.toLowerCase().replace(/\s+/g, "-")}`}
     onClick={onClick}
-    className={`flex items-center gap-3 px-4 py-[6px] ${onClick ? "cursor-pointer hover:bg-brain-v1row-hover transition-colors" : ""}`}
+    className={`flex items-center gap-3 px-4 py-[16px] ${onClick ? "cursor-pointer hover:bg-brain-v1row-hover transition-colors" : ""}`}
   >
     {useCircleIcon ? icon : <RowIcon danger={danger}>{icon}</RowIcon>}
     <div className="flex flex-col gap-[4px] flex-1 min-w-0">
@@ -795,7 +795,7 @@ function BillingSection() {
       <div className="flex flex-col gap-[4px]">
         <SectionLabel>Current Plan</SectionLabel>
         <WidgetPanel noBorder>
-          <div className="px-4 py-[6px] flex items-center gap-4 h-[52px]">
+          <div className="px-4 py-[16px] flex items-center gap-4 h-[72px]">
             <div className="flex-1 min-w-0 flex flex-col gap-[4px] justify-center">
               <div className="flex items-center gap-2 min-w-0">
                 <p
@@ -858,7 +858,7 @@ function BillingSection() {
       <div className="flex flex-col gap-[4px]">
         <SectionLabel>Payment Method</SectionLabel>
         <WidgetPanel noBorder>
-          <div className="px-4 py-[6px] flex items-center gap-4 h-[52px]">
+          <div className="px-4 py-[16px] flex items-center gap-4 h-[72px]">
             <div className="settings-record-content flex-1 min-w-0 flex items-center gap-[16px]">
               <div
                 className="size-[40px] rounded-full flex items-center justify-center flex-shrink-0"

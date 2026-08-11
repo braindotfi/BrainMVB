@@ -53,7 +53,7 @@ export function LedgerRecordRow({
       onKeyDown={onKeyDown}
       data-testid={rowTestId}
       className={[
-        "flex gap-[12px] items-center px-[16px] py-[6px] relative shrink-0 w-full",
+        "flex gap-[12px] items-center px-[16px] py-[16px] relative shrink-0 w-full",
         "bg-brain-v1highlight-dropdown-bg border-b border-solid border-brain-v1stroke-2 last:border-b-0",
         interactive ? "cursor-pointer transition-colors hover:bg-brain-v1baby-blue-5 outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple" : "",
       ].join(" ")}
