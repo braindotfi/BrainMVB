@@ -990,12 +990,13 @@ export function HomePage() {
                 pendingSummary.tone !== "unknown";
               const isNeutral =
                 pendingSummary.tone === "loading" || pendingSummary.tone === "unknown";
+              const isNonUrgent = !isUrgent && !isNeutral;
 
               const textColor = isUrgent
                 ? "text-brain-v1pink-red"
                 : isNeutral
                 ? "text-brain-v1baby-blue-60"
-                : "text-brain-v1baby-blue-100";
+                : "text-brain-v1light-orange";
 
               return (
                 <button
@@ -1009,13 +1010,15 @@ export function HomePage() {
                     className={`flex items-center gap-[12px] px-[16px] py-[14px] w-full ${
                       isUrgent
                         ? "bg-brain-v1dark-pink-red"
+                        : isNonUrgent
+                        ? "bg-brain-v1dark-orange"
                         : "bg-brain-v1highlight-dropdown-bg"
                     }`}
                   >
                     {/* 12×12 circle indicator — matches Figma icon node exactly */}
                     <svg className="shrink-0" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
                       <circle cx="6" cy="6" r="4"
-                        fill={isUrgent ? "#D20344" : isNeutral ? "var(--brain-v1baby-blue-60)" : "#A8B9F4"}
+                        fill={isUrgent ? "#D20344" : isNeutral ? "var(--brain-v1baby-blue-60)" : "#FF9400"}
                       />
                     </svg>
 
@@ -1039,7 +1042,7 @@ export function HomePage() {
                           ? "bg-brain-v1pink-red"
                           : isNeutral
                           ? "bg-[rgba(108,119,157,0.15)]"
-                          : "bg-brain-v1dark-orange"
+                          : "bg-brain-v1light-orange"
                       }`}
                     >
                       <span
@@ -1048,7 +1051,7 @@ export function HomePage() {
                             ? "text-brain-v1dark-pink-red"
                             : isNeutral
                             ? "text-brain-v1baby-blue-60"
-                            : "text-brain-v1light-orange"
+                            : "text-brain-v1dark-orange"
                         }`}
                       >
                         Open Inbox

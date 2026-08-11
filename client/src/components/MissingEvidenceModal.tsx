@@ -439,13 +439,6 @@ export function MissingEvidenceModal({
                     onClick={() => closeAndNavigate(fixAction.path)}
                     testId="button-missing-evidence-fix"
                   />
-                  <ActionButton
-                    label="Dismiss"
-                    tone="neutral"
-                    size="compact"
-                    onClick={() => onOpenChange(false)}
-                    testId="button-missing-evidence-dismiss"
-                  />
                 </ActionRow>
               </CardActions>
             </CardBody>

@@ -18,24 +18,24 @@ describe("a complete read", () => {
   it("counts approvals and inputs together, because both are work asked of you", () => {
     const s = pendingAttentionSummary(counts({ urgent: 1, waiting: 2, input: 3 }));
     expect(s?.total).toBe(6);
-    expect(s?.text).toBe("6 items need your attention");
+    expect(s?.text).toBe("6 Items Need Your Attention");
   });
 
   it("agrees with itself about singular and plural", () => {
-    expect(pendingAttentionSummary(counts({ waiting: 1 }))?.text).toBe("1 item needs your attention");
-    expect(pendingAttentionSummary(counts({ waiting: 2 }))?.text).toBe("2 items need your attention");
+    expect(pendingAttentionSummary(counts({ waiting: 1 }))?.text).toBe("1 Item Needs Your Attention");
+    expect(pendingAttentionSummary(counts({ waiting: 2 }))?.text).toBe("2 Items Need Your Attention");
   });
 
   it("names the breakdown, and omits the tiers that are empty", () => {
     const s = pendingAttentionSummary(counts({ urgent: 2, input: 1 }));
     expect(s?.detail).toBe("2 urgent · 1 needing your input");
-    expect(s?.detail).not.toContain("waiting on you");
+    expect(s?.detail).not.toContain("waiting for you");
   });
 
   it("orders the breakdown as urgent, input, then waiting", () => {
     expect(
       pendingAttentionSummary(counts({ urgent: 2, input: 1, waiting: 3 }))?.detail,
-    ).toBe("2 urgent · 1 needing your input · 3 waiting on you");
+    ).toBe("2 urgent · 1 needing your input · 3 waiting for you");
   });
 
   it("reads urgent only when something urgent is in it", () => {
@@ -48,7 +48,7 @@ describe("a complete read", () => {
 describe("an incomplete read", () => {
   it("still reports a failed-read state without claiming an empty queue", () => {
     const s = pendingAttentionSummary(counts({ waiting: 3, incomplete: true }));
-    expect(s?.text).toBe("At least 3 items need your attention");
+    expect(s?.text).toBe("At least 3 Items Need Your Attention");
   });
 
   it("says in the detail line that something couldn't be read", () => {
