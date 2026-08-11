@@ -328,7 +328,11 @@ export function CashProjectionCard({
                 fontSize: 12,
               }}
               labelFormatter={(v) => shortDate(String(v))}
-              labelStyle={{ color: "rgba(108, 119, 157, 1)", fontFamily: "Gilroy, sans-serif" }}
+              labelStyle={{
+                color: "rgba(108, 119, 157, 1)",
+                fontFamily: "Gilroy, sans-serif",
+                fontWeight: 500,
+              }}
               formatter={(value: number, name) => [
                 format(value),
                 name === "all" ? "If invoices are paid" : "Confirmed only",
