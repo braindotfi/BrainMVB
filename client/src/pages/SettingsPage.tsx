@@ -797,15 +797,19 @@ function BillingSection() {
       <div className="flex flex-col gap-[4px]">
         <SectionLabel>Current Plan</SectionLabel>
         <WidgetPanel noBorder>
-          <div className="p-4 flex items-center gap-4 min-h-[122px]">
+          <div className="px-4 py-3 flex items-center gap-4 h-[64px]">
             <div className="flex-1 min-w-0 flex flex-col gap-[4px] justify-center">
-              <div className="flex items-center gap-2">
-                <p style={{ color: "#6c779d", fontFamily: "'Gilroy', sans-serif", fontWeight: 500, fontSize: "16px", lineHeight: "20px" }}>
-                  {plan ? plan.tagline : "No plan selected yet."}
+              <div className="flex items-center gap-2 min-w-0">
+                <p
+                  data-testid="text-plan-name"
+                  className="truncate"
+                  style={{ color: "#a8b9f4", fontFamily: "'Gilroy', sans-serif", fontWeight: 500, fontSize: "16px", lineHeight: "20px" }}
+                >
+                  {plan ? plan.label : "No plan selected yet."}
                 </p>
                 {plan && cancelled && (
                   <span
-                    className="px-2 py-[3px] rounded-pill"
+                    className="px-2 py-[3px] rounded-pill shrink-0"
                     style={{
                       background: "#4a2300",
                       color: "#ff9500",
@@ -820,24 +824,15 @@ function BillingSection() {
                   </span>
                 )}
               </div>
-              {plan && (
-                <p
-                  data-testid="text-plan-name"
-                  style={{ color: "#a8b9f4", fontFamily: "'Gilroy', sans-serif", fontWeight: 500, fontSize: "24px", lineHeight: "32px" }}
-                >
-                  {plan.label}
-                </p>
-              )}
-              {plan && (
-                <p
-                  data-testid="text-plan-price"
-                  style={{ color: "#6c779d", fontFamily: "'JetBrains Mono', monospace", fontWeight: 500, fontSize: "14px", lineHeight: "20px" }}
-                >
-                  {plan.price} {plan.cadence}
-                </p>
-              )}
+              <p
+                data-testid="text-plan-price"
+                className="truncate"
+                style={{ color: "#6c779d", fontFamily: "'Gilroy', sans-serif", fontWeight: 500, fontSize: "14px", lineHeight: "16px" }}
+              >
+                {plan ? `${plan.tagline} · ${plan.price} ${plan.cadence}` : "Choose a plan to get started."}
+              </p>
             </div>
-            <div className="flex flex-col items-end gap-2 flex-shrink-0">
+            <div className="flex items-center gap-2 flex-shrink-0">
               <Button
                 variant="primary"
                 data-testid="button-upgrade-plan"
@@ -865,7 +860,7 @@ function BillingSection() {
       <div className="flex flex-col gap-[4px]">
         <SectionLabel>Payment Method</SectionLabel>
         <WidgetPanel noBorder>
-          <div className="p-4 flex items-center gap-4 min-h-[122px]">
+          <div className="px-4 py-3 flex items-center gap-4 h-[64px]">
             <div className="settings-record-content flex-1 min-w-0 flex items-center gap-[16px]">
               <div
                 className="size-[40px] rounded-full flex items-center justify-center flex-shrink-0"
