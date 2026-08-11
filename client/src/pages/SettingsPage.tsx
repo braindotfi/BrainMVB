@@ -11,6 +11,8 @@ import { useUserContact, setUserEmail, setUserPhone } from "@/lib/userContact";
 import { useCurrency } from "@/lib/useCurrency";
 import { ICONS } from "@/assets/figma-icons";
 import acmeAvatar from "@assets/images_1777396125844.png";
+import approvalLimitIcon from "@assets/Limit_1786452580813.png";
+import replayIcon from "@assets/Replay_1786452583279.png";
 import { NAV_ACTIVE } from "@/assets/nav-active-icons";
 import legalActiveIcon from "@assets/LegalActive_1782953679878.png";
 import legalInactiveIcon from "@assets/LegalInactive_1782953679879.png";
@@ -273,7 +275,7 @@ const SettingRow = ({
       </p>
       {sublabel && (
         <p
-          className="settings-record-detail"
+          className="settings-record-detail whitespace-normal break-words"
           style={{
             color: "#6c779d",
             fontFamily: "'Gilroy', 'Plus Jakarta Sans', system-ui, sans-serif",
@@ -667,14 +669,7 @@ function ProfileSection() {
         <SectionLabel>Approvals</SectionLabel>
         <WidgetPanel noBorder>
           <SettingRow
-            icon={
-              <RowIcon>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path d="M12 3.5l7 3v5c0 4.2-2.9 7.6-7 9-4.1-1.4-7-4.8-7-9v-5l7-3z" stroke="#a8b9f4" strokeWidth="1.5" strokeLinejoin="round" />
-                  <path d="M9 12l2.2 2.2L15.5 10" stroke="#a8b9f4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </RowIcon>
-            }
+            icon={<img src={approvalLimitIcon} alt="" className="size-[40px] rounded-pill shrink-0" />}
             label="Auto-Approve Limit"
             sublabel={
               policy.isLoading
@@ -690,6 +685,7 @@ function ProfileSection() {
                         : "Nothing runs automatically. Every payment waits for an approver."
             }
             testId="setting-row-auto-approve-limit"
+            useCircleIcon
             right={
               /* The error state keeps its own fill and stroke so "Unknown" cannot be
                  mistaken for a real figure. Alpha values are spelled raw because
@@ -746,17 +742,11 @@ function ProfileSection() {
         <SectionLabel>Getting Started</SectionLabel>
         <WidgetPanel noBorder>
           <SettingRow
-            icon={
-              <RowIcon>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path d="M4 12a8 8 0 1 1 2.6 5.9" stroke="#a8b9f4" strokeWidth="1.5" strokeLinecap="round" />
-                  <path d="M4 8.5V13h4.5" stroke="#a8b9f4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </RowIcon>
-            }
+            icon={<img src={replayIcon} alt="" className="size-[40px] rounded-pill shrink-0" />}
             label="Welcome Walkthrough"
             sublabel="How your rules decide what runs automatically, and what always waits for you."
             testId="setting-row-replay-onboarding"
+            useCircleIcon
             right={
               <Button
                 variant="secondary"
