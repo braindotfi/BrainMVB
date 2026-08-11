@@ -102,3 +102,7 @@
 - [Modal shell standard](modal-shell-standard.md) — 480/400/375px variants; blur-sm≠blur-[2px]; AgentProposalModal was a hidden 520px popup; Radix mandatory for all modals.
 - [Decided-proposal suppression](inbox-decided-suppression.md) — the "already decided" set is a hide switch: decisions only, ordered replay (undo reopens), fail open; a declared-but-unassigned field made it dead for months.
 - [Empty-state standard](empty-state-standard.md) — px-[16px] py-[12px] in-panel geometry; "No X yet" vs "Nothing X yet" voice split; "Couldn't load" leads errors.
+- [Cross-currency totals](cross-currency-totals.md) — no FX rate exists; a total may exclude + disclose, a ratio must refuse, because a shrunken denominator changes its meaning.
+- [Silently-dropped inputs](honest-derived-figures.md) — an extremum seeded null can't return day zero; completeness is the cursor, never the row count.
+- [Injected-witness QA](qa-injected-witness.md) — prove a section a thin tenant can't trigger by appending a synthetic record to the real read; still report the real check as SKIP.
+- [Vite lazy-dep reoptimize](vite-lazy-dep-reoptimize.md) — a dep reached only from an unvisited surface reloads mid-session with a null React; looks exactly like duplicate React.

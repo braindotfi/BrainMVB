@@ -52,3 +52,15 @@ logging in, and provisioning a new one creates an upstream tenant that cannot be
 deleted. Inserting a fresh session row for the existing user id is the cheap way
 back in; the cookie is the signed form derived from the session secret, so it
 must be computed at run time and passed by env, never written down.
+
+## A prefix testid selector matches the row's CHILDREN too
+
+`TierRow` stamps its prefix on the container **and** on the pieces inside it:
+`<prefix>-<id>`, `-select`, `-badge`, `-action-<action>`. So
+`[data-testid^="<prefix>-"]` matches one row three or four times and any count
+taken from it is silently a multiple of the truth — a single row reported as
+"3 rows".
+
+**How to apply:** count row ROOTS by excluding the known child suffixes, and be
+suspicious of any row count that is a small multiple of what you expected.
+
