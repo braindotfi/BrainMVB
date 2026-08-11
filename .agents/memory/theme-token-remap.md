@@ -29,6 +29,39 @@ in the original theme and re-decided in the new one. Look for them by searching
 for a status token used as a *background* and checking what its text token is —
 if the text is the other half of the same pair, it is inverted.
 
+## Count the roles the spec gives a colour, don't infer them from the old theme
+
+A design system can give a colour **more roles on the new substrate than the old
+one needed**. A typical light spec splits each status into three — a saturated
+accent for fills and bars, a pale tint for badge grounds, and a darkened tone
+for text — where the dark theme needed only two, because there the bright ink
+and the fill colour are *the same value*.
+
+Read from the existing code and you will build the two-role model and map every
+fill to the text tone. It looks deliberate and it is wrong: dots, bars and
+reference lines come out as muddy dark versions of themselves.
+
+**How to apply:** get the actual spec document, not a summarising brief. A flat
+list of token values transmits the values and loses the *structure* — role
+counts, which family a grey belongs to, which hue is redrawn for the new
+substrate. Those are the parts that change what you build.
+
+Related: a brand colour tuned for one substrate may be explicitly demoted on the
+other (e.g. "tint only, never text"). Grep for its literal value — it is usually
+hardcoded somewhere as a glyph or stroke.
+
+## An unenforced mirror of a palette will drift
+
+Keeping colours in two places — say a JS palette object that a chart library
+consumes and a matching set of CSS variables "so they can be read side by side"
+— means one of them has no consumers. That one is documentation, and correcting
+*it* feels exactly like fixing the bug while changing nothing on screen.
+
+**How to apply:** either delete the unused half or add a test asserting the two
+agree (alpha included, so a translucent value cannot match its opaque twin).
+Then confirm the test fails when one side is reverted. Also note which half is
+authoritative, right where the duplicate lives.
+
 ## A modal inside a themed subtree must portal out or be themed
 
 Half-pinning is the one option that cannot work: pinning the modal's surface

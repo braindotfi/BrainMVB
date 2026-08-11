@@ -108,4 +108,4 @@
 - [Vite lazy-dep reoptimize](vite-lazy-dep-reoptimize.md) — a dep reached only from an unvisited surface reloads mid-session with a null React; looks exactly like duplicate React.
 - [Outcome-not-source bucketing](outcome-not-source-bucketing.md) — group a queue by the decisions a record accepts, never a per-feed `kind`; published list outranks source, even when empty.
 - [Duplicate-looking rows](duplicate-rows-can-be-two-records.md) — agents re-propose the same invoice each sweep; group on a record id, never dedupe; a fresh demo tenant is ~10 min short of the state.
-- [Theming by token remap](theme-token-remap.md) — a remap can't express "and also invert"; modals portal out or get themed (never half-pinned); scan the import closure, not a file list.
+- [Theming by token remap](theme-token-remap.md) — a remap can't express "and also invert"; spec role counts & redrawn hues die in a summarising brief; unenforced palette mirrors drift.
