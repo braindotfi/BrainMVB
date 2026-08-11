@@ -29,6 +29,8 @@ function ev(overrides: Partial<BrainAuditEvent> = {}): BrainAuditEvent {
 
 function anchor(overrides: Partial<BrainAnchor> = {}): BrainAnchor {
   return {
+    anchoring_mode: "onchain",
+    guarantee: "base_sepolia",
     merkle_root: "0xroot",
     event_count: 10,
     period_start: "2026-07-01T00:00:00.000Z",
@@ -40,6 +42,20 @@ function anchor(overrides: Partial<BrainAnchor> = {}): BrainAnchor {
 }
 
 describe("mapAuditEventToRecord", () => {
+  it("shows demo audit records as database-only rather than pending on-chain", () => {
+    const r = mapAuditEventToRecord(ev(), anchor({
+      anchoring_mode: "db_only",
+      guarantee: "database_hash_chain",
+      merkle_root: null,
+      event_count: null,
+      period_start: null,
+      period_end: null,
+      onchain_tx_hash: null,
+      onchain_block_number: null,
+    }));
+    expect(r.anchor.status).toBe("db_only_hash_chain");
+  });
+
   it("classifies an Inbox acknowledge decision into the Acknowledge audit bucket", () => {
     const r = mapAuditEventToRecord(
       ev({

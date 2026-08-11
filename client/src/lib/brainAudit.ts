@@ -109,10 +109,12 @@ export async function fetchAllBrainAuditEvents(signal?: AbortSignal): Promise<Au
 }
 
 export interface BrainAnchor {
-  merkle_root: string;
-  event_count: number;
-  period_start: string;
-  period_end: string;
+  anchoring_mode?: "onchain" | "db_only";
+  guarantee?: "base_sepolia" | "database_hash_chain";
+  merkle_root: string | null;
+  event_count: number | null;
+  period_start: string | null;
+  period_end: string | null;
   /* NULL until the on-chain anchor() tx has actually mined — a merkle_root is
      computed when the audit window's tree is built, BEFORE anything is
      broadcast to Base. brain-core only writes these on a confirmed receipt. */
@@ -371,11 +373,14 @@ export function anchorFromInclusionProof(
  *  over-claims. */
 function anchorFor(event: BrainAuditEvent, latest: BrainAnchor | undefined): AnchorProof {
   const auditId = event.id;
+  if (latest?.anchoring_mode === "db_only") {
+    return { status: "db_only_hash_chain", auditId };
+  }
   if (!latest || !latest.merkle_root) return { status: "pending_next_batch", auditId };
   const createdMs = new Date(event.created_at).getTime();
   const covered =
-    createdMs <= new Date(latest.period_end).getTime() &&
-    createdMs >= new Date(latest.period_start).getTime();
+    createdMs <= new Date(latest.period_end!).getTime() &&
+    createdMs >= new Date(latest.period_start!).getTime();
   if (!covered) return { status: "pending_next_batch", auditId };
   const txHash = latest.onchain_tx_hash?.trim() || null;
   if (!txHash) {
@@ -383,7 +388,7 @@ function anchorFor(event: BrainAuditEvent, latest: BrainAnchor | undefined): Anc
       status: "recorded_pending_anchor",
       auditId,
       merkleRoot: latest.merkle_root,
-      recordedAtLabel: label(new Date(latest.period_end).getTime()),
+      recordedAtLabel: label(new Date(latest.period_end!).getTime()),
     };
   }
   const baseTx = normalizeTxHash(txHash);
@@ -393,7 +398,7 @@ function anchorFor(event: BrainAuditEvent, latest: BrainAnchor | undefined): Anc
     merkleRoot: latest.merkle_root,
     baseTx,
     block: latest.onchain_block_number ?? undefined,
-    anchoredAtLabel: label(new Date(latest.period_end).getTime()),
+    anchoredAtLabel: label(new Date(latest.period_end!).getTime()),
     verifyHref: explorerTxUrl(baseTx),
   };
 }

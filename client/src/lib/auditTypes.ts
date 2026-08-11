@@ -36,6 +36,7 @@ export type AnchorStatus =
   | "not_recorded"
   | "pending_next_batch"
   | "recorded_pending_anchor"
+  | "db_only_hash_chain"
   | "anchored";
 
 export interface AnchorProof {

@@ -516,6 +516,9 @@ that let rules break before):
      affordance stays disabled but gets NO future-tense caption/tooltip (the
      "opens once anchored" wording would be false) and its own badge/label
      ("Not recorded", not "Pending") wherever anchor status renders as a pill.
+   - `db_only_hash_chain` — demo-tenant records are retained in Brain's
+     database hash chain but are explicitly not published to Base. Verify stays
+     disabled and the UI must not promise a future on-chain anchor.
    A local-only record (e.g. an `assistant_questions` row) is only `not_recorded`
    when its `engine` confirms the direct-Anthropic fallback was taken; an
    unresolved/unknown `engine` (including legacy rows written before the column

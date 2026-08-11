@@ -70,6 +70,7 @@ const RECORD_STATUS_BADGE = {
      implies a future anchor) would be false. Distinct, honest styling — no
      "waiting" connotation. */
   notRecorded: { label: "Not recorded", bg: "#3a1414", color: "#e5484d", border: "1px solid rgba(229,72,77,0.2)" },
+  dbOnly: { label: "Database only", bg: "#222737", color: "#a8b9f4", border: "1px solid rgba(168,185,244,0.2)" },
 } as const;
 
 function categorise(record: AuditRecord, systemIds: ReadonlySet<string>): Category {
@@ -390,7 +391,8 @@ export function AuditLogSection() {
             /* A record is only Anchored when brain-core has confirmed an
                on-chain transaction. Records with no Merkle proof yet and
                records sealed in the audit chain while the transaction is
-               still pending both use the honest Pending pill. not_recorded
+               still pending both use the honest Pending pill. db_only_hash_chain
+               records are deliberately never published on-chain. not_recorded
                never reached brain-core's audit log at all, so it gets its
                own pill rather than being folded into "Pending". */
             const statusBadge =
@@ -398,6 +400,8 @@ export function AuditLogSection() {
                 ? RECORD_STATUS_BADGE.anchored
                 : record.anchor.status === "not_recorded"
                   ? RECORD_STATUS_BADGE.notRecorded
+                  : record.anchor.status === "db_only_hash_chain"
+                    ? RECORD_STATUS_BADGE.dbOnly
                   : RECORD_STATUS_BADGE.pending;
             const actor = humanReadableActor(record.actor);
             return (

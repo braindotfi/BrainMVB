@@ -61,12 +61,15 @@ export function AnchorStatus({
   const isAnchored = anchor.status === "anchored" && !!anchor.baseTx;
   const isRecorded = anchor.status === "recorded_pending_anchor";
   const isNotRecorded = anchor.status === "not_recorded";
+  const isDbOnly = anchor.status === "db_only_hash_chain";
   const pending = !isAnchored;
 
   const statusLabel = isAnchored
     ? "Anchored · Tamper-Evident"
     : isRecorded
       ? "Recorded and verifiable. On-chain anchor pending."
+      : isDbOnly
+        ? "Recorded · Database Hash Chain"
       : isNotRecorded
         ? "Not in the audit log. This activity has no on-chain proof."
         : "Proof incomplete. This record hasn't been anchored on-chain yet.";
@@ -84,6 +87,8 @@ export function AnchorStatus({
     ? "This record is anchored on Base and can't be altered. Confirm it independently, without trusting Brain."
     : isRecorded
       ? "This record is sealed in Brain's append-only audit chain and can be verified cryptographically. The on-chain anchor to Base is pending."
+      : isDbOnly
+        ? "This demo record is retained in Brain's append-only database hash chain. It is not published to Base and has no on-chain proof."
       : isNotRecorded
         ? "This activity was handled outside Brain's audit log, so there is nothing to anchor or verify on-chain."
         : "Once anchored on Base, this record becomes independently verifiable.";
@@ -141,7 +146,14 @@ export function AnchorStatus({
           by a border-t, not inside the scrollable content area. */}
       {mode !== "proof" && (
         <div className="flex gap-[12px] items-center w-full">
-          {isNotRecorded ? (
+          {isDbOnly ? (
+            <span
+              data-testid="text-verify-db-only-caption"
+              className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-brain-v1baby-blue-60"
+            >
+              Demo records are not published on-chain.
+            </span>
+          ) : isNotRecorded ? (
             <span
               data-testid="text-not-recorded-caption"
               className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-brain-v1baby-blue-30"

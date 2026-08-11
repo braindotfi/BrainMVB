@@ -89,7 +89,7 @@ export function AuditRecordPopup({
   if (!record) return null;
 
   const anchor =
-    isBrainEvent && eventDetail.data
+    isBrainEvent && eventDetail.data && record.anchor.status !== "db_only_hash_chain"
       ? anchorFromInclusionProof(
           record.id,
           eventDetail.data.inclusion_proof,
@@ -126,6 +126,7 @@ export function AuditRecordPopup({
      pending states there is no future anchor window to promise — suppress
      the "opens once anchored" caption/tooltip for it (button stays disabled). */
   const isNotRecorded = anchor.status === "not_recorded";
+  const isDbOnlyAnchor = anchor.status === "db_only_hash_chain";
 
   const handleVerify = () => {
     if (anchor.verifyHref) {
@@ -426,13 +427,17 @@ export function AuditRecordPopup({
                 variant="primary"
                 onClick={handleVerify}
                 disabled={!isAnchored}
-                title={isAnchored || isNotRecorded ? undefined : "On-chain verification opens once this record is anchored."}
+                title={isAnchored || isNotRecorded || isDbOnlyAnchor ? undefined : "On-chain verification opens once this record is anchored."}
                 data-testid="button-verify-on-chain"
                 className="w-full"
               >
                 Verify On-Chain
               </Button>
-              {!isAnchored && !isNotRecorded && (
+              {isDbOnlyAnchor ? (
+                <p data-testid="text-verify-db-only-caption" className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-brain-v1baby-blue-60">
+                  Demo records are retained in Brain's database hash chain and are not published on-chain.
+                </p>
+              ) : !isAnchored && !isNotRecorded && (
                 <p data-testid="text-verify-pending-caption" className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-brain-v1baby-blue-60">
                   On-chain verification opens once anchored.
                 </p>
