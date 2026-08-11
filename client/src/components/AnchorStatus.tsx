@@ -50,23 +50,29 @@ export function AnchorStatus({
   onVerify?: () => void;
   onViewFullRecord?: () => void;
 }) {
-  /* Four honest states (see AnchorStatus type in auditTypes.ts):
+  /* Five honest states (see AnchorStatus type in auditTypes.ts):
      anchored                → green, immutability claim, Verify On-Chain rendered.
      recorded_pending_anchor → amber, "verifiable, on-chain anchor pending", NO Verify button.
      pending_next_batch      → neutral, proof incomplete, NO Verify button.
      not_recorded            → neutral, and must NOT say "yet": this record never reached
                                brain-core's audit log, so no anchor will ever cover it.
                                Promising a future anchor here is the same class of overclaim
-                               the green-badge fix removed, one state further down. */
+                               the green-badge fix removed, one state further down.
+     db_only_hash_chain      → neutral, demo-tenant record retained in Brain's database
+                               hash chain only; NOT published to Base, NO Verify button,
+                               and must not promise a future on-chain anchor. */
   const isAnchored = anchor.status === "anchored" && !!anchor.baseTx;
   const isRecorded = anchor.status === "recorded_pending_anchor";
   const isNotRecorded = anchor.status === "not_recorded";
+  const isDbOnly = anchor.status === "db_only_hash_chain";
   const pending = !isAnchored;
 
   const statusLabel = isAnchored
     ? "Anchored · Tamper-Evident"
     : isRecorded
       ? "Recorded and verifiable. On-chain anchor pending."
+      : isDbOnly
+        ? "Recorded · Database Hash Chain"
       : isNotRecorded
         ? "Not in the audit log. This activity has no on-chain proof."
         : "Proof incomplete. This record hasn't been anchored on-chain yet.";
@@ -84,6 +90,8 @@ export function AnchorStatus({
     ? "This record is anchored on Base and can't be altered. Confirm it independently, without trusting Brain."
     : isRecorded
       ? "This record is sealed in Brain's append-only audit chain and can be verified cryptographically. The on-chain anchor to Base is pending."
+      : isDbOnly
+        ? "This demo record is retained in Brain's append-only database hash chain. It is not published to Base and has no on-chain proof."
       : isNotRecorded
         ? "This activity was handled outside Brain's audit log, so there is nothing to anchor or verify on-chain."
         : "Once anchored on Base, this record becomes independently verifiable.";
@@ -94,7 +102,7 @@ export function AnchorStatus({
       {/* Status line: icon + label */}
       <div className="content-stretch flex gap-[8px] items-center relative shrink-0 w-full">
         {pending ? (
-          <img src={clockIcon} alt={isNotRecorded ? "Not recorded" : "Pending"} className="size-[16px] shrink-0 object-contain" />
+          <img src={clockIcon} alt={isNotRecorded ? "Not recorded" : isDbOnly ? "Database only" : "Pending"} className="size-[16px] shrink-0 object-contain" />
         ) : (
           <img src={anchoredIcon} alt="Anchored" className="size-[16px] shrink-0" />
         )}
@@ -141,7 +149,14 @@ export function AnchorStatus({
           by a border-t, not inside the scrollable content area. */}
       {mode !== "proof" && (
         <div className="flex gap-[12px] items-center w-full">
-          {isNotRecorded ? (
+          {isDbOnly ? (
+            <span
+              data-testid="text-verify-db-only-caption"
+              className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-brain-v1baby-blue-60"
+            >
+              Demo records are not published on-chain.
+            </span>
+          ) : isNotRecorded ? (
             <span
               data-testid="text-not-recorded-caption"
               className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-brain-v1baby-blue-30"

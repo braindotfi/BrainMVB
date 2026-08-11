@@ -501,12 +501,14 @@ that let rules break before):
    Futures was auto_approved. Logs: `[semantic-consistency] OK ...` or listed
    mismatches.
 
-6. **`checkAnchorUiCoherence()`** — anchor-UI honesty guard. On-chain verification
-   is only real once a record is anchored, so any record whose `anchor.status` is
+6. **Anchor-UI honesty invariant** (formerly enforced by a `checkAnchorUiCoherence()`
+   guard — that function NO LONGER EXISTS in the codebase; this section now documents
+   the invariant itself, not a check that runs). On-chain verification is only real
+   once a record is anchored, so any record whose `anchor.status` is
    `pending_next_batch` OR `not_recorded` must NOT carry `merkleRoot` / `baseTx` /
    `verifyHref` (there is nothing to link to yet, and for `not_recorded` never will
-   be). This is the DATA-level assertion that keeps the ONE shared `AnchorStatus`
-   component honest across every surface. There are four states, not two:
+   be). This is meant to keep the ONE shared `AnchorStatus` component honest across
+   every surface. There are five states, not two:
    - `anchored` — Verify affordance enabled, live link.
    - `recorded_pending_anchor` / `pending_next_batch` — Verify affordance disabled,
      caption "Verification opens once anchored." — a real future anchor window
@@ -516,11 +518,14 @@ that let rules break before):
      affordance stays disabled but gets NO future-tense caption/tooltip (the
      "opens once anchored" wording would be false) and its own badge/label
      ("Not recorded", not "Pending") wherever anchor status renders as a pill.
+   - `db_only_hash_chain` — demo-tenant records are retained in Brain's
+     database hash chain but are explicitly not published to Base. Verify stays
+     disabled and the UI must not promise a future on-chain anchor.
    A local-only record (e.g. an `assistant_questions` row) is only `not_recorded`
    when its `engine` confirms the direct-Anthropic fallback was taken; an
    unresolved/unknown `engine` (including legacy rows written before the column
    existed) falls back to `pending_next_batch` rather than asserting the stronger,
-   possibly-false `not_recorded` claim. Logs `[anchor-ui-consistency] OK ...`.
+   possibly-false `not_recorded` claim.
 
 7. **`checkAgentDomainCoherence()`** — agent↔event domain guard. The proposing
    agent named in a lifecycle label must stay inside its canonical catalog domain

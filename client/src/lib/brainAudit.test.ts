@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { mapAuditEventToRecord, anchorFromInclusionProof, localQuestionToRecord, extractActorName, bffPathForActorLookup, truncateForCard, decidedProposalIdsFromEvents, CARD_TITLE_MAX, type BrainAuditEvent, type BrainAnchor, type BrainInclusionProof } from "./brainAudit";
+import { mapAuditEventToRecord, anchorFromInclusionProof, resolveDetailAnchor, localQuestionToRecord, applyTenantDbOnly, extractActorName, bffPathForActorLookup, truncateForCard, decidedProposalIdsFromEvents, CARD_TITLE_MAX, type BrainAuditEvent, type BrainAnchor, type BrainInclusionProof } from "./brainAudit";
+import type { AnchorProof } from "./auditTypes";
 
 /**
  * mapAuditEventToRecord's real branches: eventType/summary classification from
@@ -29,6 +30,7 @@ function ev(overrides: Partial<BrainAuditEvent> = {}): BrainAuditEvent {
 
 function anchor(overrides: Partial<BrainAnchor> = {}): BrainAnchor {
   return {
+    anchoring_mode: "onchain",
     merkle_root: "0xroot",
     event_count: 10,
     period_start: "2026-07-01T00:00:00.000Z",
@@ -40,6 +42,19 @@ function anchor(overrides: Partial<BrainAnchor> = {}): BrainAnchor {
 }
 
 describe("mapAuditEventToRecord", () => {
+  it("shows demo audit records as database-only rather than pending on-chain", () => {
+    const r = mapAuditEventToRecord(ev(), anchor({
+      anchoring_mode: "db_only",
+      merkle_root: null,
+      event_count: null,
+      period_start: null,
+      period_end: null,
+      onchain_tx_hash: null,
+      onchain_block_number: null,
+    }));
+    expect(r.anchor.status).toBe("db_only_hash_chain");
+  });
+
   it("classifies an Inbox acknowledge decision into the Acknowledge audit bucket", () => {
     const r = mapAuditEventToRecord(
       ev({
@@ -242,6 +257,34 @@ describe("mapAuditEventToRecord", () => {
     expect(anchorFromInclusionProof("evt_x", { merkle_root: null, anchor_tx_hash: null, anchor_block: null }).status).toBe("pending_next_batch");
     expect(anchorFromInclusionProof("evt_x", null).status).toBe("pending_next_batch");
     expect(anchorFromInclusionProof("evt_x", undefined).status).toBe("pending_next_batch");
+  });
+
+  /* db_only tenant regression: the tenant-level anchor.status is db_only for
+     every event on the tenant, but an event anchored BEFORE the tenant
+     flipped to db_only still carries a real anchor_tx_hash in its per-event
+     inclusion proof. That real proof must win — flipping it to "database
+     only" would deny a genuine on-chain proof and kill a working Verify
+     link. */
+  it("resolveDetailAnchor: db_only tenant + event whose inclusion proof carries a confirmed tx still reports anchored", () => {
+    const dbOnlyRecordAnchor: AnchorProof = { status: "db_only_hash_chain", auditId: "evt_x" };
+    const proof: BrainInclusionProof = {
+      merkle_root: "0xroot",
+      merkle_proof: [],
+      anchor_tx_hash: "0xtx",
+      anchor_block: 42,
+    };
+    const proofAnchor = anchorFromInclusionProof("evt_x", proof, "2026-06-15T12:00:00.000Z");
+    const resolved = resolveDetailAnchor(dbOnlyRecordAnchor, proofAnchor);
+    expect(resolved.status).toBe("anchored");
+    expect(resolved.baseTx).toBe("0xtx");
+    expect(resolved.verifyHref).toBeDefined();
+  });
+
+  it("resolveDetailAnchor: db_only tenant + no/incomplete proof still reports db_only, not pending", () => {
+    const dbOnlyRecordAnchor: AnchorProof = { status: "db_only_hash_chain", auditId: "evt_x" };
+    expect(resolveDetailAnchor(dbOnlyRecordAnchor, undefined).status).toBe("db_only_hash_chain");
+    const incompleteProof = anchorFromInclusionProof("evt_x", { merkle_root: null, anchor_tx_hash: null, anchor_block: null });
+    expect(resolveDetailAnchor(dbOnlyRecordAnchor, incompleteProof).status).toBe("db_only_hash_chain");
   });
 
   it("maps a known action to its eventType/summary with alert lifecycle for rejected", () => {
@@ -511,6 +554,32 @@ describe("localQuestionToRecord", () => {
   it("does not mark an unknown (null) engine not_recorded — that would assert a false negative", () => {
     const unknownQ = { ...q, engine: null };
     expect(localQuestionToRecord(unknownQ).anchor.status).toBe("pending_next_batch");
+  });
+});
+
+describe("applyTenantDbOnly", () => {
+  const q = {
+    id: "q1",
+    userId: "u1",
+    question: "What's our trailing monthly cash flow?",
+    engine: "anthropic",
+    createdAt: new Date("2026-08-06T12:07:00Z"),
+  };
+  const wikiQ = { ...q, engine: "wiki" };
+
+  it("remaps a pending_next_batch local row to db_only_hash_chain when the tenant is db_only", () => {
+    const r = applyTenantDbOnly(localQuestionToRecord(wikiQ), true);
+    expect(r.anchor.status).toBe("db_only_hash_chain");
+  });
+
+  it("leaves not_recorded untouched — it is the stronger, still-correct claim", () => {
+    const r = applyTenantDbOnly(localQuestionToRecord(q), true);
+    expect(r.anchor.status).toBe("not_recorded");
+  });
+
+  it("is a no-op when the tenant is not db_only", () => {
+    const r = applyTenantDbOnly(localQuestionToRecord(wikiQ), false);
+    expect(r.anchor.status).toBe("pending_next_batch");
   });
 });
 

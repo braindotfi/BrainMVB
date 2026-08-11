@@ -16,7 +16,7 @@ export type AuditEventType =
      nothing to approve/reject, Audit Log only, neutral chip. */
   | "system_activity";
 
-/* Four honest anchor states, gated on brain-core's actual signals:
+/* Five honest anchor states, gated on brain-core's actual signals:
    - "anchored"                → a confirmed on-chain anchor tx exists (anchor_tx_hash
                                  non-null). Only this state may claim on-chain immutability
                                  or render a Verify link.
@@ -31,11 +31,17 @@ export type AuditEventType =
                                  written to brain-core's audit log, so no anchor will ever
                                  cover it. Assistant questions that fell back to the direct
                                  Anthropic path are the case this exists for. Rendering them
-                                 as "pending" promised an anchor that cannot arrive. */
+                                 as "pending" promised an anchor that cannot arrive.
+   - "db_only_hash_chain"      → the tenant is demo/sandbox (brain-core's
+                                 audit_anchor_mode='db_only'); the record is retained in
+                                 Brain's append-only database hash chain but is never
+                                 published to Base. No Verify link, no future-anchor
+                                 promise. */
 export type AnchorStatus =
   | "not_recorded"
   | "pending_next_batch"
   | "recorded_pending_anchor"
+  | "db_only_hash_chain"
   | "anchored";
 
 export interface AnchorProof {
