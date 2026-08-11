@@ -204,8 +204,8 @@ export default function AccountSection() {
           </p>
         </div>
         <div className="bg-brain-v1highlight-dropdown-bg content-stretch flex flex-col gap-[16px] items-start overflow-clip p-[16px] relative rounded-panel shrink-0 w-full">
-          <div className="content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full">
-            <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
+          <div className="settings-record content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full">
+            <div className="settings-record-content content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
               <div className="relative rounded-pill shrink-0 size-[40px]">
                 <div className="absolute left-0 size-[40px] top-0">
                   <img alt="" className="absolute block inset-0 max-w-none size-full" src={SUB["ce14e446"]} />
@@ -218,12 +218,12 @@ export default function AccountSection() {
                   </div>
                 </div>
               </div>
-              <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
-                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] not-italic relative shrink-0 text-brain-v1baby-blue-100 text-[14px] whitespace-nowrap">
+              <div className="settings-record-copy content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
+                  <p className="settings-record-title">
                   Export My Data
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
-                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] not-italic relative shrink-0 text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">
+                    <p className="settings-record-detail">
                     Last updated January 1, 2025
                   </p>
                 </div>
@@ -256,9 +256,9 @@ export default function AccountSection() {
             onClick={() => setModal("deleteData")}
             data-testid="button-delete-data"
             aria-label="Delete My Data"
-            className="content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full text-left cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30 rounded-[4px]"
+            className="settings-record content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full text-left cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30 rounded-[4px]"
           >
-            <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
+            <div className="settings-record-content content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
               <div className="relative rounded-pill shrink-0 size-[40px]">
                 <div className="absolute left-0 size-[40px] top-0">
                   <img alt="" className="absolute block inset-0 max-w-none size-full" src={SUB["ce14e446"]} />
@@ -271,12 +271,12 @@ export default function AccountSection() {
                   </div>
                 </div>
               </div>
-              <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
-                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-brain-v1baby-blue-100 text-[16px] whitespace-nowrap">
+              <div className="settings-record-copy content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
+                <p className="settings-record-title">
                   Delete My Data
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">
+                  <p className="settings-record-detail">
                     How we handle your data
                   </p>
                 </div>
@@ -313,9 +313,9 @@ export default function AccountSection() {
             onClick={handleCloseAccountClick}
             data-testid="button-close-account"
             aria-label="Close Account"
-            className="content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full text-left cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30 rounded-[4px]"
+            className="settings-record content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full text-left cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30 rounded-[4px]"
           >
-            <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
+            <div className="settings-record-content content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
               <div className="relative rounded-pill shrink-0 size-[40px]">
                 <div className="absolute left-0 size-[40px] top-0">
                   <img alt="" className="absolute block inset-0 max-w-none size-full" src={SUB["670b6028"]} />
@@ -328,12 +328,12 @@ export default function AccountSection() {
                   </div>
                 </div>
               </div>
-              <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] not-italic relative shrink-0 text-brain-v1pink-red text-[14px] whitespace-nowrap">
+              <div className="settings-record-copy content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
+                <p className="settings-record-title text-brain-v1pink-red">
                   Close Account
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
-                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] not-italic relative shrink-0 text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">
+                  <p className="settings-record-detail">
                     Permanently delete your Brain account
                   </p>
                 </div>

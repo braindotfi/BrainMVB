@@ -38,8 +38,8 @@ import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
           </p>
         </div>
         <div className="bg-brain-v1highlight-dropdown-bg content-stretch flex flex-col gap-[16px] items-start p-[16px] relative rounded-panel shrink-0 w-full">
-          <div className="content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full">
-            <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
+          <div className="settings-record content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full">
+            <div className="settings-record-content content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
               <div className="relative rounded-pill shrink-0 size-[40px]">
                 <div className="absolute left-0 size-[40px] top-0">
                   <img alt="" className="absolute block inset-0 max-w-none size-full" src={SUB["8075e445"]} />
@@ -62,12 +62,12 @@ import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
                   </div>
                 </div>
               </div>
-              <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
-                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-brain-v1baby-blue-100 text-[16px] whitespace-nowrap">
+              <div className="settings-record-copy content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
+                <p className="settings-record-title">
                   Two-Factor Authentication
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">
+                  <p className="settings-record-detail">
                     Not enabled
                   </p>
                 </div>
@@ -81,8 +81,8 @@ import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
               <img alt="" className="block max-w-none size-full" src={SUB["e3fea1dc"]} />
             </div>
           </div>
-          <div className="content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full">
-            <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
+          <div className="settings-record content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full">
+            <div className="settings-record-content content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
               <div className="relative rounded-pill shrink-0 size-[40px]">
                 <div className="absolute left-0 size-[40px] top-0">
                   <img alt="" className="absolute block inset-0 max-w-none size-full" src={SUB["8075e445"]} />
@@ -105,12 +105,12 @@ import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
                   </div>
                 </div>
               </div>
-              <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
-                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-brain-v1baby-blue-100 text-[16px] whitespace-nowrap">
+              <div className="settings-record-copy content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
+                <p className="settings-record-title">
                   Session Timeout
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">
+                  <p className="settings-record-detail">
                     Auto-lock after inactivity
                   </p>
                 </div>
@@ -141,8 +141,8 @@ import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
           </p>
         </div>
         <div className="bg-brain-v1highlight-dropdown-bg content-stretch flex flex-col gap-[16px] items-start overflow-clip p-[16px] relative rounded-panel shrink-0 w-full">
-          <div className="content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full">
-            <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
+          <div className="settings-record content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full">
+            <div className="settings-record-content content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
               <div className="relative rounded-pill shrink-0 size-[40px]">
                 <div className="absolute left-0 size-[40px] top-0">
                   <img alt="" className="absolute block inset-0 max-w-none size-full" src={SUB["8075e445"]} />
@@ -163,12 +163,12 @@ import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
                   </div>
                 </div>
               </div>
-              <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
-                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-brain-v1baby-blue-100 text-[16px] whitespace-nowrap">
+              <div className="settings-record-copy content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
+                <p className="settings-record-title">
                   Login Alerts
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">
+                  <p className="settings-record-detail">
                     Not enabled
                   </p>
                 </div>
@@ -182,8 +182,8 @@ import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
               <img alt="" className="block max-w-none size-full" src={SUB["e3fea1dc"]} />
             </div>
           </div>
-          <div className="content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full">
-            <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
+          <div className="settings-record content-stretch flex gap-[16px] items-center relative shrink-0 w-full">
+            <div className="settings-record-content content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
               <div className="relative rounded-pill shrink-0 size-[40px]">
                 <div className="absolute left-0 size-[40px] top-0">
                   <img alt="" className="absolute block inset-0 max-w-none size-full" src={SUB["8075e445"]} />
@@ -206,12 +206,12 @@ import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
                   </div>
                 </div>
               </div>
-              <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
-                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-brain-v1baby-blue-100 text-[16px] whitespace-nowrap">
+              <div className="settings-record-copy content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
+                <p className="settings-record-title">
                   Login History
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">
+                  <p className="settings-record-detail">
                     View recent sign-in activity
                   </p>
                 </div>
@@ -245,8 +245,8 @@ import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
               <img alt="" className="block max-w-none size-full" src={SUB["e3fea1dc"]} />
             </div>
           </div>
-          <div className="content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full">
-            <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
+          <div className="settings-record content-stretch flex gap-[16px] items-center relative shrink-0 w-full">
+            <div className="settings-record-content content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
               <div className="relative rounded-pill shrink-0 size-[40px]">
                 <div className="absolute left-0 size-[40px] top-0">
                   <img alt="" className="absolute block inset-0 max-w-none size-full" src={SUB["8075e445"]} />
@@ -270,12 +270,12 @@ import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
                   <div className="absolute border-2 border-brain-v1baby-blue-60 border-solid h-[11px] left-[3px] rounded-[3px] top-[7px] w-[18px]" />
                 </div>
               </div>
-              <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
-                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-brain-v1baby-blue-100 text-[16px] whitespace-nowrap">
+              <div className="settings-record-copy content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
+                <p className="settings-record-title">
                   Change PIN
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">
+                  <p className="settings-record-detail">
                     Update your 6-digit transaction PIN
                   </p>
                 </div>

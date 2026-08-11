@@ -2,7 +2,12 @@ import { useMemo } from "react";
 import { Area, AreaChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { WidgetCard, Divider } from "@/components/LedgerWidgets";
 import { UnavailableDataBox } from "@/components/Callout";
-import { CASH_EVENT_BASIS, type CashEvent, type CashProjectionView } from "@/lib/cashProjection";
+import {
+  CASH_EVENT_BASIS,
+  formatCashProjectionDate,
+  type CashEvent,
+  type CashProjectionView,
+} from "@/lib/cashProjection";
 
 /**
  * Overview's cash projection.
@@ -34,12 +39,8 @@ const AXIS_INK = "rgba(65, 73, 101, 1)"; /* brain-v1baby-blue-30 */
 const GRID_INK = "rgba(29, 33, 50, 1)"; /* brain-v1stroke-2 */
 const DANGER = "rgba(210, 3, 68, 1)"; /* brain-v1pink-red */
 
-/** "Aug 14" — short enough for a 420px column, unambiguous within a 3-week window. */
-function shortDate(iso: string): string {
-  const t = Date.parse(iso);
-  if (!Number.isFinite(t)) return iso;
-  return new Date(t).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
-}
+/* "Aug 14" — shared by event chips and the chart tooltip. */
+const shortDate = formatCashProjectionDate;
 
 const LABEL = "[font-family:'Gilroy',sans-serif] font-semibold text-[12px] uppercase text-brain-v1baby-blue-60";
 const BODY = "[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[18px]";
@@ -298,7 +299,7 @@ export function CashProjectionCard({
             <XAxis
               dataKey="date"
               tickFormatter={shortDate}
-              tick={{ fill: AXIS_INK, fontSize: 11, fontFamily: "Gilroy, sans-serif" }}
+              tick={{ fill: AXIS_INK, fontSize: 11, fontFamily: "JetBrains Mono, monospace" }}
               axisLine={{ stroke: GRID_INK }}
               tickLine={false}
               minTickGap={24}
@@ -324,14 +325,21 @@ export function CashProjectionCard({
                 background: "rgba(10, 12, 16, 1)",
                 border: `1px solid ${GRID_INK}`,
                 borderRadius: 8,
-                fontFamily: "Gilroy, sans-serif",
+                fontFamily: "JetBrains Mono, monospace",
                 fontSize: 12,
               }}
-              labelFormatter={(v) => shortDate(String(v))}
+              labelFormatter={(v) => shortDate(v)}
               labelStyle={{
                 color: "rgba(108, 119, 157, 1)",
-                fontFamily: "Gilroy, sans-serif",
+                fontFamily: "JetBrains Mono, monospace",
+                fontSize: 13,
                 fontWeight: 500,
+              }}
+              itemStyle={{
+                fontFamily: "JetBrains Mono, monospace",
+                fontSize: 12,
+                paddingTop: 2,
+                paddingBottom: 2,
               }}
               formatter={(value: number, name) => [
                 format(value),

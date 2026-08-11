@@ -51,6 +51,64 @@
     all: unset;
   }
 
+  /* Canonical Settings record rhythm, matching Account → Delete My Data.
+     Keep the icon/action artwork at the call site, but do not let each
+     subpage invent its own title/detail ramp or row geometry. */
+  .settings-record {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    height: 40px;
+    width: 100%;
+    flex-shrink: 0;
+  }
+
+  .settings-record-content {
+    display: flex;
+    flex: 1 1 0%;
+    min-width: 0;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .settings-record-copy {
+    display: flex;
+    min-width: 0;
+    flex-shrink: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 4px;
+  }
+
+  .settings-record-title,
+  .settings-record-detail {
+    margin: 0;
+    font-family: "Gilroy", "Plus Jakarta Sans", system-ui, sans-serif;
+    white-space: nowrap;
+  }
+
+  .settings-record-title {
+    color: var(--brain-v1baby-blue-100);
+    font-weight: 500;
+    font-size: 16px;
+    line-height: 20px;
+  }
+
+  .settings-record-detail {
+    color: var(--brain-v1baby-blue-60);
+    font-weight: 400;
+    font-size: 14px;
+    line-height: 16px;
+  }
+
+  .settings-record-divider {
+    width: 100%;
+    height: 1px;
+    flex-shrink: 0;
+    background: var(--brain-v1stroke-2);
+  }
+
   .decision-checkbox {
     appearance: none;
     background-color: var(--brain-v1baby-blue-15);
@@ -342,5 +400,49 @@
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+    /* The platform typography pass is one weight lighter than the original
+       scale. Explicit utility and inline-weight remaps below keep this
+       consistent for inherited text as well. */
+    font-weight: 300;
+  }
+}
+
+/*
+ * Platform-wide typography weight step-down.
+ *
+ * Keep this centralized rather than changing individual records and controls:
+ * semibold -> medium, medium -> regular, regular -> light, and the heavier
+ * weights follow the same one-step reduction. `!important` is intentional
+ * here so the remap also wins over inline `fontWeight` values used by a small
+ * number of Figma-derived surfaces.
+ */
+@layer utilities {
+  .font-extralight { font-weight: 100 !important; }
+  .font-light { font-weight: 200 !important; }
+  .font-normal { font-weight: 300 !important; }
+  .font-medium { font-weight: 400 !important; }
+  .font-semibold { font-weight: 500 !important; }
+  .font-bold { font-weight: 600 !important; }
+  .font-extrabold { font-weight: 700 !important; }
+  .font-black { font-weight: 800 !important; }
+
+  [style*="font-weight: 400"],
+  [style*="font-weight:400"] {
+    font-weight: 300 !important;
+  }
+
+  [style*="font-weight: 500"],
+  [style*="font-weight:500"] {
+    font-weight: 400 !important;
+  }
+
+  [style*="font-weight: 600"],
+  [style*="font-weight:600"] {
+    font-weight: 500 !important;
+  }
+
+  [style*="font-weight: 700"],
+  [style*="font-weight:700"] {
+    font-weight: 600 !important;
   }
 }

@@ -166,14 +166,13 @@ export const TierRow = ({ row }: { row: TierRowModel }) => {
      The hover needs to lighten that tint, not snap back to the default. */
   const baseBg = row.rowBg ?? "#0a0c10";
   const hoverBg = row.rowBg ? "#1a0442" : "#11141b";
-  /* Both secondary lines — the "why" subtitle and the timestamp note — share one
-     treatment on EVERY row, settled or not: 14px / medium / leading-[16px] in
-     #6c779d. Settled rows briefly carried a heavier 16px semibold variant here;
-     that made a decided row's supporting text compete with its own title (which
-     is the same 16px) and gave the two halves of the list different row heights.
-     Only the title and the right-hand pill distinguish a settled row now. */
-  const secondaryClass =
+  /* Supporting text directly below the title keeps the original 14px / 16px
+     treatment. The smaller secondary note uses the requested 12px / 14px
+     treatment. */
+  const supportClass =
     "[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px] w-full truncate";
+  const secondaryClass =
+    "[font-family:'Gilroy',sans-serif] font-medium leading-[14px] text-brain-v1baby-blue-60 text-[12px] w-full truncate";
 
   return (
     <div
@@ -217,7 +216,7 @@ export const TierRow = ({ row }: { row: TierRowModel }) => {
       )}
       <div className="flex flex-col gap-[4px] items-start min-w-px flex-1">
         <div className="flex flex-nowrap items-center gap-x-[8px] w-full min-w-0">
-          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[16px] min-w-0 truncate">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-100 text-[16px] min-w-0 truncate">
             {row.title}
           </p>
           {row.badge && (
@@ -231,7 +230,7 @@ export const TierRow = ({ row }: { row: TierRowModel }) => {
           )}
         </div>
         {row.subtitle && (
-          <p className={secondaryClass}>
+          <p className={supportClass}>
             {row.subtitle}
           </p>
         )}

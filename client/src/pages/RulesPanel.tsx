@@ -156,7 +156,7 @@ function AutomationRow({ rule }: { rule: AutoRule }) {
         className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px] text-left cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple rounded-[6px]"
         data-testid={`button-open-rule-${rule.id}`}
       >
-        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[16px] whitespace-nowrap w-full">
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-100 text-[16px] whitespace-nowrap w-full">
           {titleCase(rule.name)}
         </p>
         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px]">
@@ -192,7 +192,7 @@ function GuardrailRow({ rule }: { rule: AutoRule }) {
         className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px] text-left cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple rounded-[6px]"
         data-testid={`button-open-rule-${rule.id}`}
       >
-        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[16px] whitespace-nowrap w-full">
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-100 text-[16px] whitespace-nowrap w-full">
           {titleCase(rule.name)}
         </p>
         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px]">
@@ -230,7 +230,7 @@ function AlwaysOnRow({ rule }: { rule: AutoRule }) {
         className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px] text-left cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple rounded-[6px]"
         data-testid={`button-open-rule-${rule.id}`}
       >
-        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[16px] whitespace-nowrap w-full">
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-100 text-[16px] whitespace-nowrap w-full">
           {titleCase(rule.name)}
         </p>
         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px]">

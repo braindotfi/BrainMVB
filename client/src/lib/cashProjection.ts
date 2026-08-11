@@ -44,6 +44,27 @@ export const CASH_EVENT_BASIS =
   "Confirmed = scheduled obligations (payroll, tax, bills). Projected = outstanding customer invoices, not yet received.";
 
 /**
+ * The compact date format used by both scheduled-event chips and the chart
+ * tooltip. Keep the timezone explicit because projection dates are ISO calendar
+ * days, not browser-local instants.
+ */
+export function formatCashProjectionDate(value: string | number | Date): string {
+  const timestamp =
+    value instanceof Date
+      ? value.getTime()
+      : typeof value === "number"
+        ? value
+        : Date.parse(value);
+  if (!Number.isFinite(timestamp)) return String(value);
+
+  return new Date(timestamp).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+/**
  * How a `CashEvent.id` names the record it came from.
  *
  * The id is not decoration: the chip on Overview is tappable BECAUSE the event

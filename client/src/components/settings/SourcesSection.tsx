@@ -147,10 +147,10 @@ function SourceRow({
       <div className="flex items-center gap-[12px]">
         {/* 4px between title and subtext — the record spacing used everywhere else. */}
         <div className="flex-1 min-w-0 flex flex-col gap-[4px]">
-          <div className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[20px] truncate">
+          <div className="settings-record-title truncate">
             {title}
           </div>
-          <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[16px] truncate">
+          <p className="settings-record-detail truncate">
             {subtitle}
           </p>
         </div>

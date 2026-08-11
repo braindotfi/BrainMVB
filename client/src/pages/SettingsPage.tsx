@@ -11,6 +11,8 @@ import { useUserContact, setUserEmail, setUserPhone } from "@/lib/userContact";
 import { useCurrency } from "@/lib/useCurrency";
 import { ICONS } from "@/assets/figma-icons";
 import acmeAvatar from "@assets/images_1777396125844.png";
+import approvalLimitIcon from "@assets/Limit_1786452580813.png";
+import replayIcon from "@assets/Replay_1786452583279.png";
 import { NAV_ACTIVE } from "@/assets/nav-active-icons";
 import legalActiveIcon from "@assets/LegalActive_1782953679878.png";
 import legalInactiveIcon from "@assets/LegalInactive_1782953679879.png";
@@ -252,7 +254,7 @@ const SettingRow = ({
     className={`flex items-center gap-3 px-4 py-3 ${onClick ? "cursor-pointer hover:bg-brain-v1row-hover transition-colors" : ""}`}
   >
     {useCircleIcon ? icon : <RowIcon danger={danger}>{icon}</RowIcon>}
-    <div className="flex-1 min-w-0">
+    <div className="flex flex-col gap-[4px] flex-1 min-w-0">
       {/* One type ramp for every row, regardless of which icon treatment it
           uses. `useCircleIcon` used to fork the typography too, which left
           Auto-Approve Limit and Welcome Walkthrough on an older 15px/12px pair
@@ -260,24 +262,24 @@ const SettingRow = ({
           Overview, Inbox and Ledger — were 16px/14px with a 4px gap. The icon
           treatment is a visual choice; the text ramp is not. */}
       <p
-        className="leading-5"
+        className={`settings-record-title ${danger ? "text-brain-v1pink-red" : ""}`}
         style={{
-          color: danger ? "#d20344" : "#a8b9f4",
+          color: danger ? "#d20344" : undefined,
           fontFamily: "'Gilroy', 'Plus Jakarta Sans', system-ui, sans-serif",
-          fontWeight: 500,
           fontSize: "16px",
+          lineHeight: "20px",
         }}
       >
         {label}
       </p>
       {sublabel && (
         <p
-          className="mt-1 leading-[16px]"
+          className="settings-record-detail whitespace-normal break-words"
           style={{
             color: "#6c779d",
             fontFamily: "'Gilroy', 'Plus Jakarta Sans', system-ui, sans-serif",
-            fontWeight: 500,
             fontSize: "14px",
+            lineHeight: "16px",
           }}
         >
           {sublabel}
@@ -665,14 +667,7 @@ function ProfileSection() {
         <SectionLabel>Approvals</SectionLabel>
         <WidgetPanel noBorder>
           <SettingRow
-            icon={
-              <RowIcon>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path d="M12 3.5l7 3v5c0 4.2-2.9 7.6-7 9-4.1-1.4-7-4.8-7-9v-5l7-3z" stroke="#a8b9f4" strokeWidth="1.5" strokeLinejoin="round" />
-                  <path d="M9 12l2.2 2.2L15.5 10" stroke="#a8b9f4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </RowIcon>
-            }
+            icon={<img src={approvalLimitIcon} alt="" className="size-[40px] rounded-pill shrink-0" />}
             label="Auto-Approve Limit"
             sublabel={
               policy.isLoading
@@ -688,6 +683,7 @@ function ProfileSection() {
                         : "Nothing runs automatically. Every payment waits for an approver."
             }
             testId="setting-row-auto-approve-limit"
+            useCircleIcon
             right={
               /* The error state keeps its own fill and stroke so "Unknown" cannot be
                  mistaken for a real figure. Alpha values are spelled raw because
@@ -702,12 +698,14 @@ function ProfileSection() {
                 data-testid="text-auto-approve-limit"
               >
                 <p
-                  className={`[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] whitespace-nowrap ${
+                  className={`[font-family:'Gilroy',sans-serif] whitespace-nowrap ${
                     limitUnreadable
-                      ? "text-brain-v1light-orange"
+                      ? "font-medium text-[16px] leading-[20px] text-brain-v1light-orange"
                       : policy.isLoading
-                        ? "text-brain-v1baby-blue-60"
-                        : "text-brain-v1white"
+                        ? "font-medium text-[16px] leading-[20px] text-brain-v1baby-blue-60"
+                        : autoLimit?.kind === "conditional"
+                          ? "font-semibold text-[14px] leading-[20px] text-brain-v1baby-blue-60"
+                        : "font-medium text-[16px] leading-[20px] text-brain-v1white"
                   }`}
                 >
                   {policy.isLoading
@@ -742,21 +740,14 @@ function ProfileSection() {
         <SectionLabel>Getting Started</SectionLabel>
         <WidgetPanel noBorder>
           <SettingRow
-            icon={
-              <RowIcon>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path d="M4 12a8 8 0 1 1 2.6 5.9" stroke="#a8b9f4" strokeWidth="1.5" strokeLinecap="round" />
-                  <path d="M4 8.5V13h4.5" stroke="#a8b9f4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </RowIcon>
-            }
+            icon={<img src={replayIcon} alt="" className="size-[40px] rounded-pill shrink-0" />}
             label="Welcome Walkthrough"
             sublabel="How your rules decide what runs automatically, and what always waits for you."
             testId="setting-row-replay-onboarding"
+            useCircleIcon
             right={
               <Button
                 variant="secondary"
-                className="text-brain-v1baby-blue-100"
                 data-testid="button-replay-onboarding"
                 onClick={() => {
                   clearOnboarding(user?.id);
@@ -804,15 +795,19 @@ function BillingSection() {
       <div className="flex flex-col gap-[4px]">
         <SectionLabel>Current Plan</SectionLabel>
         <WidgetPanel noBorder>
-          <div className="p-4 flex items-center gap-4">
+          <div className="px-4 py-3 flex items-center gap-4 h-[64px]">
             <div className="flex-1 min-w-0 flex flex-col gap-[4px] justify-center">
-              <div className="flex items-center gap-2">
-                <p style={{ color: "#6c779d", fontFamily: "'Gilroy', sans-serif", fontWeight: 500, fontSize: "16px", lineHeight: "20px" }}>
-                  {plan ? plan.tagline : "No plan selected yet."}
+              <div className="flex items-center gap-2 min-w-0">
+                <p
+                  data-testid="text-plan-name"
+                  className="settings-record-title truncate"
+                  style={{ color: "#a8b9f4", fontFamily: "'Gilroy', sans-serif", fontSize: "16px", lineHeight: "20px" }}
+                >
+                  {plan ? plan.label : "No plan selected yet."}
                 </p>
                 {plan && cancelled && (
                   <span
-                    className="px-2 py-[3px] rounded-pill"
+                    className="px-2 py-[3px] rounded-pill shrink-0"
                     style={{
                       background: "#4a2300",
                       color: "#ff9500",
@@ -827,24 +822,15 @@ function BillingSection() {
                   </span>
                 )}
               </div>
-              {plan && (
-                <p
-                  data-testid="text-plan-name"
-                  style={{ color: "#a8b9f4", fontFamily: "'Gilroy', sans-serif", fontWeight: 500, fontSize: "24px", lineHeight: "32px" }}
-                >
-                  {plan.label}
-                </p>
-              )}
-              {plan && (
-                <p
-                  data-testid="text-plan-price"
-                  style={{ color: "#6c779d", fontFamily: "'JetBrains Mono', monospace", fontWeight: 500, fontSize: "14px", lineHeight: "20px" }}
-                >
-                  {plan.price} {plan.cadence}
-                </p>
-              )}
+              <p
+                data-testid="text-plan-price"
+                className="settings-record-detail truncate"
+                style={{ color: "#6c779d", fontFamily: "'Gilroy', sans-serif", fontSize: "14px", lineHeight: "16px" }}
+              >
+                {plan ? `${plan.tagline} · ${plan.price} ${plan.cadence}` : "Choose a plan to get started."}
+              </p>
             </div>
-            <div className="flex flex-col items-end gap-2 flex-shrink-0">
+            <div className="flex items-center gap-2 flex-shrink-0">
               <Button
                 variant="primary"
                 data-testid="button-upgrade-plan"
@@ -872,8 +858,8 @@ function BillingSection() {
       <div className="flex flex-col gap-[4px]">
         <SectionLabel>Payment Method</SectionLabel>
         <WidgetPanel noBorder>
-          <div className="p-4 flex items-center gap-4">
-            <div className="flex-1 min-w-0 flex items-center gap-[12px]">
+          <div className="px-4 py-3 flex items-center gap-4 h-[64px]">
+            <div className="settings-record-content flex-1 min-w-0 flex items-center gap-[16px]">
               <div
                 className="size-[40px] rounded-full flex items-center justify-center flex-shrink-0"
                 style={{ background: "#161b28" }}
@@ -884,27 +870,21 @@ function BillingSection() {
                   <rect x="6" y="14" width="5" height="1.6" rx="0.8" fill="#a8b9f4"/>
                 </svg>
               </div>
-              <div className="min-w-0">
+              <div className="settings-record-copy min-w-0">
                 {cardLast4 ? (
                   <>
                     <p
                       data-testid="text-card-brand"
-                      style={{ color: "#a8b9f4", fontFamily: "'Gilroy', sans-serif", fontWeight: 500, fontSize: "16px", lineHeight: "20px" }}
+                      className="settings-record-title"
                     >
                       Card •••• {cardLast4}
                     </p>
-                    <p
-                      data-testid="text-card-meta"
-                      style={{ color: "#6c779d", fontFamily: "'Gilroy', sans-serif", fontWeight: 500, fontSize: "14px", lineHeight: "16px", marginTop: 2 }}
-                    >
+                    <p data-testid="text-card-meta" className="settings-record-detail">
                       Receipts to {email}
                     </p>
                   </>
                 ) : (
-                  <p
-                    data-testid="text-card-brand"
-                    style={{ color: "#6c779d", fontFamily: "'Gilroy', sans-serif", fontWeight: 500, fontSize: "16px", lineHeight: "20px" }}
-                  >
+                    <p data-testid="text-card-brand" className="settings-record-title" style={{ color: "#6c779d" }}>
                     No Payment Method on File
                   </p>
                 )}

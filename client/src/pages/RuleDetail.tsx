@@ -555,7 +555,7 @@ function ReportCard({
           {/* Record ramp, matching every other title-over-subtext row: medium 16/20
               title, medium 14/16 subtext. This row had both lines at semibold 16/20,
               which made the timestamp compete with the reason. */}
-          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[16px]">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-100 text-[16px]">
             {report.reason}
           </p>
           <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px]">
