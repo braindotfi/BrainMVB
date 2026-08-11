@@ -107,3 +107,4 @@
 - [Injected-witness QA](qa-injected-witness.md) — prove a section a thin tenant can't trigger by appending a synthetic record to the real read; still report the real check as SKIP.
 - [Vite lazy-dep reoptimize](vite-lazy-dep-reoptimize.md) — a dep reached only from an unvisited surface reloads mid-session with a null React; looks exactly like duplicate React.
 - [Outcome-not-source bucketing](outcome-not-source-bucketing.md) — group a queue by the decisions a record accepts, never a per-feed `kind`; published list outranks source, even when empty.
+- [Duplicate-looking rows](duplicate-rows-can-be-two-records.md) — agents re-propose the same invoice each sweep; group on a record id, never dedupe; a fresh demo tenant is ~10 min short of the state.
