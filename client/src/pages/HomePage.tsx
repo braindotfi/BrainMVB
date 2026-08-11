@@ -1006,10 +1006,10 @@ export function HomePage() {
                   className="rounded-panel bg-brain-v1highlight-dropdown-bg w-full mb-[16px] text-left outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple overflow-hidden"
                 >
                   <div
-                    className={`flex items-center gap-[12px] px-[16px] py-[14px] w-full transition-colors ${
+                    className={`flex items-center gap-[12px] px-[16px] py-[14px] w-full ${
                       isUrgent
-                        ? "bg-brain-v1dark-pink-red hover:bg-brain-v1dark-pink-red-hover"
-                        : "bg-brain-v1highlight-dropdown-bg hover:bg-[rgba(168,185,244,0.06)]"
+                        ? "bg-brain-v1dark-pink-red"
+                        : "bg-brain-v1highlight-dropdown-bg"
                     }`}
                   >
                     {/* 12×12 circle indicator — matches Figma icon node exactly */}
