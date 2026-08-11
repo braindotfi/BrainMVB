@@ -338,6 +338,8 @@ export function CashProjectionCard({
               itemStyle={{
                 fontFamily: "JetBrains Mono, monospace",
                 fontSize: 12,
+                paddingTop: 2,
+                paddingBottom: 2,
               }}
               formatter={(value: number, name) => [
                 format(value),
