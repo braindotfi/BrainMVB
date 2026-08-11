@@ -44,7 +44,7 @@ import {
   inputRowFixPath,
   buildInputRowSubtitle,
 } from "@/lib/agentRunInput";
-import { AGENT_DISPLAY_NAME } from "@/lib/agentProposals";
+import { AGENT_DISPLAY_NAME, agentBadgeLabel } from "@/lib/agentProposals";
 
 /* ── Amber palette (matches TAG_AGENT / the "Needs your input" section accent) */
 const AMBER_PILL = {
@@ -61,10 +61,11 @@ function agentDisplayName(item: MissingEvidenceItem): string {
   const actionKey = agentKeyFromAction(item.attemptedAction);
   const keys = [item.agentKey, actionKey].filter(Boolean) as string[];
   const upstreamName = item.agentName?.trim().replace(/\s+agent\s*$/i, "");
-  if (upstreamName && !/^(brain|agent)$/i.test(upstreamName)) return upstreamName;
-  return keys
-    .map((key) => (AGENT_DISPLAY_NAME as Record<string, string>)[key])
-    .find(Boolean) ?? "Brain";
+  if (upstreamName && !/^(brain|agent)$/i.test(upstreamName)) {
+    return `${upstreamName} Agent`;
+  }
+  const resolvedKey = keys.find((key) => (AGENT_DISPLAY_NAME as Record<string, string>)[key]);
+  return resolvedKey ? agentBadgeLabel(resolvedKey) : "Brain Agent";
 }
 
 /* ── Routing ─────────────────────────────────────────────────────────────────
