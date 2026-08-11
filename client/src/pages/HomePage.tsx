@@ -19,6 +19,7 @@ import {
   useBrainProposals,
   isNeedsReview,
 } from "@/lib/brainProposals";
+import { isDecidableProposal } from "@/lib/proposalCards";
 import {
   deriveProposalTier,
   thresholdsFromRules,
@@ -482,7 +483,14 @@ export function HomePage() {
     isError: liveProposalsError,
     isLoading: liveProposalsLoading,
   } = useBrainProposals();
-  const needsReviewProposals = useMemo(() => liveProposals.filter(isNeedsReview), [liveProposals]);
+  /* Keep the Overview count aligned with Inbox's Needs your approval section:
+     pending status alone is not enough. Acknowledge-only and otherwise
+     non-writable proposals are awareness records and must not inflate the
+     urgent/waiting categories. */
+  const needsReviewProposals = useMemo(
+    () => liveProposals.filter((p) => isNeedsReview(p) && isDecidableProposal(p)),
+    [liveProposals],
+  );
   /* Tier order is retained even though nothing is rendered from this list any
      more: `deriveProposalTier` returning null is how a proposal with no writable
      decision is excluded, and the count below re-derives per row. */
