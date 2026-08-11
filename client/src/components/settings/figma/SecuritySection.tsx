@@ -38,7 +38,7 @@ import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
           </p>
         </div>
         <div className="bg-brain-v1highlight-dropdown-bg content-stretch flex flex-col gap-[16px] items-start p-[16px] relative rounded-panel shrink-0 w-full">
-          <div className="settings-record content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full">
+          <div className="settings-record content-stretch flex gap-[16px] h-[52px] items-center relative shrink-0 w-full">
             <div className="settings-record-content content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
               <div className="relative rounded-pill shrink-0 size-[40px]">
                 <div className="absolute left-0 size-[40px] top-0">
@@ -81,7 +81,7 @@ import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
               <img alt="" className="block max-w-none size-full" src={SUB["e3fea1dc"]} />
             </div>
           </div>
-          <div className="settings-record content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full">
+          <div className="settings-record content-stretch flex gap-[16px] h-[52px] items-center relative shrink-0 w-full">
             <div className="settings-record-content content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
               <div className="relative rounded-pill shrink-0 size-[40px]">
                 <div className="absolute left-0 size-[40px] top-0">
@@ -141,7 +141,7 @@ import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
           </p>
         </div>
         <div className="bg-brain-v1highlight-dropdown-bg content-stretch flex flex-col gap-[16px] items-start overflow-clip p-[16px] relative rounded-panel shrink-0 w-full">
-          <div className="settings-record content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full">
+          <div className="settings-record content-stretch flex gap-[16px] h-[52px] items-center relative shrink-0 w-full">
             <div className="settings-record-content content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
               <div className="relative rounded-pill shrink-0 size-[40px]">
                 <div className="absolute left-0 size-[40px] top-0">
