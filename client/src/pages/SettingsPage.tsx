@@ -254,7 +254,7 @@ const SettingRow = ({
     className={`flex items-center gap-3 px-4 py-3 ${onClick ? "cursor-pointer hover:bg-brain-v1row-hover transition-colors" : ""}`}
   >
     {useCircleIcon ? icon : <RowIcon danger={danger}>{icon}</RowIcon>}
-    <div className="flex-1 min-w-0">
+    <div className="flex flex-col gap-[4px] flex-1 min-w-0">
       {/* One type ramp for every row, regardless of which icon treatment it
           uses. `useCircleIcon` used to fork the typography too, which left
           Auto-Approve Limit and Welcome Walkthrough on an older 15px/12px pair
@@ -797,7 +797,7 @@ function BillingSection() {
       <div className="flex flex-col gap-[4px]">
         <SectionLabel>Current Plan</SectionLabel>
         <WidgetPanel noBorder>
-          <div className="p-4 flex items-center gap-4">
+          <div className="p-4 flex items-center gap-4 min-h-[122px]">
             <div className="flex-1 min-w-0 flex flex-col gap-[4px] justify-center">
               <div className="flex items-center gap-2">
                 <p style={{ color: "#6c779d", fontFamily: "'Gilroy', sans-serif", fontWeight: 500, fontSize: "16px", lineHeight: "20px" }}>
@@ -865,7 +865,7 @@ function BillingSection() {
       <div className="flex flex-col gap-[4px]">
         <SectionLabel>Payment Method</SectionLabel>
         <WidgetPanel noBorder>
-          <div className="settings-record px-[16px]">
+          <div className="p-4 flex items-center gap-4 min-h-[122px]">
             <div className="settings-record-content flex-1 min-w-0 flex items-center gap-[16px]">
               <div
                 className="size-[40px] rounded-full flex items-center justify-center flex-shrink-0"
