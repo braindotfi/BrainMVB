@@ -963,7 +963,7 @@ export function HomePage() {
                 the same window. Moved up against the metrics it actually
                 comments on: trailing spend, not the projection horizon. */}
             <p
-              className={`[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[16px] w-full mb-[8px] ${insightLine.colorClass}`}
+              className={`[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[16px] w-full mb-[16px] ${insightLine.colorClass}`}
               data-testid="text-home-cash-insight"
             >
               {insightLine.text}
@@ -1003,7 +1003,7 @@ export function HomePage() {
                   onClick={() => navigate("/inbox")}
                   data-testid="row-home-pending-summary"
                   aria-label={`${pendingSummary.text}. Open the Inbox.`}
-                  className="rounded-panel bg-brain-v1highlight-dropdown-bg w-full mb-[8px] text-left outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple overflow-hidden"
+                  className="rounded-panel bg-brain-v1highlight-dropdown-bg w-full mb-[16px] text-left outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple overflow-hidden"
                 >
                   <div
                     className={`flex items-center gap-[12px] px-[16px] py-[14px] w-full transition-colors ${

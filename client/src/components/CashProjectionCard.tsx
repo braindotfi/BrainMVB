@@ -388,7 +388,7 @@ export function CashProjectionCard({
           date sequence across rows and cost the alignment with the plot, which
           is the only reason this is a strip and not a list. The next chip is
           left partly visible at this column width, which is the scroll cue. */}
-      <p className={`${LABEL} w-full`}>
+       <p className={`${LABEL} w-full mt-[12px]`}>
         {view.events.length === 1 ? "1 scheduled event" : `${view.events.length} scheduled events`}
       </p>
       <ul
