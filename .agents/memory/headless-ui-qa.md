@@ -146,6 +146,49 @@ Two traps in that scan:
   that does not contain the row yet and reports a cross-surface disagreement that is
   really a half-finished read.
 
+## A route walk that reloads cannot test in-session state
+
+Navigating with `page.goto()` is a full document load. Anything held in memory —
+an unpersisted theme, a wizard step, an optimistic cache — is gone on arrival, so
+a walk that visits each route that way is asserting against a freshly booted app
+every time.
+
+The failure is silent and total: a check like "this route does *not* get the
+feature" passes on arrival at a default state, and would pass identically against
+a build with the gating removed entirely.
+
+**How to apply:** if the thing under test lives in memory, move between routes by
+clicking the app's own navigation and assert the state survived the first hop.
+Keep exactly one deliberate reload, to test that it *is* unpersisted.
+
+## Screen names are not routes, and a swallowed wait hides it
+
+The sidebar item labelled "Inbox" navigates to `/decisions`. A walk that clicked
+it and then did `waitForURL("**/inbox").catch(() => {})` timed out, continued,
+and spent the whole run measuring a route that was never the subject — reporting
+passes under the label `/inbox`.
+
+**Why:** the `.catch()` was there to stop a slow navigation from throwing, and it
+converted "I never got there" into "everything is fine".
+
+**How to apply:** read `new URL(page.url()).pathname` after navigating and assert
+it equals the expected path, as its own named check. Never let a navigation
+failure degrade into a silent continue — every colour or content assertion after
+it is a claim about that specific route.
+
+## An effective-background walk must composite alpha
+
+Resolving what text actually sits on, by climbing ancestors until one has
+`alpha > 0` and then treating that colour as opaque, is wrong wherever a design
+system uses translucent washes. Ink at 4–8% over white gets scored as near-black,
+which *inverts* the verdict: the highest-contrast labels on the page are reported
+as the worst failures. One run invented 21 of 23 AA findings this way.
+
+**How to apply:** collect every layer up to the first fully opaque one, composite
+them src-over onto the page ground, and fold cumulative ancestor `opacity` into
+the ink colour too. Then sanity-check one known-good pairing by hand: a plausible
+list of failures is not evidence the measurement is sound.
+
 ## Budget the fresh tenants
 
 `POST /api/auth/demo-fresh` is rate limited per network (a handful per 15 minutes),

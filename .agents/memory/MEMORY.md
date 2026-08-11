@@ -31,7 +31,7 @@
 - [GitHub push credentials](github-connector-write-limit.md) — PATs refuse .github/workflows; connector is no fallback (contents=HTML 403, git/trees=404 after a 201 blob); hand over the editor link.
 - [Verifying the demo seed](demo-seed-verification.md) — seed docs are generated at seed time, dates roll with "now" (never re-pin); Brightline fixture authoritative vs brain-core's __fixtures__.
 - [Refresh after upload](brain-refresh-after-upload.md) — query defaults never refetch, so ingest paths must invalidate; extract done ≠ projected, and modal-scoped settle windows die on close.
-- [Headless UI walkthroughs](headless-ui-qa.md) — verify what *renders* on auth-gated screens: npx-cache playwright + nix chromium, reuse a curl cookie; default tabs hide data.
+- [Headless UI walkthroughs](headless-ui-qa.md) — verify what *renders*: npx-cache playwright + nix chromium; reloading between routes can't test in-session state; composite alpha before scoring AA.
 - [brain-core sources registry](brain-sources-registry.md) — /v1/sources is a 4th source surface (empty upstream today); demo rows hide disconnect; type-keyed rows must not inherit per-record restrictions.
 - [Client route integrity](client-route-integrity.md) — wouter sends unregistered navigate() targets to NotFound silently; deep-link params need a consuming effect, not a mount-only initializer.
 - [Proposal evidence refs](brain-proposal-evidence-refs.md) — refs come bare AND as `wiki:` URIs; wiki refs are context not subject; `pd_`/`evt_` never resolve; probe live, don't trust mocks.
