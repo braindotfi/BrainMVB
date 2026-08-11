@@ -70,8 +70,13 @@ export function LiveInsightModal({
   if (!insight) return null;
   const confidencePct = typeof insight.confidence === "number" ? Math.round(insight.confidence * 100) : null;
   const hasPager = Boolean(onPrev && onNext);
-  /* Title names the agent WITHOUT the word "Agent", matching the decision cards. */
-  const agentName = capitalCase(insight.badge);
+  /* Title names the owning agent with the same suffix used by Inbox agent pills.
+     "Detected" is a neutral fallback, not an agent name, so leave it unchanged. */
+  const insightBaseName = capitalCase(insight.badge).replace(/\s*\bagent\b\s*$/i, "").trim();
+  const agentName =
+    insightBaseName && !/^detected$/i.test(insightBaseName)
+      ? `${insightBaseName} Agent`
+      : insightBaseName || "Agent";
   /* The chart means something different per insight kind, and the cash frame
      titles it for what it plots rather than the generic shape of it. */
   const chartTitle = insight.kind === "cashflow" ? "Cash Flow Details" : "Trend";

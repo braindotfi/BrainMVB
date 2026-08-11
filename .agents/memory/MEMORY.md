@@ -1,3 +1,4 @@
+- [WidgetPanel primitive](widget-panel-primitive.md) — sole shared panel chrome; WidgetCard=header+panel; noBorder only when Figma shows no stroke; DevelopersSection now has the border it was silently missing.
 - [Brain URL split (demo vs production)](brain-url-split.md) — demo → staging, real users → prod; per-request AsyncLocalStorage; every new proxy handler must wrap with withBrainBaseUrl(baseUrl, …).
 - [Add Source ingestion wizard](add-source-wizard.md) — source-agnostic connector modal; docs persist metadata only; route-ordering + screen-stack constraints.
 - [Source-to-account resolution](source-account-resolution.md) — source rows open Account Details only after a real upstream ledger-account link is validated.
@@ -99,3 +100,12 @@
 - [Trust claim verification](trust-claim-verification.md) — money-promise copy must be read back from the live tenant policy; the shipped policy auto-executes payments the "you decide" copy claims it never does.
 - [JSX source-scan probes](jsx-source-scan-probes.md) — a fixed char window swallows children and `[^>]*>` stops at an arrow function; confirm any load-bearing scan with a second probe.
 - [Primitive migration delegation](primitive-migration-delegation.md) — tell agents to leave unmappable values and report them; the leftovers are the missing spec (tonal vs solid families).
+- [Modal shell standard](modal-shell-standard.md) — 480/400/375px variants; blur-sm≠blur-[2px]; AgentProposalModal was a hidden 520px popup; Radix mandatory for all modals.
+- [Decided-proposal suppression](inbox-decided-suppression.md) — the "already decided" set is a hide switch: decisions only, ordered replay (undo reopens), fail open; a declared-but-unassigned field made it dead for months.
+- [Empty-state standard](empty-state-standard.md) — px-[16px] py-[12px] in-panel geometry; "No X yet" vs "Nothing X yet" voice split; "Couldn't load" leads errors.
+- [Cross-currency totals](cross-currency-totals.md) — no FX rate exists; a total may exclude + disclose, a ratio must refuse, because a shrunken denominator changes its meaning.
+- [Silently-dropped inputs](honest-derived-figures.md) — an extremum seeded null can't return day zero; completeness is the cursor, never the row count.
+- [Injected-witness QA](qa-injected-witness.md) — prove a section a thin tenant can't trigger by appending a synthetic record to the real read; still report the real check as SKIP.
+- [Vite lazy-dep reoptimize](vite-lazy-dep-reoptimize.md) — a dep reached only from an unvisited surface reloads mid-session with a null React; looks exactly like duplicate React.
+- [Outcome-not-source bucketing](outcome-not-source-bucketing.md) — group a queue by the decisions a record accepts, never a per-feed `kind`; published list outranks source, even when empty.
+- [Duplicate-looking rows](duplicate-rows-can-be-two-records.md) — agents re-propose the same invoice each sweep; group on a record id, never dedupe; a fresh demo tenant is ~10 min short of the state.

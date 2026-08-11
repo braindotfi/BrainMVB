@@ -32,6 +32,7 @@ import stepOneIcon from "@assets/1_1785602525964.png";
 import stepTwoIcon from "@assets/2_1785602525965.png";
 import stepThreeIcon from "@assets/3_1785602525965.png";
 import { capitalCase } from "@/lib/displayLabels";
+import { WidgetPanel } from "@/components/LedgerWidgets";
 
 /* ─── Types (wire shapes from server/routes.ts developers block) ─── */
 type DevEnv = "sandbox" | "live";
@@ -149,11 +150,6 @@ const API_ENDPOINTS: Array<{ path: string; scope: string | null; description: st
 const GET_STARTED_STEP_ICONS = [stepOneIcon, stepTwoIcon, stepThreeIcon] as const;
 
 /* ─── Shared primitives (Settings/Home card + label patterns) ─── */
-const Card = ({ children, testId }: { children: ReactNode; testId?: string }) => (
-  <div data-testid={testId} className="rounded-panel overflow-hidden" style={{ background: "#0a0c10" }}>
-    {children}
-  </div>
-);
 
 /* 16px/24 semibold #6c779d. Spacing to the card below comes from the
    parent flex container (flex flex-col gap-[4px]), NOT margin here. */
@@ -217,7 +213,7 @@ const EnvBadge = ({ env }: { env: string }) => (
 /* Honest waiting state while brain-core's key API flag is off upstream.
    Shared by Overview / API Keys / Usage — never a local fallback. */
 const KeysUnavailableCard = ({ testId }: { testId?: string }) => (
-  <Card testId={testId ?? "card-keys-unavailable"}>
+  <WidgetPanel testId={testId ?? "card-keys-unavailable"}>
     <div className="p-[16px] flex flex-col gap-[4px]">
       <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[20px]">
         The keys API isn't enabled yet
@@ -227,11 +223,11 @@ const KeysUnavailableCard = ({ testId }: { testId?: string }) => (
         available here automatically as soon as it is. No action needed on your side.
       </p>
     </div>
-  </Card>
+  </WidgetPanel>
 );
 
 const EmptyRow = ({ children, testId }: { children: ReactNode; testId?: string }) => (
-  <div className="p-4" data-testid={testId}>
+  <div className="px-[16px] py-[12px] rounded-[8px]" data-testid={testId}>
     <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px]">{children}</p>
   </div>
 );
@@ -964,7 +960,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
 
       <div className="flex flex-col gap-[4px]">
         <SectionLabel>Usage and Limits</SectionLabel>
-        <Card testId="card-overview-usage">
+        <WidgetPanel testId="card-overview-usage">
           <div className="flex gap-[16px] items-stretch p-[16px]">
             <button
               type="button"
@@ -1000,22 +996,22 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
               </p>
             </button>
           </div>
-        </Card>
+        </WidgetPanel>
       </div>
 
       <div className="flex flex-col gap-[4px]">
         <SectionLabel>Recent Activity</SectionLabel>
-        <Card testId="card-recent-activity">
+        <WidgetPanel testId="card-recent-activity">
           {activityQ.isLoading ? (
             <EmptyRow>Loading activity…</EmptyRow>
           ) : activityQ.isError ? (
             /* "We could not read the log" is not "nothing happened". The second
                claim is the one a developer acts on when a call seems to vanish. */
             <EmptyRow testId="row-activity-unavailable">
-              Couldn't load activity. brain-core may be unavailable. This is not the same as no activity.
+              Couldn't load activity. Brain core may be unavailable. This isn't the same as no activity.
             </EmptyRow>
           ) : !activityQ.data?.events?.length ? (
-            <EmptyRow>No recorded activity yet. Calls appear here as brain-core audit events.</EmptyRow>
+            <EmptyRow>Nothing recorded yet. API calls show up here as events.</EmptyRow>
           ) : (
             <div className="flex flex-col gap-[16px] p-[16px]">
               {activityQ.data.events.slice(0, 8).map((ev, i) => (
@@ -1037,7 +1033,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
               ))}
             </div>
           )}
-        </Card>
+        </WidgetPanel>
       </div>
       </div>
     </div>
@@ -1230,7 +1226,7 @@ function KeysSection({ env }: { env: DevEnv }) {
         </div>
 
         {env === "live" && !liveAvailable && (
-        <Card testId="card-live-gated">
+        <WidgetPanel testId="card-live-gated">
           <div className="p-[16px] flex flex-col gap-[16px]">
             <div className="flex flex-col gap-[4px]">
               <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[20px]">Live key issuance is gated</p>
@@ -1252,7 +1248,7 @@ function KeysSection({ env }: { env: DevEnv }) {
               Request Access
             </Button>
           </div>
-        </Card>
+        </WidgetPanel>
       )}
 
       {showCreate && (env === "sandbox" || liveAvailable) && (
@@ -1331,11 +1327,11 @@ function KeysSection({ env }: { env: DevEnv }) {
         {keysUnavailable ? (
           <KeysUnavailableCard testId="card-keys-unavailable-keys" />
         ) : (
-          <Card testId="card-keys-list">
+          <WidgetPanel testId="card-keys-list">
           {keysQ.isLoading ? (
             <EmptyRow>Loading keys…</EmptyRow>
           ) : keysQ.isError ? (
-            <EmptyRow>Couldn't load keys. brain-core may be unavailable.</EmptyRow>
+            <EmptyRow>Couldn't load keys. Brain core may be unavailable.</EmptyRow>
           ) : keys.length === 0 ? (
           <div className="p-[16px] flex flex-col gap-[4px]">
             <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[20px]" data-testid="text-no-keys-title">
@@ -1389,7 +1385,7 @@ function KeysSection({ env }: { env: DevEnv }) {
             ))}
           </div>
         )}
-      </Card>
+      </WidgetPanel>
       )}
       </div>
 
@@ -1650,7 +1646,7 @@ function TenantsSection({ env, onNavigate }: { env: DevEnv; onNavigate: (s: DevS
       </div>
 
       {showCreate && data?.canCreate && (
-        <Card testId="card-create-tenant">
+        <WidgetPanel testId="card-create-tenant">
           <div className="p-4 flex flex-col gap-3">
             <div className="flex flex-col gap-1">
               <label className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px]" htmlFor="company-name">Company name</label>
@@ -1677,14 +1673,14 @@ function TenantsSection({ env, onNavigate }: { env: DevEnv; onNavigate: (s: DevS
               </PillButton>
             </div>
           </div>
-        </Card>
+        </WidgetPanel>
       )}
 
-      <Card testId="card-tenants-list">
+      <WidgetPanel testId="card-tenants-list">
         {tenantsQ.isLoading ? (
           <EmptyRow>Loading tenants…</EmptyRow>
         ) : tenantsQ.isError ? (
-          <EmptyRow>Couldn't load tenants. brain-core may be unavailable.</EmptyRow>
+          <EmptyRow>Couldn't load tenants. Brain core may be unavailable.</EmptyRow>
         ) : !data?.tenants.length ? (
           <EmptyRow>
             {data?.mode === "production"
@@ -1718,7 +1714,7 @@ function TenantsSection({ env, onNavigate }: { env: DevEnv; onNavigate: (s: DevS
             ))}
           </div>
         )}
-      </Card>
+      </WidgetPanel>
       </div>
 
     </div>
@@ -1775,7 +1771,7 @@ function UsageSection({ env }: { env: DevEnv }) {
     <div className="flex flex-col flex-1 min-h-0 gap-[16px]">
       <div className="flex flex-col gap-[4px] shrink-0">
         <SectionLabel testId="text-usage-title">Usage and Limits</SectionLabel>
-        <Card testId="card-usage-metrics">
+        <WidgetPanel testId="card-usage-metrics">
         <div className="flex gap-[16px] items-stretch p-[16px]">
           <div className="flex-1 min-w-px flex flex-col gap-[4px] justify-center" data-testid="metric-requests-month">
             <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[20px]">
@@ -1831,13 +1827,13 @@ function UsageSection({ env }: { env: DevEnv }) {
             </p>
           </div>
         </div>
-        </Card>
+        </WidgetPanel>
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-[16px]">
       <div className="flex flex-col gap-[4px]">
         <SectionLabel>Requests by Method</SectionLabel>
-        <Card testId="card-usage-by-method">
+        <WidgetPanel testId="card-usage-by-method">
           {usageQ.isLoading ? (
             <EmptyRow>Loading usage…</EmptyRow>
           ) : usageQ.isError ? (
@@ -1905,7 +1901,7 @@ function UsageSection({ env }: { env: DevEnv }) {
               })}
             </div>
           )}
-        </Card>
+        </WidgetPanel>
       </div>
 
       <div className="flex flex-col gap-[4px]">
@@ -1913,11 +1909,11 @@ function UsageSection({ env }: { env: DevEnv }) {
         {keysUnavailable ? (
           <KeysUnavailableCard testId="card-keys-unavailable-usage" />
         ) : (
-        <Card testId="card-usage-by-key">
+        <WidgetPanel testId="card-usage-by-key">
           {keysQ.isLoading || keyUsageQ.isLoading ? (
             <EmptyRow>Loading key usage…</EmptyRow>
           ) : keysQ.isError || keyUsageQ.isError ? (
-            <EmptyRow>Key usage is unavailable right now.</EmptyRow>
+            <EmptyRow>Couldn't load key usage. Brain core may be unavailable.</EmptyRow>
           ) : !envKeys.length ? (
             <EmptyRow>No {env} API keys yet. Create one under API Keys.</EmptyRow>
           ) : (
@@ -1950,7 +1946,7 @@ function UsageSection({ env }: { env: DevEnv }) {
               })}
             </div>
           )}
-        </Card>
+        </WidgetPanel>
         )}
       </div>
 

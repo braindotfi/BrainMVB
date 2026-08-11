@@ -318,7 +318,7 @@ export function AccountDetailPopup({
                 }
               >
                 {accountsFeed.unavailable
-                  ? "Your accounts couldn't be loaded, so this one can't be shown. It hasn't been removed from your ledger."
+                  ? "Couldn't load your accounts. This account can't be shown right now — it hasn't been removed from your ledger."
                   : accountsFeed.pending
                     ? "Loading account…"
                     : "This account isn't in your current ledger."}

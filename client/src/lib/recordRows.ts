@@ -121,11 +121,17 @@ export function queueIntentRow(p: QueueRecordLike, fmt: RowFormatters): RecordRo
 export function liveProposalRow(
   headerCopy: { title: string; text: string },
   pillName: string,
+  /** Set when other live proposals cite the same record — see
+   *  `proposalInvoiceIdentity`. Two agent sweeps can both propose on one
+   *  invoice, and each is a separate approval, so the rows say so rather than
+   *  one of them being hidden. */
+  note?: string,
 ): RecordRowPresentation {
   return {
     title: headerCopy.title,
     badge: agentBadge(pillName, "needs review"),
     subtitle: headerCopy.text || undefined,
+    note: note || undefined,
   };
 }
 

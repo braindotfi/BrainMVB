@@ -33,7 +33,7 @@ import { useCurrency } from "@/lib/useCurrency";
 import type { AutoRule, RuleSuggestion } from "@/lib/proposalTypes";
 import { AlertCallout, PolicyCallout, UnavailableDataBox } from "@/components/Callout";
 import { AppAlertLink, useAppAlert } from "@/components/AppAlert";
-import { CountPill } from "@/components/CountPill";
+import { Divider, WidgetHeader, WidgetPanel } from "@/components/LedgerWidgets";
 
 const ACTIVE = "#42bf23";
 
@@ -76,7 +76,6 @@ function finalizeDraft(draft: Partial<AutoRule>): AutoRule {
 }
 
 /* ── Pause/resume toggle ────────────────────────────────────────────────────── */
-const Divider = () => <div className="h-px shrink-0 w-full" style={{ background: "#1d2132" }} />;
 
 /* Rule confirmation sentence: natural-language summary with highlighted vars */
 function RuleConfirmSentence({ rule }: { rule: AutoRule }) {
@@ -125,7 +124,7 @@ function Section({
   empty?: React.ReactNode;
 }) {
   return (
-    <div className="bg-brain-v1highlight-dropdown-bg border border-solid border-brain-v1stroke-2 flex flex-col overflow-hidden relative rounded-panel w-full">
+    <WidgetPanel>
       <div className="flex flex-col items-start relative w-full">
         {count === 0 && empty ? (
           <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative rounded-[8px] shrink-0 w-full">
@@ -135,7 +134,7 @@ function Section({
           children
         )}
       </div>
-    </div>
+    </WidgetPanel>
   );
 }
 
@@ -262,7 +261,7 @@ function PolicySection({
   rules: ReturnType<typeof useBrainPolicy>["rules"];
 }) {
   return (
-    <div className="bg-brain-v1highlight-dropdown-bg border border-solid border-brain-v1stroke-2 flex flex-col items-start overflow-clip relative rounded-panel shrink-0 w-full">
+    <WidgetPanel>
       <div className="flex flex-col items-start relative shrink-0 w-full">
         {isLoading && (
           <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative rounded-[8px] shrink-0 w-full bg-brain-v1highlight-dropdown-bg">
@@ -279,7 +278,7 @@ function PolicySection({
         {!isLoading && !isError && rules.length === 0 && (
           <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative rounded-[8px] shrink-0 w-full bg-brain-v1highlight-dropdown-bg">
             <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-brain-v1baby-blue-60 text-[16px]">
-              No active policy found for your account yet.
+              No policy rules yet.
             </p>
           </div>
         )}
@@ -287,7 +286,7 @@ function PolicySection({
           <AlwaysOnRow key={r.id} rule={r} />
         ))}
       </div>
-    </div>
+    </WidgetPanel>
   );
 }
 
@@ -323,10 +322,7 @@ function SuggestionCard({
 }) {
   const conf = CONFIDENCE[suggestion.confidence];
   return (
-    <div
-      className="bg-brain-v1highlight-dropdown-bg border border-solid border-brain-v1stroke-2 flex flex-col items-start overflow-clip relative rounded-panel shrink-0 w-full"
-      data-testid={`card-suggestion-${suggestion.id}`}
-    >
+    <WidgetPanel testId={`card-suggestion-${suggestion.id}`}>
       {/* Header: title + confidence pill */}
       <div className="bg-brain-v1highlight-dropdown-bg border-brain-v1stroke-2 border-b border-solid flex items-center justify-between px-[16px] py-[12px] relative shrink-0 w-full">
         <div className="flex flex-1 gap-[8px] items-center min-w-px relative">
@@ -406,7 +402,7 @@ function SuggestionCard({
           </Button>
         </div>
       </div>
-    </div>
+    </WidgetPanel>
   );
 }
 
@@ -851,12 +847,11 @@ export function RulesPanel() {
                         {trustedVendors.length === 0 && (
                           vendorsFailed ? (
                             <UnavailableDataBox testId="text-vendors-unavailable">
-                              Vendors couldn't be loaded, so this list is empty for the wrong reason.
+                              Couldn't load vendors. This list may be incomplete.
                             </UnavailableDataBox>
                           ) : (
                             <p
-                              className="px-[8px] pb-[6px] [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px]"
-                              style={{ color: "#a8b9f4" }}
+                              className="px-[8px] pb-[6px] [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-brain-v1baby-blue-60"
                               data-testid="text-vendors-empty"
                             >
                               No trusted vendors yet.
@@ -992,16 +987,13 @@ export function RulesPanel() {
         </div>{/* end filter row + builder block */}
 
       <div className="flex flex-col gap-[10px] w-full">
-      <div className="flex items-center gap-[8px] min-h-[16px] w-full">
-        <div className="size-[6px] rounded-full shrink-0 bg-brain-v1baby-blue-60" />
-        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[12px] uppercase tracking-[0.4px] whitespace-nowrap">Rules</p>
-        <CountPill>{activeCount}</CountPill>
+      <WidgetHeader title="Rules" count={activeCount}>
         {activeTab === "Default" && !policyLoading && !policyError && policyVersion !== undefined && (
           <p className="ml-auto [font-family:'JetBrains_Mono',monospace] text-[12px] leading-[16px] text-brain-v1baby-blue-60 whitespace-nowrap">
             v{policyVersion} · quorum {policyQuorum}
           </p>
         )}
-      </div>
+      </WidgetHeader>
 
       <div className="w-full flex flex-col gap-[16px]">
 
@@ -1026,7 +1018,7 @@ export function RulesPanel() {
             <Section
               title="Automations"
               count={automations.length}
-              empty={<p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-brain-v1baby-blue-60 text-[16px]">No automated rules yet. Create one for Brain to automatically handle payments for you.</p>}
+              empty={<p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-brain-v1baby-blue-60 text-[16px]">No automations yet. Add one using the builder above.</p>}
             >
               {automations.map((r, idx) => (
                 <div key={r.id} className="flex flex-col gap-[8px] w-full">
@@ -1050,7 +1042,7 @@ export function RulesPanel() {
             <Section
               title="Guardrails"
               count={guardrails.length}
-              empty={<p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-brain-v1baby-blue-60 text-[16px]">No guardrails set. Create one to block risky transactions automatically.</p>}
+              empty={<p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-brain-v1baby-blue-60 text-[16px]">No guardrails yet. Add one using the builder above.</p>}
             >
               {guardrails.map((r, idx) => (
                 <div key={r.id} className="flex flex-col gap-[8px] w-full">
@@ -1073,7 +1065,7 @@ export function RulesPanel() {
           <Section
             title="Suggested"
             count={suggestions.length}
-            empty={<p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-brain-v1baby-blue-60 text-[16px]">Brain suggests policies as it sees patterns in your activity. Nothing yet.</p>}
+            empty={<p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-brain-v1baby-blue-60 text-[16px]">Nothing suggested yet. Brain will show these as it spots patterns.</p>}
           >
             {suggestions.map((s) => (
               <SuggestionCard

@@ -52,6 +52,7 @@ export function PayableDetailPopup({
   payables,
   onSelectPayable,
   invoicesUnknown,
+  hidePager,
   onClose,
 }: {
   /** `null` closes the popup, matching BillDetailPopup's contract. */
@@ -66,6 +67,12 @@ export function PayableDetailPopup({
    * invoice on file whenever the invoice endpoint happened to be down.
    */
   invoicesUnknown?: boolean;
+  /**
+   * Hides Previous/Next. Set by surfaces whose list is not the payables list —
+   * Overview's cash strip interleaves payables with customer invoices, so paging
+   * within one type there would silently skip the events shown either side.
+   */
+  hidePager?: boolean;
   onClose: () => void;
 }) {
   const { format } = useCurrency();
@@ -131,20 +138,22 @@ export function PayableDetailPopup({
                 data-testid="text-payable-next"
               >
                 {invoicesUnknown
-                  ? "Your invoices couldn't be loaded just now, so whether one backs this payable is unknown. It is still counted in what you owe and tracked for its due date."
+                  ? "Couldn't load your invoices. Whether one backs this payable is unknown. It is still counted in what you owe and tracked for its due date."
                   : "Brain proposes payments from invoices, and this payable has none on file, so there is nothing to approve here. It is counted in what you owe and tracked for its due date."}
               </p>
             </div>
           </DetailPopupBody>
-          <div className="border-t border-brain-v1stroke-2 border-solid flex items-center justify-between p-[16px] w-full">
-            <RecordPager
-              onPrev={() => currentIdx > 0 && onSelectPayable?.(list[currentIdx - 1])}
-              onNext={() => currentIdx >= 0 && currentIdx < list.length - 1 && onSelectPayable?.(list[currentIdx + 1])}
-              disabledPrev={currentIdx <= 0}
-              disabledNext={currentIdx < 0 || currentIdx >= list.length - 1}
-              testIdPrefix="payable"
-            />
-          </div>
+          {!hidePager && (
+            <div className="border-t border-brain-v1stroke-2 border-solid flex items-center justify-between p-[16px] w-full">
+              <RecordPager
+                onPrev={() => currentIdx > 0 && onSelectPayable?.(list[currentIdx - 1])}
+                onNext={() => currentIdx >= 0 && currentIdx < list.length - 1 && onSelectPayable?.(list[currentIdx + 1])}
+                disabledPrev={currentIdx <= 0}
+                disabledNext={currentIdx < 0 || currentIdx >= list.length - 1}
+                testIdPrefix="payable"
+              />
+            </div>
+          )}
         </>
       ) : null}
     </DetailPopupShell>

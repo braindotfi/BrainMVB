@@ -73,8 +73,7 @@ export function ReceivablesTab({ format }: { format: Format }): JSX.Element {
       <WidgetCard title="Receivables" count={kind === "loading" ? undefined : rows.length}>
         {kind === "failed" ? (
           <UnavailableDataBox testId="text-receivables-unavailable">
-            Your receivables couldn't be loaded just now, so this list is empty for the wrong
-            reason. It isn't a sign that nobody owes you anything.
+            Couldn't load your receivables. This list may be incomplete. It doesn't mean nobody owes you anything.
           </UnavailableDataBox>
         ) : kind === "loading" ? (
           <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative shrink-0 w-full bg-brain-v1highlight-dropdown-bg">

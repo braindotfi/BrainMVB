@@ -1,5 +1,6 @@
 import { useQuery, useQueries } from "@tanstack/react-query";
 import type { Proposal, ProposalStatus } from "./proposalTypes";
+import { fetchAllBrainProposals, type ListProposalsResponse } from "./brainProposals";
 
 /* ── Durable "Needs Review" queue - live brain-core PaymentIntents ─────────
    brain-core has no bulk list of full PaymentIntents, and no tenant-scoped
@@ -25,20 +26,14 @@ import type { Proposal, ProposalStatus } from "./proposalTypes";
 /** Same key brainProposals.ts uses, so the two surfaces share one fetch. */
 const PROPOSALS_QUERY_KEY = "/api/brain/proposals?limit=100";
 
-interface ProposalsPage {
-  proposals: { payment_intent_id: string | null }[];
-}
-
-/** The money-path payment_intent_ids on a /proposals page, de-duplicated and
- *  capped so a large page can't fan out unboundedly. Exported for tests. */
+/** The money-path payment_intent_ids on the complete proposals feed,
+ * de-duplicated. Every returned id gets its detail read. */
 export function selectMoneyPathIntentIds(
   proposals: { payment_intent_id: string | null }[],
-  cap = 25,
 ): string[] {
   const ids = new Set<string>();
   for (const p of proposals) {
     if (p.payment_intent_id) ids.add(p.payment_intent_id);
-    if (ids.size >= cap) break;
   }
   return [...ids];
 }
@@ -111,13 +106,14 @@ interface CounterpartiesLiteResponse {
  * only knows about intents proposed in THIS browser session).
  */
 export function useBrainReviewQueue() {
-  const list = useQuery<ProposalsPage>({
+  const list = useQuery<ListProposalsResponse>({
     queryKey: [PROPOSALS_QUERY_KEY],
+    queryFn: ({ signal }) => fetchAllBrainProposals(signal),
     retry: false,
     refetchOnWindowFocus: true,
   });
-  const pendingIds = selectMoneyPathIntentIds(list.data?.proposals ?? []);
-
+  const page = list.data?.proposals ?? [];
+  const pendingIds = selectMoneyPathIntentIds(page);
   // Fan out to the full record per candidate. useQueries (not useQuery-in-a-
   // loop, which breaks Rules of Hooks once the id list's length changes)
   // dedupes/caches each by its own key.
@@ -177,8 +173,9 @@ export function useBrainReviewQueue() {
  * "paid" — see mapIntentToAutoApprovedProposal below.
  */
 export function useBrainAutoApproved() {
-  const list = useQuery<ProposalsPage>({
+  const list = useQuery<ListProposalsResponse>({
     queryKey: [PROPOSALS_QUERY_KEY],
+    queryFn: ({ signal }) => fetchAllBrainProposals(signal),
     retry: false,
     refetchOnWindowFocus: true,
   });

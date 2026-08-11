@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { WidgetPanel } from "@/components/LedgerWidgets";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -48,20 +49,16 @@ import {
    duplicate lists. */
 
 /* ─── Shared primitives (matching the Settings card + label patterns) ─── */
+
+/** Wizard/form panel — borderless per Figma (sources add-flow sits inside a
+ *  bordered parent; the inner panel does not add a second stroke). */
 const Card = ({ children, testId }: { children: ReactNode; testId?: string }) => (
-  <div data-testid={testId} className="rounded-panel overflow-hidden" style={{ background: "#0a0c10" }}>
-    {children}
-  </div>
+  <WidgetPanel testId={testId} noBorder>{children}</WidgetPanel>
 );
 
+/** Data table panel — always bordered (matches Sources table Figma frame). */
 const TableCard = ({ children, testId }: { children: ReactNode; testId?: string }) => (
-  <div
-    data-testid={testId}
-    className="rounded-panel overflow-hidden border border-solid border-brain-v1stroke-2"
-    style={{ background: "#0a0c10" }}
-  >
-    {children}
-  </div>
+  <WidgetPanel testId={testId}>{children}</WidgetPanel>
 );
 
 const SectionLabel = ({ children, testId }: { children: ReactNode; testId?: string }) => (
@@ -200,16 +197,15 @@ function EmptyRow({ states, emptyLabel, testId }: { states: ReadState[]; emptyLa
   const pending = states.some((s) => s === "pending");
 
   const text = failed
-    ? "Brain couldn't load this list. Anything connected here is missing from the page. It has not been disconnected."
+    ? "Couldn't load this list. Connected items are still connected. This just failed to load."
     : pending
       ? "Checking…"
       : emptyLabel;
 
   return (
-    <div className="px-[16px] py-[14px]" data-testid={testId}>
+    <div className="px-[16px] py-[12px] rounded-[8px]" data-testid={testId}>
       <p
-        className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[18px]"
-        style={{ color: failed ? "#ff9500" : "#6c779d" }}
+        className={`[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[18px] ${failed ? "text-brain-v1light-orange" : "text-brain-v1baby-blue-60"}`}
       >
         {text}
       </p>
@@ -479,11 +475,10 @@ export function SourcesSection() {
 
       {failedFeeds.length > 0 && (
         <AlertCallout title="This page is incomplete" testId="notice-sources-unavailable">
-          Brain could not load {failedFeeds.length === 1
+          Couldn't load {failedFeeds.length === 1
             ? failedFeeds[0]
             : `${failedFeeds.slice(0, -1).join(", ")} and ${failedFeeds[failedFeeds.length - 1]}`}
-          . Anything connected there is missing from this page. It has not been disconnected.
-          Try again in a moment.
+          . Connected items are still connected — this just failed to load. Try again in a moment.
         </AlertCallout>
       )}
 

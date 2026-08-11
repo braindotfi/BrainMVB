@@ -166,10 +166,11 @@ export function LiveProposalModal({
   const agentName = proposal.agent?.display_name || AGENT_DISPLAY_NAME[agentKey];
   const isPaymentAgent = agentKey === "payment" || /^(?:demo\s+)?payment agent$/i.test(agentName.trim());
   const normalizedAgentName = isPaymentAgent ? "Payment Agent" : agentName.trim();
-  /* Card titles name the agent WITHOUT the word "Agent" — "Payment", not
-     "Payment Agent". Core's display_name sometimes carries the suffix already,
-     so strip it rather than assuming it is absent. */
-  const agentHeaderName = normalizedAgentName.replace(/\s*\bagent\b\s*$/i, "").trim() || normalizedAgentName;
+  /* Card titles name the agent with the same suffix used by Inbox agent pills.
+     Core's display_name sometimes carries the suffix already, so normalize it
+     before appending rather than risking "Payment Agent Agent". */
+  const agentBaseName = normalizedAgentName.replace(/\s*\bagent\b\s*$/i, "").trim() || normalizedAgentName;
+  const agentHeaderName = `${agentBaseName} Agent`;
   const risk = proposal.risk_band ? RISK_META[proposal.risk_band] : null;
   const needsReview = isNeedsReview(proposal);
 

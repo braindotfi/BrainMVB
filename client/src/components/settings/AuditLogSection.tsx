@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Search } from "lucide-react";
 import chevronDownIcon from "@/assets/chevron_down_dropdown.png";
-import { useBrainAuditRecords, AUDIT_EVENTS_LIMIT } from "@/lib/brainAudit";
+import { useBrainAuditRecords } from "@/lib/brainAudit";
 import { partitionSystemActivity } from "@/lib/auditVisibility";
 import { humanReadableActor, isAssistantActivity } from "@/lib/auditTypes";
 import type { AuditRecord } from "@/lib/auditTypes";
@@ -101,7 +101,7 @@ function plural(n: number, one: string, many: string): string {
 }
 
 export function AuditLogSection() {
-  const { records: brainRecords, isLoading, isError, eventCount } = useBrainAuditRecords();
+  const { records: brainRecords, isLoading, isError } = useBrainAuditRecords();
   const acknowledgedRecords = useAcknowledgedRecords();
   const { formatText } = useCurrency();
   const [query, setQuery] = useState("");
@@ -212,13 +212,6 @@ export function AuditLogSection() {
 
   const withheldByFilter = searched.length - visible.length;
 
-  /* A full page back means the cursor has more behind it. Nothing here may say
-     "N events" in that case — only "at least N". Measured on brain-core's raw
-     page, never the merged list: locally-recorded assistant questions are not
-     subject to the read's limit, and letting them count would turn a short page
-     into a false "there is more" claim. */
-  const atEventLimit = eventCount >= AUDIT_EVENTS_LIMIT;
-
   /* The audit read failing does NOT empty the list — locally-recorded assistant
      questions are merged in from a separate query and survive. So the error
      cannot be left to the empty state: a list of two local rows under copy that
@@ -241,8 +234,8 @@ export function AuditLogSection() {
   const emptyMessage = (): { title: string; detail?: string } => {
     if (isError) {
       return {
-        title: "Brain could not read your audit history.",
-        detail: "This list is unavailable, not empty. No conclusion should be drawn from it being blank.",
+        title: "Brain couldn't read your audit history.",
+        detail: "This list is unavailable, not empty.",
       };
     }
     if (isLoading) return { title: "Reading your audit history…" };
@@ -250,12 +243,7 @@ export function AuditLogSection() {
     if (query.trim() && searched.length === 0) return { title: "No records match your search." };
     if (withheldByFilter > 0) {
       return {
-        title:
-          filter === "system"
-            ? "No system activity here."
-            : filter === "assistant"
-              ? "No assistant activity here."
-              : "No decision records here.",
+        title: "No system, assistant, or decision records here.",
         detail: `${plural(withheldByFilter, "record is", "records are")} hidden by the type filter. Switch to "All Types" to see everything.`,
       };
     }
@@ -271,13 +259,12 @@ export function AuditLogSection() {
           <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-brain-v1baby-blue-60 text-[16px]">
             Audit Log
           </p>
-          {/* Suppressed while the feed is unreadable: a count next to a partial
-              list reads as a total. */}
+          {/* The feed is a complete cursor walk, so this is the actual record count. */}
           {!isLoading && !feedUnavailable && records.length > 0 && (
             <CountPill testId="badge-audit-count">
               {visible.length === records.length
-                ? `${records.length}${atEventLimit ? "+" : ""}`
-                : `${visible.length} of ${records.length}${atEventLimit ? "+" : ""}`}
+                ? `${records.length}`
+                : `${visible.length} of ${records.length}`}
             </CountPill>
           )}
         </div>
@@ -301,7 +288,7 @@ export function AuditLogSection() {
             testId="notice-audit-unavailable"
             className="mb-[8px]"
           >
-            Brain could not read your audit history. What is shown below was recorded in this
+            Brain couldn't read your audit history. What is shown below was recorded in this
             browser — the events from Brain are missing, not absent. Try again in a moment.
           </AlertCallout>
         )}
@@ -384,15 +371,14 @@ export function AuditLogSection() {
         style={{ background: "#0a0c10" }}
       >
         {visible.length === 0 ? (
-          <div className="p-[24px] flex flex-col items-center gap-[6px]" data-testid="text-audit-empty">
+          <div className="px-[16px] py-[12px] rounded-[8px] flex flex-col gap-[6px]" data-testid="text-audit-empty">
             <p
-              className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-center"
-              style={{ color: isError ? "#ff9500" : "#6c779d" }}
+              className={`[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] ${isError ? "text-brain-v1light-orange" : "text-brain-v1baby-blue-60"}`}
             >
               {emptyMessage().title}
             </p>
             {emptyMessage().detail && (
-              <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[13px] leading-[18px] text-center max-w-[420px]">
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[13px] leading-[18px]">
                 {emptyMessage().detail}
               </p>
             )}

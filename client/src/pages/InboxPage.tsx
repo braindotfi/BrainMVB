@@ -33,18 +33,30 @@ import {
   isDecidableProposal,
   buildDecisionButtons,
   buildProposalHeaderCopy,
+  proposalInvoiceIdentity,
   type DecisionButton,
 } from "@/lib/proposalCards";
 import { LiveProposalModal, AGENT_DISPLAY_NAME } from "@/components/AgentProposalModal";
 import type { AgentKey } from "@/lib/agentProposals";
 import { agentBadgeLabel } from "@/lib/agentProposals";
 import { capitalCase } from "@/lib/displayLabels";
-import { useBrainAuditRecords, registerProposalAgentKey } from "@/lib/brainAudit";
+import { useBrainAuditRecords, registerProposalAgentKey, useDecidedProposalIds } from "@/lib/brainAudit";
 import { inboxTapTarget } from "@/lib/inboxTap";
 import { pagerState, stepPager, type PagerEntry } from "@/lib/unifiedPager";
 import { AuditRecordPopup } from "@/components/AuditRecordPopup";
 import type { AuditRecord, AuditEventType } from "@/lib/auditTypes";
 import { auditEventLabel, auditEventChipClass, isAssistantActivity, isSystemActivity, humanReadableActor } from "@/lib/auditTypes";
+import {
+  useMissingEvidenceItems,
+  agentKeyFromAction,
+  buildInputRowTitle,
+  buildInputRowSubtitle,
+  inputRowActionLabel,
+  inputRowFixPath,
+  type MissingEvidenceItem,
+} from "@/lib/agentRunInput";
+import { MissingEvidenceModal } from "@/components/MissingEvidenceModal";
+import { useBrainVendors } from "@/lib/brainVendors";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { mapApprovalRejection, parseCoreError, type ApprovalRejection } from "@/lib/approvalRejections";
@@ -57,7 +69,9 @@ import {
 } from "@/lib/rulesStore";
 import { useReviewStatuses, setReviewStatus } from "@/lib/reviewStatusStore";
 import { acknowledgeInsight, useAcknowledgedRecords } from "@/lib/acknowledgedStore";
-import { TierRow, type TierRowModel, type TierRowAction, type TierRowStatusPill } from "@/components/TierRowList";
+import { TierRow, RowSection, type TierRowModel, type TierRowAction, type TierRowStatusPill } from "@/components/TierRowList";
+import { orderRowsForDisplay } from "@/lib/tierRowOrder";
+import { inboxBucket } from "@/lib/inboxBuckets";
 import {
   auditStatusPill,
   PILL_APPROVED,
@@ -73,9 +87,10 @@ import {
   canonicalDecisionType,
   decisionTypeLabel,
   hasActiveFilter,
+  PRIORITY_OPTIONS,
   typeOptions,
   EMPTY_FILTERS,
-  PRIORITY_OPTIONS,
+  RECOMMENDATION_OPTIONS,
   STATUS_OPTIONS,
   type DecisionFacets,
   type DecisionFilterState,
@@ -297,6 +312,7 @@ function InboxDropdown({
   testId,
   open,
   onOpenChange,
+  width = "w-[120px]",
 }: {
   values: readonly string[];
   options: readonly InboxDropdownOption[];
@@ -305,6 +321,7 @@ function InboxDropdown({
   testId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  width?: string;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const closeTimerRef = useRef<number | null>(null);
@@ -360,7 +377,7 @@ function InboxDropdown({
   return (
     <div
       ref={rootRef}
-      className="relative w-[120px] shrink-0"
+      className={`relative ${width} shrink-0`}
       onPointerEnter={cancelClose}
       onPointerLeave={() => {
         if (open) scheduleClose();
@@ -514,6 +531,9 @@ export function InboxPage() {
   // read model carries no decider-identity field (no `decided_by`), so there's
   // no honest way to tell an agent decision from a human one here.
   const [selectedProposal, setSelectedProposal] = useState<BrainProposal | null>(null);
+  /* Track by index so the pager can step through missingEvidence in order.
+     Derived item is the one at that index (null when no modal is open). */
+  const [selectedInputIdx, setSelectedInputIdx] = useState<number | null>(null);
   /* Which timeline ROW currently has a detail surface open. The five surfaces
      below hold five unrelated record types, so the row id is the only handle
      the shared pager can compare across them. */
@@ -531,6 +551,15 @@ export function InboxPage() {
      Passing only needsReviewProposals made a reload lose "collections" and
      fall back to the generic execution-agent name ("Demo Payment Agent"). */
   const { records: auditRecords, isError: auditError } = useBrainAuditRecords(liveProposals);
+  /* The set of proposals the audit trail shows as settled, and how far it can be
+     trusted. Deliberately NOT re-derived from `auditRecords` here: this set is a
+     hide switch, so it has to model effective state — `undo` is a decision that
+     REOPENS a record, and a set built by scanning mapped records for a proposal
+     reference would keep suppressing a proposal an undo had put back in front of
+     the tenant. useDecidedProposalIds replays the decisions in order and is the
+     same rule the Overview count subtracts, so the two screens cannot disagree.
+     It shares a query key with the read above, so this costs no extra request. */
+  const { ids: decidedIds } = useDecidedProposalIds();
 
   /* ── Live approve / reject (durable brain-core queue rows) ─────────────── */
   const queryClient = useQueryClient();
@@ -753,10 +782,19 @@ export function InboxPage() {
        it gets decided — it only adds an audit record. Without this guard a
        proposal and its settled audit record both appear simultaneously (the user
        sees two rows for the same invoice). Build a set of proposal IDs that the
-       audit log already confirms as decided so we can suppress the live copy. */
-    const decidedProposalIds = new Set(
-      auditRecords.flatMap((r) => (r.proposalId ? [r.proposalId] : [])),
-    );
+       audit log already confirms as decided so we can suppress the live copy.
+
+       Two properties this set MUST keep, because it is a hide switch:
+
+       1. Decisions only. `record.proposalId` is populated for `proposal.decided`
+          and for nothing else — deliberately not for `agent.action.proposed`,
+          which quotes the same id in the same field the moment an agent files a
+          proposal. Sourcing this from "any audit record mentioning an id" would
+          hide every record while its own creation event was still in the page.
+        2. Fail open. If the audit read fails, this set remains empty and the
+           live proposal stays visible rather than being hidden accidentally.
+           Successful audit reads are complete cursor walks. */
+    const decidedProposalIds = decidedIds;
 
     /* Needs you: session-scoped §6-gated intents (decidable). */
     for (const item of liveReviews) {
@@ -813,6 +851,21 @@ export function InboxPage() {
        forecast, etc. — GET /v1/proposals via the BFF). The tag carries the
        originating agent's identity; the "Why:" line is the agent's own
        narrative — omitted when the record carries none (honest omission). */
+    /* One invoice, several live proposals — confirmed against a live tenant, not
+       inferred: brain-core's collections agent re-proposes an open invoice on
+       every sweep, and those runs overlap the proposals a tenant is seeded with,
+       so two records citing the same invoice id sit in the queue at once. They
+       are separate approvals (approving one leaves the other pending upstream),
+       so neither may be suppressed. The rows instead say they share a document,
+       grouped on the invoice ID each one cites. */
+    const proposalsPerInvoice = new Map<string, number>();
+    for (const p of needsReviewProposals) {
+      if (decidedProposalIds.has(p.id)) continue;
+      const identity = proposalInvoiceIdentity(p);
+      if (!identity) continue;
+      proposalsPerInvoice.set(identity.key, (proposalsPerInvoice.get(identity.key) ?? 0) + 1);
+    }
+
     for (const p of needsReviewProposals) {
       /* Skip proposals the audit log already confirms as decided — brain-core
          never removes them from the feed, so without this guard both the live
@@ -827,7 +880,15 @@ export function InboxPage() {
       const pillName = agentBadgeLabel(agentKey);
         const decisions = buildDecisionButtons(p.available_decisions, p.presentation?.actions);
       const headerCopy = buildProposalHeaderCopy(p, agentName, formatText);
-      const proposalPresentation = liveProposalRow(headerCopy, pillName);
+      const identity = proposalInvoiceIdentity(p);
+      const shared = identity ? (proposalsPerInvoice.get(identity.key) ?? 1) - 1 : 0;
+      /* Counted, never ordered: the sibling could sort anywhere in the list, so
+         the row claims only that another open proposal exists on the document. */
+      const sharedNote =
+        shared > 0
+          ? `${shared === 1 ? "1 other open proposal" : `${shared} other open proposals`} on ${identity?.code ? `invoice ${identity.code}` : "the same invoice"}`
+          : undefined;
+      const proposalPresentation = liveProposalRow(headerCopy, pillName, sharedNote);
       push({
         id: p.id,
         kind: "proposal",
@@ -1071,7 +1132,87 @@ export function InboxPage() {
   const resolvedItems   = useMemo(() => items.filter((it) => it.tier === "decided"),  [items]);
   const tabItems        = activeTab === "Unresolved" ? unresolvedItems : resolvedItems;
 
+  /* ── Needs your input ───────────────────────────────────────────────────────
+     Agent runs that reached a terminal `missing_evidence` outcome. These are not
+     proposals — nothing is being suggested and there is nothing to approve. Work
+     simply stopped, and until now it stopped silently: the run left an audit
+     event and no surface read it.
+
+     Shipped deliberately reduced. Entity refs render as raw brain-core ids
+     because resolving them needs either a batch lookup this feed doesn't offer
+     or denormalization at emission time, and every row carries the same generic
+     action rather than a per-field guess at where the fix lives. Both are
+     tracked as follow-ups; a wrong deep link would be worse than a plain one. */
+  const {
+    items: missingEvidence,
+    isError: missingEvidenceError,
+  } = useMissingEvidenceItems();
+  /* Derived from the index so the pager can step through the list. */
+  const selectedInputItem = selectedInputIdx !== null ? (missingEvidence[selectedInputIdx] ?? null) : null;
+  /* Counterparty id → display name. Shared with inputRows so titles can say
+      "Vendor risk check blocked — couldn't classify Brightline Systems Inc. as a
+     vendor" rather than repeating the same generic sentence for every run. */
+  const { vendors } = useBrainVendors();
+  const vendorNameMap = useMemo(
+    () => new Map(vendors.map((v) => [v.id, v.name])),
+    [vendors],
+  );
+
+  const inputRows = useMemo<TierRowModel[]>(
+    () =>
+      missingEvidence.map((entry, idx) => {
+        /* Derive the agent key from the attempted action so the badge chip can
+           say "Vendor Risk Agent" / "Payment Agent" instead of "Agent blocked". */
+        const agentKey = entry.agentKey ?? agentKeyFromAction(entry.attemptedAction);
+        const primaryField = entry.missingFields[0];
+        const fixPath = inputRowFixPath(entry);
+        return {
+          id: `missing-evidence-${entry.id}`,
+          /* Amber, not red. A stalled run is real work not happening, but nothing
+             is mid-flight and no money is at risk this minute. */
+          tier: "waiting" as const,
+          /* Interpolated title naming the real counterparty from entity_refs.
+             Previously this called describeMissingEvidence which never read
+             entity_refs, producing identical titles for every run of the same
+             agent — the template bug confirmed in the accompanying notes. */
+          title: buildInputRowTitle(entry, vendorNameMap),
+          /* Agent-specific badge label ("Vendor Risk Agent", "Payment Agent", …)
+             in place of the previous generic "Agent blocked" on every row. */
+          badge: { label: agentBadgeLabel(agentKey), className: TAG_AGENT },
+          /* Subtitle carries the entity, reference, and missing field context. */
+          subtitle: buildInputRowSubtitle(entry, vendorNameMap),
+          /* Row tap opens the detail modal. */
+          onOpenDetail: () => setSelectedInputIdx(idx),
+          /* Primary action button — label derives from the specific missing field;
+             destination is confirmed for the common fields, falls back to the audit
+             log for field types whose remediation page isn't confirmed yet (see
+             inputRowActionLabel and inputRowFixPath comments for the split). */
+          actions: [
+            {
+              id: "fix",
+              label: inputRowActionLabel(primaryField),
+              tone: "warning" as const,
+              onClick: () => navigate(fixPath),
+            },
+          ],
+          /* No checkbox, ever. Bulk approve batches decisions, and there is no
+             decision here to batch. */
+          testIdPrefix: "row-agent-input",
+        };
+      }),
+    [missingEvidence, vendorNameMap, navigate],
+  );
+
   const visibleItems = useMemo(() => applyDecisionFilters(tabItems, filters), [tabItems, filters]);
+  /* Missing-evidence rows live outside `items`, so apply the urgency label
+     facet explicitly. Every stalled run belongs to the waiting tier. */
+  const visibleInputRows = useMemo(
+    () =>
+      filters.priority && filters.priority.length > 0 && !filters.priority.includes("waiting")
+        ? []
+        : inputRows,
+    [filters.priority, inputRows],
+  );
   const availableTypes = useMemo(() => typeOptions(tabItems), [tabItems]);
   const filtering = hasActiveFilter(filters);
 
@@ -1419,11 +1560,62 @@ export function InboxPage() {
     };
   };
 
+  /* ── The three named sections ───────────────────────────────────────────────
+     Split on what the record can actually DO, not on where it came from.
+
+     `kind` looks like the taxonomy for this, and the split used to use it, but
+     it is stamped per source: every agent proposal is pushed as
+     kind: "proposal" regardless of what brain-core will accept for it. A
+     notify_only fraud or compliance finding offers `acknowledge` and nothing
+     else, and it was landing under "Needs your decision" above a single
+     Acknowledge button — a heading demanding a decision over a row that has
+     none to give. Sorting by outcome type instead means the heading and the
+     buttons cannot disagree, because they now read the same field.
+
+     Tier is NOT lost by regrouping: rows stay in tier order inside each section
+     and every row keeps its own accent bar, so urgency still reads down the list. */
+  const decisionRows = useMemo(
+    () => orderRowsForDisplay(visibleItems.filter((it) => inboxBucket(it) === "approval").map(toRow)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- toRow closes over live handler state and is rebuilt every render by design
+    [visibleItems, toRow],
+  );
+  const awarenessRows = useMemo(
+    () => orderRowsForDisplay(visibleItems.filter((it) => inboxBucket(it) === "awareness").map(toRow)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- see above
+    [visibleItems, toRow],
+  );
+
+  /* Filters are built from the facets of `items`, and missing-evidence rows are
+     not in `items`. Their urgency label is applied separately above; status,
+     type, and text filters do not apply to this source. */
+  /* Caption removed: the truncation notice ("Showing the most recent audit
+     events only…") was removed per spec — the section header is sufficient. */
+  const inputSectionCaption =
+    filters.status.length > 0 || filters.type.length > 0 || filters.query.trim() !== ""
+      ? "Some filters don't apply to this section."
+      : "";
+
+  /* Which sections to show based on the recommendation filter.
+     An empty filter means "all". The inputRows section lives outside
+     visibleItems so it must be gated here rather than via matchesFilters. */
+  const rec = filters.recommendation;
+  const showApproval  = rec.length === 0 || rec.includes("approval");
+  const labelAllowsInput =
+    !filters.priority?.length || filters.priority.includes("waiting");
+  const showInput     = (rec.length === 0 || rec.includes("input")) && labelAllowsInput;
+  const showAwareness = rec.length === 0 || rec.includes("awareness");
+
+  const unresolvedEmpty =
+    activeTab === "Unresolved" &&
+    (showApproval  ? visibleItems.filter((it) => inboxBucket(it) === "approval").length  === 0 : true) &&
+    (showInput     ? visibleInputRows.length === 0 : true) &&
+    (showAwareness ? visibleItems.filter((it) => inboxBucket(it) === "awareness").length === 0 : true);
+
   /* Three different silences, three different sentences. "No decisions match this
      filter" after the user narrowed the list is information; the same words on an
      unfiltered empty queue would read as a fault. */
   const emptyText = decisionsUnreachable
-    ? "Brain couldn\u2019t load your decisions. This is a connection problem, not an empty queue \u2014 don\u2019t read it as \u201cnothing to approve\u201d."
+    ? "Brain couldn't load your decisions. This is a connection problem, not an empty queue. Don't read it as nothing to approve."
     : filtering
     ? `No ${activeTab.toLowerCase()} decisions match this filter.`
     : liveQueueLoading
@@ -1475,14 +1667,23 @@ export function InboxPage() {
           />
         </div>
 
-        <div className="flex flex-row gap-[24px]">
+         <div className="flex flex-row flex-wrap gap-[12px] items-center">
           {([
             {
-              values: filters.priority,
+              values: filters.recommendation,
+              onChange: (v: string[]) => setFilter("recommendation", v as DecisionFilterState["recommendation"]),
+              label: "Filter by recommendation",
+              testId: "filter-recommendation",
+              options: [{ value: "all", label: "All Recommendations" }, ...RECOMMENDATION_OPTIONS],
+              width: "w-[196px]",
+            },
+            {
+              values: filters.priority ?? [],
               onChange: (v: string[]) => setFilter("priority", v as DecisionFilterState["priority"]),
-              label: "Filter by priority",
-              testId: "filter-priority",
-              options: [{ value: "all", label: "All Priorities" }, ...PRIORITY_OPTIONS],
+              label: "Filter by label",
+              testId: "filter-label",
+              options: [{ value: "all", label: "All Labels" }, ...PRIORITY_OPTIONS],
+              width: "w-[160px]",
             },
             {
               values: filters.status,
@@ -1490,6 +1691,7 @@ export function InboxPage() {
               label: "Filter by status",
               testId: "filter-status",
               options: [{ value: "all", label: "All Status" }, ...STATUS_OPTIONS],
+              width: undefined,
             },
             {
               values: filters.type,
@@ -1498,8 +1700,9 @@ export function InboxPage() {
               testId: "filter-type",
               /* Types from rows present so the filter is never vacuously empty. */
               options: [{ value: "all", label: "All Types" }, ...availableTypes],
+              width: undefined,
             },
-          ] as const).map(({ values, onChange, label, testId, options }) => (
+          ] as const).map(({ values, onChange, label, testId, options, width }) => (
             <InboxDropdown
               key={testId}
               values={values}
@@ -1509,8 +1712,19 @@ export function InboxPage() {
               options={options}
               open={openDropdown === testId}
               onOpenChange={(nextOpen) => setOpenDropdown(nextOpen ? testId : null)}
+              width={width}
             />
           ))}
+          {filtering && (
+            <button
+              type="button"
+              onClick={() => setFilters(EMPTY_FILTERS)}
+              data-testid="button-clear-filters"
+              className="ml-auto [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1purple text-[12px] hover:underline outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple rounded-[4px] shrink-0"
+            >
+              Clear filters
+            </button>
+          )}
         </div>
         </div>
       </div>
@@ -1523,7 +1737,9 @@ export function InboxPage() {
             the badge is always honest even when a filter hides rows. */}
         <FilterChipRow
           chips={[
-            { value: "Unresolved", label: "Unresolved", count: unresolvedItems.length },
+            /* Includes stalled runs: they are unresolved things asking something
+               of you, and a tab badge that omits them under-reports the queue. */
+            { value: "Unresolved", label: "Unresolved", count: unresolvedItems.length + inputRows.length },
             { value: "Resolved",   label: "Resolved",   count: resolvedItems.length   },
           ]}
           value={activeTab}
@@ -1540,24 +1756,6 @@ export function InboxPage() {
             outer container separating this block from the chip strip. */}
         <div className="flex flex-col gap-[10px] items-start w-full">
 
-        {/* Count row + clear-filter link */}
-        <div className="flex items-center gap-[8px] w-full min-h-[20px]">
-          <div className="size-[6px] rounded-full shrink-0 bg-brain-v1baby-blue-60" />
-          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[12px] uppercase tracking-[0.4px] whitespace-nowrap">
-            Decisions
-          </p>
-          <CountPill testId="text-decision-count">{visibleItems.length}</CountPill>
-          {filtering && (
-            <button
-              type="button"
-              onClick={() => setFilters(EMPTY_FILTERS)}
-              data-testid="button-clear-filters"
-              className="ml-auto [font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1purple text-[12px] hover:underline outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple rounded-[4px]"
-            >
-              Clear filters
-            </button>
-          )}
-        </div>
 
         {/* A partial list is as misleading as a wrongly-empty one — say so above
             the rows rather than letting the count imply completeness. */}
@@ -1573,7 +1771,7 @@ export function InboxPage() {
             "eligible" meant. */}
         {selection.count >= 2 && selection.limit && (
           <div
-            className="bg-brain-v1dark-dark-purple flex flex-col overflow-hidden rounded-panel shrink-0 w-full"
+            className="order-first bg-brain-v1dark-dark-purple flex flex-col mb-[12px] overflow-hidden rounded-panel shrink-0 w-full"
             data-testid="bulk-bar"
           >
             {/* Body — count metric + Brain Observed sentence */}
@@ -1633,7 +1831,7 @@ export function InboxPage() {
           </div>
         )}
 
-        {visibleItems.length === 0 ? (
+        {(activeTab === "Unresolved" ? unresolvedEmpty : visibleItems.length === 0) ? (
           decisionsUnreachable ? (
             <UnavailableDataBox testId="text-decisions-empty">{emptyText}</UnavailableDataBox>
           ) : (
@@ -1646,7 +1844,49 @@ export function InboxPage() {
               </p>
             </div>
           )
+        ) : activeTab === "Unresolved" ? (
+          /* Grouped by what each section ASKS OF YOU. An empty section renders
+             nothing at all — three "nothing here" boxes on a quiet day trains
+             people to stop reading the page. */
+          <div className="flex flex-col gap-[26px] w-full">
+            {showApproval && decisionRows.length > 0 && (
+              <RowSection
+                title="Needs your approval"
+                accent="#d20344"
+                rows={decisionRows}
+                testId="section-needs-decision"
+                headingTestId="heading-needs-decision"
+              />
+            )}
+            {showInput && (missingEvidenceError ? (
+              <UnavailableDataBox testId="text-needs-input-unavailable">
+                Couldn't check whether any agent is waiting on information from you. This is a connection problem, not an all-clear.
+              </UnavailableDataBox>
+            ) : (
+               visibleInputRows.length > 0 && (
+                <RowSection
+                  title="Needs your input"
+                  accent="#ff9500"
+                   rows={visibleInputRows}
+                  caption={inputSectionCaption || undefined}
+                  testId="section-needs-input"
+                  headingTestId="heading-needs-input"
+                />
+              )
+            ))}
+            {showAwareness && awarenessRows.length > 0 && (
+              <RowSection
+                title="For your awareness"
+                accent="#a8b9f4"
+                rows={awarenessRows}
+                testId="section-for-awareness"
+                headingTestId="heading-for-awareness"
+              />
+            )}
+          </div>
         ) : (
+          /* Resolved is history, not a queue: nothing is being asked of anyone,
+             so the "needs your …" grouping would be meaningless here. */
           <div className="shrink-0 flex flex-col w-full rounded-row border border-solid border-brain-v1stroke-2 bg-brain-v1highlight-dropdown-bg overflow-hidden">
             <div className="flex flex-col w-full">
               {visibleItems.map((item) => (
@@ -1763,6 +2003,25 @@ export function InboxPage() {
         onOpenChange={(o) => { if (!o) { setSelectedProposal(null); setOpenItemId(null); } }}
         {...pagerProps}
         position={pager.position ?? undefined}
+      />
+
+      {/* Blocked-run detail — "Needs Your Input" rows open this.
+          Previous / Next pages through missingEvidence in newest-first order,
+          matching the list order the user sees in the Needs Your Input section. */}
+      <MissingEvidenceModal
+        item={selectedInputItem}
+        open={selectedInputIdx !== null}
+        onOpenChange={(o) => { if (!o) setSelectedInputIdx(null); }}
+        vendorNameMap={vendorNameMap}
+        hasPrev={selectedInputIdx !== null && selectedInputIdx > 0}
+        hasNext={selectedInputIdx !== null && selectedInputIdx < missingEvidence.length - 1}
+        onPrev={() => setSelectedInputIdx((i) => (i !== null && i > 0 ? i - 1 : i))}
+        onNext={() => setSelectedInputIdx((i) => (i !== null && i < missingEvidence.length - 1 ? i + 1 : i))}
+        position={
+          selectedInputIdx !== null && missingEvidence.length > 1
+            ? `${selectedInputIdx + 1} of ${missingEvidence.length}`
+            : undefined
+        }
       />
     </div>
   );
