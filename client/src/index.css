@@ -399,5 +399,49 @@
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+    /* The platform typography pass is one weight lighter than the original
+       scale. Explicit utility and inline-weight remaps below keep this
+       consistent for inherited text as well. */
+    font-weight: 300;
+  }
+}
+
+/*
+ * Platform-wide typography weight step-down.
+ *
+ * Keep this centralized rather than changing individual records and controls:
+ * semibold -> medium, medium -> regular, regular -> light, and the heavier
+ * weights follow the same one-step reduction. `!important` is intentional
+ * here so the remap also wins over inline `fontWeight` values used by a small
+ * number of Figma-derived surfaces.
+ */
+@layer utilities {
+  .font-extralight { font-weight: 100 !important; }
+  .font-light { font-weight: 200 !important; }
+  .font-normal { font-weight: 300 !important; }
+  .font-medium { font-weight: 400 !important; }
+  .font-semibold { font-weight: 500 !important; }
+  .font-bold { font-weight: 600 !important; }
+  .font-extrabold { font-weight: 700 !important; }
+  .font-black { font-weight: 800 !important; }
+
+  [style*="font-weight: 400"],
+  [style*="font-weight:400"] {
+    font-weight: 300 !important;
+  }
+
+  [style*="font-weight: 500"],
+  [style*="font-weight:500"] {
+    font-weight: 400 !important;
+  }
+
+  [style*="font-weight: 600"],
+  [style*="font-weight:600"] {
+    font-weight: 500 !important;
+  }
+
+  [style*="font-weight: 700"],
+  [style*="font-weight:700"] {
+    font-weight: 600 !important;
   }
 }
