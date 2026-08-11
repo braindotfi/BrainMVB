@@ -368,7 +368,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onLogout }: Props):
                     >
                       {active ? <ActiveIcon /> : <InactiveIcon />}
                       <div className="flex flex-1 gap-[4px] items-center min-w-px relative">
-                        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[16px] whitespace-nowrap" style={{ color: active ? "#ffffff" : "#6c779d" }}>
+                        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[16px] whitespace-nowrap" style={{ color: active ? "#ffffff" : "#6c779d" }}>
                           {label}
                         </p>
                       </div>
@@ -406,7 +406,7 @@ export const NavigationMenuSection = ({ collapsed, onToggle, onLogout }: Props):
                     >
                       {active ? <ActiveIcon /> : <InactiveIcon />}
                       <div className="flex flex-1 gap-[4px] items-center min-w-px relative">
-                        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[16px] whitespace-nowrap" style={{ color: active ? "#ffffff" : "#6c779d" }}>
+                        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[16px] whitespace-nowrap" style={{ color: active ? "#ffffff" : "#6c779d" }}>
                           {label}
                         </p>
                       </div>
