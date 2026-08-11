@@ -299,7 +299,7 @@ export function CashProjectionCard({
             <XAxis
               dataKey="date"
               tickFormatter={shortDate}
-              tick={{ fill: AXIS_INK, fontSize: 11, fontFamily: "Gilroy, sans-serif" }}
+              tick={{ fill: AXIS_INK, fontSize: 11, fontFamily: "JetBrains Mono, monospace" }}
               axisLine={{ stroke: GRID_INK }}
               tickLine={false}
               minTickGap={24}
@@ -325,14 +325,19 @@ export function CashProjectionCard({
                 background: "rgba(10, 12, 16, 1)",
                 border: `1px solid ${GRID_INK}`,
                 borderRadius: 8,
-                fontFamily: "Gilroy, sans-serif",
+                fontFamily: "JetBrains Mono, monospace",
                 fontSize: 12,
               }}
               labelFormatter={(v) => shortDate(v)}
               labelStyle={{
                 color: "rgba(108, 119, 157, 1)",
-                fontFamily: "Gilroy, sans-serif",
+                fontFamily: "JetBrains Mono, monospace",
+                fontSize: 13,
                 fontWeight: 500,
+              }}
+              itemStyle={{
+                fontFamily: "JetBrains Mono, monospace",
+                fontSize: 12,
               }}
               formatter={(value: number, name) => [
                 format(value),
