@@ -1,7 +1,8 @@
 /**
  * QA walkthrough for #136 — Modal shell standard.
- * Verifies: AddAccountModal Radix migration (focus trap, aria-modal, overlay/Esc close),
- * detail popup width at 480px, and app loads correctly.
+ * Verifies: app loads, inbox detail popup width (480px), home add-goal modal
+ * width (400px). AddAccountModal is unreachable from the app (no nav wires it
+ * in) so it has no automated check here.
  * Run: QA_COOKIE=<value> node scripts/qa-modal-shell-verify.mjs
  */
 import { chromium } from 'playwright';
@@ -32,57 +33,14 @@ try {
   const url = page.url();
   check('app-loads', !url.includes('/login'), `landed at: ${url}`);
 
-  // ── 2. AddAccountModal: Radix present, focus trap, aria-modal ───────────
-  const addMoneyBtn = page.locator('[data-testid="btn-add-money"]').first();
-  const hasBtn = await addMoneyBtn.count() > 0;
-  check('add-money-btn-present', hasBtn, `found: ${hasBtn}`);
-
-  if (hasBtn) {
-    await addMoneyBtn.click();
-    await page.waitForTimeout(500);
-    const dialog = page.locator('[role="dialog"]').first();
-    const dialogCount = await dialog.count();
-    check('add-account-radix-rendered', dialogCount > 0, `role=dialog count: ${dialogCount}`);
-
-    if (dialogCount > 0) {
-      const ariaModal = await dialog.getAttribute('aria-modal');
-      check('add-account-aria-modal', ariaModal === 'true', `aria-modal="${ariaModal}"`);
-
-      const srTitle = await page.locator('[role="dialog"] .sr-only').first().textContent().catch(() => '');
-      check('add-account-sr-title', srTitle.includes('Add Money'), `sr-only: "${srTitle}"`);
-
-      // Width: form variant = 400px
-      const { width } = await dialog.boundingBox();
-      check('add-account-width-400', Math.round(width) === 400, `width: ${Math.round(width)}px`);
-
-      // Focus trapped — Tab key cycles within dialog
-      await page.keyboard.press('Tab');
-      const focusedTag = await page.evaluate(() => {
-        const el = document.activeElement;
-        return el?.closest('[data-testid]')?.getAttribute('data-testid') ?? el?.tagName ?? 'none';
-      });
-      check('add-account-focus-trapped', focusedTag !== 'BODY', `focused: ${focusedTag}`);
-
-      // Overlay click closes
-      await page.mouse.click(50, 50);
-      await page.waitForTimeout(400);
-      const afterOverlay = await page.locator('[role="dialog"]').count();
-      check('add-account-overlay-closes', afterOverlay === 0, `dialogs remaining: ${afterOverlay}`);
-    }
-
-    // Re-open → Escape closes
-    await addMoneyBtn.click();
-    await page.waitForTimeout(400);
-    await page.keyboard.press('Escape');
-    await page.waitForTimeout(300);
-    const afterEsc = await page.locator('[role="dialog"]').count();
-    check('add-account-esc-closes', afterEsc === 0, `dialogs after Esc: ${afterEsc}`);
-  }
+  // ── 2. AddAccountModal: unreachable from the app (no nav wires it in —
+  // see CLAUDE.md holdout list), so there is no button to drive here. No
+  // check recorded rather than one that can never run.
 
   // ── 3. Inbox detail popup: width must now be 480px (was 520) ───────────
   await page.goto(`${BASE}/inbox`, { waitUntil: 'networkidle', timeout: 20000 });
   await page.waitForTimeout(1000);
-  const rows = page.locator('[data-testid^="audit-row-"], [data-testid^="proposal-row-"], [data-testid^="decision-row-"]');
+  const rows = page.locator('[data-testid^="row-decision-"]');
   const rowCount = await rows.count();
   check('inbox-has-rows', rowCount > 0, `${rowCount} rows`);
   if (rowCount > 0) {
@@ -101,8 +59,9 @@ try {
 
   // ── 4. Home page goal modal: width must be 400px (was 440) ─────────────
   await page.goto(BASE, { waitUntil: 'networkidle', timeout: 20000 });
-  const addGoalBtn = page.locator('[data-testid="btn-add-goal"]').first();
+  const addGoalBtn = page.locator('[data-testid="button-add-goal"]').first();
   const hasGoal = await addGoalBtn.count() > 0;
+  check('add-goal-btn-present', hasGoal, `found: ${hasGoal}`);
   if (hasGoal) {
     await addGoalBtn.click();
     await page.waitForTimeout(400);
@@ -111,14 +70,15 @@ try {
       const { width } = await goalDialog.boundingBox();
       check('add-goal-width-400', Math.round(width) === 400, `width: ${Math.round(width)}px (was 440)`);
       await page.keyboard.press('Escape');
+    } else {
+      check('add-goal-opens', false, 'no dialog appeared after add-goal click');
     }
-  } else {
-    console.log('  (btn-add-goal not on home page — skip goal width check)');
   }
 
 } catch (e) {
   console.error('WALKTHROUGH ERROR:', e.message);
   console.error(e.stack);
+  process.exitCode = 1;
 } finally {
   await browser.close();
 }

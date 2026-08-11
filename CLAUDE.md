@@ -1347,7 +1347,25 @@ Forcing a row onto a button primitive makes the row worse. That is the test.
 
 ## Modal shell standard
 
-Every modal in the app shares the same frame; only the **width** varies by purpose.
+This is the **target** shell for every modal in the app; migration is in progress, not
+complete. New and touched modals must conform. Known holdouts not yet converged (verify
+with `git grep -n "w-\[[0-9]*px\]" -- client/src` before assuming this list is stale):
+
+| file | width | how it diverges |
+|---|---|---|
+| `MissingEvidenceModal.tsx:284` | `w-[520px]` | off-standard width (not 480/400/375) |
+| `DocumentViewerPopup.tsx:698` | `w-[560px]` | off-standard width; `bg-black/70` overlay, shadow alpha 0.7 (not 0.6) |
+| `MemberDetailPopup.tsx:175` | `w-[440px]` | off-standard width |
+| `settings/figma/TeamSection.tsx:308` | `w-[440px]` | off-standard width |
+| `pages/RuleDetail.tsx:273` (resume-rule) | `w-[440px]` | off-standard width; `bg-brain-v1highlight-dropdown-bg` shell + title bar, not `bg-brain-v1baby-blue-5` |
+| `pages/RuleDetail.tsx:331` (delete-rule) | `w-[375px]` | matches the compact width but is otherwise bespoke: `border-[0.938px]`, `h-[52.5px]`/`text-[18.75px]` title bar, `bg-brain-v1highlight-dropdown-bg` shell |
+| `pages/VendorsPanel.tsx:182` | `w-[374px]` | no title bar; inline `style` (16px radius, bespoke multi-layer shadow) instead of the standard classes |
+| `DeleteConfirmDialog.tsx:60` | `w-[375px]` | width matches the compact variant, but shell diverges: `bg-brain-v1highlight-dropdown-bg` (not `bg-brain-v1baby-blue-5`), no `max-h-[calc(100vh-32px)]` clamp |
+
+`AddGoalModal.tsx` and `ReviewItems.tsx` converged independently (main #135-139, after this
+branch point) — both now `w-[400px]`/`w-[480px]` on the standard shell; not holdouts.
+
+Everywhere else, the shell below is real and enforced.
 
 ### The shell
 
@@ -1372,15 +1390,16 @@ Esc-to-close, and overlay-click-to-close. Hand-rolled `<div>` overlays are not p
 |---|---|---|
 | **standard** | `w-[480px]` | record detail popups (account, bill, transaction, vendor, audit, proposal, review…) |
 | **form** | `w-[400px]` | single-purpose form dialogs (contact update, billing, security pin, goals…) |
-| **compact** | `w-[375px]` | destructive confirmation dialogs only (`DeleteConfirmDialog`) |
+| **compact** | `w-[375px]` | destructive confirmation dialogs only (`DeleteConfirmDialog` — width converged, shell still a holdout, see above) |
 
 All variants add `max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)]` for mobile safety.
 
 ### Shared shell component
 
 `client/src/components/detailPopup.tsx` exports `DetailPopupShell` — the canonical Radix
-wrapper for detail popups. Pass `widthClass` to use a non-default width. Billing, security,
-and contact-update modals have their own local `ModalShell`/`ShellRoot` helpers that already
+wrapper for **standard (480px)** detail popups; the width is fixed, not a prop, so the
+mobile max-w clamp can't be dropped by a caller. For the form/compact widths, security and
+contact-update modals have their own local `ModalShell`/`ShellRoot` helpers that already
 conform to this standard. **Do not introduce a fourth shell pattern** — extend one of these.
 
 ### Adding a new modal

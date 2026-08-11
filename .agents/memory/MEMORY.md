@@ -95,12 +95,11 @@
 - [Design-token scan](design-token-scan.md) — it is a vitest source-scan in client/src, not CI; it cannot see inline styles or role misuse, and its guards count rather than classify.
 - [Global restyle passes](global-restyle-passes.md) — tally before→after transitions to catch the unintended direction; component geometry invariants outrank the global table.
 - [Badge pill geometry](badge-pill-geometry.md) — small bordered pills keep leading-14; +2px drags record rows off their canonical height, and only a runtime measurement sees it.
-- [Modal shell standard](modal-shell-standard.md) — 480/400/375px variants; blur-sm≠blur-[2px]; AgentProposalModal was a hidden 520px popup; Radix mandatory for all modals.
 - [Silent UI deletion](silent-ui-deletion.md) — stale sync merges revert finished work; match all 3 testid spellings, re-apply never revert, and live tests can guard dead UI.
 - [Trust claim verification](trust-claim-verification.md) — money-promise copy must be read back from the live tenant policy; the shipped policy auto-executes payments the "you decide" copy claims it never does.
 - [JSX source-scan probes](jsx-source-scan-probes.md) — a fixed char window swallows children and `[^>]*>` stops at an arrow function; confirm any load-bearing scan with a second probe.
 - [Primitive migration delegation](primitive-migration-delegation.md) — tell agents to leave unmappable values and report them; the leftovers are the missing spec (tonal vs solid families).
-- [Modal shell standard](modal-shell-standard.md) — 480/400/375px variants; blur-sm≠blur-[2px]; AgentProposalModal was a hidden 520px popup; Radix mandatory for all modals.
+- [Modal shell standard](modal-shell-standard.md) — target shell (480/400/375px variants), migration in progress with several named holdouts still off-width/off-style; blur-sm≠blur-[2px]; AgentProposalModal was a hidden 520px popup; Radix (`DialogPrimitive`) mandatory for all modals, including the holdouts.
 - [Decided-proposal suppression](inbox-decided-suppression.md) — the "already decided" set is a hide switch: decisions only, ordered replay (undo reopens), fail open; a declared-but-unassigned field made it dead for months.
 - [Empty-state standard](empty-state-standard.md) — px-[16px] py-[12px] in-panel geometry; "No X yet" vs "Nothing X yet" voice split; "Couldn't load" leads errors.
 - [Cross-currency totals](cross-currency-totals.md) — no FX rate exists; a total may exclude + disclose, a ratio must refuse, because a shrunken denominator changes its meaning.

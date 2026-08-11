@@ -254,6 +254,13 @@ function AccountPopup({
   );
 }
 
+/* ── Standard wizard header — back button (or close on step 1) ── */
+const WizardHeader = ({ onClick }: { onClick: () => void }) => (
+  <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-brain-v1stroke-2 h-[56px] relative shrink-0 w-full">
+    <BackBtn onClick={onClick} />
+  </div>
+);
+
 // ── Main component ────────────────────────────────────────────────────────────
 interface Props {
   open: boolean;
@@ -342,13 +349,6 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep 
   };
 
   const activeAddr = selected?.address ?? "";
-
-  /* ── Standard wizard header — back button (or close on step 1) ── */
-  const WizardHeader = ({ onClick }: { onClick: () => void }) => (
-    <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-brain-v1stroke-2 h-[56px] relative shrink-0 w-full">
-      <BackBtn onClick={onClick} />
-    </div>
-  );
 
   /* ── Step content (inner panel only — Radix shell provides the frame) ── */
   const stepContent = (() => {
