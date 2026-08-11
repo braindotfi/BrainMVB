@@ -98,7 +98,7 @@ export function pendingAttentionSummary({
   const parts: string[] = [];
   if (urgent > 0) parts.push(`${urgent} urgent`);
   if (input > 0) parts.push(`${input} needing your input`);
-  if (waiting > 0) parts.push(`${waiting} waiting on you`);
+  if (waiting > 0) parts.push(`${waiting} waiting for you`);
 
   return {
     total,
@@ -107,7 +107,9 @@ export function pendingAttentionSummary({
        become less urgent because a second feed timed out — but the hedge in the
        wording is what stops the count being read as complete. */
     tone: incomplete ? "partial" : urgent > 0 ? "urgent" : "normal",
-    text: `${incomplete ? "At least " : ""}${total} ${total === 1 ? "item needs" : "items need"} your attention`,
+    text: `${incomplete ? "At least " : ""}${total} ${
+      total === 1 ? "Item Needs" : "Items Need"
+    } Your Attention`,
     detail: incomplete ? [...parts, INCOMPLETE_NOTE].join(" · ") : parts.join(" · "),
   };
 }
