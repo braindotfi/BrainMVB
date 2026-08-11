@@ -702,14 +702,14 @@ function ProfileSection() {
                 data-testid="text-auto-approve-limit"
               >
                 <p
-                  className={`[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] whitespace-nowrap ${
+                  className={`[font-family:'Gilroy',sans-serif] whitespace-nowrap ${
                     limitUnreadable
-                      ? "text-brain-v1light-orange"
+                      ? "font-medium text-[16px] leading-[20px] text-brain-v1light-orange"
                       : policy.isLoading
-                        ? "text-brain-v1baby-blue-60"
+                        ? "font-medium text-[16px] leading-[20px] text-brain-v1baby-blue-60"
                         : autoLimit?.kind === "conditional"
-                          ? "text-brain-v1baby-blue-60 text-[14px] leading-[20px] font-semibold"
-                        : "text-brain-v1white"
+                          ? "font-semibold text-[14px] leading-[20px] text-brain-v1baby-blue-60"
+                        : "font-medium text-[16px] leading-[20px] text-brain-v1white"
                   }`}
                 >
                   {policy.isLoading
