@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Search } from "lucide-react";
 import chevronDownIcon from "@/assets/chevron_down_dropdown.png";
-import { useBrainAuditRecords, AUDIT_EVENTS_LIMIT } from "@/lib/brainAudit";
+import { useBrainAuditRecords } from "@/lib/brainAudit";
 import { partitionSystemActivity } from "@/lib/auditVisibility";
 import { humanReadableActor, isAssistantActivity } from "@/lib/auditTypes";
 import type { AuditRecord } from "@/lib/auditTypes";
@@ -101,7 +101,7 @@ function plural(n: number, one: string, many: string): string {
 }
 
 export function AuditLogSection() {
-  const { records: brainRecords, isLoading, isError, eventCount } = useBrainAuditRecords();
+  const { records: brainRecords, isLoading, isError } = useBrainAuditRecords();
   const acknowledgedRecords = useAcknowledgedRecords();
   const { formatText } = useCurrency();
   const [query, setQuery] = useState("");
@@ -212,13 +212,6 @@ export function AuditLogSection() {
 
   const withheldByFilter = searched.length - visible.length;
 
-  /* A full page back means the cursor has more behind it. Nothing here may say
-     "N events" in that case — only "at least N". Measured on brain-core's raw
-     page, never the merged list: locally-recorded assistant questions are not
-     subject to the read's limit, and letting them count would turn a short page
-     into a false "there is more" claim. */
-  const atEventLimit = eventCount >= AUDIT_EVENTS_LIMIT;
-
   /* The audit read failing does NOT empty the list — locally-recorded assistant
      questions are merged in from a separate query and survive. So the error
      cannot be left to the empty state: a list of two local rows under copy that
@@ -266,13 +259,12 @@ export function AuditLogSection() {
           <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-brain-v1baby-blue-60 text-[16px]">
             Audit Log
           </p>
-          {/* Suppressed while the feed is unreadable: a count next to a partial
-              list reads as a total. */}
+          {/* The feed is a complete cursor walk, so this is the actual record count. */}
           {!isLoading && !feedUnavailable && records.length > 0 && (
             <CountPill testId="badge-audit-count">
               {visible.length === records.length
-                ? `${records.length}${atEventLimit ? "+" : ""}`
-                : `${visible.length} of ${records.length}${atEventLimit ? "+" : ""}`}
+                ? `${records.length}`
+                : `${visible.length} of ${records.length}`}
             </CountPill>
           )}
         </div>

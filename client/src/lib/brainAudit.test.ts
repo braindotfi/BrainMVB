@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { mapAuditEventToRecord, anchorFromInclusionProof, localQuestionToRecord, extractActorName, bffPathForActorLookup, truncateForCard, CARD_TITLE_MAX, type BrainAuditEvent, type BrainAnchor, type BrainInclusionProof } from "./brainAudit";
+import { mapAuditEventToRecord, anchorFromInclusionProof, localQuestionToRecord, extractActorName, bffPathForActorLookup, truncateForCard, decidedProposalIdsFromEvents, CARD_TITLE_MAX, type BrainAuditEvent, type BrainAnchor, type BrainInclusionProof } from "./brainAudit";
 
 /**
  * mapAuditEventToRecord's real branches: eventType/summary classification from
@@ -50,6 +50,37 @@ describe("mapAuditEventToRecord", () => {
     );
     expect(r.eventType).toBe("acknowledged");
     expect(r.summary).toContain("acknowledge");
+  });
+
+  /* The Inbox suppresses a live proposal when an audit record carries its id
+     (brain-core leaves decided proposals in GET /proposals, so without that the
+     pending row and its settled row both render). That makes `proposalId` a
+     HIDE switch, and every agent proposal is born with an
+     `agent.action.proposed` event quoting its own id in exactly the same field.
+     If this mapping ever widened past proposal.decided, every record would be
+     hidden for as long as its own creation event sat inside the audit page —
+     and because that page is capped, which records vanished would drift as the
+     tenant aged. Pinned here rather than at the call site: this is the line
+     that decides it. */
+  it("never links a proposal from a creation event, only from a decision", () => {
+    const created = mapAuditEventToRecord(
+      ev({
+        action: "agent.action.proposed",
+        actor: "compliance",
+        inputs: { action_kind: "agent_action", proposal_id: "prop_01NOTDECIDED" },
+        outputs: { status: "pending", outcome: "confirm" },
+      }),
+      anchor(),
+    );
+    expect(created.linked).toEqual([]);
+
+    const decided = mapAuditEventToRecord(
+      ev({ action: "proposal.decided", inputs: { proposal_id: "prop_01DECIDED", decision: "approve" } }),
+      anchor(),
+    );
+    expect(decided.linked).toEqual([
+      { kind: "proposal", label: "prop_01DECIDED", refId: "prop_01DECIDED" },
+    ]);
   });
 
   it("uses the real narrative + links the proposal when brain-core attaches a proposal_summary", () => {
@@ -480,5 +511,66 @@ describe("localQuestionToRecord", () => {
   it("does not mark an unknown (null) engine not_recorded — that would assert a false negative", () => {
     const unknownQ = { ...q, engine: null };
     expect(localQuestionToRecord(unknownQ).anchor.status).toBe("pending_next_batch");
+  });
+});
+
+/**
+ * This set is a HIDE SWITCH. Both the Inbox and the Overview count subtract it
+ * from the live proposals feed, so an id that lands in it wrongly does not
+ * produce a visible error — it produces a record the tenant is never shown and
+ * cannot know to look for. These pin the two ways that could happen.
+ */
+describe("decidedProposalIdsFromEvents", () => {
+  const decision = (id: string, d: string, at: string) =>
+    ev({ action: "proposal.decided", inputs: { proposal_id: id, decision: d }, created_at: at });
+
+  it("collects proposals that were actually decided", () => {
+    const ids = decidedProposalIdsFromEvents([
+      decision("prop_a", "approve", "2026-07-01T10:00:00.000Z"),
+      decision("prop_b", "reject", "2026-07-01T11:00:00.000Z"),
+      decision("prop_c", "acknowledge", "2026-07-01T12:00:00.000Z"),
+    ]);
+    expect([...ids].sort()).toEqual(["prop_a", "prop_b", "prop_c"]);
+  });
+
+  /* An agent filing a proposal quotes the same proposal_id in the same field as
+     a decision does. Only the action tells them apart, and if that check ever
+     goes away every record disappears while its own birth event is in the feed. */
+  it("ignores an agent.action.proposed event quoting the same id", () => {
+    const ids = decidedProposalIdsFromEvents([
+      ev({
+        action: "agent.action.proposed",
+        inputs: { action_kind: "agent_action", proposal_id: "prop_live" },
+        created_at: "2026-07-01T10:00:00.000Z",
+      }),
+    ]);
+    expect(ids.has("prop_live")).toBe(false);
+  });
+
+  /* `undo` is a decision that REOPENS the record. Counting it as terminal would
+     hide a proposal that is live and waiting on the tenant. */
+  it("drops a proposal that was undone after being decided", () => {
+    const ids = decidedProposalIdsFromEvents([
+      decision("prop_a", "undo", "2026-07-01T12:00:00.000Z"),
+      decision("prop_a", "approve", "2026-07-01T10:00:00.000Z"),
+    ]);
+    expect(ids.has("prop_a")).toBe(false);
+  });
+
+  /* ...and the reverse must still hide it, which is what makes this an ordered
+     replay rather than "an undo anywhere wins". */
+  it("hides a proposal decided again after an undo", () => {
+    const ids = decidedProposalIdsFromEvents([
+      decision("prop_a", "reject", "2026-07-01T14:00:00.000Z"),
+      decision("prop_a", "undo", "2026-07-01T12:00:00.000Z"),
+      decision("prop_a", "approve", "2026-07-01T10:00:00.000Z"),
+    ]);
+    expect(ids.has("prop_a")).toBe(true);
+  });
+
+  it("survives an empty or unread feed without inventing ids", () => {
+    expect(decidedProposalIdsFromEvents([]).size).toBe(0);
+    expect(decidedProposalIdsFromEvents(undefined).size).toBe(0);
+    expect(decidedProposalIdsFromEvents(null).size).toBe(0);
   });
 });

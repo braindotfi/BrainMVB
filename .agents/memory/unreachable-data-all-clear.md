@@ -133,3 +133,20 @@ as settled tenant configuration.
 
 **How to apply:** route failed and pending branches through the shared unavailable
 component; keep neutral styling only for a confirmed empty result.
+
+
+## An unanswered read is not an empty one
+
+`isError` is not enough. A count assembled while its queries are still in flight
+is zero, and a summary line that hides itself at zero renders nothing at all —
+an all-clear built from nothing, sitting beside KPI cards that resolved fast, so
+the blank space reads as an answer rather than as a page still asking.
+
+Any surface whose empty state means "you're done" needs **five** states, not
+two: still reading, clean zero, clean count, hedged count, and read-failed. The
+loading state must outrank both the count (a subtotal changes under the reader)
+and the failure wording (a slow read is not a broken one).
+
+Truncation belongs in the same hedge as errors: a capped or paged read that
+succeeded is still a floor, and a hook that does not expose `isTruncated` cannot
+be hedged by its caller.

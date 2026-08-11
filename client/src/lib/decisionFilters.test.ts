@@ -8,6 +8,7 @@ import {
   matchesQuery,
   typeOptions,
   EMPTY_FILTERS,
+  PRIORITY_OPTIONS,
   ROW_TIER_ORDER,
   type DecisionFacets,
 } from "./decisionFilters";
@@ -80,6 +81,16 @@ describe("ordering", () => {
 
   it("urgent leads the order", () => {
     expect(ROW_TIER_ORDER[0]).toBe("urgent");
+  });
+});
+
+describe("priority label options", () => {
+  it("exposes the three Inbox urgency labels in display order", () => {
+    expect(PRIORITY_OPTIONS).toEqual([
+      { value: "urgent", label: "Urgent" },
+      { value: "waiting", label: "Waiting on You" },
+      { value: "insight", label: "Insights" },
+    ]);
   });
 });
 

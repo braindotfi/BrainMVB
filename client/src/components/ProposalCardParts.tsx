@@ -27,6 +27,7 @@ import editIconSrc from "@assets/figma_icons/inline/outcome_edit.png";
 import rejectIconSrc from "@assets/figma_icons/inline/outcome_reject.png";
 import { capitalCase } from "@/lib/displayLabels";
 import { Button } from "@/components/ui/button";
+import { RecordPill } from "@/components/RecordPill";
 
 /* ── Section heading ──────────────────────────────────────────────────────────
    Label, then a hairline rule that fills the remaining width, then an optional
@@ -177,15 +178,40 @@ export const StatusPill = ({
 
 /** Small caption pill used on evidence rows ("Payment", "Invoice").
  *  20px tall in the frame (2px padding + 14px line + 2px padding + 1px borders). */
-export const TypeTag = ({ label, testId }: { label: string; testId?: string }) => (
-  <div
-    className="inline-flex items-center justify-center bg-brain-v1baby-blue-15 border border-solid border-[rgba(108,119,157,0.2)] px-[8px] py-[2px] rounded-pill shrink-0"
-    data-testid={testId}
-  >
-    <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-brain-v1baby-blue-60 text-center whitespace-nowrap">
+export const TypeTag = ({
+  label,
+  testId,
+  tone = "neutral",
+}: {
+  label: string;
+  testId?: string;
+  tone?: "neutral" | "warning" | "agent";
+}) => (
+  tone === "agent" ? (
+    <RecordPill
+      className="bg-brain-v1dark-orange text-brain-v1light-orange border-[rgba(255,149,0,0.2)]"
+      testId={testId}
+    >
       {capitalCase(label)}
-    </span>
-  </div>
+    </RecordPill>
+  ) : (
+    <div
+      className={`inline-flex items-center justify-center px-[8px] py-[2px] rounded-pill shrink-0 ${
+        tone === "warning"
+          ? "bg-[rgba(255,149,0,0.08)] border border-solid border-[rgba(255,149,0,0.25)]"
+          : "bg-brain-v1baby-blue-15 border border-solid border-[rgba(108,119,157,0.2)]"
+      }`}
+      data-testid={testId}
+    >
+      <span
+        className={`[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-center whitespace-nowrap ${
+          tone === "warning" ? "text-brain-v1light-orange" : "text-brain-v1baby-blue-60"
+        }`}
+      >
+        {capitalCase(label)}
+      </span>
+    </div>
+  )
 );
 
 /* ── Callout boxes ────────────────────────────────────────────────────────────
@@ -397,17 +423,25 @@ export const OutcomeRow = ({
 export const EvidenceLinkRow = ({
   label,
   kind,
+  kindTone = "neutral",
   onClick,
   testId,
 }: {
   label: string;
   kind?: string | null;
+  kindTone?: "neutral" | "agent";
   onClick: () => void;
   testId?: string;
 }) => {
   const inner = (
     <>
-      {kind && <TypeTag label={kind} testId={testId ? `${testId}-kind` : undefined} />}
+      {kind && (
+        <TypeTag
+          label={kind}
+          tone={kindTone}
+          testId={testId ? `${testId}-kind` : undefined}
+        />
+      )}
       <div className="flex flex-1 items-center min-w-px">
         <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-brain-v1baby-blue-100 truncate">
           {label}
@@ -457,13 +491,14 @@ export const HeadingValue = ({ children, testId }: { children: ReactNode; testId
    Approve / Postpone / Reject in the frame; in the live card the SET comes from
    available_decisions, so the tone maps onto the shared Button primitive's
    named intents (approve → success, reject → destructive, neutral → secondary). */
-export type ActionTone = "approve" | "reject" | "neutral" | "acknowledge";
+export type ActionTone = "approve" | "reject" | "neutral" | "acknowledge" | "warning";
 
-const ACTION_VARIANTS: Record<ActionTone, "success" | "destructive" | "secondary"> = {
+const ACTION_VARIANTS: Record<ActionTone, "success" | "destructive" | "secondary" | "warning"> = {
   approve: "success",
   reject: "destructive",
   neutral: "secondary",
   acknowledge: "success",
+  warning: "warning",
 };
 
 /* `full` fills the card footer (the detail sheets); `compact` sits inline at the

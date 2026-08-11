@@ -1700,6 +1700,18 @@ When you mention a money amount, always reproduce it exactly as the grounding da
         const patch = { extractStatus: "failed" as ExtractStatus };
         const updated = await storage.updateSourceDocumentExtraction(userId, doc.id, patch);
         let message = err instanceof BrainApiError ? err.message : (err as Error).message;
+
+        /* Extract brain-core's own request_id from the error body so it is
+           persisted server-side. Without this, a production ingest 5xx is only
+           traceable if someone happens to capture the client-facing 502 body at
+           the moment it occurs — there is no way to look it up afterward. */
+        const brainRequestId: string | null = (() => {
+          if (!(err instanceof BrainApiError)) return null;
+          const b = err.body as Record<string, unknown> | null | undefined;
+          const e = typeof b?.error === "object" && b.error !== null ? (b.error as Record<string, unknown>) : null;
+          return typeof e?.request_id === "string" ? e.request_id : null;
+        })();
+
         if (err instanceof BrainApiError && err.status === 403) {
           const body = err.body as Record<string, unknown> | undefined;
           const code = typeof body?.error === "object" && body.error && typeof (body.error as Record<string, unknown>).code === "string"
@@ -1709,10 +1721,26 @@ When you mention a money amount, always reproduce it exactly as the grounding da
             message = "Document upload is not yet available on this demo environment. Brain is adding the required permission to the demo token.";
           }
         }
+
+        /* Always log ingest failures server-side, including the brain-core
+           request_id when present, so failures are traceable without a live
+           client-side capture. */
+        console.error(
+          `[document-ingest] brain-core /raw/ingest failed:`,
+          `status=${err instanceof BrainApiError ? err.status : "network"}`,
+          brainRequestId ? `brain_request_id=${brainRequestId}` : "(no brain_request_id)",
+          `filename=${filename}`,
+          `userId=${userId}`,
+          `docId=${doc.id}`,
+        );
+
         return res.status(502).json({
           document: updated ?? { ...doc, ...patch },
           error: "ingest_failed",
           message,
+          /* Pass the brain_request_id through so the client can surface it and
+             so log-scraping can correlate our server log with brain-core's. */
+          ...(brainRequestId ? { brain_request_id: brainRequestId } : {}),
         });
       }
 

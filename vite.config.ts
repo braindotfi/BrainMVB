@@ -100,6 +100,14 @@ export default defineConfig({
   },
   root: path.resolve(import.meta.dirname, "client"),
   optimizeDeps: {
+    /* recharts must be pre-bundled at startup, not discovered on first render.
+       It is imported by exactly one lazy-reached surface (the Overview cash
+       projection), so Vite doesn't see it during the initial crawl; when the
+       card first mounts, Vite re-optimizes and reloads mid-session, and the
+       in-flight module graph briefly holds a null React — surfacing as
+       "Cannot read properties of null (reading 'useRef')" inside recharts,
+       which reads exactly like a duplicate-React bug and isn't one. */
+    include: ["recharts"],
     esbuildOptions: {
       // NOTE: changing this define busts the browserHash so browsers
       // fetch fresh pre-bundled chunks (v1 = bs58+tweetnacl fully fixed).

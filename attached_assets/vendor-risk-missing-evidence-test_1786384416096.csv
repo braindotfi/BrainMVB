@@ -1,0 +1,5 @@
+Date,Description,Counterparty,Amount,Type
+2026-08-01,Office supplies restock,Staples Business Advantage,-284.50,debit
+2026-08-03,Customer payment received,Initech LLC,9800.00,credit
+2026-08-05,Recurring monthly software subscription,Northgate Supplies,-412.00,debit
+2026-08-07,One-time contractor payment,R. Castellano Consulting,-1850.00,debit
