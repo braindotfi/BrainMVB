@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { WidgetPanel } from "@/components/LedgerWidgets";
+import { CountPill } from "@/components/CountPill";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -61,11 +62,22 @@ const TableCard = ({ children, testId }: { children: ReactNode; testId?: string 
   <WidgetPanel testId={testId}>{children}</WidgetPanel>
 );
 
-const SectionLabel = ({ children, testId }: { children: ReactNode; testId?: string }) => (
-  <div className="flex items-center min-h-[36px]">
+const SectionLabel = ({
+  children,
+  count,
+  countTestId,
+  testId,
+}: {
+  children: ReactNode;
+  count?: number;
+  countTestId?: string;
+  testId?: string;
+}) => (
+  <div className="flex items-center gap-[8px] min-h-[36px]">
     <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-60 text-[16px] leading-[24px]" data-testid={testId}>
       {children}
     </p>
+    {typeof count === "number" && <CountPill testId={countTestId}>{count}</CountPill>}
   </div>
 );
 
@@ -466,7 +478,13 @@ export function SourcesSection() {
       )}
 
       <div className="flex flex-col gap-[4px]">
-        <SectionLabel testId="label-connected-accounts">Connected Accounts</SectionLabel>
+        <SectionLabel
+          testId="label-connected-accounts"
+          count={accountRows.length}
+          countTestId="count-connected-accounts"
+        >
+          Connected Accounts
+        </SectionLabel>
         <TableCard testId="list-connected-accounts">
           {accountRows.length === 0 ? (
             <EmptyRow
@@ -510,7 +528,13 @@ export function SourcesSection() {
       />
 
       <div className="flex flex-col gap-[4px]">
-        <SectionLabel testId="label-documents">Documents</SectionLabel>
+        <SectionLabel
+          testId="label-documents"
+          count={docs.length}
+          countTestId="count-documents"
+        >
+          Documents
+        </SectionLabel>
         <TableCard testId="list-documents">
           {docs.length === 0 ? (
             <EmptyRow
