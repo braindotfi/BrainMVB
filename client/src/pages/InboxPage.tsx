@@ -87,6 +87,7 @@ import {
   canonicalDecisionType,
   decisionTypeLabel,
   hasActiveFilter,
+  PRIORITY_OPTIONS,
   typeOptions,
   EMPTY_FILTERS,
   RECOMMENDATION_OPTIONS,
@@ -1203,6 +1204,15 @@ export function InboxPage() {
   );
 
   const visibleItems = useMemo(() => applyDecisionFilters(tabItems, filters), [tabItems, filters]);
+  /* Missing-evidence rows live outside `items`, so apply the urgency label
+     facet explicitly. Every stalled run belongs to the waiting tier. */
+  const visibleInputRows = useMemo(
+    () =>
+      filters.priority && filters.priority.length > 0 && !filters.priority.includes("waiting")
+        ? []
+        : inputRows,
+    [filters.priority, inputRows],
+  );
   const availableTypes = useMemo(() => typeOptions(tabItems), [tabItems]);
   const filtering = hasActiveFilter(filters);
 
@@ -1576,28 +1586,30 @@ export function InboxPage() {
   );
 
   /* Filters are built from the facets of `items`, and missing-evidence rows are
-     not in `items` — they have no type, amount or decision status to match on.
-     Rather than drop the section (silently under-reporting stuck agents) or
-     pretend it was filtered, it stays and says the filter doesn't reach it. */
+     not in `items`. Their urgency label is applied separately above; status,
+     type, and text filters do not apply to this source. */
   /* Caption removed: the truncation notice ("Showing the most recent audit
      events only…") was removed per spec — the section header is sufficient. */
-  const inputSectionCaption = filtering ? "Filters don't apply to this section." : "";
+  const inputSectionCaption =
+    filters.status.length > 0 || filters.type.length > 0 || filters.query.trim() !== ""
+      ? "Some filters don't apply to this section."
+      : "";
 
   /* Which sections to show based on the recommendation filter.
      An empty filter means "all". The inputRows section lives outside
      visibleItems so it must be gated here rather than via matchesFilters. */
   const rec = filters.recommendation;
   const showApproval  = rec.length === 0 || rec.includes("approval");
-  const showInput     = rec.length === 0 || rec.includes("input");
+  const labelAllowsInput =
+    !filters.priority?.length || filters.priority.includes("waiting");
+  const showInput     = (rec.length === 0 || rec.includes("input")) && labelAllowsInput;
   const showAwareness = rec.length === 0 || rec.includes("awareness");
 
   const unresolvedEmpty =
     activeTab === "Unresolved" &&
     (showApproval  ? visibleItems.filter((it) => inboxBucket(it) === "approval").length  === 0 : true) &&
-    (showInput     ? inputRows.length === 0 : true) &&
-    (showAwareness ? visibleItems.filter((it) => inboxBucket(it) === "awareness").length === 0 : true) &&
-    visibleItems.length === 0 &&
-    inputRows.length === 0;
+    (showInput     ? visibleInputRows.length === 0 : true) &&
+    (showAwareness ? visibleItems.filter((it) => inboxBucket(it) === "awareness").length === 0 : true);
 
   /* Three different silences, three different sentences. "No decisions match this
      filter" after the user narrowed the list is information; the same words on an
@@ -1655,7 +1667,7 @@ export function InboxPage() {
           />
         </div>
 
-        <div className="flex flex-row gap-[24px] items-center">
+         <div className="flex flex-row flex-wrap gap-[12px] items-center">
           {([
             {
               values: filters.recommendation,
@@ -1664,6 +1676,14 @@ export function InboxPage() {
               testId: "filter-recommendation",
               options: [{ value: "all", label: "All Recommendations" }, ...RECOMMENDATION_OPTIONS],
               width: "w-[196px]",
+            },
+            {
+              values: filters.priority ?? [],
+              onChange: (v: string[]) => setFilter("priority", v as DecisionFilterState["priority"]),
+              label: "Filter by label",
+              testId: "filter-label",
+              options: [{ value: "all", label: "All Labels" }, ...PRIORITY_OPTIONS],
+              width: "w-[160px]",
             },
             {
               values: filters.status,
@@ -1843,11 +1863,11 @@ export function InboxPage() {
                 Couldn't check whether any agent is waiting on information from you. This is a connection problem, not an all-clear.
               </UnavailableDataBox>
             ) : (
-              inputRows.length > 0 && (
+               visibleInputRows.length > 0 && (
                 <RowSection
                   title="Needs your input"
                   accent="#ff9500"
-                  rows={inputRows}
+                   rows={visibleInputRows}
                   caption={inputSectionCaption || undefined}
                   testId="section-needs-input"
                   headingTestId="heading-needs-input"
