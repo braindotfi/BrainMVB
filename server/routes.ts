@@ -1661,6 +1661,26 @@ When you mention a money amount, always reproduce it exactly as the grounding da
       }
       const { filename, category, sourceType } = q.data;
       const mimeType = q.data.mimeType ?? "application/octet-stream";
+      const extension = filename.toLowerCase().slice(filename.lastIndexOf("."));
+      const supportedExtensions = new Set([
+        ".pdf",
+        ".csv",
+        ".xls",
+        ".xlsx",
+        ".doc",
+        ".docx",
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".gif",
+        ".webp",
+      ]);
+      if (!supportedExtensions.has(extension)) {
+        return res.status(415).json({
+          error: "unsupported_file_type",
+          message: "ZIP files and other unsupported file types can't be uploaded.",
+        });
+      }
 
       const userId = req.session.userId!;
 

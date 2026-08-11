@@ -23,6 +23,12 @@ import docsIcon from "@assets/docs_1783621224017.png";
 import { AlertCallout, MutedCallout, InfoIcon } from "@/components/Callout";
 import { useAuth } from "@/lib/authContext";
 import { Button } from "@/components/ui/button";
+import {
+  DOCUMENT_ACCEPT,
+  DOCUMENT_FORMAT_LABEL,
+  isSupportedDocumentFile,
+  sourceTypeForDocument,
+} from "@/lib/documentUpload";
 
 /* ──────────────────────────────────────────────────────────────────────────
  *  Source connect screens - the mechanisms for attaching a data source to Brain.
@@ -45,13 +51,6 @@ import { Button } from "@/components/ui/button";
 export type { CategoryId };
 
 type CounterpartyLite = { id: string; display_name?: string; name?: string };
-
-/** Map a file to brain-core's source_type. */
-function sourceTypeForFile(file: File): "pdf_upload" | "csv_upload" {
-  const n = file.name.toLowerCase();
-  if (n.endsWith(".csv") || n.endsWith(".xls") || n.endsWith(".xlsx")) return "csv_upload";
-  return "pdf_upload";
-}
 
 /* ─── Catalog ─── */
 type Provider = { id: string; name: string; logo: string; bg: string; light?: boolean; live?: boolean };
@@ -405,7 +404,7 @@ export function DocumentUpload({ category, onDone }: { category: string; onDone:
         filename: file.name,
         mimeType: file.type || "application/octet-stream",
         category,
-        sourceType: sourceTypeForFile(file),
+        sourceType: sourceTypeForDocument(file),
       });
       const res = await fetch(`/api/integrations/documents/ingest?${params.toString()}`, {
         method: "POST",
@@ -433,7 +432,14 @@ export function DocumentUpload({ category, onDone }: { category: string; onDone:
 
   const addFiles = useCallback((list: FileList | File[]) => {
     setError(null);
-    Array.from(list).forEach((f) => uploadMut.mutate(f));
+    const files = Array.from(list);
+    const unsupported = files.filter((file) => !isSupportedDocumentFile(file));
+    if (unsupported.length > 0) {
+      setError("ZIP files and other unsupported file types can't be uploaded. Choose PDF, CSV, XLSX, DOCX, or another supported document.");
+    }
+    files
+      .filter(isSupportedDocumentFile)
+      .forEach((file) => uploadMut.mutate(file));
   }, [uploadMut]);
 
   const onDrop = (e: React.DragEvent) => {
@@ -462,13 +468,13 @@ export function DocumentUpload({ category, onDone }: { category: string; onDone:
           Drop files here, or <span className="text-brain-v1light-orange">click to browse</span>
         </p>
         <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px]">
-          PDF, CSV, Excel, images, ZIPs
+          {DOCUMENT_FORMAT_LABEL}
         </p>
         <input
           ref={inputRef}
           type="file"
           multiple
-          accept=".pdf,.csv,.xls,.xlsx,.png,.jpg,.jpeg,.zip"
+          accept={DOCUMENT_ACCEPT}
           className="hidden"
           onChange={(e) => { if (e.target.files) addFiles(e.target.files); e.currentTarget.value = ""; }}
           data-testid="input-add-source-file"
