@@ -720,35 +720,55 @@ describe("buildProposalHeaderCopy", () => {
     expect(titleCaseLabel("high risk")).toBe("High Risk");
   });
 
-  it("falls back to the resolved narrative, not the bare agent name, when there's no subject or headline", () => {
-    // Exactly the compliance/notify_only shape: no subject, no presentation.headline,
-    // so every one of these previously rendered an identical, indistinguishable
-    // "Compliance" row title regardless of what each finding was actually about.
-    const proposal = {
-      id: "pr_compliance",
-      type: "compliance",
-      created_at: "2026-07-29T00:00:00.000Z",
-      status: "pending",
-      risk_band: "high",
-      confidence: 0.94,
-      mode: "notify_only",
-      narrative: "Compliance review found policy_violation with high severity.",
-      evidence: [],
-      agent: { id: "agent_compliance", kind: "compliance", display_name: "Compliance" },
-      payment_intent_id: null,
-      action_type: null,
-      subject: null,
-      presentation: null,
-      key_facts: null,
-      resolved_refs: null,
-    } as any;
+  /* Every services/internal-agents/src/*\/handler.ts in brain-core that never
+     sets `subject` or `presentation.headline` on its built action, checked
+     against brain-core main as of 2026-08-09. compliance is ALWAYS
+     notify_only; dispute/revenue_intel/subscription go notify_only only when
+     a tenant's policy config sets that rule's default_authority to
+     "notify_only" - but the header-copy fallback risk this test guards is
+     identical whenever that happens, regardless of which of the four it is.
+     Real AGENT_DISPLAY_NAME values (agentProposals.ts), not invented labels,
+     so a display-name change there doesn't silently desync this list. */
+  const NOTIFY_ONLY_CAPABLE_AGENTS = [
+    ["compliance", "Compliance"],
+    ["dispute", "Dispute"],
+    ["revenue_intel", "Revenue Intelligence"],
+    ["subscription", "Subscription"],
+  ] as const;
 
-    const formatText = (value: string) => value;
-    expect(buildProposalHeaderCopy(proposal, "Compliance", formatText)).toEqual({
-      title: "Compliance review found policy violation with high severity.",
-      text: "Proposed by Compliance",
-    });
-  });
+  it.each(NOTIFY_ONLY_CAPABLE_AGENTS)(
+    "falls back to the resolved narrative, not the bare agent name, for a %s finding with no subject/headline",
+    (agentType, agentName) => {
+      // Exactly the notify_only shape: no subject, no presentation.headline,
+      // so every one of these previously rendered an identical,
+      // indistinguishable bare-agent-name title regardless of what each
+      // finding was actually about.
+      const proposal = {
+        id: `pr_${agentType}`,
+        type: agentType,
+        created_at: "2026-07-29T00:00:00.000Z",
+        status: "pending",
+        risk_band: "high",
+        confidence: 0.94,
+        mode: "notify_only",
+        narrative: `${agentName} review found an issue with high severity.`,
+        evidence: [],
+        agent: { id: `agent_${agentType}`, kind: agentType, display_name: agentName },
+        payment_intent_id: null,
+        action_type: null,
+        subject: null,
+        presentation: null,
+        key_facts: null,
+        resolved_refs: null,
+      } as any;
+
+      const formatText = (value: string) => value;
+      const result = buildProposalHeaderCopy(proposal, agentName, formatText);
+      expect(result.title).toBe(proposal.narrative);
+      expect(result.title).not.toBe(agentName);
+      expect(result.text).toBe(`Proposed by ${agentName}`);
+    },
+  );
 
   it("still falls back to the agent name when there's no subject, headline, OR narrative", () => {
     const proposal = {

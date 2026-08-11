@@ -44,6 +44,10 @@ export interface MissingEvidenceItem {
   runId: string | null;
   /** What the agent was attempting, e.g. "payment.execute". Raw, may be absent. */
   attemptedAction: string | null;
+  /** Agent key carried by the event identity, when available. */
+  agentKey?: string | null;
+  /** Upstream display name, when brain-core provides one on the actor ref. */
+  agentName?: string | null;
   /** The event that triggered the run. Raw, may be absent. */
   triggerEvent: string | null;
   /** Required fields brain-core could not find. Never empty — see `parseMissingEvidence`. */
@@ -64,6 +68,74 @@ function pick(e: BrainAuditEvent, key: string): unknown {
 function pickString(e: BrainAuditEvent, key: string): string | null {
   const v = pick(e, key);
   return typeof v === "string" && v.trim() ? v.trim() : null;
+}
+
+function nonEmptyString(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function eventAgentKey(e: BrainAuditEvent): string | null {
+  const payloadKey =
+    pickString(e, "agent_key") ??
+    pickString(e, "agent_type") ??
+    pickString(e, "agent");
+  const topLevelAgent = e.agent;
+  const topLevelKey =
+    e.agent_key ??
+    (typeof topLevelAgent === "string"
+      ? topLevelAgent
+      : topLevelAgent && typeof topLevelAgent === "object"
+        ? topLevelAgent.key ?? topLevelAgent.kind
+        : null);
+  return agentKeyFromIdentity(payloadKey ?? nonEmptyString(topLevelKey) ?? e.actor_ref?.id ?? e.actor);
+}
+
+function eventAgentName(e: BrainAuditEvent): string | null {
+  const topLevelAgent = e.agent;
+  return (
+    nonEmptyString(e.agent_name) ??
+    (topLevelAgent && typeof topLevelAgent === "object"
+      ? nonEmptyString(topLevelAgent.display_name)
+      : null) ??
+    nonEmptyString(e.actor_ref?.display_name)
+  );
+}
+
+/** Extract a stable agent key from brain-core's actor/agent identity spellings. */
+export function agentKeyFromIdentity(identity: string | null): string | null {
+  if (!identity) return null;
+  const value = identity.trim().replace(/\s+agent\s*$/i, "");
+  if (!value) return null;
+  const normalized = value.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+  const withoutAgentPrefix = normalized.replace(/^agent_/, "");
+  const knownKeys = new Set([
+    "vendor_risk",
+    "payment",
+    "collections",
+    "treasury",
+    "cash_forecast",
+    "dispute",
+    "compliance",
+    "revenue_intel",
+    "reconciliation",
+    "subscription",
+    "fraud_anomaly",
+    "bill_management",
+    "debt_optimization",
+    "financial_health",
+    "personal_budget",
+    "purchase_advisor",
+    "savings",
+    "tax_prep",
+    "travel_finance",
+  ]);
+  if (knownKeys.has(withoutAgentPrefix)) return withoutAgentPrefix;
+  for (const key of knownKeys) {
+    if (withoutAgentPrefix.includes(`${key}_`) || withoutAgentPrefix.endsWith(`_${key}`)) {
+      return key;
+    }
+  }
+  return knownKeys.has(withoutAgentPrefix) ? withoutAgentPrefix : null;
 }
 
 /**
@@ -104,10 +176,19 @@ export function parseMissingEvidence(e: BrainAuditEvent): MissingEvidenceItem | 
   if (e.action !== MISSING_EVIDENCE_ACTION) return null;
   const missingFields = pickStringList(e, "missing_required_evidence");
   if (missingFields.length === 0) return null;
+  const attemptedAction =
+    pickString(e, "action") ??
+    pickString(e, "attempted_action") ??
+    pickString(e, "agent_action") ??
+    nonEmptyString(e.agent_action);
+  const agentKey = eventAgentKey(e) ?? agentKeyFromAction(attemptedAction);
+  const agentName = eventAgentName(e);
   return {
     id: e.id,
     runId: pickString(e, "run_id"),
-    attemptedAction: pickString(e, "action") ?? pickString(e, "attempted_action"),
+    attemptedAction,
+    agentKey,
+    agentName,
     triggerEvent: pickString(e, "trigger_event") ?? pickString(e, "trigger"),
     missingFields,
     entityRefs: pickStringList(e, "entity_refs"),
@@ -268,8 +349,17 @@ export function agentKeyFromAction(action: string | null): string {
     "cash_forecast.project":"cash_forecast",
   };
   if (MAP[action]) return MAP[action];
+  const normalized = action.toLowerCase().replace(/[^a-z0-9]+/g, "_");
+  for (const key of Object.values(MAP)) {
+    if (normalized.includes(`${key}_`) || normalized.endsWith(`_${key}`)) return key;
+  }
   // Best-effort: first segment ("bill_management.approve" → "bill_management")
   return action.split(".")[0] ?? "agent";
+}
+
+/** Keep row headlines sentence case without changing resolved entity names. */
+function sentenceCaseTitle(title: string): string {
+  return title ? `${title[0].toUpperCase()}${title.slice(1)}` : title;
 }
 
 /**
@@ -296,37 +386,37 @@ export function buildInputRowTitle(
 
   switch (agentKey) {
     case "vendor_risk":
-      return entityName
-        ? `Vendor risk check blocked — couldn't classify ${entityName} as a vendor`
-        : `Vendor risk check blocked — ${humanizeField(primaryField ?? "required information")} missing`;
+      return sentenceCaseTitle(entityName
+        ? `vendor risk check blocked: couldn't classify ${entityName} as a vendor`
+        : `vendor risk check blocked: ${humanizeField(primaryField ?? "required information")} missing`);
 
     case "payment":
-      return entityName
-        ? `Payment blocked for ${entityName} — missing ${humanizeField(primaryField ?? "payment information")}`
-        : `Payment blocked — missing ${humanizeField(primaryField ?? "payment information")}`;
+      return sentenceCaseTitle(entityName
+        ? `payment blocked for ${entityName}: missing ${humanizeField(primaryField ?? "payment information")}`
+        : `payment blocked: missing ${humanizeField(primaryField ?? "payment information")}`);
 
     case "collections":
-      return entityName
-        ? `Collections reminder blocked for ${entityName} — missing ${humanizeField(primaryField ?? "contact information")}`
-        : `Collections reminder blocked — missing ${humanizeField(primaryField ?? "contact information")}`;
+      return sentenceCaseTitle(entityName
+        ? `collections reminder blocked for ${entityName}: missing ${humanizeField(primaryField ?? "contact information")}`
+        : `collections reminder blocked: missing ${humanizeField(primaryField ?? "contact information")}`);
 
     case "reconciliation":
-      return `Transaction matching blocked — missing ${humanizeField(primaryField ?? "transaction record")}`;
+      return sentenceCaseTitle(`transaction matching blocked: missing ${humanizeField(primaryField ?? "transaction record")}`);
 
     case "treasury":
-      return `Treasury action blocked — missing ${humanizeField(primaryField ?? "account balance")}`;
+      return sentenceCaseTitle(`treasury action blocked: missing ${humanizeField(primaryField ?? "account balance")}`);
 
     case "fraud_anomaly":
-      return `Fraud review blocked — missing ${humanizeField(primaryField ?? "transaction record")}`;
+      return sentenceCaseTitle(`fraud review blocked: missing ${humanizeField(primaryField ?? "transaction record")}`);
 
     case "cash_forecast":
-      return `Cash forecast blocked — missing ${humanizeField(primaryField ?? "account balance")}`;
+      return sentenceCaseTitle(`cash forecast blocked: missing ${humanizeField(primaryField ?? "account balance")}`);
 
     default: {
       const label = agentKey.replace(/_/g, " ");
-      return entityName
-        ? `${label} blocked for ${entityName} — missing ${humanizeField(primaryField ?? "required information")}`
-        : `${label} blocked — missing ${humanizeField(primaryField ?? "required information")}`;
+      return sentenceCaseTitle(entityName
+        ? `${label} blocked for ${entityName}: missing ${humanizeField(primaryField ?? "required information")}`
+        : `${label} blocked: missing ${humanizeField(primaryField ?? "required information")}`);
     }
   }
 }
@@ -389,7 +479,7 @@ export function buildInputRowSubtitle(
  */
 export function inputRowActionLabel(field: string | undefined): string {
   switch (field) {
-    case "counterparty":        return "Confirm Vendor Details";
+    case "counterparty":        return "Add Vendor";
     case "tax_id":              return "Add Tax ID";
     case "contact_email":       return "Add Contact Email";
     case "payment_destination": return "Add Payment Info";

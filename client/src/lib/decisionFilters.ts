@@ -28,6 +28,14 @@ export type RowTier = ProposalTier | "decided";
 /** Fixed render order: what needs attention first, history last. */
 export const ROW_TIER_ORDER: readonly RowTier[] = ["urgent", "waiting", "insight", "decided"] as const;
 
+/** Labels exposed by the Inbox urgency dropdown. Resolved history is intentionally
+ * excluded because it has no urgency label. */
+export const PRIORITY_OPTIONS: readonly { value: ProposalTier; label: string }[] = [
+  { value: "urgent", label: "Urgent" },
+  { value: "waiting", label: "Waiting on You" },
+  { value: "insight", label: "Insights" },
+] as const;
+
 /**
  * The three visible sections of the Unresolved inbox, used as recommendation
  * filter values. "input" is the stalled-agent section (Needs Your Input), which
@@ -119,10 +127,9 @@ export interface DecisionFacets {
 
 export interface DecisionFilterState {
   /**
-   * Legacy priority facet retained for callers that still construct the
-   * pre-recommendation filter shape. The Inbox UI uses `recommendation` for
-   * section visibility, but row-level priority filtering remains harmless and
-   * keeps the pure filter contract backwards-compatible.
+   * Urgency labels used by the Inbox's "All Labels" dropdown. Resolved history
+   * uses the separate `decided` grouping and therefore does not match one of
+   * these labels.
    */
   priority?: readonly RowTier[];
   /**

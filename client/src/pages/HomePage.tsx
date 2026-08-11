@@ -19,6 +19,13 @@ import {
   useBrainProposals,
   isNeedsReview,
 } from "@/lib/brainProposals";
+import { isDecidableProposal } from "@/lib/proposalCards";
+import {
+  useBrainReconciliationInsights,
+  useBrainSubscriptionInsights,
+  useBrainDisputeInsights,
+  useBrainCashFlowInsight,
+} from "@/lib/brainAgentSurfaces";
 import {
   deriveProposalTier,
   thresholdsFromRules,
@@ -482,7 +489,31 @@ export function HomePage() {
     isError: liveProposalsError,
     isLoading: liveProposalsLoading,
   } = useBrainProposals();
-  const needsReviewProposals = useMemo(() => liveProposals.filter(isNeedsReview), [liveProposals]);
+  const { insights: reconciliationInsights, isLoading: reconciliationLoading, isError: reconciliationError } =
+    useBrainReconciliationInsights();
+  const { insights: subscriptionInsights, isLoading: subscriptionLoading, isError: subscriptionError } =
+    useBrainSubscriptionInsights();
+  const { insights: disputeInsights, isLoading: disputeLoading, isError: disputeError } =
+    useBrainDisputeInsights();
+  const { insight: cashFlowInsight, isLoading: cashFlowLoading, isError: cashFlowError } =
+    useBrainCashFlowInsight();
+  const readOnlyInsights = useMemo(
+    () => [
+      ...reconciliationInsights,
+      ...subscriptionInsights,
+      ...disputeInsights,
+      ...(cashFlowInsight ? [cashFlowInsight] : []),
+    ],
+    [reconciliationInsights, subscriptionInsights, disputeInsights, cashFlowInsight],
+  );
+  /* Keep the Overview count aligned with Inbox's Needs your approval section:
+     pending status alone is not enough. Acknowledge-only and otherwise
+     non-writable proposals are awareness records and must not inflate the
+     urgent/waiting categories. */
+  const needsReviewProposals = useMemo(
+    () => liveProposals.filter((p) => isNeedsReview(p) && isDecidableProposal(p)),
+    [liveProposals],
+  );
   /* Tier order is retained even though nothing is rendered from this list any
      more: `deriveProposalTier` returning null is how a proposal with no writable
      decision is excluded, and the count below re-derives per row. */
@@ -523,26 +554,41 @@ export function HomePage() {
     liveNeedsReviewError ||
     liveProposalsError ||
     missingEvidence.isError ||
-     decided.isError;
+    decided.isError ||
+    reconciliationError ||
+    subscriptionError ||
+    disputeError ||
+    cashFlowError;
   /* Until every one of these has answered, the total is a running subtotal.
      Printing it would show a number that changes under the reader, and showing
      nothing would read as an all-clear — so the line says it is still asking. */
-  const stillReading = liveNeedsReviewLoading || liveProposalsLoading || missingEvidence.isLoading || decided.isLoading;
+  const stillReading =
+    liveNeedsReviewLoading ||
+    liveProposalsLoading ||
+    missingEvidence.isLoading ||
+    decided.isLoading ||
+    reconciliationLoading ||
+    subscriptionLoading ||
+    disputeLoading ||
+    cashFlowLoading;
 
   const pendingSummary = useMemo(() => {
     let urgent = 0;
     let waiting = 0;
+    let insights = readOnlyInsights.length;
     for (const p of tieredProposals) {
       if (decidedIds.has(p.id)) continue;
       const tier = deriveProposalTier(p, { thresholds: tierThresholds });
       if (tier === "urgent") urgent++;
       else if (tier === "waiting") waiting++;
+      else if (tier === "insight") insights++;
     }
     /* Both payment-intent feeds land in "waiting" — see tierForPaymentIntent. */
     return pendingAttentionSummary({
       urgent,
       waiting: waiting + pendingSessionIntents + durableNeedsReview.length,
       input: missingEvidenceCount,
+      insights,
       incomplete: incompleteRead,
       loading: stillReading,
     });
@@ -553,6 +599,7 @@ export function HomePage() {
     pendingSessionIntents,
     durableNeedsReview.length,
     missingEvidenceCount,
+    readOnlyInsights.length,
     incompleteRead,
     stillReading,
   ]);
@@ -963,7 +1010,7 @@ export function HomePage() {
                 the same window. Moved up against the metrics it actually
                 comments on: trailing spend, not the projection horizon. */}
             <p
-              className={`[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[16px] w-full ${insightLine.colorClass}`}
+              className={`[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[16px] w-full mb-[16px] ${insightLine.colorClass}`}
               data-testid="text-home-cash-insight"
             >
               {insightLine.text}
@@ -980,50 +1027,87 @@ export function HomePage() {
                 Hidden entirely when nothing is pending AND every feed was read
                 — a permanent "0 items" badge trains people to stop reading the
                 row. It is NOT hidden when a read failed: see pendingSummary. */}
-            {pendingSummary && (
-              <button
-                type="button"
-                onClick={() => navigate("/inbox")}
-                data-testid="row-home-pending-summary"
-                aria-label={`${pendingSummary.text}. Open the Inbox.`}
-                className={`flex flex-col gap-[4px] px-[16px] py-[12px] rounded-panel border border-solid w-full text-left transition-colors outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple ${
-                  pendingSummary.tone === "urgent"
-                    ? "bg-brain-v1dark-pink-red border-[rgba(210,3,68,0.2)] hover:border-[rgba(210,3,68,0.45)]"
-                    : "bg-brain-v1highlight-dropdown-bg border-brain-v1stroke-2 hover:border-brain-v1purple"
-                }`}
-              >
-                <div className="flex items-center gap-[10px] w-full min-w-0">
+            {pendingSummary && (() => {
+              /* Urgent visual state fires whenever there are confirmed urgent
+                 items — including partial reads where `tone` is "partial" but
+                 `urgent > 0` is already known. Loading and unknown stay neutral. */
+              const isUrgent =
+                pendingSummary.urgent > 0 &&
+                pendingSummary.tone !== "loading" &&
+                pendingSummary.tone !== "unknown";
+              const isNeutral =
+                pendingSummary.tone === "loading" || pendingSummary.tone === "unknown";
+              const isNonUrgent = !isUrgent && !isNeutral;
+
+              const textColor = isUrgent
+                ? "text-brain-v1pink-red"
+                : isNeutral
+                ? "text-brain-v1baby-blue-60"
+                : "text-brain-v1light-orange";
+
+              return (
+                <button
+                  type="button"
+                  onClick={() => navigate("/inbox")}
+                  data-testid="row-home-pending-summary"
+                  aria-label={`${pendingSummary.text}. Open the Inbox.`}
+                  className="rounded-panel bg-brain-v1highlight-dropdown-bg w-full mb-[16px] text-left outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple overflow-hidden"
+                >
                   <div
-                    className="size-[8px] rounded-full shrink-0"
-                    style={{
-                      background:
-                        pendingSummary.tone === "urgent"
-                          ? "#d20344"
-                          : /* Grey for both "we don't know yet" cases: still
-                               reading, and read but failed. Amber would claim
-                               there is something to act on. */
-                            pendingSummary.tone === "unknown" || pendingSummary.tone === "loading"
-                            ? "#6c779d"
-                            : "#ff9500",
-                    }}
-                  />
-                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[16px] text-brain-v1baby-blue-100 flex-1 min-w-0">
-                    {pendingSummary.text}
-                  </p>
-                  <span
-                    className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[14px] text-brain-v1purple shrink-0"
-                    aria-hidden="true"
+                    className={`flex items-center gap-[12px] px-[16px] py-[14px] w-full ${
+                      isUrgent
+                        ? "bg-brain-v1dark-pink-red"
+                        : isNonUrgent
+                        ? "bg-brain-v1dark-orange"
+                        : "bg-brain-v1highlight-dropdown-bg"
+                    }`}
                   >
-                    Open Inbox
-                  </span>
-                </div>
-                {pendingSummary.detail && (
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[14px] text-brain-v1baby-blue-60 pl-[18px] w-full">
-                    {pendingSummary.detail}
-                  </p>
-                )}
-              </button>
-            )}
+                    {/* 12×12 circle indicator — matches Figma icon node exactly */}
+                    <svg className="shrink-0" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                      <circle cx="6" cy="6" r="4"
+                        fill={isUrgent ? "#D20344" : isNeutral ? "var(--brain-v1baby-blue-60)" : "#FF9400"}
+                      />
+                    </svg>
+
+                    {/* Stacked title + breakdown */}
+                    <div className="flex-1 min-w-0 flex flex-col gap-[4px]">
+                      <p className={`[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[16px] ${textColor}`}>
+                        {pendingSummary.text}
+                      </p>
+                      {pendingSummary.detail && (
+                        <p className={`[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[14px] ${textColor}`}>
+                          {pendingSummary.detail}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* "Open Inbox" pill */}
+                    <div
+                      aria-hidden="true"
+                      className={`shrink-0 flex items-center justify-center px-[10px] py-[4px] rounded-[22px] ${
+                        isUrgent
+                          ? "bg-brain-v1pink-red"
+                          : isNeutral
+                          ? "bg-[rgba(108,119,157,0.15)]"
+                          : "bg-brain-v1light-orange"
+                      }`}
+                    >
+                      <span
+                        className={`[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap ${
+                          isUrgent
+                            ? "text-brain-v1dark-pink-red"
+                            : isNeutral
+                            ? "text-brain-v1baby-blue-60"
+                            : "text-brain-v1dark-orange"
+                        }`}
+                      >
+                        Open Inbox
+                      </span>
+                    </div>
+                  </div>
+                </button>
+              );
+            })()}
 
             <CashProjectionCard
               view={projection}

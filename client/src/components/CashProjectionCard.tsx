@@ -328,6 +328,11 @@ export function CashProjectionCard({
                 fontSize: 12,
               }}
               labelFormatter={(v) => shortDate(String(v))}
+              labelStyle={{
+                color: "rgba(108, 119, 157, 1)",
+                fontFamily: "Gilroy, sans-serif",
+                fontWeight: 500,
+              }}
               formatter={(value: number, name) => [
                 format(value),
                 name === "all" ? "If invoices are paid" : "Confirmed only",
@@ -362,7 +367,7 @@ export function CashProjectionCard({
 
       {floor && (
         <div
-          className={`flex flex-col gap-[2px] px-[12px] py-[10px] rounded-[8px] border border-solid ${
+          className={`flex flex-col gap-[2px] px-[12px] py-[10px] mb-[12px] rounded-[8px] border border-solid ${
             negative
               ? "bg-brain-v1dark-pink-red border-[rgba(210,3,68,0.2)]"
               : "bg-brain-v1baby-blue-5 border-brain-v1stroke-2"
@@ -381,10 +386,6 @@ export function CashProjectionCard({
         </div>
       )}
 
-      <p className={`${BODY} text-brain-v1baby-blue-60`} data-testid="text-cash-projection-basis">
-        {CASH_EVENT_BASIS}
-      </p>
-
       <Divider />
 
       {/* The event strip: chart order, left to right, one chip per event.
@@ -392,7 +393,7 @@ export function CashProjectionCard({
           date sequence across rows and cost the alignment with the plot, which
           is the only reason this is a strip and not a list. The next chip is
           left partly visible at this column width, which is the scroll cue. */}
-      <p className={`${LABEL} w-full`}>
+       <p className={`${LABEL} w-full`}>
         {view.events.length === 1 ? "1 scheduled event" : `${view.events.length} scheduled events`}
       </p>
       <ul
@@ -409,6 +410,10 @@ export function CashProjectionCard({
           />
         ))}
       </ul>
+
+      <p className={`${BODY} text-brain-v1baby-blue-60`} data-testid="text-cash-projection-basis">
+        {CASH_EVENT_BASIS}
+      </p>
     </Shell>
   );
 }

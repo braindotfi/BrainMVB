@@ -6,6 +6,7 @@ const counts = (over: Partial<Parameters<typeof pendingAttentionSummary>[0]> = {
   urgent: 0,
   waiting: 0,
   input: 0,
+  insights: 0,
   incomplete: false,
   ...over,
 });
@@ -15,21 +16,34 @@ describe("a complete read", () => {
     expect(pendingAttentionSummary(counts())).toBeNull();
   });
 
-  it("counts approvals and inputs together, because both are work asked of you", () => {
+  it("counts all three urgency categories", () => {
     const s = pendingAttentionSummary(counts({ urgent: 1, waiting: 2, input: 3 }));
     expect(s?.total).toBe(6);
-    expect(s?.text).toBe("6 items need your attention");
+    expect(s?.text).toBe("6 Items Need Your Attention");
   });
 
   it("agrees with itself about singular and plural", () => {
-    expect(pendingAttentionSummary(counts({ waiting: 1 }))?.text).toBe("1 item needs your attention");
-    expect(pendingAttentionSummary(counts({ waiting: 2 }))?.text).toBe("2 items need your attention");
+    expect(pendingAttentionSummary(counts({ waiting: 1 }))?.text).toBe("1 Item Needs Your Attention");
+    expect(pendingAttentionSummary(counts({ waiting: 2 }))?.text).toBe("2 Items Need Your Attention");
   });
 
-  it("names the breakdown, and omits the tiers that are empty", () => {
-    const s = pendingAttentionSummary(counts({ urgent: 2, input: 1 }));
-    expect(s?.detail).toBe("2 urgent · 1 needing your input");
-    expect(s?.detail).not.toContain("waiting on you");
+  it("names the urgency categories, and omits the tiers that are empty", () => {
+    const s = pendingAttentionSummary(counts({ urgent: 2, input: 1, insights: 4 }));
+    expect(s?.total).toBe(7);
+    expect(s?.detail).toBe("2 urgent · 1 waiting on you · 4 insights");
+    expect(s?.detail).not.toContain("needing your input");
+  });
+
+  it("orders the breakdown as urgent, waiting on you, then insights", () => {
+    expect(
+      pendingAttentionSummary(counts({ urgent: 2, input: 1, waiting: 3, insights: 4 }))?.detail,
+    ).toBe("2 urgent · 4 waiting on you · 4 insights");
+  });
+
+  it("keeps an Insights-only state visible in the attention banner", () => {
+    const s = pendingAttentionSummary(counts({ insights: 4 }));
+    expect(s?.total).toBe(4);
+    expect(s?.detail).toBe("4 insights");
   });
 
   it("reads urgent only when something urgent is in it", () => {
@@ -42,7 +56,7 @@ describe("a complete read", () => {
 describe("an incomplete read", () => {
   it("still reports a failed-read state without claiming an empty queue", () => {
     const s = pendingAttentionSummary(counts({ waiting: 3, incomplete: true }));
-    expect(s?.text).toBe("At least 3 items need your attention");
+    expect(s?.text).toBe("At least 3 Items Need Your Attention");
   });
 
   it("says in the detail line that something couldn't be read", () => {
@@ -127,6 +141,11 @@ describe("Overview wires the summary to every feed it depends on", () => {
 
   it("hands the count to the shared function instead of phrasing it inline", () => {
     expect(src).toContain("pendingAttentionSummary({");
+  });
+
+  it("uses Inbox's writable-decision rule before counting agent proposals", () => {
+    expect(src).toContain('import { isDecidableProposal } from "@/lib/proposalCards";');
+    expect(src).toContain("isNeedsReview(p) && isDecidableProposal(p)");
   });
 
   /* Silence during load is the same lie as silence during a failure, so every

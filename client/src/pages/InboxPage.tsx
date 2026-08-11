@@ -57,7 +57,6 @@ import {
 } from "@/lib/agentRunInput";
 import { MissingEvidenceModal } from "@/components/MissingEvidenceModal";
 import { useBrainVendors } from "@/lib/brainVendors";
-import { formatRelativeTime } from "@/lib/sourceRows";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { mapApprovalRejection, parseCoreError, type ApprovalRejection } from "@/lib/approvalRejections";
@@ -88,6 +87,7 @@ import {
   canonicalDecisionType,
   decisionTypeLabel,
   hasActiveFilter,
+  PRIORITY_OPTIONS,
   typeOptions,
   EMPTY_FILTERS,
   RECOMMENDATION_OPTIONS,
@@ -531,7 +531,9 @@ export function InboxPage() {
   // read model carries no decider-identity field (no `decided_by`), so there's
   // no honest way to tell an agent decision from a human one here.
   const [selectedProposal, setSelectedProposal] = useState<BrainProposal | null>(null);
-  const [selectedInputItem, setSelectedInputItem] = useState<MissingEvidenceItem | null>(null);
+  /* Track by index so the pager can step through missingEvidence in order.
+     Derived item is the one at that index (null when no modal is open). */
+  const [selectedInputIdx, setSelectedInputIdx] = useState<number | null>(null);
   /* Which timeline ROW currently has a detail surface open. The five surfaces
      below hold five unrelated record types, so the row id is the only handle
      the shared pager can compare across them. */
@@ -1145,10 +1147,10 @@ export function InboxPage() {
     items: missingEvidence,
     isError: missingEvidenceError,
   } = useMissingEvidenceItems();
-  const nowMs = useMemo(() => Date.now(), []);
-
+  /* Derived from the index so the pager can step through the list. */
+  const selectedInputItem = selectedInputIdx !== null ? (missingEvidence[selectedInputIdx] ?? null) : null;
   /* Counterparty id → display name. Shared with inputRows so titles can say
-     "Vendor risk check blocked — couldn't classify Brightline Systems Inc. as a
+      "Vendor risk check blocked — couldn't classify Brightline Systems Inc. as a
      vendor" rather than repeating the same generic sentence for every run. */
   const { vendors } = useBrainVendors();
   const vendorNameMap = useMemo(
@@ -1158,10 +1160,10 @@ export function InboxPage() {
 
   const inputRows = useMemo<TierRowModel[]>(
     () =>
-      missingEvidence.map((entry) => {
+      missingEvidence.map((entry, idx) => {
         /* Derive the agent key from the attempted action so the badge chip can
            say "Vendor Risk Agent" / "Payment Agent" instead of "Agent blocked". */
-        const agentKey = agentKeyFromAction(entry.attemptedAction);
+        const agentKey = entry.agentKey ?? agentKeyFromAction(entry.attemptedAction);
         const primaryField = entry.missingFields[0];
         const fixPath = inputRowFixPath(entry);
         return {
@@ -1177,11 +1179,10 @@ export function InboxPage() {
           /* Agent-specific badge label ("Vendor Risk Agent", "Payment Agent", …)
              in place of the previous generic "Agent blocked" on every row. */
           badge: { label: agentBadgeLabel(agentKey), className: TAG_AGENT },
-          /* Three-part subtitle: {entity name} · {run/trigger ID} · Missing: {field} */
+          /* Subtitle carries the entity, reference, and missing field context. */
           subtitle: buildInputRowSubtitle(entry, vendorNameMap),
-          note: formatRelativeTime(entry.createdAt, nowMs) ?? undefined,
           /* Row tap opens the detail modal. */
-          onOpenDetail: () => setSelectedInputItem(entry),
+          onOpenDetail: () => setSelectedInputIdx(idx),
           /* Primary action button — label derives from the specific missing field;
              destination is confirmed for the common fields, falls back to the audit
              log for field types whose remediation page isn't confirmed yet (see
@@ -1190,7 +1191,7 @@ export function InboxPage() {
             {
               id: "fix",
               label: inputRowActionLabel(primaryField),
-              tone: "acknowledge" as const,
+              tone: "warning" as const,
               onClick: () => navigate(fixPath),
             },
           ],
@@ -1199,10 +1200,19 @@ export function InboxPage() {
           testIdPrefix: "row-agent-input",
         };
       }),
-    [missingEvidence, vendorNameMap, nowMs, navigate],
+    [missingEvidence, vendorNameMap, navigate],
   );
 
   const visibleItems = useMemo(() => applyDecisionFilters(tabItems, filters), [tabItems, filters]);
+  /* Missing-evidence rows live outside `items`, so apply the urgency label
+     facet explicitly. Every stalled run belongs to the waiting tier. */
+  const visibleInputRows = useMemo(
+    () =>
+      filters.priority && filters.priority.length > 0 && !filters.priority.includes("waiting")
+        ? []
+        : inputRows,
+    [filters.priority, inputRows],
+  );
   const availableTypes = useMemo(() => typeOptions(tabItems), [tabItems]);
   const filtering = hasActiveFilter(filters);
 
@@ -1576,28 +1586,30 @@ export function InboxPage() {
   );
 
   /* Filters are built from the facets of `items`, and missing-evidence rows are
-     not in `items` — they have no type, amount or decision status to match on.
-     Rather than drop the section (silently under-reporting stuck agents) or
-     pretend it was filtered, it stays and says the filter doesn't reach it. */
+     not in `items`. Their urgency label is applied separately above; status,
+     type, and text filters do not apply to this source. */
   /* Caption removed: the truncation notice ("Showing the most recent audit
      events only…") was removed per spec — the section header is sufficient. */
-  const inputSectionCaption = filtering ? "Filters don't apply to this section." : "";
+  const inputSectionCaption =
+    filters.status.length > 0 || filters.type.length > 0 || filters.query.trim() !== ""
+      ? "Some filters don't apply to this section."
+      : "";
 
   /* Which sections to show based on the recommendation filter.
      An empty filter means "all". The inputRows section lives outside
      visibleItems so it must be gated here rather than via matchesFilters. */
   const rec = filters.recommendation;
   const showApproval  = rec.length === 0 || rec.includes("approval");
-  const showInput     = rec.length === 0 || rec.includes("input");
+  const labelAllowsInput =
+    !filters.priority?.length || filters.priority.includes("waiting");
+  const showInput     = (rec.length === 0 || rec.includes("input")) && labelAllowsInput;
   const showAwareness = rec.length === 0 || rec.includes("awareness");
 
   const unresolvedEmpty =
     activeTab === "Unresolved" &&
     (showApproval  ? visibleItems.filter((it) => inboxBucket(it) === "approval").length  === 0 : true) &&
-    (showInput     ? inputRows.length === 0 : true) &&
-    (showAwareness ? visibleItems.filter((it) => inboxBucket(it) === "awareness").length === 0 : true) &&
-    visibleItems.length === 0 &&
-    inputRows.length === 0;
+    (showInput     ? visibleInputRows.length === 0 : true) &&
+    (showAwareness ? visibleItems.filter((it) => inboxBucket(it) === "awareness").length === 0 : true);
 
   /* Three different silences, three different sentences. "No decisions match this
      filter" after the user narrowed the list is information; the same words on an
@@ -1655,7 +1667,7 @@ export function InboxPage() {
           />
         </div>
 
-        <div className="flex flex-row gap-[24px] items-center">
+         <div className="flex flex-row flex-wrap gap-[12px] items-center">
           {([
             {
               values: filters.recommendation,
@@ -1664,6 +1676,14 @@ export function InboxPage() {
               testId: "filter-recommendation",
               options: [{ value: "all", label: "All Recommendations" }, ...RECOMMENDATION_OPTIONS],
               width: "w-[196px]",
+            },
+            {
+              values: filters.priority ?? [],
+              onChange: (v: string[]) => setFilter("priority", v as DecisionFilterState["priority"]),
+              label: "Filter by label",
+              testId: "filter-label",
+              options: [{ value: "all", label: "All Labels" }, ...PRIORITY_OPTIONS],
+              width: "w-[160px]",
             },
             {
               values: filters.status,
@@ -1843,11 +1863,11 @@ export function InboxPage() {
                 Couldn't check whether any agent is waiting on information from you. This is a connection problem, not an all-clear.
               </UnavailableDataBox>
             ) : (
-              inputRows.length > 0 && (
+               visibleInputRows.length > 0 && (
                 <RowSection
                   title="Needs your input"
                   accent="#ff9500"
-                  rows={inputRows}
+                   rows={visibleInputRows}
                   caption={inputSectionCaption || undefined}
                   testId="section-needs-input"
                   headingTestId="heading-needs-input"
@@ -1985,13 +2005,23 @@ export function InboxPage() {
         position={pager.position ?? undefined}
       />
 
-      {/* Blocked-run detail — "Needs Your Input" rows open this instead of
-          navigating to the Audit Log. No pager: input rows are outside the
-          unified pager queue (they are a separate feed with a different shape). */}
+      {/* Blocked-run detail — "Needs Your Input" rows open this.
+          Previous / Next pages through missingEvidence in newest-first order,
+          matching the list order the user sees in the Needs Your Input section. */}
       <MissingEvidenceModal
         item={selectedInputItem}
-        open={selectedInputItem !== null}
-        onOpenChange={(o) => { if (!o) setSelectedInputItem(null); }}
+        open={selectedInputIdx !== null}
+        onOpenChange={(o) => { if (!o) setSelectedInputIdx(null); }}
+        vendorNameMap={vendorNameMap}
+        hasPrev={selectedInputIdx !== null && selectedInputIdx > 0}
+        hasNext={selectedInputIdx !== null && selectedInputIdx < missingEvidence.length - 1}
+        onPrev={() => setSelectedInputIdx((i) => (i !== null && i > 0 ? i - 1 : i))}
+        onNext={() => setSelectedInputIdx((i) => (i !== null && i < missingEvidence.length - 1 ? i + 1 : i))}
+        position={
+          selectedInputIdx !== null && missingEvidence.length > 1
+            ? `${selectedInputIdx + 1} of ${missingEvidence.length}`
+            : undefined
+        }
       />
     </div>
   );

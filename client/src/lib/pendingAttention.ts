@@ -38,6 +38,8 @@ export interface PendingAttentionCounts {
   waiting: number;
   /** Stalled agent runs asking the tenant for information (Needs Your Input). */
   input: number;
+  /** Awareness records: acknowledge-only proposals and read-only ledger insights. */
+  insights: number;
   /**
    * True when ANY contributing read failed or stopped short of the full trail.
    * Truncation counts: at the audit page cap, an absent stalled run is not
@@ -64,10 +66,13 @@ export function pendingAttentionSummary({
   urgent,
   waiting,
   input,
+  insights,
   incomplete,
   loading = false,
 }: PendingAttentionCounts): PendingAttentionSummary | null {
-  const total = urgent + waiting + input;
+  /* The banner is an attention summary, not only an action queue: awareness
+     records are included so an Insights-only Inbox still has a visible count. */
+  const total = urgent + waiting + input + insights;
 
   /* Checked before anything else, INCLUDING a non-zero total: a partial count
      drawn mid-load is a number that will change under the reader, and this line
@@ -97,8 +102,9 @@ export function pendingAttentionSummary({
 
   const parts: string[] = [];
   if (urgent > 0) parts.push(`${urgent} urgent`);
-  if (waiting > 0) parts.push(`${waiting} waiting on you`);
-  if (input > 0) parts.push(`${input} needing your input`);
+  const waitingOnYou = waiting + input;
+  if (waitingOnYou > 0) parts.push(`${waitingOnYou} waiting on you`);
+  if (insights > 0) parts.push(`${insights} insights`);
 
   return {
     total,
@@ -107,7 +113,9 @@ export function pendingAttentionSummary({
        become less urgent because a second feed timed out — but the hedge in the
        wording is what stops the count being read as complete. */
     tone: incomplete ? "partial" : urgent > 0 ? "urgent" : "normal",
-    text: `${incomplete ? "At least " : ""}${total} ${total === 1 ? "item needs" : "items need"} your attention`,
+    text: `${incomplete ? "At least " : ""}${total} ${
+      total === 1 ? "Item Needs" : "Items Need"
+    } Your Attention`,
     detail: incomplete ? [...parts, INCOMPLETE_NOTE].join(" · ") : parts.join(" · "),
   };
 }
