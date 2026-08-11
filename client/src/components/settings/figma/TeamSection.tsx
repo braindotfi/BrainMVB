@@ -107,7 +107,7 @@ function MemberRow({ member, inviteActions }: { member: BrainMember; inviteActio
         type="button"
         onClick={() => openMemberDetail(member.id)}
         data-testid={`row-member-${member.id}`}
-        className="settings-record flex gap-[16px] h-[72px] items-center w-full text-left cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30 rounded-[4px]"
+        className="settings-record text-left cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30 rounded-[4px]"
       >
         <div className="settings-record-content flex flex-[1_0_0] gap-[8px] items-center min-w-px">
           <div className="shrink-0 size-[40px] rounded-full overflow-hidden">
@@ -543,7 +543,7 @@ export default function TeamSection() {
             <div key={row.id} className="flex flex-col gap-[16px]">
               {i > 0 && <div className="h-px bg-brain-v1stroke-2 w-full" />}
               <div
-                className="settings-record flex gap-[16px] items-center opacity-40"
+                className="settings-record opacity-40"
                 data-testid={`row-escalation-${row.id}`}
                 aria-disabled="true"
               >

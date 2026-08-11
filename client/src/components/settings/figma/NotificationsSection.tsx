@@ -67,7 +67,7 @@ export default function NotificationsSection() {
             <div key={c.id} className="flex flex-col gap-[16px]">
               {i > 0 && <div className="h-px bg-brain-v1stroke-2 w-full" />}
               <div
-                className="settings-record flex gap-[16px] items-center opacity-40"
+                className="settings-record opacity-40"
                 data-testid={`row-notification-${c.id}`}
                 aria-disabled="true"
               >
