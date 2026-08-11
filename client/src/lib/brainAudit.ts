@@ -110,7 +110,6 @@ export async function fetchAllBrainAuditEvents(signal?: AbortSignal): Promise<Au
 
 export interface BrainAnchor {
   anchoring_mode?: "onchain" | "db_only";
-  guarantee?: "base_sepolia" | "database_hash_chain";
   merkle_root: string | null;
   event_count: number | null;
   period_start: string | null;
@@ -349,6 +348,24 @@ export function anchorFromInclusionProof(
   };
 }
 
+/** Resolve the detail-popup anchor from the tenant-level record anchor and the
+ *  (optional) per-event inclusion-proof anchor. The per-event proof is
+ *  authoritative when it actually proves an anchor: an event anchored BEFORE
+ *  its tenant flipped to db_only still carries a genuine merkle_root/
+ *  anchor_tx_hash there, even though tenant-level /audit/anchor/latest now
+ *  hard-returns db_only for every event on that tenant. Otherwise the
+ *  tenant-level db_only label wins - a real on-chain proof is never swallowed
+ *  by db_only, and db_only is never overridden by a proof that doesn't
+ *  actually prove an anchor. Exported for AuditRecordPopup and for tests. */
+export function resolveDetailAnchor(
+  recordAnchor: AnchorProof,
+  proofAnchor: AnchorProof | undefined,
+): AnchorProof {
+  if (proofAnchor?.status === "anchored") return proofAnchor;
+  if (recordAnchor.status === "db_only_hash_chain") return recordAnchor;
+  return proofAnchor ?? recordAnchor;
+}
+
 /** Anchor state for a record, gated on brain-core's REAL signals:
  *  - The record is covered by the latest anchor window (its created_at falls
  *    within [period_start, period_end]) → the Merkle tree includes it, so it is
@@ -376,11 +393,18 @@ function anchorFor(event: BrainAuditEvent, latest: BrainAnchor | undefined): Anc
   if (latest?.anchoring_mode === "db_only") {
     return { status: "db_only_hash_chain", auditId };
   }
-  if (!latest || !latest.merkle_root) return { status: "pending_next_batch", auditId };
+  /* Fail-safe, not an assertion: `new Date(null!)` is `new Date(0)`, NOT NaN,
+     so a null period_end/period_start next to a non-null merkle_root would
+     silently make `covered` false for every event rather than throwing -
+     every row would degrade to "Pending" with no error. Requiring both
+     bounds up front means a bad declared shape under-claims (as documented
+     above) but can never over-claim. */
+  if (!latest?.merkle_root || !latest.period_start || !latest.period_end)
+    return { status: "pending_next_batch", auditId };
   const createdMs = new Date(event.created_at).getTime();
   const covered =
-    createdMs <= new Date(latest.period_end!).getTime() &&
-    createdMs >= new Date(latest.period_start!).getTime();
+    createdMs <= new Date(latest.period_end).getTime() &&
+    createdMs >= new Date(latest.period_start).getTime();
   if (!covered) return { status: "pending_next_batch", auditId };
   const txHash = latest.onchain_tx_hash?.trim() || null;
   if (!txHash) {
@@ -388,7 +412,7 @@ function anchorFor(event: BrainAuditEvent, latest: BrainAnchor | undefined): Anc
       status: "recorded_pending_anchor",
       auditId,
       merkleRoot: latest.merkle_root,
-      recordedAtLabel: label(new Date(latest.period_end!).getTime()),
+      recordedAtLabel: label(new Date(latest.period_end).getTime()),
     };
   }
   const baseTx = normalizeTxHash(txHash);
@@ -398,7 +422,7 @@ function anchorFor(event: BrainAuditEvent, latest: BrainAnchor | undefined): Anc
     merkleRoot: latest.merkle_root,
     baseTx,
     block: latest.onchain_block_number ?? undefined,
-    anchoredAtLabel: label(new Date(latest.period_end!).getTime()),
+    anchoredAtLabel: label(new Date(latest.period_end).getTime()),
     verifyHref: explorerTxUrl(baseTx),
   };
 }
@@ -730,6 +754,17 @@ export function localQuestionToRecord(q: AssistantQuestion): AuditRecord {
   };
 }
 
+/** localQuestionToRecord (above) has no anchor argument, so it cannot know
+ *  the tenant is db_only - it hard-codes pending_next_batch for engine
+ *  "wiki"/unknown. Remap here, at the one place both facts are in scope.
+ *  Only pending_next_batch is remapped: not_recorded is the stronger,
+ *  still-correct claim (that record never reached brain-core's audit log at
+ *  all, db_only or not) and must stay untouched. Exported for tests. */
+export function applyTenantDbOnly(record: AuditRecord, dbOnly: boolean): AuditRecord {
+  if (!dbOnly || record.anchor.status !== "pending_next_batch") return record;
+  return { ...record, anchor: { ...record.anchor, status: "db_only_hash_chain" } };
+}
+
 /** How many events to request per audit page. */
 export const AUDIT_EVENTS_LIMIT = 100;
 
@@ -894,8 +929,10 @@ export function useBrainAuditRecords(proposals?: ProposalForTracking[]) {
       }
     }
     const FIVE_MIN_MS = 5 * 60 * 1000;
+    const dbOnly = anchor.data?.anchoring_mode === "db_only";
     const localRecords = (localQuestions.data?.questions ?? [])
       .map(localQuestionToRecord)
+      .map((r) => applyTenantDbOnly(r, dbOnly))
       .filter((r) => {
         if (!r.rawQuestion) return true;
         const key = r.rawQuestion.trim().toLowerCase();

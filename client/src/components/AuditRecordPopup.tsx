@@ -23,7 +23,7 @@ import { openProposalDetail, resolveProposal } from "@/lib/openProposalDetail";
 import type { DocumentRecord } from "@/lib/documentTypes";
 import { RecordPager } from "./RecordPager";
 import { matchCannedPrompt } from "@shared/cannedPrompts";
-import { anchorFromInclusionProof, type BrainAuditEventDetail } from "@/lib/brainAudit";
+import { anchorFromInclusionProof, resolveDetailAnchor, type BrainAuditEventDetail } from "@/lib/brainAudit";
 import { capitalCase } from "@/lib/displayLabels";
 import { Button } from "@/components/ui/button";
 
@@ -88,14 +88,15 @@ export function AuditRecordPopup({
 
   if (!record) return null;
 
-  const anchor =
-    isBrainEvent && eventDetail.data && record.anchor.status !== "db_only_hash_chain"
+  const proofAnchor =
+    isBrainEvent && eventDetail.data
       ? anchorFromInclusionProof(
           record.id,
           eventDetail.data.inclusion_proof,
           eventDetail.data.event?.created_at,
         )
-      : record.anchor;
+      : undefined;
+  const anchor = resolveDetailAnchor(record.anchor, proofAnchor);
 
   const isFlagged = record.eventType === "flagged" && !isAssistantActivity(record);
 

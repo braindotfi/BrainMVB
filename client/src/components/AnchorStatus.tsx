@@ -50,14 +50,17 @@ export function AnchorStatus({
   onVerify?: () => void;
   onViewFullRecord?: () => void;
 }) {
-  /* Four honest states (see AnchorStatus type in auditTypes.ts):
+  /* Five honest states (see AnchorStatus type in auditTypes.ts):
      anchored                → green, immutability claim, Verify On-Chain rendered.
      recorded_pending_anchor → amber, "verifiable, on-chain anchor pending", NO Verify button.
      pending_next_batch      → neutral, proof incomplete, NO Verify button.
      not_recorded            → neutral, and must NOT say "yet": this record never reached
                                brain-core's audit log, so no anchor will ever cover it.
                                Promising a future anchor here is the same class of overclaim
-                               the green-badge fix removed, one state further down. */
+                               the green-badge fix removed, one state further down.
+     db_only_hash_chain      → neutral, demo-tenant record retained in Brain's database
+                               hash chain only; NOT published to Base, NO Verify button,
+                               and must not promise a future on-chain anchor. */
   const isAnchored = anchor.status === "anchored" && !!anchor.baseTx;
   const isRecorded = anchor.status === "recorded_pending_anchor";
   const isNotRecorded = anchor.status === "not_recorded";
@@ -99,7 +102,7 @@ export function AnchorStatus({
       {/* Status line: icon + label */}
       <div className="content-stretch flex gap-[8px] items-center relative shrink-0 w-full">
         {pending ? (
-          <img src={clockIcon} alt={isNotRecorded ? "Not recorded" : "Pending"} className="size-[16px] shrink-0 object-contain" />
+          <img src={clockIcon} alt={isNotRecorded ? "Not recorded" : isDbOnly ? "Database only" : "Pending"} className="size-[16px] shrink-0 object-contain" />
         ) : (
           <img src={anchoredIcon} alt="Anchored" className="size-[16px] shrink-0" />
         )}
