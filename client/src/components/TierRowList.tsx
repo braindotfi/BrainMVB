@@ -167,13 +167,13 @@ export const TierRow = ({ row }: { row: TierRowModel }) => {
   const baseBg = row.rowBg ?? "#0a0c10";
   const hoverBg = row.rowBg ? "#1a0442" : "#11141b";
   /* Both secondary lines — the "why" subtitle and the timestamp note — share one
-     treatment on EVERY row, settled or not: 14px / medium / leading-[16px] in
+     treatment on EVERY row, settled or not: 12px / medium / leading-[14px] in
      #6c779d. Settled rows briefly carried a heavier 16px semibold variant here;
      that made a decided row's supporting text compete with its own title (which
      is the same 16px) and gave the two halves of the list different row heights.
      Only the title and the right-hand pill distinguish a settled row now. */
   const secondaryClass =
-    "[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px] w-full truncate";
+    "[font-family:'Gilroy',sans-serif] font-medium leading-[14px] text-brain-v1baby-blue-60 text-[12px] w-full truncate";
 
   return (
     <div
