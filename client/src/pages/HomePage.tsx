@@ -980,50 +980,84 @@ export function HomePage() {
                 Hidden entirely when nothing is pending AND every feed was read
                 — a permanent "0 items" badge trains people to stop reading the
                 row. It is NOT hidden when a read failed: see pendingSummary. */}
-            {pendingSummary && (
-              <button
-                type="button"
-                onClick={() => navigate("/inbox")}
-                data-testid="row-home-pending-summary"
-                aria-label={`${pendingSummary.text}. Open the Inbox.`}
-                className={`flex flex-col gap-[4px] px-[16px] py-[12px] rounded-panel border border-solid w-full text-left transition-colors outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple ${
-                  pendingSummary.tone === "urgent"
-                    ? "bg-brain-v1dark-pink-red border-[rgba(210,3,68,0.2)] hover:border-[rgba(210,3,68,0.45)]"
-                    : "bg-brain-v1highlight-dropdown-bg border-brain-v1stroke-2 hover:border-brain-v1purple"
-                }`}
-              >
-                <div className="flex items-center gap-[10px] w-full min-w-0">
+            {pendingSummary && (() => {
+              /* Urgent visual state fires whenever there are confirmed urgent
+                 items — including partial reads where `tone` is "partial" but
+                 `urgent > 0` is already known. Loading and unknown stay neutral. */
+              const isUrgent =
+                pendingSummary.urgent > 0 &&
+                pendingSummary.tone !== "loading" &&
+                pendingSummary.tone !== "unknown";
+              const isNeutral =
+                pendingSummary.tone === "loading" || pendingSummary.tone === "unknown";
+
+              const textColor = isUrgent
+                ? "text-brain-v1pink-red"
+                : isNeutral
+                ? "text-brain-v1baby-blue-60"
+                : "text-brain-v1baby-blue-100";
+
+              return (
+                <button
+                  type="button"
+                  onClick={() => navigate("/inbox")}
+                  data-testid="row-home-pending-summary"
+                  aria-label={`${pendingSummary.text}. Open the Inbox.`}
+                  className="rounded-panel bg-brain-v1highlight-dropdown-bg w-full text-left outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple overflow-hidden"
+                >
                   <div
-                    className="size-[8px] rounded-full shrink-0"
-                    style={{
-                      background:
-                        pendingSummary.tone === "urgent"
-                          ? "#d20344"
-                          : /* Grey for both "we don't know yet" cases: still
-                               reading, and read but failed. Amber would claim
-                               there is something to act on. */
-                            pendingSummary.tone === "unknown" || pendingSummary.tone === "loading"
-                            ? "#6c779d"
-                            : "#ff9500",
-                    }}
-                  />
-                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[16px] text-brain-v1baby-blue-100 flex-1 min-w-0">
-                    {pendingSummary.text}
-                  </p>
-                  <span
-                    className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[14px] text-brain-v1purple shrink-0"
-                    aria-hidden="true"
+                    className={`flex items-center gap-[12px] px-[16px] py-[14px] w-full transition-colors ${
+                      isUrgent
+                        ? "bg-brain-v1dark-pink-red hover:bg-brain-v1dark-pink-red-hover"
+                        : "bg-brain-v1highlight-dropdown-bg hover:bg-[rgba(168,185,244,0.06)]"
+                    }`}
                   >
-                    Open Inbox
-                  </span>
-                </div>
-                {pendingSummary.detail && (
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[14px] text-brain-v1baby-blue-60 pl-[18px] w-full">
-                    {pendingSummary.detail}
-                  </p>
-                )}
-              </button>
-            )}
+                    {/* 12×12 circle indicator — matches Figma icon node exactly */}
+                    <svg className="shrink-0" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                      <circle cx="6" cy="6" r="4"
+                        fill={isUrgent ? "#D20344" : isNeutral ? "var(--brain-v1baby-blue-60)" : "#A8B9F4"}
+                      />
+                    </svg>
+
+                    {/* Stacked title + breakdown */}
+                    <div className="flex-1 min-w-0 flex flex-col gap-[4px]">
+                      <p className={`[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[16px] ${textColor}`}>
+                        {pendingSummary.text}
+                      </p>
+                      {pendingSummary.detail && (
+                        <p className={`[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[16px] ${textColor}`}>
+                          {pendingSummary.detail}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* "Open Inbox" pill */}
+                    <div
+                      aria-hidden="true"
+                      className={`shrink-0 flex items-center justify-center px-[10px] py-[4px] rounded-[22px] ${
+                        isUrgent
+                          ? "bg-brain-v1pink-red"
+                          : isNeutral
+                          ? "bg-[rgba(108,119,157,0.15)]"
+                          : "bg-brain-v1dark-orange"
+                      }`}
+                    >
+                      <span
+                        className={`[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap ${
+                          isUrgent
+                            ? "text-brain-v1dark-pink-red"
+                            : isNeutral
+                            ? "text-brain-v1baby-blue-60"
+                            : "text-brain-v1light-orange"
+                        }`}
+                      >
+                        Open Inbox
+                      </span>
+                    </div>
+                  </div>
+                </button>
+              );
+            })()}
 
             <CashProjectionCard
               view={projection}
