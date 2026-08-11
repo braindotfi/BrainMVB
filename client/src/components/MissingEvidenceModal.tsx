@@ -58,8 +58,13 @@ const AMBER_PILL = {
    the approval modal reads its agent name from proposal.type. Unknown actions
    degrade to "Brain" rather than showing a raw action string in the title. */
 function agentDisplayName(item: MissingEvidenceItem): string {
-  const key = agentKeyFromAction(item.attemptedAction);
-  return (AGENT_DISPLAY_NAME as Record<string, string>)[key] ?? "Brain";
+  const actionKey = agentKeyFromAction(item.attemptedAction);
+  const keys = [item.agentKey, actionKey].filter(Boolean) as string[];
+  const upstreamName = item.agentName?.trim().replace(/\s+agent\s*$/i, "");
+  if (upstreamName && !/^(brain|agent)$/i.test(upstreamName)) return upstreamName;
+  return keys
+    .map((key) => (AGENT_DISPLAY_NAME as Record<string, string>)[key])
+    .find(Boolean) ?? "Brain";
 }
 
 /* ── Routing ─────────────────────────────────────────────────────────────────

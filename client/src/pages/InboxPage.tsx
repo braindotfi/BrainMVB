@@ -1162,7 +1162,7 @@ export function InboxPage() {
       missingEvidence.map((entry, idx) => {
         /* Derive the agent key from the attempted action so the badge chip can
            say "Vendor Risk Agent" / "Payment Agent" instead of "Agent blocked". */
-        const agentKey = agentKeyFromAction(entry.attemptedAction);
+        const agentKey = entry.agentKey ?? agentKeyFromAction(entry.attemptedAction);
         const primaryField = entry.missingFields[0];
         const fixPath = inputRowFixPath(entry);
         return {

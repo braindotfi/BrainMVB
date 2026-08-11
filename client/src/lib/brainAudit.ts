@@ -48,6 +48,10 @@ export interface BrainAuditEvent {
   layer: string;
   actor: string;
   actor_ref?: BrainActorRef;
+  agent_key?: string | null;
+  agent_name?: string | null;
+  agent_action?: string | null;
+  agent?: string | { key?: string; kind?: string; display_name?: string } | null;
   action: string;
   /* brain-core's authoritative classification, present on every event —
      unset events default to system_activity server-side. This, not the local

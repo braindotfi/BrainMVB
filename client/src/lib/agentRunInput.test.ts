@@ -11,6 +11,7 @@ import {
   buildInputRowSubtitle,
   inputRowActionLabel,
   inputRowFixPath,
+  agentKeyFromIdentity,
   type MissingEvidenceItem,
 } from "./agentRunInput";
 import { agentBadgeLabel } from "./agentProposals";
@@ -60,6 +61,45 @@ describe("parseMissingEvidence — which events become rows", () => {
     expect(item?.runId).toBeNull();
     expect(item?.attemptedAction).toBeNull();
     expect(item?.entityRefs).toEqual([]);
+  });
+
+  it("keeps the agent identity when the attempted action is absent", () => {
+    const item = parseMissingEvidence(event({
+      actor: "agent:payment",
+      outputs: { missing_required_evidence: ["payment_destination"] },
+    }));
+    expect(item?.agentKey).toBe("payment");
+  });
+
+  it("uses an upstream actor display name when one is provided", () => {
+    const item = parseMissingEvidence(event({
+      actor: "agent_01",
+      actor_ref: { id: "agent_01", type: "agent", display_name: "Payment Agent" },
+      outputs: { missing_required_evidence: ["payment_destination"] },
+    }));
+    expect(item?.agentName).toBe("Payment Agent");
+  });
+
+  it("reads top-level agent identity fields", () => {
+    const item = parseMissingEvidence(event({
+      agent_key: "collections",
+      agent_name: "Collections Agent",
+      agent_action: "collections.remind",
+      outputs: { missing_required_evidence: ["contact_email"] },
+    }));
+    expect(item?.agentKey).toBe("collections");
+    expect(item?.agentName).toBe("Collections Agent");
+    expect(item?.attemptedAction).toBe("collections.remind");
+  });
+});
+
+describe("agentKeyFromIdentity", () => {
+  it("reads the agent key from common actor identity forms", () => {
+    expect(agentKeyFromIdentity("agent:payment")).toBe("payment");
+    expect(agentKeyFromIdentity("agent_vendor_risk")).toBe("vendor_risk");
+    expect(agentKeyFromIdentity("agent.payment.execute")).toBe("payment");
+    expect(agentKeyFromIdentity("payment")).toBe("payment");
+    expect(agentKeyFromIdentity(null)).toBeNull();
   });
 });
 
