@@ -303,6 +303,87 @@ function label(ms: number): string {
   });
 }
 
+const LIFECYCLE_ID_FIELDS = [
+  "payment_intent_id",
+  "paymentIntentId",
+  "proposal_id",
+  "proposalId",
+  "action_id",
+  "actionId",
+] as const;
+
+/** Return the stable upstream identifier that ties audit events to one
+ * decision. Generic account/counterparty ids are deliberately excluded:
+ * grouping on those would merge unrelated payments for the same vendor. */
+export function auditEventCorrelationKey(event: BrainAuditEvent): string | undefined {
+  for (const field of LIFECYCLE_ID_FIELDS) {
+    const input = event.inputs?.[field];
+    if (typeof input === "string" && input.trim()) return `${field}:${input}`;
+    const output = event.outputs?.[field];
+    if (typeof output === "string" && output.trim()) return `${field}:${output}`;
+  }
+  return undefined;
+}
+
+function isPendingLifecycleEvent(event: BrainAuditEvent): boolean {
+  if (event.action === "proposal.awaiting_second_approval") return true;
+  const values = [event.inputs?.status, event.outputs?.status, event.inputs?.outcome, event.outputs?.outcome];
+  return values.some((value) =>
+    typeof value === "string" && /^(pending|queued|awaiting|in_progress|not_sent)$/i.test(value),
+  );
+}
+
+/** Merge records for events that share a real proposal/payment id. A single
+ * audit event remains a single-step record; only an explicit correlation can
+ * create a multi-step lifecycle. */
+export function mergeRelatedAuditRecords(
+  events: BrainAuditEvent[],
+  records: AuditRecord[],
+): AuditRecord[] {
+  const entries = events.map((event, index) => ({ event, record: records[index], index })).filter((entry) => entry.record);
+  const grouped = new Map<string, typeof entries>();
+  entries.forEach((entry) => {
+    const key = auditEventCorrelationKey(entry.event);
+    if (!key) return;
+    const related = grouped.get(key) ?? [];
+    related.push(entry);
+    grouped.set(key, related);
+  });
+
+  const consumed = new Set<number>();
+  const merged: AuditRecord[] = [];
+  for (const entriesForKey of grouped.values()) {
+    if (entriesForKey.length < 2) continue;
+    const related = [...entriesForKey].sort((a, b) => a.record.occurredAtMs - b.record.occurredAtMs);
+    if (related.length < 2) continue;
+    const latest = related[related.length - 1].record;
+    merged.push({
+      ...latest,
+      lifecycle: related.flatMap(({ event, record }) =>
+        record.lifecycle.map((step) => ({
+          ...step,
+          kind: isPendingLifecycleEvent(event) ? "pending" as const : step.kind,
+        })),
+      ),
+    });
+    entriesForKey.forEach(({ index }) => consumed.add(index));
+  }
+
+  records.forEach((record, index) => {
+    if (consumed.has(index)) return;
+    const event = events[index];
+    if (event && isPendingLifecycleEvent(event)) {
+      merged.push({
+        ...record,
+        lifecycle: record.lifecycle.map((step) => ({ ...step, kind: "pending" as const })),
+      });
+      return;
+    }
+    merged.push(record);
+  });
+  return merged.sort((a, b) => b.occurredAtMs - a.occurredAtMs);
+}
+
 /** Per-event inclusion proof from GET /audit/event/{id} — computed by
  *  brain-core against the anchor window that ACTUALLY contains the event
  *  (not just the latest one). Same null-until-mined semantics as BrainAnchor:
@@ -920,8 +1001,11 @@ export function useBrainAuditRecords(proposals?: ProposalForTracking[]) {
      timestamp matching prevents false positives from unrelated wiki events.
      The local id prefix `local-question-` ensures no collision with brain-core ids. */
   const records = useMemo(() => {
-    const brainRecords = (events.data?.events ?? [])
-      .map((e) => mapAuditEventToRecord(e, anchor.data, actorLookups.data, proposalTypeMapRef.current));
+    const brainEvents = events.data?.events ?? [];
+    const brainRecords = mergeRelatedAuditRecords(
+      brainEvents,
+      brainEvents.map((e) => mapAuditEventToRecord(e, anchor.data, actorLookups.data, proposalTypeMapRef.current)),
+    );
     /* Map: normalized question text → Set of timestamps from brain-core wiki.question events */
     const wikiTsByQuestion = new Map<string, Set<number>>();
     for (const r of brainRecords) {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { mapAuditEventToRecord, anchorFromInclusionProof, resolveDetailAnchor, localQuestionToRecord, applyTenantDbOnly, extractActorName, bffPathForActorLookup, truncateForCard, decidedProposalIdsFromEvents, CARD_TITLE_MAX, type BrainAuditEvent, type BrainAnchor, type BrainInclusionProof } from "./brainAudit";
+import { mapAuditEventToRecord, mergeRelatedAuditRecords, anchorFromInclusionProof, resolveDetailAnchor, localQuestionToRecord, applyTenantDbOnly, extractActorName, bffPathForActorLookup, truncateForCard, decidedProposalIdsFromEvents, CARD_TITLE_MAX, type BrainAuditEvent, type BrainAnchor, type BrainInclusionProof } from "./brainAudit";
 import type { AnchorProof } from "./auditTypes";
 
 /**
@@ -458,6 +458,46 @@ describe("mapAuditEventToRecord", () => {
       { "/v1/members/user_01KY52DRHFX1707ECARCY6Z8VJ": null },
     );
     expect(r.lifecycle[0].actor).toBeUndefined();
+  });
+});
+
+describe("mergeRelatedAuditRecords", () => {
+  it("builds one chronological lifecycle from correlated proposal events", () => {
+    const proposed = ev({
+      id: "evt_proposed",
+      action: "agent.action.proposed",
+      created_at: "2026-07-01T10:00:00.000Z",
+      inputs: { proposal_id: "prop_lifecycle" },
+      outputs: { status: "pending" },
+    });
+    const decided = ev({
+      id: "evt_decided",
+      action: "proposal.decided",
+      created_at: "2026-07-01T10:05:00.000Z",
+      inputs: { proposal_id: "prop_lifecycle", decision: "approve" },
+    });
+    const records = [
+      mapAuditEventToRecord(proposed, anchor()),
+      mapAuditEventToRecord(decided, anchor()),
+    ];
+    const [merged] = mergeRelatedAuditRecords([proposed, decided], records);
+
+    expect(merged.lifecycle).toHaveLength(2);
+    expect(merged.lifecycle.map((step) => step.timestamp)).toEqual([
+      "Jul 1, 10:00 AM UTC",
+      "Jul 1, 10:05 AM UTC",
+    ]);
+  });
+
+  it("marks an explicitly awaiting event as pending instead of inventing a terminal outcome", () => {
+    const awaiting = ev({
+      id: "evt_awaiting",
+      action: "proposal.awaiting_second_approval",
+      inputs: { payment_intent_id: "pi_lifecycle" },
+      outputs: { status: "awaiting_second_approval" },
+    });
+    const record = mapAuditEventToRecord(awaiting, anchor());
+    expect(mergeRelatedAuditRecords([awaiting], [record])[0].lifecycle[0].kind).toBe("pending");
   });
 });
 

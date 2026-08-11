@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock3 } from "lucide-react";
 import closeIcon from "@assets/Close_1783293571882.png";
 import checkIcon from "@assets/check_1784935340999.png";
 import warningIcon from "@assets/warning_1783385196939.png";
@@ -176,17 +176,9 @@ export function AuditRecordPopup({
     );
   };
 
-  const SectionHeader = ({
-    children,
-    compact = false,
-  }: {
-    children: React.ReactNode;
-    compact?: boolean;
-  }) => (
-    <div className={`content-stretch flex gap-[8px] items-center relative shrink-0 w-full${compact ? " h-[14px]" : ""}`}>
-      <p className={`[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-60 whitespace-nowrap ${
-        compact ? "leading-[14px] text-[12px]" : "leading-[20px] text-[14px]"
-      }`}>
+  const SectionHeader = ({ children }: { children: React.ReactNode }) => (
+    <div className="content-stretch flex gap-[8px] items-center relative shrink-0 w-full">
+      <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">
         {children}
       </p>
       <div className="flex-[1_0_0] h-px bg-brain-v1stroke-2 min-w-px" />
@@ -240,30 +232,41 @@ export function AuditRecordPopup({
               {record.lifecycle.length > 0 && (
                 <div className="relative shrink-0 w-full">
                   <div className="bg-clip-padding border-0 border-[transparent] border-solid content-stretch flex flex-col gap-[16px] items-start relative size-full">
-                    <SectionHeader compact>Decision Lifecycle</SectionHeader>
+                    <SectionHeader>Decision Lifecycle</SectionHeader>
                     <div className="bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 border-solid content-stretch flex flex-col items-start relative rounded-row shrink-0 w-full">
                       <div className="content-stretch flex items-start p-[16px] relative shrink-0 w-full">
                         <div className="content-stretch flex flex-[1_0_0] flex-col items-start min-w-px relative">
                           {record.lifecycle.map((step, idx) => {
                             const isLast = idx === record.lifecycle.length - 1;
                             const isAlert = step.kind === "alert";
+                            const isPending = step.kind === "pending";
                             const actorRole = resolveActorRole(step.actor);
                             const actorMember = resolveMemberByTokens(actorIdentityTokens(step.actor));
                             return (
                               <div key={idx} className={`content-stretch flex gap-[8px] items-start relative shrink-0 w-full${!isLast ? " pb-[16px]" : ""}`}>
                                 {/* Icon + solid connector - self-stretch so line spans the pb gap to the next icon */}
                                 <div className="flex flex-col items-center self-stretch shrink-0 w-[16px]">
-                                  <img
-                                    src={isAlert ? warningIcon : checkIcon}
-                                    alt={isAlert ? "Alert" : "Check"}
-                                    className="size-[16px] shrink-0"
-                                  />
+                                  {isPending ? (
+                                    <Clock3
+                                      aria-label="Pending"
+                                      className="size-[16px] shrink-0 text-brain-v1baby-blue-60"
+                                      strokeWidth={1.75}
+                                    />
+                                  ) : (
+                                    <img
+                                      src={isAlert ? warningIcon : checkIcon}
+                                      alt={isAlert ? "Alert" : "Check"}
+                                      className="size-[16px] shrink-0"
+                                    />
+                                  )}
                                   {!isLast && (
                                     <div className="mt-[4px] mb-[4px] w-[2px] flex-1 bg-brain-v1stroke-2" />
                                   )}
                                 </div>
                                 <div className="[word-break:break-word] content-stretch flex flex-[1_0_0] flex-col [font-family:'Gilroy',sans-serif] font-medium gap-[8px] items-start justify-center leading-[16px] min-w-px not-italic relative text-[14px]">
-                                  <p className="relative shrink-0 text-brain-v1baby-blue-100 w-full">
+                                  <p className={`relative shrink-0 w-full ${
+                                    isPending ? "text-brain-v1baby-blue-60" : "text-brain-v1baby-blue-100"
+                                  }`}>
                                     {actorMember ? (
                                       <button
                                         type="button"
