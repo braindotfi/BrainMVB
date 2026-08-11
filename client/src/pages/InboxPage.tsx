@@ -1639,7 +1639,7 @@ export function InboxPage() {
 
          {/* Filter toolbar — closed controls stay compact; the open menu follows
              Figma node 6191:69205 exactly. */}
-        <div className="flex flex-col gap-[12px] w-full min-w-0">
+        <div className="flex flex-col items-start gap-[12px] w-fit max-w-full min-w-0">
 
         {/* Search. The predicate, the `query` field and its tests all survived a
             merge that deleted only the control, so this filter has been running
@@ -1667,7 +1667,7 @@ export function InboxPage() {
           />
         </div>
 
-         <div className="flex flex-row flex-wrap gap-[12px] items-center">
+          <div className="flex flex-row flex-wrap gap-[12px] items-center w-fit max-w-full">
           {([
             {
               values: filters.recommendation,
