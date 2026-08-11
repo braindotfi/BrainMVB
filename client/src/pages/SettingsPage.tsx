@@ -708,7 +708,7 @@ function ProfileSection() {
                       : policy.isLoading
                         ? "text-brain-v1baby-blue-60"
                         : autoLimit?.kind === "conditional"
-                          ? "text-brain-v1baby-blue-100"
+                          ? "text-brain-v1baby-blue-60 text-[14px] leading-[20px] font-semibold"
                         : "text-brain-v1white"
                   }`}
                 >
@@ -758,7 +758,6 @@ function ProfileSection() {
             right={
               <Button
                 variant="secondary"
-                className="text-brain-v1baby-blue-100"
                 data-testid="button-replay-onboarding"
                 onClick={() => {
                   clearOnboarding(user?.id);
