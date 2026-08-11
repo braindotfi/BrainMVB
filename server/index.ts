@@ -32,6 +32,11 @@ const helmetConfig: Parameters<typeof helmet>[0] = process.env.NODE_ENV === "pro
     }
   : {
       contentSecurityPolicy: false,
+      // The Replit workspace canvas embeds the dev preview from a different
+      // origin. Helmet's default SAMEORIGIN frameguard would render that
+      // otherwise-healthy preview as a blank page. Production keeps the
+      // stricter frame-ancestors policy above.
+      frameguard: false,
     };
 
 declare module "http" {
