@@ -707,6 +707,8 @@ function ProfileSection() {
                       ? "text-brain-v1light-orange"
                       : policy.isLoading
                         ? "text-brain-v1baby-blue-60"
+                        : autoLimit?.kind === "conditional"
+                          ? "text-brain-v1baby-blue-100"
                         : "text-brain-v1white"
                   }`}
                 >
