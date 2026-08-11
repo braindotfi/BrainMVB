@@ -1025,7 +1025,7 @@ export function HomePage() {
                         {pendingSummary.text}
                       </p>
                       {pendingSummary.detail && (
-                        <p className={`[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-[16px] ${textColor}`}>
+                        <p className={`[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-[14px] ${textColor}`}>
                           {pendingSummary.detail}
                         </p>
                       )}
