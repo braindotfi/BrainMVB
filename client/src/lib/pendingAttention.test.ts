@@ -135,6 +135,11 @@ describe("Overview wires the summary to every feed it depends on", () => {
     expect(src).toContain("pendingAttentionSummary({");
   });
 
+  it("uses Inbox's writable-decision rule before counting agent proposals", () => {
+    expect(src).toContain('import { isDecidableProposal } from "@/lib/proposalCards";');
+    expect(src).toContain("isNeedsReview(p) && isDecidableProposal(p)");
+  });
+
   /* Silence during load is the same lie as silence during a failure, so every
      contributing read has to be able to hold the line back. */
   const loadingFlag = src.slice(src.indexOf("const stillReading ="), src.indexOf("const pendingSummary"));
