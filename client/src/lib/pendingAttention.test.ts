@@ -6,6 +6,7 @@ const counts = (over: Partial<Parameters<typeof pendingAttentionSummary>[0]> = {
   urgent: 0,
   waiting: 0,
   input: 0,
+  insights: 0,
   incomplete: false,
   ...over,
 });
@@ -15,7 +16,7 @@ describe("a complete read", () => {
     expect(pendingAttentionSummary(counts())).toBeNull();
   });
 
-  it("counts approvals and inputs together, because both are work asked of you", () => {
+  it("counts all three urgency categories", () => {
     const s = pendingAttentionSummary(counts({ urgent: 1, waiting: 2, input: 3 }));
     expect(s?.total).toBe(6);
     expect(s?.text).toBe("6 Items Need Your Attention");
@@ -26,16 +27,23 @@ describe("a complete read", () => {
     expect(pendingAttentionSummary(counts({ waiting: 2 }))?.text).toBe("2 Items Need Your Attention");
   });
 
-  it("names the breakdown, and omits the tiers that are empty", () => {
-    const s = pendingAttentionSummary(counts({ urgent: 2, input: 1 }));
-    expect(s?.detail).toBe("2 urgent · 1 needing your input");
-    expect(s?.detail).not.toContain("waiting for you");
+  it("names the urgency categories, and omits the tiers that are empty", () => {
+    const s = pendingAttentionSummary(counts({ urgent: 2, input: 1, insights: 4 }));
+    expect(s?.total).toBe(7);
+    expect(s?.detail).toBe("2 urgent · 1 waiting on you · 4 insights");
+    expect(s?.detail).not.toContain("needing your input");
   });
 
-  it("orders the breakdown as urgent, input, then waiting", () => {
+  it("orders the breakdown as urgent, waiting on you, then insights", () => {
     expect(
-      pendingAttentionSummary(counts({ urgent: 2, input: 1, waiting: 3 }))?.detail,
-    ).toBe("2 urgent · 1 needing your input · 3 waiting for you");
+      pendingAttentionSummary(counts({ urgent: 2, input: 1, waiting: 3, insights: 4 }))?.detail,
+    ).toBe("2 urgent · 4 waiting on you · 4 insights");
+  });
+
+  it("keeps an Insights-only state visible in the attention banner", () => {
+    const s = pendingAttentionSummary(counts({ insights: 4 }));
+    expect(s?.total).toBe(4);
+    expect(s?.detail).toBe("4 insights");
   });
 
   it("reads urgent only when something urgent is in it", () => {

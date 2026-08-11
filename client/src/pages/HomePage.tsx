@@ -21,6 +21,12 @@ import {
 } from "@/lib/brainProposals";
 import { isDecidableProposal } from "@/lib/proposalCards";
 import {
+  useBrainReconciliationInsights,
+  useBrainSubscriptionInsights,
+  useBrainDisputeInsights,
+  useBrainCashFlowInsight,
+} from "@/lib/brainAgentSurfaces";
+import {
   deriveProposalTier,
   thresholdsFromRules,
   TIER_ORDER,
@@ -483,6 +489,23 @@ export function HomePage() {
     isError: liveProposalsError,
     isLoading: liveProposalsLoading,
   } = useBrainProposals();
+  const { insights: reconciliationInsights, isLoading: reconciliationLoading, isError: reconciliationError } =
+    useBrainReconciliationInsights();
+  const { insights: subscriptionInsights, isLoading: subscriptionLoading, isError: subscriptionError } =
+    useBrainSubscriptionInsights();
+  const { insights: disputeInsights, isLoading: disputeLoading, isError: disputeError } =
+    useBrainDisputeInsights();
+  const { insight: cashFlowInsight, isLoading: cashFlowLoading, isError: cashFlowError } =
+    useBrainCashFlowInsight();
+  const readOnlyInsights = useMemo(
+    () => [
+      ...reconciliationInsights,
+      ...subscriptionInsights,
+      ...disputeInsights,
+      ...(cashFlowInsight ? [cashFlowInsight] : []),
+    ],
+    [reconciliationInsights, subscriptionInsights, disputeInsights, cashFlowInsight],
+  );
   /* Keep the Overview count aligned with Inbox's Needs your approval section:
      pending status alone is not enough. Acknowledge-only and otherwise
      non-writable proposals are awareness records and must not inflate the
@@ -531,26 +554,41 @@ export function HomePage() {
     liveNeedsReviewError ||
     liveProposalsError ||
     missingEvidence.isError ||
-     decided.isError;
+    decided.isError ||
+    reconciliationError ||
+    subscriptionError ||
+    disputeError ||
+    cashFlowError;
   /* Until every one of these has answered, the total is a running subtotal.
      Printing it would show a number that changes under the reader, and showing
      nothing would read as an all-clear — so the line says it is still asking. */
-  const stillReading = liveNeedsReviewLoading || liveProposalsLoading || missingEvidence.isLoading || decided.isLoading;
+  const stillReading =
+    liveNeedsReviewLoading ||
+    liveProposalsLoading ||
+    missingEvidence.isLoading ||
+    decided.isLoading ||
+    reconciliationLoading ||
+    subscriptionLoading ||
+    disputeLoading ||
+    cashFlowLoading;
 
   const pendingSummary = useMemo(() => {
     let urgent = 0;
     let waiting = 0;
+    let insights = readOnlyInsights.length;
     for (const p of tieredProposals) {
       if (decidedIds.has(p.id)) continue;
       const tier = deriveProposalTier(p, { thresholds: tierThresholds });
       if (tier === "urgent") urgent++;
       else if (tier === "waiting") waiting++;
+      else if (tier === "insight") insights++;
     }
     /* Both payment-intent feeds land in "waiting" — see tierForPaymentIntent. */
     return pendingAttentionSummary({
       urgent,
       waiting: waiting + pendingSessionIntents + durableNeedsReview.length,
       input: missingEvidenceCount,
+      insights,
       incomplete: incompleteRead,
       loading: stillReading,
     });
@@ -561,6 +599,7 @@ export function HomePage() {
     pendingSessionIntents,
     durableNeedsReview.length,
     missingEvidenceCount,
+    readOnlyInsights.length,
     incompleteRead,
     stillReading,
   ]);
