@@ -49,11 +49,11 @@ const ModalShell = ({ open, onOpenChange, title, testId, description, width = 40
 }) => (
   <Dialog.Root open={open} onOpenChange={onOpenChange}>
     <Dialog.Portal>
-      <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm data-[state=open]:animate-in data-[state=open]:fade-in-0" />
+      <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=open]:fade-in-0" />
       <Dialog.Content
         data-testid={`modal-${testId}`}
-        className="fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 rounded-modal border border-brain-v1stroke-2 overflow-hidden focus:outline-none data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
-        style={{ background: "#11141b", width }}
+        className="fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 bg-brain-v1baby-blue-5 rounded-modal border border-brain-v1stroke-2 overflow-hidden shadow-[0_24px_60px_rgba(0,0,0,0.6)] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] focus:outline-none data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
+        style={{ width }}
       >
         <Dialog.Description className="sr-only">{description}</Dialog.Description>
         <Header title={title} onClose={() => onOpenChange(false)} testIdPrefix={testId} />

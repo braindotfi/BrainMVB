@@ -40,7 +40,7 @@ const RoundIconButton = ({ children, onClick, label, testId }: { children: React
 );
 
 const Header = ({ title, onClose, onBack, testIdPrefix }: { title: string; onClose: () => void; onBack?: () => void; testIdPrefix: string }) => (
-  <div className="relative h-[56px] flex items-center justify-center border-b border-brain-v1stroke-2">
+  <div className="relative h-[56px] flex items-center justify-center border-b border-brain-v1stroke-2 backdrop-blur-[10px]" style={{ background: "rgba(17,20,27,0.8)" }}>
     {onBack && (
       <div className="absolute left-[11px] top-1/2 -translate-y-1/2">
         <RoundIconButton label="Back" testId={`button-${testIdPrefix}-back`} onClick={onBack}><BackIcon /></RoundIconButton>
@@ -294,10 +294,10 @@ export function ContactUpdateModal({
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm data-[state=open]:animate-in data-[state=open]:fade-in-0" />
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=open]:fade-in-0" />
         <Dialog.Content
           data-testid={`modal-contact-update-${type}`}
-          className="fixed left-1/2 top-1/2 z-50 w-[400px] -translate-x-1/2 -translate-y-1/2 bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 rounded-modal overflow-clip focus:outline-none data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
+          className="fixed left-1/2 top-1/2 z-50 w-[400px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] -translate-x-1/2 -translate-y-1/2 bg-brain-v1baby-blue-5 border border-brain-v1stroke-2 rounded-modal overflow-clip shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
         >
           <Dialog.Description className="sr-only">
             {isEmail ? "Update your email address." : "Update your phone number."}

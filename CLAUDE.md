@@ -1350,6 +1350,72 @@ or 40px or whose glyph is not 16px — `[&_svg]:size-4` would resize the artwork
 
 Forcing a row onto a button primitive makes the row worse. That is the test.
 
+## Modal shell standard
+
+This is the **target** shell for every modal in the app; migration is in progress, not
+complete. New and touched modals must conform. Known holdouts not yet converged (verify
+with `git grep -n "w-\[[0-9]*px\]" -- client/src` before assuming this list is stale):
+
+| file | width | how it diverges |
+|---|---|---|
+| `MissingEvidenceModal.tsx:284` | `w-[520px]` | off-standard width (not 480/400/375) |
+| `DocumentViewerPopup.tsx:698` | `w-[560px]` | off-standard width; `bg-black/70` overlay, shadow alpha 0.7 (not 0.6) |
+| `MemberDetailPopup.tsx:175` | `w-[440px]` | off-standard width |
+| `settings/figma/TeamSection.tsx:308` | `w-[440px]` | off-standard width |
+| `pages/RuleDetail.tsx:273` (resume-rule) | `w-[440px]` | off-standard width; `bg-brain-v1highlight-dropdown-bg` shell + title bar, not `bg-brain-v1baby-blue-5` |
+| `pages/RuleDetail.tsx:331` (delete-rule) | `w-[375px]` | matches the compact width but is otherwise bespoke: `border-[0.938px]`, `h-[52.5px]`/`text-[18.75px]` title bar, `bg-brain-v1highlight-dropdown-bg` shell |
+| `pages/VendorsPanel.tsx:182` | `w-[374px]` | no title bar; inline `style` (16px radius, bespoke multi-layer shadow) instead of the standard classes |
+| `DeleteConfirmDialog.tsx:60` | `w-[375px]` | width matches the compact variant, but shell diverges: `bg-brain-v1highlight-dropdown-bg` (not `bg-brain-v1baby-blue-5`), no `max-h-[calc(100vh-32px)]` clamp |
+
+`AddGoalModal.tsx` and `ReviewItems.tsx` converged independently (main #135-139, after this
+branch point) — both now `w-[400px]`/`w-[480px]` on the standard shell; not holdouts.
+
+Everywhere else, the shell below is real and enforced.
+
+### The shell
+
+| property | value |
+|---|---|
+| overlay | `bg-black/60 backdrop-blur-[2px]` |
+| background | `bg-brain-v1baby-blue-5` (`#11141b`) |
+| border | `border border-brain-v1stroke-2 border-solid` (`#1d2132`) |
+| radius | `rounded-modal` (24px) |
+| shadow | `shadow-[0_24px_60px_rgba(0,0,0,0.6)]` |
+| z-index | `z-50` (z-[60] only for dialogs that must float above another modal) |
+| title bar | `h-[56px] backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-brain-v1stroke-2` |
+| close button | 32px `DialogPrimitive.Close`, close icon PNG, `right-[12px] top-[12px]` |
+| Portal | always use `DialogPrimitive.Portal` — never render a modal outside the portal |
+
+All modals use **Radix Dialog** (`@radix-ui/react-dialog`) for focus trapping, `aria-modal`,
+Esc-to-close, and overlay-click-to-close. Hand-rolled `<div>` overlays are not permitted.
+
+### Width variants
+
+| variant | width | use |
+|---|---|---|
+| **standard** | `w-[480px]` | record detail popups (account, bill, transaction, vendor, audit, proposal, review…) |
+| **form** | `w-[400px]` | single-purpose form dialogs (contact update, billing, security pin, goals…) |
+| **compact** | `w-[375px]` | destructive confirmation dialogs only (`DeleteConfirmDialog` — width converged, shell still a holdout, see above) |
+
+All variants add `max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)]` for mobile safety.
+
+### Shared shell component
+
+`client/src/components/detailPopup.tsx` exports `DetailPopupShell` — the canonical Radix
+wrapper for **standard (480px)** detail popups; the width is fixed, not a prop, so the
+mobile max-w clamp can't be dropped by a caller. For the form/compact widths, security and
+contact-update modals have their own local `ModalShell`/`ShellRoot` helpers that already
+conform to this standard. **Do not introduce a fourth shell pattern** — extend one of these.
+
+### Adding a new modal
+
+1. Use `DetailPopupShell` (detail content) or the local shell helper in the appropriate
+   sibling file (form / confirm content).
+2. Pick the width variant from the table above.
+3. Title bar: centered `DialogPrimitive.Title` + close button at right.
+4. Add a `DialogPrimitive.Description` (may be `className="sr-only"`) for screen readers.
+5. Verify focus traps and overlay close work before shipping.
+
 ## Design tokens are the standard — raw hex in a class string is a bug
 
 `client/src/index.css` defines the colour and radius variables; `tailwind.config.ts` maps each one

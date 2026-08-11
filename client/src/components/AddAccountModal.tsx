@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { ADD_MONEY_ICONS as ICON } from "@/assets/add-money-icons";
 import { Button } from "@/components/ui/button";
 
@@ -253,6 +254,13 @@ function AccountPopup({
   );
 }
 
+/* ── Standard wizard header — back button (or close on step 1) ── */
+const WizardHeader = ({ onClick }: { onClick: () => void }) => (
+  <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-b border-brain-v1stroke-2 h-[56px] relative shrink-0 w-full">
+    <BackBtn onClick={onClick} />
+  </div>
+);
+
 // ── Main component ────────────────────────────────────────────────────────────
 interface Props {
   open: boolean;
@@ -294,8 +302,6 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep 
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [recipientName, setRecipientName] = useState("");
   const [iban, setIban]               = useState("");
-
-  if (!open) return null;
 
   const availableAccounts = ALL_ACCOUNTS.filter(
     (a) => !excludeTypes.includes(a.type)
@@ -344,316 +350,13 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep 
 
   const activeAddr = selected?.address ?? "";
 
-  // ── STEP 1 ─────────────────────────────────────────────────────────────────
-  if (step === "select") {
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center">
-        <div className="absolute inset-0 bg-black/65 backdrop-blur-sm" onClick={handleClose} />
-        <div className="relative z-10 w-[402px] bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 rounded-modal overflow-hidden">
-
-          {/* Header */}
-          <div className="bg-brain-v1highlight-dropdown-bg h-[56px] relative flex-shrink-0 border-b border-brain-v1stroke-2">
-            <BackBtn onClick={handleClose} />
-          </div>
-
-          {/* Content */}
-          <div className="flex flex-col gap-[24px] px-[39px] pt-[23px] pb-[0px]">
-            {/* Title */}
-            <div className="flex flex-col">
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[32px] leading-[40px]">
-                Add Money
-              </p>
-              <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-30 text-[22px] leading-[28px]">
-                What account should we fund?
-              </p>
-            </div>
-
-            {/* Account selector */}
-            <div className="relative">
-              <button
-                onClick={() => setPopupOpen((v) => !v)}
-                className="bg-brain-v1baby-blue-15 flex gap-[8px] h-[56px] items-center px-[16px] rounded-panel w-full hover:bg-brain-v1baby-blue-15-hover transition-colors"
-                data-testid="btn-select-account"
-              >
-                {selected ? (
-                  <>
-                    <AccountIcon type={selected.type} />
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[20px] leading-[24px] flex-1 text-left whitespace-nowrap">
-                      {selected.name}
-                    </p>
-                    <RowEndIcon icon="chevron-down" />
-                  </>
-                ) : (
-                  <>
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[20px] leading-[24px] flex-1 text-left whitespace-nowrap">
-                      Select Account
-                    </p>
-                    <RowEndIcon icon="plus" />
-                  </>
-                )}
-              </button>
-
-              {popupOpen && (
-                <AccountPopup
-                  accounts={availableAccounts}
-                  onSelect={handleAccountSelect}
-                  onClose={() => setPopupOpen(false)}
-                />
-              )}
-            </div>
-          </div>
-
-          {/* Cancel + Next buttons */}
-          <div className="flex gap-[16px] items-center px-[39px] pt-[24px] pb-[32px]">
-            <Button
-              variant="secondary"
-              size="large"
-              className="flex-1"
-              onClick={handleClose}
-              data-testid="btn-add-cancel"
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="warning"
-              size="large"
-              className="flex-1"
-              onClick={() => selected && setStep(selected.type)}
-              disabled={!selected}
-              data-testid="btn-add-next"
-            >
-              Next
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ── STEP 2: Crypto Account ─────────────────────────────────────────────────
-  if (step === "wallet") {
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center">
-        <div className="absolute inset-0 bg-black/65 backdrop-blur-sm" onClick={handleClose} />
-        <div className="relative z-10 w-[402px] bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 rounded-modal overflow-hidden">
-
-          {/* QR overlay */}
-          {qrOpen && (
-            <QRPopup
-              address={activeAddr}
-              onClose={() => setQrOpen(false)}
-              onCopy={() => handleCopy(activeAddr)}
-              copied={copied}
-            />
-          )}
-
-          {/* Header */}
-          <div className="bg-brain-v1highlight-dropdown-bg h-[56px] relative flex-shrink-0 border-b border-brain-v1stroke-2">
-            <BackBtn onClick={handleBack} />
-          </div>
-
-          {/* Content */}
-          <div className="flex flex-col gap-[24px] px-[39px] pt-[23px]">
-            {/* Title */}
-            <div className="flex flex-col">
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[32px] leading-[40px]">
-                Add Money
-              </p>
-              <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-30 text-[22px] leading-[28px]">
-                What account should we fund?
-              </p>
-            </div>
-
-            {/* Selected account row */}
-            <div className="relative">
-              <button
-                onClick={() => { setPopupOpen((v) => !v); }}
-                className="bg-brain-v1baby-blue-15 flex gap-[8px] h-[56px] items-center px-[16px] rounded-panel w-full hover:bg-brain-v1baby-blue-15-hover transition-colors"
-                data-testid="btn-account-row"
-              >
-                <AccountIcon type="wallet" />
-                <p className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[20px] leading-[24px] flex-1 text-left whitespace-nowrap">
-                  Crypto Account
-                </p>
-                <RowEndIcon icon="chevron-down" />
-              </button>
-              {popupOpen && (
-                <AccountPopup
-                  accounts={availableAccounts}
-                  onSelect={handleAccountSelect}
-                  onClose={() => setPopupOpen(false)}
-                />
-              )}
-            </div>
-
-            {/* Wallet Address */}
-            <div className="flex flex-col gap-[4px]">
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-30 text-[16px] leading-[24px]">
-                Wallet Address
-              </p>
-              <div className="bg-brain-v1baby-blue-15 flex gap-[8px] h-[56px] items-center px-[16px] py-[10px] rounded-panel w-full">
-                <p className="[font-family:'JetBrains_Mono',monospace] font-medium text-white text-[20px] leading-[24px] flex-1 min-w-0 truncate whitespace-nowrap">
-                  {truncAddr(activeAddr)}
-                </p>
-                <div className="flex gap-[8px] items-center shrink-0">
-                  <ActionBtn variant="purple" icon="qr"   onClick={() => setQrOpen(true)}     testId="btn-wallet-qr"   title="Show QR code" />
-                  <ActionBtn variant="orange" icon="copy" onClick={() => handleCopy(activeAddr)} testId="btn-wallet-copy" title="Copy address" />
-                </div>
-              </div>
-              {copied && (
-                <p className="[font-family:'Gilroy',sans-serif] text-brain-v1green text-[12px] leading-[16px]">
-                  Address copied!
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Close button */}
-          <div className="px-[39px] pt-[24px] pb-[32px]">
-            <Button
-              variant="warning"
-              size="large"
-              className="w-full"
-              onClick={handleClose}
-              data-testid="btn-wallet-close"
-            >
-              Close
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ── STEP 2: Bank Account ───────────────────────────────────────────────────
-  if (step === "bank") {
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center">
-        <div className="absolute inset-0 bg-black/65 backdrop-blur-sm" onClick={handleClose} />
-        <div className="relative z-10 w-[402px] bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 rounded-modal overflow-hidden">
-
-          {/* Header */}
-          <div className="bg-brain-v1highlight-dropdown-bg h-[56px] relative flex-shrink-0 border-b border-brain-v1stroke-2">
-            <BackBtn onClick={handleBack} />
-          </div>
-
-          {/* Content */}
-          <div className="flex flex-col gap-[24px] px-[39px] pt-[23px]">
-            {/* Title */}
-            <div className="flex flex-col">
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[32px] leading-[40px]">
-                Add Money
-              </p>
-              <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-30 text-[22px] leading-[28px]">
-                What account should we fund?
-              </p>
-            </div>
-
-            {/* Selected account row */}
-            <div className="relative">
-              <button
-                onClick={() => setPopupOpen((v) => !v)}
-                className="bg-brain-v1baby-blue-15 flex gap-[8px] h-[56px] items-center px-[16px] rounded-panel w-full hover:bg-brain-v1baby-blue-15-hover transition-colors"
-                data-testid="btn-account-row-bank"
-              >
-                <AccountIcon type="bank" />
-                <p className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[20px] leading-[24px] flex-1 text-left whitespace-nowrap">
-                  Bank Account
-                </p>
-                <RowEndIcon icon="chevron-down" />
-              </button>
-              {popupOpen && (
-                <AccountPopup
-                  accounts={availableAccounts}
-                  onSelect={handleAccountSelect}
-                  onClose={() => setPopupOpen(false)}
-                />
-              )}
-            </div>
-
-            {/* Bank fields */}
-            <div className="flex flex-col gap-[24px]">
-              {/* Recipient Name */}
-              <div className="flex flex-col gap-[4px]">
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-30 text-[16px] leading-[24px]">
-                  Recipient Name
-                </p>
-                <div className="bg-brain-v1baby-blue-15 flex gap-[8px] h-[56px] items-center px-[16px] py-[10px] rounded-panel w-full">
-                  <p className="flex-1 [font-family:'Gilroy',sans-serif] font-semibold text-white text-[20px] leading-[24px] min-w-0 overflow-hidden text-ellipsis whitespace-nowrap" data-testid="text-recipient-name">
-                    {recipientName || "-"}
-                  </p>
-                  <ActionBtn
-                    variant="orange"
-                    icon="copy"
-                    onClick={() => handleCopyField("recipientName")}
-                    testId="btn-copy-name"
-                    title={copiedField === "recipientName" ? "Copied!" : "Copy"}
-                  />
-                </div>
-              </div>
-
-              {/* IBAN */}
-              <div className="flex flex-col gap-[4px]">
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-30 text-[16px] leading-[24px]">
-                  IBAN Bank Number
-                </p>
-                <div className="bg-brain-v1baby-blue-15 flex gap-[8px] h-[56px] items-center px-[16px] py-[10px] rounded-panel w-full">
-                  <p className="flex-1 [font-family:'JetBrains_Mono',monospace] font-semibold text-white text-[20px] leading-[24px] whitespace-nowrap" data-testid="text-iban">
-                    {iban ? truncIban(iban) : "-"}
-                  </p>
-                  <ActionBtn
-                    variant="orange"
-                    icon="copy"
-                    onClick={() => handleCopyField("iban")}
-                    testId="btn-copy-iban"
-                    title={copiedField === "iban" ? "Copied!" : "Copy"}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Close button */}
-          <div className="px-[39px] pt-[24px] pb-[32px]">
-            <Button
-              variant="warning"
-              size="large"
-              className="w-full"
-              onClick={handleClose}
-              data-testid="btn-bank-close"
-            >
-              Close
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ── STEP 2: Agent Account ──────────────────────────────────────────────────
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/65 backdrop-blur-sm" onClick={handleClose} />
-      <div className="relative z-10 w-[402px] bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 rounded-modal overflow-hidden">
-
-        {/* QR overlay */}
-        {qrOpen && (
-          <QRPopup
-            address={activeAddr}
-            onClose={() => setQrOpen(false)}
-            onCopy={() => handleCopy(activeAddr)}
-            copied={copied}
-          />
-        )}
-
-        {/* Header */}
-        <div className="bg-brain-v1highlight-dropdown-bg h-[56px] relative flex-shrink-0 border-b border-brain-v1stroke-2">
-          <BackBtn onClick={handleBack} />
-        </div>
-
-        {/* Content */}
-        <div className="flex flex-col gap-[24px] px-[39px] pt-[23px]">
-          {/* Title */}
+  /* ── Step content (inner panel only — Radix shell provides the frame) ── */
+  const stepContent = (() => {
+    // ── STEP 1: Select account ─────────────────────────────────────────────
+    if (step === "select") return (
+      <>
+        <WizardHeader onClick={handleClose} />
+        <div className="flex flex-col gap-[24px] px-[39px] pt-[23px] pb-[0px]">
           <div className="flex flex-col">
             <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[32px] leading-[40px]">
               Add Money
@@ -662,8 +365,212 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep 
               What account should we fund?
             </p>
           </div>
+          <div className="relative">
+            <button
+              onClick={() => setPopupOpen((v) => !v)}
+              className="bg-brain-v1baby-blue-15 flex gap-[8px] h-[56px] items-center px-[16px] rounded-panel w-full hover:bg-brain-v1baby-blue-15-hover transition-colors"
+              data-testid="btn-select-account"
+            >
+              {selected ? (
+                <>
+                  <AccountIcon type={selected.type} />
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[20px] leading-[24px] flex-1 text-left whitespace-nowrap">
+                    {selected.name}
+                  </p>
+                  <RowEndIcon icon="chevron-down" />
+                </>
+              ) : (
+                <>
+                  <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[20px] leading-[24px] flex-1 text-left whitespace-nowrap">
+                    Select Account
+                  </p>
+                  <RowEndIcon icon="plus" />
+                </>
+              )}
+            </button>
+            {popupOpen && (
+              <AccountPopup
+                accounts={availableAccounts}
+                onSelect={handleAccountSelect}
+                onClose={() => setPopupOpen(false)}
+              />
+            )}
+          </div>
+        </div>
+        <div className="flex gap-[16px] items-center px-[39px] pt-[24px] pb-[32px]">
+          <Button variant="secondary" size="large" className="flex-1" onClick={handleClose} data-testid="btn-add-cancel">
+            Cancel
+          </Button>
+          <Button
+            variant="warning"
+            size="large"
+            className="flex-1"
+            onClick={() => selected && setStep(selected.type)}
+            disabled={!selected}
+            data-testid="btn-add-next"
+          >
+            Next
+          </Button>
+        </div>
+      </>
+    );
 
-          {/* Selected account row */}
+    // ── STEP 2a: Crypto Account ────────────────────────────────────────────
+    if (step === "wallet") return (
+      <>
+        {qrOpen && (
+          <QRPopup
+            address={activeAddr}
+            onClose={() => setQrOpen(false)}
+            onCopy={() => handleCopy(activeAddr)}
+            copied={copied}
+          />
+        )}
+        <WizardHeader onClick={handleBack} />
+        <div className="flex flex-col gap-[24px] px-[39px] pt-[23px]">
+          <div className="flex flex-col">
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[32px] leading-[40px]">
+              Add Money
+            </p>
+            <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-30 text-[22px] leading-[28px]">
+              What account should we fund?
+            </p>
+          </div>
+          <div className="relative">
+            <button
+              onClick={() => setPopupOpen((v) => !v)}
+              className="bg-brain-v1baby-blue-15 flex gap-[8px] h-[56px] items-center px-[16px] rounded-panel w-full hover:bg-brain-v1baby-blue-15-hover transition-colors"
+              data-testid="btn-account-row"
+            >
+              <AccountIcon type="wallet" />
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[20px] leading-[24px] flex-1 text-left whitespace-nowrap">
+                Crypto Account
+              </p>
+              <RowEndIcon icon="chevron-down" />
+            </button>
+            {popupOpen && (
+              <AccountPopup
+                accounts={availableAccounts}
+                onSelect={handleAccountSelect}
+                onClose={() => setPopupOpen(false)}
+              />
+            )}
+          </div>
+          <div className="flex flex-col gap-[4px]">
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-30 text-[16px] leading-[24px]">
+              Wallet Address
+            </p>
+            <div className="bg-brain-v1baby-blue-15 flex gap-[8px] h-[56px] items-center px-[16px] py-[10px] rounded-panel w-full">
+              <p className="[font-family:'JetBrains_Mono',monospace] font-medium text-white text-[20px] leading-[24px] flex-1 min-w-0 truncate whitespace-nowrap">
+                {truncAddr(activeAddr)}
+              </p>
+              <div className="flex gap-[8px] items-center shrink-0">
+                <ActionBtn variant="purple" icon="qr"   onClick={() => setQrOpen(true)}         testId="btn-wallet-qr"   title="Show QR code" />
+                <ActionBtn variant="orange" icon="copy" onClick={() => handleCopy(activeAddr)}   testId="btn-wallet-copy" title="Copy address" />
+              </div>
+            </div>
+            {copied && (
+              <p className="[font-family:'Gilroy',sans-serif] text-brain-v1green text-[12px] leading-[16px]">
+                Address copied!
+              </p>
+            )}
+          </div>
+        </div>
+        <div className="px-[39px] pt-[24px] pb-[32px]">
+          <Button variant="warning" size="large" className="w-full" onClick={handleClose} data-testid="btn-wallet-close">
+            Close
+          </Button>
+        </div>
+      </>
+    );
+
+    // ── STEP 2b: Bank Account ──────────────────────────────────────────────
+    if (step === "bank") return (
+      <>
+        <WizardHeader onClick={handleBack} />
+        <div className="flex flex-col gap-[24px] px-[39px] pt-[23px]">
+          <div className="flex flex-col">
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[32px] leading-[40px]">
+              Add Money
+            </p>
+            <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-30 text-[22px] leading-[28px]">
+              What account should we fund?
+            </p>
+          </div>
+          <div className="relative">
+            <button
+              onClick={() => setPopupOpen((v) => !v)}
+              className="bg-brain-v1baby-blue-15 flex gap-[8px] h-[56px] items-center px-[16px] rounded-panel w-full hover:bg-brain-v1baby-blue-15-hover transition-colors"
+              data-testid="btn-account-row-bank"
+            >
+              <AccountIcon type="bank" />
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[20px] leading-[24px] flex-1 text-left whitespace-nowrap">
+                Bank Account
+              </p>
+              <RowEndIcon icon="chevron-down" />
+            </button>
+            {popupOpen && (
+              <AccountPopup
+                accounts={availableAccounts}
+                onSelect={handleAccountSelect}
+                onClose={() => setPopupOpen(false)}
+              />
+            )}
+          </div>
+          <div className="flex flex-col gap-[24px]">
+            <div className="flex flex-col gap-[4px]">
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-30 text-[16px] leading-[24px]">
+                Recipient Name
+              </p>
+              <div className="bg-brain-v1baby-blue-15 flex gap-[8px] h-[56px] items-center px-[16px] py-[10px] rounded-panel w-full">
+                <p className="flex-1 [font-family:'Gilroy',sans-serif] font-semibold text-white text-[20px] leading-[24px] min-w-0 overflow-hidden text-ellipsis whitespace-nowrap" data-testid="text-recipient-name">
+                  {recipientName || "-"}
+                </p>
+                <ActionBtn variant="orange" icon="copy" onClick={() => handleCopyField("recipientName")} testId="btn-copy-name" title={copiedField === "recipientName" ? "Copied!" : "Copy"} />
+              </div>
+            </div>
+            <div className="flex flex-col gap-[4px]">
+              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-30 text-[16px] leading-[24px]">
+                IBAN Bank Number
+              </p>
+              <div className="bg-brain-v1baby-blue-15 flex gap-[8px] h-[56px] items-center px-[16px] py-[10px] rounded-panel w-full">
+                <p className="flex-1 [font-family:'JetBrains_Mono',monospace] font-semibold text-white text-[20px] leading-[24px] whitespace-nowrap" data-testid="text-iban">
+                  {iban ? truncIban(iban) : "-"}
+                </p>
+                <ActionBtn variant="orange" icon="copy" onClick={() => handleCopyField("iban")} testId="btn-copy-iban" title={copiedField === "iban" ? "Copied!" : "Copy"} />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="px-[39px] pt-[24px] pb-[32px]">
+          <Button variant="warning" size="large" className="w-full" onClick={handleClose} data-testid="btn-bank-close">
+            Close
+          </Button>
+        </div>
+      </>
+    );
+
+    // ── STEP 2c: Agent Account ─────────────────────────────────────────────
+    return (
+      <>
+        {qrOpen && (
+          <QRPopup
+            address={activeAddr}
+            onClose={() => setQrOpen(false)}
+            onCopy={() => handleCopy(activeAddr)}
+            copied={copied}
+          />
+        )}
+        <WizardHeader onClick={handleBack} />
+        <div className="flex flex-col gap-[24px] px-[39px] pt-[23px]">
+          <div className="flex flex-col">
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[32px] leading-[40px]">
+              Add Money
+            </p>
+            <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-30 text-[22px] leading-[28px]">
+              What account should we fund?
+            </p>
+          </div>
           <div className="relative">
             <button
               onClick={() => setPopupOpen((v) => !v)}
@@ -684,8 +591,6 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep 
               />
             )}
           </div>
-
-          {/* Wallet Address */}
           <div className="flex flex-col gap-[4px]">
             <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-30 text-[16px] leading-[24px]">
               Wallet Address
@@ -695,8 +600,8 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep 
                 {truncAddr(activeAddr)}
               </p>
               <div className="flex gap-[8px] items-center shrink-0">
-                <ActionBtn variant="purple" icon="qr"   onClick={() => setQrOpen(true)}     testId="btn-agent-qr"   title="Show QR code" />
-                <ActionBtn variant="orange" icon="copy" onClick={() => handleCopy(activeAddr)} testId="btn-agent-copy" title="Copy address" />
+                <ActionBtn variant="purple" icon="qr"   onClick={() => setQrOpen(true)}         testId="btn-agent-qr"   title="Show QR code" />
+                <ActionBtn variant="orange" icon="copy" onClick={() => handleCopy(activeAddr)}   testId="btn-agent-copy" title="Copy address" />
               </div>
             </div>
             {copied && (
@@ -706,20 +611,33 @@ export const AddAccountModal = ({ open, onClose, excludeTypes = [], initialStep 
             )}
           </div>
         </div>
-
-        {/* Close button */}
         <div className="px-[39px] pt-[24px] pb-[32px]">
-          <Button
-            variant="warning"
-            size="large"
-            className="w-full"
-            onClick={handleClose}
-            data-testid="btn-agent-close"
-          >
+          <Button variant="warning" size="large" className="w-full" onClick={handleClose} data-testid="btn-agent-close">
             Close
           </Button>
         </div>
-      </div>
-    </div>
+      </>
+    );
+  })();
+
+  /* ── Single Radix shell — standard overlay + frame, wizard content inside ── */
+  return (
+    <DialogPrimitive.Root open={open} onOpenChange={(o) => { if (!o) handleClose(); }}>
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px]" />
+        <DialogPrimitive.Content
+          aria-describedby={undefined}
+          className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-brain-v1baby-blue-5 border border-brain-v1stroke-2 rounded-modal overflow-hidden w-[400px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.6)] focus:outline-none flex flex-col"
+        >
+          <DialogPrimitive.Title className="sr-only">
+            {step === "select" ? "Add Money — Select Account"
+              : step === "wallet" ? "Add Money — Crypto Account"
+              : step === "bank"   ? "Add Money — Bank Account"
+              : "Add Money — Agent Account"}
+          </DialogPrimitive.Title>
+          {stepContent}
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
   );
 };
