@@ -106,3 +106,4 @@
 - [Silently-dropped inputs](honest-derived-figures.md) — an extremum seeded null can't return day zero; completeness is the cursor, never the row count.
 - [Injected-witness QA](qa-injected-witness.md) — prove a section a thin tenant can't trigger by appending a synthetic record to the real read; still report the real check as SKIP.
 - [Vite lazy-dep reoptimize](vite-lazy-dep-reoptimize.md) — a dep reached only from an unvisited surface reloads mid-session with a null React; looks exactly like duplicate React.
+- [Outcome-not-source bucketing](outcome-not-source-bucketing.md) — group a queue by the decisions a record accepts, never a per-feed `kind`; published list outranks source, even when empty.
