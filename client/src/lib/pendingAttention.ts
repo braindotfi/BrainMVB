@@ -97,8 +97,8 @@ export function pendingAttentionSummary({
 
   const parts: string[] = [];
   if (urgent > 0) parts.push(`${urgent} urgent`);
-  if (waiting > 0) parts.push(`${waiting} waiting on you`);
   if (input > 0) parts.push(`${input} needing your input`);
+  if (waiting > 0) parts.push(`${waiting} waiting on you`);
 
   return {
     total,

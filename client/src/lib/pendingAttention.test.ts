@@ -32,6 +32,12 @@ describe("a complete read", () => {
     expect(s?.detail).not.toContain("waiting on you");
   });
 
+  it("orders the breakdown as urgent, input, then waiting", () => {
+    expect(
+      pendingAttentionSummary(counts({ urgent: 2, input: 1, waiting: 3 }))?.detail,
+    ).toBe("2 urgent · 1 needing your input · 3 waiting on you");
+  });
+
   it("reads urgent only when something urgent is in it", () => {
     expect(pendingAttentionSummary(counts({ urgent: 1 }))?.tone).toBe("urgent");
     expect(pendingAttentionSummary(counts({ waiting: 4 }))?.tone).toBe("normal");
