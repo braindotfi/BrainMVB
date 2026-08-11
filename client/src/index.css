@@ -60,7 +60,21 @@
     gap: 12px;
     width: 100%;
     flex-shrink: 0;
-    padding: 16px 0;
+    padding: 16px;
+  }
+
+  .settings-record-list {
+    display: flex;
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .settings-record-list > .settings-record + .settings-record {
+    border-top: 1px solid var(--brain-v1stroke-2);
+  }
+
+  .settings-record-list > .settings-record-item + .settings-record-item {
+    border-top: 1px solid var(--brain-v1stroke-2);
   }
 
   .settings-record-content {

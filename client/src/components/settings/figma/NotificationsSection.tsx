@@ -53,39 +53,36 @@ export default function NotificationsSection() {
           </p>
         </div>
 
-        <div className="bg-brain-v1highlight-dropdown-bg rounded-panel p-[16px] flex flex-col gap-[16px] w-full">
+        <div className="bg-brain-v1highlight-dropdown-bg rounded-panel overflow-hidden flex flex-col w-full">
           {/* Said once, at the top, rather than repeated on every row. */}
-          <MutedCallout
-            title="Notification delivery is not connected yet."
-            testId="text-notifications-unavailable"
-          >
-            These channels are shown so you can see what Brain will support. None of
-            them can be switched on today, and nothing here is being sent.
-          </MutedCallout>
-
-          {CHANNELS.map((c, i) => (
-            <div key={c.id} className="flex flex-col gap-[16px]">
-              {i > 0 && <div className="h-px bg-brain-v1stroke-2 w-full" />}
+          <div className="p-[16px]">
+            <MutedCallout
+              title="Notification delivery is not connected yet."
+              testId="text-notifications-unavailable"
+            >
+              These channels are shown so you can see what Brain will support. None of
+              them can be switched on today, and nothing here is being sent.
+            </MutedCallout>
+          </div>
+          <div className="settings-record-list">
+            {CHANNELS.map((c) => (
               <div
+                key={c.id}
                 className="settings-record opacity-40"
                 data-testid={`row-notification-${c.id}`}
                 aria-disabled="true"
               >
-                <div className="settings-record-copy flex flex-[1_0_0] flex-col gap-[4px] min-w-px">
-                  <p className="settings-record-title">
-                    {c.title}
-                  </p>
-                  <p className="settings-record-detail">
-                    {c.detail}
-                  </p>
+                <div className="settings-record-copy">
+                  <p className="settings-record-title">{c.title}</p>
+                  <p className="settings-record-detail">{c.detail}</p>
                 </div>
                 {/* Presentational only — deliberately not a button and not focusable. */}
                 <div className="shrink-0" aria-hidden="true">
                   <Switch active={false} />
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
 

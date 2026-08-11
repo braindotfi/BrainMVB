@@ -203,7 +203,7 @@ export default function AccountSection() {
             Your Data
           </p>
         </div>
-        <div className="bg-brain-v1highlight-dropdown-bg content-stretch flex flex-col gap-[16px] items-start overflow-clip p-[16px] relative rounded-panel shrink-0 w-full">
+        <div className="settings-record-list bg-brain-v1highlight-dropdown-bg overflow-clip relative rounded-panel shrink-0 w-full">
           <div className="settings-record">
             <div className="settings-record-content content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
               <div className="relative rounded-pill shrink-0 size-[40px]">
@@ -218,7 +218,7 @@ export default function AccountSection() {
                   </div>
                 </div>
               </div>
-              <div className="settings-record-copy content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
+              <div className="settings-record-copy">
                   <p className="settings-record-title">
                   Export My Data
                 </p>
@@ -246,11 +246,6 @@ export default function AccountSection() {
               </div>
             </div>
           </div>
-          <div className="h-0 relative shrink-0 w-full">
-            <div className="absolute inset-[-0.5px_0]">
-              <img alt="" className="block max-w-none size-full" src={SUB["7bddb712"]} />
-            </div>
-          </div>
           <button
             type="button"
             onClick={() => setModal("deleteData")}
@@ -271,7 +266,7 @@ export default function AccountSection() {
                   </div>
                 </div>
               </div>
-              <div className="settings-record-copy content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
+              <div className="settings-record-copy">
                 <p className="settings-record-title">
                   Delete My Data
                 </p>
@@ -307,7 +302,7 @@ export default function AccountSection() {
             Account
           </p>
         </div>
-        <div className="bg-brain-v1highlight-dropdown-bg content-stretch flex flex-col items-start overflow-clip p-[16px] relative rounded-panel shrink-0 w-full">
+        <div className="settings-record-list bg-brain-v1highlight-dropdown-bg overflow-clip relative rounded-panel shrink-0 w-full">
           <button
             type="button"
             onClick={handleCloseAccountClick}
@@ -328,7 +323,7 @@ export default function AccountSection() {
                   </div>
                 </div>
               </div>
-              <div className="settings-record-copy content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
+              <div className="settings-record-copy">
                 <p className="settings-record-title text-brain-v1pink-red">
                   Close Account
                 </p>
