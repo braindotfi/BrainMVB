@@ -122,3 +122,34 @@ the *routing* assertion fails for a reason that has nothing to do with routing.
 panel is non-empty separately. Also poll past provisional states ("Loading…",
 a "checking" attribute) before judging a degraded-state assertion, or the check
 races the query's retry.
+
+## Two surfaces opening "the same record" is a byte-comparison, not a popup count
+
+When a record is reachable from two places (a summary card and the list page that
+owns it), the interesting failure is not "no popup opened" — it is a popup showing
+a *neighbouring* record. Both surfaces look entirely reasonable on their own, so
+nothing on screen reports the disagreement.
+
+**How to apply:** open the record from surface A, capture the rendered popup text,
+then find the counterpart row on the owning page and compare the two strings
+(normalised, minus chrome like Prev/Next). Match the row by the record it actually
+opens — list rows are frequently keyed by index, not id, so scan until the opened
+record matches and treat "no row matched" as a FAIL, never as "not found".
+
+Two traps in that scan:
+
+- **Normalise before you regex.** A popup's raw `innerText` separates a label from
+  its value with a newline, so `/Source ([A-Za-z0-9_]+)/` matches nothing and every
+  row reads as a mismatch. Collapse whitespace first.
+- **Wait for the count to stop moving, not for the first row.** Cursor-walked lists
+  keep appending after first paint; a scan started at first paint searches a list
+  that does not contain the row yet and reports a cross-surface disagreement that is
+  really a half-finished read.
+
+## Budget the fresh tenants
+
+`POST /api/auth/demo-fresh` is rate limited per network (a handful per 15 minutes),
+and every walkthrough, probe and retry spends one. Exhausting it costs a long wait
+mid-investigation, so fold several questions into one scripted pass instead of
+re-running the whole suite per hypothesis — and prefer a direct API read over a
+browser run when the question is about data rather than rendering.

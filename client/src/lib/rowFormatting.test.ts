@@ -70,7 +70,6 @@ describe("the count pill is declared once", () => {
       "../components/TierRowList.tsx",
       "../components/settings/AuditLogSection.tsx",
       "../pages/VendorsPanel.tsx",
-      "../pages/InboxPage.tsx",
     ];
     for (const f of callSites) {
       expect(read(f), `${f} must import the shared pill`).toContain(

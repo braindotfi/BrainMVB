@@ -13,3 +13,9 @@
 # If you are adding a line here only to make the check pass, stop -- that is the
 # exact failure this file exists to prevent. Confirm the control is genuinely
 # superseded before declaring it.
+
+banner-overview-incomplete   superseded — Overview aggregate now waits for all contributing feeds and shows an explicit failure state instead of a partial-data banner
+filter-priority              superseded — Inbox restructure replaced the priority filter with outcome-bucketed sections (needs input / awareness / decided)
+row-overview                 superseded — Overview tier-row list replaced by the cash projection + KPI dashboard layout
+text-decision-count          superseded — decided-count pill replaced by per-section counts in the three-section Inbox
+button-missing-evidence-dismiss   removed — Needs Your Input modal now offers only Remind later and the field-specific fix action
