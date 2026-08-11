@@ -127,7 +127,7 @@ function VendorRow({
     >
       <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
         <div className="flex items-center gap-[8px] min-w-px max-w-full">
-          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[16px] truncate">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-100 text-[16px] truncate">
             {vendor.name}
           </p>
           {reason ? <ReasonChip label={reason} /> : null}

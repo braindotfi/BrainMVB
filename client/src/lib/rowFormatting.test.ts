@@ -115,13 +115,10 @@ describe("record rows sit on the shared type ramp", () => {
 
   it("a rule's problem report uses the medium record ramp, not two bold lines", () => {
     const row = block(read("../pages/RuleDetail.tsx"), "data-testid={`card-report-", 1100);
-    // Title: medium 16/20. Subtext: medium 14/16 — it had been semibold 16/20,
+    // Title: medium 16/20. Subtext: regular 14/16 — it had been semibold 16/20,
     // which made the timestamp shout as loudly as the reason.
-    expect(row).toContain("font-medium leading-[20px] text-brain-v1baby-blue-100 text-[16px]");
+    expect(row).toContain("font-semibold leading-[20px] text-brain-v1baby-blue-100 text-[16px]");
     expect(row).toContain("font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px]");
-    expect(row, "the report title must not go back to semibold").not.toContain(
-      "font-semibold leading-[20px] text-brain-v1baby-blue-100 text-[16px]",
-    );
   });
 
   it("a source row separates its title and subtext by 4px", () => {

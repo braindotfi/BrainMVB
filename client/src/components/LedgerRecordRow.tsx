@@ -61,7 +61,7 @@ export function LedgerRecordRow({
       <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
         <div className="flex gap-[8px] items-center relative shrink-0 max-w-full">
           <p
-            className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[16px] truncate"
+            className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-100 text-[16px] truncate"
             data-testid={nameTestId}
           >
             {name}

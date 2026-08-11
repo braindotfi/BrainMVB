@@ -216,7 +216,7 @@ export const TierRow = ({ row }: { row: TierRowModel }) => {
       )}
       <div className="flex flex-col gap-[4px] items-start min-w-px flex-1">
         <div className="flex flex-nowrap items-center gap-x-[8px] w-full min-w-0">
-          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[16px] min-w-0 truncate">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-100 text-[16px] min-w-0 truncate">
             {row.title}
           </p>
           {row.badge && (

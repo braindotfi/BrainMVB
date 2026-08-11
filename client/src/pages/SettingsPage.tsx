@@ -266,7 +266,6 @@ const SettingRow = ({
         style={{
           color: danger ? "#d20344" : undefined,
           fontFamily: "'Gilroy', 'Plus Jakarta Sans', system-ui, sans-serif",
-          fontWeight: 500,
           fontSize: "16px",
           lineHeight: "20px",
         }}
@@ -279,7 +278,6 @@ const SettingRow = ({
           style={{
             color: "#6c779d",
             fontFamily: "'Gilroy', 'Plus Jakarta Sans', system-ui, sans-serif",
-            fontWeight: 500,
             fontSize: "14px",
             lineHeight: "16px",
           }}
@@ -802,8 +800,8 @@ function BillingSection() {
               <div className="flex items-center gap-2 min-w-0">
                 <p
                   data-testid="text-plan-name"
-                  className="truncate"
-                  style={{ color: "#a8b9f4", fontFamily: "'Gilroy', sans-serif", fontWeight: 500, fontSize: "16px", lineHeight: "20px" }}
+                  className="settings-record-title truncate"
+                  style={{ color: "#a8b9f4", fontFamily: "'Gilroy', sans-serif", fontSize: "16px", lineHeight: "20px" }}
                 >
                   {plan ? plan.label : "No plan selected yet."}
                 </p>
@@ -826,8 +824,8 @@ function BillingSection() {
               </div>
               <p
                 data-testid="text-plan-price"
-                className="truncate"
-                style={{ color: "#6c779d", fontFamily: "'Gilroy', sans-serif", fontWeight: 500, fontSize: "14px", lineHeight: "16px" }}
+                className="settings-record-detail truncate"
+                style={{ color: "#6c779d", fontFamily: "'Gilroy', sans-serif", fontSize: "14px", lineHeight: "16px" }}
               >
                 {plan ? `${plan.tagline} · ${plan.price} ${plan.cadence}` : "Choose a plan to get started."}
               </p>

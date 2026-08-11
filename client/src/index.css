@@ -85,18 +85,19 @@
   .settings-record-detail {
     margin: 0;
     font-family: "Gilroy", "Plus Jakarta Sans", system-ui, sans-serif;
-    font-weight: 500;
     white-space: nowrap;
   }
 
   .settings-record-title {
     color: var(--brain-v1baby-blue-100);
+    font-weight: 500;
     font-size: 16px;
     line-height: 20px;
   }
 
   .settings-record-detail {
     color: var(--brain-v1baby-blue-60);
+    font-weight: 400;
     font-size: 14px;
     line-height: 16px;
   }
