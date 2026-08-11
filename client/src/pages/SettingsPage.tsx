@@ -251,7 +251,7 @@ const SettingRow = ({
   <div
     data-testid={testId ?? `setting-row-${label.toLowerCase().replace(/\s+/g, "-")}`}
     onClick={onClick}
-    className={`flex items-center gap-3 px-4 py-3 ${onClick ? "cursor-pointer hover:bg-brain-v1row-hover transition-colors" : ""}`}
+    className={`settings-record px-4 ${onClick ? "cursor-pointer hover:bg-brain-v1row-hover transition-colors" : ""}`}
   >
     {useCircleIcon ? icon : <RowIcon danger={danger}>{icon}</RowIcon>}
     <div className="flex flex-col gap-[4px] flex-1 min-w-0">
@@ -261,27 +261,11 @@ const SettingRow = ({
           with a 2px gap while the Identity rows — and every row record on
           Overview, Inbox and Ledger — were 16px/14px with a 4px gap. The icon
           treatment is a visual choice; the text ramp is not. */}
-      <p
-        className={`settings-record-title ${danger ? "text-brain-v1pink-red" : ""}`}
-        style={{
-          color: danger ? "#d20344" : undefined,
-          fontFamily: "'Gilroy', 'Plus Jakarta Sans', system-ui, sans-serif",
-          fontSize: "16px",
-          lineHeight: "20px",
-        }}
-      >
+      <p className={`settings-record-title ${danger ? "text-brain-v1pink-red" : ""}`}>
         {label}
       </p>
       {sublabel && (
-        <p
-          className="settings-record-detail whitespace-normal break-words"
-          style={{
-            color: "#6c779d",
-            fontFamily: "'Gilroy', 'Plus Jakarta Sans', system-ui, sans-serif",
-            fontSize: "14px",
-            lineHeight: "16px",
-          }}
-        >
+        <p className="settings-record-detail whitespace-normal break-words">
           {sublabel}
         </p>
       )}
@@ -795,14 +779,10 @@ function BillingSection() {
       <div className="flex flex-col gap-[4px]">
         <SectionLabel>Current Plan</SectionLabel>
         <WidgetPanel noBorder>
-          <div className="px-4 py-3 flex items-center gap-4 h-[64px]">
-            <div className="flex-1 min-w-0 flex flex-col gap-[4px] justify-center">
+          <div className="settings-record px-4">
+            <div className="settings-record-copy">
               <div className="flex items-center gap-2 min-w-0">
-                <p
-                  data-testid="text-plan-name"
-                  className="settings-record-title truncate"
-                  style={{ color: "#a8b9f4", fontFamily: "'Gilroy', sans-serif", fontSize: "16px", lineHeight: "20px" }}
-                >
+                <p data-testid="text-plan-name" className="settings-record-title truncate">
                   {plan ? plan.label : "No plan selected yet."}
                 </p>
                 {plan && cancelled && (
@@ -822,11 +802,7 @@ function BillingSection() {
                   </span>
                 )}
               </div>
-              <p
-                data-testid="text-plan-price"
-                className="settings-record-detail truncate"
-                style={{ color: "#6c779d", fontFamily: "'Gilroy', sans-serif", fontSize: "14px", lineHeight: "16px" }}
-              >
+              <p data-testid="text-plan-price" className="settings-record-detail truncate">
                 {plan ? `${plan.tagline} · ${plan.price} ${plan.cadence}` : "Choose a plan to get started."}
               </p>
             </div>
@@ -858,8 +834,8 @@ function BillingSection() {
       <div className="flex flex-col gap-[4px]">
         <SectionLabel>Payment Method</SectionLabel>
         <WidgetPanel noBorder>
-          <div className="px-4 py-3 flex items-center gap-4 h-[64px]">
-            <div className="settings-record-content flex-1 min-w-0 flex items-center gap-[16px]">
+          <div className="settings-record px-4">
+            <div className="settings-record-content">
               <div
                 className="size-[40px] rounded-full flex items-center justify-center flex-shrink-0"
                 style={{ background: "#161b28" }}

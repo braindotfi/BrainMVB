@@ -123,7 +123,7 @@ function VendorRow({
       type="button"
       onClick={onClick}
       data-testid={`row-vendor-${vendor.id}`}
-      className="flex gap-[12px] items-center px-[16px] py-[12px] relative shrink-0 w-full bg-brain-v1highlight-dropdown-bg transition-colors border-b border-solid border-brain-v1stroke-2 last:border-b-0 hover:bg-brain-v1baby-blue-5 cursor-pointer text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
+      className="flex gap-[12px] items-center px-[16px] py-[16px] relative shrink-0 w-full bg-brain-v1highlight-dropdown-bg transition-colors border-b border-solid border-brain-v1stroke-2 last:border-b-0 hover:bg-brain-v1baby-blue-5 cursor-pointer text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
     >
       <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
         <div className="flex items-center gap-[8px] min-w-px max-w-full">

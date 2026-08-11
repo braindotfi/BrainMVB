@@ -1356,11 +1356,11 @@ function KeysSection({ env }: { env: DevEnv }) {
                 >
                   <div className="flex flex-col gap-[4px] justify-center w-full">
                     <div className="flex gap-[12px] items-start w-full">
-                      <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[20px] flex-1 min-w-px break-words group-hover:text-white transition-colors">{k.name}</p>
+                      <p className="settings-record-title whitespace-normal flex-1 min-w-px break-words group-hover:text-white transition-colors">{k.name}</p>
                       <StatusBadge status={k.status} />
                     </div>
                     <div className="flex items-center w-full">
-                      <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[16px] flex-1 min-w-px break-words" data-testid={`text-masked-key-${k.id}`}>{maskKey(k)}</p>
+                      <p className="settings-record-detail whitespace-normal flex-1 min-w-px break-words" data-testid={`text-masked-key-${k.id}`}>{maskKey(k)}</p>
                     </div>
                   </div>
                   <div className="bg-brain-v1headerfooterbg border border-brain-v1stroke-2 rounded-row flex flex-col w-full overflow-hidden">
@@ -1694,7 +1694,7 @@ function TenantsSection({ env, onNavigate }: { env: DevEnv; onNavigate: (s: DevS
                 key={t.id}
                 type="button"
                 onClick={() => setSelectedTenantId(t.id)}
-                className="settings-record flex gap-[16px] items-center px-[16px] relative rounded-[8px] shrink-0 w-full bg-brain-v1highlight-dropdown-bg border border-transparent transition-colors hover:bg-brain-v1baby-blue-5 hover:border-brain-v1stroke-2 cursor-pointer text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
+                className="settings-record px-[16px] relative rounded-[8px] bg-brain-v1highlight-dropdown-bg border border-transparent transition-colors hover:bg-brain-v1baby-blue-5 hover:border-brain-v1stroke-2 cursor-pointer text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
                 data-testid={`row-tenant-${t.id}`}
               >
                 <div className="settings-record-copy flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
@@ -1927,11 +1927,11 @@ function UsageSection({ env }: { env: DevEnv }) {
                     <div className="flex flex-col gap-[8px] justify-center w-full" data-testid={`row-usage-key-${k.id}`}>
                       <div className="flex flex-col gap-[4px] w-full">
                         <div className="flex gap-[12px] items-start w-full">
-                          <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[20px] flex-1 min-w-px break-words" title={k.name}>{k.name}</p>
+                          <p className="settings-record-title whitespace-normal flex-1 min-w-px break-words" title={k.name}>{k.name}</p>
                           {k.status === "revoked" && <StatusBadge status="revoked" />}
                         </div>
                         <div className="flex items-center w-full">
-                          <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[16px] flex-1 min-w-px break-words" data-testid={`text-usage-key-masked-${k.id}`}>{maskKey(k)}</p>
+                          <p className="settings-record-detail whitespace-normal flex-1 min-w-px break-words" data-testid={`text-usage-key-masked-${k.id}`}>{maskKey(k)}</p>
                         </div>
                       </div>
                       <div className="flex gap-[7px] items-center w-full">

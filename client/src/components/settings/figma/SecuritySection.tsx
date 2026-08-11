@@ -37,8 +37,8 @@ import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
             Authentication
           </p>
         </div>
-        <div className="bg-brain-v1highlight-dropdown-bg content-stretch flex flex-col gap-[16px] items-start p-[16px] relative rounded-panel shrink-0 w-full">
-          <div className="settings-record content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full">
+        <div className="settings-record-list bg-brain-v1highlight-dropdown-bg relative rounded-panel shrink-0 w-full">
+          <div className="settings-record">
             <div className="settings-record-content content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
               <div className="relative rounded-pill shrink-0 size-[40px]">
                 <div className="absolute left-0 size-[40px] top-0">
@@ -62,7 +62,7 @@ import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
                   </div>
                 </div>
               </div>
-              <div className="settings-record-copy content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
+              <div className="settings-record-copy">
                 <p className="settings-record-title">
                   Two-Factor Authentication
                 </p>
@@ -76,12 +76,7 @@ import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
             {/* No 2FA backend wired up yet - off, not a fabricated "enabled". */}
             <Switch className="h-[24px] relative rounded-row shrink-0 w-[40px]" />
           </div>
-          <div className="h-0 relative shrink-0 w-full">
-            <div className="absolute inset-[-0.5px_0]">
-              <img alt="" className="block max-w-none size-full" src={SUB["e3fea1dc"]} />
-            </div>
-          </div>
-          <div className="settings-record content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full">
+          <div className="settings-record">
             <div className="settings-record-content content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
               <div className="relative rounded-pill shrink-0 size-[40px]">
                 <div className="absolute left-0 size-[40px] top-0">
@@ -105,7 +100,7 @@ import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
                   </div>
                 </div>
               </div>
-              <div className="settings-record-copy content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
+              <div className="settings-record-copy">
                 <p className="settings-record-title">
                   Session Timeout
                 </p>
@@ -140,8 +135,8 @@ import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
             Account Activity
           </p>
         </div>
-        <div className="bg-brain-v1highlight-dropdown-bg content-stretch flex flex-col gap-[16px] items-start overflow-clip p-[16px] relative rounded-panel shrink-0 w-full">
-          <div className="settings-record content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full">
+        <div className="settings-record-list bg-brain-v1highlight-dropdown-bg overflow-clip relative rounded-panel shrink-0 w-full">
+          <div className="settings-record">
             <div className="settings-record-content content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
               <div className="relative rounded-pill shrink-0 size-[40px]">
                 <div className="absolute left-0 size-[40px] top-0">
@@ -163,7 +158,7 @@ import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
                   </div>
                 </div>
               </div>
-              <div className="settings-record-copy content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
+              <div className="settings-record-copy">
                 <p className="settings-record-title">
                   Login Alerts
                 </p>
@@ -177,12 +172,7 @@ import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
             {/* No email/notification backend wired up yet - off, not fabricated. */}
             <Switch className="h-[24px] relative rounded-row shrink-0 w-[40px]" />
           </div>
-          <div className="h-0 relative shrink-0 w-full">
-            <div className="absolute inset-[-0.5px_0]">
-              <img alt="" className="block max-w-none size-full" src={SUB["e3fea1dc"]} />
-            </div>
-          </div>
-          <div className="settings-record content-stretch flex gap-[16px] items-center relative shrink-0 w-full">
+          <div className="settings-record">
             <div className="settings-record-content content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
               <div className="relative rounded-pill shrink-0 size-[40px]">
                 <div className="absolute left-0 size-[40px] top-0">
@@ -206,7 +196,7 @@ import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
                   </div>
                 </div>
               </div>
-              <div className="settings-record-copy content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
+              <div className="settings-record-copy">
                 <p className="settings-record-title">
                   Login History
                 </p>
@@ -240,12 +230,7 @@ import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
               </div>
             </button>
           </div>
-          <div className="h-0 relative shrink-0 w-full">
-            <div className="absolute inset-[-0.5px_0]">
-              <img alt="" className="block max-w-none size-full" src={SUB["e3fea1dc"]} />
-            </div>
-          </div>
-          <div className="settings-record content-stretch flex gap-[16px] items-center relative shrink-0 w-full">
+          <div className="settings-record">
             <div className="settings-record-content content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
               <div className="relative rounded-pill shrink-0 size-[40px]">
                 <div className="absolute left-0 size-[40px] top-0">
@@ -270,7 +255,7 @@ import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
                   <div className="absolute border-2 border-brain-v1baby-blue-60 border-solid h-[11px] left-[3px] rounded-[3px] top-[7px] w-[18px]" />
                 </div>
               </div>
-              <div className="settings-record-copy content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
+              <div className="settings-record-copy">
                 <p className="settings-record-title">
                   Change PIN
                 </p>

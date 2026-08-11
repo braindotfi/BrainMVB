@@ -102,20 +102,20 @@ function MemberRow({ member, inviteActions }: { member: BrainMember; inviteActio
   };
 
   return (
-    <div className="flex flex-col gap-[8px]">
+    <div className="settings-record-item flex flex-col gap-[8px]">
       <button
         type="button"
         onClick={() => openMemberDetail(member.id)}
         data-testid={`row-member-${member.id}`}
-        className="settings-record flex gap-[16px] h-[40px] items-center w-full text-left cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30 rounded-[4px]"
+        className="settings-record text-left cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30 rounded-[4px]"
       >
         <div className="settings-record-content flex flex-[1_0_0] gap-[8px] items-center min-w-px">
           <div className="shrink-0 size-[40px] rounded-full overflow-hidden">
             <img alt="" className="size-full object-cover" src={memberIcon} />
           </div>
           <div className="settings-record-copy min-w-0 flex flex-col gap-[4px] items-start justify-center">
-          <div className="flex gap-[8px] items-center shrink-0">
-            <p className="settings-record-title truncate">
+          <div className="flex flex-wrap gap-[8px] items-center min-w-0">
+            <p className="settings-record-title min-w-0">
               {member.displayName}
             </p>
             <RolePill role={member.role} />
@@ -147,7 +147,7 @@ function MemberRow({ member, inviteActions }: { member: BrainMember; inviteActio
               </span>
             )}
           </div>
-          <p className="settings-record-detail truncate" data-testid={`text-envelope-${member.id}`}>
+          <p className="settings-record-detail" data-testid={`text-envelope-${member.id}`}>
             {envelopeLine(member.approval)}
           </p>
           </div>
@@ -179,22 +179,6 @@ function MemberRow({ member, inviteActions }: { member: BrainMember; inviteActio
             </Button>
           </>
         )}
-        {/* UI-only mark; the label below the list says so once for the whole card. */}
-        <button
-          type="button"
-          onClick={() => setBackupApprover(member.id, !isBackup)}
-          data-testid={`button-backup-${member.id}`}
-          aria-pressed={isBackup}
-          title={BACKUP_APPROVER_NOTE}
-          className="rounded-pill px-[12px] py-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] transition-colors flex items-center justify-center"
-          style={
-            isBackup
-              ? { background: "rgba(255,149,0,0.1)", color: "#ff9500", border: "1px solid rgba(255,149,0,0.3)" }
-              : { background: "#0c0f14", color: "#6c779d", border: "1px solid #1d2132" }
-          }
-        >
-          {isBackup ? "Remove Backup Mark" : "Mark As Backup Approver"}
-        </button>
       </div>
     </div>
   );
@@ -466,7 +450,8 @@ export default function TeamSection() {
           </p>
         </div>
 
-        <div className="bg-brain-v1highlight-dropdown-bg rounded-panel p-[16px] flex flex-col gap-[16px]">
+        <div className="bg-brain-v1highlight-dropdown-bg rounded-panel overflow-hidden flex flex-col">
+        <div className="settings-record-list">
         {isLoading && (
           <div className="flex gap-[16px] h-[40px] items-center">
             <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[16px]">Loading members…</p>
@@ -484,12 +469,10 @@ export default function TeamSection() {
             <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[16px]">No members yet.</p>
           </div>
         )}
-        {members.map((m, i) => (
-          <div key={m.id} className="flex flex-col gap-[16px]">
-            {i > 0 && <div className="h-px bg-brain-v1stroke-2 w-full" />}
-            <MemberRow member={m} inviteActions={production} />
-          </div>
+        {members.map((m) => (
+          <MemberRow key={m.id} member={m} inviteActions={production} />
         ))}
+        </div>
         </div>
       </div>
 
@@ -516,16 +499,18 @@ export default function TeamSection() {
           </p>
         </div>
 
-        <div className="bg-brain-v1highlight-dropdown-bg rounded-panel p-[16px] flex flex-col gap-[16px] w-full">
-          <MutedCallout
-            title="Escalation timers are not active."
-            testId="text-escalation-unavailable"
-          >
-            Brain is propose-only: if the primary approver does not act, nothing ships
-            and nothing is escalated. Backup-approver marks are recorded in this
-            browser only, so no reminder is sent to anyone today.
-          </MutedCallout>
-
+        <div className="bg-brain-v1highlight-dropdown-bg rounded-panel overflow-hidden flex flex-col w-full">
+          <div className="p-[16px]">
+            <MutedCallout
+              title="Escalation timers are not active."
+              testId="text-escalation-unavailable"
+            >
+              Brain is propose-only: if the primary approver does not act, nothing ships
+              and nothing is escalated. Backup-approver marks are recorded in this
+              browser only, so no reminder is sent to anyone today.
+            </MutedCallout>
+          </div>
+          <div className="settings-record-list">
           {[
             {
               id: "urgent",
@@ -539,31 +524,26 @@ export default function TeamSection() {
               detail: "Payments, collections, treasury, close.",
               value: "4 hours",
             },
-          ].map((row, i) => (
-            <div key={row.id} className="flex flex-col gap-[16px]">
-              {i > 0 && <div className="h-px bg-brain-v1stroke-2 w-full" />}
+          ].map((row) => (
+            <div
+              key={row.id}
+              className="settings-record opacity-40"
+              data-testid={`row-escalation-${row.id}`}
+              aria-disabled="true"
+            >
+              <div className="settings-record-copy">
+                <p className="settings-record-title">{row.title}</p>
+                <p className="settings-record-detail">{row.detail}</p>
+              </div>
               <div
-                className="settings-record flex gap-[16px] items-center opacity-40"
-                data-testid={`row-escalation-${row.id}`}
-                aria-disabled="true"
+                className="shrink-0 rounded-[8px] px-[12px] py-[8px] [font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] bg-brain-v1baby-blue-15"
+                aria-hidden="true"
               >
-                <div className="settings-record-copy flex flex-[1_0_0] flex-col gap-[4px] min-w-px">
-                  <p className="settings-record-title">
-                    {row.title}
-                  </p>
-                  <p className="settings-record-detail">
-                    {row.detail}
-                  </p>
-                </div>
-                <div
-                  className="shrink-0 rounded-[8px] px-[12px] py-[8px] [font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] bg-brain-v1baby-blue-15"
-                  aria-hidden="true"
-                >
-                  {row.value}
-                </div>
+                {row.value}
               </div>
             </div>
           ))}
+          </div>
         </div>
       </div>
 

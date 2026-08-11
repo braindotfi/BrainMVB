@@ -176,7 +176,7 @@ export const TierRow = ({ row }: { row: TierRowModel }) => {
 
   return (
     <div
-      className={`flex flex-col sm:flex-row gap-[12px] items-start sm:items-center justify-between px-[16px] py-[12px] w-full transition-colors border-b border-solid border-brain-v1stroke-2 last:border-b-0 ${
+      className={`flex flex-col sm:flex-row gap-[12px] items-start sm:items-center justify-between px-[16px] py-[16px] w-full transition-colors border-b border-solid border-brain-v1stroke-2 last:border-b-0 ${
         accent ? "border-l-[3px]" : ""
       } ${row.onOpenDetail ? "cursor-pointer" : ""}`}
       style={{
@@ -211,7 +211,10 @@ export const TierRow = ({ row }: { row: TierRowModel }) => {
           data-testid={`${row.testIdPrefix}-${row.id}-select`}
           className="decision-checkbox mt-[3px] sm:mt-0 size-[16px] shrink-0 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 disabled:cursor-not-allowed outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
         />
-      ) : (
+      ) : row.statusPill ? null : (
+        /* Resolved rows always end in an outcome pill and never have a
+           selector. Do not reserve the unresolved-row checkbox gutter for
+           them; their copy should align with the row's 16px right inset. */
         <div aria-hidden="true" className="size-[16px] shrink-0" />
       )}
       <div className="flex flex-col gap-[4px] items-start min-w-px flex-1">

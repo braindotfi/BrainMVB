@@ -57,10 +57,24 @@
   .settings-record {
     display: flex;
     align-items: center;
-    gap: 16px;
-    height: 40px;
+    gap: 12px;
     width: 100%;
     flex-shrink: 0;
+    padding: 16px;
+  }
+
+  .settings-record-list {
+    display: flex;
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .settings-record-list > .settings-record + .settings-record {
+    border-top: 1px solid var(--brain-v1stroke-2);
+  }
+
+  .settings-record-list > .settings-record-item + .settings-record-item {
+    border-top: 1px solid var(--brain-v1stroke-2);
   }
 
   .settings-record-content {
@@ -74,7 +88,8 @@
   .settings-record-copy {
     display: flex;
     min-width: 0;
-    flex-shrink: 0;
+    flex: 1 1 0%;
+    flex-shrink: 1;
     flex-direction: column;
     align-items: flex-start;
     justify-content: center;
@@ -85,7 +100,8 @@
   .settings-record-detail {
     margin: 0;
     font-family: "Gilroy", "Plus Jakarta Sans", system-ui, sans-serif;
-    white-space: nowrap;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 
   .settings-record-title {

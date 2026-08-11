@@ -16,13 +16,13 @@ const openExternal = (url: string) => {
             Account Activity
           </p>
         </div>
-        <div className="bg-brain-v1highlight-dropdown-bg content-stretch flex flex-col gap-[16px] items-start overflow-clip p-[16px] relative rounded-panel shrink-0 w-full">
+        <div className="settings-record-list bg-brain-v1highlight-dropdown-bg overflow-clip relative rounded-panel shrink-0 w-full">
           <button
             type="button"
             onClick={() => openExternal(TERMS_URL)}
             data-testid="button-terms-of-service"
             aria-label="Open Terms of Service"
-            className="settings-record content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full text-left cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30 rounded-[4px]"
+            className="settings-record text-left cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30 rounded-[4px]"
           >
             <div className="settings-record-content content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
               <div className="relative rounded-pill shrink-0 size-[40px]">
@@ -37,7 +37,7 @@ const openExternal = (url: string) => {
                   </div>
                 </div>
               </div>
-              <div className="settings-record-copy content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
+              <div className="settings-record-copy">
                 <p className="settings-record-title">
                   Terms of Service
                 </p>
@@ -65,17 +65,12 @@ const openExternal = (url: string) => {
               </div>
             </div>
           </button>
-          <div className="h-0 relative shrink-0 w-full">
-            <div className="absolute inset-[-0.5px_0]">
-              <img alt="" className="block max-w-none size-full" src={SUB["10beff8b"]} />
-            </div>
-          </div>
           <button
             type="button"
             onClick={() => openExternal(PRIVACY_URL)}
             data-testid="button-privacy-policy"
             aria-label="Open Privacy Policy"
-            className="settings-record content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full text-left cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30 rounded-[4px]"
+            className="settings-record text-left cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30 rounded-[4px]"
           >
             <div className="settings-record-content content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
               <div className="relative rounded-pill shrink-0 size-[40px]">
@@ -90,7 +85,7 @@ const openExternal = (url: string) => {
                   </div>
                 </div>
               </div>
-              <div className="settings-record-copy content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
+              <div className="settings-record-copy">
                 <p className="settings-record-title">
                   Privacy Policy
                 </p>
@@ -118,12 +113,7 @@ const openExternal = (url: string) => {
               </div>
             </div>
           </button>
-          <div className="h-0 relative shrink-0 w-full">
-            <div className="absolute inset-[-0.5px_0]">
-              <img alt="" className="block max-w-none size-full" src={SUB["10beff8b"]} />
-            </div>
-          </div>
-          <div className="settings-record content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full">
+          <div className="settings-record">
             <div className="settings-record-content content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
               <div className="relative rounded-pill shrink-0 size-[40px]">
                 <div className="absolute left-0 size-[40px] top-0">
@@ -152,13 +142,13 @@ const openExternal = (url: string) => {
                   </div>
                 </div>
               </div>
-              <div className="settings-record-copy content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
+              <div className="settings-record-copy">
                 <p className="settings-record-title">
                   Cookie Policy
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
                   <p className="settings-record-detail">
-                    Manage Cookie Perferences
+                    Manage Cookie Preferences
                   </p>
                 </div>
               </div>

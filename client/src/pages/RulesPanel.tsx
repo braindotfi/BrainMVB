@@ -148,7 +148,7 @@ function AutomationRow({ rule }: { rule: AutoRule }) {
   return (
     <div
       data-testid={`row-automation-${rule.id}`}
-      className="flex gap-[12px] items-center px-[16px] py-[12px] relative shrink-0 w-full bg-brain-v1highlight-dropdown-bg transition-colors border-b border-solid border-brain-v1stroke-2 last:border-b-0 hover:bg-brain-v1baby-blue-5 cursor-pointer"
+      className="flex gap-[12px] items-center px-[16px] py-[16px] relative shrink-0 w-full bg-brain-v1highlight-dropdown-bg transition-colors border-b border-solid border-brain-v1stroke-2 last:border-b-0 hover:bg-brain-v1baby-blue-5 cursor-pointer"
     >
       <button
         type="button"
@@ -184,7 +184,7 @@ function GuardrailRow({ rule }: { rule: AutoRule }) {
   return (
     <div
       data-testid={`row-guardrail-${rule.id}`}
-      className="flex gap-[12px] items-center px-[16px] py-[12px] relative shrink-0 w-full bg-brain-v1highlight-dropdown-bg transition-colors border-b border-solid border-brain-v1stroke-2 last:border-b-0 hover:bg-brain-v1baby-blue-5 cursor-pointer"
+      className="flex gap-[12px] items-center px-[16px] py-[16px] relative shrink-0 w-full bg-brain-v1highlight-dropdown-bg transition-colors border-b border-solid border-brain-v1stroke-2 last:border-b-0 hover:bg-brain-v1baby-blue-5 cursor-pointer"
     >
       <button
         type="button"
@@ -221,7 +221,7 @@ function AlwaysOnRow({ rule }: { rule: AutoRule }) {
   return (
     <div
       data-testid={`row-alwayson-${rule.id}`}
-      className="flex gap-[12px] items-center px-[16px] py-[12px] relative shrink-0 w-full bg-brain-v1highlight-dropdown-bg transition-colors border-b border-solid border-brain-v1stroke-2 last:border-b-0 hover:bg-brain-v1baby-blue-5 cursor-pointer"
+      className="flex gap-[12px] items-center px-[16px] py-[16px] relative shrink-0 w-full bg-brain-v1highlight-dropdown-bg transition-colors border-b border-solid border-brain-v1stroke-2 last:border-b-0 hover:bg-brain-v1baby-blue-5 cursor-pointer"
     >
       <img src={shieldKeyIcon} alt="shield" className="shrink-0 w-[20px] h-[20px]" />
       <button
