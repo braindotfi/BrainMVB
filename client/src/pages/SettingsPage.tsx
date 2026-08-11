@@ -249,10 +249,10 @@ const SettingRow = ({
   <div
     data-testid={testId ?? `setting-row-${label.toLowerCase().replace(/\s+/g, "-")}`}
     onClick={onClick}
-    className={`flex items-center gap-3 px-4 py-3 ${onClick ? "cursor-pointer hover:bg-brain-v1row-hover transition-colors" : ""}`}
+    className={`settings-record flex items-center gap-[16px] px-[16px] h-[40px] ${onClick ? "cursor-pointer hover:bg-brain-v1row-hover transition-colors" : ""}`}
   >
     {useCircleIcon ? icon : <RowIcon danger={danger}>{icon}</RowIcon>}
-    <div className="flex-1 min-w-0">
+    <div className="settings-record-copy flex-1 min-w-0">
       {/* One type ramp for every row, regardless of which icon treatment it
           uses. `useCircleIcon` used to fork the typography too, which left
           Auto-Approve Limit and Welcome Walkthrough on an older 15px/12px pair
@@ -260,24 +260,26 @@ const SettingRow = ({
           Overview, Inbox and Ledger — were 16px/14px with a 4px gap. The icon
           treatment is a visual choice; the text ramp is not. */}
       <p
-        className="leading-5"
+        className={`settings-record-title ${danger ? "text-brain-v1pink-red" : ""}`}
         style={{
-          color: danger ? "#d20344" : "#a8b9f4",
+          color: danger ? "#d20344" : undefined,
           fontFamily: "'Gilroy', 'Plus Jakarta Sans', system-ui, sans-serif",
           fontWeight: 500,
           fontSize: "16px",
+          lineHeight: "20px",
         }}
       >
         {label}
       </p>
       {sublabel && (
         <p
-          className="mt-1 leading-[16px]"
+          className="settings-record-detail"
           style={{
             color: "#6c779d",
             fontFamily: "'Gilroy', 'Plus Jakarta Sans', system-ui, sans-serif",
             fontWeight: 500,
             fontSize: "14px",
+            lineHeight: "16px",
           }}
         >
           {sublabel}
@@ -873,8 +875,8 @@ function BillingSection() {
       <div className="flex flex-col gap-[4px]">
         <SectionLabel>Payment Method</SectionLabel>
         <WidgetPanel noBorder>
-          <div className="p-4 flex items-center gap-4">
-            <div className="flex-1 min-w-0 flex items-center gap-[12px]">
+          <div className="settings-record px-[16px]">
+            <div className="settings-record-content flex-1 min-w-0 flex items-center gap-[16px]">
               <div
                 className="size-[40px] rounded-full flex items-center justify-center flex-shrink-0"
                 style={{ background: "#161b28" }}
@@ -885,27 +887,21 @@ function BillingSection() {
                   <rect x="6" y="14" width="5" height="1.6" rx="0.8" fill="#a8b9f4"/>
                 </svg>
               </div>
-              <div className="min-w-0">
+              <div className="settings-record-copy min-w-0">
                 {cardLast4 ? (
                   <>
                     <p
                       data-testid="text-card-brand"
-                      style={{ color: "#a8b9f4", fontFamily: "'Gilroy', sans-serif", fontWeight: 500, fontSize: "16px", lineHeight: "20px" }}
+                      className="settings-record-title"
                     >
                       Card •••• {cardLast4}
                     </p>
-                    <p
-                      data-testid="text-card-meta"
-                      style={{ color: "#6c779d", fontFamily: "'Gilroy', sans-serif", fontWeight: 500, fontSize: "14px", lineHeight: "16px", marginTop: 2 }}
-                    >
+                    <p data-testid="text-card-meta" className="settings-record-detail">
                       Receipts to {email}
                     </p>
                   </>
                 ) : (
-                  <p
-                    data-testid="text-card-brand"
-                    style={{ color: "#6c779d", fontFamily: "'Gilroy', sans-serif", fontWeight: 500, fontSize: "16px", lineHeight: "20px" }}
-                  >
+                    <p data-testid="text-card-brand" className="settings-record-title" style={{ color: "#6c779d" }}>
                     No Payment Method on File
                   </p>
                 )}

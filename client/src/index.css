@@ -51,6 +51,63 @@
     all: unset;
   }
 
+  /* Canonical Settings record rhythm, matching Account → Delete My Data.
+     Keep the icon/action artwork at the call site, but do not let each
+     subpage invent its own title/detail ramp or row geometry. */
+  .settings-record {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    height: 40px;
+    width: 100%;
+    flex-shrink: 0;
+  }
+
+  .settings-record-content {
+    display: flex;
+    flex: 1 1 0%;
+    min-width: 0;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .settings-record-copy {
+    display: flex;
+    min-width: 0;
+    flex-shrink: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 4px;
+  }
+
+  .settings-record-title,
+  .settings-record-detail {
+    margin: 0;
+    font-family: "Gilroy", "Plus Jakarta Sans", system-ui, sans-serif;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .settings-record-title {
+    color: var(--brain-v1baby-blue-100);
+    font-size: 16px;
+    line-height: 20px;
+  }
+
+  .settings-record-detail {
+    color: var(--brain-v1baby-blue-60);
+    font-size: 14px;
+    line-height: 16px;
+  }
+
+  .settings-record-divider {
+    width: 100%;
+    height: 1px;
+    flex-shrink: 0;
+    background: var(--brain-v1stroke-2);
+  }
+
   .decision-checkbox {
     appearance: none;
     background-color: var(--brain-v1baby-blue-15);

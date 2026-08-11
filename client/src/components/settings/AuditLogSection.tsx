@@ -411,11 +411,11 @@ export function AuditLogSection() {
                   type="button"
                   data-testid={`row-audit-${record.id}`}
                   onClick={() => setActiveRecord(record)}
-                  className="w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-brain-v1row-hover transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px]"
+                  className="settings-record w-full text-left px-4 flex items-center gap-[16px] hover:bg-brain-v1row-hover transition-colors [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px]"
                 >
-                  <div className="flex-1 min-w-0 flex flex-col gap-[4px]">
+                  <div className="settings-record-copy flex-1 min-w-0 flex flex-col gap-[4px]">
                     <div className="flex items-center gap-[8px] w-full min-w-0">
-                      <span className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[20px] min-w-0 max-w-full basis-auto grow-0 shrink truncate">
+                      <span className="settings-record-title min-w-0 max-w-full basis-auto grow-0 shrink truncate">
                         {formatText(record.summary)}
                       </span>
                       <RecordPill
@@ -426,7 +426,7 @@ export function AuditLogSection() {
                         {capitalCase(categoryBadge.label)}
                       </RecordPill>
                     </div>
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[16px]">
+                    <p className="settings-record-detail text-[14px] leading-[16px]">
                       {[actor, formatText(record.rowSubtitle ?? ""), record.occurredAtLabel]
                         .filter(Boolean)
                         .join(" · ")}

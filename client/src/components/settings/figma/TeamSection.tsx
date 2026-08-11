@@ -107,15 +107,15 @@ function MemberRow({ member, inviteActions }: { member: BrainMember; inviteActio
         type="button"
         onClick={() => openMemberDetail(member.id)}
         data-testid={`row-member-${member.id}`}
-        className="flex gap-[16px] h-[40px] items-center w-full text-left cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30 rounded-[4px]"
+        className="settings-record flex gap-[16px] h-[40px] items-center w-full text-left cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30 rounded-[4px]"
       >
-        <div className="flex flex-[1_0_0] gap-[8px] items-center min-w-px">
+        <div className="settings-record-content flex flex-[1_0_0] gap-[8px] items-center min-w-px">
           <div className="shrink-0 size-[40px] rounded-full overflow-hidden">
             <img alt="" className="size-full object-cover" src={memberIcon} />
           </div>
-          <div className="min-w-0 flex flex-col gap-[4px] items-start justify-center">
+          <div className="settings-record-copy min-w-0 flex flex-col gap-[4px] items-start justify-center">
           <div className="flex gap-[8px] items-center shrink-0">
-            <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[20px] truncate">
+            <p className="settings-record-title truncate">
               {member.displayName}
             </p>
             <RolePill role={member.role} />
@@ -147,7 +147,7 @@ function MemberRow({ member, inviteActions }: { member: BrainMember; inviteActio
               </span>
             )}
           </div>
-          <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[16px] truncate" data-testid={`text-envelope-${member.id}`}>
+          <p className="settings-record-detail truncate" data-testid={`text-envelope-${member.id}`}>
             {envelopeLine(member.approval)}
           </p>
           </div>
@@ -543,15 +543,15 @@ export default function TeamSection() {
             <div key={row.id} className="flex flex-col gap-[16px]">
               {i > 0 && <div className="h-px bg-brain-v1stroke-2 w-full" />}
               <div
-                className="flex gap-[16px] items-center opacity-40"
+                className="settings-record flex gap-[16px] items-center opacity-40"
                 data-testid={`row-escalation-${row.id}`}
                 aria-disabled="true"
               >
-                <div className="flex flex-[1_0_0] flex-col gap-[4px] min-w-px">
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[16px]">
+                <div className="settings-record-copy flex flex-[1_0_0] flex-col gap-[4px] min-w-px">
+                  <p className="settings-record-title">
                     {row.title}
                   </p>
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px]">
+                  <p className="settings-record-detail">
                     {row.detail}
                   </p>
                 </div>

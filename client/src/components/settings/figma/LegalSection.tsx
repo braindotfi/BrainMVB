@@ -22,9 +22,9 @@ const openExternal = (url: string) => {
             onClick={() => openExternal(TERMS_URL)}
             data-testid="button-terms-of-service"
             aria-label="Open Terms of Service"
-            className="content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full text-left cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30 rounded-[4px]"
+            className="settings-record content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full text-left cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30 rounded-[4px]"
           >
-            <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
+            <div className="settings-record-content content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
               <div className="relative rounded-pill shrink-0 size-[40px]">
                 <div className="absolute left-0 size-[40px] top-0">
                   <img alt="" className="absolute block inset-0 max-w-none size-full" src={SUB["38b57d96"]} />
@@ -37,12 +37,12 @@ const openExternal = (url: string) => {
                   </div>
                 </div>
               </div>
-              <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] not-italic relative shrink-0 text-brain-v1baby-blue-100 text-[14px] whitespace-nowrap">
+              <div className="settings-record-copy content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
+                <p className="settings-record-title">
                   Terms of Service
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
-                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] not-italic relative shrink-0 text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">
+                  <p className="settings-record-detail">
                     Last updated January 1, 2025
                   </p>
                 </div>
@@ -75,9 +75,9 @@ const openExternal = (url: string) => {
             onClick={() => openExternal(PRIVACY_URL)}
             data-testid="button-privacy-policy"
             aria-label="Open Privacy Policy"
-            className="content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full text-left cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30 rounded-[4px]"
+            className="settings-record content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full text-left cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brain-v1baby-blue-30 rounded-[4px]"
           >
-            <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
+            <div className="settings-record-content content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
               <div className="relative rounded-pill shrink-0 size-[40px]">
                 <div className="absolute left-0 size-[40px] top-0">
                   <img alt="" className="absolute block inset-0 max-w-none size-full" src={SUB["38b57d96"]} />
@@ -90,12 +90,12 @@ const openExternal = (url: string) => {
                   </div>
                 </div>
               </div>
-              <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] not-italic relative shrink-0 text-brain-v1baby-blue-100 text-[14px] whitespace-nowrap">
+              <div className="settings-record-copy content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
+                <p className="settings-record-title">
                   Privacy Policy
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
-                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] not-italic relative shrink-0 text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">
+                  <p className="settings-record-detail">
                     How we handle your data
                   </p>
                 </div>
@@ -123,8 +123,8 @@ const openExternal = (url: string) => {
               <img alt="" className="block max-w-none size-full" src={SUB["10beff8b"]} />
             </div>
           </div>
-          <div className="content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full">
-            <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
+          <div className="settings-record content-stretch flex gap-[16px] h-[40px] items-center relative shrink-0 w-full">
+            <div className="settings-record-content content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative">
               <div className="relative rounded-pill shrink-0 size-[40px]">
                 <div className="absolute left-0 size-[40px] top-0">
                   <img alt="" className="absolute block inset-0 max-w-none size-full" src={SUB["38b57d96"]} />
@@ -152,12 +152,12 @@ const openExternal = (url: string) => {
                   </div>
                 </div>
               </div>
-              <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
-                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] not-italic relative shrink-0 text-brain-v1baby-blue-100 text-[16px] whitespace-nowrap">
+              <div className="settings-record-copy content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
+                <p className="settings-record-title">
                   Cookie Policy
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] not-italic relative shrink-0 text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">
+                  <p className="settings-record-detail">
                     Manage Cookie Perferences
                   </p>
                 </div>

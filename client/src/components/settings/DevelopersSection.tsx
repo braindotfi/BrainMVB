@@ -1694,19 +1694,19 @@ function TenantsSection({ env, onNavigate }: { env: DevEnv; onNavigate: (s: DevS
                 key={t.id}
                 type="button"
                 onClick={() => setSelectedTenantId(t.id)}
-                className="flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full bg-brain-v1highlight-dropdown-bg border border-transparent transition-colors hover:bg-brain-v1baby-blue-5 hover:border-brain-v1stroke-2 cursor-pointer text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
+                className="settings-record flex gap-[16px] items-center px-[16px] relative rounded-[8px] shrink-0 w-full bg-brain-v1highlight-dropdown-bg border border-transparent transition-colors hover:bg-brain-v1baby-blue-5 hover:border-brain-v1stroke-2 cursor-pointer text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
                 data-testid={`row-tenant-${t.id}`}
               >
-                <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
-                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-100 text-[16px] whitespace-nowrap">
+                <div className="settings-record-copy flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
+                  <p className="settings-record-title whitespace-nowrap">
                     {t.companyName ?? (t.ephemeral ? "Demo tenant" : "Your company")}
                   </p>
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap" data-testid={`text-tenant-id-${t.id}`}>
+                  <p className="settings-record-detail whitespace-nowrap" data-testid={`text-tenant-id-${t.id}`}>
                     {t.id}
                   </p>
                 </div>
                 <div className="flex flex-col items-end justify-center relative shrink-0">
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[14px] text-right whitespace-nowrap" data-testid={`text-tenant-created-${t.id}`}>
+                  <p className="settings-record-detail text-right whitespace-nowrap" data-testid={`text-tenant-created-${t.id}`}>
                     Created {t.ephemeral ? formatRelative(t.createdAt) : formatDate(t.createdAt)}
                   </p>
                 </div>

@@ -67,15 +67,15 @@ export default function NotificationsSection() {
             <div key={c.id} className="flex flex-col gap-[16px]">
               {i > 0 && <div className="h-px bg-brain-v1stroke-2 w-full" />}
               <div
-                className="flex gap-[16px] items-center opacity-40"
+                className="settings-record flex gap-[16px] items-center opacity-40"
                 data-testid={`row-notification-${c.id}`}
                 aria-disabled="true"
               >
-                <div className="flex flex-[1_0_0] flex-col gap-[4px] min-w-px">
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[16px]">
+                <div className="settings-record-copy flex flex-[1_0_0] flex-col gap-[4px] min-w-px">
+                  <p className="settings-record-title">
                     {c.title}
                   </p>
-                  <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px]">
+                  <p className="settings-record-detail">
                     {c.detail}
                   </p>
                 </div>

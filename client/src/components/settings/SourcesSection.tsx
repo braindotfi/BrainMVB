@@ -142,15 +142,15 @@ function SourceRow({
           onOpenAccount?.();
         }
       } : undefined}
-      className={`flex flex-col gap-[8px] px-[16px] py-[12px] ${last ? "" : "border-b border-brain-v1stroke-2"} ${clickable ? "cursor-pointer transition-colors hover:bg-brain-v1baby-blue-5 focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple focus-visible:ring-inset" : ""}`}
+      className={`settings-record flex flex-col gap-[4px] px-[16px] ${last ? "" : "border-b border-brain-v1stroke-2"} ${clickable ? "cursor-pointer transition-colors hover:bg-brain-v1baby-blue-5 focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple focus-visible:ring-inset" : ""}`}
     >
-      <div className="flex items-center gap-[12px]">
+      <div className="flex items-center gap-[16px] w-full">
         {/* 4px between title and subtext — the record spacing used everywhere else. */}
-        <div className="flex-1 min-w-0 flex flex-col gap-[4px]">
-          <div className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[20px] truncate">
+        <div className="settings-record-copy flex-1 min-w-0 flex flex-col gap-[4px]">
+          <div className="settings-record-title truncate">
             {title}
           </div>
-          <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[16px] truncate">
+          <p className="settings-record-detail truncate">
             {subtitle}
           </p>
         </div>
