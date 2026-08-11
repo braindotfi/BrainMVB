@@ -27,6 +27,7 @@ import editIconSrc from "@assets/figma_icons/inline/outcome_edit.png";
 import rejectIconSrc from "@assets/figma_icons/inline/outcome_reject.png";
 import { capitalCase } from "@/lib/displayLabels";
 import { Button } from "@/components/ui/button";
+import { RecordPill } from "@/components/RecordPill";
 
 /* ── Section heading ──────────────────────────────────────────────────────────
    Label, then a hairline rule that fills the remaining width, then an optional
@@ -184,24 +185,33 @@ export const TypeTag = ({
 }: {
   label: string;
   testId?: string;
-  tone?: "neutral" | "warning";
+  tone?: "neutral" | "warning" | "agent";
 }) => (
-  <div
-    className={`inline-flex items-center justify-center px-[8px] py-[2px] rounded-pill shrink-0 ${
-      tone === "warning"
-        ? "bg-[rgba(255,149,0,0.08)] border border-solid border-[rgba(255,149,0,0.25)]"
-        : "bg-brain-v1baby-blue-15 border border-solid border-[rgba(108,119,157,0.2)]"
-    }`}
-    data-testid={testId}
-  >
-    <span
-      className={`[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-center whitespace-nowrap ${
-        tone === "warning" ? "text-brain-v1light-orange" : "text-brain-v1baby-blue-60"
-      }`}
+  tone === "agent" ? (
+    <RecordPill
+      className="bg-brain-v1dark-orange text-brain-v1light-orange border-[rgba(255,149,0,0.2)]"
+      testId={testId}
     >
       {capitalCase(label)}
-    </span>
-  </div>
+    </RecordPill>
+  ) : (
+    <div
+      className={`inline-flex items-center justify-center px-[8px] py-[2px] rounded-pill shrink-0 ${
+        tone === "warning"
+          ? "bg-[rgba(255,149,0,0.08)] border border-solid border-[rgba(255,149,0,0.25)]"
+          : "bg-brain-v1baby-blue-15 border border-solid border-[rgba(108,119,157,0.2)]"
+      }`}
+      data-testid={testId}
+    >
+      <span
+        className={`[font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[14px] text-center whitespace-nowrap ${
+          tone === "warning" ? "text-brain-v1light-orange" : "text-brain-v1baby-blue-60"
+        }`}
+      >
+        {capitalCase(label)}
+      </span>
+    </div>
+  )
 );
 
 /* ── Callout boxes ────────────────────────────────────────────────────────────
@@ -413,17 +423,25 @@ export const OutcomeRow = ({
 export const EvidenceLinkRow = ({
   label,
   kind,
+  kindTone = "neutral",
   onClick,
   testId,
 }: {
   label: string;
   kind?: string | null;
+  kindTone?: "neutral" | "agent";
   onClick: () => void;
   testId?: string;
 }) => {
   const inner = (
     <>
-      {kind && <TypeTag label={kind} testId={testId ? `${testId}-kind` : undefined} />}
+      {kind && (
+        <TypeTag
+          label={kind}
+          tone={kindTone}
+          testId={testId ? `${testId}-kind` : undefined}
+        />
+      )}
       <div className="flex flex-1 items-center min-w-px">
         <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-brain-v1baby-blue-100 truncate">
           {label}

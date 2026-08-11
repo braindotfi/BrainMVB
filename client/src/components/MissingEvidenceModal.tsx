@@ -62,33 +62,6 @@ function agentDisplayName(item: MissingEvidenceItem): string {
   return (AGENT_DISPLAY_NAME as Record<string, string>)[key] ?? "Brain";
 }
 
-/* ── Headline ────────────────────────────────────────────────────────────────
-   One sentence naming what Brain was doing and what it couldn't find.
-   Uses the same sentence-case pattern as the row title in TierRowList. */
-function buildHeadline(item: MissingEvidenceItem): string {
-  const PHRASES: Record<string, string> = {
-    "payment.execute":      "Payment blocked",
-    "payment.schedule":     "Payment scheduling blocked",
-    "collections.remind":   "Collections reminder blocked",
-    "reconciliation.match": "Transaction matching blocked",
-    "treasury.sweep":       "Treasury action blocked",
-    "vendor_risk.assess":   "Vendor risk check blocked",
-    "fraud.review":         "Fraud review blocked",
-    "cash_forecast.project":"Cash forecast blocked",
-  };
-  const prefix = item.attemptedAction
-    ? (PHRASES[item.attemptedAction] ?? "Action blocked")
-    : "Action blocked";
-  const fields = item.missingFields
-    .map(humanizeField)
-    .reduce<string>((acc, f, i, arr) => {
-      if (i === 0) return `couldn't find ${f}`;
-      if (i === arr.length - 1) return `${acc} or ${f}`;
-      return `${acc}, ${f}`;
-    }, "");
-  return `${prefix}: ${fields}`;
-}
-
 /* ── Routing ─────────────────────────────────────────────────────────────────
    Routes to wherever the missing field is actually managed. Delegates to the
    shared inputRowFixPath helper so the row CTA and the modal CTA never drift
@@ -192,7 +165,7 @@ const MissingFieldRow = ({
     data-testid={testId}
   >
     {/* Amber "Missing" type tag */}
-    <TypeTag label="Missing" tone="warning" testId={testId ? `${testId}-kind` : undefined} />
+    <TypeTag label="Missing" tone="agent" testId={testId ? `${testId}-kind` : undefined} />
 
     {/* Field name */}
     <div className="flex flex-1 items-center min-w-px">
@@ -264,7 +237,9 @@ export function MissingEvidenceModal({
   if (!item) return null;
 
   const agentName  = agentDisplayName(item);
-  const headline   = buildHeadline(item);
+   /* Keep the card title aligned with the Inbox agent badge and modal header.
+      The blocked action remains in the supporting context below. */
+   const headline   = agentName;
   const subtitle   = buildInputRowSubtitle(item, vendorNameMap ?? new Map());
   const whyBlocked = buildWhyBlocked(item);
   const detailRows = buildDetailsRows(item);
@@ -353,7 +328,7 @@ export function MissingEvidenceModal({
               {/* Status — fills the confidence slot so the card reads as complete
                   next to the approval card. No numeric value — this run didn't
                   produce one, so a percentage would be fabricated. */}
-              <CardSection title="Status" testId="section-missing-evidence-status">
+              <CardSection title="Confidence" testId="section-missing-evidence-status">
                 <StatusLine />
               </CardSection>
 
@@ -387,6 +362,7 @@ export function MissingEvidenceModal({
                         key={ref}
                         label={ref}
                         kind={refKindLabel(ref)}
+                        kindTone="agent"
                         onClick={() => {
                           if (ref.startsWith("cp_")) {
                             closeAndNavigate(
