@@ -58,8 +58,16 @@ const Card = ({ children, testId }: { children: ReactNode; testId?: string }) =>
 );
 
 /** Data table panel — always bordered (matches Sources table Figma frame). */
-const TableCard = ({ children, testId }: { children: ReactNode; testId?: string }) => (
-  <WidgetPanel testId={testId}>{children}</WidgetPanel>
+const TableCard = ({
+  children,
+  noBorder = false,
+  testId,
+}: {
+  children: ReactNode;
+  noBorder?: boolean;
+  testId?: string;
+}) => (
+  <WidgetPanel testId={testId} noBorder={noBorder}>{children}</WidgetPanel>
 );
 
 const SectionLabel = ({
@@ -215,9 +223,9 @@ function EmptyRow({ states, emptyLabel, testId }: { states: ReadState[]; emptyLa
       : emptyLabel;
 
   return (
-    <div className="px-[16px] py-[12px] rounded-[8px]" data-testid={testId}>
+    <div className="settings-record" data-testid={testId}>
       <p
-        className={`[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[18px] ${failed ? "text-brain-v1light-orange" : "text-brain-v1baby-blue-60"}`}
+        className={`settings-record-title ${failed ? "text-brain-v1light-orange" : "text-brain-v1baby-blue-60"}`}
       >
         {text}
       </p>
@@ -485,7 +493,7 @@ export function SourcesSection() {
         >
           Connected Accounts
         </SectionLabel>
-        <TableCard testId="list-connected-accounts">
+        <TableCard testId="list-connected-accounts" noBorder={accountRows.length === 0}>
           {accountRows.length === 0 ? (
             <EmptyRow
               states={accountStates}
@@ -535,7 +543,7 @@ export function SourcesSection() {
         >
           Documents
         </SectionLabel>
-        <TableCard testId="list-documents">
+        <TableCard testId="list-documents" noBorder={docs.length === 0}>
           {docs.length === 0 ? (
             <EmptyRow
               states={[docState]}
