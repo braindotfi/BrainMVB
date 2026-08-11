@@ -100,7 +100,8 @@
   .settings-record-detail {
     margin: 0;
     font-family: "Gilroy", "Plus Jakarta Sans", system-ui, sans-serif;
-    white-space: nowrap;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 
   .settings-record-title {

@@ -114,8 +114,8 @@ function MemberRow({ member, inviteActions }: { member: BrainMember; inviteActio
             <img alt="" className="size-full object-cover" src={memberIcon} />
           </div>
           <div className="settings-record-copy min-w-0 flex flex-col gap-[4px] items-start justify-center">
-          <div className="flex gap-[8px] items-center shrink-0">
-            <p className="settings-record-title truncate">
+          <div className="flex flex-wrap gap-[8px] items-center min-w-0">
+            <p className="settings-record-title min-w-0">
               {member.displayName}
             </p>
             <RolePill role={member.role} />
@@ -147,7 +147,7 @@ function MemberRow({ member, inviteActions }: { member: BrainMember; inviteActio
               </span>
             )}
           </div>
-          <p className="settings-record-detail truncate" data-testid={`text-envelope-${member.id}`}>
+          <p className="settings-record-detail" data-testid={`text-envelope-${member.id}`}>
             {envelopeLine(member.approval)}
           </p>
           </div>
@@ -179,22 +179,6 @@ function MemberRow({ member, inviteActions }: { member: BrainMember; inviteActio
             </Button>
           </>
         )}
-        {/* UI-only mark; the label below the list says so once for the whole card. */}
-        <button
-          type="button"
-          onClick={() => setBackupApprover(member.id, !isBackup)}
-          data-testid={`button-backup-${member.id}`}
-          aria-pressed={isBackup}
-          title={BACKUP_APPROVER_NOTE}
-          className="rounded-pill px-[12px] py-[6px] [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] transition-colors flex items-center justify-center"
-          style={
-            isBackup
-              ? { background: "rgba(255,149,0,0.1)", color: "#ff9500", border: "1px solid rgba(255,149,0,0.3)" }
-              : { background: "#0c0f14", color: "#6c779d", border: "1px solid #1d2132" }
-          }
-        >
-          {isBackup ? "Remove Backup Mark" : "Mark As Backup Approver"}
-        </button>
       </div>
     </div>
   );
