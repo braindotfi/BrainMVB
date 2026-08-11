@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { cashProjectionView, PROJECTION_DAYS } from "./cashProjection";
+import {
+  cashProjectionView,
+  formatCashProjectionDate,
+  PROJECTION_DAYS,
+} from "./cashProjection";
 import type { RawObligation } from "./brainObligations";
 import type { RawInvoice } from "./receivables";
 
@@ -7,6 +11,18 @@ const NOW = new Date("2026-08-09T12:00:00.000Z");
 const DAY = 86_400_000;
 /** ISO date N days from NOW. */
 const inDays = (n: number) => new Date(NOW.getTime() + n * DAY).toISOString().slice(0, 10);
+
+describe("formatCashProjectionDate", () => {
+  it("keeps event-chip and chart-tooltip dates in the same compact format", () => {
+    expect(formatCashProjectionDate("2026-08-14")).toBe("Aug 14");
+    expect(formatCashProjectionDate(Date.parse("2026-08-14T00:00:00.000Z"))).toBe("Aug 14");
+    expect(formatCashProjectionDate(new Date("2026-08-14T00:00:00.000Z"))).toBe("Aug 14");
+  });
+
+  it("returns an unparseable value rather than inventing a date", () => {
+    expect(formatCashProjectionDate("not-a-date")).toBe("not-a-date");
+  });
+});
 
 function obl(over: Partial<RawObligation>): RawObligation {
   return { id: "obl_1", amount_due: "100.00", currency: "USD", status: "open", kind: "bill", ...over };
