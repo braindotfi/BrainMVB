@@ -2,7 +2,6 @@ import { Switch, Route, useRoute } from "wouter";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppAlertProvider } from "@/components/AppAlert";
-import { Web3Provider } from "@/lib/web3Provider";
 import { useAuth } from "@/lib/authContext";
 import NotFound from "@/pages/not-found";
 import { useState, useEffect, useRef } from "react";
@@ -11,7 +10,7 @@ import { GlobalSearch } from "@/components/GlobalSearch";
 import { useSessionTimeout } from "@/lib/sessionTimeoutContext";
 import { useAppAlert } from "@/components/AppAlert";
 
-import { useQuery } from "@tanstack/react-query";
+import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { SettingsPage } from "@/pages/SettingsPage";
 import { SignupPage } from "@/pages/SignupPage";
 import { CompanySetupPage } from "@/pages/CompanySetupPage";
@@ -28,6 +27,10 @@ import { MemberDetailHost } from "@/components/MemberDetailPopup";
 import { hydrateDocuments } from "@/lib/documentsStore";
 import { useBrainProjectionRefresh } from "@/lib/brainRefresh";
 import { useSearch } from "wouter";
+import { AuthProvider } from "@/lib/authContext";
+import { CurrencyProvider } from "@/lib/currencyContext";
+import { SessionTimeoutProvider } from "@/lib/sessionTimeoutContext";
+import { queryClient } from "@/lib/queryClient";
 
 /**
  * Vendors and Rules are Ledger tabs now, not pages.
@@ -270,19 +273,25 @@ function MainShell({ onLogout }: { onLogout: () => void }) {
 
 function App() {
   return (
-    <Web3Provider>
-      <TransactionProvider>
-        <IntentsProvider>
-          <TooltipProvider>
-            <AppAlertProvider>
-              <Toaster />
-              <AppLayout />
-              <MemberDetailHost />
-            </AppAlertProvider>
-          </TooltipProvider>
-        </IntentsProvider>
-      </TransactionProvider>
-    </Web3Provider>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <SessionTimeoutProvider>
+          <CurrencyProvider>
+            <TransactionProvider>
+              <IntentsProvider>
+                <TooltipProvider>
+                  <AppAlertProvider>
+                    <Toaster />
+                    <AppLayout />
+                    <MemberDetailHost />
+                  </AppAlertProvider>
+                </TooltipProvider>
+              </IntentsProvider>
+            </TransactionProvider>
+          </CurrencyProvider>
+        </SessionTimeoutProvider>
+      </AuthProvider>
+    </QueryClientProvider>
   );
 }
 

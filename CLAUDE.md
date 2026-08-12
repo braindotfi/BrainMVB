@@ -742,6 +742,11 @@ agents_execution_payments_members, audit_proof_tenant):
   `server/brain/tenancy.ts` — verified nothing else calls them), everything under
   `feature_gated_or_not_stable` (signup/login/verify-email, wallets, API keys/usage —
   the Developers pages stay as-is, service-token, demo/* provisioning).
+- **Frontend wallet runtime removed**: the app does not mount a wallet provider or wallet
+  connector. The former `Web3Provider`/RainbowKit/wagmi stack and unused `WalletButton`
+  were removed after the Coinbase Wallet connector was retired. Server-side `viem` remains
+  because SIWE verification in `server/routes.ts` still uses it. Do not re-add a frontend
+  wallet SDK or its analytics CSP allowance without a new product decision.
 - **Deliberately pending**: `DELETE /tenants/:id` (destructive — needs its own confirm
   flow), `POST /audit/anchor/publish` (audit:admin + conditional dependency),
   tenant export `download` (binary relay, brainRequest is JSON-only).
