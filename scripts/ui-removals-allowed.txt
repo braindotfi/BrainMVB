@@ -19,3 +19,4 @@ filter-priority              superseded — Inbox restructure replaced the prior
 row-overview                 superseded — Overview tier-row list replaced by the cash projection + KPI dashboard layout
 text-decision-count          superseded — decided-count pill replaced by per-section counts in the three-section Inbox
 button-missing-evidence-dismiss   removed — Needs Your Input modal now offers only Remind later and the field-specific fix action
+connect-wallet-btn   removed — frontend wallet runtime and its unused connect control were retired with the Coinbase Wallet cleanup

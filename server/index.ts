@@ -23,7 +23,7 @@ const helmetConfig: Parameters<typeof helmet>[0] = process.env.NODE_ENV === "pro
           styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
           imgSrc: ["'self'", "data:", "blob:"],
           fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
-          connectSrc: ["'self'", "https://mm-sdk-analytics.api.cx.metamask.io"],
+          connectSrc: ["'self'"],
           objectSrc: ["'none'"],
           baseUri: ["'self'"],
           frameAncestors: ["'none'"],

@@ -1,4 +1,4 @@
-/* Block-explorer URL helpers for audit anchors. Kept dependency-free (no wagmi
+/* Block-explorer URL helpers for audit anchors. Kept dependency-free (no wallet SDK
    import) so data modules and vitest suites can use them without pulling in
    the whole web3 stack. */
 

@@ -57,7 +57,7 @@ type Provider = { id: string; name: string; logo: string; bg: string; light?: bo
 
 const CATEGORY_META: Record<CategoryId, { label: string; sub: string; accent: string }> = {
   bank:       { label: "Bank Accounts",  sub: "Checking, savings and credit via Plaid",      accent: "#22c55e" },
-  crypto:     { label: "Crypto Wallets", sub: "MetaMask, Coinbase Wallet, WalletConnect", accent: "#ff9500" },
+  crypto:     { label: "Crypto Wallets", sub: "MetaMask, WalletConnect", accent: "#ff9500" },
   accounting: { label: "Accounting",     sub: "QuickBooks, Xero, Wave",                accent: "#7631EE" },
   payroll:    { label: "Payroll",        sub: "Gusto, Rippling, ADP",                  accent: "#a8b9f4" },
   tax:        { label: "Tax",            sub: "Returns, filings and tax documents",      accent: "#ff9500" },
@@ -69,7 +69,6 @@ const CATEGORY_META: Record<CategoryId, { label: string; sub: string; accent: st
 const PROVIDERS: Partial<Record<CategoryId, Provider[]>> = {
   crypto: [
     { id: "metamask",      name: "MetaMask",        logo: "M", bg: "#F6851B" },
-    { id: "coinbasewallet", name: "Coinbase Wallet", logo: "C", bg: "#0052FF" },
     { id: "walletconnect", name: "WalletConnect",   logo: "W", bg: "#3B99FC" },
     { id: "ledger",        name: "Ledger",          logo: "L", bg: "#000000" },
   ],
