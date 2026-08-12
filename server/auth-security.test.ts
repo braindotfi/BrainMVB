@@ -79,6 +79,43 @@ beforeEach(() => {
 });
 
 describe("auth boundary hardening", () => {
+  it("persists a registration session before the response completes", async () => {
+    const client = new SessionClient(baseUrl);
+    const email = `register-race-${Date.now().toString(36)}@example.com`;
+    const registered = await client.request<{ user: { id: string } }>("POST", "/api/auth/register", {
+      email,
+      password: "correct-horse-battery",
+      name: "Registration Race",
+    });
+    expect(registered.status).toBe(201);
+
+    const current = await client.request<{ user: { id: string } }>("GET", "/api/auth/user");
+    expect(current.status).toBe(200);
+    expect(current.json.user.id).toBe(registered.json.user.id);
+  });
+
+  it("persists a password-login session before the response completes", async () => {
+    const email = `login-race-${Date.now().toString(36)}@example.com`;
+    const registered = new SessionClient(baseUrl);
+    const created = await registered.request<{ user: { id: string } }>("POST", "/api/auth/register", {
+      email,
+      password: "correct-horse-battery",
+      name: "Password Login Race",
+    });
+    expect(created.status).toBe(201);
+
+    const client = new SessionClient(baseUrl);
+    const login = await client.request<{ user: { id: string } }>("POST", "/api/auth/login", {
+      identifier: email,
+      password: "correct-horse-battery",
+    });
+    expect(login.status).toBe(200);
+
+    const current = await client.request<{ user: { id: string } }>("GET", "/api/auth/user");
+    expect(current.status).toBe(200);
+    expect(current.json.user.id).toBe(login.json.user.id);
+  });
+
   it("creates a session after successful SIWE verify", async () => {
     const client = new SessionClient(baseUrl);
     const nonceRes = await client.request<{ nonce: string }>("GET", "/api/auth/nonce");
@@ -146,6 +183,9 @@ describe("auth boundary hardening", () => {
     const login = await demo.request<{ user: { isDemo: boolean } }>("POST", "/api/auth/demo-fresh");
     expect(login.status).toBe(200);
     expect(login.json.user.isDemo).toBe(true);
+
+    const current = await demo.request<{ user: { id: string } }>("GET", "/api/auth/user");
+    expect(current.status).toBe(200);
 
     const link = await demo.request<{ error: string }>("POST", "/api/integrations/plaid/link-token");
     expect(link.status).toBe(403);

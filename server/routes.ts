@@ -1,7 +1,7 @@
 import express, { type Express, type Request, type Response } from "express";
 import { createServer, type Server } from "http";
 import Anthropic from "@anthropic-ai/sdk";
-import { setupAuth, googleEnabled, requireAuth, requireNonDemo } from "./auth";
+import { setupAuth, googleEnabled, requireAuth, requireNonDemo, switchSession } from "./auth";
 import { storage } from "./storage";
 import { z } from "zod";
 import { verifyMessage } from "viem";
@@ -1244,7 +1244,7 @@ When you mention a money amount, always reproduce it exactly as the grounding da
       if (!user) {
         user = await storage.createUser({ username: address.slice(0, 8) + "..." + address.slice(-4), password: "", walletAddress: address });
       }
-      req.session.userId = user.id;
+      await switchSession(req, user.id);
       return res.json({ success: true, user: { id: user.id, walletAddress: user.walletAddress, username: user.username } });
     } catch (error) {
       console.error("SIWE verify error:", error);

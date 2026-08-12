@@ -22,15 +22,20 @@ const scryptAsync = promisify(scrypt);
  * it first — this issues a new session ID and cookie, preventing session
  * fixation (a prior principal's cookie cannot be used to access the new one).
  * After regeneration (or immediately if the session was anonymous), the new
- * userId is written and express-session saves it on response.
+ * userId is written and explicitly persisted before the caller sends a
+ * response. This matters for the Postgres-backed session store: response
+ * completion must not race the client's next authenticated request.
  */
-async function switchSession(req: Request, newUserId: string): Promise<void> {
+export async function switchSession(req: Request, newUserId: string): Promise<void> {
   if (req.session.userId && req.session.userId !== newUserId) {
     await new Promise<void>((resolve, reject) => {
       req.session.regenerate((err) => (err ? reject(err) : resolve()));
     });
   }
   req.session.userId = newUserId;
+  await new Promise<void>((resolve, reject) => {
+    req.session.save((err) => (err ? reject(err) : resolve()));
+  });
 }
 
 // ─── Session typing ───
