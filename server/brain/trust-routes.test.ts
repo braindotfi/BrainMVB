@@ -35,6 +35,8 @@ interface RecordedCall {
 
 const realFetch = globalThis.fetch;
 let calls: RecordedCall[] = [];
+let upstreamTrustStatus = 200;
+let upstreamTrustBody: unknown;
 let server: Server;
 let baseUrl: string;
 let createBrainProxyRouter: typeof import("./proxy").createBrainProxyRouter;
@@ -64,7 +66,7 @@ function routeBrainCore(fullUrl: string, method: string): Response {
       path,
     )
   ) {
-    return json({ ok: true, path });
+    return json(upstreamTrustBody ?? { ok: true, path }, upstreamTrustStatus);
   }
 
   throw new Error(`unexpected brain-core call in trust route test: ${method} ${path}`);
@@ -141,6 +143,8 @@ afterAll(() => {
 
 beforeEach(() => {
   calls = [];
+  upstreamTrustStatus = 200;
+  upstreamTrustBody = undefined;
   clearBrainTokenCache();
 });
 
@@ -173,6 +177,57 @@ describe("counterparty trust BFF route contract", () => {
       });
     },
   );
+
+  it("relays an upstream 401 and its missing/expired-token body", async () => {
+    upstreamTrustStatus = 401;
+    upstreamTrustBody = {
+      error: { code: "auth_token_expired", message: "token expired" },
+    };
+
+    const result = await post(
+      "/api/brain/ledger/counterparties/cp_contract/trust/grant",
+    );
+
+    expect(result.status).toBe(401);
+    expect(result.json).toEqual({
+      error: "brain_upstream_error",
+      status: 401,
+      body: upstreamTrustBody,
+    });
+    const upstreamCalls = callsEndingWith(
+      "/ledger/counterparties/cp_contract/trust/grant",
+    );
+    expect(upstreamCalls).toHaveLength(1);
+    expect(upstreamCalls[0].auth).toBe(`Bearer ${MEMBER_TOKEN}`);
+    expect(upstreamCalls[0].provisionAuth).toBeUndefined();
+  });
+
+  it("relays an upstream 409 ledger_status_invalid body", async () => {
+    upstreamTrustStatus = 409;
+    upstreamTrustBody = {
+      error: {
+        code: "ledger_status_invalid",
+        message: "restore is not valid from trusted",
+      },
+    };
+
+    const result = await post(
+      "/api/brain/ledger/counterparties/cp_contract/trust/restore",
+    );
+
+    expect(result.status).toBe(409);
+    expect(result.json).toEqual({
+      error: "brain_upstream_error",
+      status: 409,
+      body: upstreamTrustBody,
+    });
+    const upstreamCalls = callsEndingWith(
+      "/ledger/counterparties/cp_contract/trust/restore",
+    );
+    expect(upstreamCalls).toHaveLength(1);
+    expect(upstreamCalls[0].auth).toBe(`Bearer ${MEMBER_TOKEN}`);
+    expect(upstreamCalls[0].provisionAuth).toBeUndefined();
+  });
 
   it("declares every trust route as a member ledger:write allowlist entry", () => {
     const source = proxySource();
