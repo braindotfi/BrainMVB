@@ -25,6 +25,7 @@ import { openMemberDetail } from "@/lib/membersStore";
 import { useSuggestedQuestions, resolveSuggestionChips } from "@/lib/brainSuggestedQuestions";
 import { resolveVendor, openVendorDetail } from "@/lib/openVendorDetail";
 import { parseAssistantResponse, ASSISTANT_GENERIC_ERROR } from "@/lib/assistantChat";
+import { isAssistantBulletLine, stripAssistantBullet } from "@/lib/assistantFormatting";
 import brainLogo from "@assets/Brain_1_1783374797129.png";
 import timeIcon from "@assets/Time_1781821466642.png";
 import expandBtnIcon from "@assets/Expand_Button_1781817819809.png";
@@ -179,14 +180,13 @@ function renderRichText(text: string, formatText: (t: string) => string): React.
     }
 
     // Bullet list start
-    const bulletMatch = trimmed.match(/^[-*]\s+/);
-    if (bulletMatch) {
+    if (isAssistantBulletLine(trimmed)) {
       const items: string[] = [];
       while (i < lines.length) {
         const l = lines[i].trim();
         if (!l) { i++; continue; }
-        if (!/^[-*]\s+/.test(l)) break;
-        items.push(l.replace(/^[-*]\s+/, ""));
+        if (!isAssistantBulletLine(l)) break;
+        items.push(stripAssistantBullet(l));
         i++;
       }
       elements.push(
@@ -209,7 +209,7 @@ function renderRichText(text: string, formatText: (t: string) => string): React.
       if (!l) break;
       if (/^#{1,3}\s+/.test(l)) break;
       if (/^\d+\.\s+/.test(l)) break;
-      if (/^[-*]\s+/.test(l)) break;
+      if (isAssistantBulletLine(l)) break;
       paraLines.push(l);
       i++;
     }
