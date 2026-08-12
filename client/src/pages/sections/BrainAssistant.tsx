@@ -16,6 +16,11 @@ import { useToast } from "@/hooks/use-toast";
 import { useCurrency } from "@/lib/useCurrency";
 import { useAuth } from "@/lib/authContext";
 import { queryClient } from "@/lib/queryClient";
+import {
+  DOCUMENT_ACCEPT,
+  isSupportedDocumentFile,
+  sourceTypeForDocument,
+} from "@/lib/documentUpload";
 import { openMemberDetail } from "@/lib/membersStore";
 import { useSuggestedQuestions, resolveSuggestionChips } from "@/lib/brainSuggestedQuestions";
 import { resolveVendor, openVendorDetail } from "@/lib/openVendorDetail";
@@ -491,7 +496,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
         filename: file.name,
         mimeType: file.type || "application/octet-stream",
         category: "general",
-        sourceType: "pdf_upload",
+        sourceType: sourceTypeForDocument(file),
       });
       const res = await fetch(`/api/integrations/documents/ingest?${params.toString()}`, {
         method: "POST",
@@ -1185,11 +1190,21 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
           <input
             ref={fileInputRef}
             type="file"
-            accept=".pdf,.csv,.xls,.xlsx,.png,.jpg,.jpeg,.zip"
+            accept={DOCUMENT_ACCEPT}
             className="hidden"
             onChange={(e) => {
               const file = e.target.files?.[0];
-              if (file) uploadDoc.mutate(file);
+              if (file) {
+                if (isSupportedDocumentFile(file)) {
+                  uploadDoc.mutate(file);
+                } else {
+                  toast({
+                    title: "Unsupported file",
+                    description: "ZIP files can't be uploaded. Choose PDF, CSV, XLSX, DOCX, or another supported document.",
+                    variant: "destructive",
+                  });
+                }
+              }
               e.target.value = "";
             }}
           />

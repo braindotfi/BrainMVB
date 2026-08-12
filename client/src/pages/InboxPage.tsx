@@ -1831,6 +1831,16 @@ export function InboxPage() {
           </div>
         )}
 
+        {activeTab === "Resolved" && (
+          <div className="flex gap-[8px] items-center w-full" data-testid="heading-resolved-decisions">
+            <div className="size-[6px] rounded-full shrink-0 bg-brain-v1baby-blue-60" />
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[12px] uppercase tracking-[0.4px] whitespace-nowrap">
+              Resolved Decisions
+            </p>
+            <CountPill testId="count-resolved-decisions">{visibleItems.length}</CountPill>
+          </div>
+        )}
+
         {(activeTab === "Unresolved" ? unresolvedEmpty : visibleItems.length === 0) ? (
           decisionsUnreachable ? (
             <UnavailableDataBox testId="text-decisions-empty">{emptyText}</UnavailableDataBox>

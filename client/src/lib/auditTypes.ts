@@ -59,7 +59,7 @@ export interface LifecycleStep {
   label: string;
   timestamp: string;
   note?: string;
-  kind: "ok" | "alert";
+  kind: "ok" | "alert" | "pending";
   /* Identity of the human who performed this step (email / actor id), present on
      HUMAN-approval steps only - system steps omit it. The muted role suffix
      ("· finance admin") is resolved from the actor record (see actors.ts), never

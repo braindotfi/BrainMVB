@@ -1,7 +1,7 @@
 import express, { type Express, type Request, type Response } from "express";
 import { createServer, type Server } from "http";
 import Anthropic from "@anthropic-ai/sdk";
-import { setupAuth, googleEnabled, requireAuth, requireNonDemo } from "./auth";
+import { setupAuth, googleEnabled, requireAuth, requireNonDemo, switchSession } from "./auth";
 import { storage } from "./storage";
 import { z } from "zod";
 import { verifyMessage } from "viem";
@@ -1244,7 +1244,7 @@ When you mention a money amount, always reproduce it exactly as the grounding da
       if (!user) {
         user = await storage.createUser({ username: address.slice(0, 8) + "..." + address.slice(-4), password: "", walletAddress: address });
       }
-      req.session.userId = user.id;
+      await switchSession(req, user.id);
       return res.json({ success: true, user: { id: user.id, walletAddress: user.walletAddress, username: user.username } });
     } catch (error) {
       console.error("SIWE verify error:", error);
@@ -1661,6 +1661,26 @@ When you mention a money amount, always reproduce it exactly as the grounding da
       }
       const { filename, category, sourceType } = q.data;
       const mimeType = q.data.mimeType ?? "application/octet-stream";
+      const extension = filename.toLowerCase().slice(filename.lastIndexOf("."));
+      const supportedExtensions = new Set([
+        ".pdf",
+        ".csv",
+        ".xls",
+        ".xlsx",
+        ".doc",
+        ".docx",
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".gif",
+        ".webp",
+      ]);
+      if (!supportedExtensions.has(extension)) {
+        return res.status(415).json({
+          error: "unsupported_file_type",
+          message: "ZIP files and other unsupported file types can't be uploaded.",
+        });
+      }
 
       const userId = req.session.userId!;
 
