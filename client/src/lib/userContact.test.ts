@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, beforeAll, afterAll } from "vitest";
-import { setUserEmail, setUserPhone, userContactSnapshot } from "./userContact";
+import { setUserEmail, setUserPhone, userContactSnapshot, subscribe } from "./userContact";
 import { applyUserScopedResets } from "./authContext";
 import type { AuthUser } from "./authContext";
 
@@ -24,11 +24,38 @@ class MemoryStorage implements Storage {
 }
 
 let priorLocalStorage: Storage | undefined;
+let priorWindow: unknown;
+
+/* Minimal window polyfill for the storage-event path: `subscribe` registers a
+   "storage" handler on window at call time. `fireStorageEvent` plays the role
+   of the BROWSER's cross-tab delivery — in a real browser the writing tab
+   never receives its own storage event, so each test simulates "another tab
+   wrote" as: mutate localStorage directly (the write is already visible,
+   storage is shared), then fire the event at this tab's handlers. */
+const storageHandlers = new Set<(e: StorageEvent) => void>();
+function fireStorageEvent(key: string | null, newValue: string | null): void {
+  const e = { key, newValue } as StorageEvent;
+  storageHandlers.forEach((h) => h(e));
+}
+const fakeWindow = {
+  addEventListener: (type: string, h: (e: StorageEvent) => void) => {
+    if (type === "storage") storageHandlers.add(h);
+  },
+  removeEventListener: (type: string, h: (e: StorageEvent) => void) => {
+    if (type === "storage") storageHandlers.delete(h);
+  },
+};
 
 beforeAll(() => {
   priorLocalStorage = (globalThis as { localStorage?: Storage }).localStorage;
+  priorWindow = (globalThis as { window?: unknown }).window;
   Object.defineProperty(globalThis, "localStorage", {
     value: new MemoryStorage(),
+    writable: true,
+    configurable: true,
+  });
+  Object.defineProperty(globalThis, "window", {
+    value: fakeWindow,
     writable: true,
     configurable: true,
   });
@@ -37,6 +64,11 @@ beforeAll(() => {
 afterAll(() => {
   Object.defineProperty(globalThis, "localStorage", {
     value: priorLocalStorage,
+    writable: true,
+    configurable: true,
+  });
+  Object.defineProperty(globalThis, "window", {
+    value: priorWindow,
     writable: true,
     configurable: true,
   });
@@ -168,5 +200,82 @@ describe("userContact", () => {
 
     applyUserScopedResets(REAL_USER_A);
     expect(userContactSnapshot().email).toBe("custom-a@example.com");
+  });
+});
+
+describe("userContact cross-tab storage events (two tabs, this module = tab B)", () => {
+  // Simulated "tab A" writes: the other tab shares localStorage, so its write
+  // is a direct setItem here, followed by the storage event the browser would
+  // deliver to THIS tab. See fireStorageEvent above.
+  function otherTabWrites(key: string, value: string): void {
+    localStorage.setItem(key, value);
+    fireStorageEvent(key, value);
+  }
+
+  it("a write in a tab signed into a DIFFERENT account does not update this tab", () => {
+    applyUserScopedResets(REAL_USER_B);
+    let fired = 0;
+    const unsubscribe = subscribe(() => fired++);
+
+    // Tab A is signed in as user A and saves an override.
+    otherTabWrites("brain_profile_email_u-real-a", "custom-a@example.com");
+    otherTabWrites("brain_profile_phone_u-real-a", "+1-555-0100");
+
+    expect(fired).toBe(0);
+    expect(userContactSnapshot()).toEqual({ email: null, phone: null });
+    unsubscribe();
+  });
+
+  it("a write in a second tab signed into the SAME account updates this tab", () => {
+    applyUserScopedResets(REAL_USER_A);
+    let fired = 0;
+    const unsubscribe = subscribe(() => fired++);
+
+    otherTabWrites("brain_profile_email_u-real-a", "custom-a@example.com");
+    expect(fired).toBe(1);
+    expect(userContactSnapshot().email).toBe("custom-a@example.com");
+
+    otherTabWrites("brain_profile_phone_u-real-a", "+1-555-0100");
+    expect(fired).toBe(2);
+    expect(userContactSnapshot().phone).toBe("+1-555-0100");
+    unsubscribe();
+  });
+
+  it("unsubscribe detaches the storage handler (no update after cleanup)", () => {
+    applyUserScopedResets(REAL_USER_A);
+    let fired = 0;
+    const unsubscribe = subscribe(() => fired++);
+    unsubscribe();
+
+    otherTabWrites("brain_profile_email_u-real-a", "custom-a@example.com");
+    expect(fired).toBe(0);
+  });
+
+  it("a stale OLD-BUILD tab writing the legacy unscoped key neither updates this tab nor survives the next scope change", () => {
+    // The legacy-key interaction, confirmed against the real prior build
+    // (commit 7fa3284, the last one shipping unscoped keys): that client
+    // (a) rehydrates `brain_profile_email`/`brain_profile_phone` ONCE into
+    // module state and never re-reads storage afterwards, and (b) its
+    // subscribe() never registers a `storage` listener at all. So the new
+    // client deleting the legacy keys cannot change what an open old-build
+    // tab displays, and an old-build tab's unscoped writes are never read by
+    // the new client. Harmless in both directions — this test pins the new
+    // client's half of that.
+    applyUserScopedResets(REAL_USER_A);
+    setUserEmail("custom-a@example.com");
+    let fired = 0;
+    const unsubscribe = subscribe(() => fired++);
+
+    otherTabWrites("brain_profile_email", "stale-old-build@example.com");
+    otherTabWrites("brain_profile_phone", "+1-555-9999");
+
+    expect(fired).toBe(0);
+    expect(userContactSnapshot()).toEqual({ email: "custom-a@example.com", phone: null });
+
+    // Next auth transition sweeps the stale keys back out.
+    applyUserScopedResets(REAL_USER_B);
+    expect(localStorage.getItem("brain_profile_email")).toBeNull();
+    expect(localStorage.getItem("brain_profile_phone")).toBeNull();
+    unsubscribe();
   });
 });

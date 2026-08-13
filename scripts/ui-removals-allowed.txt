@@ -20,3 +20,7 @@ row-overview                 superseded — Overview tier-row list replaced by t
 text-decision-count          superseded — decided-count pill replaced by per-section counts in the three-section Inbox
 button-missing-evidence-dismiss   removed — Needs Your Input modal now offers only Remind later and the field-specific fix action
 connect-wallet-btn   removed — frontend wallet runtime and its unused connect control were retired with the Coinbase Wallet cleanup
+button-avatar   superseded — Settings Profile no longer has a top avatar record; Identity uses a placeholder profile icon
+button-edit-profile   superseded — the old top profile editor was replaced by the Name row's inline edit action
+img-avatar   superseded — Settings Profile no longer renders an uploaded avatar in the removed top record
+input-avatar-file   superseded — avatar upload controls were removed from Settings Profile

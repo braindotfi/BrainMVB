@@ -94,7 +94,11 @@ export function setBackupApprover(memberId: string, value: boolean): void {
   listeners.forEach((l) => l());
 }
 
-function subscribe(listener: Listener): () => void {
+/**
+ * Exported for tests (backupApprover.test.ts's two-tab suite) — same
+ * scoped-key storage-event contract as userContact.ts's subscribe.
+ */
+export function subscribe(listener: Listener): () => void {
   listeners.add(listener);
   const onStorage = (e: StorageEvent) => {
     if (e.key === storageKey()) {

@@ -143,7 +143,13 @@ export function setUserPhone(next: string): void {
   listeners.forEach((l) => l());
 }
 
-function subscribe(listener: Listener): () => void {
+/**
+ * Exported for tests (userContact.test.ts's two-tab suite): the storage-event
+ * handler compares `e.key` against keys computed from THIS tab's scope, which
+ * is exactly what keeps a write in a tab signed into a different account from
+ * bleeding into this one. React consumers get it via useUserContact below.
+ */
+export function subscribe(listener: Listener): () => void {
   listeners.add(listener);
   const onStorage = (e: StorageEvent) => {
     if (e.key === emailKey() || e.key === phoneKey()) {
