@@ -174,6 +174,32 @@ const ACTION_MAP: Record<string, { eventType: AuditEventType; summary: (e: Brain
   "raw.ingest.deduplicated": { eventType: "system_activity", summary: () => "Duplicate data: already ingested previously, skipped" },
 };
 
+/* Lifecycle titles are read by humans, not by the audit API. Keep unknown
+ * actions honest while removing the dotted machine vocabulary from the step
+ * heading. Known agent-action events get a more useful description than a
+ * literal title-case conversion. */
+const HUMAN_ACTION_LABELS: Record<string, string> = {
+  "agent.action.proposed": "Agent recommendation created",
+  "agent.action.refreshed": "Agent recommendation updated",
+  "agent.action.executed": "Agent action executed",
+  "agent.action.completed": "Agent action completed",
+  "agent.action.failed": "Agent action failed",
+  "agent.action.cancelled": "Agent action cancelled",
+};
+
+export function humanizeAuditAction(action: string): string {
+  const exact = HUMAN_ACTION_LABELS[action];
+  if (exact) return exact;
+  const words = action
+    .split(".")
+    .map((part) => part.replace(/[_-]+/g, " ").trim())
+    .filter(Boolean);
+  if (words.length === 0) return "Audit event";
+  return words
+    .join(" ")
+    .replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
 /** Card-friendly single-line truncation for titles sourced from free text
  *  (currently the wiki.question question). Exported for tests. */
 export const CARD_TITLE_MAX = 72;
@@ -221,11 +247,10 @@ function proposalSummaryFrom(e: BrainAuditEvent): ProposalDecisionSummary | unde
  *  eventType in the decision itself (approve|reject|acknowledge|undo), not a
  *  fixed action string, so it's handled separately from the static ACTION_MAP
  *  above rather than one entry per decision. proposal_id is included as plain
- *  reference text (not a tappable link) - see the `linked: []` honesty note on
- *  mapAuditEventToRecord below. */
+ *  reference text; the popup resolves it against the live proposal feed when
+ *  available and otherwise keeps it as honest plain text. */
 function classifyProposalDecided(e: BrainAuditEvent): { eventType: AuditEventType; summary: string } {
   const decision = typeof e.inputs.decision === "string" ? e.inputs.decision : "decided";
-  const proposalId = typeof e.inputs.proposal_id === "string" ? e.inputs.proposal_id : undefined;
   const eventType: AuditEventType =
     decision === "reject"
       ? "rejected"
@@ -234,7 +259,16 @@ function classifyProposalDecided(e: BrainAuditEvent): { eventType: AuditEventTyp
         : decision === "undo"
           ? "flagged"
           : "approved";
-  const fallback = `Proposal decided - ${decision}${proposalId ? ` (${proposalId})` : ""}`;
+  const fallback =
+    decision === "approve"
+      ? "Proposal approved"
+      : decision === "reject"
+        ? "Proposal rejected"
+        : decision === "acknowledge"
+          ? "Proposal acknowledged"
+          : decision === "undo"
+            ? "Proposal reopened"
+            : "Proposal decision recorded";
   // Prefer the real narrative brain-core now snapshots at decision time
   // (e.g. "Compliance review found policy_violation with high severity...").
   // Falls back to the old opaque id-only line for events predating this.
@@ -267,7 +301,7 @@ function coreBucket(e: BrainAuditEvent): AuditEventType | undefined {
 function classify(e: BrainAuditEvent): { eventType: AuditEventType; summary: string } {
   if (e.action === "proposal.decided") return classifyProposalDecided(e);
   const known = ACTION_MAP[e.action];
-  const summary = known ? known.summary(e) : e.action;
+  const summary = known ? known.summary(e) : humanizeAuditAction(e.action);
   // Mapped decision types (approved/rejected/etc) are richer than core's
   // buckets and stay authoritative for their tabs.
   if (known && known.eventType !== "flagged" && known.eventType !== "system_activity") {
@@ -751,11 +785,8 @@ export function mapAuditEventToRecord(
     // those stores are also live - see BrainMVB-data-integration/CLAUDE.md's
     // linked-evidence contract). The popup already gracefully falls back to
     // a plain, non-tappable "(proposal unavailable)" chip when the id
-    // doesn't resolve against the demo proposal store (AuditRecordPopup.tsx),
-    // so populating this for live tenants is safe today even though it
-    // won't be tappable there until openProposalDetail/resolveProposal
-    // learns to resolve live GET /v1/proposals/{id} data, not just the
-    // demo-only mock corpus.
+    // doesn't resolve against either the live proposal feed or the demo
+    // proposal store (AuditRecordPopup.tsx).
     linked: proposalId
       ? [{ kind: "proposal" as const, label: proposalId, refId: proposalId }]
       : [],

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { mapAuditEventToRecord, mergeRelatedAuditRecords, anchorFromInclusionProof, resolveDetailAnchor, localQuestionToRecord, applyTenantDbOnly, extractActorName, bffPathForActorLookup, truncateForCard, decidedProposalIdsFromEvents, CARD_TITLE_MAX, type BrainAuditEvent, type BrainAnchor, type BrainInclusionProof } from "./brainAudit";
+import { mapAuditEventToRecord, mergeRelatedAuditRecords, anchorFromInclusionProof, resolveDetailAnchor, localQuestionToRecord, applyTenantDbOnly, extractActorName, bffPathForActorLookup, truncateForCard, decidedProposalIdsFromEvents, CARD_TITLE_MAX, humanizeAuditAction, type BrainAuditEvent, type BrainAnchor, type BrainInclusionProof } from "./brainAudit";
 import type { AnchorProof } from "./auditTypes";
 
 /**
@@ -65,6 +65,18 @@ describe("mapAuditEventToRecord", () => {
     );
     expect(r.eventType).toBe("acknowledged");
     expect(r.summary).toContain("acknowledge");
+  });
+
+  it("turns agent action ids into human-readable lifecycle titles", () => {
+    const r = mapAuditEventToRecord(
+      ev({
+        action: "agent.action.refreshed",
+        event_type: "flagged",
+      }),
+      anchor(),
+    );
+    expect(r.lifecycle[0].label).toBe("Agent recommendation updated");
+    expect(humanizeAuditAction("ledger.reconciled")).toBe("Ledger Reconciled");
   });
 
   /* The Inbox suppresses a live proposal when an audit record carries its id
@@ -144,7 +156,7 @@ describe("mapAuditEventToRecord", () => {
     expect(r.proposingAgentDisplay).toBeUndefined();
   });
 
-  it("falls back to the opaque id-only summary for proposal.decided events predating the snapshot", () => {
+  it("uses a human-readable decision title for proposal.decided events predating the snapshot", () => {
     const r = mapAuditEventToRecord(
       ev({
         action: "proposal.decided",
@@ -153,7 +165,7 @@ describe("mapAuditEventToRecord", () => {
       }),
       anchor(),
     );
-    expect(r.summary).toBe("Proposal decided - approve (prop_01OLD)");
+    expect(r.summary).toBe("Proposal approved");
     expect(r.lifecycle[0].note).toBeUndefined();
     // still links the id even without a summary - resolves-or-plain-text on the popup side
     expect(r.linked).toEqual([{ kind: "proposal", label: "prop_01OLD", refId: "prop_01OLD" }]);
@@ -294,9 +306,9 @@ describe("mapAuditEventToRecord", () => {
     expect(r.lifecycle[0].kind).toBe("alert");
   });
 
-  it("falls back to the raw action id for an unmapped action, never a fabricated category", () => {
+  it("uses a human-readable title for an unmapped action, never a fabricated category", () => {
     const r = mapAuditEventToRecord(ev({ action: "ledger.reconciliation.matched" }), anchor());
-    expect(r.summary).toBe("ledger.reconciliation.matched");
+    expect(r.summary).toBe("Ledger Reconciliation Matched");
   });
 
   it("classifies an unmapped action as system_activity (brain-core's default), NOT flagged", () => {
@@ -315,13 +327,13 @@ describe("mapAuditEventToRecord", () => {
     expect(sys.summary).toBe("New data ingested: Brain pulled in new records to process");
     expect(sys.coreEventType).toBe("system_activity");
 
-    // core explicitly flags an unmapped action → it IS flagged, raw action id as summary
+    // core explicitly flags an unmapped action → it IS flagged, with a human-readable summary
     const flagged = mapAuditEventToRecord(
       ev({ action: "policy.violation.detected", event_type: "flagged" }),
       anchor(),
     );
     expect(flagged.eventType).toBe("flagged");
-    expect(flagged.summary).toBe("policy.violation.detected");
+    expect(flagged.summary).toBe("Policy Violation Detected");
     expect(flagged.lifecycle[0].kind).toBe("alert");
 
     // core demotes a locally mapped-flagged action → informational wins
