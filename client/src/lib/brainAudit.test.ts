@@ -502,6 +502,31 @@ describe("mergeRelatedAuditRecords", () => {
     });
   });
 
+  it("adds pending execution after an approved decision, but not after a rejection", () => {
+    const approved = mapAuditEventToRecord(
+      ev({
+        action: "proposal.decided",
+        inputs: { proposal_id: "prop_approved", decision: "approve" },
+      }),
+      anchor(),
+    );
+    const approvedSteps = lifecycleStepsForDisplay(approved);
+    expect(approvedSteps.at(-1)).toMatchObject({
+      label: "Agent action executed",
+      kind: "pending",
+      timestamp: "Pending execution",
+    });
+
+    const rejected = mapAuditEventToRecord(
+      ev({
+        action: "proposal.decided",
+        inputs: { proposal_id: "prop_rejected", decision: "reject" },
+      }),
+      anchor(),
+    );
+    expect(lifecycleStepsForDisplay(rejected)).toHaveLength(rejected.lifecycle.length);
+  });
+
   it("builds one chronological lifecycle from correlated proposal events", () => {
     const proposed = ev({
       id: "evt_proposed",

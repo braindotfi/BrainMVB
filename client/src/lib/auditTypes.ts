@@ -118,6 +118,9 @@ export interface AuditRecord {
      from — carried through so surfaces can special-case non-risk subtypes
      (assistant activity) until brain-core ships a distinct event type. */
   subtype?: string;
+  /* Decision carried by proposal.decided events. Used to distinguish an
+     approved proposal awaiting execution from a rejected/acknowledged one. */
+  decision?: string;
   /* brain-core's OWN authoritative event_type from /audit/events
      (system_activity | assistant_activity | flagged). Carried through raw so
      isAssistantActivity/isSystemActivity read the wire value instead of a

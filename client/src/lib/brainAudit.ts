@@ -205,11 +205,14 @@ export function humanizeAuditAction(action: string): string {
  * complete. For an unresolved recommendation, the popup may show the next
  * execution stage as an explicitly labelled, UI-only pending step. */
 export function lifecycleStepsForDisplay(
-  record: Pick<AuditRecord, "lifecycle" | "subtype">,
+  record: Pick<AuditRecord, "lifecycle" | "subtype" | "decision">,
 ): LifecycleStep[] {
   const recommendationIsAwaitingDecision =
     record.subtype === "agent.action.proposed" ||
     record.subtype === "agent.action.refreshed";
+  const approvedDecision =
+    record.subtype === "proposal.decided" &&
+    record.decision === "approve";
   const hasExecutionOutcome = record.lifecycle.some((step) =>
     [
       "Agent action executed",
@@ -219,13 +222,15 @@ export function lifecycleStepsForDisplay(
     ].includes(step.label),
   );
 
-  if (!recommendationIsAwaitingDecision || hasExecutionOutcome) return record.lifecycle;
+  if ((!recommendationIsAwaitingDecision && !approvedDecision) || hasExecutionOutcome) {
+    return record.lifecycle;
+  }
 
   return [
     ...record.lifecycle,
     {
       label: "Agent action executed",
-      timestamp: "Pending your decision",
+      timestamp: approvedDecision ? "Pending execution" : "Pending your decision",
       kind: "pending",
     },
   ];
@@ -784,6 +789,10 @@ export function mapAuditEventToRecord(
     event.action === "proposal.decided" && typeof event.inputs.proposal_id === "string"
       ? event.inputs.proposal_id
       : undefined;
+  const decision =
+    event.action === "proposal.decided" && typeof event.inputs.decision === "string"
+      ? event.inputs.decision
+      : undefined;
   /* Remediation/rule context reads as a second line under the narrative
      headline - only set when it says something the summary doesn't already. */
   const proposalNote =
@@ -830,6 +839,7 @@ export function mapAuditEventToRecord(
     anchor: anchorFor(event, latestAnchor),
     rawQuestion: fullQuestion,
     agentLabel,
+    ...(decision ? { decision } : {}),
     /* proposingAgent: canonical agent type key for the proposing agent.
        Priority:
        1. Session cache hit (populated when the live proposal was still visible
