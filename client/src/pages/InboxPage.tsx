@@ -1313,6 +1313,7 @@ export function InboxPage() {
     activeTab === "Unresolved"
       ? unresolvedItems.length + inputRows.length > 0
       : resolvedItems.length > 0;
+  const hasUnresolvedRecords = unresolvedItems.length + inputRows.length > 0;
   const filtering = hasActiveFilter(filters);
 
   /* ── Bulk approve ───────────────────────────────────────────────────────────
@@ -1934,7 +1935,7 @@ export function InboxPage() {
           </div>
         )}
 
-        {activeTab === "Unresolved" && (
+        {activeTab === "Unresolved" && !hasUnresolvedRecords && (
           <div className="flex gap-[8px] items-center w-full" data-testid="heading-unresolved-decisions">
             <div className="size-[6px] rounded-full shrink-0 bg-brain-v1baby-blue-60" />
             <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[12px] uppercase tracking-[0.4px] whitespace-nowrap">
