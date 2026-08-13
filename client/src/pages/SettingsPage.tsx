@@ -374,7 +374,7 @@ function readNameOverride(key: string | null): string | null {
   try { return localStorage.getItem(key); } catch { return null; }
 }
 
-function ProfileSection() {
+export function ProfileSection() {
   const alert = useAppAlert();
   const { user } = useAuth();
   const navigate = useLocation()[1];
