@@ -369,33 +369,43 @@ const ChevronActionButton = ({ label, testId, onClick }: { label: string; testId
   </button>
 );
 
-function ProfileSection() {
+function readNameOverride(key: string | null): string | null {
+  if (!key) return null;
+  try { return localStorage.getItem(key); } catch { return null; }
+}
+
+export function ProfileSection() {
   const alert = useAppAlert();
   const { user } = useAuth();
   const navigate = useLocation()[1];
   const { email, phone } = useUserContact(user?.email);
-  // Real company name from the tenancy link, falling back to the user's own display name.
-  // A locally-saved override (from the "Edit" button below) always wins once set.
   const { data: tenancy } = useQuery<{ mode: string; linked: boolean; tenantId?: string; companyName?: string }>({
     queryKey: ["/api/brain/tenancy"],
   });
   const liveName = tenancy?.companyName || user?.name || "";
-  const [nameOverride, setNameOverride] = useState<string | null>(() => {
-    // Demo users must never inherit a prior real user's saved display name.
-    if (user?.isDemo) return null;
-    try { return localStorage.getItem("brain_profile_name"); } catch { return null; }
-  });
-  // Re-sync nameOverride when the user identity changes (auth transitions don't
-  // remount this component, so useState initializer above only runs on first mount).
-  useEffect(() => {
-    if (user?.isDemo) {
-      setNameOverride(null);
-    } else if (user?.id) {
-      try { setNameOverride(localStorage.getItem("brain_profile_name")); } catch { setNameOverride(null); }
-    }
-  }, [user?.id, user?.isDemo]);
+  // Scoped by userId (`brain_profile_name_{userId}`), same pattern as
+  // userContact.ts and backupApprover.ts — NOT the single unscoped
+  // `brain_profile_name` key this used before, which one real account's
+  // saved override leaked into every OTHER account ever logged into on the
+  // same browser (confirmed live 2026-08-13; see userContact.ts's header for
+  // the full writeup of the bug class).
+  const nameOverrideKey = user?.id ? `brain_profile_name_${user.id}` : null;
+  // The saved value is held together with the key it was read under, so a stale
+  // value can never be rendered against a different account's key.
+  const [saved, setSaved] = useState<{ key: string | null; value: string | null }>(() => ({
+    key: nameOverrideKey,
+    value: readNameOverride(nameOverrideKey),
+  }));
+  if (saved.key !== nameOverrideKey) {
+    // Auth transitions don't remount this section, so the initializer above only
+    // runs once. Re-point during render (React's supported "adjust state when a
+    // prop changes" pattern) rather than in an effect: an effect runs after paint,
+    // so the previous account's saved display name would be visible for a frame.
+    setSaved({ key: nameOverrideKey, value: readNameOverride(nameOverrideKey) });
+  }
+  const nameOverride = saved.key === nameOverrideKey ? saved.value : null;
   const name = nameOverride ?? liveName;
-  const setName = setNameOverride;
+  const setName = (next: string) => setSaved({ key: nameOverrideKey, value: next });
   const [editing, setEditing] = useState(false);
   const [contactModal, setContactModal] = useState<"email" | "phone" | null>(null);
   const [avatarSrc, setAvatarSrc] = useState<string>(acmeAvatar);
@@ -528,7 +538,9 @@ function ProfileSection() {
             onClick={() => {
               if (editing) {
                 alert.success("Profile saved", "Your display name has been updated.");
-                try { localStorage.setItem("brain_profile_name", name); } catch {}
+                if (nameOverrideKey) {
+                  try { localStorage.setItem(nameOverrideKey, name); } catch {}
+                }
               }
               setEditing(v => !v);
             }}

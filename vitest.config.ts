@@ -9,14 +9,20 @@ export default defineConfig({
     alias: {
       "@shared": path.resolve(import.meta.dirname, "shared"),
       "@": path.resolve(import.meta.dirname, "client", "src"),
+      "@assets": path.resolve(import.meta.dirname, "attached_assets"),
     },
   },
+  // The rendering tests import real page components (.tsx). Vitest compiles
+  // them with esbuild, which defaults to the classic `React.createElement`
+  // transform — the pages assume Vite's automatic JSX runtime instead.
+  esbuild: { jsx: "automatic" },
   test: {
     environment: "node",
     setupFiles: ["server/testEnv.ts"],
     include: [
       "server/**/*.test.ts",
       "client/src/**/*.test.ts",
+      "client/src/**/*.test.tsx",
     ],
     globals: false,
   },
