@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback, useLayoutEffect } from "react";
+import { createPortal } from "react-dom";
 import chevronDownIcon from "@/assets/chevron_down_dropdown.png";
 import { useLocation, useSearch } from "wouter";
 import { Search } from "lucide-react";
@@ -324,7 +325,15 @@ function InboxDropdown({
   width?: string;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const closeTimerRef = useRef<number | null>(null);
+  const [menuPosition, setMenuPosition] = useState<{
+    top: number;
+    left: number;
+    maxHeight: number;
+    measured: boolean;
+  } | null>(null);
   const allOption = options[0];
   const selected = options.filter((option) => values.includes(option.value));
   const triggerLabel =
@@ -333,6 +342,37 @@ function InboxDropdown({
       : selected.length === 1
         ? selected[0].label
         : `${selected.length} selected`;
+
+  /* The inbox sits inside several clipped/scrolling panels. A menu rendered
+     absolute inside that tree is painted inside those clip boxes, so the
+     bottom options disappear depending on the selected tab. Portal it to the
+     document and position it from the trigger instead. */
+  const placeMenu = useCallback(() => {
+    const button = buttonRef.current;
+    if (!button) return;
+
+    const trigger = button.getBoundingClientRect();
+    const menu = menuRef.current;
+    const menuHeight = menu?.scrollHeight ?? 0;
+    const menuWidth = menu?.offsetWidth ?? 208;
+    const measured = menu !== null;
+    const margin = 8;
+    const gap = 4;
+    const spaceBelow = Math.max(0, window.innerHeight - trigger.bottom - gap - margin);
+    const spaceAbove = Math.max(0, trigger.top - gap - margin);
+    const flip = measured && menuHeight > spaceBelow && spaceAbove > spaceBelow;
+    const availableSpace = flip ? spaceAbove : spaceBelow;
+    const maxHeight = Math.max(120, availableSpace);
+    const left = Math.max(
+      margin,
+      Math.min(trigger.left, window.innerWidth - menuWidth - margin),
+    );
+    const top = flip
+      ? Math.max(margin, trigger.top - gap - Math.min(menuHeight, maxHeight))
+      : trigger.bottom + gap;
+
+    setMenuPosition({ top, left, maxHeight, measured });
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -343,10 +383,34 @@ function InboxDropdown({
     };
   }, []);
 
+  useLayoutEffect(() => {
+    if (open && menuPosition && !menuPosition.measured) placeMenu();
+  }, [open, menuPosition, placeMenu]);
+
+  useEffect(() => {
+    if (!open) {
+      setMenuPosition(null);
+      return;
+    }
+
+    placeMenu();
+    const onScroll = () => placeMenu();
+    const onResize = () => placeMenu();
+    window.addEventListener("scroll", onScroll, true);
+    window.addEventListener("resize", onResize);
+    return () => {
+      window.removeEventListener("scroll", onScroll, true);
+      window.removeEventListener("resize", onResize);
+    };
+  }, [open, placeMenu]);
+
   useEffect(() => {
     if (!open) return;
     const onPointerDown = (event: PointerEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) onOpenChange(false);
+      const target = event.target as Node;
+      if (!rootRef.current?.contains(target) && !menuRef.current?.contains(target)) {
+        onOpenChange(false);
+      }
     };
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") onOpenChange(false);
@@ -384,6 +448,7 @@ function InboxDropdown({
       }}
     >
       <button
+        ref={buttonRef}
         type="button"
         aria-haspopup="true"
         aria-expanded={open}
@@ -398,12 +463,21 @@ function InboxDropdown({
         <img src={chevronDownIcon} alt="" aria-hidden="true" className="shrink-0 h-[7px] w-auto" />
       </button>
 
-      {open && (
+      {open && menuPosition && createPortal(
         <div
+          ref={menuRef}
           role="group"
           aria-label={label}
-          className="absolute left-0 top-[calc(100%+4px)] z-50 bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 border-solid flex flex-col items-start p-[8px] rounded-row w-[208px] shadow-[0px_68px_13.5px_rgba(0,0,0,0.06),0px_38px_11.5px_rgba(0,0,0,0.2),0px_17px_8.5px_rgba(0,0,0,0.34),0px_4px_4.5px_rgba(0,0,0,0.39)]"
+          onPointerEnter={cancelClose}
+          onPointerLeave={scheduleClose}
+          className="fixed z-[80] bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 border-solid flex flex-col items-start p-[8px] rounded-row w-[208px] overflow-y-auto shadow-[0px_68px_13.5px_rgba(0,0,0,0.06),0px_38px_11.5px_rgba(0,0,0,0.2),0px_17px_8.5px_rgba(0,0,0,0.34),0px_4px_4.5px_rgba(0,0,0,0.39)]"
           data-testid={`${testId}-menu`}
+          style={{
+            top: menuPosition.top,
+            left: menuPosition.left,
+            maxHeight: menuPosition.maxHeight,
+            visibility: menuPosition.measured ? "visible" : "hidden",
+          }}
         >
           {options.map((option) => {
             const isAll = option.value === "all";
@@ -435,7 +509,8 @@ function InboxDropdown({
               </label>
             );
           })}
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
@@ -1213,7 +1288,20 @@ export function InboxPage() {
         : inputRows,
     [filters.priority, inputRows],
   );
-  const availableTypes = useMemo(() => typeOptions(tabItems), [tabItems]);
+  /* "All Types" is a shared Inbox facet, not a facet of whichever resolution
+     tab happens to be selected. Building it from resolvedItems made the menu
+     lose every type that only had unresolved rows — and older settled audit
+     records may not carry a proposal type at all. Keep the option set stable
+     across the two tabs while still exposing only types present in this Inbox. */
+  const availableTypes = useMemo(() => typeOptions(items), [items]);
+  /* Dropdowns only help when the selected tab has records to narrow. Use the
+     unfiltered tab contents so a filter that matches nothing can still be
+     cleared through the dropdowns. Missing-evidence rows are part of the
+     Unresolved tab even though they live outside the unified item list. */
+  const activeTabHasRecords =
+    activeTab === "Unresolved"
+      ? unresolvedItems.length + inputRows.length > 0
+      : resolvedItems.length > 0;
   const filtering = hasActiveFilter(filters);
 
   /* ── Bulk approve ───────────────────────────────────────────────────────────
@@ -1654,21 +1742,23 @@ export function InboxPage() {
             you and changes nothing else. The original copy ("Search vendor,
             amount or description") predated the global bar and now reads as a
             second attempt at the same job. */}
-        <div className="flex h-[40px] items-center gap-[8px] p-[8px] rounded-[8px] bg-brain-v1baby-blue-15 w-full min-w-0">
-          <Search className="shrink-0 size-[20px] text-brain-v1baby-blue-60" strokeWidth={1.8} aria-hidden="true" />
-          <input
-            type="text"
-            value={filters.query}
-            onChange={(e) => setFilter("query", e.target.value)}
-            placeholder="Filter these decisions"
-            aria-label="Filter decisions by text"
-            data-testid="filter-search"
-            className="flex-1 min-w-0 h-[24px] bg-transparent outline-none [font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 placeholder:text-brain-v1baby-blue-60 text-[14px] leading-[20px]"
-          />
-        </div>
+        {activeTabHasRecords && (
+          <div className="flex h-[40px] items-center gap-[8px] p-[8px] rounded-[8px] bg-brain-v1baby-blue-15 w-full min-w-0">
+            <Search className="shrink-0 size-[20px] text-brain-v1baby-blue-60" strokeWidth={1.8} aria-hidden="true" />
+            <input
+              type="text"
+              value={filters.query}
+              onChange={(e) => setFilter("query", e.target.value)}
+              placeholder="Filter these decisions"
+              aria-label="Filter decisions by text"
+              data-testid="filter-search"
+              className="flex-1 min-w-0 h-[24px] bg-transparent outline-none [font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 placeholder:text-brain-v1baby-blue-60 text-[14px] leading-[20px]"
+            />
+          </div>
+        )}
 
           <div className="flex flex-row flex-wrap gap-[12px] items-center w-fit max-w-full">
-          {([
+          {activeTabHasRecords && ([
             {
               values: filters.recommendation,
               onChange: (v: string[]) => setFilter("recommendation", v as DecisionFilterState["recommendation"]),
@@ -1715,7 +1805,7 @@ export function InboxPage() {
               width={width}
             />
           ))}
-          {filtering && (
+          {activeTabHasRecords && filtering && (
             <button
               type="button"
               onClick={() => setFilters(EMPTY_FILTERS)}
@@ -1746,6 +1836,7 @@ export function InboxPage() {
           onChange={(v) => {
             setActiveTab(v as InboxTab);
             setFilters(EMPTY_FILTERS);
+            setOpenDropdown(null);
           }}
           label="Filter by resolution status"
           testIdPrefix="tab-inbox"
