@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { mapAuditEventToRecord, mergeRelatedAuditRecords, anchorFromInclusionProof, resolveDetailAnchor, localQuestionToRecord, applyTenantDbOnly, extractActorName, bffPathForActorLookup, truncateForCard, decidedProposalIdsFromEvents, CARD_TITLE_MAX, humanizeAuditAction, type BrainAuditEvent, type BrainAnchor, type BrainInclusionProof } from "./brainAudit";
+import { mapAuditEventToRecord, mergeRelatedAuditRecords, anchorFromInclusionProof, resolveDetailAnchor, localQuestionToRecord, applyTenantDbOnly, extractActorName, bffPathForActorLookup, truncateForCard, decidedProposalIdsFromEvents, CARD_TITLE_MAX, humanizeAuditAction, lifecycleStepsForDisplay, type BrainAuditEvent, type BrainAnchor, type BrainInclusionProof } from "./brainAudit";
 import type { AnchorProof } from "./auditTypes";
 
 /**
@@ -474,6 +474,34 @@ describe("mapAuditEventToRecord", () => {
 });
 
 describe("mergeRelatedAuditRecords", () => {
+  it("keeps recommendation creation completed while its decision is pending", () => {
+    const proposed = ev({
+      action: "agent.action.proposed",
+      inputs: { proposal_id: "prop_pending" },
+      outputs: { status: "pending", outcome: "confirm" },
+    });
+    const record = mapAuditEventToRecord(proposed, anchor());
+    expect(mergeRelatedAuditRecords([proposed], [record])[0].lifecycle[0].kind).toBe("ok");
+  });
+
+  it("adds an explicitly pending future execution stage to an unresolved recommendation", () => {
+    const proposed = ev({
+      action: "agent.action.proposed",
+      inputs: { proposal_id: "prop_pending" },
+      outputs: { status: "pending" },
+    });
+    const record = mapAuditEventToRecord(proposed, anchor());
+    const steps = lifecycleStepsForDisplay(record);
+    expect(steps.map((step) => step.label)).toEqual([
+      "Agent recommendation created",
+      "Agent action executed",
+    ]);
+    expect(steps[1]).toMatchObject({
+      kind: "pending",
+      timestamp: "Pending your decision",
+    });
+  });
+
   it("builds one chronological lifecycle from correlated proposal events", () => {
     const proposed = ev({
       id: "evt_proposed",

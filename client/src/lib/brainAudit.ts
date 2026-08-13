@@ -200,6 +200,37 @@ export function humanizeAuditAction(action: string): string {
     .replace(/\b\w/g, (character) => character.toUpperCase());
 }
 
+/** The lifecycle is an event history, not a mirror of the proposal's current
+ * status. A proposal can still be pending while its creation event is already
+ * complete. For an unresolved recommendation, the popup may show the next
+ * execution stage as an explicitly labelled, UI-only pending step. */
+export function lifecycleStepsForDisplay(
+  record: Pick<AuditRecord, "lifecycle" | "subtype">,
+): LifecycleStep[] {
+  const recommendationIsAwaitingDecision =
+    record.subtype === "agent.action.proposed" ||
+    record.subtype === "agent.action.refreshed";
+  const hasExecutionOutcome = record.lifecycle.some((step) =>
+    [
+      "Agent action executed",
+      "Agent action completed",
+      "Agent action failed",
+      "Agent action cancelled",
+    ].includes(step.label),
+  );
+
+  if (!recommendationIsAwaitingDecision || hasExecutionOutcome) return record.lifecycle;
+
+  return [
+    ...record.lifecycle,
+    {
+      label: "Agent action executed",
+      timestamp: "Pending your decision",
+      kind: "pending",
+    },
+  ];
+}
+
 /** Card-friendly single-line truncation for titles sourced from free text
  *  (currently the wiki.question question). Exported for tests. */
 export const CARD_TITLE_MAX = 72;
@@ -361,6 +392,12 @@ export function auditEventCorrelationKey(event: BrainAuditEvent): string | undef
 
 function isPendingLifecycleEvent(event: BrainAuditEvent): boolean {
   if (event.action === "proposal.awaiting_second_approval") return true;
+  /* `agent.action.proposed` and `.refreshed` are completed audit events even
+     when their payload says the proposal is still pending. That status belongs
+     to the decision, not to the recording of the recommendation itself. */
+  if (event.action === "agent.action.proposed" || event.action === "agent.action.refreshed") {
+    return false;
+  }
   const values = [event.inputs?.status, event.outputs?.status, event.inputs?.outcome, event.outputs?.outcome];
   return values.some((value) =>
     typeof value === "string" && /^(pending|queued|awaiting|in_progress|not_sent)$/i.test(value),

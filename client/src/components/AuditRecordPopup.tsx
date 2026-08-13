@@ -23,7 +23,7 @@ import { openProposalDetail, resolveProposal } from "@/lib/openProposalDetail";
 import type { DocumentRecord } from "@/lib/documentTypes";
 import { RecordPager } from "./RecordPager";
 import { matchCannedPrompt } from "@shared/cannedPrompts";
-import { anchorFromInclusionProof, resolveDetailAnchor, type BrainAuditEventDetail } from "@/lib/brainAudit";
+import { anchorFromInclusionProof, lifecycleStepsForDisplay, resolveDetailAnchor, type BrainAuditEventDetail } from "@/lib/brainAudit";
 import { capitalCase } from "@/lib/displayLabels";
 import { Button } from "@/components/ui/button";
 import { useBrainProposals, agentKeyForProposalType, type BrainProposal } from "@/lib/brainProposals";
@@ -112,6 +112,7 @@ export function AuditRecordPopup({
         )
       : undefined;
   const anchor = resolveDetailAnchor(record.anchor, proofAnchor);
+  const lifecycle = lifecycleStepsForDisplay(record);
 
   const isFlagged = record.eventType === "flagged" && !isAssistantActivity(record);
 
@@ -254,15 +255,15 @@ export function AuditRecordPopup({
             <div className="flex flex-col gap-[32px] items-start p-[24px] w-full overflow-y-auto">
 
               {/* Decision Lifecycle */}
-              {record.lifecycle.length > 0 && (
+              {lifecycle.length > 0 && (
                 <div className="relative shrink-0 w-full">
                   <div className="bg-clip-padding border-0 border-[transparent] border-solid content-stretch flex flex-col gap-[16px] items-start relative size-full">
                     <SectionHeader>Decision Lifecycle</SectionHeader>
                     <div className="bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 border-solid content-stretch flex flex-col items-start relative rounded-row shrink-0 w-full">
                       <div className="content-stretch flex items-start p-[16px] relative shrink-0 w-full">
                         <div className="content-stretch flex flex-[1_0_0] flex-col items-start min-w-px relative">
-                          {record.lifecycle.map((step, idx) => {
-                            const isLast = idx === record.lifecycle.length - 1;
+                          {lifecycle.map((step, idx) => {
+                            const isLast = idx === lifecycle.length - 1;
                             const isAlert = step.kind === "alert";
                             const isPending = step.kind === "pending";
                             const actorRole = resolveActorRole(step.actor);
