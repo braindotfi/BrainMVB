@@ -69,12 +69,22 @@ figures — until each stale timer fired.
 **Fix (2026-08-04):** `loginDemoFresh` now calls `queryClient.clear()` and
 `clearMembers()` before `setUser(u)`, matching the pattern used by `logout`.
 
-**Why the email leaked separately:** `userContact.ts` stores an `emailOverride`
-module-level variable (set by the Edit Email flow). This was not in
-`applyUserScopedResets`, so `d@damonnam.com` persisted even after `setUser(demoUser)`
-was called. Fix: `resetUserContact()` exported from `userContact.ts` and added to
-`applyUserScopedResets`. Note: resets in-memory override only; localStorage values
-are NOT wiped so the real user's edits survive their next login.
+**Why the email leaked separately:** `userContact.ts` holds the profile
+email/phone override (set by the Edit Email flow) at module level. It was not in
+`applyUserScopedResets`, so a real user's saved address persisted even after
+`setUser(demoUser)`. The first fix cleared the in-memory value from the funnel
+but left the localStorage value under one unscoped key — which only moved the
+leak: **real user A → real user B** on the same browser still showed A's saved
+contact info and display name, because the funnel reloaded that one shared key
+for any non-demo user (confirmed live 2026-08-13). Superseded by per-user key
+scoping — see "Persisted stores: key by user, do NOT clear in the funnel" below,
+which is the general rule this case proves twice.
+
+**The trap in the intermediate fix:** it looked correct because it had an
+`isDemo` branch, and a demo → real transition genuinely is fixed by clearing.
+Any reset whose correctness depends on *classifying* the incoming user is a
+signal the state should be keyed by that user instead. The tell is a boolean
+parameter on a reset function.
 
 **Server-side:** `POST /api/auth/demo-fresh` now calls `req.session.regenerate()`
 when there is an existing authenticated session, issuing a new cookie. Without this,
@@ -117,8 +127,22 @@ exactly like a broken save and is easy to misdiagnose as a storage bug.
 **re-point a per-user key** (`<prefix>_{userId}`) from the funnel instead. Both
 keep data from crossing accounts, but only the second survives a reload.
 
-Two details for a `useSyncExternalStore` store built this way:
+Three details for a `useSyncExternalStore` store built this way:
 - Cache the parsed snapshot. Parsing storage inside `getSnapshot` returns a new
   object identity every render and spins forever.
 - Reads before the scope is set (no user yet) must return a **stable** empty
   value, and writes must no-op rather than write to an unscoped key.
+- Return the cached object as the snapshot; do **not** serialize the fields into
+  a delimited string to get a cheap identity. Any field that is free text can
+  contain the delimiter, so distinct values collide (`("a|b", null)` and
+  `("a", "b|")` both give `a|b|`) and React skips the re-render. That failure is
+  invisible in a consumer that also reads `useAuth` — it re-renders for its own
+  reasons — and only shows up in the one that doesn't, which is precisely where
+  a scope change needs to land.
+
+**A leaked value has as many homes as it has editors.** Scoping the store is not
+the whole fix if a page duplicates the same "locally-saved override" logic
+inline against the same key. Grep the key string, not the module, and fix every
+site in one change. Also: a component that reads the key into `useState` needs
+its value re-pointed **during render**, not in a `useEffect` — an effect runs
+after paint, so the previous account's value is briefly visible.
