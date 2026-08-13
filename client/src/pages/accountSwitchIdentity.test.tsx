@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 /**
- * Rendering tests for the two surfaces the 2026-08-13 wrong-account-identity
- * bug was actually reported from: the Settings > Profile card and the
+     * Rendering tests for the two surfaces the 2026-08-13 wrong-account-identity
+     * bug was actually reported from: the Settings > Profile Identity card and the
  * HomePage greeting. Both read the saved display-name override from
  * localStorage inline, so the store-level suite (userContact.test.ts) cannot
  * see a regression here — that gap is exactly how the first fix attempt
@@ -157,16 +157,16 @@ afterEach(() => {
   applyUserScopedResets(null);
 });
 
-describe("Settings > Profile card across an A → B account switch (same mounted section)", () => {
+describe("Settings > Profile Identity card across an A → B account switch (same mounted section)", () => {
   it("B never sees A's saved display name — not even for one frame", () => {
     mount(<ProfileSection />);
     flushPassiveEffects();
 
-    // A saves a display-name override through the real Edit → Save flow, so
+    // A saves a display-name override through the real Name-row Edit → Save flow, so
     // this test is bound to whatever key ProfileSection actually writes.
-    clickButton(byTestId("button-edit-profile")!);
+    clickButton(byTestId("button-edit-name")!);
     setInputValue(byTestId("input-display-name") as HTMLInputElement, A_SAVED_NAME);
-    clickButton(byTestId("button-edit-profile")!); // Save
+    clickButton(byTestId("button-edit-name")!); // Save
     expect(byTestId("text-profile-name")!.textContent).toBe(A_SAVED_NAME);
     // ...and it actually persisted under A's scoped key.
     expect(localStorage.getItem(`brain_profile_name_${USER_A.id}`)).toBe(A_SAVED_NAME);

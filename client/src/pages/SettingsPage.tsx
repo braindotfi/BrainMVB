@@ -483,7 +483,7 @@ export function ProfileSection() {
                   className="w-full bg-transparent outline-none border-b border-brain-v1purple text-brain-v1white"
                 />
               ) : (
-                name || "Not set"
+                <span data-testid="text-profile-name">{name || "Not set"}</span>
               )
             }
             right={
