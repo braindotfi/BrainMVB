@@ -5,7 +5,7 @@ import { setDemoDataEnabled } from "./demoMode";
 import { resetAcknowledgedStore } from "./acknowledgedStore";
 import { setBackupApproverScope } from "./backupApprover";
 import { markOnboardingComplete } from "./onboarding";
-import { resetUserContact } from "./userContact";
+import { setUserContactScope } from "./userContact";
 
 export interface AuthUser {
   id: string;
@@ -54,11 +54,15 @@ export function applyUserScopedResets(u: AuthUser | null): void {
      funnel also runs on session bootstrap, where clearing would wipe the marks on
      every page load. */
   setBackupApproverScope(u?.id ?? null);
-  /* Clear the in-memory email/phone overrides so contact info from a previous
-     real-user session cannot bleed into a subsequent demo session (or vice versa).
-     Pass isDemo so resetUserContact knows whether to permit a localStorage reload:
-     demo sessions must not rehydrate from the prior real user's stored values. */
-  resetUserContact(!!u?.isDemo);
+  /* Re-point the saved-contact-override store at this account (by user id,
+     the same key-scoping pattern as setBackupApproverScope above). Previously
+     this cleared-and-conditionally-reloaded a single UNSCOPED localStorage
+     key shared by every account that ever logged in on this browser: real
+     user A saves a custom email, real user B then registers a fresh account
+     on the same browser and sees A's saved email/name instead of their own —
+     confirmed live (2026-08-13), fixed by scoping the key to userId instead
+     of trying to clear it at the right moments. */
+  setUserContactScope(u?.id ?? null);
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {

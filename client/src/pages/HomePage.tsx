@@ -417,9 +417,15 @@ export function HomePage() {
     queryKey: ["/api/brain/tenancy"],
   });
   // A locally-saved override from the Settings > Profile "Edit" field always wins, matching
-  // client/src/pages/SettingsPage.tsx's ProfileSection.
+  // client/src/pages/SettingsPage.tsx's ProfileSection. Scoped by userId
+  // (`brain_profile_name_{userId}`), same key SettingsPage now writes — NOT the
+  // old unscoped `brain_profile_name` key, which one account's saved name leaked
+  // through into every OTHER account's greeting on the same browser (confirmed
+  // live 2026-08-13; see client/src/lib/userContact.ts's header for the full
+  // writeup of the bug class this belongs to).
   const nameOverride = (() => {
-    try { return localStorage.getItem("brain_profile_name"); } catch { return null; }
+    if (!user?.id) return null;
+    try { return localStorage.getItem(`brain_profile_name_${user.id}`); } catch { return null; }
   })();
   const greetingName = nameOverride || tenancy?.companyName || user?.name || "";
 

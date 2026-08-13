@@ -374,26 +374,30 @@ function ProfileSection() {
   const { user } = useAuth();
   const navigate = useLocation()[1];
   const { email, phone } = useUserContact(user?.email);
-  // Real company name from the tenancy link, falling back to the user's own display name.
-  // A locally-saved override (from the "Edit" button below) always wins once set.
   const { data: tenancy } = useQuery<{ mode: string; linked: boolean; tenantId?: string; companyName?: string }>({
     queryKey: ["/api/brain/tenancy"],
   });
   const liveName = tenancy?.companyName || user?.name || "";
+  // Scoped by userId (`brain_profile_name_{userId}`), same pattern as
+  // userContact.ts and backupApprover.ts — NOT the single unscoped
+  // `brain_profile_name` key this used before, which one real account's
+  // saved override leaked into every OTHER account ever logged into on the
+  // same browser (confirmed live 2026-08-13; see userContact.ts's header for
+  // the full writeup of the bug class).
+  const nameOverrideKey = user?.id ? `brain_profile_name_${user.id}` : null;
   const [nameOverride, setNameOverride] = useState<string | null>(() => {
-    // Demo users must never inherit a prior real user's saved display name.
-    if (user?.isDemo) return null;
-    try { return localStorage.getItem("brain_profile_name"); } catch { return null; }
+    if (!nameOverrideKey) return null;
+    try { return localStorage.getItem(nameOverrideKey); } catch { return null; }
   });
   // Re-sync nameOverride when the user identity changes (auth transitions don't
   // remount this component, so useState initializer above only runs on first mount).
   useEffect(() => {
-    if (user?.isDemo) {
+    if (!nameOverrideKey) {
       setNameOverride(null);
-    } else if (user?.id) {
-      try { setNameOverride(localStorage.getItem("brain_profile_name")); } catch { setNameOverride(null); }
+      return;
     }
-  }, [user?.id, user?.isDemo]);
+    try { setNameOverride(localStorage.getItem(nameOverrideKey)); } catch { setNameOverride(null); }
+  }, [nameOverrideKey]);
   const name = nameOverride ?? liveName;
   const setName = setNameOverride;
   const [editing, setEditing] = useState(false);
@@ -528,7 +532,9 @@ function ProfileSection() {
             onClick={() => {
               if (editing) {
                 alert.success("Profile saved", "Your display name has been updated.");
-                try { localStorage.setItem("brain_profile_name", name); } catch {}
+                if (nameOverrideKey) {
+                  try { localStorage.setItem(nameOverrideKey, name); } catch {}
+                }
               }
               setEditing(v => !v);
             }}

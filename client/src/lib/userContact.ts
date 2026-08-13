@@ -1,90 +1,184 @@
+/**
+ * Locally-saved profile contact overrides (email/phone) — a UI-only field,
+ * same category as backupApprover.ts's marks: brain-core's member model has
+ * no editable contact-email/phone concept independent of the account's login
+ * email, so a Settings "Edit Email"/"Edit Phone" save is held here, in the
+ * browser, not sent to core.
+ *
+ * Scoped by KEY (`brain_profile_email_{userId}` / `brain_profile_phone_{userId}`),
+ * not cleared-and-reloaded on every auth transition — same rationale as
+ * backupApprover.ts: the reset funnel (applyUserScopedResets) also runs on
+ * session bootstrap (page load), and clearing there would silently drop a
+ * real saved override on every refresh while looking like it saved.
+ *
+ * This replaces a prior design that stored both fields under a single
+ * unscoped `brain_profile_email` / `brain_profile_phone` key shared by every
+ * account that ever logged in on that browser: real user A saves a custom
+ * email, then real user B registers a brand-new account on the same browser
+ * and sees user A's saved email instead of their own, forever, until B also
+ * happens to save one. Key-scoping fixes this the same way it already fixed
+ * the identical class of bug for backup-approver marks — a demo account's
+ * freshly-minted id never collides with a real user's saved key, so demo
+ * sessions naturally never inherit real contact info either, with no
+ * separate isDemo flag needed here (unlike the old design).
+ */
+
 import { useSyncExternalStore } from "react";
 
-// ponytail: no phone field on the users table and no SMS provider wired up —
-// the app has no real phone number to show or edit, so this is a fixed
-// "Not set" rather than an editable value. Add when a real phone field +
-// verification flow exists.
 const PHONE_NOT_SET = "Not set";
 const EMAIL_NOT_SET = "Not set";
+const EMAIL_KEY_PREFIX = "brain_profile_email_";
+const PHONE_KEY_PREFIX = "brain_profile_phone_";
 
-let emailOverride: string | null = null;
-let phoneOverride: string | null = null;
-const listeners = new Set<() => void>();
-
-function emit() {
-  listeners.forEach(l => l());
+// Pre-scoping keys. Never read again under the new design — removed on every
+// scope change purely so they don't linger in a real user's browser storage
+// looking like they mean something. No data migration needed: an affected
+// account simply falls back to its own real email/phone/name on next load,
+// which is the correct value anyway. `brain_profile_name` belongs to
+// SettingsPage.tsx (a separate, now-also-fixed override), cleaned up here too
+// since this is the one shared entry point already wired into every auth
+// transition via applyUserScopedResets. removeItem() is idempotent (a no-op
+// once the key is gone), so this runs on every call rather than gating with
+// a "ran once" flag — simpler, and avoids the flag surviving in memory for
+// the rest of a long-lived tab in a way that's awkward to reason about or
+// test.
+const LEGACY_EMAIL_KEY = "brain_profile_email";
+const LEGACY_PHONE_KEY = "brain_profile_phone";
+const LEGACY_NAME_KEY = "brain_profile_name";
+function clearLegacyKeys(): void {
+  try {
+    localStorage.removeItem(LEGACY_EMAIL_KEY);
+    localStorage.removeItem(LEGACY_PHONE_KEY);
+    localStorage.removeItem(LEGACY_NAME_KEY);
+  } catch {
+    /* storage unavailable — nothing to clean up */
+  }
 }
 
-export function setUserEmail(next: string) {
-  emailOverride = next;
-  try { localStorage.setItem("brain_profile_email", next); } catch {}
-  emit();
+type Listener = () => void;
+const listeners = new Set<Listener>();
+
+let scopeUserId: string | null = null;
+
+/* useSyncExternalStore compares snapshots by identity, so re-reading storage
+   on every call would hand React a fresh object each render. Cached and
+   dropped only when something actually changes — same pattern as
+   backupApprover.ts's `cached`. */
+let cached: { email: string | null; phone: string | null } | null = null;
+
+function emailKey(): string | null {
+  return scopeUserId ? `${EMAIL_KEY_PREFIX}${scopeUserId}` : null;
 }
 
-export function setUserPhone(next: string) {
-  phoneOverride = next;
-  try { localStorage.setItem("brain_profile_phone", next); } catch {}
-  emit();
+function phoneKey(): string | null {
+  return scopeUserId ? `${PHONE_KEY_PREFIX}${scopeUserId}` : null;
 }
 
-function subscribe(cb: () => void) {
-  listeners.add(cb);
-  return () => listeners.delete(cb);
+function notify(): void {
+  cached = null;
+  listeners.forEach((l) => l());
 }
 
-function getSnapshot() {
-  return `${emailOverride ?? ""}|${phoneOverride ?? ""}`;
+function read(): { email: string | null; phone: string | null } {
+  if (cached) return cached;
+  const ek = emailKey();
+  const pk = phoneKey();
+  let email: string | null = null;
+  let phone: string | null = null;
+  if (ek) {
+    try {
+      email = localStorage.getItem(ek);
+    } catch {
+      /* storage unavailable — no saved override for this session */
+    }
+  }
+  if (pk) {
+    try {
+      phone = localStorage.getItem(pk);
+    } catch {
+      /* storage unavailable */
+    }
+  }
+  cached = { email, phone };
+  return cached;
 }
-
-let hydrated = false;
 
 /**
- * Clear the in-memory email and phone overrides on every auth transition.
- * Called from applyUserScopedResets (authContext.tsx).
- *
- * `isDemo` controls localStorage rehydration:
- *   true  → set hydrated=true so the next render does NOT reload from localStorage.
- *           A real user's brain_profile_email / brain_profile_phone must not bleed
- *           into a demo session, even if the reset already cleared the in-memory value.
- *   false → set hydrated=false so the next render DOES reload from localStorage.
- *           A real user logging in (or back in) should recover their own saved contact
- *           info from a prior session.
+ * Point the store at the signed-in account. Called from
+ * `applyUserScopedResets` (authContext.tsx) on every user change — logout,
+ * login, register, demo-fresh, and session bootstrap.
  */
-export function resetUserContact(isDemo = false) {
-  emailOverride = null;
-  phoneOverride = null;
-  hydrated = isDemo; // skip localStorage reload for demo; allow it for real users
-  emit();
+export function setUserContactScope(userId: string | null): void {
+  clearLegacyKeys();
+  if (scopeUserId === userId) return;
+  scopeUserId = userId;
+  notify();
+}
+
+export function setUserEmail(next: string): void {
+  const key = emailKey();
+  if (!key) return;
+  cached = { email: next, phone: read().phone };
+  try {
+    localStorage.setItem(key, next);
+  } catch {
+    /* storage unavailable — the in-memory value still stands for this session */
+  }
+  listeners.forEach((l) => l());
+}
+
+export function setUserPhone(next: string): void {
+  const key = phoneKey();
+  if (!key) return;
+  cached = { email: read().email, phone: next };
+  try {
+    localStorage.setItem(key, next);
+  } catch {
+    /* storage unavailable */
+  }
+  listeners.forEach((l) => l());
+}
+
+function subscribe(listener: Listener): () => void {
+  listeners.add(listener);
+  const onStorage = (e: StorageEvent) => {
+    if (e.key === emailKey() || e.key === phoneKey()) {
+      cached = null;
+      listener();
+    }
+  };
+  window.addEventListener("storage", onStorage);
+  return () => {
+    listeners.delete(listener);
+    window.removeEventListener("storage", onStorage);
+  };
+}
+
+function getSnapshot(): string {
+  const { email, phone } = read();
+  return `${email ?? ""}|${phone ?? ""}`;
+}
+
+/** Plain-function snapshot, same split as acknowledgedStore.ts's
+ *  acknowledgedRecordsSnapshot()/useAcknowledgedRecords() — lets tests (and any
+ *  non-React caller) read the current value without needing
+ *  @testing-library/react, which this repo doesn't have. */
+export function userContactSnapshot(): { email: string | null; phone: string | null } {
+  return read();
 }
 
 /**
  * Returns the display email and phone for the current user.
  *
  * `userEmail` is the raw email from the auth context (user?.email). Callers
- * must supply it — this hook no longer imports useAuth itself, which would
- * create a circular dependency (authContext → userContact → authContext).
+ * must supply it, used as the fallback when no saved override exists for
+ * this account.
  */
 export function useUserContact(userEmail?: string | null) {
-  // One-time global rehydration from localStorage (skipped for demo users —
-  // see resetUserContact(isDemo=true) which sets hydrated=true to prevent this).
-  if (!hydrated) {
-    hydrated = true;
-    try {
-      const storedEmail = localStorage.getItem("brain_profile_email");
-      if (storedEmail && storedEmail !== (emailOverride ?? "")) {
-        emailOverride = storedEmail;
-      }
-    } catch {}
-    try {
-      const storedPhone = localStorage.getItem("brain_profile_phone");
-      if (storedPhone && storedPhone !== (phoneOverride ?? "")) {
-        phoneOverride = storedPhone;
-      }
-    } catch {}
-  }
   useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+  const { email, phone } = read();
   return {
-    email: emailOverride ?? userEmail ?? EMAIL_NOT_SET,
-    phone: phoneOverride ?? PHONE_NOT_SET,
+    email: email ?? userEmail ?? EMAIL_NOT_SET,
+    phone: phone ?? PHONE_NOT_SET,
   };
 }
