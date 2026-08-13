@@ -82,12 +82,11 @@ const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 export const googleEnabled = !!(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET);
 
-function googleCallbackUrl(req: Request): string {
-  const configuredDomain = process.env.REPLIT_DOMAINS?.split(",")[0]?.trim();
-  const host = configuredDomain || req.get("host");
-  const proto = configuredDomain ? "https" : req.protocol;
-  return `${proto}://${host}/api/auth/google/callback`;
-}
+// OAuth callbacks must use the app's canonical public domain, not the
+// Replit proxy hostname exposed through REPLIT_DOMAINS or the incoming Host
+// header. The same value is used for both the authorization request and the
+// code exchange below.
+const GOOGLE_CALLBACK_URL = "https://app.brain.fi/api/auth/google/callback";
 
 const registerSchema = z.object({
   email: z.string().email(),
@@ -292,7 +291,7 @@ export function setupAuth(app: Express) {
     req.session.googleState = state;
     const params = new URLSearchParams({
       client_id: GOOGLE_CLIENT_ID!,
-      redirect_uri: googleCallbackUrl(req),
+      redirect_uri: GOOGLE_CALLBACK_URL,
       response_type: "code",
       scope: "openid email profile",
       access_type: "offline",
@@ -320,7 +319,7 @@ export function setupAuth(app: Express) {
           code,
           client_id: GOOGLE_CLIENT_ID!,
           client_secret: GOOGLE_CLIENT_SECRET!,
-          redirect_uri: googleCallbackUrl(req),
+          redirect_uri: GOOGLE_CALLBACK_URL,
           grant_type: "authorization_code",
         }),
       });
