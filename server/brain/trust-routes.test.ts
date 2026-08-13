@@ -31,6 +31,7 @@ interface RecordedCall {
   method: string;
   auth?: string;
   provisionAuth?: string;
+  requestId?: string;
 }
 
 const realFetch = globalThis.fetch;
@@ -91,6 +92,7 @@ function installFetchMock(): void {
       method: (init.method ?? "GET").toUpperCase(),
       auth: headers.Authorization ?? headers.authorization,
       provisionAuth: headers["X-Demo-Provision-Auth"],
+      requestId: headers["X-Request-Id"] ?? headers["x-request-id"],
     });
     return routeBrainCore(url, (init.method ?? "GET").toUpperCase());
   }) as typeof fetch;
@@ -178,6 +180,22 @@ describe("counterparty trust BFF route contract", () => {
     },
   );
 
+  it.each(routes)(
+    "forwards a well-formed X-Request-Id on the outbound trust call for POST %s",
+    async (action, upstreamSuffix) => {
+      await post(`/api/brain/ledger/counterparties/cp_contract/trust/${action}`);
+
+      // The trust action call must carry a stable, well-formed BFF request ID.
+      // (Provision calls go through brain/auth.ts directly and are excluded —
+      // they are session-management machinery, not per-request brain-core calls.)
+      const trustCalls = callsEndingWith(
+        `/ledger/counterparties/cp_contract${upstreamSuffix}`,
+      );
+      expect(trustCalls).toHaveLength(1);
+      expect(trustCalls[0].requestId).toMatch(/^req_[0-9a-f-]{36}$/);
+    },
+  );
+
   it("relays an upstream 401 and its missing/expired-token body", async () => {
     upstreamTrustStatus = 401;
     upstreamTrustBody = {
@@ -200,6 +218,43 @@ describe("counterparty trust BFF route contract", () => {
     expect(upstreamCalls).toHaveLength(1);
     expect(upstreamCalls[0].auth).toBe(`Bearer ${MEMBER_TOKEN}`);
     expect(upstreamCalls[0].provisionAuth).toBeUndefined();
+  });
+
+  it("logs both bff_request_id and brain_request_id when brain-core returns an error", async () => {
+    const CORE_REQUEST_ID = "req_brain_core_abc123";
+    upstreamTrustStatus = 401;
+    upstreamTrustBody = {
+      error: {
+        code: "auth_token_expired",
+        message: "token expired",
+        request_id: CORE_REQUEST_ID,
+      },
+    };
+
+    const errorLines: string[] = [];
+    const originalError = console.error;
+    console.error = (...args: unknown[]) => {
+      errorLines.push(args.map(String).join(" "));
+    };
+    try {
+      await post("/api/brain/ledger/counterparties/cp_contract/trust/grant");
+    } finally {
+      console.error = originalError;
+    }
+
+    // Must have logged exactly one [brain-proxy] error line.
+    const proxyLines = errorLines.filter((l) => l.includes("[brain-proxy] upstream error:"));
+    expect(proxyLines).toHaveLength(1);
+    const line = proxyLines[0];
+
+    // The BFF request ID must be a well-formed req_ UUID.
+    expect(line).toMatch(/bff_request_id=req_[0-9a-f-]{36}/);
+
+    // The brain-core request_id must be relayed verbatim from the error body.
+    expect(line).toContain(`brain_request_id=${CORE_REQUEST_ID}`);
+
+    // Status and path must also appear.
+    expect(line).toContain("status=401");
   });
 
   it("relays an upstream 409 ledger_status_invalid body", async () => {

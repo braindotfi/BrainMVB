@@ -8,6 +8,7 @@ import { verifyMessage } from "viem";
 import { createBrainProxyRouter } from "./brain/proxy";
 import { getBrainSession, getBrainSessionProvisionedAt, getBrainSessionExpiresAt } from "./brain/auth";
 import { withBrainBaseUrl, withKeyAuthedBrainCall } from "./brain/baseUrl";
+import { bffRequestIdMiddleware, currentBffRequestId } from "./brain/requestId";
 import { brainTenancyMode } from "./brain/config";
 import {
   listLedgerAccounts,
@@ -971,7 +972,7 @@ When you mention a money amount, always reproduce it exactly as the grounding da
     return dataWords.test(q);
   }
 
-  app.post("/api/assistant/chat", requireAuth, async (req, res) => {
+  app.post("/api/assistant/chat", requireAuth, bffRequestIdMiddleware, async (req, res) => {
     const parsed = assistantChatSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json({ error: "invalid_messages" });
@@ -1642,6 +1643,7 @@ When you mention a money amount, always reproduce it exactly as the grounding da
   app.post(
     "/api/integrations/documents/ingest",
     requireAuth,
+    bffRequestIdMiddleware,
     express.raw({ type: "application/octet-stream", limit: "52mb" }),
     async (req, res) => {
       const q = z
@@ -1742,11 +1744,12 @@ When you mention a money amount, always reproduce it exactly as the grounding da
           }
         }
 
-        /* Always log ingest failures server-side, including the brain-core
-           request_id when present, so failures are traceable without a live
-           client-side capture. */
+        /* Always log ingest failures server-side, including both the BFF
+           request ID and brain-core's own request_id when present, so a
+           grep on either ID can correlate the two sides of the failure. */
         console.error(
           `[document-ingest] brain-core /raw/ingest failed:`,
+          `bff_request_id=${currentBffRequestId()}`,
           `status=${err instanceof BrainApiError ? err.status : "network"}`,
           brainRequestId ? `brain_request_id=${brainRequestId}` : "(no brain_request_id)",
           `filename=${filename}`,
