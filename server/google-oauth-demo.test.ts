@@ -67,7 +67,11 @@ function mockGoogle(profile: {
 async function runCallback(): Promise<{ location: string; cookie: string }> {
   const begin = await realFetch(`${baseUrl}/api/auth/google`, { redirect: "manual" });
   const cookie = (begin.headers.get("set-cookie") ?? "").split(";")[0];
-  const state = new URL(begin.headers.get("location") ?? "").searchParams.get("state");
+  const authorizationUrl = new URL(begin.headers.get("location") ?? "");
+  expect(authorizationUrl.searchParams.get("redirect_uri")).toBe(
+    "https://app.brain.fi/api/auth/google/callback",
+  );
+  const state = authorizationUrl.searchParams.get("state");
   expect(state).toBeTruthy();
 
   const cb = await realFetch(
