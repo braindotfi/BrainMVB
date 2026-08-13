@@ -10,7 +10,6 @@ import { usePlanId, setPlanId } from "@/lib/planStore";
 import { useUserContact, setUserEmail, setUserPhone } from "@/lib/userContact";
 import { useCurrency } from "@/lib/useCurrency";
 import { ICONS } from "@/assets/figma-icons";
-import acmeAvatar from "@assets/images_1777396125844.png";
 import approvalLimitIcon from "@assets/Limit_1786452580813.png";
 import replayIcon from "@assets/Replay_1786452583279.png";
 import { NAV_ACTIVE } from "@/assets/nav-active-icons";
@@ -240,7 +239,7 @@ const SettingRow = ({
 }: {
   icon: React.ReactNode;
   label: string;
-  sublabel?: string;
+  sublabel?: React.ReactNode;
   right?: React.ReactNode;
   danger?: boolean;
   onClick?: () => void;
@@ -390,11 +389,16 @@ export function ProfileSection() {
   // same browser (confirmed live 2026-08-13; see userContact.ts's header for
   // the full writeup of the bug class).
   const nameOverrideKey = user?.id ? `brain_profile_name_${user.id}` : null;
+  const usernameOverrideKey = user?.id ? `brain_profile_username_${user.id}` : null;
   // The saved value is held together with the key it was read under, so a stale
   // value can never be rendered against a different account's key.
   const [saved, setSaved] = useState<{ key: string | null; value: string | null }>(() => ({
     key: nameOverrideKey,
     value: readNameOverride(nameOverrideKey),
+  }));
+  const [savedUsername, setSavedUsername] = useState<{ key: string | null; value: string | null }>(() => ({
+    key: usernameOverrideKey,
+    value: readNameOverride(usernameOverrideKey),
   }));
   if (saved.key !== nameOverrideKey) {
     // Auth transitions don't remount this section, so the initializer above only
@@ -403,36 +407,30 @@ export function ProfileSection() {
     // so the previous account's saved display name would be visible for a frame.
     setSaved({ key: nameOverrideKey, value: readNameOverride(nameOverrideKey) });
   }
+  if (savedUsername.key !== usernameOverrideKey) {
+    setSavedUsername({ key: usernameOverrideKey, value: readNameOverride(usernameOverrideKey) });
+  }
   const nameOverride = saved.key === nameOverrideKey ? saved.value : null;
   const name = nameOverride ?? liveName;
   const setName = (next: string) => setSaved({ key: nameOverrideKey, value: next });
-  const [editing, setEditing] = useState(false);
+  const usernameOverride = savedUsername.key === usernameOverrideKey ? savedUsername.value : null;
+  const username = usernameOverride ?? user?.username ?? "";
+  const setUsername = (next: string) => setSavedUsername({ key: usernameOverrideKey, value: next });
+  const [editingField, setEditingField] = useState<"name" | "username" | null>(null);
   const [contactModal, setContactModal] = useState<"email" | "phone" | null>(null);
-  const [avatarSrc, setAvatarSrc] = useState<string>(acmeAvatar);
-  const avatarFileRef = useRef<HTMLInputElement | null>(null);
-
-  const handleAvatarPick = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      alert.error("Unsupported file", "Please choose an image file (PNG, JPG, GIF, or WebP).");
-      e.target.value = "";
-      return;
+  const saveName = () => {
+    if (nameOverrideKey) {
+      try { localStorage.setItem(nameOverrideKey, name); } catch {}
     }
-    if (file.size > 5 * 1024 * 1024) {
-      alert.error("Image too large", "Please choose an image smaller than 5MB.");
-      e.target.value = "";
-      return;
+    setEditingField(null);
+    alert.success("Profile saved", "Your display name has been updated.");
+  };
+  const saveUsername = () => {
+    if (usernameOverrideKey) {
+      try { localStorage.setItem(usernameOverrideKey, username); } catch {}
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        setAvatarSrc(reader.result);
-        alert.success("Profile photo updated", "Your new profile photo is now in use.");
-      }
-    };
-    reader.readAsDataURL(file);
-    e.target.value = "";
+    setEditingField(null);
+    alert.success("Profile saved", "Your username has been updated.");
   };
 
   const { currency, setCurrency } = useCurrency();
@@ -465,109 +463,68 @@ export function ProfileSection() {
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Profile header card, borderless per Figma */}
-      <WidgetPanel noBorder>
-        <div className="flex items-center gap-4 p-4">
-          <button
-            type="button"
-            data-testid="button-avatar"
-            onClick={() => avatarFileRef.current?.click()}
-            aria-label="Change profile photo"
-            className="relative size-[64px] rounded-full flex-shrink-0 group focus:outline-none focus:ring-2 focus:ring-brain-v1purple hover-elevate"
-          >
-            <img
-              data-testid="img-avatar"
-              src={avatarSrc}
-              alt={name}
-              className="size-[64px] rounded-full object-cover"
-            />
-            <span
-              className="absolute inset-0 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity"
-              style={{ background: "rgba(10,12,16,0.55)" }}
-              aria-hidden="true"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M4 7h3l2-2h6l2 2h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1Z"
-                  stroke="#a8b9f4" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"
-                />
-                <circle cx="12" cy="13" r="3.25" stroke="#a8b9f4" strokeWidth="1.6"/>
-              </svg>
-            </span>
-          </button>
-          <input
-            ref={avatarFileRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            data-testid="input-avatar-file"
-            onChange={handleAvatarPick}
-          />
-          <div className="flex-1 min-w-0">
-            {editing ? (
-              <input
-                data-testid="input-display-name"
-                value={name}
-                onChange={e => setName(e.target.value)}
-                className="bg-transparent outline-none border-b w-full"
-                style={{
-                  borderColor: "#7631ee",
-                  color: "#fff",
-                  fontFamily: "'Gilroy', 'Plus Jakarta Sans', system-ui, sans-serif",
-                  fontWeight: 600,
-                  fontSize: "20px",
-                  lineHeight: "24px",
-                }}
-                autoFocus
-              />
-            ) : (
-              <p
-                data-testid="text-profile-name"
-                style={{ color: "#fff", fontFamily: "'Gilroy', 'Plus Jakarta Sans', system-ui, sans-serif", fontWeight: 600, fontSize: "20px", lineHeight: "24px" }}
-              >
-                {name}
-              </p>
-            )}
-          </div>
-
-          {/* Edit button, Figma 3695:40062: amber pill #4a2300 / #ff9500 */}
-          <Button
-            variant="warning"
-            className="flex-shrink-0"
-            data-testid="button-edit-profile"
-            onClick={() => {
-              if (editing) {
-                alert.success("Profile saved", "Your display name has been updated.");
-                if (nameOverrideKey) {
-                  try { localStorage.setItem(nameOverrideKey, name); } catch {}
-                }
-              }
-              setEditing(v => !v);
-            }}
-          >
-            <div className="overflow-clip relative shrink-0 size-[16px]">
-              <div className="absolute inset-[13.87%_13.87%_12.5%_12.5%]">
-                <div className="absolute inset-[-5.66%]">
-                  <img alt="" className="block max-w-none size-full" src={ICONS.settings_edit_pencil1} />
-                </div>
-              </div>
-              <div className="absolute bottom-[56.25%] left-[56.25%] right-1/4 top-1/4">
-                <div className="absolute inset-[-22.22%]">
-                  <img alt="" className="block max-w-none size-full" src={ICONS.settings_edit_pencil2} />
-                </div>
-              </div>
-            </div>
-            <span className="[font-family:'Gilroy',sans-serif] font-semibold whitespace-nowrap">
-              {editing ? "Save" : "Edit"}
-            </span>
-          </Button>
-        </div>
-      </WidgetPanel>
-
       {/* Identity card, borderless per Figma 3957:43974 */}
       <div className="flex flex-col gap-[4px]">
         <SectionLabel>Identity</SectionLabel>
         <WidgetPanel noBorder>
+          <SettingRow
+            icon={<ProfileRowCircle src={ICONS.settings_profile_inactive} w={20} h={20} />}
+            label="Name"
+            sublabel={
+              editingField === "name" ? (
+                <input
+                  autoFocus
+                  data-testid="input-display-name"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === "Enter") saveName();
+                  }}
+                  className="w-full bg-transparent outline-none border-b border-brain-v1purple text-brain-v1white"
+                />
+              ) : (
+                name || "Not set"
+              )
+            }
+            right={
+              <ChevronActionButton
+                label={editingField === "name" ? "Save Name" : "Edit Name"}
+                testId="button-edit-name"
+                onClick={() => editingField === "name" ? saveName() : setEditingField("name")}
+              />
+            }
+            useCircleIcon
+          />
+          <Divider />
+          <SettingRow
+            icon={<ProfileRowCircle src={ICONS.settings_profile_inactive} w={20} h={20} />}
+            label="Username"
+            sublabel={
+              editingField === "username" ? (
+                <input
+                  autoFocus
+                  data-testid="input-profile-username"
+                  value={username}
+                  onChange={e => setUsername(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === "Enter") saveUsername();
+                  }}
+                  className="w-full bg-transparent outline-none border-b border-brain-v1purple text-brain-v1white"
+                />
+              ) : (
+                username || "Not set"
+              )
+            }
+            right={
+              <ChevronActionButton
+                label={editingField === "username" ? "Save Username" : "Edit Username"}
+                testId="button-edit-username"
+                onClick={() => editingField === "username" ? saveUsername() : setEditingField("username")}
+              />
+            }
+            useCircleIcon
+          />
+          <Divider />
           <SettingRow
             icon={<RowCircleIcon src={ICONS.settings_kyc_icon} inset="20.83% 12.5%" innerInset="-7.14% -5.56%" />}
             label="Email"
