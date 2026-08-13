@@ -1922,6 +1922,16 @@ export function InboxPage() {
           </div>
         )}
 
+        {activeTab === "Unresolved" && (
+          <div className="flex gap-[8px] items-center w-full" data-testid="heading-unresolved-decisions">
+            <div className="size-[6px] rounded-full shrink-0 bg-brain-v1baby-blue-60" />
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[12px] uppercase tracking-[0.4px] whitespace-nowrap">
+              Unresolved Decisions
+            </p>
+            <CountPill testId="count-unresolved-decisions">{visibleItems.length + visibleInputRows.length}</CountPill>
+          </div>
+        )}
+
         {activeTab === "Resolved" && (
           <div className="flex gap-[8px] items-center w-full" data-testid="heading-resolved-decisions">
             <div className="size-[6px] rounded-full shrink-0 bg-brain-v1baby-blue-60" />

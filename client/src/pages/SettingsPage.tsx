@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, type ComponentType } from "react";
 import { useLocation, useSearch } from "wouter";
 import { clearOnboarding } from "@/lib/onboarding";
-import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useAppAlert, AppAlertLink } from "@/components/AppAlert";
 import { useAuth } from "@/lib/authContext";
@@ -24,6 +23,9 @@ import auditInactiveIcon from "@assets/1_auditinactive_1785598481543.png";
 import billingActiveIcon from "@assets/BillingActive_1782953915934.png";
 import teamActiveIcon from "@assets/Active_1783634473571.png";
 import teamInactiveIcon from "@assets/Normal_1783634473571.png";
+import identityUsernameIcon from "@assets/username_1786656382693.png";
+import identityEmailIcon from "@assets/email_1786656382698.png";
+import identityNameIcon from "@assets/name_1786656382699.png";
 import { ContactUpdateModal } from "@/components/ContactUpdateModal";
 import { SourcesSection } from "@/components/settings/SourcesSection";
 import { DevelopersSection } from "@/components/settings/DevelopersSection";
@@ -318,6 +320,13 @@ const ProfileRowCircle = ({ src, w, h }: { src: string; w: number; h: number }) 
   </div>
 );
 
+/* These supplied identity exports already include their 80px circle artwork.
+   Render them at the row's 40px logical size instead of nesting them inside
+   the generic circle background used by the other settings rows. */
+const IdentityRowIcon = ({ src }: { src: string }) => (
+  <img alt="" className="block size-[40px] shrink-0" src={src} />
+);
+
 /* Briefcase icon: 4-layer composite for the "Add Business Account" row
    (Figma node within 3957:43975 misc section). */
 const BriefcaseRowCircle = () => (
@@ -378,10 +387,7 @@ export function ProfileSection() {
   const { user } = useAuth();
   const navigate = useLocation()[1];
   const { email, phone } = useUserContact(user?.email);
-  const { data: tenancy } = useQuery<{ mode: string; linked: boolean; tenantId?: string; companyName?: string }>({
-    queryKey: ["/api/brain/tenancy"],
-  });
-  const liveName = tenancy?.companyName || user?.name || "";
+  const liveName = user?.name || "";
   // Scoped by userId (`brain_profile_name_{userId}`), same pattern as
   // userContact.ts and backupApprover.ts — NOT the single unscoped
   // `brain_profile_name` key this used before, which one real account's
@@ -468,7 +474,7 @@ export function ProfileSection() {
         <SectionLabel>Identity</SectionLabel>
         <WidgetPanel noBorder>
           <SettingRow
-            icon={<ProfileRowCircle src={ICONS.settings_profile_inactive} w={20} h={20} />}
+            icon={<IdentityRowIcon src={identityNameIcon} />}
             label="Name"
             sublabel={
               editingField === "name" ? (
@@ -497,7 +503,7 @@ export function ProfileSection() {
           />
           <Divider />
           <SettingRow
-            icon={<ProfileRowCircle src={ICONS.settings_profile_inactive} w={20} h={20} />}
+            icon={<IdentityRowIcon src={identityUsernameIcon} />}
             label="Username"
             sublabel={
               editingField === "username" ? (
@@ -526,7 +532,7 @@ export function ProfileSection() {
           />
           <Divider />
           <SettingRow
-            icon={<RowCircleIcon src={ICONS.settings_kyc_icon} inset="20.83% 12.5%" innerInset="-7.14% -5.56%" />}
+            icon={<IdentityRowIcon src={identityEmailIcon} />}
             label="Email"
             sublabel={email}
             right={
