@@ -849,9 +849,20 @@ function relayError(res: Response, err: unknown): Response {
       `path=${err.path}`,
     );
     // Relay brain-core's status + body so the UI can react (e.g. 401/403/404).
-    return res.status(err.status).json({ error: "brain_upstream_error", status: err.status, body: err.body });
+    // Include the BFF request ID in the response body on actionable errors so
+    // the UI can surface it as a reference ("Error ref: req_…") for support
+    // tickets.  Auth failures (401/403) are omitted — they are user-fixable
+    // state transitions, not traceable infrastructure failures.
+    const authError = err.status === 401 || err.status === 403;
+    return res.status(err.status).json({
+      error: "brain_upstream_error",
+      status: err.status,
+      body: err.body,
+      ...(authError ? {} : { bff_request_id: bffId }),
+    });
   }
+  const bffId = currentBffRequestId();
   const message = err instanceof Error ? err.message : String(err);
-  console.error("[brain-proxy] error:", message);
-  return res.status(502).json({ error: "brain_proxy_error", message });
+  console.error("[brain-proxy] error:", `bff_request_id=${bffId}`, message);
+  return res.status(502).json({ error: "brain_proxy_error", message, bff_request_id: bffId });
 }

@@ -1747,9 +1747,10 @@ When you mention a money amount, always reproduce it exactly as the grounding da
         /* Always log ingest failures server-side, including both the BFF
            request ID and brain-core's own request_id when present, so a
            grep on either ID can correlate the two sides of the failure. */
+        const bffId = currentBffRequestId();
         console.error(
           `[document-ingest] brain-core /raw/ingest failed:`,
-          `bff_request_id=${currentBffRequestId()}`,
+          `bff_request_id=${bffId}`,
           `status=${err instanceof BrainApiError ? err.status : "network"}`,
           brainRequestId ? `brain_request_id=${brainRequestId}` : "(no brain_request_id)",
           `filename=${filename}`,
@@ -1761,8 +1762,9 @@ When you mention a money amount, always reproduce it exactly as the grounding da
           document: updated ?? { ...doc, ...patch },
           error: "ingest_failed",
           message,
-          /* Pass the brain_request_id through so the client can surface it and
+          /* Pass both IDs through so the client can surface the reference and
              so log-scraping can correlate our server log with brain-core's. */
+          bff_request_id: bffId,
           ...(brainRequestId ? { brain_request_id: brainRequestId } : {}),
         });
       }

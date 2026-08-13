@@ -50,6 +50,9 @@ function json(value: unknown, status = 200): Response {
   });
 }
 
+let upstreamGetStatus = 200;
+let upstreamGetBody: unknown;
+
 function routeBrainCore(fullUrl: string, method: string): Response {
   const path = fullUrl.split("?")[0];
   if (path.endsWith("/demo/provision-run")) {
@@ -68,6 +71,10 @@ function routeBrainCore(fullUrl: string, method: string): Response {
     )
   ) {
     return json(upstreamTrustBody ?? { ok: true, path }, upstreamTrustStatus);
+  }
+
+  if (method === "GET" && path.endsWith("/ledger/accounts")) {
+    return json(upstreamGetBody ?? { accounts: [] }, upstreamGetStatus);
   }
 
   throw new Error(`unexpected brain-core call in trust route test: ${method} ${path}`);
@@ -271,11 +278,15 @@ describe("counterparty trust BFF route contract", () => {
     );
 
     expect(result.status).toBe(409);
-    expect(result.json).toEqual({
-      error: "brain_upstream_error",
-      status: 409,
-      body: upstreamTrustBody,
-    });
+    // bff_request_id is now included in non-auth error responses (#192).
+    expect(result.json).toEqual(
+      expect.objectContaining({
+        error: "brain_upstream_error",
+        status: 409,
+        body: upstreamTrustBody,
+        bff_request_id: expect.stringMatching(/^req_[0-9a-f-]{36}$/),
+      }),
+    );
     const upstreamCalls = callsEndingWith(
       "/ledger/counterparties/cp_contract/trust/restore",
     );
@@ -306,6 +317,103 @@ describe("counterparty trust BFF route contract", () => {
     );
   });
 
+});
+
+describe("X-Request-Id forwarding — generic GET proxy path", () => {
+  it("forwards a well-formed X-Request-Id on the outbound GET call", async () => {
+    const response = await realFetch(`${baseUrl}/api/brain/ledger/accounts`, {
+      method: "GET",
+    });
+
+    expect(response.status).toBe(200);
+
+    // Exactly one outbound call to /ledger/accounts.
+    const getCalls = callsEndingWith("/ledger/accounts");
+    expect(getCalls).toHaveLength(1);
+    expect(getCalls[0].method).toBe("GET");
+
+    // Must carry a well-formed BFF request ID as X-Request-Id.
+    expect(getCalls[0].requestId).toMatch(/^req_[0-9a-f-]{36}$/);
+  });
+
+  it("uses a different X-Request-Id for each independent GET request", async () => {
+    await realFetch(`${baseUrl}/api/brain/ledger/accounts`);
+    await realFetch(`${baseUrl}/api/brain/ledger/accounts`);
+
+    const getCalls = callsEndingWith("/ledger/accounts");
+    // Two calls, each with a valid but distinct request ID.
+    expect(getCalls).toHaveLength(2);
+    expect(getCalls[0].requestId).toMatch(/^req_[0-9a-f-]{36}$/);
+    expect(getCalls[1].requestId).toMatch(/^req_[0-9a-f-]{36}$/);
+    expect(getCalls[0].requestId).not.toBe(getCalls[1].requestId);
+  });
+
+  it("relays bff_request_id in the JSON body when the GET upstream errors", async () => {
+    upstreamGetStatus = 500;
+    upstreamGetBody = {
+      error: {
+        code: "internal_error",
+        message: "something broke",
+        request_id: "req_brain_get_500",
+      },
+    };
+
+    const response = await realFetch(`${baseUrl}/api/brain/ledger/accounts`);
+    const body = (await response.json()) as Record<string, unknown>;
+
+    expect(response.status).toBe(500);
+    // bff_request_id must be present and well-formed (non-auth error).
+    expect(typeof body.bff_request_id).toBe("string");
+    expect(body.bff_request_id as string).toMatch(/^req_[0-9a-f-]{36}$/);
+    // brain_upstream_error envelope.
+    expect(body.error).toBe("brain_upstream_error");
+  });
+});
+
+describe("counterparty trust — bff_request_id in relay", () => {
+  it("includes bff_request_id in the JSON body on a non-auth upstream error", async () => {
+    upstreamTrustStatus = 409;
+    upstreamTrustBody = {
+      error: {
+        code: "ledger_status_invalid",
+        message: "restore is not valid from unreviewed",
+        request_id: "req_brain_409_abc",
+      },
+    };
+
+    const result = await post("/api/brain/ledger/counterparties/cp_x/trust/restore");
+
+    expect(result.status).toBe(409);
+    const body = result.json as Record<string, unknown>;
+    expect(typeof body.bff_request_id).toBe("string");
+    expect(body.bff_request_id as string).toMatch(/^req_[0-9a-f-]{36}$/);
+    expect(body.error).toBe("brain_upstream_error");
+  });
+
+  it("does NOT include bff_request_id for a 401 upstream error", async () => {
+    upstreamTrustStatus = 401;
+    upstreamTrustBody = { error: { code: "auth_token_expired", message: "expired" } };
+
+    const result = await post("/api/brain/ledger/counterparties/cp_x/trust/grant");
+
+    expect(result.status).toBe(401);
+    const body = result.json as Record<string, unknown>;
+    expect(body.bff_request_id).toBeUndefined();
+  });
+
+  it("does NOT include bff_request_id for a 403 upstream error", async () => {
+    upstreamTrustStatus = 403;
+    upstreamTrustBody = { error: { code: "auth_scope_insufficient", message: "no scope" } };
+
+    const result = await post("/api/brain/ledger/counterparties/cp_x/trust/grant");
+
+    expect(result.status).toBe(403);
+    const body = result.json as Record<string, unknown>;
+    expect(body.bff_request_id).toBeUndefined();
+  });
+});
+
+describe("counterparty trust - disallowed actions", () => {
   it.each(["revoke", "resume", "delete"])(
     "rejects unallowlisted trust action %s with 405 instead of proxying it",
     async (action) => {
