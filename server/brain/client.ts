@@ -15,6 +15,7 @@ import { randomUUID } from "node:crypto";
 import { brainConfig } from "./config";
 import { currentBrainBaseUrl } from "./baseUrl";
 import { hasMeaningfulScalar } from "../wikiAnswerGuard";
+import { currentBffRequestId } from "./requestId";
 
 export class BrainApiError extends Error {
   public constructor(
@@ -65,7 +66,7 @@ export async function brainRequest<T>(path: string, opts: BrainRequestOptions): 
 
   const headers: Record<string, string> = {
     Authorization: `Bearer ${opts.token}`,
-    "X-Request-Id": `req_${randomUUID()}`,
+    "X-Request-Id": currentBffRequestId(),
     Accept: "application/json",
   };
   if (opts.body !== undefined) headers["Content-Type"] = "application/json";
@@ -94,6 +95,19 @@ function safeJson(text: string): unknown {
   } catch {
     return text;
   }
+}
+
+/**
+ * Extract brain-core's own request_id from a BrainApiError body.
+ * Core embeds it as `error.request_id` on non-2xx responses (core PR #601).
+ * Returns null when the body is absent or doesn't carry the expected shape.
+ */
+export function extractCoreRequestId(body: unknown): string | null {
+  if (body == null || typeof body !== "object") return null;
+  const e = (body as Record<string, unknown>).error;
+  if (e == null || typeof e !== "object") return null;
+  const id = (e as Record<string, unknown>).request_id;
+  return typeof id === "string" ? id : null;
 }
 
 // ─── Minimal typed shapes for the slice (subset of the OpenAPI schemas) ──────
@@ -684,7 +698,7 @@ export async function ingestRawDocument(
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
-      "X-Request-Id": `req_${randomUUID()}`,
+      "X-Request-Id": currentBffRequestId(),
       "Idempotency-Key": randomUUID(),
       Accept: "application/json",
       // NB: no Content-Type - fetch sets multipart/form-data; boundary=… itself.

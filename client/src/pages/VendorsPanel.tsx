@@ -810,7 +810,8 @@ export function VendorsPanel() {
           (body?.body?.error?.message as string | undefined) ??
           (body?.message as string | undefined) ??
           "Brain core rejected this action.";
-        alert.error("Action failed", msg);
+        const ref = typeof body?.bff_request_id === "string" ? body.bff_request_id : null;
+        alert.error("Action failed", ref ? `${msg}\n\nRef: ${ref}` : msg);
         return;
       }
       await queryClient.invalidateQueries({ queryKey: ["/api/brain/ledger/counterparties"] });

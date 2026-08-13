@@ -21,11 +21,13 @@ import { brainAuthConfigured, brainTenancyMode, platformServiceConfigured } from
 import { isDemoEmail } from "../demoUsers";
 import { getBrainSession, getCachedBrainTenantId, registerBrainSession, NoTenantError } from "./auth";
 import { withBrainBaseUrl } from "./baseUrl";
+import { bffRequestIdMiddleware, currentBffRequestId } from "./requestId";
 import { createTenant, consumeInvite, TenancyApiError } from "./tenancy";
 import { storage } from "../storage";
 import {
   brainRequest,
   BrainApiError,
+  extractCoreRequestId,
   listLedgerInvoices,
   evaluatePolicy,
   proposeInvoicePayment,
@@ -61,6 +63,12 @@ const COUNTERPARTY_TYPES: readonly string[] = [
 
 export function createBrainProxyRouter(): Router {
   const router = Router();
+
+  // Bind a fresh BFF request ID to every request in this router.  All
+  // downstream brainRequest() / ingestRawDocument() calls within the same
+  // async context automatically inherit it as X-Request-Id, so no per-route
+  // plumbing is needed.
+  router.use(bffRequestIdMiddleware);
 
   router.use(requireAuth);
 
@@ -829,10 +837,32 @@ function relayError(res: Response, err: unknown): Response {
     return res.status(err.status).json({ error: "brain_upstream_error", status: err.status, body: err.body });
   }
   if (err instanceof BrainApiError) {
+    // Log both the BFF request ID and brain-core's own request_id so a single
+    // grep on either ID can correlate the two sides of the failure.
+    const bffId = currentBffRequestId();
+    const coreId = extractCoreRequestId(err.body);
+    console.error(
+      "[brain-proxy] upstream error:",
+      `bff_request_id=${bffId}`,
+      coreId ? `brain_request_id=${coreId}` : "(no brain_request_id)",
+      `status=${err.status}`,
+      `path=${err.path}`,
+    );
     // Relay brain-core's status + body so the UI can react (e.g. 401/403/404).
-    return res.status(err.status).json({ error: "brain_upstream_error", status: err.status, body: err.body });
+    // Include the BFF request ID in the response body on actionable errors so
+    // the UI can surface it as a reference ("Error ref: req_…") for support
+    // tickets.  Auth failures (401/403) are omitted — they are user-fixable
+    // state transitions, not traceable infrastructure failures.
+    const authError = err.status === 401 || err.status === 403;
+    return res.status(err.status).json({
+      error: "brain_upstream_error",
+      status: err.status,
+      body: err.body,
+      ...(authError ? {} : { bff_request_id: bffId }),
+    });
   }
+  const bffId = currentBffRequestId();
   const message = err instanceof Error ? err.message : String(err);
-  console.error("[brain-proxy] error:", message);
-  return res.status(502).json({ error: "brain_proxy_error", message });
+  console.error("[brain-proxy] error:", `bff_request_id=${bffId}`, message);
+  return res.status(502).json({ error: "brain_proxy_error", message, bff_request_id: bffId });
 }
