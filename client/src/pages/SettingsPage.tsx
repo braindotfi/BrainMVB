@@ -369,6 +369,11 @@ const ChevronActionButton = ({ label, testId, onClick }: { label: string; testId
   </button>
 );
 
+function readNameOverride(key: string | null): string | null {
+  if (!key) return null;
+  try { return localStorage.getItem(key); } catch { return null; }
+}
+
 function ProfileSection() {
   const alert = useAppAlert();
   const { user } = useAuth();
@@ -385,21 +390,22 @@ function ProfileSection() {
   // same browser (confirmed live 2026-08-13; see userContact.ts's header for
   // the full writeup of the bug class).
   const nameOverrideKey = user?.id ? `brain_profile_name_${user.id}` : null;
-  const [nameOverride, setNameOverride] = useState<string | null>(() => {
-    if (!nameOverrideKey) return null;
-    try { return localStorage.getItem(nameOverrideKey); } catch { return null; }
-  });
-  // Re-sync nameOverride when the user identity changes (auth transitions don't
-  // remount this component, so useState initializer above only runs on first mount).
-  useEffect(() => {
-    if (!nameOverrideKey) {
-      setNameOverride(null);
-      return;
-    }
-    try { setNameOverride(localStorage.getItem(nameOverrideKey)); } catch { setNameOverride(null); }
-  }, [nameOverrideKey]);
+  // The saved value is held together with the key it was read under, so a stale
+  // value can never be rendered against a different account's key.
+  const [saved, setSaved] = useState<{ key: string | null; value: string | null }>(() => ({
+    key: nameOverrideKey,
+    value: readNameOverride(nameOverrideKey),
+  }));
+  if (saved.key !== nameOverrideKey) {
+    // Auth transitions don't remount this section, so the initializer above only
+    // runs once. Re-point during render (React's supported "adjust state when a
+    // prop changes" pattern) rather than in an effect: an effect runs after paint,
+    // so the previous account's saved display name would be visible for a frame.
+    setSaved({ key: nameOverrideKey, value: readNameOverride(nameOverrideKey) });
+  }
+  const nameOverride = saved.key === nameOverrideKey ? saved.value : null;
   const name = nameOverride ?? liveName;
-  const setName = setNameOverride;
+  const setName = (next: string) => setSaved({ key: nameOverrideKey, value: next });
   const [editing, setEditing] = useState(false);
   const [contactModal, setContactModal] = useState<"email" | "phone" | null>(null);
   const [avatarSrc, setAvatarSrc] = useState<string>(acmeAvatar);

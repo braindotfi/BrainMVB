@@ -125,6 +125,40 @@ describe("userContact", () => {
     expect(userContactSnapshot()).toEqual({ email: null, phone: null });
   });
 
+  it("distinguishes contact pairs that a serialized `email|phone` snapshot would collide (both fields are free text and may contain a pipe)", () => {
+    // ("a|b", null) and ("a", "b|") both serialize to "a|b|". If the store's
+    // snapshot were that string, useSyncExternalStore would treat the A → B
+    // switch as "no change" and a consumer that doesn't independently re-render
+    // on auth would keep showing A's contact info.
+    applyUserScopedResets(REAL_USER_A);
+    setUserEmail("a|b");
+    const a = userContactSnapshot();
+
+    applyUserScopedResets(REAL_USER_B);
+    setUserEmail("a");
+    setUserPhone("b|");
+    const b = userContactSnapshot();
+
+    expect(a).not.toEqual(b);
+    expect(a).not.toBe(b);
+  });
+
+  it("keeps snapshot identity stable while nothing changes, and replaces it when something does", () => {
+    // useSyncExternalStore compares snapshots by identity: an unstable identity
+    // renders forever, a frozen one never updates.
+    applyUserScopedResets(REAL_USER_A);
+    const first = userContactSnapshot();
+    expect(userContactSnapshot()).toBe(first);
+
+    setUserEmail("custom-a@example.com");
+    const afterWrite = userContactSnapshot();
+    expect(afterWrite).not.toBe(first);
+    expect(userContactSnapshot()).toBe(afterWrite);
+
+    applyUserScopedResets(REAL_USER_B);
+    expect(userContactSnapshot()).not.toBe(afterWrite);
+  });
+
   it("does nothing when there is no signed-in account to scope to (logged out)", () => {
     applyUserScopedResets(REAL_USER_A);
     setUserEmail("custom-a@example.com");

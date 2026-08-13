@@ -79,6 +79,10 @@ function notify(): void {
   listeners.forEach((l) => l());
 }
 
+/* Stable identity for the "nothing readable" case, so a server/pre-scope
+   snapshot never hands useSyncExternalStore a fresh object. */
+const EMPTY: { email: string | null; phone: string | null } = { email: null, phone: null };
+
 function read(): { email: string | null; phone: string | null } {
   if (cached) return cached;
   const ek = emailKey();
@@ -154,9 +158,17 @@ function subscribe(listener: Listener): () => void {
   };
 }
 
-function getSnapshot(): string {
-  const { email, phone } = read();
-  return `${email ?? ""}|${phone ?? ""}`;
+/* `read()` itself is the snapshot: it caches, and `notify()`/the setters are the
+   only things that replace the cached object, so identity is stable between
+   renders and changes exactly when the value does. Deliberately NOT a serialized
+   `email|phone` string — both fields are free text that may contain "|", so
+   distinct pairs can serialize identically ("a|b" + null and "a" + "b|" both give
+   "a|b|") and useSyncExternalStore would then skip the re-render, leaving a
+   consumer that doesn't independently re-render on auth (BillingSection reads this
+   hook without useAuth) showing the previous account's contact info — the exact
+   leak this change exists to close. */
+function getServerSnapshot(): { email: string | null; phone: string | null } {
+  return EMPTY;
 }
 
 /** Plain-function snapshot, same split as acknowledgedStore.ts's
@@ -175,8 +187,7 @@ export function userContactSnapshot(): { email: string | null; phone: string | n
  * this account.
  */
 export function useUserContact(userEmail?: string | null) {
-  useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
-  const { email, phone } = read();
+  const { email, phone } = useSyncExternalStore(subscribe, read, getServerSnapshot);
   return {
     email: email ?? userEmail ?? EMAIL_NOT_SET,
     phone: phone ?? PHONE_NOT_SET,
