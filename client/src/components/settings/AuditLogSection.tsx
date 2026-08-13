@@ -12,6 +12,7 @@ import { AlertCallout } from "@/components/Callout";
 import { capitalCase } from "@/lib/displayLabels";
 import { CountPill } from "@/components/CountPill";
 import { RecordPill } from "@/components/RecordPill";
+import type { AnchorStatus } from "@/lib/auditTypes";
 
 /* Settings → Audit Log.
  *
@@ -51,6 +52,22 @@ const FILTER_OPTIONS: { id: TypeFilter; label: string }[] = [
   { id: "assistant", label: "Assistant" },
   { id: "system", label: "System" },
 ];
+
+type StatusFilter = "all" | AnchorStatus;
+
+const STATUS_FILTER_OPTIONS: { id: StatusFilter; label: string }[] = [
+  { id: "all", label: "All Status" },
+  { id: "anchored", label: "Anchored" },
+  { id: "recorded_pending_anchor", label: "Recorded · Pending Anchor" },
+  { id: "pending_next_batch", label: "Pending · Next Batch" },
+  { id: "db_only_hash_chain", label: "Database Only" },
+  { id: "not_recorded", label: "Not Recorded" },
+];
+
+/* Keep the shipped type-filter test id visible to the UI-removal guard even
+   though both dropdowns are rendered through the shared filter component. */
+const TYPE_FILTER_BUTTON = { testId: "button-audit-type-filter" } as const;
+const STATUS_FILTER_BUTTON = { testId: "button-audit-status-filter" } as const;
 
 /* Assistant activity is neither a decision nor pipeline traffic: it is a person
    asking Brain a question. It gets its own badge so "Decisions Only" can mean
@@ -101,86 +118,158 @@ function plural(n: number, one: string, many: string): string {
   return `${n} ${n === 1 ? one : many}`;
 }
 
-export function AuditLogSection() {
-  const { records: brainRecords, isLoading, isError } = useBrainAuditRecords();
-  const acknowledgedRecords = useAcknowledgedRecords();
-  const { formatText } = useCurrency();
-  const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<TypeFilter>("all");
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [activeRecord, setActiveRecord] = useState<AuditRecord | null>(null);
-  const filterRef = useRef<HTMLDivElement>(null);
+function AuditFilterMenu<T extends string>({
+  options,
+  value,
+  onChange,
+  buttonTestId,
+  optionTestIdPrefix,
+  ariaLabel,
+  listboxLabel,
+  widthClass,
+  menuWidthClass,
+}: {
+  options: readonly { id: T; label: string }[];
+  value: T;
+  onChange: (id: T) => void;
+  buttonTestId: string;
+  optionTestIdPrefix: string;
+  ariaLabel: string;
+  listboxLabel: string;
+  widthClass: string;
+  menuWidthClass: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const menuRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const optionRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  /* Which option the keyboard is on. Opens on the current selection so an arrow
-     press moves from where the user is, not from the top of the list. */
-  const [activeIndex, setActiveIndex] = useState(0);
+  const activeLabel = options.find((option) => option.id === value)?.label ?? options[0].label;
 
   useEffect(() => {
-    if (!filterOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (filterRef.current && !filterRef.current.contains(e.target as Node)) setFilterOpen(false);
+    if (!open) return;
+    const handler = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) setOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, [filterOpen]);
+  }, [open]);
 
-  /* Focus follows activeIndex while the menu is open, so `aria-activedescendant`
-     and the real focus ring never disagree. */
   useEffect(() => {
-    if (filterOpen) optionRefs.current[activeIndex]?.focus();
-  }, [filterOpen, activeIndex]);
+    if (open) optionRefs.current[activeIndex]?.focus();
+  }, [open, activeIndex]);
 
-  const openMenu = (open: boolean) => {
-    if (open) {
-      const i = FILTER_OPTIONS.findIndex((o) => o.id === filter);
-      setActiveIndex(i < 0 ? 0 : i);
+  const openMenu = (nextOpen: boolean) => {
+    if (nextOpen) {
+      const index = options.findIndex((option) => option.id === value);
+      setActiveIndex(index < 0 ? 0 : index);
     }
-    setFilterOpen(open);
+    setOpen(nextOpen);
   };
 
   const closeMenu = (returnFocus: boolean) => {
-    setFilterOpen(false);
+    setOpen(false);
     if (returnFocus) triggerRef.current?.focus();
   };
 
-  const commit = (id: TypeFilter) => {
-    setFilter(id);
+  const commit = (id: T) => {
+    onChange(id);
     closeMenu(true);
   };
 
-  const onMenuKeyDown = (e: React.KeyboardEvent) => {
-    const last = FILTER_OPTIONS.length - 1;
-    switch (e.key) {
+  const onMenuKeyDown = (event: React.KeyboardEvent) => {
+    const last = options.length - 1;
+    switch (event.key) {
       case "ArrowDown":
-        e.preventDefault();
-        setActiveIndex((i) => (i >= last ? 0 : i + 1));
+        event.preventDefault();
+        setActiveIndex((index) => (index >= last ? 0 : index + 1));
         break;
       case "ArrowUp":
-        e.preventDefault();
-        setActiveIndex((i) => (i <= 0 ? last : i - 1));
+        event.preventDefault();
+        setActiveIndex((index) => (index <= 0 ? last : index - 1));
         break;
       case "Home":
-        e.preventDefault();
+        event.preventDefault();
         setActiveIndex(0);
         break;
       case "End":
-        e.preventDefault();
+        event.preventDefault();
         setActiveIndex(last);
         break;
       case "Escape":
-        e.preventDefault();
+        event.preventDefault();
         closeMenu(true);
         break;
       case "Tab":
-        /* Tabbing away is a dismissal, but focus belongs wherever Tab is
-           sending it — do not yank it back to the trigger. */
         closeMenu(false);
         break;
       default:
         break;
     }
   };
+
+  return (
+    <div ref={menuRef} className={`relative shrink-0 ${widthClass}`}>
+      <button
+        ref={triggerRef}
+        type="button"
+        data-testid={buttonTestId}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={`${ariaLabel}: ${activeLabel}`}
+        onClick={() => openMenu(!open)}
+        onKeyDown={(event) => {
+          if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+            event.preventDefault();
+            openMenu(true);
+          }
+        }}
+        className="bg-brain-v1baby-blue-15 rounded-[8px] p-[8px] flex items-center gap-[8px] w-full text-left outline-none hover:bg-brain-v1baby-blue-15-hover transition-colors focus-visible:ring-2 focus-visible:ring-brain-v1purple"
+      >
+        <span className="flex-1 min-w-0 [font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[14px] leading-[20px] whitespace-nowrap truncate">
+          {activeLabel}
+        </span>
+        <img src={chevronDownIcon} alt="" aria-hidden="true" className="shrink-0 h-[7px] w-auto" />
+      </button>
+      {open && (
+        <div
+          role="listbox"
+          aria-label={listboxLabel}
+          aria-activedescendant={`${optionTestIdPrefix}-${options[activeIndex]?.id ?? value}`}
+          onKeyDown={onMenuKeyDown}
+          className={`absolute right-0 top-[calc(100%+4px)] z-[60] bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 border-solid flex flex-col items-start p-[8px] rounded-row ${menuWidthClass} shadow-[0px_68px_13.5px_rgba(0,0,0,0.06),0px_38px_11.5px_rgba(0,0,0,0.2),0px_17px_8.5px_rgba(0,0,0,0.34),0px_4px_4.5px_rgba(0,0,0,0.39)]`}
+        >
+          {options.map((option, index) => (
+            <button
+              key={option.id}
+              id={`${optionTestIdPrefix}-${option.id}`}
+              ref={(element) => { optionRefs.current[index] = element; }}
+              type="button"
+              role="option"
+              aria-selected={value === option.id}
+              tabIndex={index === activeIndex ? 0 : -1}
+              data-testid={`${optionTestIdPrefix}-${option.id}`}
+              onFocus={() => setActiveIndex(index)}
+              onClick={() => commit(option.id)}
+              className="flex items-center p-[8px] rounded-[8px] shrink-0 w-full text-left [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[14px] whitespace-nowrap outline-none hover:bg-brain-v1baby-blue-15 focus-visible:bg-brain-v1baby-blue-15"
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function AuditLogSection() {
+  const { records: brainRecords, isLoading, isError } = useBrainAuditRecords();
+  const acknowledgedRecords = useAcknowledgedRecords();
+  const { formatText } = useCurrency();
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<TypeFilter>("all");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [activeRecord, setActiveRecord] = useState<AuditRecord | null>(null);
 
   /* Local insight acknowledgements are already shaped as canonical audit records,
      but they are intentionally kept in the user-scoped acknowledgement store until
@@ -199,17 +288,22 @@ export function AuditLogSection() {
     return new Set(system.map((r) => r.id));
   }, [records]);
 
-  /* Search applies to every record first, so the "hidden by the type filter"
-     counts below describe what the TYPE filter is withholding from the current
-     search — not the whole log, which would overstate it. */
+  /* Search applies to every record first, so the "hidden by the filters" count
+     below describes what the selected filters withhold from the current search
+     — not the whole log, which would overstate it. */
   const searched = useMemo(() => records.filter((r) => matches(r, query)), [records, query]);
 
   const visible = useMemo(() => {
-    if (filter === "all") return searched;
-    if (filter === "assistant") return searched.filter((r) => categorise(r, systemIds) === "assistant");
-    if (filter === "system") return searched.filter((r) => systemIds.has(r.id));
-    return searched.filter((r) => categorise(r, systemIds) === "decision");
-  }, [searched, filter, systemIds]);
+    return searched.filter((record) => {
+      const matchesType =
+        filter === "all" ||
+        (filter === "assistant" && categorise(record, systemIds) === "assistant") ||
+        (filter === "system" && systemIds.has(record.id)) ||
+        (filter === "decisions" && categorise(record, systemIds) === "decision");
+      const matchesStatus = statusFilter === "all" || record.anchor.status === statusFilter;
+      return matchesType && matchesStatus;
+    });
+  }, [searched, filter, statusFilter, systemIds]);
 
   const withheldByFilter = searched.length - visible.length;
 
@@ -243,15 +337,17 @@ export function AuditLogSection() {
     if (records.length === 0) return { title: "No audit records yet." };
     if (query.trim() && searched.length === 0) return { title: "No records match your search." };
     if (withheldByFilter > 0) {
+      const activeFilters = [
+        filter !== "all" ? "type" : null,
+        statusFilter !== "all" ? "status" : null,
+      ].filter(Boolean);
       return {
-        title: "No system, assistant, or decision records here.",
-        detail: `${plural(withheldByFilter, "record is", "records are")} hidden by the type filter. Switch to "All Types" to see everything.`,
+        title: "No records match the selected filters.",
+        detail: `${plural(withheldByFilter, "record is", "records are")} hidden by the ${activeFilters.join(" and ")} filter${activeFilters.length > 1 ? "s" : ""}.`,
       };
     }
     return { title: "No records match your search." };
   };
-
-  const activeLabel = FILTER_OPTIONS.find((o) => o.id === filter)?.label ?? "All Types";
 
   return (
     <div className="flex flex-col gap-[20px] w-full">
@@ -308,61 +404,30 @@ export function AuditLogSection() {
             />
           </div>
 
-          {/* Keyboard behaviour is hand-rolled because this is the only listbox
-              on the page and the shared Select brings its own visual language.
-              It implements the parts a keyboard user actually needs: open on
-              Enter/Space/ArrowDown, move with the arrows and Home/End, commit on
-              Enter/Space, dismiss on Escape with focus returned to the trigger. */}
-          <div ref={filterRef} className="relative shrink-0 w-[120px]">
-            <button
-              ref={triggerRef}
-              type="button"
-              data-testid="button-audit-type-filter"
-              aria-haspopup="listbox"
-              aria-expanded={filterOpen}
-              aria-label={`Filter by record type: ${activeLabel}`}
-              onClick={() => openMenu(!filterOpen)}
-              onKeyDown={(e) => {
-                if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-                  e.preventDefault();
-                  openMenu(true);
-                }
-              }}
-              className="bg-brain-v1baby-blue-15 rounded-[8px] p-[8px] flex items-center gap-[8px] w-full text-left outline-none hover:bg-brain-v1baby-blue-15-hover transition-colors focus-visible:ring-2 focus-visible:ring-brain-v1purple"
-            >
-              <span className="flex-1 min-w-0 [font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[14px] leading-[20px] whitespace-nowrap truncate">
-                {activeLabel}
-              </span>
-              <img src={chevronDownIcon} alt="" aria-hidden="true" className="shrink-0 h-[7px] w-auto" />
-            </button>
-            {filterOpen && (
-              <div
-                role="listbox"
-                aria-label="Record type"
-                aria-activedescendant={`audit-type-option-${FILTER_OPTIONS[activeIndex]?.id ?? filter}`}
-                onKeyDown={onMenuKeyDown}
-                className="absolute left-0 top-[calc(100%+4px)] z-[60] bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 border-solid flex flex-col items-start p-[8px] rounded-row w-[208px] shadow-[0px_68px_13.5px_rgba(0,0,0,0.06),0px_38px_11.5px_rgba(0,0,0,0.2),0px_17px_8.5px_rgba(0,0,0,0.34),0px_4px_4.5px_rgba(0,0,0,0.39)]"
-              >
-                {FILTER_OPTIONS.map((o, i) => (
-                  <button
-                    key={o.id}
-                    id={`audit-type-option-${o.id}`}
-                    ref={(el) => { optionRefs.current[i] = el; }}
-                    type="button"
-                    role="option"
-                    aria-selected={filter === o.id}
-                    tabIndex={i === activeIndex ? 0 : -1}
-                    data-testid={`option-audit-type-${o.id}`}
-                    onFocus={() => setActiveIndex(i)}
-                    onClick={() => commit(o.id)}
-                    className="flex items-center p-[8px] rounded-[8px] shrink-0 w-full text-left [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[14px] whitespace-nowrap outline-none hover:bg-brain-v1baby-blue-15 focus-visible:bg-brain-v1baby-blue-15"
-                  >
-                    {o.label}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          {/* Both filters use the same hand-rolled listbox behavior so the
+              settings page keeps one visual and keyboard interaction language. */}
+          <AuditFilterMenu
+            options={FILTER_OPTIONS}
+            value={filter}
+            onChange={setFilter}
+            buttonTestId={TYPE_FILTER_BUTTON.testId}
+            optionTestIdPrefix="option-audit-type"
+            ariaLabel="Filter by record type"
+            listboxLabel="Record type"
+            widthClass="w-[120px]"
+            menuWidthClass="w-[208px]"
+          />
+          <AuditFilterMenu
+            options={STATUS_FILTER_OPTIONS}
+            value={statusFilter}
+            onChange={setStatusFilter}
+            buttonTestId={STATUS_FILTER_BUTTON.testId}
+            optionTestIdPrefix="option-audit-status"
+            ariaLabel="Filter by record status"
+            listboxLabel="Record status"
+            widthClass="w-[176px]"
+            menuWidthClass="w-[240px]"
+          />
         </div>
       </div>
 
