@@ -13,6 +13,7 @@ import { TransactionDetailPopup } from "@/components/TransactionDetailPopup";
 import { AccountDetailPopup } from "@/components/AccountDetailPopup";
 import { BillDetailPopup, type BrainInvoiceDTO } from "@/components/BillDetailPopup";
 import { useToast } from "@/hooks/use-toast";
+import { reportRateLimit } from "@/lib/rateLimit";
 import { useCurrency } from "@/lib/useCurrency";
 import { useAuth } from "@/lib/authContext";
 import { queryClient } from "@/lib/queryClient";
@@ -652,6 +653,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
         signal: controller.signal,
         body: JSON.stringify({ messages: history }),
       });
+      if (res.status === 429) reportRateLimit();
       const parsed = await parseAssistantResponse(res);
       if (requestGeneration !== chatGenerationRef.current) return;
       const { data, reply } = parsed;

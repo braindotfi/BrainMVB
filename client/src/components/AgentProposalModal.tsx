@@ -553,8 +553,8 @@ export function LiveProposalModal({
               {/* Linked Evidence — Wiki-resolved records only. A ref that resolved to
                   nothing yields NO row: the only thing left to show would be the raw
                   id, which this view must not put in front of an approver. */}
-              {evidenceTiles.length > 0 && (
-                <CardSection title="Linked Evidence" gap={8}>
+               {evidenceTiles.length > 0 && (
+                 <CardSection title="Linked Evidence">
                   <div className="flex flex-col gap-[8px] items-start w-full" data-testid="list-live-proposal-evidence">
                     {evidenceTiles.map((tile, i) => (
                       <EvidenceLinkRow

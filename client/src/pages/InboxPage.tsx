@@ -61,6 +61,7 @@ import { useBrainVendors } from "@/lib/brainVendors";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { mapApprovalRejection, parseCoreError, type ApprovalRejection } from "@/lib/approvalRejections";
+import { isRateLimitError, reportRateLimit } from "@/lib/rateLimit";
 import {
   useRules,
   pauseRule as storePauseRule,
@@ -646,11 +647,21 @@ export function InboxPage() {
     mutationFn: async (id: string) => {
       const res = await fetch(`/api/brain/payment-intents/${id}/approve`, { method: "POST", credentials: "include" });
       const body = await res.json().catch(() => undefined);
-      if (!res.ok) throw new Error(mapApprovalRejection(parseCoreError(body)).detail);
+      if (!res.ok) {
+        if (res.status === 429) reportRateLimit();
+        throw new Error(
+          res.status === 429
+            ? "429: rate_limited"
+            : mapApprovalRejection(parseCoreError(body)).detail,
+        );
+      }
       return body;
     },
     onSuccess: () => { setActive(null); invalidateLiveQueue(); },
-    onError: (err) => toast({ title: "Couldn't approve", description: err.message, variant: "destructive" }),
+    onError: (err) => {
+      if (isRateLimitError(err)) return;
+      toast({ title: "Couldn't approve", description: err.message, variant: "destructive" });
+    },
   });
   const rejectLive = useMutation<unknown, Error, string>({
     mutationFn: async (id: string) => {
@@ -658,7 +669,10 @@ export function InboxPage() {
       return res.json();
     },
     onSuccess: () => { setActive(null); invalidateLiveQueue(); },
-    onError: (err) => toast({ title: "Couldn't reject", description: err.message, variant: "destructive" }),
+    onError: (err) => {
+      if (isRateLimitError(err)) return;
+      toast({ title: "Couldn't reject", description: err.message, variant: "destructive" });
+    },
   });
 
   /* ── Session-scoped intent approve / reject (§6-gated) ─────────────────── */
@@ -681,6 +695,10 @@ export function InboxPage() {
       });
       const body = await res.json().catch(() => undefined);
       if (!res.ok) {
+        if (res.status === 429) {
+          reportRateLimit();
+          return;
+        }
         const rej = mapApprovalRejection(parseCoreError(body));
         if (surfaceRejection) {
           setLiveRejection(rej);

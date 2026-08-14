@@ -4,6 +4,7 @@ import closeIcon from "@assets/Close_1783293571882.png";
 import { useQuery } from "@tanstack/react-query";
 import { formatThousandsInput, parseAmt, stripCommas } from "@/lib/formatters";
 import { Button } from "@/components/ui/button";
+import { reportRateLimit } from "@/lib/rateLimit";
 
 /* AddGoalModal, Figma 4074:65865 ("New Goal").
    Same modal chrome as the Review popup (440px, rounded-24,
@@ -122,7 +123,10 @@ const RecommendationCard = ({ category }: { category: string }) => {
       const res = await fetch(`${base}?category=${encodeURIComponent(cat)}`, {
         credentials: "include",
       });
-      if (!res.ok) throw new Error(`${res.status}`);
+       if (!res.ok) {
+         if (res.status === 429) reportRateLimit();
+         throw new Error(`${res.status}`);
+       }
       return res.json();
     },
     enabled: Boolean(category),

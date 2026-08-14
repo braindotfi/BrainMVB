@@ -6,6 +6,7 @@ import { resetAcknowledgedStore } from "./acknowledgedStore";
 import { setBackupApproverScope } from "./backupApprover";
 import { markOnboardingComplete } from "./onboarding";
 import { setUserContactScope } from "./userContact";
+import { reportRateLimit } from "./rateLimit";
 
 export interface AuthUser {
   id: string;
@@ -107,6 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify({ identifier, password }),
       });
       const data = await res.json().catch(() => ({}));
+      if (res.status === 429) reportRateLimit();
       if (!res.ok) throw new Error(data?.error || "Login failed");
       // Clear any stale queries from a prior session (e.g. demo → real user switch)
       // before applying the new user identity, so no cached data from the previous
@@ -130,6 +132,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           body: JSON.stringify(params),
         });
         const data = await res.json().catch(() => ({}));
+        if (res.status === 429) reportRateLimit();
         if (!res.ok) throw new Error(data?.error || "Registration failed");
         // Same cache-clear as loginWithPassword — guards against any prior session data.
         queryClient.clear();
@@ -160,6 +163,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         credentials: "include",
       });
       const data = await res.json().catch(() => ({}));
+      if (res.status === 429) reportRateLimit();
       if (!res.ok) throw new Error(data?.error || "Demo login failed");
       const u = data.user;
       if (opts?.skipOnboarding) markOnboardingComplete(u.id);

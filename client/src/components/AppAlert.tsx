@@ -5,6 +5,11 @@ import successIcon from "@assets/success_1779540800270.png";
 import approvedIcon from "@assets/approved_1784058164235.png";
 import rejectedIcon from "@assets/rejected_1784058164236.png";
 import postponedIcon from "@assets/postpone_1784058164236.png";
+import {
+  RATE_LIMIT_ALERT_DESCRIPTION,
+  RATE_LIMIT_ALERT_TITLE,
+  RATE_LIMIT_EVENT,
+} from "@/lib/rateLimit";
 
 /* ─── Pop-up alerts (Figma 4086:66890 / 4086:66991 / 4086:67000 +
    action confirmations 5773:66469 / 5734:82359 / 5787:65369) ───
@@ -183,6 +188,19 @@ export const AppAlertProvider = ({ children }: { children: ReactNode }) => {
       timers.current.clear();
     };
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const onRateLimit = () => {
+      showAlert({
+        variant: "error",
+        title: RATE_LIMIT_ALERT_TITLE,
+        description: RATE_LIMIT_ALERT_DESCRIPTION,
+      });
+    };
+    window.addEventListener(RATE_LIMIT_EVENT, onRateLimit);
+    return () => window.removeEventListener(RATE_LIMIT_EVENT, onRateLimit);
+  }, [showAlert]);
 
   const value = useMemo<AlertContextValue>(
     () => ({ showAlert, dismissAlert }),

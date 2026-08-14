@@ -55,12 +55,7 @@ export const SectionHeading = ({
   </div>
 );
 
-/** Heading + body, at the frame's 16px internal gap.
- *
- *  `gap` exists for the one section that measures differently: Linked Evidence
- *  sits 8px under its heading (frame 5875:65797 — heading ends at y=14, the first
- *  row starts at y=22) because the rows carry their own 12px inner padding, so a
- *  full 16px there reads as a hole. Every other section stays at 16px. */
+/** Heading + body, at the frame's 16px internal gap. */
 export const CardSection = ({
   title,
   trailing,
