@@ -349,19 +349,43 @@ export function useBrainCashFlowInsight() {
   if (!currency || currency.by_day.length === 0) {
     return { isLoading: q.isLoading, isError: q.isError, insight: null as LiveInsight | null };
   }
+
+  // ── Signed net label (fix: add explicit +/− and inflow/outflow direction) ──
+  const netNum = Number(currency.net) || 0;
+  const absNetStr = format(Math.abs(netNum).toFixed(2));
+  const netLabel =
+    netNum > 0
+      ? `+${absNetStr} net inflow`
+      : netNum < 0
+        ? `−${absNetStr} net outflow`
+        : `${absNetStr} net`;
+
+  // ── Pluralization fix ────────────────────────────────────────────────────
+  const txCount = currency.transaction_count;
+  const txWord = txCount === 1 ? "transaction" : "transactions";
+
+  // ── Chart: only render when ≥2 days of data exist ───────────────────────
+  // A single bar spanning the full card width implies a trend that doesn't
+  // exist. With one data point there is nothing to compare it against, so
+  // suppress the chart entirely and let the subtitle + explanation carry the
+  // number. The section reappears automatically once a second day is recorded.
   const points: LiveInsightChartPoint[] = currency.by_day.map((d) => ({
     label: new Date(d.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
     value: Number(d.net) || 0,
   }));
-  // Meaningful comparison from the same endpoint (not an echo of the subtitle):
-  // the latest day's net vs a 30-day rolling daily average. A short window is
-  // noise, not signal, so with fewer than 3 data points the Why line is omitted
-  // entirely; with 3-29 days we fall back to the available window and say so.
+  const showChart = points.length >= 2;
+
+  // ── Explanation: meaningful comparison or honest short-window notice ─────
+  // A short window is noise, not signal, so with fewer than 3 data points we
+  // don't attempt a comparison. With 3-29 days we fall back to the available
+  // window and label it. The short-window copy also names the thresholds so
+  // the reader knows what to expect as data accumulates.
   const windowDays = currency.by_day.slice(-30);
   const windowCount = windowDays.length;
   const latest = currency.by_day[currency.by_day.length - 1];
   const latestNet = Number(latest.net) || 0;
   let explanation: string | undefined;
+
   if (windowCount >= 3) {
     const windowNet = windowDays.reduce((s, d) => s + (Number(d.net) || 0), 0);
     const avgDailyNet = windowNet / windowCount;
@@ -379,27 +403,34 @@ export function useBrainCashFlowInsight() {
     }
   } else {
     /* Too short a window to compare against anything — but the card still owes
-       the reader a reason it is on their screen, so state the trigger and the
-       limitation instead of dropping the section. Never a comparison the data
-       cannot support. */
+       the reader a reason it is on their screen. State the trigger, the
+       limitation, and the thresholds that unlock more capability so the reader
+       knows what to expect as their data accumulates. */
+    const dayWord = windowCount === 1 ? "day" : "days";
+    const haveWord = windowCount === 1 ? "has" : "have";
     explanation =
       `Brain reports your trailing cash position whenever the ledger has activity. ` +
-      `Only ${windowCount} day${windowCount === 1 ? "" : "s"} of movement ${windowCount === 1 ? "has" : "have"} been recorded so far, ` +
-      `which is too short a window to compare against a trend.`;
+      `Only ${windowCount} ${dayWord} of movement ${haveWord} been recorded so far — ` +
+      `trend comparisons require at least 3 days of data, ` +
+      `and forward-looking cash forecasting will require at least 30 days of history ` +
+      `(and is not yet available from brain-core regardless of data volume — it is a planned capability).`;
   }
+
   const insight: LiveInsight = {
     id: "cashflow-trailing",
     kind: "cashflow",
     itemKind: "detection",
     badge: "Cash Forecasting",
     title: `Trailing cash flow (${currency.currency})`,
-    subtitle: `Net ${format(currency.net)} over ${currency.transaction_count} transactions`,
+    subtitle: `${netLabel} over ${txCount} ${txWord}`,
     explanation,
-    chart: {
-      points,
-      unit: currency.currency,
-      note: "Trailing actuals only - brain-core has no forward cash-flow projection yet.",
-    },
+    chart: showChart
+      ? {
+          points,
+          unit: currency.currency,
+          note: "Trailing actuals only — brain-core has no forward cash-flow projection yet.",
+        }
+      : undefined,
   };
   return { isLoading: q.isLoading, isError: q.isError, insight };
 }
