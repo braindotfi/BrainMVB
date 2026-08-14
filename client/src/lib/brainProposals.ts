@@ -295,13 +295,15 @@ export function useBrainProposals(): {
     queryKey: ["/api/brain/proposals?limit=100"],
     queryFn: ({ signal }) => fetchAllBrainProposals(signal),
     retry: false,
-    /* Focus refetch, deliberately without an interval. This is a shared work
-       queue: a proposal decided by a teammate stays actionable here until
-       something refetches, and the app's defaults (infinite stale time, no
-       interval, no focus refetch) mean nothing ever does. Returning to a
-       backgrounded tab is both the realistic moment for that and the dangerous
-       one — it is when the operator is about to act on what they see. */
+    /* Focus refetch on a 30 s stale window. This is a shared work queue:
+       a proposal decided by a teammate stays actionable here until something
+       refetches. Returning to the Inbox tab is the realistic moment for that;
+       the 30 s stale window also means the cache refreshes naturally when the
+       user navigates back within a minute, without constant polling from every
+       open tab. The explicit invalidation after every decide() call is kept so
+       the UI reflects the operator's own action immediately. */
     refetchOnWindowFocus: true,
+    staleTime: 30_000,
   });
   return {
     isLoading: list.isLoading,

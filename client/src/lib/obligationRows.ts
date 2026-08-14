@@ -25,9 +25,20 @@ type Format = (a: string | number) => string;
    it does on Cash Flow. Borders need an explicit `border border-solid` on the
    element; a colour alone renders no stroke at all. */
 const STATUS_COLORS: Record<string, { bg: string; border: string; fg: string }> = {
-  overdue: { bg: "#350011", border: "rgba(210,3,68,0.25)", fg: "#d20344" },
-  due: { bg: "#4a2300", border: "rgba(255,148,0,0.25)", fg: "#ff9500" },
-  upcoming: { bg: "#222737", border: "#2c3247", fg: "#6c779d" },
+  overdue:  { bg: "#350011", border: "rgba(210,3,68,0.25)",     fg: "#d20344" },
+  due:      { bg: "#4a2300", border: "rgba(255,148,0,0.25)",    fg: "#ff9500" },
+  upcoming: { bg: "#222737", border: "#2c3247",                 fg: "#6c779d" },
+  /* AR / invoice statuses — matched to DocumentViewerPopup's STATUS_CHIP colours
+     so the same record looks identical whether opened from Receivables or a
+     linked-evidence tile in a proposal card. */
+  paid:     { bg: "#123509", border: "rgba(66,191,35,0.2)",     fg: "#42bf23" },
+  unpaid:   { bg: "#4a2300", border: "rgba(255,148,0,0.25)",    fg: "#ff9500" },
+  partial:  { bg: "#4a2300", border: "rgba(255,148,0,0.25)",    fg: "#ff9500" },
+  held:     { bg: "#350011", border: "rgba(210,3,68,0.2)",      fg: "#d20344" },
+  disputed: { bg: "#350011", border: "rgba(210,3,68,0.2)",      fg: "#d20344" },
+  cancelled:{ bg: "#222737", border: "#2c3247",                 fg: "#6c779d" },
+  open:     { bg: "#4a2300", border: "rgba(255,148,0,0.25)",    fg: "#ff9500" },
+  closed:   { bg: "#123509", border: "rgba(66,191,35,0.2)",     fg: "#42bf23" },
 };
 const NEUTRAL = { bg: "#222737", border: "#2c3247", fg: "#6c779d" };
 

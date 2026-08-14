@@ -12,11 +12,10 @@ import {
   ExternalLink,
   ArrowLeftRight,
 } from "lucide-react";
-import invoiceImg from "@assets/invoice_1783385090730.png";
-import magnifyingGlassImg from "@assets/magnifyingglass_1783385090731.png";
 import closeIcon from "@assets/Close_1783293571882.png";
 import type { DocKind, DocStatus, DocumentRecord } from "@/lib/documentTypes";
 import { docKindLabel, docKindCaption, docStatusLabel, openDocumentOriginal } from "@/lib/documentTypes";
+import { capitalCase } from "@/lib/displayLabels";
 import { resolveDocument } from "@/lib/openDocumentDetail";
 import { resolveProposal } from "@/lib/openProposalDetail";
 import { useCurrency } from "@/lib/useCurrency";
@@ -101,8 +100,25 @@ function DarkTableRow({ label, value }: { label: string; value: string }) {
 }
 
 /* Invoice pane, Figma 5573:97699 dark-themed invoice viewer */
+
+/* Status chip colours for the invoice header — kept here rather than inside
+   the JSX so the three-value palette (green/amber/red/neutral) is readable in
+   one place and can be updated without hunting through a ternary chain. */
+const INVOICE_STATUS_CHIP: Record<string, { bg: string; border: string; color: string }> = {
+  paid:      { bg: "#123509", border: "rgba(66,191,35,0.2)",     color: "#42bf23" },
+  unpaid:    { bg: "#4a2300", border: "rgba(255,148,0,0.25)",    color: "#ff9500" },
+  partial:   { bg: "#4a2300", border: "rgba(255,148,0,0.25)",    color: "#ff9500" },
+  held:      { bg: "#350011", border: "rgba(210,3,68,0.2)",      color: "#d20344" },
+  disputed:  { bg: "#350011", border: "rgba(210,3,68,0.2)",      color: "#d20344" },
+  cancelled: { bg: "#222737", border: "#2c3247",                  color: "#6c779d" },
+};
+const INVOICE_STATUS_CHIP_FALLBACK = { bg: "#222737", border: "#2c3247", color: "#6c779d" };
+
+function invoiceStatusChip(status: string) {
+  return INVOICE_STATUS_CHIP[status.trim().toLowerCase()] ?? INVOICE_STATUS_CHIP_FALLBACK;
+}
+
 function InvoicePane({ doc }: { doc: DocumentRecord }) {
-  const [previewOpen, setPreviewOpen] = useState(false);
   const { format } = useCurrency();
   const proposal = resolveProposal(doc.proposalId);
   const match = proposal && typeof doc.amount === "number" && typeof proposal.amount === "number"
@@ -110,73 +126,39 @@ function InvoicePane({ doc }: { doc: DocumentRecord }) {
     : true;
 
   return (
-    <div className="flex flex-col gap-[32px] w-full">
-      {/* Fullscreen invoice preview overlay */}
-      {previewOpen && (
-        <div
-          className="fixed inset-0 z-[80] flex items-center justify-center bg-black/80 backdrop-blur-[4px]"
-          onClick={() => setPreviewOpen(false)}
-          data-testid="invoice-preview-overlay"
-        >
-          <div
-            className="relative max-w-[640px] w-[90vw] rounded-panel overflow-hidden shadow-[0_24px_60px_rgba(0,0,0,0.8)]"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <img src={invoiceImg} alt="Invoice preview" className="w-full block" />
-            <button
-              type="button"
-              onClick={() => setPreviewOpen(false)}
-              data-testid="button-close-invoice-preview"
-              className="absolute top-[12px] right-[12px] size-[32px] flex items-center justify-center rounded-full bg-black/60 hover:bg-black/80 transition-colors focus:outline-none"
-            >
-              <img src={closeIcon} alt="" className="size-[24px]" />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Top: thumbnail + invoice id + status + amount/date */}
-      <div className="content-stretch flex gap-[16px] items-start relative shrink-0 w-full">
-        {/* Invoice thumbnail: click expands full preview, hover shows magnifier */}
-        <div
-          className="group relative shrink-0 size-[56px] rounded-row overflow-hidden cursor-pointer"
-          onClick={() => setPreviewOpen(true)}
-          data-testid="invoice-thumbnail"
-        >
-          <img
-            src={invoiceImg}
-            alt="Invoice"
-            className="absolute inset-0 size-full object-cover rounded-row"
-          />
-          <div className="absolute inset-0 flex items-center justify-center rounded-row bg-black/0 group-hover:bg-black/45 transition-all">
-            <img src={magnifyingGlassImg} alt="View" className="size-[32px] opacity-0 group-hover:opacity-100 transition-opacity" />
-          </div>
-        </div>
-        <div className="content-stretch flex flex-[1_0_0] flex-col gap-[8px] items-start min-w-px relative">
-          <div className="content-stretch flex gap-[8px] items-center relative shrink-0 w-full">
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-brain-v1baby-blue-100 text-[20px] whitespace-nowrap">
-              {doc.id}
-            </p>
-            {doc.status && (
+    <div className="flex flex-col w-full">
+      {/* Top: invoice id + status + amount/date — separated from body by border-b */}
+      <div className="flex flex-col gap-[8px] items-start w-full pb-[24px] border-b border-brain-v1stroke-2 border-solid">
+        <div className="flex gap-[8px] items-center w-full">
+          <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-brain-v1baby-blue-100 text-[20px] whitespace-nowrap">
+            {doc.id}
+          </p>
+          {doc.status && (() => {
+            const chip = invoiceStatusChip(doc.status);
+            return (
               <div
-                className={`content-stretch flex items-center justify-center px-[10px] py-[4px] relative rounded-pill shrink-0 border border-solid ${STATUS_CHIP[doc.status]}`}
-                style={{ background: doc.status === "paid" ? "#123509" : doc.status === "held" ? "#350011" : "#222737", borderColor: doc.status === "paid" ? "rgba(66,191,35,0.2)" : doc.status === "held" ? "rgba(210,3,68,0.2)" : "rgba(108,119,157,0.2)" }}
+                className="flex items-center justify-center px-[10px] py-[4px] rounded-pill shrink-0 border border-solid"
+                style={{ background: chip.bg, borderColor: chip.border }}
               >
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap" style={{ color: doc.status === "paid" ? "#42bf23" : doc.status === "held" ? "#d20344" : "#6c779d" }}>
-                  {docStatusLabel(doc.status)}
+                <p
+                  className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap"
+                  style={{ color: chip.color }}
+                >
+                  {capitalCase(doc.status)}
                 </p>
               </div>
-            )}
-          </div>
-          <div className="content-stretch flex items-center relative shrink-0 w-full">
-            <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[16px]">
-              {typeof doc.amount === "number" ? format(doc.amount) : ""}
-              {typeof doc.amount === "number" && doc.dateLabel ? " · " : ""}
-              {doc.dateLabel.replace(/^(Issued|Due|Paid|Effective|Posted)\s+/, "")}
-            </p>
-          </div>
+            );
+          })()}
         </div>
+        <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[16px]">
+          {typeof doc.amount === "number" ? format(doc.amount) : ""}
+          {typeof doc.amount === "number" && doc.dateLabel ? " · " : ""}
+          {doc.dateLabel.replace(/^(Issued|Due|Paid|Effective|Posted)\s+/, "")}
+        </p>
       </div>
+
+      {/* Remaining sections */}
+      <div className="flex flex-col gap-[32px] w-full pt-[24px]">
 
       {/* What Brain Extracted */}
       <div className="relative shrink-0 w-full">
@@ -275,6 +257,7 @@ function InvoicePane({ doc }: { doc: DocumentRecord }) {
           Open Original in Source System
         </Button>
       )}
+      </div>{/* end: Remaining sections */}
     </div>
   );
 }

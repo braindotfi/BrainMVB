@@ -24,3 +24,6 @@ button-avatar   superseded — Settings Profile no longer has a top avatar recor
 button-edit-profile   superseded — the old top profile editor was replaced by the Name row's inline edit action
 img-avatar   superseded — Settings Profile no longer renders an uploaded avatar in the removed top record
 input-avatar-file   superseded — avatar upload controls were removed from Settings Profile
+button-close-invoice-preview   removed — Invoice Record no longer exposes a thumbnail preview overlay
+invoice-preview-overlay   removed — Invoice Record no longer exposes a thumbnail preview overlay
+invoice-thumbnail   removed — Invoice Record header now matches Bill Details without an invoice thumbnail

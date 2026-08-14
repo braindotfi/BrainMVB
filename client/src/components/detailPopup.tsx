@@ -13,6 +13,7 @@
 
 import type { ReactNode } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { ChevronRight } from "lucide-react";
 import closeIcon from "@assets/Close_1783293571882.png";
 
 export function fmtDue(iso?: string | null): string {
@@ -89,7 +90,12 @@ export function DetailTable({ children }: { children: ReactNode }) {
   );
 }
 
-/** Name + due chip over amount + currency. */
+/** Name + due chip over amount + currency.
+ *
+ *  Optional `icon`: a ReactNode (e.g. a thumbnail image) rendered to the left
+ *  of the name/amount block.  When omitted the header keeps its original
+ *  single-column layout so existing callers are unaffected.
+ */
 export function DetailPopupHeader({
   name,
   chip,
@@ -98,6 +104,7 @@ export function DetailPopupHeader({
   nameTestId,
   chipTestId,
   amountTestId,
+  icon,
 }: {
   name: string;
   chip: DueChip | null;
@@ -106,10 +113,13 @@ export function DetailPopupHeader({
   nameTestId?: string;
   chipTestId?: string;
   amountTestId?: string;
+  /** Optional leading icon — rendered at 56×56 px to the left of the name block. */
+  icon?: ReactNode;
 }) {
   return (
-    <div className="border-b border-brain-v1stroke-2 border-solid flex flex-col items-start p-[24px] relative shrink-0 w-full">
-      <div className="flex flex-col gap-[8px] items-start w-full">
+    <div className={`border-b border-brain-v1stroke-2 border-solid p-[24px] relative shrink-0 w-full ${icon ? "flex items-start gap-[16px]" : "flex flex-col items-start"}`}>
+      {icon && <div className="shrink-0">{icon}</div>}
+      <div className="flex flex-col gap-[8px] items-start w-full min-w-px">
         <div className="flex gap-[8px] items-center w-full">
           <p
             className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-brain-v1baby-blue-100 text-[20px]"
@@ -146,6 +156,57 @@ export function DetailPopupHeader({
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+/** A linked-evidence row (chip + label + chevron) matching the AuditRecordPopup
+ *  and AgentProposalModal pattern.  Tappable by default; pass `onClick` to wire
+ *  the navigation action. */
+export function LinkedEvidenceRow({
+  kind,
+  label,
+  onClick,
+  testId,
+}: {
+  kind: string;
+  label: string;
+  onClick?: () => void;
+  testId?: string;
+}) {
+  const inner = (
+    <>
+      <div className="bg-brain-v1baby-blue-15 border border-[rgba(108,119,157,0.2)] border-solid flex items-center justify-center px-[8px] py-[3px] rounded-pill shrink-0">
+        <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-brain-v1baby-blue-60 text-[12px] whitespace-nowrap">
+          {kind}
+        </p>
+      </div>
+      <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-100 text-[16px] flex-1 min-w-px">
+        {label}
+      </p>
+      <ChevronRight size={16} className="text-brain-v1baby-blue-60 shrink-0" />
+    </>
+  );
+
+  const rowClass =
+    "bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 border-solid flex gap-[16px] items-center px-[16px] py-[12px] rounded-row w-full text-left";
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        data-testid={testId}
+        className={`${rowClass} hover:bg-brain-v1baby-blue-5 hover:border-brain-v1stroke-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple`}
+      >
+        {inner}
+      </button>
+    );
+  }
+
+  return (
+    <div data-testid={testId} className={rowClass}>
+      {inner}
     </div>
   );
 }
