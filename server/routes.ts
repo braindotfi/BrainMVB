@@ -1651,7 +1651,7 @@ When you mention a money amount, always reproduce it exactly as the grounding da
           filename: z.string().min(1).max(512),
           mimeType: z.string().max(256).optional(),
           category: z.string().max(64).optional(),
-          sourceType: z.enum(["pdf_upload", "csv_upload"]),
+          sourceType: z.enum(["pdf_upload", "csv_upload", "xlsx_upload", "txt_upload"]),
         })
         .safeParse(req.query);
       if (!q.success) {
@@ -1669,6 +1669,7 @@ When you mention a money amount, always reproduce it exactly as the grounding da
         ".csv",
         ".xls",
         ".xlsx",
+        ".txt",
         ".doc",
         ".docx",
         ".png",
