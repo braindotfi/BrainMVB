@@ -38,6 +38,7 @@
 - [Proposal evidence refs](brain-proposal-evidence-refs.md) — refs come bare AND as `wiki:` URIs; wiki refs are context not subject; `pd_`/`evt_` never resolve; probe live, don't trust mocks.
 - [Assistant tier order](assistant-tier-order.md) — the local deterministic tier answers before core's wiki route, so core-side audit traces legitimately show zero wiki.question events.
 - [Assistant answer status](assistant-answer-status.md) — refusals arrive as HTTP 200 prose; non-chat surfaces must check answered AND wording, never cache one; evidence ≠ answer.
+- [Compliance narrative shape](compliance-narrative-shape.md) — live compliance narratives are generic prose; no inv_/cp_ refs; use source_refs (brain-core PR #645), never textRefs(narrative).
 - [Guarding generated fixtures](generated-fixture-guards.md) — can't hash-pin generated PDF/XLSX; and a check must prove it CAN fail: witness-gate it, never `continue` past a missing record.
 - [Proposal presentation contract](brain-proposal-presentation-contract.md) — doc's action table is aspirational: bind to available_decisions; policy_id null; core puts raw ids in prose; band ≠ pct.
 - [brain-core list caps & by-id](brain-list-endpoint-caps.md) — list reads cap silently (20 rows, no cursor) so bulk prefetch needs a by-id fallback; obligations by-id is 404; no email/reminder/message data exists.
