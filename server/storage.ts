@@ -1556,7 +1556,28 @@ function mapUserRuleRow(r: typeof userRulesTable.$inferSelect): UserRule {
   };
 }
 
+/**
+ * Refuse to boot in production without a database.
+ *
+ * Without DATABASE_URL the app silently falls back to MemStorage below, which
+ * keeps users, password hashes and sessions in process memory. It serves
+ * traffic normally and logs nothing, but every restart wipes every account:
+ * users who registered before the last restart get "Invalid username/email or
+ * password" for an account they know exists, and their scrypt hashes are gone
+ * for good because they never touched a disk. It also strands their
+ * brain-core tenant, which is persisted upstream and can no longer be reached
+ * by any login. Mirrors the SESSION_SECRET guard in server/auth.ts.
+ */
+export function assertStorageBackend(env: NodeJS.ProcessEnv = process.env): void {
+  if (env.NODE_ENV === "production" && !env.DATABASE_URL) {
+    throw new Error(
+      "DATABASE_URL must be set in production - the in-memory fallback loses every account and session on restart",
+    );
+  }
+}
+
 async function createStorage(): Promise<IStorage> {
+  assertStorageBackend();
   if (process.env.DATABASE_URL) {
     return new DatabaseStorage();
   }
