@@ -327,10 +327,13 @@ function classifyProposalDecided(e: BrainAuditEvent): { eventType: AuditEventTyp
           : decision === "undo"
             ? "Proposal reopened"
             : "Proposal decision recorded";
-  // Use the clean decision label as the summary. The brain narrative / recommended
-  // remediation text is moved to the lifecycle step note so it appears only in
-  // "Brain's Recommendation" — not in the card's summary header or lifecycle row.
-  return { eventType, summary: fallback };
+  // Prefer the proposal's own subject/title (proposal_summary.summary) as the
+  // summary header so audit records are consistent with agent decision cards,
+  // which use the proposal subject/headline as their title. Fall back to the
+  // generic decision label only when no subject snapshot is available.
+  const proposalSummary = proposalSummaryFrom(e);
+  const summary = proposalSummary?.summary?.trim() || fallback;
+  return { eventType, summary };
 }
 
 /** brain-core's own event_type mapped onto the client bucket, when present.

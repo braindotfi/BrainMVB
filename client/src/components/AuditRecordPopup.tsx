@@ -25,7 +25,7 @@ import { RecordPager } from "./RecordPager";
 import { matchCannedPrompt } from "@shared/cannedPrompts";
 import { anchorFromInclusionProof, lifecycleStepsForDisplay, resolveDetailAnchor, type BrainAuditEventDetail } from "@/lib/brainAudit";
 import { capitalCase } from "@/lib/displayLabels";
-import { humanizeEnumValue } from "@/lib/proposalCards";
+
 import { Button } from "@/components/ui/button";
 import { useBrainProposals, agentKeyForProposalType, type BrainProposal } from "@/lib/brainProposals";
 import { AGENT_DISPLAY_NAME } from "@/lib/agentProposals";
@@ -42,10 +42,6 @@ function proposalEvidenceLabel(proposal: BrainProposal): string {
     : `${agentBaseName} proposal`;
 }
 
-function sentenceCaseRecommendation(text: string, formatText: (value: string) => string): string {
-  const formatted = humanizeEnumValue(formatText(text).trim());
-  return formatted ? formatted.charAt(0).toUpperCase() + formatted.slice(1) : formatted;
-}
 
 export function AuditRecordPopup({
   record,
@@ -122,10 +118,6 @@ export function AuditRecordPopup({
   /* proposal.decided carries Brain's supporting recommendation on its
      lifecycle step. Pull it into its own section so the summary remains the
      event narrative and the lifecycle remains an event history. */
-  const recommendationNote = !isAssistantActivity(record)
-    ? [...lifecycle].reverse().map((step) => step.note?.trim()).find(Boolean)
-    : undefined;
-
   const isFlagged = record.eventType === "flagged" && !isAssistantActivity(record);
 
   const handleNavigate = (link: LinkedEntity) => {
@@ -357,22 +349,6 @@ export function AuditRecordPopup({
                         </div>
                       </div>
                     </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Brain's supporting recommendation belongs after the recorded
-                  lifecycle, never inside the summary or an individual step. */}
-              {recommendationNote && (
-                <div className="relative shrink-0 w-full" data-testid="section-audit-brain-recommendation">
-                  <div className="content-stretch flex flex-col gap-[16px] items-start relative size-full">
-                    <SectionHeader>Brain's Recommendation</SectionHeader>
-                    <p
-                      className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[16px] w-full"
-                      data-testid="text-audit-brain-recommendation"
-                    >
-                      {sentenceCaseRecommendation(recommendationNote, formatText)}
-                    </p>
                   </div>
                 </div>
               )}
