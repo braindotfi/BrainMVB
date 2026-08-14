@@ -23,7 +23,12 @@ import { fetchAllBrainProposals, type ListProposalsResponse } from "./brainPropo
    share one list query key, so react-query issues a single list request and
    dedupes the detail fetches between them. */
 
-/** Same key brainProposals.ts uses, so the two surfaces share one fetch. */
+/** Unfiltered proposals feed — deliberately NO status param. The PaymentIntent
+ *  queue must see all statuses because the proposal row's status is a merged
+ *  read-model value whose mapping onto PaymentIntent statuses is not part of
+ *  the published contract. useBrainProposals now uses a separate
+ *  `?status=pending` key; useDecideProposal's invalidation uses startsWith so
+ *  both slots are evicted on every decision. */
 const PROPOSALS_QUERY_KEY = "/api/brain/proposals?limit=100";
 
 /** The money-path payment_intent_ids on the complete proposals feed,
