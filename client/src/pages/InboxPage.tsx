@@ -58,10 +58,9 @@ import {
 } from "@/lib/agentRunInput";
 import { MissingEvidenceModal } from "@/components/MissingEvidenceModal";
 import { useBrainVendors } from "@/lib/brainVendors";
-import { apiRequest } from "@/lib/queryClient";
+import { isBrainRateLimitError, reportBrainReadCooldownIfActive, throwBrainRateLimitIfNeeded } from "@/lib/rateLimit";
 import { useToast } from "@/hooks/use-toast";
 import { mapApprovalRejection, parseCoreError, type ApprovalRejection } from "@/lib/approvalRejections";
-import { isRateLimitError, reportRateLimit } from "@/lib/rateLimit";
 import {
   useRules,
   pauseRule as storePauseRule,
@@ -599,18 +598,7 @@ export function InboxPage() {
      to record. They appeared in the Audit Log with no way to act on them. Rows
      with no writable decision are still informational and still stay out. */
   const needsReviewProposals = useMemo(
-    () =>
-      liveProposals.filter(
-        (p) =>
-          /* isNeedsReview gates on status==="pending" — the primary guard.
-             The explicit status!=="acknowledged" below is defense-in-depth for
-             the edge case where brain-core returns an acknowledged proposal
-             with a stale "pending" status field (possible on recurring
-             notify_only findings re-proposed by the same agent sweep). */
-          isNeedsReview(p) &&
-          p.status !== "acknowledged" &&
-          isDecidableProposal(p),
-      ),
+    () => liveProposals.filter((p) => isNeedsReview(p) && isDecidableProposal(p)),
     [liveProposals],
   );
   const decideProposal = useDecideProposal();
@@ -656,43 +644,64 @@ export function InboxPage() {
   };
   const approveLive = useMutation<unknown, Error, string>({
     mutationFn: async (id: string) => {
+      reportBrainReadCooldownIfActive("proposals");
       const res = await fetch(`/api/brain/payment-intents/${id}/approve`, { method: "POST", credentials: "include" });
-      const body = await res.json().catch(() => undefined);
+      const text = await res.text().catch(() => "");
+      let body: { intent?: { status?: string } } | undefined;
+      try {
+        body = text ? JSON.parse(text) as { intent?: { status?: string } } : undefined;
+      } catch {
+        body = undefined;
+      }
       if (!res.ok) {
-        if (res.status === 429) {
-          reportRateLimit({ "retry-after": res.headers.get("retry-after"), body });
-        }
-        throw new Error(
-          res.status === 429
-            ? "429: rate_limited"
-            : mapApprovalRejection(parseCoreError(body)).detail,
-        );
+        if (res.status === 429) await throwBrainRateLimitIfNeeded(res, text, "proposals");
+        throw new Error(mapApprovalRejection(parseCoreError(body)).detail);
       }
       return body;
     },
     onSuccess: () => { setActive(null); invalidateLiveQueue(); },
     onError: (err) => {
-      if (isRateLimitError(err)) return;
-      toast({ title: "Couldn't approve", description: err.message, variant: "destructive" });
+      if (!isBrainRateLimitError(err)) toast({ title: "Couldn't approve", description: err.message, variant: "destructive" });
     },
   });
   const rejectLive = useMutation<unknown, Error, string>({
     mutationFn: async (id: string) => {
-      const res = await apiRequest("POST", "/api/brain/reject", { payment_intent_id: id, reason: "Declined by operator" });
-      return res.json();
+      reportBrainReadCooldownIfActive("proposals");
+      const res = await fetch("/api/brain/reject", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ payment_intent_id: id, reason: "Declined by operator" }),
+      });
+      const text = await res.text().catch(() => "");
+      if (!res.ok) {
+        if (res.status === 429) await throwBrainRateLimitIfNeeded(res, text, "proposals");
+        throw new Error(text || `Couldn't reject (${res.status}).`);
+      }
+      return text ? JSON.parse(text) : undefined;
     },
     onSuccess: () => { setActive(null); invalidateLiveQueue(); },
     onError: (err) => {
-      if (isRateLimitError(err)) return;
-      toast({ title: "Couldn't reject", description: err.message, variant: "destructive" });
+      if (!isBrainRateLimitError(err)) toast({ title: "Couldn't reject", description: err.message, variant: "destructive" });
     },
   });
 
   /* ── Session-scoped intent approve / reject (§6-gated) ─────────────────── */
   const rejectIntent = useMutation<unknown, Error, string>({
     mutationFn: async (intentId: string) => {
-      const res = await apiRequest("POST", "/api/brain/reject", { payment_intent_id: intentId, reason: "Declined by operator" });
-      return res.json();
+      reportBrainReadCooldownIfActive("proposals");
+      const res = await fetch("/api/brain/reject", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ payment_intent_id: intentId, reason: "Declined by operator" }),
+      });
+      const text = await res.text().catch(() => "");
+      if (!res.ok) {
+        if (res.status === 429) await throwBrainRateLimitIfNeeded(res, text, "proposals");
+        throw new Error(text || `Couldn't reject (${res.status}).`);
+      }
+      return text ? JSON.parse(text) : undefined;
     },
     onSuccess: (_d, intentId) => markDeclined(intentId),
   });
@@ -702,15 +711,21 @@ export function InboxPage() {
     setApprovingIntentId(intentId);
     setLiveRejection(null);
     try {
+      reportBrainReadCooldownIfActive("proposals");
       const res = await fetch(`/api/brain/payment-intents/${intentId}/approve`, {
         method: "POST",
         credentials: "include",
       });
-      const body = await res.json().catch(() => undefined);
+      const text = await res.text().catch(() => "");
+      let body: { intent?: { status?: string } } | undefined;
+      try {
+        body = text ? JSON.parse(text) as { intent?: { status?: string } } : undefined;
+      } catch {
+        body = undefined;
+      }
       if (!res.ok) {
         if (res.status === 429) {
-          reportRateLimit({ "retry-after": res.headers.get("retry-after"), body });
-          return;
+          await throwBrainRateLimitIfNeeded(res, text, "proposals");
         }
         const rej = mapApprovalRejection(parseCoreError(body));
         if (surfaceRejection) {
@@ -729,7 +744,8 @@ export function InboxPage() {
         alert.approved("Payment approved", "Brain core accepted the approval. It will settle shortly.", 2_000);
       }
       setActiveLive(null);
-    } catch {
+    } catch (err) {
+      if (isBrainRateLimitError(err)) return;
       const rej: ApprovalRejection = {
         reason: "network_error",
         title: "Couldn't reach Brain core",
@@ -2128,7 +2144,6 @@ export function InboxPage() {
         open={selectedInsight !== null}
         onOpenChange={(o) => { if (!o) { setSelectedInsight(null); setOpenItemId(null); } }}
         {...pagerProps}
-        position={pager.position ?? undefined}
         onAcknowledge={
           selectedInsight
             ? () => { if (selectedInsightItem) acknowledgeItem(selectedInsightItem); }
@@ -2157,7 +2172,6 @@ export function InboxPage() {
         open={activeRecord !== null}
         onOpenChange={(o) => { if (!o) { setActiveRecord(null); setOpenItemId(null); } }}
         {...pagerProps}
-        position={pager.position ?? undefined}
         returnToBase="/inbox"
       />
 

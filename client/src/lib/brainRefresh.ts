@@ -71,6 +71,7 @@ const DOCUMENT_POLL_MS = 15_000;
 const DOCUMENT_IDLE_POLL_MS = 30_000;
 const SETTLE_INTERVAL_MS = 20_000;
 const SETTLE_WINDOW_MS = 3 * 60_000;
+const BRAIN_INVALIDATION_COALESCE_MS = 250;
 
 /**
  * Ceiling on how long a projection signal can hold a document in flight, measured from
@@ -140,12 +141,47 @@ export function projectionSettledCleanly(
   );
 }
 
-/** Mark every /api/brain/* query stale. Mounted pages refetch immediately; unmounted ones
- *  refetch on their next mount, which they would not otherwise do under staleTime: Infinity. */
-export function invalidateBrainNamespace(): void {
-  void queryClient.invalidateQueries({
+export function makeCoalescedInvalidator(run: () => Promise<unknown> | unknown, delayMs: number) {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  let running = false;
+  let pending = false;
+
+  const flush = () => {
+    timer = null;
+    if (running) {
+      pending = true;
+      return;
+    }
+    running = true;
+    Promise.resolve(run()).finally(() => {
+      running = false;
+      if (pending) {
+        pending = false;
+        schedule();
+      }
+    });
+  };
+
+  const schedule = () => {
+    if (timer) return;
+    timer = setTimeout(flush, delayMs);
+  };
+
+  return schedule;
+}
+
+const scheduleBrainNamespaceInvalidation = makeCoalescedInvalidator(
+  () => queryClient.invalidateQueries({
     predicate: (q) => typeof q.queryKey[0] === "string" && q.queryKey[0].startsWith("/api/brain/"),
-  });
+  }),
+  BRAIN_INVALIDATION_COALESCE_MS,
+);
+
+/** Mark every /api/brain/* query stale. Mounted pages refetch after a short
+ * coalescing window; unmounted ones refetch on their next mount, which they
+ * would not otherwise do under staleTime: Infinity. */
+export function invalidateBrainNamespace(): void {
+  scheduleBrainNamespaceInvalidation();
 }
 
 /**

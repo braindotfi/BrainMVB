@@ -5,10 +5,6 @@ import successIcon from "@assets/success_1779540800270.png";
 import approvedIcon from "@assets/approved_1784058164235.png";
 import rejectedIcon from "@assets/rejected_1784058164236.png";
 import postponedIcon from "@assets/postpone_1784058164236.png";
-import {
-  RATE_LIMIT_ALERT_TITLE,
-  RATE_LIMIT_EVENT,
-} from "@/lib/rateLimit";
 
 /* ─── Pop-up alerts (Figma 4086:66890 / 4086:66991 / 4086:67000 +
    action confirmations 5773:66469 / 5734:82359 / 5787:65369) ───
@@ -30,6 +26,8 @@ export type AppAlertOptions = {
   description?: ReactNode;
   /** Auto-dismiss timeout in ms. Set 0 to keep open until tapped. */
   durationMs?: number;
+  /** Alerts with the same key update one visible card instead of stacking. */
+  dedupeKey?: string;
 };
 
 type ActiveAlert = AppAlertOptions & { id: number };
@@ -157,11 +155,14 @@ export const AppAlertProvider = ({ children }: { children: ReactNode }) => {
   const [alerts, setAlerts] = useState<ActiveAlert[]>([]);
   const nextId = useRef(1);
   const timers = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
-  const rateLimitAlertId = useRef<number | null>(null);
+  const keyedAlerts = useRef<Map<string, number>>(new Map());
 
   const dismissAlert = useCallback((id: number) => {
-    setAlerts((prev) => prev.filter((a) => a.id !== id));
-    if (rateLimitAlertId.current === id) rateLimitAlertId.current = null;
+    setAlerts((prev) => {
+      const dismissed = prev.find((a) => a.id === id);
+      if (dismissed?.dedupeKey) keyedAlerts.current.delete(dismissed.dedupeKey);
+      return prev.filter((a) => a.id !== id);
+    });
     const t = timers.current.get(id);
     if (t) {
       clearTimeout(t);
@@ -171,9 +172,20 @@ export const AppAlertProvider = ({ children }: { children: ReactNode }) => {
 
   const showAlert = useCallback(
     (opts: AppAlertOptions) => {
-      const id = nextId.current++;
+      const existingId = opts.dedupeKey ? keyedAlerts.current.get(opts.dedupeKey) : undefined;
+      const id = existingId ?? nextId.current++;
+      if (opts.dedupeKey) keyedAlerts.current.set(opts.dedupeKey, id);
       const duration = opts.durationMs ?? 5_000;
-      setAlerts((prev) => [...prev, { ...opts, id }]);
+      setAlerts((prev) => {
+        const existing = prev.find((a) => a.id === id);
+        if (!existing) return [...prev, { ...opts, id }];
+        return prev.map((a) => a.id === id ? { ...opts, id } : a);
+      });
+      const previous = timers.current.get(id);
+      if (previous) {
+        clearTimeout(previous);
+        timers.current.delete(id);
+      }
       if (duration > 0) {
         const handle = setTimeout(() => dismissAlert(id), duration);
         timers.current.set(id, handle);
@@ -189,32 +201,6 @@ export const AppAlertProvider = ({ children }: { children: ReactNode }) => {
       timers.current.clear();
     };
   }, []);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const onRateLimit = (event: Event) => {
-      const retryAfter = (event as CustomEvent<{ retryAfterSeconds?: number }>).detail?.retryAfterSeconds;
-      const description =
-        retryAfter !== undefined
-          ? `Rate limit exceeded. Retry in ${retryAfter} second${retryAfter === 1 ? "" : "s"}.`
-          : "Rate limit exceeded. Retry shortly.";
-      if (rateLimitAlertId.current !== null) {
-        setAlerts((prev) =>
-          prev.map((alert) =>
-            alert.id === rateLimitAlertId.current ? { ...alert, description } : alert,
-          ),
-        );
-        return;
-      }
-      rateLimitAlertId.current = showAlert({
-        variant: "error",
-        title: RATE_LIMIT_ALERT_TITLE,
-        description,
-      });
-    };
-    window.addEventListener(RATE_LIMIT_EVENT, onRateLimit);
-    return () => window.removeEventListener(RATE_LIMIT_EVENT, onRateLimit);
-  }, [showAlert]);
 
   const value = useMemo<AlertContextValue>(
     () => ({ showAlert, dismissAlert }),
@@ -256,8 +242,8 @@ export const useAppAlert = () => {
     return {
       info:       (title: string, description?: ReactNode, durationMs?: number) =>
         ctx.showAlert({ variant: "info", title, description, durationMs }),
-      error:      (title: string, description?: ReactNode, durationMs?: number) =>
-        ctx.showAlert({ variant: "error", title, description, durationMs }),
+      error:      (title: string, description?: ReactNode, durationMs?: number, dedupeKey?: string) =>
+        ctx.showAlert({ variant: "error", title, description, durationMs, dedupeKey }),
       success:    (title: string, description?: ReactNode, durationMs?: number) =>
         ctx.showAlert({ variant: "success", title, description, durationMs }),
       approved:   (title: string, description?: ReactNode, durationMs?: number) =>

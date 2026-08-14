@@ -1,3 +1,10 @@
+import {
+  BrainRateLimitError,
+  brainReadFamilyForUrl,
+  getBrainReadCooldownDeadline,
+  throwBrainRateLimitIfNeeded,
+} from "./rateLimit";
+
 /**
  * Cursor pagination for brain-core's Ledger list endpoints.
  *
@@ -65,6 +72,7 @@ export async function fetchAllPages<T>(
   const pageSize = opts.pageSize ?? PAGE_SIZE;
   const maxPages = opts.maxPages ?? MAX_PAGES;
   const doFetch = opts.fetchImpl ?? fetch;
+  const rateLimitFamily = brainReadFamilyForUrl(path);
 
   const rows: T[] = [];
   /* A server that keeps handing back the same cursor is not advancing. Tracking
@@ -76,6 +84,14 @@ export async function fetchAllPages<T>(
   for (let page = 0; page < maxPages; page++) {
     const qs = new URLSearchParams({ limit: String(pageSize) });
     if (cursor) qs.set("cursor", cursor);
+    const cooldownUntil = rateLimitFamily ? getBrainReadCooldownDeadline(rateLimitFamily) : 0;
+    if (rateLimitFamily && cooldownUntil > Date.now()) {
+      throw new BrainRateLimitError(
+        rateLimitFamily,
+        Math.max(1, Math.ceil((cooldownUntil - Date.now()) / 1000)),
+        cooldownUntil,
+      );
+    }
 
     const res = await doFetch(`${path}?${qs.toString()}`, {
       credentials: "include",
@@ -83,6 +99,9 @@ export async function fetchAllPages<T>(
     });
     if (!res.ok) {
       const detail = await res.text().catch(() => res.statusText);
+      if (res.status === 429 && rateLimitFamily) {
+        await throwBrainRateLimitIfNeeded(res, detail, rateLimitFamily);
+      }
       throw new Error(`${res.status}: ${detail}`);
     }
 

@@ -95,16 +95,10 @@ describe("selectMoneyPathIntentIds", () => {
 describe("the review queues refresh when the operator comes back to the tab", () => {
   const src = (): string => require("fs").readFileSync("client/src/lib/brainQueue.ts", "utf8");
 
-  it("opts every query in this file into the focus refetch", () => {
-    /* Counting rather than naming each site: the two hooks hold three queries
-       apiece and a seventh added later must not quietly inherit the frozen
-       default. Every query already carries `retry: false`, so that is the
-       reliable per-query marker to count against. */
+  it("uses the canonical proposals list query policy instead of restating options", () => {
     const code = src();
-    const queries = code.match(/retry: false/g)?.length ?? 0;
-    const focused = code.match(/refetchOnWindowFocus: true/g)?.length ?? 0;
-    expect(queries).toBeGreaterThan(0);
-    expect(focused).toBe(queries);
+    expect(code.match(/useBrainProposalsListQuery\(\)/g)).toHaveLength(2);
+    expect(code).not.toContain('queryKey: ["/api/brain/proposals?limit=100"]');
   });
 
   it("refreshes the detail fan-out, not just the list", () => {
@@ -122,6 +116,8 @@ describe("the review queues refresh when the operator comes back to the tab", ()
       // Each query object ends at the arrow-function close that follows it.
       const block = code.slice(start, code.indexOf("})),", start));
       expect(block).toContain("refetchOnWindowFocus: true");
+      expect(block).toContain("staleTime: BRAIN_PROPOSALS_STALE_MS");
+      expect(block).toContain("enabled: !proposalsCooldown.isCoolingDown");
     }
   });
 

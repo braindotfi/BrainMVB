@@ -2,7 +2,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { parseCoreError } from "./approvalRejections";
 import type { AgentKey } from "./agentProposals";
-import { isRateLimitError, reportRateLimit } from "./rateLimit";
+import {
+  fetchBrainRead,
+  isBrainRateLimitError,
+  reportBrainReadCooldownIfActive,
+  throwBrainRateLimitIfNeeded,
+  useBrainReadCooldown,
+} from "./rateLimit";
 
 /* ── Live brain-core agent proposals (GET/POST /v1/proposals*) ────────────────
    Non-financial agent outputs (vendor risk, collections, treasury, etc.) that a
@@ -226,19 +232,18 @@ export interface ListProposalsResponse {
 
 const PROPOSALS_PAGE_SIZE = 100;
 const MAX_PROPOSAL_PAGES = 50;
+export const BRAIN_PROPOSALS_QUERY_KEY = ["/api/brain/proposals?limit=100"] as const;
+export const BRAIN_PENDING_PROPOSALS_QUERY_KEY = ["/api/brain/proposals?limit=100&status=pending"] as const;
+export const BRAIN_PROPOSALS_STALE_MS = 30_000;
 
 /** Read the complete proposals feed. Brain-core returns a cursor when the
  * merged proposal/payment-intent list spans more than one page. A partial
  * response must fail the query rather than render as a complete queue.
  *
- * `status` is forwarded to brain-core's read model as an explicit filter
- * (read-model.ts supports it). Pass `"pending"` for the non-financial inbox
- * queue to avoid fetching thousands of already-decided rows — brain-core's
- * suppress-set (decidedProposalIds) relies on the audit-log window, which
- * silently misses decisions older than `AUDIT_EVENTS_LIMIT` events. Omitting
- * `status` is intentional for the PaymentIntent queue (brainQueue.ts), where
- * the proposal row's status is a merged read-model value whose mapping onto
- * PaymentIntent statuses is not part of the published contract. */
+ * `status` is forwarded to brain-core's read model as an explicit filter.
+ * Pass `"pending"` for the non-financial inbox to avoid pulling old decided
+ * rows; omit it for the PaymentIntent queue because that queue filters on the
+ * detail record's authoritative status. */
 export async function fetchAllBrainProposals(signal?: AbortSignal, status?: string): Promise<ListProposalsResponse> {
   const proposals: BrainProposal[] = [];
   const followed = new Set<string>();
@@ -248,17 +253,9 @@ export async function fetchAllBrainProposals(signal?: AbortSignal, status?: stri
     const params = new URLSearchParams({ limit: String(PROPOSALS_PAGE_SIZE) });
     if (status) params.set("status", status);
     if (cursor) params.set("cursor", cursor);
-    const response = await fetch(`/api/brain/proposals?${params.toString()}`, {
-      credentials: "include",
+    const response = await fetchBrainRead(`/api/brain/proposals?${params.toString()}`, "proposals", {
       signal,
     });
-    if (!response.ok) {
-      const detail = (await response.text().catch(() => "")) || response.statusText;
-      if (response.status === 429) {
-        reportRateLimit({ "retry-after": response.headers.get("retry-after"), body: detail });
-      }
-      throw new Error(`${response.status}: ${detail}`);
-    }
     const body = (await response.json()) as Partial<ListProposalsResponse>;
     if (!Array.isArray(body.proposals)) {
       throw new Error("Brain proposals response did not contain a proposals array.");
@@ -302,6 +299,22 @@ export function selectNonFinancialProposals(items: BrainProposal[]): BrainPropos
   return items.filter((p) => p.payment_intent_id === null);
 }
 
+export function brainProposalsQueryOptions(enabled = true, status?: string) {
+  return {
+    queryKey: status === "pending" ? BRAIN_PENDING_PROPOSALS_QUERY_KEY : BRAIN_PROPOSALS_QUERY_KEY,
+    queryFn: ({ signal }: { signal?: AbortSignal }) => fetchAllBrainProposals(signal, status),
+    retry: false,
+    refetchOnWindowFocus: true,
+    staleTime: BRAIN_PROPOSALS_STALE_MS,
+    enabled,
+  };
+}
+
+export function useBrainProposalsListQuery(status?: string) {
+  const cooldown = useBrainReadCooldown("proposals");
+  return useQuery<ListProposalsResponse>(brainProposalsQueryOptions(!cooldown.isCoolingDown, status));
+}
+
 // ponytail: the auto-approved live-proposal bucket (an agent decided without a
 // human) is deferred - the merged read model carries no decider-identity field
 // (no `decided_by`), so there's no honest way to tell an agent decision from a
@@ -311,36 +324,21 @@ export function selectNonFinancialProposals(items: BrainProposal[]): BrainPropos
 
 /** All pending (non-financial) proposals. The list already returns full detail
  *  records (no extra fields live on GET /proposals/{id} that aren't on the
- *  list row), so no fan-out is needed here unlike brainQueue.ts's PaymentIntent
- *  queue.
- *
- *  Uses a dedicated `status=pending` query key, separate from the unfiltered
- *  key brainQueue.ts holds for the PaymentIntent queue. They no longer share a
- *  cache slot, but useDecideProposal's invalidation uses startsWith so it
- *  catches both. The split is intentional: the PaymentIntent queue must NOT
- *  pre-filter by status (its read-model mapping isn't part of the published
- *  contract), while the non-financial inbox MUST avoid pulling 2 000+ already-
- *  decided rows whose proposal.decided audit events fall outside the 100-event
- *  decidedProposalIds window. */
+ *  list row), so no fan-out is needed here unlike brainQueue.ts's
+ *  PaymentIntent queue. */
 export function useBrainProposals(): {
   isLoading: boolean;
   isError: boolean;
   proposals: BrainProposal[];
 } {
-  const list = useQuery<ListProposalsResponse>({
-    queryKey: ["/api/brain/proposals?limit=100&status=pending"],
-    queryFn: ({ signal }) => fetchAllBrainProposals(signal, "pending"),
-    retry: false,
-    /* Focus refetch on a 30 s stale window. This is a shared work queue:
-       a proposal decided by a teammate stays actionable here until something
-       refetches. Returning to the Inbox tab is the realistic moment for that;
-       the 30 s stale window also means the cache refreshes naturally when the
-       user navigates back within a minute, without constant polling from every
-       open tab. The explicit invalidation after every decide() call is kept so
-       the UI reflects the operator's own action immediately. */
-    refetchOnWindowFocus: true,
-    staleTime: 30_000,
-  });
+  /* Focus refetch on a 30 s stale window. This is a shared work queue:
+     a proposal decided by a teammate stays actionable here until something
+     refetches. Returning to the Inbox tab is the realistic moment for that;
+     the 30 s stale window also means the cache refreshes naturally when the
+     user navigates back within a minute, without constant polling from every
+     open tab. The explicit invalidation after every decide() call is kept so
+     the UI reflects the operator's own action immediately. */
+  const list = useBrainProposalsListQuery("pending");
   return {
     isLoading: list.isLoading,
     /* Surfaced so callers can tell "nothing to approve" from "couldn't ask".
@@ -397,16 +395,23 @@ export function useDecideProposal() {
 
   return useMutation<ProposalDecisionResult, Error, DecideProposalInput>({
     mutationFn: async ({ id, decision }) => {
+      reportBrainReadCooldownIfActive("proposals");
       const res = await fetch(`/api/brain/proposals/${encodeURIComponent(id)}/decide`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ decision }),
       });
-      const body = await res.json().catch(() => undefined);
+      const text = await res.text().catch(() => "");
+      let body: unknown;
+      try {
+        body = text ? JSON.parse(text) : undefined;
+      } catch {
+        body = undefined;
+      }
       if (!res.ok) {
         if (res.status === 429) {
-          reportRateLimit({ "retry-after": res.headers.get("retry-after"), body });
+          await throwBrainRateLimitIfNeeded(res, text, "proposals");
         }
         const code = parseCoreError(body)?.error?.code;
         if (res.status === 409 && (code === "execution_proposal_invalid_state" || code === "agent_proposal_invalid_state")) {
@@ -425,8 +430,7 @@ export function useDecideProposal() {
           variant: "destructive",
         });
         invalidate();
-      } else {
-        if (isRateLimitError(err)) return;
+      } else if (!isBrainRateLimitError(err)) {
         toast({ title: "Couldn't record decision", description: err.message, variant: "destructive" });
       }
     },
