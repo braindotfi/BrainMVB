@@ -43,9 +43,17 @@ function ageMs(d: SettleCandidate, now: number): number {
  * away) - even though brain-core had already resolved it, often within seconds. Never
  * silently stop asking; brain-core's own terminal status is authoritative once it
  * exists, at any age.
+ *
+ * "unavailable" gets the same treatment as "extracting", not just "unsupported"/
+ * "failed": it is set whenever the ingest-time extract call throws ANYTHING that
+ * is not a clean 422 (a network error, a 404, a 500, an auth hiccup) - confirmed
+ * live twice: a document landed "unavailable" locally while brain-core's own job
+ * had already reached a genuine terminal "failed" within seconds. "unavailable"
+ * is "we don't actually know", not "brain-core told us no" - the same category
+ * "extracting" is, so it deserves the same never-give-up re-check.
  */
 export function needsExtractSettle(d: SettleCandidate): boolean {
-  return d.extractStatus === "extracting";
+  return d.extractStatus === "extracting" || d.extractStatus === "unavailable";
 }
 
 /**
