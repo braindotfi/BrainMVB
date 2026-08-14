@@ -570,9 +570,9 @@ export const PagerFooter = ({
         <ChevronLeft size={24} className="shrink-0" aria-hidden="true" />
         Previous
       </Button>
-      {/* Queue position — visible between the buttons so users can see where they
-          are in the queue without guessing. Also announced to screen readers via
-          aria-live. A 1px spacer keeps the layout symmetric when absent. */}
+      {/* Queue position indicator — visible to all, also announced to screen
+          readers via aria-live. Sits between Previous/Next so the layout is
+          symmetric and the count reads as a midpoint, not an afterthought. */}
       {position ? (
         <span
           className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[16px] text-brain-v1baby-blue-60 shrink-0 whitespace-nowrap"
@@ -582,7 +582,8 @@ export const PagerFooter = ({
           {position}
         </span>
       ) : (
-        <span className="w-[1px] shrink-0" aria-hidden="true" />
+        /* Keep the flex layout symmetric when there is no position string. */
+        <span className="shrink-0 w-[1px]" aria-hidden="true" />
       )}
       <Button
         variant="secondary"
