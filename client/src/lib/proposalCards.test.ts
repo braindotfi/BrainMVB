@@ -18,6 +18,7 @@ import {
   keyFactsFromPresentation,
   resolveHeadlineText,
   resolveProseText,
+  stripRecommendationSuffix,
   buildRefDisplayMap,
   buildCollectionsDraft,
   applyCurrencyToBareAmounts,
@@ -730,6 +731,30 @@ describe("resolveHeadlineText", () => {
 });
 
 describe("buildProposalHeaderCopy", () => {
+  it("keeps a vendor-risk summary factual when core appends the recommendation", () => {
+    const proposal = {
+      id: "pr_vendor_risk_headline",
+      type: "vendor_risk",
+      status: "pending",
+      mode: "propose",
+      narrative: "Recommend hold.",
+      evidence: [],
+      subject: { label: "Vendor", display: "IRS" },
+      presentation: {
+        headline: "IRS vendor risk is high; recommend hold.",
+        recommendation: "recommend_hold",
+        key_facts: null,
+      },
+      key_facts: null,
+      resolved_refs: null,
+    } as any;
+
+    expect(buildProposalHeaderCopy(proposal, "Vendor Risk Agent", (value) => value)).toEqual({
+      title: "IRS vendor risk is high",
+      text: "IRS",
+    });
+  });
+
   it("matches the detail title/text and preserves title-case display labels", () => {
     const proposal = {
       id: "pr_test",
