@@ -599,7 +599,18 @@ export function InboxPage() {
      to record. They appeared in the Audit Log with no way to act on them. Rows
      with no writable decision are still informational and still stay out. */
   const needsReviewProposals = useMemo(
-    () => liveProposals.filter((p) => isNeedsReview(p) && isDecidableProposal(p)),
+    () =>
+      liveProposals.filter(
+        (p) =>
+          /* isNeedsReview gates on status==="pending" — the primary guard.
+             The explicit status!=="acknowledged" below is defense-in-depth for
+             the edge case where brain-core returns an acknowledged proposal
+             with a stale "pending" status field (possible on recurring
+             notify_only findings re-proposed by the same agent sweep). */
+          isNeedsReview(p) &&
+          p.status !== "acknowledged" &&
+          isDecidableProposal(p),
+      ),
     [liveProposals],
   );
   const decideProposal = useDecideProposal();

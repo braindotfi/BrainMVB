@@ -217,14 +217,24 @@ const MAX_PROPOSAL_PAGES = 50;
 
 /** Read the complete proposals feed. Brain-core returns a cursor when the
  * merged proposal/payment-intent list spans more than one page. A partial
- * response must fail the query rather than render as a complete queue. */
-export async function fetchAllBrainProposals(signal?: AbortSignal): Promise<ListProposalsResponse> {
+ * response must fail the query rather than render as a complete queue.
+ *
+ * `status` is forwarded to brain-core's read model as an explicit filter
+ * (read-model.ts supports it). Pass `"pending"` for the non-financial inbox
+ * queue to avoid fetching thousands of already-decided rows — brain-core's
+ * suppress-set (decidedProposalIds) relies on the audit-log window, which
+ * silently misses decisions older than `AUDIT_EVENTS_LIMIT` events. Omitting
+ * `status` is intentional for the PaymentIntent queue (brainQueue.ts), where
+ * the proposal row's status is a merged read-model value whose mapping onto
+ * PaymentIntent statuses is not part of the published contract. */
+export async function fetchAllBrainProposals(signal?: AbortSignal, status?: string): Promise<ListProposalsResponse> {
   const proposals: BrainProposal[] = [];
   const followed = new Set<string>();
   let cursor: string | null = null;
 
   for (let page = 0; page < MAX_PROPOSAL_PAGES; page++) {
     const params = new URLSearchParams({ limit: String(PROPOSALS_PAGE_SIZE) });
+    if (status) params.set("status", status);
     if (cursor) params.set("cursor", cursor);
     const response = await fetch(`/api/brain/proposals?${params.toString()}`, {
       credentials: "include",
@@ -287,17 +297,27 @@ export function selectNonFinancialProposals(items: BrainProposal[]): BrainPropos
 
 /* ── Reads ──────────────────────────────────────────────────────────────────── */
 
-/** All proposals. The list already returns full detail records (no extra
- *  fields live on GET /proposals/{id} that aren't on the list row), so no
- *  fan-out is needed here unlike brainQueue.ts's PaymentIntent queue. */
+/** All pending (non-financial) proposals. The list already returns full detail
+ *  records (no extra fields live on GET /proposals/{id} that aren't on the
+ *  list row), so no fan-out is needed here unlike brainQueue.ts's PaymentIntent
+ *  queue.
+ *
+ *  Uses a dedicated `status=pending` query key, separate from the unfiltered
+ *  key brainQueue.ts holds for the PaymentIntent queue. They no longer share a
+ *  cache slot, but useDecideProposal's invalidation uses startsWith so it
+ *  catches both. The split is intentional: the PaymentIntent queue must NOT
+ *  pre-filter by status (its read-model mapping isn't part of the published
+ *  contract), while the non-financial inbox MUST avoid pulling 2 000+ already-
+ *  decided rows whose proposal.decided audit events fall outside the 100-event
+ *  decidedProposalIds window. */
 export function useBrainProposals(): {
   isLoading: boolean;
   isError: boolean;
   proposals: BrainProposal[];
 } {
   const list = useQuery<ListProposalsResponse>({
-    queryKey: ["/api/brain/proposals?limit=100"],
-    queryFn: ({ signal }) => fetchAllBrainProposals(signal),
+    queryKey: ["/api/brain/proposals?limit=100&status=pending"],
+    queryFn: ({ signal }) => fetchAllBrainProposals(signal, "pending"),
     retry: false,
     /* Focus refetch on a 30 s stale window. This is a shared work queue:
        a proposal decided by a teammate stays actionable here until something
