@@ -1489,7 +1489,7 @@ When you mention a money amount, always reproduce it exactly as the grounding da
         const patch: SourceDocumentExtractionPatch = {};
         let extractStatus: ExtractStatus | null = d.extractStatus;
 
-        if (needsExtractSettle(d, now)) {
+        if (needsExtractSettle(d)) {
           try {
             const extract = await withBrainBaseUrl(settleBaseUrl, () => extractRawDocument(agentToken, d.rawId!));
             const next = extractStatusForJob(extract);

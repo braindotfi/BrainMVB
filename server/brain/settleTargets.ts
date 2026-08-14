@@ -9,14 +9,6 @@ import type { ExtractStatus, ProjectionStatus } from "../storage";
 import { isTerminalProjectionStatus } from "./projectionStatus";
 
 /**
- * How long we keep re-POSTing /raw/{id}/extract for a document stuck at "extracting".
- * Generous, because extraction genuinely can take a while and a document past this point
- * stays "extracting" - we don't know what happened, and inventing a terminal status
- * would be a lie.
- */
-export const EXTRACT_SETTLE_MAX_AGE_MS = 60 * 60 * 1000;
-
-/**
  * How long we keep reading GET /raw/{id} for a document's projection status.
  *
  * Deliberately far shorter than the extraction window. Projection starts once extraction
@@ -40,9 +32,20 @@ function ageMs(d: SettleCandidate, now: number): number {
   return now - new Date(d.uploadedAt).getTime();
 }
 
-/** Extraction is still running and recent enough to be worth another poll. */
-export function needsExtractSettle(d: SettleCandidate, now: number): boolean {
-  return d.extractStatus === "extracting" && ageMs(d, now) < EXTRACT_SETTLE_MAX_AGE_MS;
+/**
+ * Extraction is still non-terminal locally, so it is worth one more check.
+ *
+ * Deliberately UNBOUNDED by age: brain-core's POST /raw/{id}/extract is idempotent
+ * and cheap (an already-terminal job just returns its settled state), and the caller
+ * caps fan-out per request via SETTLE_MAX_PER_REQUEST. An age cutoff here previously
+ * meant a document could get stuck showing "extracting" forever if the one settle
+ * window happened to close before the client polled again (e.g. the user navigated
+ * away) - even though brain-core had already resolved it, often within seconds. Never
+ * silently stop asking; brain-core's own terminal status is authoritative once it
+ * exists, at any age.
+ */
+export function needsExtractSettle(d: SettleCandidate): boolean {
+  return d.extractStatus === "extracting";
 }
 
 /**
@@ -54,7 +57,10 @@ export function needsExtractSettle(d: SettleCandidate, now: number): boolean {
  * bound we would mirror that "pending" onto old documents and hold the post-upload
  * refresh open forever on rows whose projection actually finished months ago.
  */
-export function needsProjectionSettle(d: SettleCandidate, now: number): boolean {
+export function needsProjectionSettle(
+  d: SettleCandidate,
+  now: number,
+): boolean {
   return (
     d.extractStatus === "extracted" &&
     !isTerminalProjectionStatus(d.projectionStatus) &&
@@ -64,5 +70,7 @@ export function needsProjectionSettle(d: SettleCandidate, now: number): boolean 
 
 /** Whether this document warrants any upstream call at all this request. */
 export function shouldSettle(d: SettleCandidate, now: number): boolean {
-  return Boolean(d.rawId) && (needsExtractSettle(d, now) || needsProjectionSettle(d, now));
+  return (
+    Boolean(d.rawId) && (needsExtractSettle(d) || needsProjectionSettle(d, now))
+  );
 }
