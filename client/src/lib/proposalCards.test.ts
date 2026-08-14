@@ -48,6 +48,15 @@ describe("resolveRecommendedAction", () => {
     expect(resolveRecommendedAction({ presentation: { recommendation: "recommend_hold" } })).toBe("Recommend hold");
   });
 
+  it("prefers authored narrative over a short presentation enum", () => {
+    expect(
+      resolveRecommendedAction({
+        presentation: { recommendation: "propose_payment_plan" },
+        narrative: "Recommend a payment plan with a collaborative tone at the payment-plan tier.",
+      }),
+    ).toBe("Recommend a payment plan with a collaborative tone at the payment-plan tier.");
+  });
+
   it("reads nested recommendation fields from details", () => {
     expect(resolveRecommendedAction({ details: { recommended_action: "Review the cash buffer." } })).toBe(
       "Review the cash buffer.",

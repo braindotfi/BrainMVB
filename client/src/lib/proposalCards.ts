@@ -265,25 +265,38 @@ export interface RecommendedActionSource {
   details?: Record<string, unknown> | null;
 }
 
+const MACHINE_ENUM_VALUE_RE = /^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$/;
+
 /**
  * Resolve the one customer-facing recommendation label used by every agent
  * card. Core has shipped this value under several additive shapes over time;
  * normalize those shapes here instead of making each card know the wire
- * history. Enum values are humanized, while authored sentences are preserved.
+ * history. Authored recommendation prose wins over a machine enum such as
+ * `propose_payment_plan`; the enum is the honest fallback when no prose exists.
  */
 export function resolveRecommendedAction(source: RecommendedActionSource): string | null {
   const candidates = [
     source.recommendedAction,
     source.recommended_action,
-    source.presentation?.recommendation,
     source.presentation?.recommendedAction,
     source.presentation?.recommended_action,
     source.details?.recommended_action,
     source.details?.recommendedAction,
     source.details?.recommendation,
     source.narrative,
+    source.presentation?.recommendation,
   ];
 
+  // Prefer a human-authored sentence regardless of which additive field carried
+  // it. This prevents a short presentation enum from hiding a useful narrative.
+  for (const candidate of candidates) {
+    if (typeof candidate !== "string") continue;
+    const value = candidate.trim();
+    if (value && !MACHINE_ENUM_VALUE_RE.test(value)) return value;
+  }
+
+  // If core supplied only machine values, keep the first one as a readable
+  // fallback rather than dropping the section entirely.
   for (const candidate of candidates) {
     if (typeof candidate !== "string") continue;
     const value = candidate.trim();

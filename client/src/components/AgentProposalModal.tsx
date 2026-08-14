@@ -298,10 +298,15 @@ export function LiveProposalModal({
     presentation,
     details: proposal.details,
   });
-  const recommendedAction = explicitRecommendedAction ?? resolveRecommendedAction({ narrative: cardNarrative });
+  const recommendedAction = resolveRecommendedAction({
+    presentation,
+    details: proposal.details,
+    narrative: cardNarrative,
+  });
   // Only show the narrative in "Why This Needs Your Decision" when it is not
   // also serving as the recommendation content.
-  const narrativeInWhySection = explicitRecommendedAction ? cardNarrative : null;
+  const narrativeInWhySection =
+    cardNarrative && recommendedAction !== cardNarrative ? cardNarrative : null;
 
   /* Collections is the only agent whose approved action sends text to a third
      party, so it is the only one that gets a draft to preview.
