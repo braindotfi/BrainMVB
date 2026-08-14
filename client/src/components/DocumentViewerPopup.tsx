@@ -12,11 +12,10 @@ import {
   ExternalLink,
   ArrowLeftRight,
 } from "lucide-react";
-import invoiceImg from "@assets/invoice_1783385090730.png";
-import magnifyingGlassImg from "@assets/magnifyingglass_1783385090731.png";
 import closeIcon from "@assets/Close_1783293571882.png";
 import type { DocKind, DocStatus, DocumentRecord } from "@/lib/documentTypes";
 import { docKindLabel, docKindCaption, docStatusLabel, openDocumentOriginal } from "@/lib/documentTypes";
+import { capitalCase } from "@/lib/displayLabels";
 import { resolveDocument } from "@/lib/openDocumentDetail";
 import { resolveProposal } from "@/lib/openProposalDetail";
 import { useCurrency } from "@/lib/useCurrency";
@@ -145,7 +144,7 @@ function InvoicePane({ doc }: { doc: DocumentRecord }) {
                   className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-[14px] whitespace-nowrap"
                   style={{ color: chip.color }}
                 >
-                  {docStatusLabel(doc.status)}
+                  {capitalCase(doc.status)}
                 </p>
               </div>
             );
