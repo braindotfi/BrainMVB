@@ -17,7 +17,7 @@ import {
   buildEvidenceTiles,
   buildRefDisplayMap,
   resolveProseText,
-  humanizeEnumValue,
+  resolveRecommendedAction,
   buildProposalHeaderCopy,
   titleCaseLabel,
   buildCollectionsDraft,
@@ -291,18 +291,17 @@ export function LiveProposalModal({
   const refDisplays = buildRefDisplayMap(resolvedFacts, evidence, proposal.resolved_refs);
   /* Core's narrative names its subject by raw id too. */
   const cardNarrative = resolveProseText(proposal.narrative, refDisplays);
-  /* presentation.recommendation carries an enum value ("recommend_hold" etc.).
-     When it is absent — which is common — fall back to the narrative so
-     Brain's Recommendation always appears on every agent card.
-     When the narrative IS the recommendation, suppress it from "Why This Needs
-     Your Decision" to avoid showing the same text twice. */
-  const enumRecommendation = presentation?.recommendation?.trim()
-    ? humanizeEnumValue(presentation.recommendation.trim())
-    : null;
-  const recommendation = enumRecommendation ?? (cardNarrative ? prose(cardNarrative) : null);
-  // Only show the narrative in "Why This Needs Your Decision" when it is NOT
+  /* One resolver owns the recommendation copy across live and legacy cards.
+     Resolve explicit action fields first; only use the narrative when core did
+     not provide a dedicated recommendation. */
+  const explicitRecommendedAction = resolveRecommendedAction({
+    presentation,
+    details: proposal.details,
+  });
+  const recommendedAction = explicitRecommendedAction ?? resolveRecommendedAction({ narrative: cardNarrative });
+  // Only show the narrative in "Why This Needs Your Decision" when it is not
   // also serving as the recommendation content.
-  const narrativeInWhySection = enumRecommendation ? cardNarrative : null;
+  const narrativeInWhySection = explicitRecommendedAction ? cardNarrative : null;
 
   /* Collections is the only agent whose approved action sends text to a third
      party, so it is the only one that gets a draft to preview.
@@ -406,8 +405,8 @@ export function LiveProposalModal({
               )}
 
               {/* The agent's own reasoning, then the structured facts behind it.
-                  When the narrative is being used as the Brain's Recommendation
-                  content, narrativeInWhySection is null to avoid duplication. */}
+                  When the narrative is being used as Recommended Action content,
+                  narrativeInWhySection is null to avoid duplication. */}
               {(narrativeInWhySection || detailRows.length > 0) && (
                 <CardSection title="Why This Needs Your Decision">
                   {narrativeInWhySection && (
@@ -419,12 +418,10 @@ export function LiveProposalModal({
                 </CardSection>
               )}
 
-              {/* Brain's recommendation is separate from the narrative that
-                  explains why this record needs review. Enum values such as
-                  recommend_hold are humanized into sentence case. */}
-              {recommendation && (
-                <CardSection title="Brain's Recommendation" testId="section-live-proposal-recommendation">
-                  <CardText testId="text-live-proposal-recommendation">{recommendation}</CardText>
+              {/* One shared recommendation surface for every agent card. */}
+              {recommendedAction && (
+                <CardSection title="Recommended Action" testId="section-live-proposal-recommendation">
+                  <CardText testId="text-live-proposal-recommendation">{prose(recommendedAction)}</CardText>
                 </CardSection>
               )}
 

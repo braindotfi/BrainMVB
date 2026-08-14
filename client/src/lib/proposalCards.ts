@@ -251,6 +251,47 @@ export function humanizeEnumValue(value: string): string {
   return words[0].charAt(0).toUpperCase() + words[0].slice(1) + (words.length > 1 ? " " + words.slice(1).join(" ") : "");
 }
 
+export interface RecommendedActionSource {
+  /** Legacy proposal field. */
+  recommendedAction?: unknown;
+  /** Live/core spelling when a BFF response has not normalized the field. */
+  recommended_action?: unknown;
+  narrative?: unknown;
+  presentation?: {
+    recommendation?: unknown;
+    recommendedAction?: unknown;
+    recommended_action?: unknown;
+  } | null;
+  details?: Record<string, unknown> | null;
+}
+
+/**
+ * Resolve the one customer-facing recommendation label used by every agent
+ * card. Core has shipped this value under several additive shapes over time;
+ * normalize those shapes here instead of making each card know the wire
+ * history. Enum values are humanized, while authored sentences are preserved.
+ */
+export function resolveRecommendedAction(source: RecommendedActionSource): string | null {
+  const candidates = [
+    source.recommendedAction,
+    source.recommended_action,
+    source.presentation?.recommendation,
+    source.presentation?.recommendedAction,
+    source.presentation?.recommended_action,
+    source.details?.recommended_action,
+    source.details?.recommendedAction,
+    source.details?.recommendation,
+    source.narrative,
+  ];
+
+  for (const candidate of candidates) {
+    if (typeof candidate !== "string") continue;
+    const value = candidate.trim();
+    if (value) return humanizeEnumValue(value);
+  }
+  return null;
+}
+
 /** Convert an engine reason into readable sentence case without changing
  * authored prose beyond its initial capital. Machine labels may arrive as
  * snake_case or dotted action names. */

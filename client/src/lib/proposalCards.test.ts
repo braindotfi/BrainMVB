@@ -5,6 +5,7 @@ import {
   initialsOf,
   isRawIdentifier,
   humanizeEnumValue,
+  resolveRecommendedAction,
   buildKeyFactRows,
   buildFlaggedBy,
   buildDecisionButtons,
@@ -31,6 +32,39 @@ import type { ProposalEvidenceItem } from "./brainProposals";
 
 const money = (a: { value: string; currency: string }) =>
   `$${Number(a.value).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+describe("resolveRecommendedAction", () => {
+  it("prefers the legacy recommendedAction field", () => {
+    expect(
+      resolveRecommendedAction({
+        recommendedAction: "Hold payment and verify the vendor.",
+        presentation: { recommendation: "recommend_allow" },
+        narrative: "The account changed recently.",
+      }),
+    ).toBe("Hold payment and verify the vendor.");
+  });
+
+  it("reads the live presentation recommendation and humanizes enum values", () => {
+    expect(resolveRecommendedAction({ presentation: { recommendation: "recommend_hold" } })).toBe("Recommend hold");
+  });
+
+  it("reads nested recommendation fields from details", () => {
+    expect(resolveRecommendedAction({ details: { recommended_action: "Review the cash buffer." } })).toBe(
+      "Review the cash buffer.",
+    );
+    expect(resolveRecommendedAction({ details: { recommendedAction: "review_vendor" } })).toBe("Review vendor");
+  });
+
+  it("falls back to the narrative when no dedicated action exists", () => {
+    expect(resolveRecommendedAction({ narrative: "Vendor bank details changed recently." })).toBe(
+      "Vendor bank details changed recently.",
+    );
+  });
+
+  it("returns null when no readable source exists", () => {
+    expect(resolveRecommendedAction({ recommendedAction: null, presentation: null, details: {} })).toBeNull();
+  });
+});
 
 const invoice: ProposalEvidenceItem = {
   kind: "invoice",
