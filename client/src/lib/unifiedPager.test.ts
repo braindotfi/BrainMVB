@@ -18,7 +18,7 @@ describe("pagerState", () => {
     const state = pagerState(mixed, "insight-3");
     expect(state.index).toBe(2);
     expect(state.total).toBe(4);
-    expect(state.position).toBe("Record 3 of 4");
+    expect(state.position).toBe("3 of 4");
   });
 
   it("offers Next across a source boundary", () => {
@@ -81,7 +81,7 @@ describe("stepPager", () => {
   });
 
   it("does not wrap past either end", () => {
-    // A position readout of "Record 4 of 4" must not have a working Next.
+    // A position readout of "4 of 4" must not have a working Next.
     const close = vi.fn();
     opened.length = 0;
     stepPager(mixed, "proposal-4", 1, close);

@@ -339,6 +339,10 @@ export function AuditLogSection() {
     const next = visible[i + delta];
     if (next) setActiveRecord(next);
   };
+  const activeIndex = activeRecord
+    ? visible.findIndex((record) => record.id === activeRecord.id)
+    : -1;
+  const position = activeIndex >= 0 ? `${activeIndex + 1} of ${visible.length}` : undefined;
   const pagerDisabled = visible.length < 2;
 
   const emptyMessage = (): { title: string; detail?: string } => {
@@ -533,6 +537,7 @@ export function AuditLogSection() {
         onPrev={() => stepRecord(-1)}
         onNext={() => stepRecord(1)}
         pagerDisabled={pagerDisabled}
+        position={position}
         returnToBase="/settings?section=audit"
       />
     </div>
