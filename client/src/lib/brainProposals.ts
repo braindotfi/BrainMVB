@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { parseCoreError } from "./approvalRejections";
 import type { AgentKey } from "./agentProposals";
+import { isRateLimitError, reportRateLimit } from "./rateLimit";
 
 /* ── Live brain-core agent proposals (GET/POST /v1/proposals*) ────────────────
    Non-financial agent outputs (vendor risk, collections, treasury, etc.) that a
@@ -231,6 +232,9 @@ export async function fetchAllBrainProposals(signal?: AbortSignal): Promise<List
     });
     if (!response.ok) {
       const detail = (await response.text().catch(() => "")) || response.statusText;
+      if (response.status === 429) {
+        reportRateLimit({ "retry-after": response.headers.get("retry-after"), body: detail });
+      }
       throw new Error(`${response.status}: ${detail}`);
     }
     const body = (await response.json()) as Partial<ListProposalsResponse>;
@@ -369,6 +373,9 @@ export function useDecideProposal() {
       });
       const body = await res.json().catch(() => undefined);
       if (!res.ok) {
+        if (res.status === 429) {
+          reportRateLimit({ "retry-after": res.headers.get("retry-after"), body });
+        }
         const code = parseCoreError(body)?.error?.code;
         if (res.status === 409 && (code === "execution_proposal_invalid_state" || code === "agent_proposal_invalid_state")) {
           throw new ProposalConflictError();
@@ -387,6 +394,7 @@ export function useDecideProposal() {
         });
         invalidate();
       } else {
+        if (isRateLimitError(err)) return;
         toast({ title: "Couldn't record decision", description: err.message, variant: "destructive" });
       }
     },

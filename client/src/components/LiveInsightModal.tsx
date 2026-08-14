@@ -38,6 +38,7 @@ export function LiveInsightModal({
   hasPrev,
   hasNext,
   pagerStep,
+  position,
   onAcknowledge,
   acknowledged = false,
 }: {
@@ -57,6 +58,9 @@ export function LiveInsightModal({
    *  the user picking a record. Skips the entrance animation — see
    *  useCardTransition. */
   pagerStep?: boolean;
+  /** Queue position label, e.g. "3 of 12". Shown between Previous/Next in the
+   *  pager footer so users can see where they are in the queue. */
+  position?: string;
   /** Files the observation to the audit trail and clears it from the queue.
    *  Omit on surfaces with no acknowledgement store and the control is hidden
    *  rather than shown dead. */
@@ -259,6 +263,7 @@ export function LiveInsightModal({
               onNext={onNext!}
               hasPrev={hasPrev === undefined ? !pagerDisabled : hasPrev}
               hasNext={hasNext === undefined ? !pagerDisabled : hasNext}
+              position={position}
             />
           )}
         </DialogPrimitive.Content>

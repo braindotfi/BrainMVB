@@ -55,12 +55,7 @@ export const SectionHeading = ({
   </div>
 );
 
-/** Heading + body, at the frame's 16px internal gap.
- *
- *  `gap` exists for the one section that measures differently: Linked Evidence
- *  sits 8px under its heading (frame 5875:65797 — heading ends at y=14, the first
- *  row starts at y=22) because the rows carry their own 12px inner padding, so a
- *  full 16px there reads as a hole. Every other section stays at 16px. */
+/** Heading + body, at the frame's 16px internal gap. */
 export const CardSection = ({
   title,
   trailing,
@@ -564,11 +559,6 @@ export const PagerFooter = ({
   position?: string;
 }) => (
   <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-t border-solid border-brain-v1stroke-2 flex flex-col items-start p-[24px] shrink-0 w-full">
-    {position && (
-      <span className="sr-only" aria-live="polite" data-testid="text-proposal-pager-position">
-        {position}
-      </span>
-    )}
     <div className="flex gap-[16px] items-center w-full">
       <Button
         variant="secondary"
@@ -580,6 +570,20 @@ export const PagerFooter = ({
         <ChevronLeft size={24} className="shrink-0" aria-hidden="true" />
         Previous
       </Button>
+      {/* Queue position — visible between the buttons so users can see where they
+          are in the queue without guessing. Also announced to screen readers via
+          aria-live. A 1px spacer keeps the layout symmetric when absent. */}
+      {position ? (
+        <span
+          className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[16px] text-brain-v1baby-blue-60 shrink-0 whitespace-nowrap"
+          aria-live="polite"
+          data-testid="text-proposal-pager-position"
+        >
+          {position}
+        </span>
+      ) : (
+        <span className="w-[1px] shrink-0" aria-hidden="true" />
+      )}
       <Button
         variant="secondary"
         onClick={onNext}

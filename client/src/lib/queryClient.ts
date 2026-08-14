@@ -1,8 +1,12 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { reportRateLimit } from "./rateLimit";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
+    if (res.status === 429) {
+      reportRateLimit({ "retry-after": res.headers.get("retry-after"), body: text });
+    }
     throw new Error(`${res.status}: ${text}`);
   }
 }

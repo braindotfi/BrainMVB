@@ -357,8 +357,8 @@ export function MissingEvidenceModal({
               {/* Linked Evidence — existing entity refs + an amber "Missing" row for
                   each absent field. The two lists are kept separate so existing
                   evidence is never visually confused with the gap. */}
-              {(item.entityRefs.length > 0 || item.missingFields.length > 0) && (
-                <CardSection title="Linked Evidence" gap={8} testId="section-missing-evidence-evidence">
+               {(item.entityRefs.length > 0 || item.missingFields.length > 0) && (
+                 <CardSection title="Linked Evidence" testId="section-missing-evidence-evidence">
                   <div
                     className="flex flex-col gap-[8px] items-start w-full"
                     data-testid="list-missing-evidence-evidence"

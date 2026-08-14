@@ -580,6 +580,16 @@ export function resolveProseText(
   return resolveHeadlineText(text, refs, { sentenceCase: false });
 }
 
+/** Core sometimes puts the action recommendation after the factual headline:
+ *  "IRS vendor risk is high; recommend hold." The action has its own
+ *  "Recommended Action" section, so the compact summary must stop at the
+ *  factual clause rather than repeat the decision in the title. Only remove an
+ *  explicit recommendation suffix; ordinary semicolon-separated facts remain
+ *  untouched. */
+export function stripRecommendationSuffix(text: string): string {
+  return text.replace(/\s*;\s*recommend(?:ed|ation)?\b.*$/i, "").trim();
+}
+
 export interface ProposalHeaderCopy {
   title: string;
   text: string;
@@ -612,7 +622,9 @@ export function buildProposalHeaderCopy(
   const refDisplays = buildRefDisplayMap(resolvedFacts, evidence, proposal.resolved_refs);
   const resolvedHeadline = resolveHeadlineText(proposal.presentation?.headline, refDisplays);
   const cardHeadline = resolvedHeadline
-    ? formatText(applyCurrencyToBareAmounts(resolvedHeadline, shownAmount?.currency ?? null))
+    ? stripRecommendationSuffix(
+        formatText(applyCurrencyToBareAmounts(resolvedHeadline, shownAmount?.currency ?? null)),
+      )
     : null;
   /* notify_only findings (compliance today) carry no subject/presentation.headline
      at all, so every row previously fell through to the bare agentName ("Compliance"

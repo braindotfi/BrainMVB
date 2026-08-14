@@ -12,8 +12,8 @@
    "Next" always means "the next row you can see" regardless of which modal that
    row happens to open. Stepping closes whatever is open and opens the neighbour.
 
-   Paging is linear rather than wrapping: with a position readout ("Record 4 of
-   17") a wrap-around makes the count a lie about what Next does, and the ends
+   Paging is linear rather than wrapping: with a position readout ("4 of 17") a
+   wrap-around makes the count a lie about what Next does, and the ends
    are where a user checks whether they have seen everything. */
 
 export interface PagerEntry {
@@ -31,7 +31,7 @@ export interface PagerState {
   hasNext: boolean;
   /** True when there is somewhere to page to in either direction. */
   canPage: boolean;
-  /** "Record 4 of 17", or null when nothing pageable is open. */
+  /** "4 of 17", or null when nothing pageable is open. */
   position: string | null;
 }
 
@@ -49,7 +49,7 @@ export function pagerState(entries: PagerEntry[], openId: string | null): PagerS
     hasPrev,
     hasNext,
     canPage: hasPrev || hasNext,
-    position: index >= 0 ? `Record ${index + 1} of ${total}` : null,
+    position: index >= 0 ? `${index + 1} of ${total}` : null,
   };
 }
 
