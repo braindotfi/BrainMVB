@@ -25,7 +25,6 @@ import {
   fmtDue,
 } from "@/components/detailPopup";
 import { RecordPager } from "@/components/RecordPager";
-import invoiceImg from "@assets/invoice_1783385090730.png";
 
 export function ReceivableDetailPopup({
   receivable,
@@ -80,13 +79,6 @@ export function ReceivableDetailPopup({
             nameTestId="text-receivable-counterparty"
             chipTestId="receivable-due-chip"
             amountTestId="text-receivable-amount"
-            icon={
-              <img
-                src={invoiceImg}
-                alt="Invoice"
-                className="size-[56px] rounded-row object-cover shrink-0"
-              />
-            }
           />
 
           <DetailPopupBody testId="receivable-detail-popup-content">
