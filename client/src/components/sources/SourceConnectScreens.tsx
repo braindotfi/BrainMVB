@@ -477,7 +477,7 @@ export function DocumentUpload({ category, onDone }: { category: string; onDone:
         <SettingsDropdown
           value={objectType}
           options={[
-            { value: "", label: "Auto-detect (AR aging / payroll)" },
+            { value: "", label: "Auto-Detect" },
             ...DOCUMENT_OBJECT_TYPES.map((t) => ({ value: t.id, label: t.label })),
           ]}
           onChange={(value) => setObjectType(value as DocumentObjectType | "")}
