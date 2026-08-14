@@ -1010,6 +1010,12 @@ export function useDecidedProposalIds() {
     queryKey: [`/api/brain/audit/events?limit=${AUDIT_EVENTS_LIMIT}`],
     queryFn: ({ signal }) => fetchAllBrainAuditEvents(signal),
     retry: false,
+    /* Mirrors the proposals query: 30 s stale window + focus refetch so the
+       decided-set stays in sync with what the proposals feed returns.  Without
+       this, a teammate's decision (which added a proposal.decided event) remains
+       invisible here until an explicit mutation invalidates the cache. */
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
   });
   const events = query.data?.events;
   return {
@@ -1043,6 +1049,8 @@ export function useBrainAuditRecords(proposals?: ProposalForTracking[]) {
     queryKey: [`/api/brain/audit/events?limit=${AUDIT_EVENTS_LIMIT}`],
     queryFn: ({ signal }) => fetchAllBrainAuditEvents(signal),
     retry: false,
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
   });
   const anchor = useQuery<BrainAnchor>({
     queryKey: ["/api/brain/audit/anchor/latest"],
