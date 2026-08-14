@@ -552,7 +552,7 @@ export function LiveProposalModal({
                   </CardText>
                 ) : (
                   <CardText className="text-center" testId="text-live-proposal-decided">
-                    Decision recorded: {proposal.status}
+                    Decision Recorded: {titleCaseLabel(proposal.status)}
                   </CardText>
                 )}
               </CardActions>
