@@ -128,7 +128,10 @@ describe("mapAuditEventToRecord", () => {
       }),
       anchor(),
     );
-    expect(r.summary).toBe("Compliance review found policy_violation with high severity.");
+    // summary is now the clean decision label; narrative/remediation move to the note
+    // so they surface only in "Brain's Recommendation", not the summary header.
+    expect(r.summary).toBe("Proposal acknowledged");
+    // recommended_remediation is preferred over narrative for the note.
     expect(r.lifecycle[0].note).toBe("Review the rejected policy decision and keep the action blocked.");
     expect(r.linked).toEqual([
       { kind: "proposal", label: "prop_01KYN94C1GRDBQA5J4KM517143", refId: "prop_01KYN94C1GRDBQA5J4KM517143" },

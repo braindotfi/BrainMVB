@@ -358,8 +358,8 @@ describe("buildWhySuggested", () => {
         null,
       ),
     ).toEqual([
-      { text: "New account number first seen 2 days ago", passed: false },
-      { text: "Vendor has no prior record of changing banking details", passed: false },
+      { text: "New account number first seen 2 days ago.", passed: false },
+      { text: "Vendor has no prior record of changing banking details.", passed: false },
     ]);
   });
 
@@ -368,7 +368,7 @@ describe("buildWhySuggested", () => {
       { trace: [{ matched: true, checks: [{ key: "within_terms", detail: "Invoice is within payment terms", passed: true }] }] },
       null,
     );
-    expect(bullets).toEqual([{ text: "Invoice is within payment terms", passed: true }]);
+    expect(bullets).toEqual([{ text: "Invoice is within payment terms.", passed: true }]);
   });
 
   it("records no verdict when the check states none", () => {
@@ -376,13 +376,13 @@ describe("buildWhySuggested", () => {
       { trace: [{ matched: true, checks: [{ detail: "Amount matches the purchase order" }] }] },
       null,
     );
-    expect(bullets).toEqual([{ text: "Amount matches the purchase order", passed: null }]);
+    expect(bullets).toEqual([{ text: "Amount matches the purchase order.", passed: null }]);
   });
 
   it("humanizes the machine key only when there is no written sentence", () => {
     expect(
       buildWhySuggested({ trace: [{ matched: true, checks: [{ key: "amount_over_limit", passed: false }] }] }, null),
-    ).toEqual([{ text: "Amount over limit", passed: false }]);
+    ).toEqual([{ text: "Amount over limit.", passed: false }]);
   });
 
   it("sentence-cases machine reason text from the engine", () => {
@@ -391,7 +391,7 @@ describe("buildWhySuggested", () => {
         { trace: [{ matched: true, checks: [{ detail: "identity_unresolved", passed: false }] }] },
         null,
       ),
-    ).toEqual([{ text: "Identity unresolved", passed: false }]);
+    ).toEqual([{ text: "Identity unresolved.", passed: false }]);
   });
 
   it("reads ranked_signals, as plain strings and as objects", () => {
@@ -404,9 +404,9 @@ describe("buildWhySuggested", () => {
         ],
       }),
     ).toEqual([
-      { text: "Combined batch fits within this week's operating cash buffer", passed: null },
-      { text: "Payment velocity is 4x the vendor's norm", passed: null },
-      { text: "Geo mismatch", passed: null },
+      { text: "Combined batch fits within this week's operating cash buffer.", passed: null },
+      { text: "Payment velocity is 4x the vendor's norm.", passed: null },
+      { text: "Geo mismatch.", passed: null },
     ]);
   });
 
@@ -415,7 +415,7 @@ describe("buildWhySuggested", () => {
       { trace: [{ matched: true, checks: [{ detail: "Vendor bank details changed" }] }] },
       { ranked_signals: ["vendor bank details changed"] },
     );
-    expect(bullets).toEqual([{ text: "Vendor bank details changed", passed: null }]);
+    expect(bullets).toEqual([{ text: "Vendor bank details changed.", passed: null }]);
   });
 
   /* The trace records every rule the engine CONSIDERED. A rule that did not fire
@@ -432,7 +432,7 @@ describe("buildWhySuggested", () => {
         },
         null,
       ),
-    ).toEqual([{ text: "Amount exceeds the review threshold", passed: null }]);
+    ).toEqual([{ text: "Amount exceeds the review threshold.", passed: null }]);
   });
 
   it("will not assume a rule fired when the trace omits the flag", () => {
@@ -746,12 +746,12 @@ describe("buildProposalHeaderCopy", () => {
   ] as const;
 
   it.each(NOTIFY_ONLY_CAPABLE_AGENTS)(
-    "falls back to the resolved narrative, not the bare agent name, for a %s finding with no subject/headline",
+    "falls back to the agent name (not the narrative) as the card title for a %s finding with no subject/headline",
     (agentType, agentName) => {
-      // Exactly the notify_only shape: no subject, no presentation.headline,
-      // so every one of these previously rendered an identical,
-      // indistinguishable bare-agent-name title regardless of what each
-      // finding was actually about.
+      // The narrative ("Recommend allow", "Recommend hold") must NOT become the
+      // card headline — it belongs only in "Brain's Recommendation". When core
+      // supplies no presentation.headline and no subject, the agent name is the
+      // correct fallback title for the summary area.
       const proposal = {
         id: `pr_${agentType}`,
         type: agentType,
@@ -773,8 +773,8 @@ describe("buildProposalHeaderCopy", () => {
 
       const formatText = (value: string) => value;
       const result = buildProposalHeaderCopy(proposal, agentName, formatText);
-      expect(result.title).toBe(proposal.narrative);
-      expect(result.title).not.toBe(agentName);
+      // Title falls back to the agent name, never to the recommendation narrative.
+      expect(result.title).toBe(agentName);
       expect(result.text).toBe(`Proposed by ${agentName}`);
     },
   );

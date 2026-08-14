@@ -567,8 +567,13 @@ export function buildProposalHeaderCopy(
      stays consistent with that rendering rather than showing raw unresolved text. */
   const resolvedNarrative = resolveProseText(proposal.narrative, refDisplays);
 
+  /* resolvedNarrative is NOT used as the title fallback: for some agent types
+     (e.g. vendor risk) the narrative IS the recommendation ("Recommend allow"),
+     which must only appear in the dedicated "Brain's Recommendation" section —
+     not as the card headline. The subject name or agent name is the right
+     fallback when core supplies no presentation headline. */
   return {
-    title: cardHeadline ?? subjectName ?? resolvedNarrative ?? agentName,
+    title: cardHeadline ?? subjectName ?? agentName,
     text:
       [cardHeadline && subjectName ? subjectName : null, headlineText].filter(Boolean).join(" · ") ||
       (subjectName ? `${proposal.subject!.label} · ${agentName}` : `Proposed by ${agentName}`),
@@ -830,12 +835,15 @@ export function buildWhySuggested(
     const rawText = raw.trim();
     // A bare ULID is an identifier, not a reason a human can read.
     if (!rawText || isRawIdentifier(rawText)) return;
-    const text = sentenceCaseText(rawText);
+    const humanized = sentenceCaseText(rawText);
     // A string with no alphabetic characters is a raw metric (e.g. "0.6",
     // "70197.57", "1,200"), not a sentence a reviewer can act on. Suppress it
     // rather than surfacing a dimensionless number as a reason bullet.
-    if (!/[a-zA-Z]/.test(text)) return;
-    const key = text.toLowerCase();
+    if (!/[a-zA-Z]/.test(humanized)) return;
+    // Append a period so each bullet reads as a complete sentence. Skipped
+    // when the text already ends with sentence-terminating punctuation.
+    const text = /[.!?]$/.test(humanized) ? humanized : `${humanized}.`;
+    const key = humanized.toLowerCase();
     if (seen.has(key)) return;
     seen.add(key);
     bullets.push({ text, passed });

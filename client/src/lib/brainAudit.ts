@@ -327,11 +327,10 @@ function classifyProposalDecided(e: BrainAuditEvent): { eventType: AuditEventTyp
           : decision === "undo"
             ? "Proposal reopened"
             : "Proposal decision recorded";
-  // Prefer the real narrative brain-core now snapshots at decision time
-  // (e.g. "Compliance review found policy_violation with high severity...").
-  // Falls back to the old opaque id-only line for events predating this.
-  const narrative = proposalSummaryFrom(e)?.narrative;
-  return { eventType, summary: narrative && narrative.trim() ? narrative.trim() : fallback };
+  // Use the clean decision label as the summary. The brain narrative / recommended
+  // remediation text is moved to the lifecycle step note so it appears only in
+  // "Brain's Recommendation" — not in the card's summary header or lifecycle row.
+  return { eventType, summary: fallback };
 }
 
 /** brain-core's own event_type mapped onto the client bucket, when present.
@@ -815,13 +814,14 @@ export function mapAuditEventToRecord(
     event.action === "proposal.decided" && typeof event.inputs.decision === "string"
       ? event.inputs.decision
       : undefined;
-  /* Remediation/rule context reads as a second line under the narrative
-     headline - only set when it says something the summary doesn't already. */
+  /* Brain's recommendation text for the "Brain's Recommendation" popup section.
+     Prefer recommended_remediation (prescriptive), fall back to narrative
+     (descriptive). The summary is now the clean decision label ("Proposal
+     approved") so any non-empty text here is always distinct from it. */
   const proposalNote =
-    proposalSummary?.recommended_remediation &&
-    proposalSummary.recommended_remediation !== summary
-      ? proposalSummary.recommended_remediation
-      : undefined;
+    proposalSummary?.recommended_remediation?.trim() ||
+    proposalSummary?.narrative?.trim() ||
+    undefined;
 
   const step: LifecycleStep = {
     label: summary,

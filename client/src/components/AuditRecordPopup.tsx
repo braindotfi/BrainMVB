@@ -266,19 +266,6 @@ export function AuditRecordPopup({
             {/* Scrollable body */}
             <div className="flex flex-col gap-[32px] items-start p-[24px] w-full overflow-y-auto">
 
-              {/* Keep the event summary concise. The decision narrative stays
-                  separate from Brain's recommendation below the lifecycle. */}
-              {recommendationNote && (
-                <div className="relative shrink-0 w-full">
-                  <div className="content-stretch flex flex-col gap-[16px] items-start relative size-full">
-                    <SectionHeader>Why This Needs Your Decision</SectionHeader>
-                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[16px] w-full">
-                      {formatText(record.summary)}
-                    </p>
-                  </div>
-                </div>
-              )}
-
               {/* Decision Lifecycle */}
               {lifecycle.length > 0 && (
                 <div className="relative shrink-0 w-full">
