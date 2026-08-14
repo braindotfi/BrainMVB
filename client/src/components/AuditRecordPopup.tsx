@@ -53,6 +53,7 @@ export function AuditRecordPopup({
   hasPrev,
   hasNext,
   pagerStep,
+  position,
   returnToBase,
 }: {
   record: AuditRecord | null;
@@ -71,6 +72,9 @@ export function AuditRecordPopup({
    *  the user picking a record. Skips the entrance animation — see
    *  useCardTransition. */
   pagerStep?: boolean;
+  /** Queue position label, e.g. "3 of 12". Shown between Previous/Next so the
+   *  user can see where they are without counting rows themselves. */
+  position?: string;
   /* Route this popup should come BACK to when the user follows a linked entity
      (vendor / proposal) and then returns. Defaults to the unified Inbox
      timeline — the old Audit Log page is retired and /audit-log is now only a
@@ -500,6 +504,20 @@ export function AuditRecordPopup({
                     <ChevronLeft size={24} className="text-brain-v1baby-blue-60 shrink-0" />
                     Previous
                   </Button>
+                  {/* Queue position — centred between buttons so the user can see
+                      where they are without counting rows. 1px spacer when absent
+                      keeps the layout symmetric. */}
+                  {position ? (
+                    <span
+                      className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[16px] text-brain-v1baby-blue-60 shrink-0 whitespace-nowrap"
+                      aria-live="polite"
+                      data-testid="text-audit-record-pager-position"
+                    >
+                      {position}
+                    </span>
+                  ) : (
+                    <span className="w-[1px] shrink-0" aria-hidden="true" />
+                  )}
                   <Button
                     variant="secondary"
                     onClick={onNext}

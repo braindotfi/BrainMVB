@@ -2097,6 +2097,7 @@ export function InboxPage() {
         open={selectedInsight !== null}
         onOpenChange={(o) => { if (!o) { setSelectedInsight(null); setOpenItemId(null); } }}
         {...pagerProps}
+        position={pager.position ?? undefined}
         onAcknowledge={
           selectedInsight
             ? () => { if (selectedInsightItem) acknowledgeItem(selectedInsightItem); }
@@ -2117,6 +2118,7 @@ export function InboxPage() {
         open={activeRecord !== null}
         onOpenChange={(o) => { if (!o) { setActiveRecord(null); setOpenItemId(null); } }}
         {...pagerProps}
+        position={pager.position ?? undefined}
         returnToBase="/inbox"
       />
 
