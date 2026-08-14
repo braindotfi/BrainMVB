@@ -1954,3 +1954,19 @@ and component pattern are unchanged — only sections were added or replaced.
   when data arrives with no further client change.
 - **Richer flag reason** (items 1, 5): `flag_reason` is checked first on
   `BrainObligation`; derived fallback is bypassed once brain-core populates it.
+
+## Cash Forecasting Agent card — polish (feat/cashflow-card-polish)
+
+Four targeted fixes to the Cash Forecasting (Informational) card. Styling unchanged.
+The shared queue-position change originally carried by this branch is now baseline
+via `feat/subscription-agent-card-detail`.
+
+| # | Fix | Status |
+|---|-----|--------|
+| 1 | **Pluralization** — "over 1 transactions" → "over 1 transaction" | ✅ Shipped |
+| 2 | **Signed net** — subtitle now reads "+$48k net inflow" / "−$48k net outflow" with explicit sign and direction label, not just raw net | ✅ Shipped |
+| 3 | **Single-point chart** — chart only renders when ≥2 days of data exist; 1 data point suppresses the chart, leaving the subtitle + explanation to carry the number | ✅ Shipped |
+| 4 | **Threshold copy** — short-window "Why Brain Suggested This" now names both thresholds: 3 days for trend comparisons, 30 days + brain-core roadmap status for forward-looking forecasting | ✅ Shipped |
+
+All remaining changes are in `brainAgentSurfaces.ts` (data layer).
+1389 tests pass.
