@@ -128,7 +128,7 @@ function InvoicePane({ doc }: { doc: DocumentRecord }) {
   return (
     <div className="flex flex-col w-full">
       {/* Top: invoice id + status + amount/date — separated from body by border-b */}
-      <div className="flex flex-col gap-[8px] items-start w-full pb-[24px] border-b border-brain-v1stroke-2 border-solid">
+      <div className="flex flex-col gap-[8px] items-start w-full px-[24px] pt-[24px] pb-[24px] border-b border-brain-v1stroke-2 border-solid">
         <div className="flex gap-[8px] items-center w-full">
           <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[28px] text-brain-v1baby-blue-100 text-[20px] whitespace-nowrap">
             {doc.id}
@@ -158,7 +158,7 @@ function InvoicePane({ doc }: { doc: DocumentRecord }) {
       </div>
 
       {/* Remaining sections */}
-      <div className="flex flex-col gap-[32px] w-full pt-[24px]">
+      <div className="flex flex-col gap-[32px] w-full p-[24px]">
 
       {/* What Brain Extracted */}
       <div className="relative shrink-0 w-full">
@@ -679,7 +679,7 @@ export function DocumentViewerPopup({
         <DialogPrimitive.Overlay className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
         <DialogPrimitive.Content
           aria-describedby={undefined}
-          className="fixed left-[50%] top-[50%] z-[60] translate-x-[-50%] translate-y-[-50%] bg-brain-v1baby-blue-5 border border-brain-v1stroke-2 border-solid flex flex-col items-start overflow-hidden rounded-modal w-[560px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.7)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out"
+          className="fixed left-[50%] top-[50%] z-[60] translate-x-[-50%] translate-y-[-50%] bg-brain-v1baby-blue-5 border border-brain-v1stroke-2 border-solid flex flex-col items-start overflow-hidden rounded-modal w-[480px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.7)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out"
           data-testid="document-viewer-popup"
         >
           {/* Header: invoice uses "Invoice Record" centred title; other kinds show doc id + kind */}
@@ -727,7 +727,7 @@ export function DocumentViewerPopup({
             </div>
           )}
 
-          <div className="flex flex-col gap-[20px] items-start p-[24px] w-full overflow-y-auto">
+          <div className={`flex flex-col gap-[20px] items-start w-full overflow-y-auto ${doc.kind === "invoice" ? "p-0" : "p-[24px]"}`}>
             {/* Primary pane: invoice uses dark Figma viewer; others use paper or bank.
                 InvoicePane renders all its own sections internally (no duplicates below). */}
             {doc.kind === "invoice" ? (
