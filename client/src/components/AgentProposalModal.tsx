@@ -359,30 +359,33 @@ export function LiveProposalModal({
           </div>
 
           <div className="flex flex-col items-start w-full overflow-y-auto">
-            {/* Hero — risk pill directly under the header, then the headline group. */}
+            {/* Hero — title on the left and the risk pill top-aligned on the
+                right, matching the audit-record summary pattern. */}
             <div className="border-b border-brain-v1stroke-2 border-solid flex flex-col gap-[8px] items-start p-[24px] shrink-0 w-full">
-              {risk && (
-                <StatusPill
-                  label={titleCaseLabel(risk.label)}
-                  color={risk.color}
-                  background={risk.bg}
-                  border={risk.border}
-                  testId="pill-live-proposal-risk"
-                />
-              )}
-              <div className="flex flex-col gap-[8px] items-start w-full">
+              <div className="flex items-start gap-[8px] w-full">
+                <div className="flex flex-col gap-[8px] items-start flex-[1_0_0] min-w-px">
                 <p
-                  className="[font-family:'Gilroy',sans-serif] font-semibold text-[20px] leading-[28px] text-brain-v1baby-blue-100 w-full"
-                  data-testid="text-live-proposal-subject"
-                >
-                  {headerCopy.title}
-                </p>
-                <p
-                  className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-brain-v1baby-blue-60 w-full"
-                  data-testid="text-live-proposal-headline"
-                >
-                  {headerCopy.text}
-                </p>
+                    className="[font-family:'Gilroy',sans-serif] font-semibold text-[20px] leading-[28px] text-brain-v1baby-blue-100 w-full [word-break:break-word]"
+                    data-testid="text-live-proposal-subject"
+                  >
+                    {headerCopy.title}
+                  </p>
+                  <p
+                    className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-brain-v1baby-blue-60 w-full [word-break:break-word]"
+                    data-testid="text-live-proposal-headline"
+                  >
+                    {headerCopy.text}
+                  </p>
+                </div>
+                {risk && (
+                  <StatusPill
+                    label={titleCaseLabel(risk.label)}
+                    color={risk.color}
+                    background={risk.bg}
+                    border={risk.border}
+                    testId="pill-live-proposal-risk"
+                  />
+                )}
               </div>
             </div>
 
