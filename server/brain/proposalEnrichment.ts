@@ -664,12 +664,58 @@ export function enrichProposal(raw: Record<string, unknown>, index: EntityIndex)
   // what it is proposing about.
   const specific = evidence.filter((e) => e.display && !e.context);
   const party = specific.find((e) => e.label === "Counterparty" || e.label === "Vendor" || e.label === "Customer");
-  const subject = party ?? specific[0];
+  const evidenceSubject = party ?? specific[0];
+
+  // Narrative-derived subject: for proposals (e.g., compliance findings) whose
+  // evidence refs are internal engine IDs (pd_/evt_) that have no ledger
+  // endpoint, the narrative often names a resolvable ledger entity
+  // ("Compliance review for inv_01KYS8… found policy_violation…").
+  // hydrateMissingRefs already fetched that invoice including its counterparty
+  // name (in the invoice entity's facts) and amount. Surface them here so the
+  // card can show a real entity name and dollar figure instead of "Compliance".
+  // This block is only reached when evidence yielded no resolvable subject, so
+  // it does not change behaviour for any other proposal type.
+  let narrativeSubject: { label: string; display: string } | null = null;
+  const narrativeFacts: ResolvedKeyFact[] = [];
+
+  if (!evidenceSubject?.display) {
+    for (const { ref } of textRefs(raw)) {
+      const entity = lookup(ref, index);
+      if (!entity?.display) continue;
+      // The invoice entity stores the counterparty name as a fact rather than
+      // in its display field ("Invoice #INV-1042"), so prefer it as the subject
+      // label — "Acme Vendor LLC" reads better than "Invoice #INV-1042".
+      const cpFact = entity.facts.find((f) => f.label === "Counterparty");
+      if (cpFact?.value) {
+        narrativeSubject = { label: "Counterparty", display: cpFact.value };
+        narrativeFacts.push({ label: "Counterparty", value: cpFact.value });
+      } else {
+        narrativeSubject = { label: entity.label, display: entity.display };
+      }
+      if (entity.amount) {
+        narrativeFacts.push({ label: "Amount", value: entity.amount.value });
+        narrativeFacts.push({ label: "Currency", value: entity.amount.currency });
+      }
+      break;
+    }
+  }
+
+  // Prepend narrative-derived facts only for labels not already present — a
+  // future core release that ships Amount directly in key_facts must not
+  // produce two Amount rows.
+  const existingLabels = new Set((keyFacts ?? []).map((f) => f.label));
+  const newFacts = narrativeFacts.filter((f) => !existingLabels.has(f.label));
+  const mergedFacts = newFacts.length > 0 ? [...newFacts, ...(keyFacts ?? [])] : keyFacts;
+
+  const resolvedSubject = evidenceSubject?.display
+    ? { label: evidenceSubject.label, display: evidenceSubject.display }
+    : narrativeSubject;
+
   return {
     ...raw,
     evidence,
-    subject: subject?.display ? { label: subject.label, display: subject.display } : null,
-    ...(keyFacts ? { key_facts: keyFacts } : {}),
+    subject: resolvedSubject,
+    ...(mergedFacts ? { key_facts: mergedFacts } : {}),
     ...(textRefMap ? { resolved_refs: textRefMap } : {}),
   };
 }

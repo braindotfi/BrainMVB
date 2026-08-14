@@ -393,6 +393,147 @@ describe("enrichProposal — rich card fields", () => {
   });
 });
 
+describe("enrichProposal — narrative-derived subject and facts", () => {
+  // Invoice entity that includes a counterparty name in its facts — exactly
+  // what hydrateMissingRefs produces after the second-hop counterparty fetch.
+  const invoiceWithCp: EntityIndex = new Map([
+    [
+      "inv_01KYS8RK94M7CED84B00QM9TNQ",
+      {
+        label: "Invoice",
+        display: "Invoice #INV-1042",
+        code: "INV-1042",
+        amount: { value: "12400.00", currency: "USD" },
+        facts: [{ label: "Counterparty", value: "Harbor Logistics LLC" }],
+      },
+    ],
+    // A second invoice that has neither a counterparty fact nor an amount.
+    // ID uses only Crockford Base32 chars (no I/L/O/U) so textRefs() matches it.
+    [
+      "inv_01KYS8RK94M7CED84B001NQAMT",
+      {
+        label: "Invoice",
+        display: "Invoice #INV-2001",
+        code: "INV-2001",
+        amount: null,
+        facts: [],
+      },
+    ],
+  ]);
+
+  it("sets subject to the counterparty name found in the invoice entity's facts", () => {
+    // Compliance finding: evidence refs are pd_/evt_ ULIDs with no ledger
+    // endpoint, but the narrative embeds the invoice the agent reviewed.
+    const enriched = enrichProposal(
+      {
+        id: "prop_cmp",
+        evidence: [{ kind: "compliance", ref: "pd_01KYS8SGWK6D66Z3T7QYQBBNK8" }],
+        narrative:
+          "Compliance review for inv_01KYS8RK94M7CED84B00QM9TNQ found policy_violation with high severity.",
+        presentation: {
+          key_facts: [
+            { label: "Finding Type", value: "policy_violation" },
+            { label: "Severity", value: "high" },
+          ],
+        },
+      },
+      invoiceWithCp,
+    );
+    expect(enriched.subject).toEqual({ label: "Counterparty", display: "Harbor Logistics LLC" });
+  });
+
+  it("prepends Counterparty, Amount, and Currency before the existing key_facts rows", () => {
+    const enriched = enrichProposal(
+      {
+        id: "prop_cmp",
+        evidence: [],
+        narrative:
+          "Compliance review for inv_01KYS8RK94M7CED84B00QM9TNQ found policy_violation with high severity.",
+        presentation: {
+          key_facts: [
+            { label: "Finding Type", value: "policy_violation" },
+            { label: "Severity", value: "high" },
+          ],
+        },
+      },
+      invoiceWithCp,
+    );
+    const labels = (enriched.key_facts as { label: string }[] | undefined)?.map((f) => f.label) ?? [];
+    // Derived facts land first; the original core facts follow.
+    expect(labels.slice(0, 3)).toEqual(["Counterparty", "Amount", "Currency"]);
+    const amt = (enriched.key_facts as { label: string; value: string }[]).find((f) => f.label === "Amount");
+    expect(amt?.value).toBe("12400.00");
+    const cur = (enriched.key_facts as { label: string; value: string }[]).find((f) => f.label === "Currency");
+    expect(cur?.value).toBe("USD");
+  });
+
+  it("does not duplicate a label that core already ships in key_facts", () => {
+    // A future core release may ship Amount directly. The derived row must not
+    // produce a second Amount entry — the core-supplied value wins.
+    const enriched = enrichProposal(
+      {
+        id: "prop_cmp",
+        evidence: [],
+        narrative: "Compliance review for inv_01KYS8RK94M7CED84B00QM9TNQ found policy_violation.",
+        presentation: { key_facts: [{ label: "Amount", value: "99999.00" }] },
+      },
+      invoiceWithCp,
+    );
+    const amountRows = (enriched.key_facts as { label: string; value: string }[] | undefined)?.filter(
+      (f) => f.label === "Amount",
+    ) ?? [];
+    expect(amountRows).toHaveLength(1);
+    expect(amountRows[0].value).toBe("99999.00");
+  });
+
+  it("falls back to the invoice entity display when no counterparty fact is present", () => {
+    const enriched = enrichProposal(
+      {
+        id: "prop_cmp",
+        evidence: [],
+        narrative: "Review for inv_01KYS8RK94M7CED84B001NQAMT found an issue.",
+      },
+      invoiceWithCp,
+    );
+    expect(enriched.subject).toEqual({ label: "Invoice", display: "Invoice #INV-2001" });
+  });
+
+  it("does not overwrite a subject already resolved from evidence", () => {
+    // A proposal that resolves a counterparty through direct evidence must keep
+    // that subject; the narrative fallback must not fire.
+    const enriched = enrichProposal(
+      {
+        id: "prop_with_evidence",
+        evidence: [{ kind: "counterparty", ref: "cp_01KYSF0QJ0N18YGNS4JR9EZPHM" }],
+        narrative:
+          "Compliance review for inv_01KYS8RK94M7CED84B00QM9TNQ found policy_violation.",
+      },
+      new Map([
+        ...invoiceWithCp,
+        [
+          "cp_01KYSF0QJ0N18YGNS4JR9EZPHM",
+          { label: "Counterparty", display: "Midmarket Co", code: null, amount: null, facts: [] },
+        ],
+      ]),
+    );
+    expect(enriched.subject).toEqual({ label: "Counterparty", display: "Midmarket Co" });
+  });
+
+  it("adds no key_facts key when no key_facts exist and the invoice carries no amount", () => {
+    const enriched = enrichProposal(
+      {
+        id: "prop_bare",
+        evidence: [],
+        narrative: "Review for inv_01KYS8RK94M7CED84B001NQAMT found an issue.",
+      },
+      invoiceWithCp,
+    );
+    // The invoice has no amount and there were no key_facts to begin with,
+    // so the key_facts key must stay absent (not present as undefined or []).
+    expect("key_facts" in enriched).toBe(false);
+  });
+});
+
 describe("textRefs / resolveTextRefs", () => {
   const raw = {
     // Verbatim live compliance narrative + fraud headline shapes.
