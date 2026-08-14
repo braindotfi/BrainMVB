@@ -234,8 +234,10 @@ export type SourceDocument = {
   category: string | null; // bank | accounting | payroll | tax | payments | general
   rawId: string | null;
   sha256: string | null;
-  sourceType: string | null;     // pdf_upload | csv_upload
+  sourceType: string | null;     // pdf_upload | csv_upload | xlsx_upload | txt_upload
+  objectType: string | null;     // customer-asserted CSV type, e.g. "payables_invoices"; null = auto-detect
   extractStatus: ExtractStatus | null;
+  extractDetail: string | null;  // human-readable detail from brain-core's error body on failure
   projectionStatus: ProjectionStatus | null;  // null = no signal (see type)
   parsedId: string | null;
   confidence: string | null;     // ≤0.5, stored as string
@@ -251,7 +253,9 @@ export type InsertSourceDocument = {
   rawId?: string | null;
   sha256?: string | null;
   sourceType?: string | null;
+  objectType?: string | null;
   extractStatus?: ExtractStatus | null;
+  extractDetail?: string | null;
   projectionStatus?: ProjectionStatus | null;
   parsedId?: string | null;
   confidence?: string | null;
@@ -262,7 +266,9 @@ export type SourceDocumentExtractionPatch = {
   rawId?: string | null;
   sha256?: string | null;
   sourceType?: string | null;
+  objectType?: string | null;
   extractStatus?: ExtractStatus | null;
+  extractDetail?: string | null;
   projectionStatus?: ProjectionStatus | null;
   parsedId?: string | null;
   confidence?: string | null;
@@ -683,7 +689,9 @@ export class MemStorage implements IStorage {
       rawId: doc.rawId ?? null,
       sha256: doc.sha256 ?? null,
       sourceType: doc.sourceType ?? null,
+      objectType: doc.objectType ?? null,
       extractStatus: doc.extractStatus ?? null,
+      extractDetail: doc.extractDetail ?? null,
       projectionStatus: doc.projectionStatus ?? null,
       parsedId: doc.parsedId ?? null,
       confidence: doc.confidence ?? null,
@@ -700,7 +708,9 @@ export class MemStorage implements IStorage {
       rawId: patch.rawId !== undefined ? patch.rawId : existing.rawId,
       sha256: patch.sha256 !== undefined ? patch.sha256 : existing.sha256,
       sourceType: patch.sourceType !== undefined ? patch.sourceType : existing.sourceType,
+      objectType: patch.objectType !== undefined ? patch.objectType : existing.objectType,
       extractStatus: patch.extractStatus !== undefined ? patch.extractStatus : existing.extractStatus,
+      extractDetail: patch.extractDetail !== undefined ? patch.extractDetail : existing.extractDetail,
       projectionStatus: patch.projectionStatus !== undefined ? patch.projectionStatus : existing.projectionStatus,
       parsedId: patch.parsedId !== undefined ? patch.parsedId : existing.parsedId,
       confidence: patch.confidence !== undefined ? patch.confidence : existing.confidence,
@@ -847,7 +857,9 @@ function mapSourceDocumentRow(r: typeof sourceDocumentsTable.$inferSelect): Sour
     rawId: r.rawId,
     sha256: r.sha256,
     sourceType: r.sourceType,
+    objectType: r.objectType,
     extractStatus: (r.extractStatus as ExtractStatus | null) ?? null,
+    extractDetail: r.extractDetail,
     projectionStatus: (r.projectionStatus as ProjectionStatus | null) ?? null,
     parsedId: r.parsedId,
     confidence: r.confidence,
@@ -1344,7 +1356,9 @@ export class DatabaseStorage implements IStorage {
         rawId: doc.rawId ?? null,
         sha256: doc.sha256 ?? null,
         sourceType: doc.sourceType ?? null,
+        objectType: doc.objectType ?? null,
         extractStatus: doc.extractStatus ?? null,
+        extractDetail: doc.extractDetail ?? null,
         projectionStatus: doc.projectionStatus ?? null,
         parsedId: doc.parsedId ?? null,
         confidence: doc.confidence ?? null,
@@ -1357,7 +1371,9 @@ export class DatabaseStorage implements IStorage {
     if (patch.rawId !== undefined) values.rawId = patch.rawId;
     if (patch.sha256 !== undefined) values.sha256 = patch.sha256;
     if (patch.sourceType !== undefined) values.sourceType = patch.sourceType;
+    if (patch.objectType !== undefined) values.objectType = patch.objectType;
     if (patch.extractStatus !== undefined) values.extractStatus = patch.extractStatus;
+    if (patch.extractDetail !== undefined) values.extractDetail = patch.extractDetail;
     if (patch.projectionStatus !== undefined) values.projectionStatus = patch.projectionStatus;
     if (patch.parsedId !== undefined) values.parsedId = patch.parsedId;
     if (patch.confidence !== undefined) values.confidence = patch.confidence;

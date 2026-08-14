@@ -28,7 +28,12 @@ import {
   DOCUMENT_FORMAT_LABEL,
   isSupportedDocumentFile,
   sourceTypeForDocument,
+  DOCUMENT_OBJECT_TYPES,
+  documentObjectTypeSpec,
+  defaultObjectTypeForCategory,
+  type DocumentObjectType,
 } from "@/lib/documentUpload";
+import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
 
 /* ──────────────────────────────────────────────────────────────────────────
  *  Source connect screens - the mechanisms for attaching a data source to Brain.
@@ -393,9 +398,14 @@ export function DocumentUpload({ category, onDone }: { category: string; onDone:
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [objectType, setObjectType] = useState<DocumentObjectType | "">(
+    () => defaultObjectTypeForCategory(category as CategoryId) ?? "",
+  );
+  const [objectTypeOpen, setObjectTypeOpen] = useState(false);
 
   const docsQuery = useQuery<SourceDocument[]>({ queryKey: ["/api/integrations/documents"] });
   const docs = (docsQuery.data ?? []).filter((d) => (category === "tax" ? d.category === "tax" : true));
+  const selectedSpec = documentObjectTypeSpec(objectType || null);
 
   const uploadMut = useMutation({
     mutationFn: async (file: File) => {
@@ -405,6 +415,7 @@ export function DocumentUpload({ category, onDone }: { category: string; onDone:
         category,
         sourceType: sourceTypeForDocument(file),
       });
+      if (objectType) params.set("objectType", objectType);
       const res = await fetch(`/api/integrations/documents/ingest?${params.toString()}`, {
         method: "POST",
         headers: { "Content-Type": "application/octet-stream" },
@@ -449,6 +460,43 @@ export function DocumentUpload({ category, onDone }: { category: string; onDone:
 
   return (
     <div className="flex flex-col gap-[16px]">
+
+      {/* Declared shape for CSV/XLSX uploads. brain-core only auto-detects AR
+          aging and payroll register shapes by header keyword; everything else
+          (a plain AP invoice ledger, a bank export, etc.) needs the caller to
+          say what it is. Left on "Auto-detect" this is a no-op - identical to
+          today's behavior. PDF/TXT/DOCX ignore this entirely; they already go
+          through the LLM extractor regardless of shape. */}
+      <div className="flex flex-col gap-[6px]">
+        <label
+          htmlFor="add-source-document-type"
+          className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-60 text-[12px] leading-[16px]"
+        >
+          What kind of document is this? (CSV / XLSX only)
+        </label>
+        <SettingsDropdown
+          value={objectType}
+          options={[
+            { value: "", label: "Auto-detect (AR aging / payroll)" },
+            ...DOCUMENT_OBJECT_TYPES.map((t) => ({ value: t.id, label: t.label })),
+          ]}
+          onChange={(value) => setObjectType(value as DocumentObjectType | "")}
+          testId="select-document-object-type"
+          ariaLabel="Declared document type"
+          open={objectTypeOpen}
+          onOpenChange={setObjectTypeOpen}
+        />
+        {selectedSpec && (
+          <a
+            href={`data:text/csv;charset=utf-8,${encodeURIComponent(selectedSpec.templateCsv)}`}
+            download={`${selectedSpec.id}-template.csv`}
+            data-testid="link-download-document-template"
+            className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1purple text-[12px] leading-[16px] hover:underline w-fit"
+          >
+            Download a {selectedSpec.label} template (required columns: {selectedSpec.requiredHeaders.join(", ")})
+          </a>
+        )}
+      </div>
 
       <div
         onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}

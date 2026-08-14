@@ -31,6 +31,7 @@ import {
   revokeTenantKey,
   getTenantKeyUsage,
   brainErrorCode,
+  brainErrorDetail,
   BrainApiError,
   type BrainTenantKey,
   type IssuedTenantKeyResponse,
@@ -1505,9 +1506,11 @@ When you mention a money amount, always reproduce it exactly as the grounding da
             if (err instanceof BrainApiError && err.status === 422) {
               extractStatus = "unsupported";
               patch.extractStatus = extractStatus;
+              patch.extractDetail = brainErrorDetail(err);
             } else if (err instanceof BrainApiError && err.status === 404) {
               extractStatus = "unavailable";
               patch.extractStatus = extractStatus;
+              patch.extractDetail = brainErrorDetail(err);
             } else {
               console.warn(`[document-extract] settle failed for rawId=${d.rawId}:`, (err as Error).message);
             }
@@ -1652,6 +1655,20 @@ When you mention a money amount, always reproduce it exactly as the grounding da
           mimeType: z.string().max(256).optional(),
           category: z.string().max(64).optional(),
           sourceType: z.enum(["pdf_upload", "csv_upload", "xlsx_upload", "txt_upload"]),
+          // Caller-declared brain-core object_type for the customer_asserted_csv_v1
+          // path (CSV/XLSX only) - see client/src/lib/documentUpload.ts's
+          // DOCUMENT_OBJECT_TYPES. Omit to keep brain-core's AR-aging/payroll
+          // auto-detect behavior.
+          objectType: z
+            .enum([
+              "payables_invoices",
+              "receivables_invoices",
+              "payroll_runs",
+              "tax_obligations",
+              "counterparties",
+              "bank_transactions",
+            ])
+            .optional(),
         })
         .safeParse(req.query);
       if (!q.success) {
@@ -1661,7 +1678,7 @@ When you mention a money amount, always reproduce it exactly as the grounding da
       if (!Buffer.isBuffer(bytes) || bytes.length === 0) {
         return res.status(400).json({ error: "empty_file", message: "No file bytes received." });
       }
-      const { filename, category, sourceType } = q.data;
+      const { filename, category, sourceType, objectType } = q.data;
       const mimeType = q.data.mimeType ?? "application/octet-stream";
       const extension = filename.toLowerCase().slice(filename.lastIndexOf("."));
       const supportedExtensions = new Set([
@@ -1695,6 +1712,7 @@ When you mention a money amount, always reproduce it exactly as the grounding da
         mimeType,
         category: category ?? null,
         sourceType,
+        objectType: objectType ?? null,
         extractStatus: "pending",
       });
 
@@ -1711,6 +1729,7 @@ When you mention a money amount, always reproduce it exactly as the grounding da
             bytes: new Uint8Array(bytes),
             filename,
             mimeType,
+            objectType,
           }),
         );
         rawId = ingest.raw_id;
@@ -1778,6 +1797,7 @@ When you mention a money amount, always reproduce it exactly as the grounding da
       let extractStatus: ExtractStatus = "extracting";
       let parsedId: string | null = null;
       let confidence: string | null = null;
+      let extractDetail: string | null = null;
       try {
         const { agentToken, baseUrl: extractBase } = await getBrainSession(userId);
         const extract = await withBrainBaseUrl(extractBase, () => extractRawDocument(agentToken, rawId));
@@ -1785,6 +1805,11 @@ When you mention a money amount, always reproduce it exactly as the grounding da
         parsedId = extract.parsed_id;
         confidence = extract.confidence !== null ? String(extract.confidence) : null;
       } catch (err) {
+        // brain-core's structured error message (e.g. "customer_asserted CSV
+        // payables_invoices is missing required headers: invoice_id, status")
+        // is far more actionable than a generic status-mapped label - surface it
+        // instead of discarding it, whichever bucket the status maps to below.
+        extractDetail = brainErrorDetail(err);
         if (err instanceof BrainApiError && err.status === 422) {
           extractStatus = "unsupported"; // can't read this file type yet (e.g. scanned image)
         } else if (err instanceof BrainApiError) {
@@ -1801,6 +1826,7 @@ When you mention a money amount, always reproduce it exactly as the grounding da
         extractStatus,
         parsedId,
         confidence,
+        extractDetail,
       });
       return res.json({ document: updated ?? doc });
     },
