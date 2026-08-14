@@ -124,7 +124,7 @@ const RecommendationCard = ({ category }: { category: string }) => {
         credentials: "include",
       });
        if (!res.ok) {
-         if (res.status === 429) reportRateLimit();
+         if (res.status === 429) reportRateLimit({ "retry-after": res.headers.get("retry-after") });
          throw new Error(`${res.status}`);
        }
       return res.json();

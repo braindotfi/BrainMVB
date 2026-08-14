@@ -653,8 +653,10 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
         signal: controller.signal,
         body: JSON.stringify({ messages: history }),
       });
-      if (res.status === 429) reportRateLimit();
       const parsed = await parseAssistantResponse(res);
+      if (res.status === 429) {
+        reportRateLimit({ "retry-after": res.headers.get("retry-after"), body: parsed });
+      }
       if (requestGeneration !== chatGenerationRef.current) return;
       const { data, reply } = parsed;
       const isUngrounded = data?.ungrounded === true;

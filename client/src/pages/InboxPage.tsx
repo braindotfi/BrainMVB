@@ -648,7 +648,9 @@ export function InboxPage() {
       const res = await fetch(`/api/brain/payment-intents/${id}/approve`, { method: "POST", credentials: "include" });
       const body = await res.json().catch(() => undefined);
       if (!res.ok) {
-        if (res.status === 429) reportRateLimit();
+        if (res.status === 429) {
+          reportRateLimit({ "retry-after": res.headers.get("retry-after"), body });
+        }
         throw new Error(
           res.status === 429
             ? "429: rate_limited"
@@ -696,7 +698,7 @@ export function InboxPage() {
       const body = await res.json().catch(() => undefined);
       if (!res.ok) {
         if (res.status === 429) {
-          reportRateLimit();
+          reportRateLimit({ "retry-after": res.headers.get("retry-after"), body });
           return;
         }
         const rej = mapApprovalRejection(parseCoreError(body));

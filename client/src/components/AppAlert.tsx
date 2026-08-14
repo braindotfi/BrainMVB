@@ -6,7 +6,6 @@ import approvedIcon from "@assets/approved_1784058164235.png";
 import rejectedIcon from "@assets/rejected_1784058164236.png";
 import postponedIcon from "@assets/postpone_1784058164236.png";
 import {
-  RATE_LIMIT_ALERT_DESCRIPTION,
   RATE_LIMIT_ALERT_TITLE,
   RATE_LIMIT_EVENT,
 } from "@/lib/rateLimit";
@@ -158,9 +157,11 @@ export const AppAlertProvider = ({ children }: { children: ReactNode }) => {
   const [alerts, setAlerts] = useState<ActiveAlert[]>([]);
   const nextId = useRef(1);
   const timers = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
+  const rateLimitAlertId = useRef<number | null>(null);
 
   const dismissAlert = useCallback((id: number) => {
     setAlerts((prev) => prev.filter((a) => a.id !== id));
+    if (rateLimitAlertId.current === id) rateLimitAlertId.current = null;
     const t = timers.current.get(id);
     if (t) {
       clearTimeout(t);
@@ -191,11 +192,24 @@ export const AppAlertProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const onRateLimit = () => {
-      showAlert({
+    const onRateLimit = (event: Event) => {
+      const retryAfter = (event as CustomEvent<{ retryAfterSeconds?: number }>).detail?.retryAfterSeconds;
+      const description =
+        retryAfter !== undefined
+          ? `Rate limit exceeded. Retry in ${retryAfter} second${retryAfter === 1 ? "" : "s"}.`
+          : "Rate limit exceeded. Retry shortly.";
+      if (rateLimitAlertId.current !== null) {
+        setAlerts((prev) =>
+          prev.map((alert) =>
+            alert.id === rateLimitAlertId.current ? { ...alert, description } : alert,
+          ),
+        );
+        return;
+      }
+      rateLimitAlertId.current = showAlert({
         variant: "error",
         title: RATE_LIMIT_ALERT_TITLE,
-        description: RATE_LIMIT_ALERT_DESCRIPTION,
+        description,
       });
     };
     window.addEventListener(RATE_LIMIT_EVENT, onRateLimit);
