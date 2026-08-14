@@ -4,6 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import { useCurrency } from "@/lib/useCurrency";
 import { useCardTransition } from "@/lib/cardTransition";
+import { useAppAlert } from "@/components/AppAlert";
+import { queryClient } from "@/lib/queryClient";
 import {
   buildProposalDetailRows,
   buildProposalHeadline,
@@ -51,7 +53,12 @@ import { TransactionDetailPopup } from "./TransactionDetailPopup";
 import { AccountDetailPopup } from "./AccountDetailPopup";
 import { VendorDetailPopup } from "./VendorDetailPopup";
 import { BillDetailPopup, type BrainInvoiceDTO } from "./BillDetailPopup";
-import { useBrainVendors, useBrainVendorDetail } from "@/lib/brainVendors";
+import {
+  useBrainVendors,
+  useBrainVendorDetail,
+  supportsTrustActions,
+  vendorSegment,
+} from "@/lib/brainVendors";
 import { LiveEvidenceRecordPopup } from "./LiveEvidenceRecordPopup";
 import {
   RISK_META,
@@ -150,8 +157,10 @@ export function LiveProposalModal({
   const [openInvoiceId, setOpenInvoiceId] = useState<string | null>(null);
   const [fallbackEvidence, setFallbackEvidence] = useState<EvidenceTile | null>(null);
   const { vendors } = useBrainVendors();
+  const alert = useAppAlert();
   const vendorBase = vendors.find((vendor) => vendor.id === openVendorId) ?? null;
   const vendorDetail = useBrainVendorDetail(vendorBase);
+  const [trustBusy, setTrustBusy] = useState(false);
   const { data: invoiceResponse } = useQuery<{ invoices: BrainInvoiceDTO[] }>({
     queryKey: ["/api/brain/ledger/invoices"],
     enabled: openInvoiceId !== null,
@@ -281,6 +290,114 @@ export function LiveProposalModal({
     setOpenVendorId(null);
     setOpenInvoiceId(null);
     setFallbackEvidence(null);
+  };
+
+  /* The vendor popup is nested inside this proposal modal, so it cannot rely on
+     VendorsPanel's mount-point handlers. Keep the write path identical here:
+     member-authenticated BFF action, shared cache invalidation, then close the
+     nested record so the proposal card remains the active surface. */
+  const callVendorTrustAction = async (
+    vendorId: string,
+    action: "grant" | "pause" | "acknowledge" | "restore",
+    successTitle: string,
+    successText: string,
+  ) => {
+    const target = vendors.find((vendor) => vendor.id === vendorId);
+    if (target && !supportsTrustActions(target)) return;
+    setTrustBusy(true);
+    try {
+      const res = await fetch(
+        `/api/brain/ledger/counterparties/${encodeURIComponent(vendorId)}/trust/${action}`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: "{}",
+        },
+      );
+      if (!res.ok) {
+        const body = await res.json().catch(() => undefined);
+        const message =
+          (body?.body?.error?.message as string | undefined) ??
+          (body?.message as string | undefined) ??
+          "Brain core rejected this action.";
+        const ref = typeof body?.bff_request_id === "string" ? body.bff_request_id : null;
+        alert.error("Action failed", ref ? `${message}\n\nRef: ${ref}` : message);
+        return;
+      }
+      await queryClient.invalidateQueries({ queryKey: ["/api/brain/ledger/counterparties"] });
+      closeEvidenceRecord();
+      alert.success(successTitle, successText);
+    } catch {
+      alert.error("Action failed", "Couldn't reach Brain core. Nothing was changed.");
+    } finally {
+      setTrustBusy(false);
+    }
+  };
+
+  const handleGrantVendor = (vendorId: string) => {
+    const vendor = vendors.find((item) => item.id === vendorId);
+    const isCustomer = vendor ? vendorSegment(vendor) === "customer" : false;
+    return callVendorTrustAction(
+      vendorId,
+      "grant",
+      isCustomer ? "Customer Successfully Trusted" : "Vendor Successfully Trusted",
+      `${vendor?.name ?? (isCustomer ? "Customer" : "Vendor")} has been added as a trusted ${isCustomer ? "customer" : "vendor"}.`,
+    );
+  };
+
+  const handlePauseVendor = (vendorId: string) => {
+    const vendor = vendors.find((item) => item.id === vendorId);
+    const isCustomer = vendor ? vendorSegment(vendor) === "customer" : false;
+    return callVendorTrustAction(
+      vendorId,
+      "pause",
+      isCustomer ? "Customer Trust Paused" : "Vendor Trust Paused",
+      `Trust for ${vendor?.name ?? (isCustomer ? "this customer" : "this vendor")} is paused. Restore it once you've verified the account.`,
+    );
+  };
+
+  const handleRestoreVendor = (vendorId: string) => {
+    const vendor = vendors.find((item) => item.id === vendorId);
+    const isCustomer = vendor ? vendorSegment(vendor) === "customer" : false;
+    return callVendorTrustAction(
+      vendorId,
+      "restore",
+      isCustomer ? "Customer Successfully Trusted" : "Vendor Successfully Trusted",
+      `${vendor?.name ?? (isCustomer ? "Customer" : "Vendor")} has been added as a trusted ${isCustomer ? "customer" : "vendor"}.`,
+    );
+  };
+
+  const handleAcknowledgeVendor = (vendorId: string) => {
+    const vendor = vendors.find((item) => item.id === vendorId);
+    const isCustomer = vendor ? vendorSegment(vendor) === "customer" : false;
+    return callVendorTrustAction(
+      vendorId,
+      "acknowledge",
+      isCustomer ? "Customer Marked with No Action" : "Vendor Marked with No Action",
+      `${vendor?.name ?? (isCustomer ? "Customer" : "Vendor")} has been reviewed but no action was taken.`,
+    );
+  };
+
+  const handleDeleteVendor = async (vendorId: string, vendorName: string) => {
+    setTrustBusy(true);
+    try {
+      const res = await fetch(`/api/brain/ledger/counterparties/${encodeURIComponent(vendorId)}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok && res.status !== 404) {
+        alert.error("Action failed", "Brain rejected the request. The counterparty was not removed.");
+        return;
+      }
+      await queryClient.invalidateQueries({ queryKey: ["/api/brain/ledger/counterparties"] });
+      closeEvidenceRecord();
+      alert.success("Counterparty Successfully Deleted", `${vendorName} has been successfully deleted and removed.`);
+    } catch {
+      alert.error("Action failed", "Couldn't reach Brain core. Nothing was changed.");
+    } finally {
+      setTrustBusy(false);
+    }
   };
   /* The structured table brain-core sends supersedes the rows we derive from
      evidence — same job, but authored upstream and type-aware. */
@@ -593,6 +710,12 @@ export function LiveProposalModal({
               if (!nextOpen) closeEvidenceRecord();
             }}
             pagerDisabled
+            onDeleteVendor={handleDeleteVendor}
+            onGrant={handleGrantVendor}
+            onPause={handlePauseVendor}
+            onRestore={handleRestoreVendor}
+            onAcknowledge={handleAcknowledgeVendor}
+            trustBusy={trustBusy}
           />
           <BillDetailPopup
             bill={openInvoice}
