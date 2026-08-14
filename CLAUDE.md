@@ -1923,3 +1923,34 @@ the review gate above is doing the work. It only sees
 literal ids in `client/src` — untagged copy, dynamic ids, and server behaviour
 are invisible to it, so it lowers the cost of the mistake but does not remove the
 need for the review.
+
+## Subscription Agent card — enrichment (feat/subscription-agent-card-detail)
+
+The `LiveInsightModal` / `LiveInsight` shape was extended to support 7 new content
+areas on the Subscription (Informational) card. Visual styling, spacing, typography
+and component pattern are unchanged — only sections were added or replaced.
+
+### What shipped (frontend-only, real data)
+- **Trigger badge**: second hero pill derived from `flag_reason` (when brain-core emits
+  it) or from available fields (`New subscription` / `Recurring charge` / `Needs
+  verification`). Uses existing `TypeTag` warning tone.
+- **Recurrence with confidence**: replaces the bare "Not specified" row with either the
+  inferred recurrence value + the obligation's extraction confidence %, or the honest
+  "Not yet established (first occurrence)" label.
+- **Source link**: `EvidenceLinkRow` in Key Facts when `provenance` is set. Clicking
+  navigates to `/sources?document=<id>` (InboxPage owns the open behaviour via
+  `onOpenSource` callback on `LiveInsightModal`).
+- **"Why Flagged" section**: one-two sentences above "Why Brain Suggested This". Sourced
+  from `flag_reason` verbatim; derived from available fields otherwise.
+- **Queue position**: visible "3 of 12" text between Previous / Next in `PagerFooter`
+  (was `sr-only`). `position` prop now wired from `InboxPage` into `LiveInsightModal`.
+- **Vendor row removed** from Key Facts — it duplicated the card title.
+
+### Backend gaps (declared, not fabricated)
+- **Amount delta** (item 3): requires `prior_amount` on the obligations API. Field
+  forward-declared on `BrainObligation`; the UI row will appear automatically.
+- **Payment history chart** (item 6): requires cycle-history from the obligations API.
+  `paymentHistory?: LiveInsightChartPoint[]` declared on `LiveInsight`; section renders
+  when data arrives with no further client change.
+- **Richer flag reason** (items 1, 5): `flag_reason` is checked first on
+  `BrainObligation`; derived fallback is bypassed once brain-core populates it.
