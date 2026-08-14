@@ -660,7 +660,7 @@ export async function askWikiQuestion(token: string, question: string): Promise<
 // ─── Document ingestion (files live in Brain, not on our box) ────────────────
 
 /** brain-core source_type for the upload (POST /raw/ingest). */
-export type RawSourceType = "pdf_upload" | "csv_upload";
+export type RawSourceType = "pdf_upload" | "csv_upload" | "xlsx_upload" | "txt_upload";
 
 export interface RawIngestResult {
   raw_id: string;
