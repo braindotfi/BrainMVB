@@ -251,6 +251,16 @@ export function humanizeEnumValue(value: string): string {
   return words[0].charAt(0).toUpperCase() + words[0].slice(1) + (words.length > 1 ? " " + words.slice(1).join(" ") : "");
 }
 
+/** Convert an engine reason into readable sentence case without changing
+ * authored prose beyond its initial capital. Machine labels may arrive as
+ * snake_case or dotted action names. */
+export function sentenceCaseText(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return trimmed;
+  const humanized = humanizeEnumValue(trimmed.replace(/\./g, "_")).replace(/_/g, " ");
+  return humanized.charAt(0).toUpperCase() + humanized.slice(1);
+}
+
 /** Customer-facing decision button copy. API ids remain unchanged, while labels
  * such as `hold_vendor` and `Clear vendor` consistently become `Hold Vendor`
  * and `Clear Vendor`. */
@@ -817,9 +827,10 @@ export function buildWhySuggested(
 
   const push = (raw: unknown, passed: boolean | null) => {
     if (typeof raw !== "string") return;
-    const text = raw.trim();
+    const rawText = raw.trim();
     // A bare ULID is an identifier, not a reason a human can read.
-    if (!text || isRawIdentifier(text)) return;
+    if (!rawText || isRawIdentifier(rawText)) return;
+    const text = sentenceCaseText(rawText);
     // A string with no alphabetic characters is a raw metric (e.g. "0.6",
     // "70197.57", "1,200"), not a sentence a reviewer can act on. Suppress it
     // rather than surfacing a dimensionless number as a reason bullet.

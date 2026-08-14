@@ -207,13 +207,35 @@ export function humanizeAuditAction(action: string): string {
 export function lifecycleStepsForDisplay(
   record: Pick<AuditRecord, "lifecycle" | "subtype" | "decision">,
 ): LifecycleStep[] {
+  const isProposalRecord =
+    record.subtype === "agent.action.proposed" ||
+    record.subtype === "agent.action.refreshed" ||
+    record.subtype === "proposal.decided";
+  const hasRecommendationCreation = record.lifecycle.some(
+    (step) => step.label === "Agent recommendation created",
+  );
+  /* Some historical audit feeds begin at proposal.decided (or refreshed)
+     because the original proposal event was outside the returned window.
+     Keep the decision lifecycle understandable without inventing a date:
+     this display-only lead step explicitly says it predates the decision. */
+  const lifecycle =
+    isProposalRecord && !hasRecommendationCreation
+      ? [
+          {
+            label: "Agent recommendation created",
+            timestamp: "Before this decision",
+            kind: "ok" as const,
+          },
+          ...record.lifecycle,
+        ]
+      : record.lifecycle;
   const recommendationIsAwaitingDecision =
     record.subtype === "agent.action.proposed" ||
     record.subtype === "agent.action.refreshed";
   const approvedDecision =
     record.subtype === "proposal.decided" &&
     record.decision === "approve";
-  const hasExecutionOutcome = record.lifecycle.some((step) =>
+  const hasExecutionOutcome = lifecycle.some((step) =>
     [
       "Agent action executed",
       "Agent action completed",
@@ -223,11 +245,11 @@ export function lifecycleStepsForDisplay(
   );
 
   if ((!recommendationIsAwaitingDecision && !approvedDecision) || hasExecutionOutcome) {
-    return record.lifecycle;
+    return lifecycle;
   }
 
   return [
-    ...record.lifecycle,
+    ...lifecycle,
     {
       label: "Agent action executed",
       timestamp: approvedDecision ? "Pending execution" : "Pending your decision",

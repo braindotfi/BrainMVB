@@ -524,7 +524,14 @@ describe("mergeRelatedAuditRecords", () => {
       }),
       anchor(),
     );
-    expect(lifecycleStepsForDisplay(rejected)).toHaveLength(rejected.lifecycle.length);
+    const rejectedSteps = lifecycleStepsForDisplay(rejected);
+    expect(rejectedSteps[0]).toMatchObject({
+      label: "Agent recommendation created",
+      timestamp: "Before this decision",
+      kind: "ok",
+    });
+    expect(rejectedSteps).toHaveLength(rejected.lifecycle.length + 1);
+    expect(rejectedSteps.some((step) => step.kind === "pending")).toBe(false);
   });
 
   it("builds one chronological lifecycle from correlated proposal events", () => {

@@ -266,31 +266,17 @@ export function AuditRecordPopup({
             {/* Scrollable body */}
             <div className="flex flex-col gap-[32px] items-start p-[24px] w-full overflow-y-auto">
 
-              {/* Keep the event summary concise. When Brain supplied a
-                  supporting recommendation, show the decision narrative and
-                  recommendation as separate labeled sections. */}
+              {/* Keep the event summary concise. The decision narrative stays
+                  separate from Brain's recommendation below the lifecycle. */}
               {recommendationNote && (
-                <>
-                  <div className="relative shrink-0 w-full">
-                    <div className="content-stretch flex flex-col gap-[16px] items-start relative size-full">
-                      <SectionHeader>Why This Needs Your Decision</SectionHeader>
-                      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[16px] w-full">
-                        {formatText(record.summary)}
-                      </p>
-                    </div>
+                <div className="relative shrink-0 w-full">
+                  <div className="content-stretch flex flex-col gap-[16px] items-start relative size-full">
+                    <SectionHeader>Why This Needs Your Decision</SectionHeader>
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[16px] w-full">
+                      {formatText(record.summary)}
+                    </p>
                   </div>
-                  <div className="relative shrink-0 w-full" data-testid="section-audit-brain-recommendation">
-                    <div className="content-stretch flex flex-col gap-[16px] items-start relative size-full">
-                      <SectionHeader>Brain's Recommendation</SectionHeader>
-                      <p
-                        className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[16px] w-full"
-                        data-testid="text-audit-brain-recommendation"
-                      >
-                        {sentenceCaseRecommendation(recommendationNote, formatText)}
-                      </p>
-                    </div>
-                  </div>
-                </>
+                </div>
               )}
 
               {/* Decision Lifecycle */}
@@ -356,31 +342,6 @@ export function AuditRecordPopup({
                                     )}
                                   </p>
                                   {(() => {
-                                    /* App-generated canned prompts (matched by exact text)
-                                       lead with the human description; the exact prompt sent
-                                       is still shown below — the audit log never hides what
-                                       was actually sent, it just stops leading with it. */
-                                     const displayNote =
-                                       step.note?.trim() === recommendationNote ? undefined : step.note;
-                                     const canned = matchCannedPrompt(displayNote);
-                                    if (!canned) {
-                                       return displayNote ? (
-                                          <p className="relative shrink-0 text-brain-v1baby-blue-30 w-full">{formatText(displayNote)}</p>
-                                      ) : null;
-                                    }
-                                    return (
-                                      <>
-                                        <p data-testid={`text-canned-description-${idx}`} className="relative shrink-0 text-brain-v1baby-blue-30 w-full">
-                                           {formatText(canned.description)}
-                                        </p>
-                                        <p data-testid={`text-canned-prompt-${idx}`} className="relative shrink-0 text-brain-v1baby-blue-30 w-full">
-                                           <span className="text-brain-v1baby-blue-60">Exact prompt used:</span>{" "}
-                                           {formatText(canned.prompt)}
-                                        </p>
-                                      </>
-                                    );
-                                  })()}
-                                  {(() => {
                                     /* Actor line — honest omission: only renders when a
                                        human-readable actor is available (raw machine ids are
                                        filtered upstream by humanReadableActor), and skipped
@@ -409,6 +370,22 @@ export function AuditRecordPopup({
                         </div>
                       </div>
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Brain's supporting recommendation belongs after the recorded
+                  lifecycle, never inside the summary or an individual step. */}
+              {recommendationNote && (
+                <div className="relative shrink-0 w-full" data-testid="section-audit-brain-recommendation">
+                  <div className="content-stretch flex flex-col gap-[16px] items-start relative size-full">
+                    <SectionHeader>Brain's Recommendation</SectionHeader>
+                    <p
+                      className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[16px] w-full"
+                      data-testid="text-audit-brain-recommendation"
+                    >
+                      {sentenceCaseRecommendation(recommendationNote, formatText)}
+                    </p>
                   </div>
                 </div>
               )}

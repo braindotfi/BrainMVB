@@ -385,6 +385,15 @@ describe("buildWhySuggested", () => {
     ).toEqual([{ text: "Amount over limit", passed: false }]);
   });
 
+  it("sentence-cases machine reason text from the engine", () => {
+    expect(
+      buildWhySuggested(
+        { trace: [{ matched: true, checks: [{ detail: "identity_unresolved", passed: false }] }] },
+        null,
+      ),
+    ).toEqual([{ text: "Identity unresolved", passed: false }]);
+  });
+
   it("reads ranked_signals, as plain strings and as objects", () => {
     expect(
       buildWhySuggested(null, {
