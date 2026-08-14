@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { ChevronRight } from "lucide-react";
 import { DocumentViewerPopup } from "@/components/DocumentViewerPopup";
 import {
   DetailPopupShell,
@@ -9,6 +8,7 @@ import {
   DetailTable,
   Row,
   SectionLabel,
+  LinkedEvidenceRow,
   fmtDue,
   daysToDue,
   dueChip,
@@ -18,7 +18,6 @@ import { useCurrency } from "@/lib/useCurrency";
 import { useIntents } from "@/lib/intentsStore";
 import { toBrainInvoiceDocument } from "@/lib/brainInvoiceDocument";
 import arrowIcon from "@assets/arrow_1783201262245.png";
-import documentIcon from "@assets/doc_1783202136247.png";
 import { AlertCallout } from "@/components/Callout";
 
 /* ── Bill detail popup ───────────────────────────────────────────────────────────
@@ -126,25 +125,16 @@ export function BillDetailPopup({
                 </DetailTable>
               </div>
 
-              {/* View source document */}
-              <button
-                type="button"
-                onClick={() => setViewingDoc(true)}
-                data-testid="button-view-invoice-document"
-                className="bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 border-solid flex items-start rounded-row w-full hover:border-[#7631ee]/40 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
-              >
-                <div className="flex flex-col items-center justify-center shrink-0 size-[64px]">
-                  <img src={documentIcon} alt="" className="size-[24px]" />
-                </div>
-                <div className="flex flex-1 flex-col items-start justify-center min-w-px self-stretch">
-                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-100 text-[16px] w-full text-left">
-                    View invoice document
-                  </p>
-                </div>
-                <div className="flex flex-col items-center justify-center shrink-0 size-[64px]">
-                  <ChevronRight size={24} className="text-brain-v1baby-blue-60" />
-                </div>
-              </button>
+              {/* Linked Evidence — the source invoice document */}
+              <div className="flex flex-col gap-[16px] items-start w-full">
+                <SectionLabel>Linked Evidence</SectionLabel>
+                <LinkedEvidenceRow
+                  kind="Invoice"
+                  label={bill.invoice_number}
+                  onClick={() => setViewingDoc(true)}
+                  testId="button-view-invoice-document"
+                />
+              </div>
 
               {/* Flags */}
               {isFlagged && (
