@@ -695,15 +695,16 @@ export function DocumentViewerPopup({
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
         <DialogPrimitive.Content
+          aria-describedby={undefined}
           className="fixed left-[50%] top-[50%] z-[60] translate-x-[-50%] translate-y-[-50%] bg-brain-v1baby-blue-5 border border-brain-v1stroke-2 border-solid flex flex-col items-start overflow-hidden rounded-modal w-[560px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.7)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out"
           data-testid="document-viewer-popup"
         >
           {/* Header: invoice uses "Invoice Record" centred title; other kinds show doc id + kind */}
           {doc.kind === "invoice" ? (
             <div className="backdrop-blur-[10px] bg-[rgba(17,20,27,0.8)] border-brain-v1stroke-2 border-b border-solid h-[56px] flex items-center relative shrink-0 w-full">
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-brain-v1baby-blue-100 text-[20px] text-center whitespace-nowrap absolute left-1/2 -translate-x-1/2 top-[calc(50%-12px)]">
+              <DialogPrimitive.Title className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-brain-v1baby-blue-100 text-[20px] text-center whitespace-nowrap absolute left-1/2 -translate-x-1/2 top-[calc(50%-12px)]">
                 Invoice Record
-              </p>
+              </DialogPrimitive.Title>
               <DialogPrimitive.Close
                 className="absolute right-[11px] top-[11px] size-[32px] p-0 hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple shrink-0"
                 data-testid="button-close-document-viewer"
@@ -718,9 +719,9 @@ export function DocumentViewerPopup({
                   <KindIcon size={14} className="text-brain-v1baby-blue-100" />
                 </div>
                 <div className="flex flex-col min-w-px">
-                  <span className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-brain-v1baby-blue-100 truncate">
+                  <DialogPrimitive.Title className="[font-family:'Gilroy',sans-serif] font-semibold text-[16px] leading-[20px] text-brain-v1baby-blue-100 truncate">
                     {doc.id}
-                  </span>
+                  </DialogPrimitive.Title>
                   <span className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px] uppercase text-brain-v1baby-blue-30">
                     {docKindLabel(doc.kind)}
                   </span>
