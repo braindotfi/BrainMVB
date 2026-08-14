@@ -26,18 +26,23 @@ describe("needsExtractSettle", () => {
     expect(needsExtractSettle(doc({ extractStatus: "extracting" }))).toBe(true);
   });
 
-  it.each<ExtractStatus>([
-    "pending",
-    "ingested",
-    "extracted",
-    "unsupported",
-    "unavailable",
-    "failed",
-  ])("does not chase extraction for %s", (extractStatus) => {
-    expect(needsExtractSettle(doc({ extractStatus }))).toBe(false);
+  it.each<ExtractStatus>(["pending", "ingested", "extracted", "unsupported", "failed"])(
+    "does not chase extraction for %s",
+    (extractStatus) => {
+      expect(needsExtractSettle(doc({ extractStatus }))).toBe(false);
+    },
+  );
+
+  it("also chases a document marked unavailable", () => {
+    // "unavailable" is set whenever the ingest-time extract call throws anything that
+    // isn't a clean 422 (network error, 404, 500, auth hiccup) - it means "we don't
+    // actually know", not "brain-core told us no". Confirmed live: a document landed
+    // "unavailable" locally while brain-core's own job had already reached a genuine
+    // terminal "failed" within seconds, so this deserves the same re-check as "extracting".
+    expect(needsExtractSettle(doc({ extractStatus: "unavailable" }))).toBe(true);
   });
 
-  it("never gives up chasing an extraction, no matter how old", () => {
+  it("never gives up chasing extraction or unavailable, no matter how old", () => {
     // brain-core's POST /raw/{id}/extract is idempotent and cheap; an age cutoff here
     // previously meant a document could get stuck showing "extracting" forever if the
     // settle window closed before the client polled again, even though brain-core had
@@ -48,9 +53,10 @@ describe("needsExtractSettle", () => {
       ),
     ).toBe(true);
     expect(
-      needsExtractSettle(
-        doc({ extractStatus: "extracting", uploadedAt: aged(48 * HOUR) }),
-      ),
+      needsExtractSettle(doc({ extractStatus: "extracting", uploadedAt: aged(48 * HOUR) })),
+    ).toBe(true);
+    expect(
+      needsExtractSettle(doc({ extractStatus: "unavailable", uploadedAt: aged(48 * HOUR) })),
     ).toBe(true);
   });
 });
