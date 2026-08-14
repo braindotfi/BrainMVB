@@ -34,6 +34,7 @@ import { openDocumentDetail, resolveDocument } from "@/lib/openDocumentDetail";
 import { DocumentViewerPopup } from "./DocumentViewerPopup";
 import { type DocumentRecord, docKindLabel } from "@/lib/documentTypes";
 import { useBrainInvoiceDocument } from "@/lib/brainInvoiceDocument";
+import { resolveRecommendedAction } from "@/lib/proposalCards";
 import { AlertCallout } from "@/components/Callout";
 import type {
   Proposal,
@@ -206,6 +207,7 @@ export function ProposalDetail({
   const agent = AGENT_META[proposal.agent];
   const AgentIcon = agent.icon;
   const confidencePct = Math.round(proposal.confidence.score * 100);
+  const recommendedAction = resolveRecommendedAction({ recommendedAction: proposal.recommendedAction });
   const effectiveStatus = currentStatus ?? proposal.status;
   const isReceipt = effectiveStatus === "auto_handled";
 
@@ -410,16 +412,6 @@ export function ProposalDetail({
                     </button>
                   );
                 })()}
-              </div>
-            )}
-
-            {/* ── Recommended Action ───────────────────────────────────────── */}
-            {proposal.recommendedAction && (
-              <div className="flex flex-col gap-[16px] items-start w-full">
-                <SectionLabel>Recommended Action</SectionLabel>
-                <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[16px] w-full">
-                  {proposal.recommendedAction}
-                </p>
               </div>
             )}
 
@@ -766,12 +758,15 @@ function AutoHandledReceipt({
         </div>
       )}
 
-      {/* ── Recommended Action (for new Figma-style auto proposals) ──────── */}
-      {proposal.recommendedAction && (
+      {/* ── Recommended Action ───────────────────────────────────────────── */}
+      {recommendedAction && (
         <div className="flex flex-col gap-[16px] items-start w-full">
           <SectionLabel>Recommended Action</SectionLabel>
-          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[16px] w-full">
-            {proposal.recommendedAction}
+          <p
+            className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[16px] w-full"
+            data-testid="text-proposal-recommended-action"
+          >
+            {recommendedAction}
           </p>
         </div>
       )}

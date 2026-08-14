@@ -23,9 +23,25 @@ import { openProposalDetail, resolveProposal } from "@/lib/openProposalDetail";
 import type { DocumentRecord } from "@/lib/documentTypes";
 import { RecordPager } from "./RecordPager";
 import { matchCannedPrompt } from "@shared/cannedPrompts";
-import { anchorFromInclusionProof, resolveDetailAnchor, type BrainAuditEventDetail } from "@/lib/brainAudit";
+import { anchorFromInclusionProof, lifecycleStepsForDisplay, resolveDetailAnchor, type BrainAuditEventDetail } from "@/lib/brainAudit";
 import { capitalCase } from "@/lib/displayLabels";
+
 import { Button } from "@/components/ui/button";
+import { useBrainProposals, agentKeyForProposalType, type BrainProposal } from "@/lib/brainProposals";
+import { AGENT_DISPLAY_NAME } from "@/lib/agentProposals";
+
+function proposalEvidenceLabel(proposal: BrainProposal): string {
+  const agentName =
+    proposal.agent?.display_name?.trim() ||
+    AGENT_DISPLAY_NAME[agentKeyForProposalType(proposal.type)] ||
+    "Brain";
+  const agentBaseName = agentName.replace(/\s+Agent\s*$/i, "").trim();
+  const subject = proposal.subject?.display?.trim();
+  return subject
+    ? `${agentBaseName} proposal for ${subject}`
+    : `${agentBaseName} proposal`;
+}
+
 
 export function AuditRecordPopup({
   record,
@@ -65,6 +81,7 @@ export function AuditRecordPopup({
   const transition = useCardTransition(open, pagerStep);
   const [, navigate] = useLocation();
   useMembersCache();
+  const { proposals: liveProposals } = useBrainProposals();
   const [viewingDocument, setViewingDocument] = useState<DocumentRecord | null>(null);
   const [documentOpen, setDocumentOpen] = useState(false);
 
@@ -97,7 +114,10 @@ export function AuditRecordPopup({
         )
       : undefined;
   const anchor = resolveDetailAnchor(record.anchor, proofAnchor);
-
+  const lifecycle = lifecycleStepsForDisplay(record);
+  /* proposal.decided carries Brain's supporting recommendation on its
+     lifecycle step. Pull it into its own section so the summary remains the
+     event narrative and the lifecycle remains an event history. */
   const isFlagged = record.eventType === "flagged" && !isAssistantActivity(record);
 
   const handleNavigate = (link: LinkedEntity) => {
@@ -111,7 +131,17 @@ export function AuditRecordPopup({
     if (link.kind === "rule") {
       openRuleDetail(link.refId, navigate);
     } else if (link.kind === "proposal") {
-      openProposalDetail(link.refId, navigate, returnTo);
+      const liveProposal = liveProposals.find((proposal) => proposal.id === link.refId);
+      if (liveProposal) {
+        /* Live proposals are opened by InboxPage's existing deep-link effect.
+           Close this record first so the proposal is the only active surface;
+           the `from` query lets its close action return here. */
+        onOpenChange(false);
+        const suffix = returnTo ? `&from=${encodeURIComponent(returnTo)}` : "";
+        navigate(`/inbox?proposal=${encodeURIComponent(liveProposal.id)}${suffix}`);
+      } else {
+        openProposalDetail(link.refId, navigate, returnTo);
+      }
     } else if (link.kind === "vendor") {
       openVendorDetail(link.refId, navigate, returnTo);
     } else if (link.kind === "invoice") {
@@ -229,15 +259,15 @@ export function AuditRecordPopup({
             <div className="flex flex-col gap-[32px] items-start p-[24px] w-full overflow-y-auto">
 
               {/* Decision Lifecycle */}
-              {record.lifecycle.length > 0 && (
+              {lifecycle.length > 0 && (
                 <div className="relative shrink-0 w-full">
                   <div className="bg-clip-padding border-0 border-[transparent] border-solid content-stretch flex flex-col gap-[16px] items-start relative size-full">
                     <SectionHeader>Decision Lifecycle</SectionHeader>
                     <div className="bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 border-solid content-stretch flex flex-col items-start relative rounded-row shrink-0 w-full">
                       <div className="content-stretch flex items-start p-[16px] relative shrink-0 w-full">
                         <div className="content-stretch flex flex-[1_0_0] flex-col items-start min-w-px relative">
-                          {record.lifecycle.map((step, idx) => {
-                            const isLast = idx === record.lifecycle.length - 1;
+                          {lifecycle.map((step, idx) => {
+                            const isLast = idx === lifecycle.length - 1;
                             const isAlert = step.kind === "alert";
                             const isPending = step.kind === "pending";
                             const actorRole = resolveActorRole(step.actor);
@@ -291,29 +321,6 @@ export function AuditRecordPopup({
                                     )}
                                   </p>
                                   {(() => {
-                                    /* App-generated canned prompts (matched by exact text)
-                                       lead with the human description; the exact prompt sent
-                                       is still shown below — the audit log never hides what
-                                       was actually sent, it just stops leading with it. */
-                                    const canned = matchCannedPrompt(step.note);
-                                    if (!canned) {
-                                      return step.note ? (
-                                         <p className="relative shrink-0 text-brain-v1baby-blue-30 w-full">{formatText(step.note)}</p>
-                                      ) : null;
-                                    }
-                                    return (
-                                      <>
-                                        <p data-testid={`text-canned-description-${idx}`} className="relative shrink-0 text-brain-v1baby-blue-30 w-full">
-                                           {formatText(canned.description)}
-                                        </p>
-                                        <p data-testid={`text-canned-prompt-${idx}`} className="relative shrink-0 text-brain-v1baby-blue-30 w-full">
-                                           <span className="text-brain-v1baby-blue-60">Exact prompt used:</span>{" "}
-                                           {formatText(canned.prompt)}
-                                        </p>
-                                      </>
-                                    );
-                                  })()}
-                                  {(() => {
                                     /* Actor line — honest omission: only renders when a
                                        human-readable actor is available (raw machine ids are
                                        filtered upstream by humanReadableActor), and skipped
@@ -356,13 +363,22 @@ export function AuditRecordPopup({
                         const ruleGone = link.kind === "rule" && !resolveRule(link.refId);
                         const vendorGone = link.kind === "vendor" && !resolveVendor(link.refId);
                         const invoiceGone = link.kind === "invoice" && !resolveDocument(link.refId);
-                        const proposalGone = link.kind === "proposal" && !resolveProposal(link.refId);
+                        const liveProposal = link.kind === "proposal"
+                          ? liveProposals.find((proposal) => proposal.id === link.refId)
+                          : undefined;
+                        const proposalGone =
+                          link.kind === "proposal" &&
+                          !liveProposal &&
+                          !resolveProposal(link.refId);
                         const tappable =
-                          (link.kind === "proposal" && !proposalGone) ||
+                          (link.kind === "proposal" && (!!liveProposal || !proposalGone)) ||
                           (link.kind === "rule" && !ruleGone) ||
                           (link.kind === "vendor" && !vendorGone) ||
                           (link.kind === "invoice" && !invoiceGone);
                         const chipLabel = linkedRelationship(record, link) ?? link.kind;
+                        const displayLabel = liveProposal
+                          ? proposalEvidenceLabel(liveProposal)
+                          : link.label;
 
                         if (!tappable) {
                           return (
@@ -377,9 +393,16 @@ export function AuditRecordPopup({
                                     {capitalCase(chipLabel)}
                                   </p>
                                 </div>
-                                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[16px] text-brain-v1baby-blue-60">
-                                  {formatText(link.label)}
-                                </p>
+                                <div className="flex min-w-0 flex-col gap-[2px]">
+                                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[16px] text-brain-v1baby-blue-60">
+                                    {formatText(displayLabel)}
+                                  </p>
+                                  {liveProposal && (
+                                    <p className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px] text-brain-v1baby-blue-60">
+                                      {link.refId}
+                                    </p>
+                                  )}
+                                </div>
                               </div>
                               {(ruleGone || vendorGone || invoiceGone || proposalGone) && (
                                 <p className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-brain-v1baby-blue-30 shrink-0">
@@ -404,9 +427,16 @@ export function AuditRecordPopup({
                                   {capitalCase(chipLabel)}
                                 </p>
                               </div>
-                              <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[16px] text-brain-v1baby-blue-100">
-                                {formatText(link.label)}
-                              </p>
+                              <div className="flex min-w-0 flex-1 flex-col gap-[2px]">
+                                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[16px] text-brain-v1baby-blue-100">
+                                  {formatText(displayLabel)}
+                                </p>
+                                {liveProposal && (
+                                  <p className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px] text-brain-v1baby-blue-60">
+                                    {link.refId}
+                                  </p>
+                                )}
+                              </div>
                             </div>
                             <ChevronRight size={16} className="text-brain-v1baby-blue-60 shrink-0" />
                           </button>

@@ -302,6 +302,17 @@ const MetricCard = ({
   </div>
 );
 
+/* Keep every Overview money card on the same whole/decimal treatment as
+   Liabilities: the integer portion is the primary figure and the two decimal
+   places are the smaller secondary figure. */
+const splitMetricAmount = (formatted: string): { whole: string; cents: string } => {
+  const parts = formatted.match(/^(.+)\.(\d{2})$/);
+  return {
+    whole: parts ? parts[1] : formatted,
+    cents: parts ? `.${parts[2]}` : "",
+  };
+};
+
 // Shown when brain-core's ledger-grounded recommendation is unavailable — neutral,
 // no invented figures (was a hardcoded "$432 less than last month. Nice.").
 const SPENDING_INSIGHT_FALLBACK = { text: "No spending insight available yet.", colorClass: "text-brain-v1baby-blue-60" };
@@ -329,7 +340,7 @@ function formatUpdatedAt(ts: number): string {
   const hour = hours % 12 || 12;
   const minute = String(date.getMinutes()).padStart(2, "0");
   const meridiem = hours < 12 ? "am" : "pm";
-  return `${weekday} the ${ordinalDay(date.getDate())} at ${hour}:${minute}${meridiem}.`;
+  return `${weekday} the ${ordinalDay(date.getDate())} at ${hour}:${minute} ${meridiem}.`;
 }
 
 /** Re-format ISO dates (YYYY-MM-DD) and common month-day patterns in the text
@@ -411,13 +422,9 @@ export function HomePage() {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const { user } = useAuth();
-  // Real company name from the tenancy link, falling back to the user's own display name
-  // (was a hardcoded "ACME Inc."). Mirrors client/src/pages/SettingsPage.tsx.
-  const { data: tenancy } = useQuery<{ mode: string; linked: boolean; tenantId?: string; companyName?: string }>({
-    queryKey: ["/api/brain/tenancy"],
-  });
   // A locally-saved override from the Settings > Profile "Edit" field always wins, matching
-  // client/src/pages/SettingsPage.tsx's ProfileSection. Scoped by userId
+  // client/src/pages/SettingsPage.tsx's ProfileSection. Otherwise show the authenticated
+  // user's entered name, never the workspace/company name. Scoped by userId
   // (`brain_profile_name_{userId}`), same key SettingsPage now writes — NOT the
   // old unscoped `brain_profile_name` key, which one account's saved name leaked
   // through into every OTHER account's greeting on the same browser (confirmed
@@ -427,7 +434,7 @@ export function HomePage() {
     if (!user?.id) return null;
     try { return localStorage.getItem(`brain_profile_name_${user.id}`); } catch { return null; }
   })();
-  const greetingName = nameOverride || tenancy?.companyName || user?.name || "";
+  const greetingName = nameOverride || user?.name || "";
 
   // Dynamic "last updated" timestamp. Refreshes every 10s
   const [lastUpdated, setLastUpdated] = useState(Date.now());
@@ -659,9 +666,7 @@ export function HomePage() {
           : "Across bank, digital, and agent accounts.";
     }
   }, [accountsTotal, currency]);
-  const totalParts = totalFormatted.match(/^(.+)\.(\d{2})$/);
-  const totalWhole = totalParts ? totalParts[1] : totalFormatted;
-  const totalCents = totalParts ? `.${totalParts[2]}` : "";
+  const { whole: totalWhole, cents: totalCents } = splitMetricAmount(totalFormatted);
 
   // Net cash flow per month from the live Ledger. With only inflows seeded today
   // this reads as positive income; it nets real expenses automatically once money
@@ -678,9 +683,7 @@ export function HomePage() {
   const cashFormatted = netMonthly !== null
     ? `${netMonthly >= 0 ? "+" : "-"}${format(Math.abs(netMonthly))}`
     : "-";
-  const cashParts = cashFormatted.match(/^([+-]?)(.+)\.(\d{2})$/);
-  const cashWhole = cashParts ? `${cashParts[1]}${cashParts[2]}` : cashFormatted;
-  const cashCents = cashParts ? `.${cashParts[3]}` : "";
+  const { whole: cashWhole, cents: cashCents } = splitMetricAmount(cashFormatted);
 
   // Real ledger-grounded insight from brain-core (via the BFF). Falls back to a
   // static (non-dollar) line when brain-core is unreachable/unconfigured; overridden
@@ -721,9 +724,7 @@ export function HomePage() {
   });
   const liabilities = payables.total;
   const liabilitiesFormatted = liabilities !== null ? format(liabilities) : "-";
-  const liabParts = liabilitiesFormatted.match(/^(.+)\.(\d{2})$/);
-  const liabWhole = liabParts ? liabParts[1] : liabilitiesFormatted;
-  const liabCents = liabParts ? `.${liabParts[2]}` : "";
+  const { whole: liabWhole, cents: liabCents } = splitMetricAmount(liabilitiesFormatted);
 
   /* Runway — how long the cash lasts at the current net burn.
      Only defined while money is actually going out. A non-negative net flow has no
@@ -851,17 +852,18 @@ export function HomePage() {
       case "unreadable":
         return { whole: "-", cents: "", caption: "Part of your ledger couldn't be read, so a share would mislead." };
       case "none":
-        return { whole: format(0), cents: "", caption: `Nothing outstanding beyond ${AR_STALE_DAYS} days.` };
+        return {
+          ...splitMetricAmount(format(0)),
+          caption: `Nothing outstanding beyond ${AR_STALE_DAYS} days.`,
+        };
       default: {
         const formatted = format(arAging.staleAmount ?? 0);
-        const parts = formatted.match(/^(.+)\.(\d{2})$/);
         const share =
           arAging.pctOfTotalAr !== null ? `${Math.round(arAging.pctOfTotalAr * 100)}% of all receivables. ` : "";
         const worst = arAging.worst;
         const oldest = worst ? `Oldest: ${worst.counterparty_id ?? "unknown customer"}, ${worst.days} days overdue.` : "";
         return {
-          whole: parts ? parts[1] : formatted,
-          cents: parts ? `.${parts[2]}` : "",
+          ...splitMetricAmount(formatted),
           caption: `${share}${oldest}`.trim(),
         };
       }

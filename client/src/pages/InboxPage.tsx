@@ -805,6 +805,7 @@ export function InboxPage() {
     if (resolveProposal(proposalId)) return; // handled by the durable-queue effect
     const brainTarget = liveProposals.find((p) => p.id === proposalId);
     if (!brainTarget) return;
+    setReturnTo(params.get("from"));
     setSelectedProposal(brainTarget);
     setOpenItemId(brainTarget.id);
     navigate("/inbox", { replace: true });
@@ -834,6 +835,16 @@ export function InboxPage() {
 
   const dismissDetail = () => {
     setActive(null);
+    setOpenItemId(null);
+    if (returnTo) {
+      const dest = returnTo;
+      setReturnTo(null);
+      navigate(dest, { replace: true });
+    }
+  };
+
+  const dismissLiveProposal = () => {
+    setSelectedProposal(null);
     setOpenItemId(null);
     if (returnTo) {
       const dest = returnTo;
@@ -1302,6 +1313,7 @@ export function InboxPage() {
     activeTab === "Unresolved"
       ? unresolvedItems.length + inputRows.length > 0
       : resolvedItems.length > 0;
+  const hasUnresolvedRecords = unresolvedItems.length + inputRows.length > 0;
   const filtering = hasActiveFilter(filters);
 
   /* ── Bulk approve ───────────────────────────────────────────────────────────
@@ -1524,6 +1536,7 @@ export function InboxPage() {
     setSelectedInsight(null);
     setSelectedProposal(null);
     setActiveRecord(null);
+    setReturnTo(null);
   };
   const stepItem = (delta: 1 | -1) => {
     /* Stepping closes one dialog and opens another; the surface that opens must
@@ -1922,6 +1935,16 @@ export function InboxPage() {
           </div>
         )}
 
+        {activeTab === "Unresolved" && !hasUnresolvedRecords && (
+          <div className="flex gap-[8px] items-center w-full" data-testid="heading-unresolved-decisions">
+            <div className="size-[6px] rounded-full shrink-0 bg-brain-v1baby-blue-60" />
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[12px] uppercase tracking-[0.4px] whitespace-nowrap">
+              Unresolved Decisions
+            </p>
+            <CountPill testId="count-unresolved-decisions">{visibleItems.length + visibleInputRows.length}</CountPill>
+          </div>
+        )}
+
         {activeTab === "Resolved" && (
           <div className="flex gap-[8px] items-center w-full" data-testid="heading-resolved-decisions">
             <div className="size-[6px] rounded-full shrink-0 bg-brain-v1baby-blue-60" />
@@ -2101,7 +2124,7 @@ export function InboxPage() {
       <LiveProposalModal
         proposal={selectedProposal}
         open={selectedProposal !== null}
-        onOpenChange={(o) => { if (!o) { setSelectedProposal(null); setOpenItemId(null); } }}
+        onOpenChange={(o) => { if (!o) dismissLiveProposal(); }}
         {...pagerProps}
         position={pager.position ?? undefined}
       />

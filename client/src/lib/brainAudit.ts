@@ -174,6 +174,90 @@ const ACTION_MAP: Record<string, { eventType: AuditEventType; summary: (e: Brain
   "raw.ingest.deduplicated": { eventType: "system_activity", summary: () => "Duplicate data: already ingested previously, skipped" },
 };
 
+/* Lifecycle titles are read by humans, not by the audit API. Keep unknown
+ * actions honest while removing the dotted machine vocabulary from the step
+ * heading. Known agent-action events get a more useful description than a
+ * literal title-case conversion. */
+const HUMAN_ACTION_LABELS: Record<string, string> = {
+  "agent.action.proposed": "Agent recommendation created",
+  "agent.action.refreshed": "Agent recommendation updated",
+  "agent.action.executed": "Agent action executed",
+  "agent.action.completed": "Agent action completed",
+  "agent.action.failed": "Agent action failed",
+  "agent.action.cancelled": "Agent action cancelled",
+};
+
+export function humanizeAuditAction(action: string): string {
+  const exact = HUMAN_ACTION_LABELS[action];
+  if (exact) return exact;
+  const words = action
+    .split(".")
+    .map((part) => part.replace(/[_-]+/g, " ").trim())
+    .filter(Boolean);
+  if (words.length === 0) return "Audit event";
+  return words
+    .join(" ")
+    .replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
+/** The lifecycle is an event history, not a mirror of the proposal's current
+ * status. A proposal can still be pending while its creation event is already
+ * complete. For an unresolved recommendation, the popup may show the next
+ * execution stage as an explicitly labelled, UI-only pending step. */
+export function lifecycleStepsForDisplay(
+  record: Pick<AuditRecord, "lifecycle" | "subtype" | "decision">,
+): LifecycleStep[] {
+  const isProposalRecord =
+    record.subtype === "agent.action.proposed" ||
+    record.subtype === "agent.action.refreshed" ||
+    record.subtype === "proposal.decided";
+  const hasRecommendationCreation = record.lifecycle.some(
+    (step) => step.label === "Agent recommendation created",
+  );
+  /* Some historical audit feeds begin at proposal.decided (or refreshed)
+     because the original proposal event was outside the returned window.
+     Keep the decision lifecycle understandable without inventing a date:
+     this display-only lead step explicitly says it predates the decision. */
+  const lifecycle =
+    isProposalRecord && !hasRecommendationCreation
+      ? [
+          {
+            label: "Agent recommendation created",
+            timestamp: "Before this decision",
+            kind: "ok" as const,
+          },
+          ...record.lifecycle,
+        ]
+      : record.lifecycle;
+  const recommendationIsAwaitingDecision =
+    record.subtype === "agent.action.proposed" ||
+    record.subtype === "agent.action.refreshed";
+  const approvedDecision =
+    record.subtype === "proposal.decided" &&
+    record.decision === "approve";
+  const hasExecutionOutcome = lifecycle.some((step) =>
+    [
+      "Agent action executed",
+      "Agent action completed",
+      "Agent action failed",
+      "Agent action cancelled",
+    ].includes(step.label),
+  );
+
+  if ((!recommendationIsAwaitingDecision && !approvedDecision) || hasExecutionOutcome) {
+    return lifecycle;
+  }
+
+  return [
+    ...lifecycle,
+    {
+      label: "Agent action executed",
+      timestamp: approvedDecision ? "Pending execution" : "Pending your decision",
+      kind: "pending",
+    },
+  ];
+}
+
 /** Card-friendly single-line truncation for titles sourced from free text
  *  (currently the wiki.question question). Exported for tests. */
 export const CARD_TITLE_MAX = 72;
@@ -221,11 +305,10 @@ function proposalSummaryFrom(e: BrainAuditEvent): ProposalDecisionSummary | unde
  *  eventType in the decision itself (approve|reject|acknowledge|undo), not a
  *  fixed action string, so it's handled separately from the static ACTION_MAP
  *  above rather than one entry per decision. proposal_id is included as plain
- *  reference text (not a tappable link) - see the `linked: []` honesty note on
- *  mapAuditEventToRecord below. */
+ *  reference text; the popup resolves it against the live proposal feed when
+ *  available and otherwise keeps it as honest plain text. */
 function classifyProposalDecided(e: BrainAuditEvent): { eventType: AuditEventType; summary: string } {
   const decision = typeof e.inputs.decision === "string" ? e.inputs.decision : "decided";
-  const proposalId = typeof e.inputs.proposal_id === "string" ? e.inputs.proposal_id : undefined;
   const eventType: AuditEventType =
     decision === "reject"
       ? "rejected"
@@ -234,12 +317,23 @@ function classifyProposalDecided(e: BrainAuditEvent): { eventType: AuditEventTyp
         : decision === "undo"
           ? "flagged"
           : "approved";
-  const fallback = `Proposal decided - ${decision}${proposalId ? ` (${proposalId})` : ""}`;
-  // Prefer the real narrative brain-core now snapshots at decision time
-  // (e.g. "Compliance review found policy_violation with high severity...").
-  // Falls back to the old opaque id-only line for events predating this.
-  const narrative = proposalSummaryFrom(e)?.narrative;
-  return { eventType, summary: narrative && narrative.trim() ? narrative.trim() : fallback };
+  const fallback =
+    decision === "approve"
+      ? "Proposal approved"
+      : decision === "reject"
+        ? "Proposal rejected"
+        : decision === "acknowledge"
+          ? "Proposal acknowledged"
+          : decision === "undo"
+            ? "Proposal reopened"
+            : "Proposal decision recorded";
+  // Prefer the proposal's own subject/title (proposal_summary.summary) as the
+  // summary header so audit records are consistent with agent decision cards,
+  // which use the proposal subject/headline as their title. Fall back to the
+  // generic decision label only when no subject snapshot is available.
+  const proposalSummary = proposalSummaryFrom(e);
+  const summary = proposalSummary?.summary?.trim() || fallback;
+  return { eventType, summary };
 }
 
 /** brain-core's own event_type mapped onto the client bucket, when present.
@@ -267,7 +361,7 @@ function coreBucket(e: BrainAuditEvent): AuditEventType | undefined {
 function classify(e: BrainAuditEvent): { eventType: AuditEventType; summary: string } {
   if (e.action === "proposal.decided") return classifyProposalDecided(e);
   const known = ACTION_MAP[e.action];
-  const summary = known ? known.summary(e) : e.action;
+  const summary = known ? known.summary(e) : humanizeAuditAction(e.action);
   // Mapped decision types (approved/rejected/etc) are richer than core's
   // buckets and stay authoritative for their tabs.
   if (known && known.eventType !== "flagged" && known.eventType !== "system_activity") {
@@ -327,6 +421,12 @@ export function auditEventCorrelationKey(event: BrainAuditEvent): string | undef
 
 function isPendingLifecycleEvent(event: BrainAuditEvent): boolean {
   if (event.action === "proposal.awaiting_second_approval") return true;
+  /* `agent.action.proposed` and `.refreshed` are completed audit events even
+     when their payload says the proposal is still pending. That status belongs
+     to the decision, not to the recording of the recommendation itself. */
+  if (event.action === "agent.action.proposed" || event.action === "agent.action.refreshed") {
+    return false;
+  }
   const values = [event.inputs?.status, event.outputs?.status, event.inputs?.outcome, event.outputs?.outcome];
   return values.some((value) =>
     typeof value === "string" && /^(pending|queued|awaiting|in_progress|not_sent)$/i.test(value),
@@ -713,13 +813,18 @@ export function mapAuditEventToRecord(
     event.action === "proposal.decided" && typeof event.inputs.proposal_id === "string"
       ? event.inputs.proposal_id
       : undefined;
-  /* Remediation/rule context reads as a second line under the narrative
-     headline - only set when it says something the summary doesn't already. */
-  const proposalNote =
-    proposalSummary?.recommended_remediation &&
-    proposalSummary.recommended_remediation !== summary
-      ? proposalSummary.recommended_remediation
+  const decision =
+    event.action === "proposal.decided" && typeof event.inputs.decision === "string"
+      ? event.inputs.decision
       : undefined;
+  /* Brain's recommendation text for the "Brain's Recommendation" popup section.
+     Prefer recommended_remediation (prescriptive), fall back to narrative
+     (descriptive). The summary is now the clean decision label ("Proposal
+     approved") so any non-empty text here is always distinct from it. */
+  const proposalNote =
+    proposalSummary?.recommended_remediation?.trim() ||
+    proposalSummary?.narrative?.trim() ||
+    undefined;
 
   const step: LifecycleStep = {
     label: summary,
@@ -751,17 +856,15 @@ export function mapAuditEventToRecord(
     // those stores are also live - see BrainMVB-data-integration/CLAUDE.md's
     // linked-evidence contract). The popup already gracefully falls back to
     // a plain, non-tappable "(proposal unavailable)" chip when the id
-    // doesn't resolve against the demo proposal store (AuditRecordPopup.tsx),
-    // so populating this for live tenants is safe today even though it
-    // won't be tappable there until openProposalDetail/resolveProposal
-    // learns to resolve live GET /v1/proposals/{id} data, not just the
-    // demo-only mock corpus.
+    // doesn't resolve against either the live proposal feed or the demo
+    // proposal store (AuditRecordPopup.tsx).
     linked: proposalId
       ? [{ kind: "proposal" as const, label: proposalId, refId: proposalId }]
       : [],
     anchor: anchorFor(event, latestAnchor),
     rawQuestion: fullQuestion,
     agentLabel,
+    ...(decision ? { decision } : {}),
     /* proposingAgent: canonical agent type key for the proposing agent.
        Priority:
        1. Session cache hit (populated when the live proposal was still visible

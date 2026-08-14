@@ -251,6 +251,70 @@ export function humanizeEnumValue(value: string): string {
   return words[0].charAt(0).toUpperCase() + words[0].slice(1) + (words.length > 1 ? " " + words.slice(1).join(" ") : "");
 }
 
+export interface RecommendedActionSource {
+  /** Legacy proposal field. */
+  recommendedAction?: unknown;
+  /** Live/core spelling when a BFF response has not normalized the field. */
+  recommended_action?: unknown;
+  narrative?: unknown;
+  presentation?: {
+    recommendation?: unknown;
+    recommendedAction?: unknown;
+    recommended_action?: unknown;
+  } | null;
+  details?: Record<string, unknown> | null;
+}
+
+const MACHINE_ENUM_VALUE_RE = /^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$/;
+
+/**
+ * Resolve the one customer-facing recommendation label used by every agent
+ * card. Core has shipped this value under several additive shapes over time;
+ * normalize those shapes here instead of making each card know the wire
+ * history. Authored recommendation prose wins over a machine enum such as
+ * `propose_payment_plan`; the enum is the honest fallback when no prose exists.
+ */
+export function resolveRecommendedAction(source: RecommendedActionSource): string | null {
+  const candidates = [
+    source.recommendedAction,
+    source.recommended_action,
+    source.presentation?.recommendedAction,
+    source.presentation?.recommended_action,
+    source.details?.recommended_action,
+    source.details?.recommendedAction,
+    source.details?.recommendation,
+    source.narrative,
+    source.presentation?.recommendation,
+  ];
+
+  // Prefer a human-authored sentence regardless of which additive field carried
+  // it. This prevents a short presentation enum from hiding a useful narrative.
+  for (const candidate of candidates) {
+    if (typeof candidate !== "string") continue;
+    const value = candidate.trim();
+    if (value && !MACHINE_ENUM_VALUE_RE.test(value)) return value;
+  }
+
+  // If core supplied only machine values, keep the first one as a readable
+  // fallback rather than dropping the section entirely.
+  for (const candidate of candidates) {
+    if (typeof candidate !== "string") continue;
+    const value = candidate.trim();
+    if (value) return humanizeEnumValue(value);
+  }
+  return null;
+}
+
+/** Convert an engine reason into readable sentence case without changing
+ * authored prose beyond its initial capital. Machine labels may arrive as
+ * snake_case or dotted action names. */
+export function sentenceCaseText(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return trimmed;
+  const humanized = humanizeEnumValue(trimmed.replace(/\./g, "_")).replace(/_/g, " ");
+  return humanized.charAt(0).toUpperCase() + humanized.slice(1);
+}
+
 /** Customer-facing decision button copy. API ids remain unchanged, while labels
  * such as `hold_vendor` and `Clear vendor` consistently become `Hold Vendor`
  * and `Clear Vendor`. */
@@ -557,8 +621,13 @@ export function buildProposalHeaderCopy(
      stays consistent with that rendering rather than showing raw unresolved text. */
   const resolvedNarrative = resolveProseText(proposal.narrative, refDisplays);
 
+  /* resolvedNarrative is NOT used as the title fallback: for some agent types
+     (e.g. vendor risk) the narrative IS the recommendation ("Recommend allow"),
+     which must only appear in the dedicated "Brain's Recommendation" section —
+     not as the card headline. The subject name or agent name is the right
+     fallback when core supplies no presentation headline. */
   return {
-    title: cardHeadline ?? subjectName ?? resolvedNarrative ?? agentName,
+    title: cardHeadline ?? subjectName ?? agentName,
     text:
       [cardHeadline && subjectName ? subjectName : null, headlineText].filter(Boolean).join(" · ") ||
       (subjectName ? `${proposal.subject!.label} · ${agentName}` : `Proposed by ${agentName}`),
@@ -817,14 +886,18 @@ export function buildWhySuggested(
 
   const push = (raw: unknown, passed: boolean | null) => {
     if (typeof raw !== "string") return;
-    const text = raw.trim();
+    const rawText = raw.trim();
     // A bare ULID is an identifier, not a reason a human can read.
-    if (!text || isRawIdentifier(text)) return;
+    if (!rawText || isRawIdentifier(rawText)) return;
+    const humanized = sentenceCaseText(rawText);
     // A string with no alphabetic characters is a raw metric (e.g. "0.6",
     // "70197.57", "1,200"), not a sentence a reviewer can act on. Suppress it
     // rather than surfacing a dimensionless number as a reason bullet.
-    if (!/[a-zA-Z]/.test(text)) return;
-    const key = text.toLowerCase();
+    if (!/[a-zA-Z]/.test(humanized)) return;
+    // Append a period so each bullet reads as a complete sentence. Skipped
+    // when the text already ends with sentence-terminating punctuation.
+    const text = /[.!?]$/.test(humanized) ? humanized : `${humanized}.`;
+    const key = humanized.toLowerCase();
     if (seen.has(key)) return;
     seen.add(key);
     bullets.push({ text, passed });

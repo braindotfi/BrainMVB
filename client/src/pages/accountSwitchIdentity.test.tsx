@@ -65,9 +65,8 @@ import { ProfileSection } from "@/pages/SettingsPage";
 import { HomePage } from "@/pages/HomePage";
 
 /* Every backend read fails (retry: false): the pages must render from auth +
-   localStorage alone, which keeps the identity assertions unpolluted by
-   tenancy data — `companyName` is undefined, so the display name is exactly
-   `override ?? user.name`. */
+   localStorage alone. The Profile identity name is always the authenticated
+   user's entered name, or that user's scoped local override. */
 const makeQueryClient = () =>
   new QueryClient({
     defaultOptions: {

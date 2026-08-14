@@ -5,6 +5,7 @@ import {
   initialsOf,
   isRawIdentifier,
   humanizeEnumValue,
+  resolveRecommendedAction,
   buildKeyFactRows,
   buildFlaggedBy,
   buildDecisionButtons,
@@ -31,6 +32,48 @@ import type { ProposalEvidenceItem } from "./brainProposals";
 
 const money = (a: { value: string; currency: string }) =>
   `$${Number(a.value).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+describe("resolveRecommendedAction", () => {
+  it("prefers the legacy recommendedAction field", () => {
+    expect(
+      resolveRecommendedAction({
+        recommendedAction: "Hold payment and verify the vendor.",
+        presentation: { recommendation: "recommend_allow" },
+        narrative: "The account changed recently.",
+      }),
+    ).toBe("Hold payment and verify the vendor.");
+  });
+
+  it("reads the live presentation recommendation and humanizes enum values", () => {
+    expect(resolveRecommendedAction({ presentation: { recommendation: "recommend_hold" } })).toBe("Recommend hold");
+  });
+
+  it("prefers authored narrative over a short presentation enum", () => {
+    expect(
+      resolveRecommendedAction({
+        presentation: { recommendation: "propose_payment_plan" },
+        narrative: "Recommend a payment plan with a collaborative tone at the payment-plan tier.",
+      }),
+    ).toBe("Recommend a payment plan with a collaborative tone at the payment-plan tier.");
+  });
+
+  it("reads nested recommendation fields from details", () => {
+    expect(resolveRecommendedAction({ details: { recommended_action: "Review the cash buffer." } })).toBe(
+      "Review the cash buffer.",
+    );
+    expect(resolveRecommendedAction({ details: { recommendedAction: "review_vendor" } })).toBe("Review vendor");
+  });
+
+  it("falls back to the narrative when no dedicated action exists", () => {
+    expect(resolveRecommendedAction({ narrative: "Vendor bank details changed recently." })).toBe(
+      "Vendor bank details changed recently.",
+    );
+  });
+
+  it("returns null when no readable source exists", () => {
+    expect(resolveRecommendedAction({ recommendedAction: null, presentation: null, details: {} })).toBeNull();
+  });
+});
 
 const invoice: ProposalEvidenceItem = {
   kind: "invoice",
@@ -358,8 +401,8 @@ describe("buildWhySuggested", () => {
         null,
       ),
     ).toEqual([
-      { text: "New account number first seen 2 days ago", passed: false },
-      { text: "Vendor has no prior record of changing banking details", passed: false },
+      { text: "New account number first seen 2 days ago.", passed: false },
+      { text: "Vendor has no prior record of changing banking details.", passed: false },
     ]);
   });
 
@@ -368,7 +411,7 @@ describe("buildWhySuggested", () => {
       { trace: [{ matched: true, checks: [{ key: "within_terms", detail: "Invoice is within payment terms", passed: true }] }] },
       null,
     );
-    expect(bullets).toEqual([{ text: "Invoice is within payment terms", passed: true }]);
+    expect(bullets).toEqual([{ text: "Invoice is within payment terms.", passed: true }]);
   });
 
   it("records no verdict when the check states none", () => {
@@ -376,13 +419,22 @@ describe("buildWhySuggested", () => {
       { trace: [{ matched: true, checks: [{ detail: "Amount matches the purchase order" }] }] },
       null,
     );
-    expect(bullets).toEqual([{ text: "Amount matches the purchase order", passed: null }]);
+    expect(bullets).toEqual([{ text: "Amount matches the purchase order.", passed: null }]);
   });
 
   it("humanizes the machine key only when there is no written sentence", () => {
     expect(
       buildWhySuggested({ trace: [{ matched: true, checks: [{ key: "amount_over_limit", passed: false }] }] }, null),
-    ).toEqual([{ text: "Amount over limit", passed: false }]);
+    ).toEqual([{ text: "Amount over limit.", passed: false }]);
+  });
+
+  it("sentence-cases machine reason text from the engine", () => {
+    expect(
+      buildWhySuggested(
+        { trace: [{ matched: true, checks: [{ detail: "identity_unresolved", passed: false }] }] },
+        null,
+      ),
+    ).toEqual([{ text: "Identity unresolved.", passed: false }]);
   });
 
   it("reads ranked_signals, as plain strings and as objects", () => {
@@ -395,9 +447,9 @@ describe("buildWhySuggested", () => {
         ],
       }),
     ).toEqual([
-      { text: "Combined batch fits within this week's operating cash buffer", passed: null },
-      { text: "Payment velocity is 4x the vendor's norm", passed: null },
-      { text: "Geo mismatch", passed: null },
+      { text: "Combined batch fits within this week's operating cash buffer.", passed: null },
+      { text: "Payment velocity is 4x the vendor's norm.", passed: null },
+      { text: "Geo mismatch.", passed: null },
     ]);
   });
 
@@ -406,7 +458,7 @@ describe("buildWhySuggested", () => {
       { trace: [{ matched: true, checks: [{ detail: "Vendor bank details changed" }] }] },
       { ranked_signals: ["vendor bank details changed"] },
     );
-    expect(bullets).toEqual([{ text: "Vendor bank details changed", passed: null }]);
+    expect(bullets).toEqual([{ text: "Vendor bank details changed.", passed: null }]);
   });
 
   /* The trace records every rule the engine CONSIDERED. A rule that did not fire
@@ -423,7 +475,7 @@ describe("buildWhySuggested", () => {
         },
         null,
       ),
-    ).toEqual([{ text: "Amount exceeds the review threshold", passed: null }]);
+    ).toEqual([{ text: "Amount exceeds the review threshold.", passed: null }]);
   });
 
   it("will not assume a rule fired when the trace omits the flag", () => {
@@ -737,12 +789,12 @@ describe("buildProposalHeaderCopy", () => {
   ] as const;
 
   it.each(NOTIFY_ONLY_CAPABLE_AGENTS)(
-    "falls back to the resolved narrative, not the bare agent name, for a %s finding with no subject/headline",
+    "falls back to the agent name (not the narrative) as the card title for a %s finding with no subject/headline",
     (agentType, agentName) => {
-      // Exactly the notify_only shape: no subject, no presentation.headline,
-      // so every one of these previously rendered an identical,
-      // indistinguishable bare-agent-name title regardless of what each
-      // finding was actually about.
+      // The narrative ("Recommend allow", "Recommend hold") must NOT become the
+      // card headline — it belongs only in "Brain's Recommendation". When core
+      // supplies no presentation.headline and no subject, the agent name is the
+      // correct fallback title for the summary area.
       const proposal = {
         id: `pr_${agentType}`,
         type: agentType,
@@ -764,8 +816,8 @@ describe("buildProposalHeaderCopy", () => {
 
       const formatText = (value: string) => value;
       const result = buildProposalHeaderCopy(proposal, agentName, formatText);
-      expect(result.title).toBe(proposal.narrative);
-      expect(result.title).not.toBe(agentName);
+      // Title falls back to the agent name, never to the recommendation narrative.
+      expect(result.title).toBe(agentName);
       expect(result.text).toBe(`Proposed by ${agentName}`);
     },
   );

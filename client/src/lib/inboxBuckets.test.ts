@@ -98,4 +98,11 @@ describe("the Inbox actually sorts on this", () => {
   it("counts only the two sections that ask the tenant for something", () => {
     expect(src).toContain("unresolvedItems.length + inputRows.length");
   });
+
+  it("shows the generic unresolved heading only for an empty unresolved queue", () => {
+    expect(src).toContain("activeTab === \"Unresolved\" && !hasUnresolvedRecords");
+    expect(src).toContain('title="Needs your approval"');
+    expect(src).toContain('title="Needs your input"');
+    expect(src).toContain('title="For your awareness"');
+  });
 });

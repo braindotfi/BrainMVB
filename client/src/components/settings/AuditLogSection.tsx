@@ -13,6 +13,7 @@ import { capitalCase } from "@/lib/displayLabels";
 import { CountPill } from "@/components/CountPill";
 import { RecordPill } from "@/components/RecordPill";
 import type { AnchorStatus } from "@/lib/auditTypes";
+import { useLocation, useSearch } from "wouter";
 
 /* Settings → Audit Log.
  *
@@ -266,6 +267,8 @@ export function AuditLogSection() {
   const { records: brainRecords, isLoading, isError } = useBrainAuditRecords();
   const acknowledgedRecords = useAcknowledgedRecords();
   const { formatText } = useCurrency();
+  const search = useSearch();
+  const [, navigate] = useLocation();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<TypeFilter>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -282,6 +285,18 @@ export function AuditLogSection() {
     return [...brainRecords, ...acknowledgedRecords.filter((record) => !brainIds.has(record.id))]
       .sort((a, b) => b.occurredAtMs - a.occurredAtMs);
   }, [brainRecords, acknowledgedRecords]);
+
+  /* A linked proposal can return here with `?record=` after its live detail
+     modal closes. Reopen the same audit record once the async feed contains it,
+     then normalize the URL so the popup owns the state again. */
+  useEffect(() => {
+    const recordId = new URLSearchParams(search).get("record");
+    if (!recordId) return;
+    const found = records.find((record) => record.id === recordId || record.anchor.auditId === recordId);
+    if (!found) return;
+    setActiveRecord(found);
+    navigate("/settings?section=audit", { replace: true });
+  }, [search, records, navigate]);
 
   const systemIds = useMemo(() => {
     const { system } = partitionSystemActivity(records);

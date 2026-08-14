@@ -267,7 +267,7 @@ const SETTINGS_CLUSTER = [
 const NAMED_TEXT_BASELINE: Record<string, number> = {
   "components/AddAccountModal.tsx": 9,
   "components/AnchorStatus.tsx": 2,
-  "components/AuditRecordPopup.tsx": 4,
+  "components/AuditRecordPopup.tsx": 1,
   "components/ContactUpdateModal.tsx": 1,
   "components/DocumentViewerPopup.tsx": 14,
   "components/LiveEvidenceRecordPopup.tsx": 1,
