@@ -25,6 +25,7 @@ import { RecordPager } from "./RecordPager";
 import { matchCannedPrompt } from "@shared/cannedPrompts";
 import { anchorFromInclusionProof, lifecycleStepsForDisplay, resolveDetailAnchor, type BrainAuditEventDetail } from "@/lib/brainAudit";
 import { capitalCase } from "@/lib/displayLabels";
+import { humanizeEnumValue } from "@/lib/proposalCards";
 import { Button } from "@/components/ui/button";
 import { useBrainProposals, agentKeyForProposalType, type BrainProposal } from "@/lib/brainProposals";
 import { AGENT_DISPLAY_NAME } from "@/lib/agentProposals";
@@ -39,6 +40,11 @@ function proposalEvidenceLabel(proposal: BrainProposal): string {
   return subject
     ? `${agentBaseName} proposal for ${subject}`
     : `${agentBaseName} proposal`;
+}
+
+function sentenceCaseRecommendation(text: string, formatText: (value: string) => string): string {
+  const formatted = humanizeEnumValue(formatText(text).trim());
+  return formatted ? formatted.charAt(0).toUpperCase() + formatted.slice(1) : formatted;
 }
 
 export function AuditRecordPopup({
@@ -113,6 +119,12 @@ export function AuditRecordPopup({
       : undefined;
   const anchor = resolveDetailAnchor(record.anchor, proofAnchor);
   const lifecycle = lifecycleStepsForDisplay(record);
+  /* proposal.decided carries Brain's supporting recommendation on its
+     lifecycle step. Pull it into its own section so the summary remains the
+     event narrative and the lifecycle remains an event history. */
+  const recommendationNote = !isAssistantActivity(record)
+    ? [...lifecycle].reverse().map((step) => step.note?.trim()).find(Boolean)
+    : undefined;
 
   const isFlagged = record.eventType === "flagged" && !isAssistantActivity(record);
 
@@ -254,6 +266,33 @@ export function AuditRecordPopup({
             {/* Scrollable body */}
             <div className="flex flex-col gap-[32px] items-start p-[24px] w-full overflow-y-auto">
 
+              {/* Keep the event summary concise. When Brain supplied a
+                  supporting recommendation, show the decision narrative and
+                  recommendation as separate labeled sections. */}
+              {recommendationNote && (
+                <>
+                  <div className="relative shrink-0 w-full">
+                    <div className="content-stretch flex flex-col gap-[16px] items-start relative size-full">
+                      <SectionHeader>Why This Needs Your Decision</SectionHeader>
+                      <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[16px] w-full">
+                        {formatText(record.summary)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="relative shrink-0 w-full" data-testid="section-audit-brain-recommendation">
+                    <div className="content-stretch flex flex-col gap-[16px] items-start relative size-full">
+                      <SectionHeader>Brain's Recommendation</SectionHeader>
+                      <p
+                        className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[16px] w-full"
+                        data-testid="text-audit-brain-recommendation"
+                      >
+                        {sentenceCaseRecommendation(recommendationNote, formatText)}
+                      </p>
+                    </div>
+                  </div>
+                </>
+              )}
+
               {/* Decision Lifecycle */}
               {lifecycle.length > 0 && (
                 <div className="relative shrink-0 w-full">
@@ -321,10 +360,12 @@ export function AuditRecordPopup({
                                        lead with the human description; the exact prompt sent
                                        is still shown below — the audit log never hides what
                                        was actually sent, it just stops leading with it. */
-                                    const canned = matchCannedPrompt(step.note);
+                                     const displayNote =
+                                       step.note?.trim() === recommendationNote ? undefined : step.note;
+                                     const canned = matchCannedPrompt(displayNote);
                                     if (!canned) {
-                                      return step.note ? (
-                                         <p className="relative shrink-0 text-brain-v1baby-blue-30 w-full">{formatText(step.note)}</p>
+                                       return displayNote ? (
+                                          <p className="relative shrink-0 text-brain-v1baby-blue-30 w-full">{formatText(displayNote)}</p>
                                       ) : null;
                                     }
                                     return (

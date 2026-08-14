@@ -408,6 +408,15 @@ export function LiveProposalModal({
                 </CardSection>
               )}
 
+              {/* Brain's recommendation is separate from the narrative that
+                  explains why this record needs review. Enum values such as
+                  recommend_hold are humanized into sentence case. */}
+              {recommendation && (
+                <CardSection title="Brain's Recommendation" testId="section-live-proposal-recommendation">
+                  <CardText testId="text-live-proposal-recommendation">{recommendation}</CardText>
+                </CardSection>
+              )}
+
               {/* Linked Evidence — Wiki-resolved records only. A ref that resolved to
                   nothing yields NO row: the only thing left to show would be the raw
                   id, which this view must not put in front of an approver. */}
@@ -456,16 +465,7 @@ export function LiveProposalModal({
                 </CardSection>
               )}
 
-              {/* 5 — Recommended Action: brain-core's `presentation.recommendation`.
-                  It sits after the evidence so the advice follows the facts that
-                  justify it, and immediately before the outcomes it leads to. */}
-              {recommendation && (
-                <CardSection title="Recommended Action">
-                  <CardText testId="text-live-proposal-recommendation">{recommendation}</CardText>
-                </CardSection>
-              )}
-
-              {/* 6 — What Happens Next: brain-core's own consequence text, one row per
+              {/* 5 — What Happens Next: brain-core's own consequence text, one row per
                   decision the card actually offers, the glyph carrying the tone.
                   Reject is a row here rather than a separate "If This Is Wrong"
                   section — the frame lists every branch together so the approver
