@@ -47,7 +47,9 @@ export type SourceDocument = {
   rawId: string | null;
   sha256: string | null;
   sourceType: string | null;
+  objectType: string | null;
   extractStatus: ExtractStatus;
+  extractDetail: string | null;
   projectionStatus: string | null;
   parsedId: string | null;
   confidence: string | null;

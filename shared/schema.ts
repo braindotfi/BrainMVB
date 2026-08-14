@@ -74,9 +74,18 @@ export const sourceDocuments = pgTable("source_documents", {
   // ── brain-core ingestion (files live in Brain, not here) ──
   rawId: text("raw_id"),                     // brain-core raw artifact id (POST /v1/raw/ingest)
   sha256: text("sha256"),                    // content hash returned by ingest
-  sourceType: text("source_type"),          // pdf_upload | csv_upload
+  sourceType: text("source_type"),          // pdf_upload | csv_upload | xlsx_upload | txt_upload
+  // Caller-declared brain-core object_type for CSV/XLSX uploads (customer_asserted_csv_v1
+  // path) - e.g. "payables_invoices", "payroll_runs". NULL means auto-detect (AR aging /
+  // payroll keyword scan), the pre-existing behavior. See DOCUMENT_OBJECT_TYPES.
+  objectType: text("object_type"),
   // pending | ingested | extracting | extracted | unsupported | unavailable | failed
   extractStatus: text("extract_status"),
+  // Human-readable detail from brain-core's own error body when extraction fails
+  // (e.g. "customer_asserted CSV payables_invoices is missing required headers:
+  // invoice_id, status"), surfaced in the upload UI instead of a generic message.
+  // NULL for success or when brain-core returned no structured detail.
+  extractDetail: text("extract_detail"),
   // Mirror of brain-core's per-document projection lifecycle, refreshed only while we are
   // actively chasing a recent upload: pending | projecting | projected |
   // projection_timed_out | projection_failed. NULL means "no signal at all" - either

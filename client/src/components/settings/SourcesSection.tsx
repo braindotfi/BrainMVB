@@ -170,7 +170,7 @@ function SourceRow({
           <div className="settings-record-title truncate">
             {title}
           </div>
-          <p className="settings-record-detail truncate">
+          <p className="settings-record-detail truncate" title={subtitle}>
             {subtitle}
           </p>
         </div>
@@ -562,7 +562,7 @@ export function SourcesSection() {
                     <ExtractStatusBadge status={d.extractStatus} testId={`doc-status-${d.id}`} />
                   </span>
                 }
-                subtitle={`${d.category ? `${d.category.charAt(0).toUpperCase()}${d.category.slice(1)} · ` : ""}${formatSize(d.size)}`}
+                subtitle={`${d.category ? `${d.category.charAt(0).toUpperCase()}${d.category.slice(1)} · ` : ""}${formatSize(d.size)}${d.extractDetail ? ` · ${d.extractDetail}` : ""}`}
                 onRemove={() => removeDoc.mutate(d.id)}
                 removing={removeDoc.isPending}
                 last={i === docs.length - 1}

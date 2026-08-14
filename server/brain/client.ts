@@ -678,7 +678,19 @@ export interface RawIngestResult {
  */
 export async function ingestRawDocument(
   token: string,
-  input: { sourceType: RawSourceType; bytes: Uint8Array; filename: string; mimeType: string },
+  input: {
+    sourceType: RawSourceType;
+    bytes: Uint8Array;
+    filename: string;
+    mimeType: string;
+    /**
+     * Caller-declared brain-core object_type for CSV/XLSX uploads (the
+     * customer_asserted_csv_v1 path in services/raw/src/interpreters/upload.ts,
+     * e.g. "payables_invoices"). Omit to fall back to brain-core's AR-aging /
+     * payroll header-keyword auto-detection - the pre-existing behavior.
+     */
+    objectType?: string;
+  },
 ): Promise<RawIngestResult> {
   // Must use currentBrainBaseUrl() — NOT brainConfig.baseUrl directly — so the
   // per-user routing (staging for demo, prod for real accounts) from withBrainBaseUrl()
@@ -691,6 +703,7 @@ export async function ingestRawDocument(
   // Explicit schema so the interpret worker's registered-schema match can never miss:
   // brain.upload.document.v1 is the correct schema for ALL upload types (PDF/XLSX/CSV).
   form.set("source_schema", "brain.upload.document.v1");
+  if (input.objectType !== undefined) form.set("object_type", input.objectType);
   const blob = new Blob([input.bytes as unknown as BlobPart], { type: input.mimeType });
   form.set("file", blob, input.filename);
 
@@ -1083,6 +1096,24 @@ export function brainErrorCode(err: unknown): string | null {
     if (typeof e === "string") return e;
     if (e && typeof e === "object" && typeof (e as { code?: unknown }).code === "string") {
       return (e as { code: string }).code;
+    }
+  }
+  return null;
+}
+
+/**
+ * The human-readable message from brain-core's structured error body, e.g.
+ * "customer_asserted CSV payables_invoices is missing required headers:
+ * invoice_id, status" - far more actionable than a generic status-mapped
+ * label. Null when the error isn't a BrainApiError or carries no message.
+ */
+export function brainErrorDetail(err: unknown): string | null {
+  if (!(err instanceof BrainApiError)) return null;
+  const body = err.body;
+  if (body && typeof body === "object" && "error" in body) {
+    const e = (body as { error: unknown }).error;
+    if (e && typeof e === "object" && typeof (e as { message?: unknown }).message === "string") {
+      return (e as { message: string }).message;
     }
   }
   return null;
