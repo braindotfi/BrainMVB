@@ -188,8 +188,9 @@ export function getBrainSessionExpiresAt(appUserId: string): number | null {
  * Mint a new session via the configured token source.
  *
  * Routing decision (per-user, made ONCE at session-create time):
- *   • isDemoEmail → demo/staging path  (brainConfig.demoBaseUrl)
- *   • real user  → production / durable path  (brainConfig.baseUrl)
+ *   • durable tenancy → production path (brainConfig.baseUrl), including demo users
+ *   • non-durable demo → demo/staging path (brainConfig.demoBaseUrl)
+ *   • non-durable real user → production / configured fallback path
  *
  * The resolved base URL is stored in sessionBaseUrl so every getBrainSession()
  * call can return it without an extra DB lookup, and withBrainBaseUrl() is set
@@ -200,7 +201,12 @@ async function createSession(appUserId: string, now: number, prior?: CachedSessi
   // to avoid a second round-trip.
   const user = await storage.getUser(appUserId);
   const isDemo = isDemoEmail(user?.email);
-  const baseUrl = isDemo ? brainConfig.demoBaseUrl : brainConfig.baseUrl;
+  // Durable tenants are genuine production tenants. This must win over the demo
+  // email predicate: staging's tenant-create response can seed successfully while
+  // returning a session JWT that staging later rejects, leaving the app authenticated
+  // locally but dead on its first ledger request.
+  const durable = brainDurableTenancy();
+  const baseUrl = durable ? brainConfig.baseUrl : isDemo ? brainConfig.demoBaseUrl : brainConfig.baseUrl;
 
   // Record the base URL for this user so getBrainSession() can return it instantly.
   sessionBaseUrl.set(appUserId, baseUrl);
@@ -208,18 +214,18 @@ async function createSession(appUserId: string, now: number, prior?: CachedSessi
   console.log(`[brain-auth] createSession user=${appUserId} isDemo=${isDemo} target=${baseUrl}`);
 
   return withBrainBaseUrl(baseUrl, async () => {
-    if (isDemo) {
-      // Demo accounts: ephemeral session on the demo/staging target.
-      // Pass the already-fetched user to avoid a second DB round-trip.
-      return createDemoSession(appUserId, now, user);
+    // Durable mode is global and deliberately includes the public demo account:
+    // create one production tenant, persist the identity, and seed it once.
+    if (durable) {
+      return createDurableSession(appUserId, prior, user);
     }
-    // Real users: PRODUCTION TENANCY (Phase 2).
     if (brainTenancyMode() === "production") {
       return createProductionSession(appUserId, prior);
     }
-    // DURABLE tenancy: one persistent production tenant per app user.
-    if (brainDurableTenancy()) {
-      return createDurableSession(appUserId, prior, user);
+    if (isDemo) {
+      // Non-durable demo accounts use the ephemeral demo/staging strategies.
+      // Pass the already-fetched user to avoid a second DB round-trip.
+      return createDemoSession(appUserId, now, user);
     }
     // No platform service credential configured: fall back to demo token strategies
     // on the production URL (preserves pre-split behaviour in dev / unconfigured envs).
@@ -461,6 +467,7 @@ async function createProductionSession(appUserId: string, prior?: CachedSession)
   if (prior?.refreshToken) {
     try {
       const rotated = await refreshSession(prior.refreshToken);
+      assertSessionTenant(rotated, identity.tenantId, "refresh");
       return toProductionCached(rotated, identity.tenantId, await getProductionAgentToken(identity.tenantId));
     } catch (err) {
       // Revoked/reused/expired refresh family (or a core-side failure): fall through to a
@@ -472,12 +479,28 @@ async function createProductionSession(appUserId: string, prior?: CachedSession)
 
   try {
     const session = await exchangeSession(identity.externalRef);
+    assertSessionTenant(session, identity.tenantId, "exchange");
     return toProductionCached(session, identity.tenantId, await getProductionAgentToken(identity.tenantId));
   } catch (err) {
     if (err instanceof TenancyApiError && err.status === 403 && err.reason === "session_identity_unlinked") {
       throw new NoTenantError(appUserId);
     }
     throw err;
+  }
+}
+
+/** Never cache a session under a tenant different from the durable identity row. */
+function assertSessionTenant(
+  session: TenantSessionShape,
+  expectedTenantId: string,
+  source: "refresh" | "exchange",
+): void {
+  const reportedTenantId = session.member?.tenantId;
+  if (reportedTenantId && reportedTenantId !== expectedTenantId) {
+    throw new Error(
+      `brain ${source} returned tenant ${reportedTenantId} for identity tenant ` +
+        `${expectedTenantId} - refusing to cache a cross-tenant session`,
+    );
   }
 }
 

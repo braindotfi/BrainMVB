@@ -204,7 +204,7 @@ describe("durable tenancy invariants", () => {
     return u.id;
   }
 
-  it("A+E: first DEMO use creates ONE seeded tenant without a durable mapping", async () => {
+  it("A+E: first DEMO use creates ONE seeded production tenant with a durable mapping", async () => {
     const userId = await createDemoAppUser();
     const session = await getBrainSession(userId);
     expect(session.tenantId).toBe(TENANT_ID);
@@ -220,10 +220,9 @@ describe("durable tenancy invariants", () => {
     expect((tenantCalls[0].body as { demo_seed?: unknown }).demo_seed).toBe(true);
 
     const identity = await storage.getBrainIdentity(userId);
-    // Demo sessions are intentionally ephemeral from the app's perspective:
-    // they use the seeded tenant for this session but do not enter durable
-    // identity reattachment on the next login.
-    expect(identity).toBeUndefined();
+    // Durable mode deliberately treats demo users as production tenants so the
+    // returned member JWT is accepted by the production ledger API on every call.
+    expect(identity).toMatchObject({ userId, externalRef: userId, tenantId: TENANT_ID });
 
     // The one-time seed streams every bundled document with the AGENT token -
     // the durable member token lacks the raw:write scope (verified live 2026-07-24).
@@ -367,14 +366,8 @@ describe("durable tenancy invariants", () => {
     expect(body.tenantId).toBe(TENANT_ID);
   });
 
-  /* ── J: demo sessions survive losing the session cache ──────────────────────
-     POST /tenants is not idempotent and the demo path stores NO brain_identities
-     row, so the in-memory cache is the only record that a demo user has a tenant.
-     A restart or eviction therefore sends every demo user back through creation,
-     where core answers 409 tenant_identity_already_linked. Before the recovery
-     path that 409 was fatal: the visitor's app went dead with no way back except
-     a brand-new identity. */
-  it("J: a demo user whose cache was cleared adopts the linked tenant instead of failing", async () => {
+  /* ── J: durable demo sessions survive losing the session cache ─────────────── */
+  it("J: a demo user whose cache was cleared re-attaches instead of re-creating", async () => {
     const userId = await createDemoAppUser();
     await getBrainSession(userId);
     expect(await whenSeedsSettle(10_000)).toBe(true);
@@ -382,7 +375,6 @@ describe("durable tenancy invariants", () => {
     // Second session creation: exactly what a server restart produces.
     clearBrainTokenCache();
     calls = [];
-    tenantAlreadyLinked = true;
 
     const session = await getBrainSession(userId);
     expect(session.tenantId).toBe(TENANT_ID);
@@ -390,15 +382,14 @@ describe("durable tenancy invariants", () => {
     // A real agent principal is re-minted, so raw:write still works after adoption.
     expect(session.agentToken).toBe(AGENT_TOKEN);
 
-    // Recovery goes through /sessions on the founder's external_ref — the same
-    // route the production path uses for an existing tenant.
+    // Recovery goes through /sessions on the founder's external_ref.
     const sessionCalls = calls.filter((c) => c.url.endsWith("/sessions") && c.method === "POST");
     expect(sessionCalls.length).toBe(1);
     expect((sessionCalls[0].body as { external_ref?: string }).external_ref).toBe(userId);
     expect(sessionCalls[0].svcAuth).toBe(SERVICE_SECRET);
 
-    // One creation attempt, not a retry loop.
-    expect(calls.filter((c) => c.url.endsWith("/tenants") && c.method === "POST").length).toBe(1);
+    // The durable identity makes tenant creation unnecessary after a cache loss.
+    expect(calls.filter((c) => c.url.endsWith("/tenants") && c.method === "POST").length).toBe(0);
   });
 
   it("J: adopting an existing tenant never re-seeds its documents", async () => {
@@ -417,7 +408,7 @@ describe("durable tenancy invariants", () => {
     expect(calls.filter((c) => c.url.endsWith("/raw/ingest")).length).toBe(0);
   });
 
-  it("J: refuses to adopt when core names two different tenants for one external_ref", async () => {
+  it("J: refuses a durable session when core names a different tenant", async () => {
     /* The conflict payload and the issued session are two independent statements
        about which tenant this external_ref owns. If they disagree, caching either
        one attributes a live member token — and a freshly minted agent token — to a
@@ -429,10 +420,9 @@ describe("durable tenancy invariants", () => {
 
     clearBrainTokenCache();
     calls = [];
-    tenantAlreadyLinked = true;          // conflict says TENANT_ID
     sessionTenantId = "tnt_someone_else"; // session says otherwise
 
-    await expect(getBrainSession(userId)).rejects.toThrow(/conflicting tenant ids/i);
+    await expect(getBrainSession(userId)).rejects.toThrow(/cross-tenant session/i);
     expect(calls.filter((c) => c.url.endsWith("/agent-token")).length).toBe(0);
   });
 
