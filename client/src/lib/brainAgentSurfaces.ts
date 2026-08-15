@@ -41,13 +41,30 @@ export interface LiveInsight {
    *  render Approve/Reject. */
   itemKind: "detection";
   badge: string;
+  /** Second hero pill summarising WHY the item was flagged, e.g. "New
+   *  subscription" or "Recurring charge". Sourced from `flag_reason` when
+   *  brain-core exposes it; derived from available obligation fields otherwise.
+   *  Omit if genuinely no signal is available. */
+  triggerBadge?: string;
   title: string;
   subtitle?: string;
   /** 0..1, only set when brain-core reports a real match confidence score. */
   confidence?: number;
   explanation?: string;
+  /** One or two sentences from the agent's actual reasoning about what
+   *  triggered this flag. Sourced from brain-core output when available;
+   *  derived from available fields otherwise. */
+  whyFlagged?: string;
   fields?: LiveInsightField[];
+  /** Provenance / raw artifact id that is the originating source document for
+   *  this insight. Shown as a clickable "Source" link in the modal. */
+  sourceDocumentId?: string;
   evidenceIds?: string[];
+  /** Per-cycle historical amounts for the payment history chart (oldest →
+   *  newest). The current cycle is the last element. Empty / undefined until
+   *  brain-core exposes obligation history — declared here so the modal can
+   *  render it without a schema change when that endpoint ships. */
+  paymentHistory?: LiveInsightChartPoint[];
   chart?: LiveInsightChart;
 }
 
@@ -123,6 +140,19 @@ interface BrainObligation {
   due_date: string;
   recurrence?: string | null;
   status: string;
+  /** Raw artifact id that brain-core used as the source for this obligation.
+   *  Present when brain-core exposes provenance on the obligations endpoint. */
+  provenance?: string | null;
+  /** brain-core's extraction confidence for this obligation record (0..1). Used
+   *  as a recurrence-confidence proxy — no separate recurrence_confidence field
+   *  is exposed by the API yet. Backend gap: if brain-core ever adds a dedicated
+   *  recurrence confidence score, thread it through here instead. */
+  confidence?: number | null;
+  /** Why the agent surfaced this subscription for review. Backend gap: not yet
+   *  emitted by brain-core's obligations endpoint; will be null until it does.
+   *  When present, surface it verbatim as the trigger badge and Why Flagged
+   *  copy rather than deriving a fallback. */
+  flag_reason?: string | null;
 }
 interface ObligationsResponse {
   obligations: BrainObligation[];
@@ -151,6 +181,67 @@ function dueDateLabel(due_date: string): string {
     : d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
 }
 
+/** Derive the trigger badge label from available obligation fields.
+ *
+ *  Brain-core's obligations endpoint does not yet emit a `flag_reason` field,
+ *  so we fall back to a signal derived from what IS available. When brain-core
+ *  adds `flag_reason`, the raw value will be surfaced verbatim instead
+ *  (forward-compat: the field is declared on BrainObligation above).
+ *
+ *  Backend gap: replace the derived fallback below with `o.flag_reason` once
+ *  brain-core populates it on the subscriptions feed. */
+function deriveTriggerBadge(o: BrainObligation): string {
+  if (o.flag_reason) return o.flag_reason;
+  // A recurrence pattern hasn't been established → likely first occurrence.
+  if (!o.recurrence) return "New subscription";
+  // Low extraction confidence → worth a human look.
+  if (typeof o.confidence === "number" && o.confidence < 0.6) return "Needs verification";
+  return "Recurring charge";
+}
+
+/** Honest recurrence display. When brain-core provides a recurrence value,
+ *  show it alongside the extraction confidence (the obligation-level confidence
+ *  is the closest proxy for recurrence confidence the API currently offers).
+ *
+ *  Backend gap: replace `o.confidence` with a dedicated `recurrence_confidence`
+ *  field if brain-core ever emits one. */
+function recurrenceDisplay(o: BrainObligation): string {
+  if (!o.recurrence) return "Not yet established (first occurrence)";
+  const base = o.recurrence;
+  if (typeof o.confidence === "number") {
+    const pct = Math.round(o.confidence * 100);
+    return `${base} (inferred, ${pct}% confidence)`;
+  }
+  return `${base} (inferred)`;
+}
+
+/** One or two sentences explaining the specific signal that triggered the flag.
+ *
+ *  Backend gap: brain-core does not yet emit agent reasoning on the obligations
+ *  endpoint. When it does, `o.flag_reason` (or a `why_flagged` field) should
+ *  replace the derivation below. */
+function deriveWhyFlagged(o: BrainObligation, vendor: string, amt: string): string {
+  if (o.flag_reason) {
+    return `Brain flagged this subscription because: ${o.flag_reason}.`;
+  }
+  if (!o.recurrence) {
+    return (
+      `Brain detected what appears to be a new subscription charge from ${vendor} ` +
+      `(${amt}). No prior recurrence pattern has been established for this vendor, ` +
+      `so it is surfaced for your awareness.`
+    );
+  }
+  const conf =
+    typeof o.confidence === "number"
+      ? ` Brain's extraction confidence for this record is ${Math.round(o.confidence * 100)}%.`
+      : "";
+  return (
+    `Brain detected a recurring subscription charge from ${vendor} (${amt}, ` +
+    `${o.recurrence} recurrence). Review the amount and due date to confirm no ` +
+    `unexpected changes since the prior cycle.${conf}`
+  );
+}
+
 export function useBrainSubscriptionInsights() {
   const { format } = useCurrency();
   const nameOf = useCounterpartyNames();
@@ -168,14 +259,27 @@ export function useBrainSubscriptionInsights() {
         kind: "subscription",
         itemKind: "detection",
         badge: "Subscription",
+        triggerBadge: deriveTriggerBadge(o),
         title: `Subscription: ${vendor}`,
         subtitle: `${amt} · due ${dueDateLabel(o.due_date)}`,
+        whyFlagged: deriveWhyFlagged(o, vendor, amt),
+        /* Vendor row removed: the vendor name is already in the card title so
+           repeating it in Key Facts added no information. */
         fields: [
-          { label: "Vendor", value: vendor },
           { label: "Amount", value: amt },
+          /* Backend gap (item 3): amount delta vs prior cycle omitted — the
+             obligations API does not expose prior_amount. When brain-core adds
+             it, render here as "${amt} (+$X vs last cycle)" with warning colour. */
           { label: "Due date", value: dueDateLabel(o.due_date) },
-          { label: "Recurrence", value: o.recurrence ?? "Not specified" },
+          { label: "Recurrence", value: recurrenceDisplay(o) },
         ],
+        /* Source link (item 4): provenance is brain-core's raw artifact id for
+           the document this obligation was extracted from. Present when brain-core
+           populates the field; undefined otherwise. */
+        sourceDocumentId: o.provenance ?? undefined,
+        /* Backend gap (item 6): payment history chart requires per-cycle
+           historical amounts, which the obligations endpoint does not yet expose.
+           paymentHistory is intentionally left undefined until that data exists. */
       } satisfies LiveInsight;
     });
   return { isLoading: q.isLoading, isError: q.isError, insights };

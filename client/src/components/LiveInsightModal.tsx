@@ -12,10 +12,12 @@ import {
   CardSection,
   CardText,
   ConfidenceMeter,
+  EvidenceLinkRow,
   HeadingValue,
   KeyFactsTable,
   PagerFooter,
   StatusPill,
+  TypeTag,
 } from "@/components/ProposalCardParts";
 
 /* Read-only viewer for live brain-core Ledger facts (reconciliation matches,
@@ -40,6 +42,7 @@ export function LiveInsightModal({
   pagerStep,
   position,
   onAcknowledge,
+  onOpenSource,
   acknowledged = false,
 }: {
   insight: LiveInsight | null;
@@ -59,12 +62,16 @@ export function LiveInsightModal({
    *  useCardTransition. */
   pagerStep?: boolean;
   /** Queue position label, e.g. "3 of 12". Shown between Previous/Next in the
-   *  pager footer so users can see where they are in the queue. */
+   *  pager footer and announced to screen readers. */
   position?: string;
   /** Files the observation to the audit trail and clears it from the queue.
    *  Omit on surfaces with no acknowledgement store and the control is hidden
    *  rather than shown dead. */
   onAcknowledge?: () => void;
+  /** Called when the user clicks the Source document link. Receives the raw
+   *  brain-core provenance/artifact id. The caller decides how to open it
+   *  (document viewer, sources page, etc.). Omit to hide the source link. */
+  onOpenSource?: (sourceDocumentId: string) => void;
   /** Already acknowledged (or a write is in flight) — the button stays visible
    *  and disabled so the card does not change height under the user. */
   acknowledged?: boolean;
@@ -122,13 +129,22 @@ export function LiveInsightModal({
               {/* These records have no decision to make, so the hero pill states
                   what the card IS rather than borrowing a risk colour it has no
                   risk to report — the frame (6206:71135) shows the same. */}
-              <StatusPill
-                label={INSIGHT_PILL_LABEL}
-                color="#6c779d"
-                background="#222737"
-                border="rgba(108,119,157,0.2)"
-                testId="pill-live-insight-kind"
-              />
+              <div className="flex gap-[8px] items-center flex-wrap">
+                <StatusPill
+                  label={INSIGHT_PILL_LABEL}
+                  color="#6c779d"
+                  background="#222737"
+                  border="rgba(108,119,157,0.2)"
+                  testId="pill-live-insight-kind"
+                />
+                {insight.triggerBadge && (
+                  <TypeTag
+                    label={insight.triggerBadge}
+                    tone="warning"
+                    testId="pill-live-insight-trigger"
+                  />
+                )}
+              </div>
               <p className="[font-family:'Gilroy',sans-serif] font-semibold text-[20px] leading-[28px] text-brain-v1baby-blue-100 w-full truncate">
                 {formatText(insight.title)}
               </p>
@@ -140,6 +156,19 @@ export function LiveInsightModal({
             </div>
 
             <CardBody>
+              {/* "Why Flagged" — the specific signal that triggered this flag.
+                  Sourced from the agent's reasoning output when available;
+                  derived from available obligation fields otherwise. Shown before
+                  the confidence section so the reader gets the "why" immediately
+                  after the title. */}
+              {insight.whyFlagged && (
+                <CardSection title="Why Flagged" testId="section-live-insight-why-flagged">
+                  <CardText testId="text-live-insight-why-flagged">
+                    {formatText(insight.whyFlagged)}
+                  </CardText>
+                </CardSection>
+              )}
+
               {/* Named as on the decision cards (frame 6206:71135) — the section
                   answers the same question, so it should not read as a different
                   one just because the record is read-only. */}
@@ -161,9 +190,23 @@ export function LiveInsightModal({
                 </CardSection>
               )}
 
-              {factRows.length > 0 && (
+              {(factRows.length > 0 || insight.sourceDocumentId) && (
                 <CardSection title="Key Facts" testId="section-live-insight-facts">
-                  <KeyFactsTable rows={factRows} testId="table-live-insight-facts" />
+                  {factRows.length > 0 && (
+                    <KeyFactsTable rows={factRows} testId="table-live-insight-facts" />
+                  )}
+                  {/* Source link (item 4) — the originating brain-core document this
+                      obligation was extracted from. Follows the same "View Invoice
+                      Document" EvidenceLinkRow pattern used in BillDetailPopup. The
+                      parent controls the actual open behaviour via onOpenSource. */}
+                  {insight.sourceDocumentId && onOpenSource && (
+                    <EvidenceLinkRow
+                      label="View source document"
+                      kind="Source"
+                      onClick={() => onOpenSource(insight.sourceDocumentId!)}
+                      testId="button-live-insight-source-document"
+                    />
+                  )}
                 </CardSection>
               )}
 
@@ -180,6 +223,45 @@ export function LiveInsightModal({
                         </p>
                       </div>
                     ))}
+                  </div>
+                </CardSection>
+              )}
+
+              {/* Payment history chart (item 6) — per-cycle historical amounts,
+                  oldest to newest, current cycle last. Only rendered when data
+                  is available; the obligations API doesn't expose cycle history
+                  yet, so this section will be absent until brain-core adds it.
+                  Backend gap: see paymentHistory on LiveInsight. */}
+              {insight.paymentHistory && insight.paymentHistory.length > 0 && (
+                <CardSection title="Payment History" testId="section-live-insight-payment-history">
+                  <div className="flex flex-col gap-[8px] w-full" data-testid="chart-live-insight-payment-history">
+                    <div className="flex gap-[8px] items-end w-full">
+                      {(() => {
+                        const pts = insight.paymentHistory!;
+                        const max = Math.max(1, ...pts.map((p) => p.value));
+                        return pts.map((point, idx) => {
+                          const isCurrent = idx === pts.length - 1;
+                          return (
+                            <div key={`${point.label}-${idx}`} className="flex-1 flex flex-col gap-[4px] items-center min-w-0">
+                              <div
+                                className="w-full rounded-[8px] min-h-[4px]"
+                                style={{
+                                  height: `${Math.max(4, Math.round((point.value / max) * 88))}px`,
+                                  background: isCurrent ? "#1a0d3a" : "#123509",
+                                  border: `1px solid ${isCurrent ? "rgba(138,92,246,0.5)" : "rgba(66,191,35,0.3)"}`,
+                                }}
+                              />
+                              <span className="[font-family:'JetBrains_Mono',monospace] font-medium text-[11px] leading-[14px] text-brain-v1baby-blue-60 text-center w-full truncate">
+                                {point.label}
+                              </span>
+                            </div>
+                          );
+                        });
+                      })()}
+                    </div>
+                    <p className="[font-family:'Gilroy',sans-serif] font-medium text-[11px] leading-[14px] text-brain-v1baby-blue-30 w-full">
+                      Current cycle highlighted in purple. Backend gap: prior cycle amounts not yet available from brain-core.
+                    </p>
                   </div>
                 </CardSection>
               )}

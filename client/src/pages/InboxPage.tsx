@@ -2134,6 +2134,14 @@ export function InboxPage() {
             ? () => { if (selectedInsightItem) acknowledgeItem(selectedInsightItem); }
             : undefined
         }
+        onOpenSource={(sourceId) => {
+          /* Navigate to the Sources page with the document id as a query param
+             so the user can inspect the originating ingestion record. The Sources
+             page is the correct owner of raw artifact detail; a dedicated deep-link
+             into DocumentViewerPopup from here would require fetching the document
+             object in InboxPage, which is out of scope for this change. */
+          window.location.href = `/sources?document=${encodeURIComponent(sourceId)}`;
+        }}
         acknowledged={
           selectedInsight !== null &&
           (acknowledgedIds.has(selectedInsight.id) ||
