@@ -453,15 +453,22 @@ export function DocumentUpload({ category, onDone }: { category: string; onDone:
     }
     const supported = files.filter(isSupportedDocumentFile);
     // The filename is a more specific signal than the Category default, but
-    // never overrides a type the user picked themselves. Computed here (not
-    // read back from state) so the very first upload in a batch uses it too -
-    // setObjectType's update wouldn't be visible until the next render.
-    const firstSuggestion = !objectTypeTouched
-      ? suggestObjectTypeFromFilename(supported[0]?.name ?? "")
-      : null;
-    const effectiveType = firstSuggestion ?? objectType;
-    if (firstSuggestion && firstSuggestion !== objectType) setObjectType(firstSuggestion);
-    supported.forEach((file) => uploadMut.mutate({ file, objectType: effectiveType }));
+    // never overrides a type the user picked themselves. Computed PER FILE
+    // (not once for the whole batch, and not read back from state - a
+    // setObjectType() call wouldn't be visible until the next render): a
+    // multi-file drop can easily mix shapes (a payroll file and a tax file
+    // dropped together), and applying one file's suggestion to every file in
+    // the batch silently mistyped every file after the first.
+    if (!objectTypeTouched) {
+      const firstSuggestion = suggestObjectTypeFromFilename(supported[0]?.name ?? "");
+      if (firstSuggestion && firstSuggestion !== objectType) setObjectType(firstSuggestion);
+    }
+    supported.forEach((file) => {
+      const forFile = !objectTypeTouched
+        ? (suggestObjectTypeFromFilename(file.name) ?? objectType)
+        : objectType;
+      uploadMut.mutate({ file, objectType: forFile });
+    });
   }, [uploadMut, objectType, objectTypeTouched]);
 
   const onDrop = (e: React.DragEvent) => {
