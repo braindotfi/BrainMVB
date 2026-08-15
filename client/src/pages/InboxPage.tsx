@@ -1346,6 +1346,20 @@ export function InboxPage() {
         : inputRows,
     [filters.priority, inputRows],
   );
+  useEffect(() => {
+    const rows = visibleItems.map((item) => ({
+      id: item.id,
+      proposal_id: item.liveAgentProposal?.id ?? item.proposal?.id ?? null,
+      kind: item.kind,
+      type: item.type,
+      tier: item.tier,
+      status: item.status,
+    }));
+    console.warn(
+      `[inbox-capture-count] tab=${activeTab} visible_items=${visibleItems.length} visible_input_rows=${visibleInputRows.length}`,
+    );
+    console.warn(`[inbox-capture-tail] ${JSON.stringify(rows.slice(-3))}`);
+  }, [activeTab, visibleItems, visibleInputRows]);
   /* "All Types" is a shared Inbox facet, not a facet of whichever resolution
      tab happens to be selected. Building it from resolvedItems made the menu
      lose every type that only had unresolved rows — and older settled audit
