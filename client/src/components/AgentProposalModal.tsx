@@ -189,7 +189,14 @@ export function LiveProposalModal({
      the original compact card rather than a page of empty headings. */
   const presentation = proposal.presentation ?? null;
   const policy = proposal.policy ?? presentation?.policy ?? null;
-  const confidence = buildConfidence(proposal.confidence, presentation?.confidence_band);
+  /* Compliance findings are deterministic rule matches, not probabilistic
+     model suggestions. Showing a percentage here implies uncertainty that the
+     policy decision does not have, so keep confidence for the other live-agent
+     cards but omit it from this detail panel. */
+  const confidence =
+    proposal.type === "compliance"
+      ? null
+      : buildConfidence(proposal.confidence, presentation?.confidence_band);
   const flaggedBy = buildFlaggedBy(policy);
   /* "Why Brain Suggested This" — read back from the policy trace / ranked signals
      the engine recorded. Empty for a record that carries neither, which drops the
@@ -534,9 +541,8 @@ export function LiveProposalModal({
                 </CardSection>
               )}
 
-              {/* 2 — Confidence: "High · 47%". The band is brain-core's own, not
-                  derived from the percentage: the two legitimately differ (a strong
-                  signal the model is only moderately certain about). */}
+              {/* 2 — Confidence: "High · 47%". Compliance intentionally sets this
+                  to null above because its finding is a deterministic rule match. */}
               {confidence && (
                 <CardSection
                   title="Confidence"

@@ -45,3 +45,10 @@ uri = "file://screenshots/chip-postponed-vs-system.jpg"
 type = "image"
 title = "Postponed vs System Activity chips — current, merged, swapped"
 description = "Real chip markup (px-12/py-8, rounded-pill, Gilroy Semibold 12/16, baby-blue-60 text) on the actual baby-blue-5 surface, at 1x and 3x. A = shipped, B = merged into baby-blue-15, C = swapped so the actionable state reads heavier."
+
+[[outputs]]
+id = "zmGsZwwnFeZi2QY7W-rGw"
+uri = "file://screenshots/compliance-source-refs.jpg"
+type = "image"
+title = "Compliance source_refs live component verification"
+description = "Actual Inbox row and LiveProposalModal rendered from the realistic source_refs fixture. Shows Midmarket Co, $18,600.00, High Risk, structured finding details, and the Open blocked action link; no confidence percentage."
