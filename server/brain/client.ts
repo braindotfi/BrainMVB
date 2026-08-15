@@ -750,7 +750,7 @@ export function isTerminalExtractStatus(status: string | null): boolean {
 }
 
 /**
- * POST /raw/{raw_id}/extract - trigger extraction. Empty body.
+ * POST /raw/{raw_id}/extract - trigger extraction. Empty body by default.
  *
  * IMPORTANT (verified live 2026-07-28): this is ASYNC despite earlier reports of a
  * synchronous drain. The first call returns 202 with `{status: "queued", parsed_id: null,
@@ -759,14 +759,24 @@ export function isTerminalExtractStatus(status: string | null): boolean {
  * parsed_id/confidence once it settles), so it doubles as the poll. Callers that record
  * parsed_id must poll (see pollRawExtraction) instead of trusting the first response.
  *
+ * Pass `retry: true` when the caller knows the underlying artifact just changed in a
+ * way brain-core can't see from the raw_id alone (e.g. this ingest deduped onto an
+ * existing artifact whose object_type may have just been backfilled) - without it, a
+ * raw_id with an already-terminal (succeeded/failed) job just returns that stale job
+ * forever instead of attempting extraction again.
+ *
  * Callers MUST also handle BrainApiError 404 (not deployed yet) and 422 (unsupported
  * file type / scanned image needing OCR) gracefully.
  */
-export async function extractRawDocument(token: string, rawId: string): Promise<RawExtractResult> {
+export async function extractRawDocument(
+  token: string,
+  rawId: string,
+  opts: { retry?: boolean } = {},
+): Promise<RawExtractResult> {
   const resp = await brainRequest<Record<string, unknown>>(`/raw/${encodeURIComponent(rawId)}/extract`, {
     token,
     method: "POST",
-    body: {},
+    body: opts.retry === true ? { retry: true } : {},
   });
   const o = resp ?? {};
   const parsedId =

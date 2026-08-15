@@ -1727,6 +1727,12 @@ When you mention a money amount, always reproduce it exactly as the grounding da
 
       // 2. Ingest bytes to brain-core.
       let rawId: string;
+      // True when this ingest content-address-deduped onto a pre-existing brain-core
+      // artifact. That artifact may have just had a previously-missing object_type
+      // backfilled (see brain-core PR #648) - force a fresh extraction attempt rather
+      // than accepting whatever terminal job state brain-core already had on file for
+      // it, which would otherwise be returned forever regardless of the fix.
+      let dedupedOntoExistingArtifact = false;
       try {
         // Raw ingest/extract need the raw:write scope. In demo mode agentToken === the
         // member token; in durable/production mode only the AGENT token holds raw:write
@@ -1742,6 +1748,7 @@ When you mention a money amount, always reproduce it exactly as the grounding da
           }),
         );
         rawId = ingest.raw_id;
+        dedupedOntoExistingArtifact = ingest.deduplicated;
         await storage.updateSourceDocumentExtraction(userId, doc.id, {
           rawId: ingest.raw_id,
           sha256: ingest.sha256,
@@ -1814,7 +1821,9 @@ When you mention a money amount, always reproduce it exactly as the grounding da
       let extractDetail: string | null = null;
       try {
         const { agentToken, baseUrl: extractBase } = await getBrainSession(userId);
-        const extract = await withBrainBaseUrl(extractBase, () => extractRawDocument(agentToken, rawId));
+        const extract = await withBrainBaseUrl(extractBase, () =>
+          extractRawDocument(agentToken, rawId, { retry: dedupedOntoExistingArtifact }),
+        );
         extractStatus = extractStatusForJob(extract);
         parsedId = extract.parsed_id;
         confidence = extract.confidence !== null ? String(extract.confidence) : null;
