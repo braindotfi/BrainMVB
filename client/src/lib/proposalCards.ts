@@ -118,6 +118,16 @@ function invoiceFactsHeadline(facts: ResolvedKeyFact[]): { code: string | null; 
   return { code, amount };
 }
 
+/** Prefer the structured finding reason that brain-core recorded over a generic
+ * agent label. Missing facts stay missing rather than becoming invented prose. */
+export function buildProposalFindingReason(proposal: BrainProposal): string | null {
+  if (proposal.type !== "compliance") return null;
+  const facts = proposal.key_facts ?? keyFactsFromPresentation(proposal.presentation?.key_facts);
+  const reason = facts.find((fact) => /^(finding|violation|issue|reason|match)\b/i.test(fact.label.trim()));
+  if (reason?.value != null && String(reason.value).trim()) return humanizeEnumValue(String(reason.value));
+  return proposal.policy?.explanation?.trim() || proposal.presentation?.headline?.trim() || null;
+}
+
 /**
  * The invoice a proposal is ABOUT, as an identity rather than a description.
  *
@@ -638,6 +648,18 @@ export function buildProposalHeaderCopy(
      which must only appear in the dedicated "Brain's Recommendation" section —
      not as the card headline. The subject name or agent name is the right
      fallback when core supplies no presentation headline. */
+  if (proposal.type === "compliance") {
+    const reason = buildProposalFindingReason(proposal);
+    const title = subjectName ?? (headlineText || agentName).split(" · ")[0];
+    return {
+      title,
+      text: [
+        shownAmount ? formatText(`${shownAmount.currency} ${shownAmount.value}`) : null,
+        reason,
+      ].filter(Boolean).join(" · ") || (subjectName ? `${proposal.subject!.label} · ${agentName}` : `Proposed by ${agentName}`),
+    };
+  }
+
   return {
     title: cardHeadline ?? subjectName ?? agentName,
     text:

@@ -29,6 +29,13 @@ type ProposalReadItem = {
   policy?: ProposalPolicy | null;
   presentation?: ProposalPresentation | null;
   available_decisions?: ProposalDecisionOption[] | null;
+  source_refs?: {
+    source_action_id?: string;
+    source_proposal_id?: string;
+    payment_intent_id?: string;
+    source_entity_refs?: Array<{ kind: string; ref: string }>;
+    amount?: { currency: string; value: string };
+  } | null;
 };
 
 type ProposalPolicy = {
@@ -74,6 +81,11 @@ Wiki-backed entities for Wiki kinds. Raw IDs and `wiki:` URIs stay in the
 collapsed technical section, never in the primary card. Policy attribution
 uses the fallback order `policy_id → matched_rule_id → policy content`; if no
 human-readable attribution exists, the line is omitted.
+
+`source_refs` is the provenance emitted by policy decisions (brain-core #645).
+The BFF copies `source_entity_refs` into the same resolved evidence stream and
+keeps the structured amount unchanged for the user's display-currency formatter.
+Source/action ids remain technical references; they are not card headlines.
 
 The shared card is used for every public proposal type. Advisory types route
 through the Inbox when pending and decidable; the Inbox action controls are

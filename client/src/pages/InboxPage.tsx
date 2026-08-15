@@ -1005,7 +1005,12 @@ export function InboxPage() {
         shared > 0
           ? `${shared === 1 ? "1 other open proposal" : `${shared} other open proposals`} on ${identity?.code ? `invoice ${identity.code}` : "the same invoice"}`
           : undefined;
-      const proposalPresentation = liveProposalRow(headerCopy, pillName, sharedNote);
+       const proposalPresentation = liveProposalRow(
+         headerCopy,
+         pillName,
+         sharedNote,
+         p.type === "compliance" ? p.risk_band : null,
+       );
       push({
         id: p.id,
         kind: "proposal",

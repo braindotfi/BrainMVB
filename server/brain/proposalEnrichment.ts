@@ -514,6 +514,71 @@ interface RawEvidence {
   resolvable?: unknown;
 }
 
+interface RawSourceEntityRef {
+  kind?: unknown;
+  ref?: unknown;
+}
+
+interface RawSourceRefs {
+  source_action_id?: string;
+  source_proposal_id?: string;
+  payment_intent_id?: string;
+  source_entity_refs?: { kind: string; ref: string }[];
+  amount?: ResolvedAmount;
+}
+
+function readSourceRefs(raw: Record<string, unknown>): RawSourceRefs | null {
+  const candidate =
+    (raw.source_refs as Record<string, unknown> | undefined) ??
+    ((raw.details as Record<string, unknown> | undefined)?.source_refs as Record<string, unknown> | undefined);
+  if (!candidate || typeof candidate !== "object") return null;
+
+  const refs = Array.isArray(candidate.source_entity_refs)
+    ? (candidate.source_entity_refs as RawSourceEntityRef[])
+        .map((ref) => ({
+          kind: typeof ref?.kind === "string" ? ref.kind.trim() : "",
+          ref: typeof ref?.ref === "string" ? ref.ref.trim() : "",
+        }))
+        .filter((ref): ref is { kind: string; ref: string } => Boolean(ref.kind && ref.ref))
+    : [];
+  const amount =
+    candidate.amount &&
+    typeof candidate.amount === "object" &&
+    typeof (candidate.amount as Record<string, unknown>).value === "string" &&
+    typeof (candidate.amount as Record<string, unknown>).currency === "string"
+      ? {
+          value: String((candidate.amount as Record<string, unknown>).value),
+          currency: String((candidate.amount as Record<string, unknown>).currency),
+        }
+      : undefined;
+
+  const sourceRefs: RawSourceRefs = {
+    ...(typeof candidate.source_action_id === "string" && candidate.source_action_id.trim()
+      ? { source_action_id: candidate.source_action_id.trim() }
+      : {}),
+    ...(typeof candidate.source_proposal_id === "string" && candidate.source_proposal_id.trim()
+      ? { source_proposal_id: candidate.source_proposal_id.trim() }
+      : {}),
+    ...(typeof candidate.payment_intent_id === "string" && candidate.payment_intent_id.trim()
+      ? { payment_intent_id: candidate.payment_intent_id.trim() }
+      : {}),
+    ...(refs.length > 0 ? { source_entity_refs: refs } : {}),
+    ...(amount ? { amount } : {}),
+  };
+  return Object.keys(sourceRefs).length > 0 ? sourceRefs : null;
+}
+
+function sourceRefEvidence(raw: Record<string, unknown>, sourceRefs: RawSourceRefs): RawEvidence[] {
+  const existing = new Set(
+    (Array.isArray(raw.evidence) ? (raw.evidence as RawEvidence[]) : [])
+      .map((e) => (typeof e?.ref === "string" ? e.ref : ""))
+      .filter(Boolean),
+  );
+  return (sourceRefs.source_entity_refs ?? [])
+    .filter((ref) => !existing.has(ref.ref))
+    .map((ref) => ({ kind: ref.kind, ref: ref.ref, resolvable: true }));
+}
+
 /**
  * Look a ref up, tolerating brain-core's two ref spellings.
  *
@@ -655,8 +720,26 @@ export function resolveKeyFacts(raw: Record<string, unknown>, index: EntityIndex
 
 /** Pure: enrich one proposal record. Unknown top-level fields pass through. */
 export function enrichProposal(raw: Record<string, unknown>, index: EntityIndex): EnrichedProposal {
+  const sourceRefs = readSourceRefs(raw);
   const rawEvidence = Array.isArray(raw.evidence) ? (raw.evidence as RawEvidence[]) : [];
-  const evidence = rawEvidence.map((e) => resolveEvidenceItem(e, index));
+  const evidence = [...rawEvidence, ...(sourceRefs ? sourceRefEvidence(raw, sourceRefs) : [])]
+    .map((e) => resolveEvidenceItem(e, index));
+  /* source_refs.amount is authoritative structured data even when the upstream
+     proposal did not repeat it on an evidence item. Keep it in the same evidence
+     stream so headline/detail presenters do not need a Compliance-only branch. */
+  if (sourceRefs?.amount) {
+    evidence.unshift({
+      kind: "source_amount",
+      ref: sourceRefs.source_action_id ?? sourceRefs.source_proposal_id ?? sourceRefs.payment_intent_id ?? "source_amount",
+      resolvable: true,
+      label: "Amount",
+      display: null,
+      code: null,
+      amount: sourceRefs.amount,
+      facts: [],
+      context: false,
+    });
+  }
   const keyFacts = resolveKeyFacts(raw, index);
   const textRefMap = resolveTextRefs(raw, index);
   // Headline: the named party if one resolved, else the first resolved entity.
@@ -668,6 +751,7 @@ export function enrichProposal(raw: Record<string, unknown>, index: EntityIndex)
   return {
     ...raw,
     evidence,
+    ...(sourceRefs ? { source_refs: sourceRefs } : {}),
     subject: subject?.display ? { label: subject.label, display: subject.display } : null,
     ...(keyFacts ? { key_facts: keyFacts } : {}),
     ...(textRefMap ? { resolved_refs: textRefMap } : {}),
@@ -685,6 +769,8 @@ export async function enrichProposals(
     // Key facts cite ids the evidence list does not always repeat (a subscription
     // names its merchant only in the fact table), so both are hydrated.
     cited.push(...keyFactRefs(p), ...textRefs(p));
+    const sourceRefs = readSourceRefs(p);
+    for (const ref of sourceRefs?.source_entity_refs ?? []) cited.push(ref);
     if (!Array.isArray(p.evidence)) continue;
     for (const e of p.evidence as RawEvidence[]) {
       if (typeof e?.ref === "string" && e.ref) {
