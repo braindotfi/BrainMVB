@@ -1,6 +1,8 @@
 import { useQuery, useQueries } from "@tanstack/react-query";
 import type { Proposal, ProposalStatus } from "./proposalTypes";
-import { fetchAllBrainProposals, type ListProposalsResponse } from "./brainProposals";
+import { BRAIN_PROPOSALS_STALE_MS, useBrainProposalsListQuery } from "./brainProposals";
+import { brainCounterpartiesQueryOptions } from "./brainVendors";
+import { useBrainReadCooldown } from "./rateLimit";
 
 /* ── Durable "Needs Review" queue - live brain-core PaymentIntents ─────────
    brain-core has no bulk list of full PaymentIntents, and no tenant-scoped
@@ -22,14 +24,6 @@ import { fetchAllBrainProposals, type ListProposalsResponse } from "./brainPropo
    pre-narrow a queue would silently empty one if the mapping shifted. Both hooks
    share one list query key, so react-query issues a single list request and
    dedupes the detail fetches between them. */
-
-/** Unfiltered proposals feed — deliberately NO status param. The PaymentIntent
- *  queue must see all statuses because the proposal row's status is a merged
- *  read-model value whose mapping onto PaymentIntent statuses is not part of
- *  the published contract. useBrainProposals now uses a separate
- *  `?status=pending` key; useDecideProposal's invalidation uses startsWith so
- *  both slots are evicted on every decision. */
-const PROPOSALS_QUERY_KEY = "/api/brain/proposals?limit=100";
 
 /** The money-path payment_intent_ids on the complete proposals feed,
  * de-duplicated. Every returned id gets its detail read. */
@@ -111,12 +105,8 @@ interface CounterpartiesLiteResponse {
  * only knows about intents proposed in THIS browser session).
  */
 export function useBrainReviewQueue() {
-  const list = useQuery<ListProposalsResponse>({
-    queryKey: [PROPOSALS_QUERY_KEY],
-    queryFn: ({ signal }) => fetchAllBrainProposals(signal),
-    retry: false,
-    refetchOnWindowFocus: true,
-  });
+  const list = useBrainProposalsListQuery();
+  const proposalsCooldown = useBrainReadCooldown("proposals");
   const page = list.data?.proposals ?? [];
   const pendingIds = selectMoneyPathIntentIds(page);
   // Fan out to the full record per candidate. useQueries (not useQuery-in-a-
@@ -129,6 +119,7 @@ export function useBrainReviewQueue() {
       // mapIntentToProposal's rowSubtitle below.
       queryKey: [`/api/brain/payment-intents/${id}?expand=agent`],
       retry: false,
+      staleTime: BRAIN_PROPOSALS_STALE_MS,
       /* The fan-out needs the focus refetch as much as the list does, and it is
          the half that actually fixes the stale queue. selectMoneyPathIntentIds
          picks ids by `payment_intent_id != null` with NO status filter, so a
@@ -138,13 +129,11 @@ export function useBrainReviewQueue() {
          every detail on the app's infinite stale time, and keep rendering a
          settled intent as pending. */
       refetchOnWindowFocus: true,
+      enabled: !proposalsCooldown.isCoolingDown,
     })),
   }) as { data?: BrainPaymentIntent; isLoading: boolean; isError: boolean }[];
-  const counterparties = useQuery<CounterpartiesLiteResponse>({
-    queryKey: ["/api/brain/ledger/counterparties"],
-    retry: false,
-    refetchOnWindowFocus: true,
-  });
+  const counterpartiesCooldown = useBrainReadCooldown("counterparties");
+  const counterparties = useQuery(brainCounterpartiesQueryOptions(!counterpartiesCooldown.isCoolingDown));
 
   const intents = details
     .map((q) => q.data)
@@ -178,29 +167,24 @@ export function useBrainReviewQueue() {
  * "paid" — see mapIntentToAutoApprovedProposal below.
  */
 export function useBrainAutoApproved() {
-  const list = useQuery<ListProposalsResponse>({
-    queryKey: [PROPOSALS_QUERY_KEY],
-    queryFn: ({ signal }) => fetchAllBrainProposals(signal),
-    retry: false,
-    refetchOnWindowFocus: true,
-  });
+  const list = useBrainProposalsListQuery();
+  const proposalsCooldown = useBrainReadCooldown("proposals");
   const autoIds = selectMoneyPathIntentIds(list.data?.proposals ?? []);
 
   const details = useQueries({
     queries: autoIds.map((id) => ({
       queryKey: [`/api/brain/payment-intents/${id}?expand=agent`],
       retry: false,
+      staleTime: BRAIN_PROPOSALS_STALE_MS,
       /* Same reasoning as the review queue: the status filter below reads the
          detail record, so a stale detail keeps an executed intent sitting in
          "cleared". */
       refetchOnWindowFocus: true,
+      enabled: !proposalsCooldown.isCoolingDown,
     })),
   }) as { data?: BrainPaymentIntent; isLoading: boolean; isError: boolean }[];
-  const counterparties = useQuery<CounterpartiesLiteResponse>({
-    queryKey: ["/api/brain/ledger/counterparties"],
-    retry: false,
-    refetchOnWindowFocus: true,
-  });
+  const counterpartiesCooldown = useBrainReadCooldown("counterparties");
+  const counterparties = useQuery(brainCounterpartiesQueryOptions(!counterpartiesCooldown.isCoolingDown));
 
   const intents = details
     .map((q) => q.data)

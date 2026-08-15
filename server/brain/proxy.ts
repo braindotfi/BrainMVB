@@ -629,6 +629,11 @@ export function createBrainProxyRouter(): Router {
       );
       const rows = Array.isArray(page?.proposals) ? (page.proposals as Record<string, unknown>[]) : null;
       if (!rows) return res.json(page); // Unexpected shape - relay verbatim rather than guess.
+      console.warn(
+        `[proposal-capture] query=${JSON.stringify(query)} core_rows=${rows.length} ` +
+        `next_cursor=${typeof page?.next_cursor === "string" ? page.next_cursor : page?.next_cursor === null ? "null" : "absent"} ` +
+        `ids=${JSON.stringify(rows.map((row) => typeof row.id === "string" ? row.id : null))}`,
+      );
       try {
         const enriched = await withBrainBaseUrl(baseUrl, () => enrichProposals(token, rows));
         return res.json({ ...page, proposals: enriched });

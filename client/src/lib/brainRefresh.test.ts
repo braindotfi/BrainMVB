@@ -1,10 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import {
   documentsInProgress,
   projectionSettledCleanly,
+  makeCoalescedInvalidator,
   type DocumentExtractStatus,
   type DocumentProjectionStatus,
 } from "./brainRefresh";
@@ -151,6 +152,25 @@ describe("projectionSettledCleanly", () => {
     expect(
       projectionSettledCleanly([projecting("projected"), projecting("projecting")], NOW),
     ).toBe(false);
+  });
+});
+
+describe("makeCoalescedInvalidator", () => {
+  it("turns repeated invalidations in one debounce window into one refresh", async () => {
+    vi.useFakeTimers();
+    const run = vi.fn(() => Promise.resolve());
+    const invalidate = makeCoalescedInvalidator(run, 100);
+
+    invalidate();
+    invalidate();
+    invalidate();
+    expect(run).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(100);
+    await Promise.resolve();
+
+    expect(run).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
   });
 });
 

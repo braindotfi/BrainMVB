@@ -524,17 +524,21 @@ describe("informational rows are wired read-only end to end", () => {
  * browser tab on the same account — or a teammate on the same tenant — kept showing the
  * pre-decision state forever, because this app's query defaults are `staleTime: Infinity`
  * with no interval and no refetch on focus. Same defect the Payables/Receivables figures
- * had, so it gets the same shared interval rather than a local constant.
+ * had, so it gets the same shared interval rather than a local constant. The polling
+ * is owned by one module-level poller so five mounted consumers do not create five
+ * independent timers on the same cache key.
  */
 describe("the counterparty read stays fresh on its own", () => {
   const read = (p: string) => require("fs").readFileSync(p, "utf8");
 
   it("polls on the shared ledger interval instead of a hand-rolled one", () => {
     const src = read("client/src/lib/brainVendors.ts");
-    expect(src).toContain("refetchInterval: ledgerPollMs(ingesting)");
+    expect(src).toContain("ledgerPollMs(active.some((p) => p.ingesting))");
+    expect(src).toContain("useSingletonCounterpartyPolling(ingesting, !cooldown.isCoolingDown)");
     expect(src).toContain("const ingesting = useIngestInProgress();");
     // A local number here would drift from the money feeds it sits beside.
-    expect(src).not.toMatch(/refetchInterval:\s*\d/);
+    expect(src).not.toMatch(/setInterval\([^,]+,\s*\d/);
+    expect(src).not.toContain("refetchInterval:");
   });
 
   it("refetches when the tab regains focus", () => {
@@ -548,7 +552,7 @@ describe("the counterparty read stays fresh on its own", () => {
        invalidation matches on the "/api/brain/" prefix. A decorated key would silently
        opt out of both while still looking correct. */
     expect(read("client/src/lib/brainVendors.ts")).toContain(
-      'queryKey: ["/api/brain/ledger/counterparties"],',
+      'BRAIN_COUNTERPARTIES_QUERY_KEY = ["/api/brain/ledger/counterparties"] as const',
     );
   });
 });

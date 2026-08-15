@@ -556,11 +556,19 @@ describe("mergeRelatedAuditRecords", () => {
       mapAuditEventToRecord(decided, anchor()),
     ];
     const [merged] = mergeRelatedAuditRecords([proposed, decided], records);
+    const expectedTimestamp = (iso: string) => new Date(iso).toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+      timeZoneName: "short",
+    });
 
     expect(merged.lifecycle).toHaveLength(2);
     expect(merged.lifecycle.map((step) => step.timestamp)).toEqual([
-      "Jul 1, 10:00 AM UTC",
-      "Jul 1, 10:05 AM UTC",
+      expectedTimestamp("2026-07-01T10:00:00.000Z"),
+      expectedTimestamp("2026-07-01T10:05:00.000Z"),
     ]);
   });
 

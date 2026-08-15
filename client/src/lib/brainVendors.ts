@@ -1,7 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
+import { useEffect, useRef } from "react";
 import type { Vendor, TrustStatus, TrustState, VendorTier } from "./vendorTypes";
 import { ledgerPollMs } from "./ledgerRead";
 import { useIngestInProgress } from "./brainRefresh";
+import { fetchBrainJson, isBrainReadCoolingDown, useBrainReadCooldown } from "./rateLimit";
+import { queryClient } from "./queryClient";
 
 /* ── Live brain-core counterparties → Vendor cards ────────────────────────────
    Replaces MOCK_VENDORS as the VendorsPage/VendorDetailPopup data source with
@@ -118,8 +121,71 @@ function readTrustState(value: unknown): TrustState | undefined {
     ? (value as TrustState)
     : undefined;
 }
-interface ListCounterpartiesResponse {
+export interface ListCounterpartiesResponse {
   counterparties: BrainCounterparty[];
+}
+
+export const BRAIN_COUNTERPARTIES_QUERY_KEY = ["/api/brain/ledger/counterparties"] as const;
+export const BRAIN_COUNTERPARTIES_STALE_MS = 30_000;
+
+export function brainCounterpartiesQueryOptions(enabled = true) {
+  return {
+    queryKey: BRAIN_COUNTERPARTIES_QUERY_KEY,
+    queryFn: ({ signal }: { signal?: AbortSignal }) =>
+      fetchBrainJson<ListCounterpartiesResponse>("/api/brain/ledger/counterparties", "counterparties", { signal }),
+    retry: false,
+    refetchOnWindowFocus: true,
+    staleTime: BRAIN_COUNTERPARTIES_STALE_MS,
+    enabled,
+  };
+}
+
+type PollerState = { ingesting: boolean; enabled: boolean };
+const counterpartyPollers = new Map<number, PollerState>();
+let nextPollerId = 1;
+let counterpartyPoll: ReturnType<typeof setInterval> | null = null;
+let counterpartyPollMs: number | null = null;
+
+function windowIsVisible(): boolean {
+  return typeof document === "undefined" || document.visibilityState !== "hidden";
+}
+
+function syncCounterpartyPoll(): void {
+  const active = [...counterpartyPollers.values()].filter((p) => p.enabled);
+  const nextMs = active.length === 0
+    ? null
+    : ledgerPollMs(active.some((p) => p.ingesting));
+  if (nextMs === counterpartyPollMs) return;
+  if (counterpartyPoll) {
+    clearInterval(counterpartyPoll);
+    counterpartyPoll = null;
+  }
+  counterpartyPollMs = nextMs;
+  if (nextMs === null) return;
+  counterpartyPoll = setInterval(() => {
+    if (!windowIsVisible() || isBrainReadCoolingDown("counterparties")) return;
+    void queryClient.invalidateQueries({ queryKey: BRAIN_COUNTERPARTIES_QUERY_KEY });
+  }, nextMs);
+}
+
+function useSingletonCounterpartyPolling(ingesting: boolean, enabled: boolean): void {
+  const idRef = useRef<number | null>(null);
+  useEffect(() => {
+    const id = nextPollerId++;
+    idRef.current = id;
+    counterpartyPollers.set(id, { ingesting, enabled });
+    syncCounterpartyPoll();
+    return () => {
+      counterpartyPollers.delete(id);
+      syncCounterpartyPoll();
+    };
+  }, []);
+  useEffect(() => {
+    const id = idRef.current;
+    if (id === null) return;
+    counterpartyPollers.set(id, { ingesting, enabled });
+    syncCounterpartyPoll();
+  }, [ingesting, enabled]);
 }
 
 /** brain-core sends payment_total as a decimal STRING. Coerce defensively: an
@@ -419,12 +485,9 @@ export function vendorSegment(v: Vendor): "vendor" | "customer" {
  */
 export function useBrainVendors() {
   const ingesting = useIngestInProgress();
-  const query = useQuery<ListCounterpartiesResponse>({
-    queryKey: ["/api/brain/ledger/counterparties"],
-    retry: false,
-    refetchInterval: ledgerPollMs(ingesting),
-    refetchOnWindowFocus: true,
-  });
+  const cooldown = useBrainReadCooldown("counterparties");
+  useSingletonCounterpartyPolling(ingesting, !cooldown.isCoolingDown);
+  const query = useQuery<ListCounterpartiesResponse>(brainCounterpartiesQueryOptions(!cooldown.isCoolingDown));
   return {
     isLoading: query.isLoading,
     isError: query.isError,

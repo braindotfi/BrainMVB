@@ -1,11 +1,18 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
-import { reportRateLimit } from "./rateLimit";
+import {
+  BrainRateLimitError,
+  brainReadFamilyForUrl,
+  getBrainReadCooldownDeadline,
+  throwBrainRateLimitIfNeeded,
+} from "./rateLimit";
 
-async function throwIfResNotOk(res: Response) {
+async function throwIfResNotOk(res: Response, requestUrl?: string) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
-    if (res.status === 429) {
-      reportRateLimit({ "retry-after": res.headers.get("retry-after"), body: text });
+    const url = requestUrl ?? (res.url ? new URL(res.url, "http://app.local").pathname : "");
+    const family = brainReadFamilyForUrl(url);
+    if (res.status === 429 && family) {
+      await throwBrainRateLimitIfNeeded(res, text, family);
     }
     throw new Error(`${res.status}: ${text}`);
   }
@@ -23,7 +30,7 @@ export async function apiRequest(
     credentials: "include",
   });
 
-  await throwIfResNotOk(res);
+  await throwIfResNotOk(res, url);
   return res;
 }
 
@@ -33,7 +40,18 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey.join("/") as string, {
+    const url = queryKey.join("/") as string;
+    const family = brainReadFamilyForUrl(url);
+    const cooldownUntil = family ? getBrainReadCooldownDeadline(family) : 0;
+    if (family && cooldownUntil > Date.now()) {
+      throw new BrainRateLimitError(
+        family,
+        Math.max(1, Math.ceil((cooldownUntil - Date.now()) / 1000)),
+        cooldownUntil,
+      );
+    }
+
+    const res = await fetch(url, {
       credentials: "include",
     });
 
@@ -41,7 +59,7 @@ export const getQueryFn: <T>(options: {
       return null;
     }
 
-    await throwIfResNotOk(res);
+    await throwIfResNotOk(res, url);
     return await res.json();
   };
 

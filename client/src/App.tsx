@@ -31,6 +31,7 @@ import { AuthProvider } from "@/lib/authContext";
 import { CurrencyProvider } from "@/lib/currencyContext";
 import { SessionTimeoutProvider } from "@/lib/sessionTimeoutContext";
 import { queryClient } from "@/lib/queryClient";
+import { formatRateLimitDescription, RATE_LIMIT_ALERT_TITLE, subscribeRateLimitReports } from "@/lib/rateLimit";
 
 /**
  * Vendors and Rules are Ledger tabs now, not pages.
@@ -104,6 +105,15 @@ function AppLayout() {
   useEffect(() => { logoutRef.current = logout; }, [logout]);
   useEffect(() => { navigateRef.current = navigate; }, [navigate]);
   useEffect(() => { alertRef.current = alert; }, [alert]);
+
+  useEffect(() => subscribeRateLimitReports((event) => {
+    alertRef.current.error(
+      RATE_LIMIT_ALERT_TITLE,
+      formatRateLimitDescription(event.retryAfterSeconds),
+      5_000,
+      "brain-rate-limit",
+    );
+  }), []);
 
   // Inactivity-based auto-logout. Resets on any user interaction.
   useEffect(() => {
