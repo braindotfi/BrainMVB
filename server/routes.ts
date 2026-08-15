@@ -1750,7 +1750,13 @@ When you mention a money amount, always reproduce it exactly as the grounding da
       } catch (err) {
         const patch = { extractStatus: "failed" as ExtractStatus };
         const updated = await storage.updateSourceDocumentExtraction(userId, doc.id, patch);
-        let message = err instanceof BrainApiError ? err.message : (err as Error).message;
+
+        /* Prefer brain-core's own structured error message over the raw
+           BrainApiError.message, which is "brain-core <path> -> HTTP <status>:
+           <raw JSON body>" - useful in server logs, never fit to show a user.
+           Falls back to the raw message only when brain-core sent no
+           structured body at all (a network error, a proxy timeout, etc). */
+        let message = brainErrorDetail(err) ?? (err instanceof BrainApiError ? err.message : (err as Error).message);
 
         /* Extract brain-core's own request_id from the error body so it is
            persisted server-side. Without this, a production ingest 5xx is only
@@ -1763,14 +1769,13 @@ When you mention a money amount, always reproduce it exactly as the grounding da
           return typeof e?.request_id === "string" ? e.request_id : null;
         })();
 
-        if (err instanceof BrainApiError && err.status === 403) {
-          const body = err.body as Record<string, unknown> | undefined;
-          const code = typeof body?.error === "object" && body.error && typeof (body.error as Record<string, unknown>).code === "string"
-            ? (body.error as Record<string, unknown>).code
-            : undefined;
-          if (code === "auth_scope_insufficient") {
-            message = "Document upload is not yet available on this demo environment. Brain is adding the required permission to the demo token.";
-          }
+        const brainCode = brainErrorCode(err);
+        if (brainCode === "auth_scope_insufficient") {
+          message = "Document upload is not yet available on this demo environment. Brain is adding the required permission to the demo token.";
+        } else if (brainCode === "auth_token_expired" || brainCode === "auth_token_invalid") {
+          // Transient: the BFF's own brain-core session token expired mid-request.
+          // A fresh request mints a fresh token, so this always clears on retry.
+          message = "Your session with Brain expired. Please try uploading this file again.";
         }
 
         /* Always log ingest failures server-side, including both the BFF
