@@ -31,6 +31,7 @@ import {
   DOCUMENT_OBJECT_TYPES,
   documentObjectTypeSpec,
   defaultObjectTypeForCategory,
+  suggestObjectTypeFromFilename,
   type DocumentObjectType,
 } from "@/lib/documentUpload";
 import { SettingsDropdown } from "@/components/settings/SettingsDropdown";
@@ -401,6 +402,9 @@ export function DocumentUpload({ category, onDone }: { category: string; onDone:
   const [objectType, setObjectType] = useState<DocumentObjectType | "">(
     () => defaultObjectTypeForCategory(category as CategoryId) ?? "",
   );
+  // Once the user picks a type themselves, the filename suggestion below must
+  // never overwrite their explicit choice.
+  const [objectTypeTouched, setObjectTypeTouched] = useState(false);
   const [objectTypeOpen, setObjectTypeOpen] = useState(false);
 
   const docsQuery = useQuery<SourceDocument[]>({ queryKey: ["/api/integrations/documents"] });
@@ -408,14 +412,14 @@ export function DocumentUpload({ category, onDone }: { category: string; onDone:
   const selectedSpec = documentObjectTypeSpec(objectType || null);
 
   const uploadMut = useMutation({
-    mutationFn: async (file: File) => {
+    mutationFn: async ({ file, objectType: forFile }: { file: File; objectType: DocumentObjectType | "" }) => {
       const params = new URLSearchParams({
         filename: file.name,
         mimeType: file.type || "application/octet-stream",
         category,
         sourceType: sourceTypeForDocument(file),
       });
-      if (objectType) params.set("objectType", objectType);
+      if (forFile) params.set("objectType", forFile);
       const res = await fetch(`/api/integrations/documents/ingest?${params.toString()}`, {
         method: "POST",
         headers: { "Content-Type": "application/octet-stream" },
@@ -447,10 +451,18 @@ export function DocumentUpload({ category, onDone }: { category: string; onDone:
     if (unsupported.length > 0) {
       setError("ZIP files and other unsupported file types can't be uploaded. Choose PDF, CSV, XLSX, DOCX, or another supported document.");
     }
-    files
-      .filter(isSupportedDocumentFile)
-      .forEach((file) => uploadMut.mutate(file));
-  }, [uploadMut]);
+    const supported = files.filter(isSupportedDocumentFile);
+    // The filename is a more specific signal than the Category default, but
+    // never overrides a type the user picked themselves. Computed here (not
+    // read back from state) so the very first upload in a batch uses it too -
+    // setObjectType's update wouldn't be visible until the next render.
+    const firstSuggestion = !objectTypeTouched
+      ? suggestObjectTypeFromFilename(supported[0]?.name ?? "")
+      : null;
+    const effectiveType = firstSuggestion ?? objectType;
+    if (firstSuggestion && firstSuggestion !== objectType) setObjectType(firstSuggestion);
+    supported.forEach((file) => uploadMut.mutate({ file, objectType: effectiveType }));
+  }, [uploadMut, objectType, objectTypeTouched]);
 
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -480,7 +492,10 @@ export function DocumentUpload({ category, onDone }: { category: string; onDone:
             { value: "", label: "Auto-Detect" },
             ...DOCUMENT_OBJECT_TYPES.map((t) => ({ value: t.id, label: t.label })),
           ]}
-          onChange={(value) => setObjectType(value as DocumentObjectType | "")}
+          onChange={(value) => {
+            setObjectType(value as DocumentObjectType | "");
+            setObjectTypeTouched(true);
+          }}
           testId="select-document-object-type"
           ariaLabel="Declared document type"
           open={objectTypeOpen}
