@@ -1503,11 +1503,20 @@ When you mention a money amount, always reproduce it exactly as the grounding da
           } catch (err) {
             // Same mapping the write paths use, so a document can't sit at "extracting"
             // forever because of an error that is itself terminal.
+            //
+            // Every BrainApiError status must be handled here, not just 422/404: brain-core's
+            // /raw/{id}/extract throws a 502 (assertExtractionJobIsHonest) for ANY job whose
+            // terminal status is "failed" - confirmed live, this is the actual common case for
+            // a re-check, not an edge case. Before this covered only 422/404, a 502 (or any
+            // other status) fell through to the bare console.warn branch below and left the
+            // document's status completely untouched - so even with needsExtractSettle no
+            // longer giving up, a document stuck this way retried forever and updated never,
+            // because every retry hit this exact same silently-ignored case.
             if (err instanceof BrainApiError && err.status === 422) {
               extractStatus = "unsupported";
               patch.extractStatus = extractStatus;
               patch.extractDetail = brainErrorDetail(err);
-            } else if (err instanceof BrainApiError && err.status === 404) {
+            } else if (err instanceof BrainApiError) {
               extractStatus = "unavailable";
               patch.extractStatus = extractStatus;
               patch.extractDetail = brainErrorDetail(err);
