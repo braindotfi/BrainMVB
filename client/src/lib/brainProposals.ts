@@ -49,6 +49,16 @@ export interface ProposalAmount {
   currency: string;
 }
 
+/** Provenance attached to policy decisions by brain-core #645. These are raw
+ * references; entity refs are copied into the shared evidence stream by the BFF. */
+export interface ProposalSourceRefs {
+  source_action_id?: string;
+  source_proposal_id?: string;
+  payment_intent_id?: string;
+  source_entity_refs?: { kind: string; ref: string }[];
+  amount?: ProposalAmount;
+}
+
 /** brain-core sends only `{kind, ref, resolvable}`. Everything below it is added
  *  by the BFF (server/brain/proposalEnrichment.ts), which joins each `ref` against
  *  the tenant's counterparties/invoices/accounts/obligations/members.
@@ -189,6 +199,8 @@ export interface BrainProposal {
   action_type: string | null;
   /** BFF-added: the headline entity to name this card by, when one resolved. */
   subject?: { label: string; display: string } | null;
+  /** BFF-preserved provenance for policy decisions (brain-core #645). */
+  source_refs?: ProposalSourceRefs | null;
 
   /* Rich card fields — see the block above. Optional: pre-#384 rows omit them. */
   /** Original stored action type (`flag_transaction`, `notify`, `block_payment`, …).

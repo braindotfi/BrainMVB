@@ -615,6 +615,7 @@ function AutoHandledReceipt({
   const { formatText } = useCurrency();
   const rule = proposal.rule;
   const paused = rulePaused ?? (rule ? !rule.active : false);
+  const recommendedAction = resolveRecommendedAction({ recommendedAction: proposal.recommendedAction });
   // The link resolves only while the rule still exists in the store; a deleted
   // rule keeps the receipt readable but renders a muted "(rule unavailable)" note.
   const ruleResolves = !!rule && !!resolveRule(rule.id);

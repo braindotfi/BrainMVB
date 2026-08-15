@@ -27,6 +27,7 @@ import {
   titleCaseDecisionLabel,
   titleCaseLabel,
   buildProposalHeaderCopy,
+  buildProposalFindingReason,
   proposalInvoiceIdentity,
 } from "./proposalCards";
 import type { ProposalEvidenceItem } from "./brainProposals";
@@ -731,6 +732,31 @@ describe("resolveHeadlineText", () => {
 });
 
 describe("buildProposalHeaderCopy", () => {
+  it("uses a resolved compliance subject, amount, and structured finding reason", () => {
+    const proposal = {
+      type: "compliance",
+      subject: { label: "Counterparty", display: "Midmarket Co" },
+      evidence: [
+        {
+          kind: "source_amount",
+          ref: "act_blocked_1042",
+          resolvable: true,
+          amount: { value: "18600.00", currency: "USD" },
+          context: false,
+        },
+      ],
+      key_facts: [{ label: "Finding Type", value: "policy_violation" }],
+      presentation: null,
+    } as any;
+    const formatText = (value: string) => (value === "USD 18600.00" ? "$18,600.00" : value);
+
+    expect(buildProposalFindingReason(proposal)).toBe("Policy violation");
+    expect(buildProposalHeaderCopy(proposal, "Compliance", formatText)).toEqual({
+      title: "Midmarket Co",
+      text: "$18,600.00 · Policy violation",
+    });
+  });
+
   it("keeps a vendor-risk summary factual when core appends the recommendation", () => {
     const proposal = {
       id: "pr_vendor_risk_headline",

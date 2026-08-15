@@ -402,6 +402,24 @@ export function LiveProposalModal({
   /* The structured table brain-core sends supersedes the rows we derive from
      evidence — same job, but authored upstream and type-aware. */
   const detailRows = keyFacts.primary.length > 0 ? keyFacts.primary : visibleRows;
+  const isCompliance = proposal.type === "compliance";
+  const complianceRows = [
+    flaggedBy ? { label: "Rule", value: flaggedBy.text } : null,
+    subjectName ? { label: proposal.subject?.label ?? "Counterparty", value: subjectName } : null,
+    headline.amount ? { label: "Amount", value: money(headline.amount) } : null,
+    proposal.created_at
+      ? {
+          label: "Timestamp",
+          value: new Date(proposal.created_at).toLocaleString("en-US", {
+            dateStyle: "medium",
+            timeStyle: "short",
+          }),
+        }
+      : null,
+  ].filter((row): row is { label: string; value: string } => Boolean(row));
+  const sourceActionHref = proposal.source_refs?.source_proposal_id
+    ? `/review?proposal=${encodeURIComponent(proposal.source_refs.source_proposal_id)}`
+    : null;
   /* brain-core's headline names its subject by raw id ("tx_01KY… fraud anomaly
      risk is elevated"). Swap in the names we resolved; an id that resolved to
      nothing is dropped rather than shown on the card face. */
@@ -543,8 +561,48 @@ export function LiveProposalModal({
                 </CardSection>
               )}
 
-              {/* One shared recommendation surface for every agent card. */}
-              {recommendedAction && (
+              {/* Compliance findings are records of a blocked source action. Show
+                  the fields core actually supplied instead of generic recommendation
+                  prose, and keep opaque ids in a compact reference line. */}
+              {isCompliance && complianceRows.length > 0 && (
+                <CardSection title="Compliance Finding" testId="section-live-proposal-compliance">
+                  <div className="flex flex-col w-full rounded-row border border-brain-v1stroke-2 bg-brain-v1highlight-dropdown-bg">
+                    {complianceRows.map((row, index) => (
+                      <div
+                        key={row.label}
+                        className={`flex items-start w-full px-[12px] py-[8px] ${index < complianceRows.length - 1 ? "border-b border-brain-v1stroke-2" : ""}`}
+                      >
+                        <span className="w-[112px] shrink-0 [font-family:'Gilroy',sans-serif] font-semibold text-[12px] leading-[16px] text-brain-v1baby-blue-60">
+                          {row.label}
+                        </span>
+                        <span className="min-w-0 [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-brain-v1baby-blue-100 break-words">
+                          {row.value}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  {sourceActionHref && (
+                    <a
+                      href={sourceActionHref}
+                      data-testid="link-live-proposal-source-action"
+                      className="text-[13px] leading-[18px] text-brain-v1purple hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple rounded"
+                    >
+                      Open blocked action
+                    </a>
+                  )}
+                  {(proposal.source_refs?.source_action_id || proposal.source_refs?.payment_intent_id) && (
+                    <p
+                      data-testid="text-live-proposal-source-reference"
+                      className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[16px] text-brain-v1baby-blue-60 break-all"
+                    >
+                      Reference: {proposal.source_refs.source_action_id ?? proposal.source_refs.payment_intent_id}
+                    </p>
+                  )}
+                </CardSection>
+              )}
+
+              {/* One shared recommendation surface for non-compliance cards. */}
+              {!isCompliance && recommendedAction && (
                 <CardSection title="Recommended Action" testId="section-live-proposal-recommendation">
                   <CardText testId="text-live-proposal-recommendation">{prose(recommendedAction)}</CardText>
                 </CardSection>

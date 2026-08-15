@@ -169,6 +169,48 @@ describe("enrichProposal", () => {
     expect(out.evidence).toEqual([]);
     expect(out.subject).toBeNull();
   });
+
+  it("adapts brain-core source_refs into the shared evidence and amount model", () => {
+    const out = enrichProposal(
+      {
+        id: "prop_compliance_source_refs",
+        type: "compliance",
+        source_refs: {
+          source_action_id: "act_blocked_1042",
+          source_proposal_id: "prop_source_1042",
+          payment_intent_id: "pi_1042",
+          source_entity_refs: [
+            { kind: "counterparty", ref: "cp_01KYSF0QJ0N18YGNS4JR9EZPHM" },
+            { kind: "invoice", ref: "inv_01KYSG21MMMHAPE101816VTQNB" },
+          ],
+          amount: { value: "18600.00", currency: "USD" },
+        },
+      },
+      index,
+    );
+
+    expect(out.subject).toEqual({ label: "Counterparty", display: "Midmarket Co" });
+    expect(out.evidence).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ kind: "counterparty", display: "Midmarket Co" }),
+        expect.objectContaining({ kind: "invoice", code: "INV-1042" }),
+        expect.objectContaining({
+          kind: "source_amount",
+          amount: { value: "18600.00", currency: "USD" },
+        }),
+      ]),
+    );
+    expect(out.source_refs).toEqual({
+      source_action_id: "act_blocked_1042",
+      source_proposal_id: "prop_source_1042",
+      payment_intent_id: "pi_1042",
+      source_entity_refs: [
+        { kind: "counterparty", ref: "cp_01KYSF0QJ0N18YGNS4JR9EZPHM" },
+        { kind: "invoice", ref: "inv_01KYSG21MMMHAPE101816VTQNB" },
+      ],
+      amount: { value: "18600.00", currency: "USD" },
+    });
+  });
 });
 
 describe("code propagation", () => {
