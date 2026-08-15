@@ -57,9 +57,7 @@ const intent = (over: Partial<ReviewItemType> = {}): ReviewItemType => ({
 const PAGES = ["client/src/pages/InboxPage.tsx"];
 
 describe("the row pill", () => {
-  /* Non-compliance live records keep the shared agent badge. Compliance is the
-     deliberate exception: its row badge states the finding severity. */
-  it("is amber for non-compliance live records", () => {
+  it("uses the shared orange agent badge for live records", () => {
     const pills = [
       sessionIntentRow(intent(), fmt).badge.className,
       queueIntentRow({ title: "t", severity: "danger" }, fmt).badge.className,
@@ -70,11 +68,10 @@ describe("the row pill", () => {
     expect(ROW_TAG_AGENT).toContain("text-brain-v1light-orange");
   });
 
-  it("uses a severity badge for compliance findings", () => {
-    const row = liveProposalRow({ title: "Midmarket Co", text: "$18,600 · Policy violation" }, "Compliance", undefined, "high");
-    expect(row.badge.label).toBe("High risk");
-    expect(row.badge.srLabel).toBe("high risk");
-    expect(row.badge.className).toContain("text-brain-v1pink-red");
+  it("labels Compliance rows with the agent name", () => {
+    const row = liveProposalRow({ title: "Midmarket Co", text: "$18,600 · Policy violation" }, "Compliance Agent");
+    expect(row.badge.label).toBe("Compliance Agent");
+    expect(row.badge.className).toBe(ROW_TAG_AGENT);
   });
 
   it("names the agent, not the state of the record", () => {
