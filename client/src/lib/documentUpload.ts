@@ -148,3 +148,47 @@ export function defaultObjectTypeForCategory(category: CategoryId): DocumentObje
       return null;
   }
 }
+
+/**
+ * A reasonable pre-selected declared type inferred from the filename itself --
+ * every file that has actually failed in testing (tax_obligations.csv,
+ * receivables_invoices.csv, counterparties.csv, payroll_runs.csv) was named
+ * exactly after the declared type it needed, so this is a cheap, high-value
+ * default. Purely a UX suggestion -- the user can change or clear it, and a
+ * wrong guess is never worse than today's Auto-Detect default.
+ *
+ * Deliberately does NOT match on "payroll" or "receivable" together with
+ * "aging": brain-core auto-detects AR aging reports and payroll registers by
+ * header keyword already (a different, more elaborate shape than the simple
+ * declared-type schemas here), so a filename that looks like one of those
+ * two should be left on Auto-Detect rather than forced onto the stricter
+ * declared-type header check, which could turn a file that would have
+ * auto-detected successfully into a hard failure instead.
+ */
+// Matches "ap"/"ar" only as a delimiter-bounded segment (ap-invoices, ap_ledger,
+// ar_aging), never as a bare substring - a plain `.includes("ap")` would false-
+// positive on "map", "gap", "chapter", and plenty of ordinary filenames.
+const AP_SEGMENT = /(^|[_-])ap([_-]|$)/;
+const AR_SEGMENT = /(^|[_-])ar([_-]|$)/;
+
+export function suggestObjectTypeFromFilename(filename: string): DocumentObjectType | null {
+  const name = filename.toLowerCase();
+  const isAging = name.includes("aging");
+
+  if (name.includes("bank") || name.includes("transaction")) return "bank_transactions";
+  if (name.includes("counterpart")) return "counterparties";
+  if (name.includes("tax")) return "tax_obligations";
+  if ((name.includes("receivable") || AR_SEGMENT.test(name)) && !isAging) return "receivables_invoices";
+  if (name.includes("payable") || AP_SEGMENT.test(name)) return "payables_invoices";
+  if (name.includes("payroll") && !isAging) return "payroll_runs";
+  return null;
+}
+
+/**
+ * Combined suggestion for a specific file: the filename is a more specific
+ * signal than the Category dropdown (which applies to every file in the
+ * upload), so it wins when both would suggest something.
+ */
+export function suggestObjectType(file: File, category: CategoryId): DocumentObjectType | null {
+  return suggestObjectTypeFromFilename(file.name) ?? defaultObjectTypeForCategory(category);
+}
