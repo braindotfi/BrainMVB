@@ -53,29 +53,6 @@ export interface RecordRowPresentation {
  */
 export const ROW_TAG_AGENT = "bg-brain-v1dark-orange text-brain-v1light-orange border-[rgba(255,149,0,0.2)]";
 
-const COMPLIANCE_SEVERITY_TAGS: Record<string, RowBadge> = {
-  low: {
-    label: "Low risk",
-    className: "bg-brain-v1dark-green text-brain-v1green border-[rgba(66,191,35,0.25)]",
-    srLabel: "low risk",
-  },
-  standard: {
-    label: "Standard",
-    className: "bg-brain-v1baby-blue-15 text-brain-v1baby-blue-60 border-[rgba(168,185,244,0.2)]",
-    srLabel: "standard risk",
-  },
-  elevated: {
-    label: "Elevated",
-    className: "bg-brain-v1dark-orange text-brain-v1light-orange border-[rgba(255,149,0,0.25)]",
-    srLabel: "elevated risk",
-  },
-  high: {
-    label: "High risk",
-    className: "bg-brain-v1dark-pink-red text-brain-v1pink-red border-[rgba(210,3,68,0.25)]",
-    srLabel: "high risk",
-  },
-};
-
 /** Amber says "needs you" to anyone who sees colour. These carry the same fact
  *  as text for anyone who does not. */
 function agentBadge(label: string, srLabel: string): RowBadge {
@@ -148,15 +125,11 @@ export function liveProposalRow(
    *  `proposalInvoiceIdentity`. Two agent sweeps can both propose on one
    *  invoice, and each is a separate approval, so the rows say so rather than
    *  one of them being hidden. */
-   note?: string,
-   /** Compliance rows state severity in the badge; other proposal types keep
-    * the shared agent badge that identifies who raised the record. */
-   severity?: string | null,
+  note?: string,
 ): RecordRowPresentation {
-  const severityBadge = severity ? COMPLIANCE_SEVERITY_TAGS[severity] : undefined;
   return {
     title: headerCopy.title,
-    badge: severityBadge ?? agentBadge(pillName, "needs review"),
+    badge: agentBadge(pillName, "needs review"),
     subtitle: headerCopy.text || undefined,
     note: note || undefined,
   };
