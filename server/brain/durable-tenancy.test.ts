@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from "vitest";
 import express, { type Express } from "express";
 import { type Server } from "node:http";
 import { type AddressInfo } from "node:net";
@@ -102,6 +102,13 @@ function routeBrainCore(fullUrl: string, method: string): Response {
   }
   if (url.endsWith("/sessions/refresh") && method === "POST") {
     return json({ token: MEMBER_TOKEN, refresh_token: "rt_3", expires_in: 900 });
+  }
+  if (url.endsWith("/invites/consume") && method === "POST") {
+    return json({
+      tenant_id: TENANT_ID,
+      member: { id: "m_invited", tenantId: TENANT_ID, email: "invitee@realco.com", displayName: "Invitee", role: "admin" },
+      session: { token: MEMBER_TOKEN, refresh_token: "rt_invited", expires_in: 900 },
+    });
   }
   if (url.endsWith("/raw/ingest") && method === "POST") {
     return json({ raw_id: `raw_${calls.filter((c) => c.url.endsWith("/raw/ingest")).length}`, sha256: "deadbeef", deduplicated: false });
@@ -329,6 +336,30 @@ describe("durable tenancy invariants", () => {
     // And it stays a genuinely empty tenant: the signup route never triggers the local seed.
     await new Promise((r) => setTimeout(r, 150));
     expect(calls.filter((c) => c.url.endsWith("/raw/ingest")).length).toBe(0);
+  });
+
+  it("uses a brain base URL context when consuming an invite", async () => {
+    const user = await storage.createUser({
+      username: "invited-user@realco.com",
+      email: "invitee@realco.com",
+      password: "x.x",
+      name: "Invitee",
+    });
+    sessionUserId = user.id;
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    try {
+      const res = await realFetch(`${signupBaseUrl}/api/brain/invites/consume`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ invite_token: "invite_test_token" }),
+      });
+      expect(res.status).toBe(200);
+      expect(calls.filter((c) => c.url.endsWith("/invites/consume"))).toHaveLength(1);
+      expect(warn).not.toHaveBeenCalledWith(expect.stringContaining("no withBrainBaseUrl context"));
+    } finally {
+      warn.mockRestore();
+    }
   });
 
   it("F: a leftover pending tombstone (crash between create and finalize) BLOCKS re-creation", async () => {
