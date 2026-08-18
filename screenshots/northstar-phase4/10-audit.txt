@@ -1,0 +1,647 @@
+Menu
+
+Overview
+
+Inbox
+
+Ledger
+
+Other
+
+Settings
+
+Logout
+
+Profile
+Notifications
+Team
+Billing
+Sources
+Developers
+Security
+Audit Log
+Legal
+Account
+
+Audit Log
+
+100
+
+All Types
+All Status
+Brain Generated Your Money Insight
+Assistant
+
+Northstar QA · Aug 18, 12:39 AM UTC
+
+Pending
+Auth Production Agent Token Minted
+Systems
+
+BFF Service Agent · Aug 18, 12:33 AM UTC
+
+Pending
+Northstar Seed Repaired
+Systems
+
+Ops:Northstar-Canonical-Repair · Aug 17, 11:54 PM UTC
+
+Anchored
+Auth Production Agent Token Minted
+Systems
+
+BFF Service Agent · Aug 17, 10:23 PM UTC
+
+Pending
+Invite Consumed
+Systems
+
+Northstar QA · Aug 17, 10:23 PM UTC
+
+Pending
+Member Invited
+Systems
+
+Northstar Validation · Aug 17, 10:14 PM UTC
+
+Pending
+Member Invited
+Systems
+
+Northstar Validation · Aug 17, 10:05 PM UTC
+
+Pending
+Member Invited
+Systems
+
+Northstar Validation · Aug 17, 9:05 PM UTC
+
+Pending
+Team Member Updated
+Systems
+
+Northstar Validation · Aug 17, 9:05 PM UTC
+
+Pending
+Agent Recommendation Created
+Systems
+
+Reconciliation · Aug 17, 8:11 PM UTC
+
+Pending
+Policy Evaluate
+Systems
+
+System · Aug 17, 8:11 PM UTC
+
+Pending
+Agent Router Selected
+Systems
+
+Reconciliation_unreconciled_scanner · Aug 17, 8:11 PM UTC
+
+Pending
+Agent Router Started
+Systems
+
+Reconciliation_unreconciled_scanner · Aug 17, 8:11 PM UTC
+
+Pending
+Agent Recommendation Created
+Systems
+
+Reconciliation · Aug 17, 8:11 PM UTC
+
+Pending
+Policy Evaluate
+Systems
+
+System · Aug 17, 8:11 PM UTC
+
+Pending
+Agent Router Selected
+Systems
+
+Reconciliation_unreconciled_scanner · Aug 17, 8:11 PM UTC
+
+Pending
+Agent Router Started
+Systems
+
+Reconciliation_unreconciled_scanner · Aug 17, 8:11 PM UTC
+
+Pending
+Agent Recommendation Created
+Systems
+
+Reconciliation · Aug 17, 8:11 PM UTC
+
+Pending
+Policy Evaluate
+Systems
+
+System · Aug 17, 8:11 PM UTC
+
+Pending
+Agent Router Selected
+Systems
+
+Reconciliation_unreconciled_scanner · Aug 17, 8:11 PM UTC
+
+Pending
+Agent Router Started
+Systems
+
+Reconciliation_unreconciled_scanner · Aug 17, 8:11 PM UTC
+
+Pending
+Agent Recommendation Created
+Systems
+
+Reconciliation · Aug 17, 8:11 PM UTC
+
+Pending
+Policy Evaluate
+Systems
+
+System · Aug 17, 8:11 PM UTC
+
+Pending
+Agent Router Selected
+Systems
+
+Reconciliation_unreconciled_scanner · Aug 17, 8:11 PM UTC
+
+Pending
+Agent Router Started
+Systems
+
+Reconciliation_unreconciled_scanner · Aug 17, 8:11 PM UTC
+
+Pending
+Agent Recommendation Created
+Systems
+
+Reconciliation · Aug 17, 8:10 PM UTC
+
+Pending
+Policy Evaluate
+Systems
+
+System · Aug 17, 8:10 PM UTC
+
+Pending
+Agent Router Selected
+Systems
+
+Reconciliation_unreconciled_scanner · Aug 17, 8:10 PM UTC
+
+Pending
+Agent Router Started
+Systems
+
+Reconciliation_unreconciled_scanner · Aug 17, 8:10 PM UTC
+
+Pending
+Agent Recommendation Created
+Systems
+
+Reconciliation · Aug 17, 8:10 PM UTC
+
+Pending
+Policy Evaluate
+Systems
+
+System · Aug 17, 8:10 PM UTC
+
+Pending
+Agent Router Selected
+Systems
+
+Reconciliation_unreconciled_scanner · Aug 17, 8:10 PM UTC
+
+Pending
+Agent Router Started
+Systems
+
+Reconciliation_unreconciled_scanner · Aug 17, 8:10 PM UTC
+
+Pending
+Agent Recommendation Created
+Systems
+
+Reconciliation · Aug 17, 8:10 PM UTC
+
+Pending
+Policy Evaluate
+Systems
+
+System · Aug 17, 8:10 PM UTC
+
+Pending
+Agent Router Selected
+Systems
+
+Reconciliation_unreconciled_scanner · Aug 17, 8:10 PM UTC
+
+Pending
+Agent Router Started
+Systems
+
+Reconciliation_unreconciled_scanner · Aug 17, 8:10 PM UTC
+
+Pending
+Agent Recommendation Created
+Systems
+
+Reconciliation · Aug 17, 8:10 PM UTC
+
+Pending
+Policy Evaluate
+Systems
+
+System · Aug 17, 8:10 PM UTC
+
+Pending
+Agent Router Selected
+Systems
+
+Reconciliation_unreconciled_scanner · Aug 17, 8:10 PM UTC
+
+Pending
+Agent Router Started
+Systems
+
+Reconciliation_unreconciled_scanner · Aug 17, 8:10 PM UTC
+
+Pending
+Agent Recommendation Created
+Systems
+
+Payment · Aug 17, 7:40 PM UTC
+
+Pending
+Policy Evaluate
+Systems
+
+System · Aug 17, 7:40 PM UTC
+
+Pending
+Agent Router Selected
+Systems
+
+Payment_advisory_scanner · Aug 17, 7:40 PM UTC
+
+Pending
+Agent Router Started
+Systems
+
+Payment_advisory_scanner · Aug 17, 7:40 PM UTC
+
+Pending
+Agent Recommendation Created
+Systems
+
+Payment · Aug 17, 7:40 PM UTC
+
+Pending
+Policy Evaluate
+Systems
+
+System · Aug 17, 7:40 PM UTC
+
+Pending
+Agent Router Selected
+Systems
+
+Payment_advisory_scanner · Aug 17, 7:40 PM UTC
+
+Pending
+Agent Router Started
+Systems
+
+Payment_advisory_scanner · Aug 17, 7:40 PM UTC
+
+Pending
+Agent Recommendation Created
+Systems
+
+Payment · Aug 17, 7:40 PM UTC
+
+Pending
+Policy Evaluate
+Systems
+
+System · Aug 17, 7:40 PM UTC
+
+Pending
+Agent Router Selected
+Systems
+
+Payment_advisory_scanner · Aug 17, 7:40 PM UTC
+
+Pending
+Agent Router Started
+Systems
+
+Payment_advisory_scanner · Aug 17, 7:40 PM UTC
+
+Pending
+Agent Recommendation Created
+Systems
+
+Payment · Aug 17, 7:40 PM UTC
+
+Pending
+Policy Evaluate
+Systems
+
+System · Aug 17, 7:40 PM UTC
+
+Pending
+Agent Router Selected
+Systems
+
+Payment_advisory_scanner · Aug 17, 7:40 PM UTC
+
+Pending
+Agent Router Started
+Systems
+
+Payment_advisory_scanner · Aug 17, 7:40 PM UTC
+
+Pending
+Agent Recommendation Created
+Systems
+
+Payment · Aug 17, 7:40 PM UTC
+
+Pending
+Policy Evaluate
+Systems
+
+System · Aug 17, 7:40 PM UTC
+
+Pending
+Agent Router Selected
+Systems
+
+Payment_advisory_scanner · Aug 17, 7:40 PM UTC
+
+Pending
+Agent Router Started
+Systems
+
+Payment_advisory_scanner · Aug 17, 7:40 PM UTC
+
+Pending
+Agent Recommendation Created
+Systems
+
+Vendor_risk · Aug 17, 7:40 PM UTC
+
+Pending
+Policy Evaluate
+Systems
+
+System · Aug 17, 7:40 PM UTC
+
+Pending
+Agent Router Selected
+Systems
+
+Vendor_risk_scanner · Aug 17, 7:40 PM UTC
+
+Pending
+Agent Router Started
+Systems
+
+Vendor_risk_scanner · Aug 17, 7:40 PM UTC
+
+Pending
+Agent Recommendation Created
+Systems
+
+Vendor_risk · Aug 17, 7:40 PM UTC
+
+Pending
+Policy Evaluate
+Systems
+
+System · Aug 17, 7:40 PM UTC
+
+Pending
+Agent Router Selected
+Systems
+
+Vendor_risk_scanner · Aug 17, 7:40 PM UTC
+
+Pending
+Agent Router Started
+Systems
+
+Vendor_risk_scanner · Aug 17, 7:40 PM UTC
+
+Pending
+Agent Recommendation Created
+Systems
+
+Vendor_risk · Aug 17, 7:40 PM UTC
+
+Pending
+Policy Evaluate
+Systems
+
+System · Aug 17, 7:40 PM UTC
+
+Pending
+Agent Router Selected
+Systems
+
+Vendor_risk_scanner · Aug 17, 7:40 PM UTC
+
+Pending
+Agent Router Started
+Systems
+
+Vendor_risk_scanner · Aug 17, 7:40 PM UTC
+
+Pending
+Agent Recommendation Created
+Systems
+
+Vendor_risk · Aug 17, 7:40 PM UTC
+
+Pending
+Policy Evaluate
+Systems
+
+System · Aug 17, 7:40 PM UTC
+
+Pending
+Agent Router Selected
+Systems
+
+Vendor_risk_scanner · Aug 17, 7:40 PM UTC
+
+Pending
+Agent Router Started
+Systems
+
+Vendor_risk_scanner · Aug 17, 7:40 PM UTC
+
+Pending
+Agent Recommendation Created
+Systems
+
+Vendor_risk · Aug 17, 7:40 PM UTC
+
+Pending
+Policy Evaluate
+Systems
+
+System · Aug 17, 7:40 PM UTC
+
+Pending
+Agent Router Selected
+Systems
+
+Vendor_risk_scanner · Aug 17, 7:40 PM UTC
+
+Pending
+Agent Router Started
+Systems
+
+Vendor_risk_scanner · Aug 17, 7:40 PM UTC
+
+Pending
+Agent Recommendation Created
+Systems
+
+Reconciliation · Aug 17, 7:30 PM UTC
+
+Pending
+Policy Evaluate
+Systems
+
+System · Aug 17, 7:30 PM UTC
+
+Pending
+Agent Router Selected
+Systems
+
+Reconciliation_unreconciled_scanner · Aug 17, 7:30 PM UTC
+
+Pending
+Agent Router Started
+Systems
+
+Reconciliation_unreconciled_scanner · Aug 17, 7:30 PM UTC
+
+Pending
+Agent Recommendation Created
+Systems
+
+Reconciliation · Aug 17, 7:30 PM UTC
+
+Pending
+Policy Evaluate
+Systems
+
+System · Aug 17, 7:30 PM UTC
+
+Pending
+Agent Router Selected
+Systems
+
+Reconciliation_unreconciled_scanner · Aug 17, 7:30 PM UTC
+
+Pending
+Agent Router Started
+Systems
+
+Reconciliation_unreconciled_scanner · Aug 17, 7:30 PM UTC
+
+Pending
+Agent Recommendation Created
+Systems
+
+Reconciliation · Aug 17, 7:30 PM UTC
+
+Pending
+Policy Evaluate
+Systems
+
+System · Aug 17, 7:30 PM UTC
+
+Pending
+Agent Router Selected
+Systems
+
+Reconciliation_unreconciled_scanner · Aug 17, 7:30 PM UTC
+
+Pending
+Agent Router Started
+Systems
+
+Reconciliation_unreconciled_scanner · Aug 17, 7:30 PM UTC
+
+Pending
+Agent Recommendation Created
+Systems
+
+Reconciliation · Aug 17, 7:30 PM UTC
+
+Pending
+Policy Evaluate
+Systems
+
+System · Aug 17, 7:30 PM UTC
+
+Pending
+Agent Router Selected
+Systems
+
+Reconciliation_unreconciled_scanner · Aug 17, 7:30 PM UTC
+
+Pending
+Agent Router Started
+Systems
+
+Reconciliation_unreconciled_scanner · Aug 17, 7:30 PM UTC
+
+Pending
+Agent Recommendation Created
+Systems
+
+Reconciliation · Aug 17, 7:30 PM UTC
+
+Pending
+Policy Evaluate
+Systems
+
+System · Aug 17, 7:30 PM UTC
+
+Pending
+Agent Router Selected
+Systems
+
+Reconciliation_unreconciled_scanner · Aug 17, 7:30 PM UTC
+
+Pending
+New Chat Session
+
+Hi, I'm Brain
+
+What can I help you with today?
+
+Are We Net Cash-Flow Positive This Month?
+How Many Transactions Do I Have This Month?
+Show My Last 10 Transactions
+Show Recent Cash Flow
+What Is My Average Transaction Amount This Month?
+What Is My Total Transaction Volume This Month?
+What's Our Total Accounts Receivable?
+What's Our Trailing Monthly Cash Flow?
+Which Customer Invoices Are Overdue?
+Copyright © 2026 Brain Finance. All rights reserved.

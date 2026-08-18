@@ -1,0 +1,103 @@
+Menu
+
+Overview
+
+Inbox
+
+Ledger
+
+Other
+
+Settings
+
+Logout
+
+Your Financial Ledger
+
+Everything you're still owed.
+
+Every unpaid customer invoice, who owes it, and when it falls due.
+
+Accounts
+Cash Flow
+Payables
+Receivables
+Counterparties
+Rules
+
+RECEIVABLES
+
+5
+
+Helio Manufacturing
+
+Overdue
+
+Due 4 Jul 2026
+
+AR-HELIO-2026-07
+
++$184,000.00
+
+Apex Health
+
+Overdue
+
+Due 3 Aug 2026
+
+AR-APEX-2026-07
+
++$96,000.00
+
+Vertex Retail
+
+Sent
+
+Due 15 Aug 2026
+
+AR-VERTEX-2026-08
+
++$58,500.00
+
+Kestrel Logistics
+
+Sent
+
+Due 25 Aug 2026
+
+AR-KESTREL-2026-08
+
++$72,000.00
+
+Horizon Finance
+
+Sent
+
+Due 1 Sep 2026
+
+AR-HORIZON-2026-08
+
++$120,000.00
+
+Receivable Totals
+
+Across everything you're still owed
+
+$530,500.00
+
+New Chat Session
+
+Hi, I'm Brain
+
+What can I help you with today?
+
+Are We Net Cash-Flow Positive This Month?
+How Many Transactions Do I Have This Month?
+Show My Last 10 Transactions
+Show Recent Cash Flow
+What Is My Average Transaction Amount This Month?
+What Is My Total Transaction Volume This Month?
+What's Our Total Accounts Receivable?
+What's Our Trailing Monthly Cash Flow?
+Which Customer Invoices Are Overdue?
+Copyright © 2026 Brain Finance. All rights reserved.

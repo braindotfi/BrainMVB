@@ -1,0 +1,84 @@
+Menu
+
+Overview
+
+Inbox
+
+Ledger
+
+Other
+
+Settings
+
+Logout
+
+Profile
+Notifications
+Team
+Billing
+Sources
+Developers
+Security
+Audit Log
+Legal
+Account
+
+Identity
+
+Name
+
+Northstar QA
+
+Username
+
+northstarqa1
+
+Email
+
+braindotfi+test1@gmail.com
+
+Phone Number
+
+Not set
+
+Currency
+
+Default Currency
+
+Fallback for accounts that don't specify their own display currency
+
+USD
+
+Approvals
+
+Auto-Approve Limit
+
+Automatic approval applies only under specific conditions, not a flat amount.
+
+Conditional
+
+Shown as your Brain policy has it. Editing an approval limit requires a signed policy change, which cannot be made from this screen yet.
+
+Getting Started
+
+Welcome Walkthrough
+
+How your rules decide what runs automatically, and what always waits for you.
+
+Replay
+New Chat Session
+
+Hi, I'm Brain
+
+What can I help you with today?
+
+Are We Net Cash-Flow Positive This Month?
+How Many Transactions Do I Have This Month?
+Show My Last 10 Transactions
+Show Recent Cash Flow
+What Is My Average Transaction Amount This Month?
+What Is My Total Transaction Volume This Month?
+What's Our Total Accounts Receivable?
+What's Our Trailing Monthly Cash Flow?
+Which Customer Invoices Are Overdue?
+Copyright © 2026 Brain Finance. All rights reserved.

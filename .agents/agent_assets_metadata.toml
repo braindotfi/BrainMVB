@@ -52,3 +52,24 @@ uri = "file://screenshots/compliance-source-refs.jpg"
 type = "image"
 title = "Compliance source_refs live component verification"
 description = "Actual Inbox row and LiveProposalModal rendered from the realistic source_refs fixture. Shows Midmarket Co, $18,600.00, High Risk, structured finding details, and the Open blocked action link; no confidence percentage."
+
+[[outputs]]
+id = "a_o4gNcQF-E5NQ3b5AEdi"
+uri = "file://screenshots/northstar-phase4/09-rules.png"
+type = "image"
+title = "Rules tab — the auto-approve card (unresolved finding)"
+description = "Shows 'Northstar AP Auto Approved — Outbound Payments - Runs Automatically — Always On' and the header 'v1 · quorum 1'. Both are wrong: the rule can never fire, and the active policy is version 2."
+
+[[outputs]]
+id = "PVEIL6KVPDeKsk_jM-Hsr"
+uri = "file://screenshots/northstar-phase4/04-receivables.png"
+type = "image"
+title = "Receivables — repaired"
+description = "5 AR invoices totalling $530,500.00, matching the API exactly."
+
+[[outputs]]
+id = "i_G_qGi0chGBBBZjQBq-p"
+uri = "file://screenshots/northstar-phase4/03-payables.png"
+type = "image"
+title = "Payables — repaired"
+description = "7 payables totalling $221,300.00, matching the API exactly."

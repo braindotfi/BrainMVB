@@ -1,0 +1,72 @@
+Menu
+
+Overview
+
+Inbox
+
+Ledger
+
+Other
+
+Settings
+
+Logout
+
+Your Financial Ledger
+
+Your boundaries that Brain follows.
+
+Manage the rules that guide Brain's reviews, recommendations, and actions.
+
+Accounts
+Cash Flow
+Payables
+Receivables
+Counterparties
+Rules
+Default
+Automations
+Guardrails
+Suggested
+
+RULES
+
+3
+
+v1 · quorum 1
+
+Northstar AP Auto Approved
+
+Outbound Payments - Runs Automatically
+
+Always On
+
+Northstar AP Review
+
+Outbound Payments - Waits For Approval · Requires Admin Approval
+
+Always On
+
+Northstar Collections Review
+
+Agent Actions - Waits For Approval · Requires Single Signer
+
+Always On
+
+These rules are created automatically by Brain as a default policy layer to protect every tenant. They establish essential safeguards from the start, ensuring consistent security, governance, and oversight before any custom rules are added.
+New Chat Session
+
+Hi, I'm Brain
+
+What can I help you with today?
+
+Are We Net Cash-Flow Positive This Month?
+How Many Transactions Do I Have This Month?
+Show My Last 10 Transactions
+Show Recent Cash Flow
+What Is My Average Transaction Amount This Month?
+What Is My Total Transaction Volume This Month?
+What's Our Total Accounts Receivable?
+What's Our Trailing Monthly Cash Flow?
+Which Customer Invoices Are Overdue?
+Copyright © 2026 Brain Finance. All rights reserved.

@@ -1,0 +1,107 @@
+Menu
+
+Overview
+
+Inbox
+
+Ledger
+
+Other
+
+Settings
+
+Logout
+
+Your Financial Ledger
+
+The people and businesses you trade with.
+
+Review new and flagged counterparties, and see payment history across vendors and customers.
+
+Accounts
+Cash Flow
+Payables
+Receivables
+Counterparties
+Rules
+Needs Review
+
+7
+
+Trusted
+Paused
+Vendors
+Customers
+
+Add a new vendor in plain English
+
+Add Vendor
+
+ADDED VENDORS
+
+7
+
+Atlas Cloud Infrastructure
+
+New
+
+Vendor · No Payments Yet
+
+Cascade Compute
+
+New
+
+Vendor · 12 Payments
+
+$710,000.00
+
+Fathom Security
+
+New
+
+Vendor · No Payments Yet
+
+Gridline Labs
+
+Risk: High
+
+Vendor · No Payments Yet
+
+Internal Revenue Service
+
+New
+
+Tax Authority · No Payments Yet
+
+Meridian Benefits
+
+New
+
+Vendor · 12 Payments
+
+$1,572,000.00
+
+Redwood Legal
+
+New
+
+Vendor · 12 Payments
+
+$778,000.00
+
+New Chat Session
+
+Hi, I'm Brain
+
+What can I help you with today?
+
+Are We Net Cash-Flow Positive This Month?
+How Many Transactions Do I Have This Month?
+Show My Last 10 Transactions
+Show Recent Cash Flow
+What Is My Average Transaction Amount This Month?
+What Is My Total Transaction Volume This Month?
+What's Our Total Accounts Receivable?
+What's Our Trailing Monthly Cash Flow?
+Which Customer Invoices Are Overdue?
+Copyright © 2026 Brain Finance. All rights reserved.
