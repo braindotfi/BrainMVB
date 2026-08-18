@@ -50,6 +50,9 @@ GOOGLE_CLIENT_ID = "391354009777-poq24ohpc1da534j08gvh17srgcisbkb.apps.googleuse
 BRAIN_TENANCY_MODE = "durable"
 BRAIN_PROVISION_SECRET = "fb6e50818f98255daac0588c341406623cc5230717c4971d49d52ad8576227fe"
 
+[userenv.development]
+PROD_BRAIN_API_BASE_URL = "https://staging-api.brain.fi/v1"
+
 [postMerge]
 path = "scripts/post-merge.sh"
 timeoutMs = 60000
