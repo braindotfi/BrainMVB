@@ -60,3 +60,21 @@ the one that reads like a system guarantee.
 never by a status both paths share. If no record can be shown to reach the
 "automatic" state without a human, render that surface empty rather than letting
 it borrow human decisions to look populated.
+
+## A rule can be unreachable because the caller cannot supply a check's input
+A policy rule's conditions may reference a context field that **no caller can populate**. Seen live:
+an AP auto-approve rule carried `agent.risk_level.lte: low`, but the policy-VM action shape is only
+`{kind, counterparty_id, amount}` — there is nowhere to put an agent risk level, so that check
+returned FAIL on every single evaluation. Counterparty and amount checks passed; the rule still
+never fired, and every payment fell through to the review rule.
+
+**Why:** the rule reads as satisfiable, and the allowlist/threshold values all look reasonable, so
+inspecting the policy JSON (or the counterparty trust data) tells you nothing. Only running the VM
+reveals that one check can never pass.
+
+**How to apply:** before trusting *or* filing a bug about an "auto" rule, dry-run
+`POST /policy/{tenantId}/evaluate` across a matrix that should pass — including a case engineered to
+satisfy every documented condition. If the engineered pass still fails, read which check failed:
+that names the unsatisfiable input. Also note real proposals may show the rule with an **empty
+`checks` array and `matched:false`**, which means it was never evaluated (wrong action `kind`), NOT
+that it was evaluated and rejected — the two are easy to confuse.

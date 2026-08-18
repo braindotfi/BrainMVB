@@ -58,3 +58,17 @@ silent breaking change in a subsystem nobody was reviewing.
 a direct install when it does not, and an override only as a last resort. Then diff the
 lock's resolved versions and confirm the change set is exactly what you intended, since
 the audit total alone will not tell you.
+
+## `--no-save --no-package-lock` is destructive here
+Installing a throwaway tool with `npm install --no-save --no-package-lock <pkg>` in this
+workspace **reconciles node_modules against package.json while ignoring the lockfile**. Observed
+result: "added 19 packages, removed 79 packages, and changed 213 packages" — the app's real
+dependency tree was gutted, even though package.json and package-lock.json stayed clean in `git status`.
+
+**Why:** without the lock, npm re-resolves the whole tree from scratch; `--no-save` only protects the
+manifest files on disk, never `node_modules`.
+
+**How to apply:** never install ad-hoc/QA tooling into the workspace. Create an isolated dir
+(`mkdir /tmp/pwlib && cd /tmp/pwlib && npm init -y && npm install <pkg>`) and import it by
+absolute path. If you already ran a bare install, repair with `npm ci` before doing anything else —
+a clean `git status` is NOT evidence that node_modules survived.
