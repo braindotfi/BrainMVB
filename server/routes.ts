@@ -2009,7 +2009,17 @@ Evidence rows must cite the actual vendor names, amounts, and counts you saw in 
       });
       const raw = (message.content.find((b) => b.type === "text") as Anthropic.TextBlock | undefined)?.text?.trim() ?? "[]";
       const jsonMatch = raw.match(/\[[\s\S]*\]/);
-      const parsedJson: unknown = JSON.parse(jsonMatch ? jsonMatch[0] : raw);
+      // Parse with a fallback so a truncated or non-JSON model response (e.g.
+      // max_tokens hit mid-array) returns an empty suggestions list rather than
+      // a 500.  We only attempt the parse when jsonMatch found something; if
+      // there is no JSON array at all in the response, treat it as empty.
+      let parsedJson: unknown;
+      try {
+        parsedJson = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
+      } catch {
+        console.warn("[RuleSuggestions] model output was not valid JSON — returning empty suggestions");
+        parsedJson = [];
+      }
       const candidates = Array.isArray(parsedJson) ? parsedJson : [];
       // Drop malformed entries silently rather than fail the whole response.
       const suggestions = candidates

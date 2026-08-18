@@ -988,7 +988,7 @@ export function RulesPanel() {
 
       <div className="flex flex-col gap-[10px] w-full">
       <WidgetHeader title="Rules" count={activeCount}>
-        {activeTab === "Default" && !policyLoading && !policyError && policyVersion !== undefined && (
+        {activeTab === "Default" && !policyLoading && !policyError && policyVersion != null && (
           <p className="ml-auto [font-family:'JetBrains_Mono',monospace] text-[12px] leading-[16px] text-brain-v1baby-blue-60 whitespace-nowrap">
             v{policyVersion} · quorum {policyQuorum}
           </p>
