@@ -48,7 +48,9 @@ export interface PolicyContentRule {
 export interface ApprovalPolicyFacts {
   selfApprovalBlocked: true;
   secondApprovalThreshold: { value: string; currency: string } | null;
-  version: number;
+  /** Policy engine version from brain-core's top-level `version` field.
+   *  null means core did not return a version — NOT the same as "v1". */
+  version: number | null;
   quorumRequired: number;
   rules: PolicyContentRule[];
 }
@@ -118,13 +120,17 @@ export function mapPolicyRuleToCard(rule: PolicyContentRule, fmt?: (v: string | 
   const conditionSummary = conditions.length > 0 ? conditions.join(" · ") : "no conditions";
   const requireSuffix = rule.require ? ` · requires ${formatRequire(rule.require)}` : "";
   const executeLabel = EXECUTE_LABEL[rule.execute ?? "confirm"] ?? (rule.execute ?? "unknown");
+  // Conditions are included in the summary so the card is self-describing.
+  // Without this, an auto rule with an allowlist + cap + risk gate reads as
+  // "runs automatically" unconditionally, which is actively misleading.
+  const conditionInfix = conditions.length > 0 ? ` · ${conditions.join(" · ")}` : "";
 
   return {
     id: `policy-${rule.id}`,
     kind: "always_on",
     locked: true,
     name: rule.id.replace(/[-_]/g, " "),
-    summary: `${scopes} - ${executeLabel}${requireSuffix}`,
+    summary: `${scopes} - ${executeLabel}${conditionInfix}${requireSuffix}`,
     createdLabel: "From your active Brain policy",
     policyId: rule.id,
     active: true,

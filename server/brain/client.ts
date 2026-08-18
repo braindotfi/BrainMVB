@@ -525,6 +525,11 @@ export interface PolicyContentRule {
 
 interface ActivePolicy {
   id: string;
+  /** Top-level version field returned by brain-core's policy serializer.
+   *  Distinct from content.version, which is a seed-time artifact version
+   *  embedded inside the policy document body and is NOT the policy engine's
+   *  active policy_version reported in proposal traces. */
+  version?: number;
   content?: { version?: number; rules?: PolicyContentRule[] };
   quorum_required?: number;
 }
@@ -541,8 +546,13 @@ export interface ApprovalPolicyFacts {
    * above. Same /policy/{tenantId} read this function already makes - added to
    * the existing response instead of a new BFF route (server/brain/proxy.ts's
    * /approval-policy). Read-only GET, member token, no new scope required.
+   *
+   * version: read from the TOP-LEVEL `policy.version` field, NOT
+   * `policy.content.version` (which is a seed-artifact version inside the
+   * document body). null means core did not return a version, which is distinct
+   * from "this is a v1 policy" — callers must not default-display 1.
    */
-  version: number;
+  version: number | null;
   quorumRequired: number;
   rules: PolicyContentRule[];
 }
@@ -572,7 +582,7 @@ export async function getApprovalPolicyFacts(token: string, tenantId: string): P
   return {
     selfApprovalBlocked: true,
     secondApprovalThreshold: threshold,
-    version: policy.content?.version ?? 1,
+    version: policy.version ?? null,
     quorumRequired: policy.quorum_required ?? 1,
     rules,
   };
