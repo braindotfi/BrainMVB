@@ -17,7 +17,7 @@
 
 import { Router, type Request, type Response } from "express";
 import { requireAuth } from "../auth";
-import { brainAuthConfigured, brainTenancyMode, platformServiceConfigured } from "./config";
+import { brainAuthConfigured, brainConfig, brainTenancyMode, platformServiceConfigured } from "./config";
 import { getBrainSession, registerBrainSession, NoTenantError } from "./auth";
 import { withBrainBaseUrl } from "./baseUrl";
 import { bffRequestIdMiddleware, currentBffRequestId } from "./requestId";
@@ -369,21 +369,23 @@ export function createBrainProxyRouter(): Router {
     }
     const user = await storage.getUser(userId);
     try {
-      const result = await consumeInvite({
-        inviteToken,
-        externalRef: userId,
-        displayName: user?.name || undefined,
+      return await withBrainBaseUrl(brainConfig.baseUrl, async () => {
+        const result = await consumeInvite({
+          inviteToken,
+          externalRef: userId,
+          displayName: user?.name || undefined,
+        });
+        const tenantId = result.member?.tenantId ?? result.tenant_id;
+        if (!tenantId) throw new Error("brain-core invite consume returned no tenant id");
+        await storage.createBrainIdentity({
+          userId,
+          externalRef: userId,
+          tenantId,
+          memberId: result.member?.id ?? null,
+        });
+        if (result.session) await registerBrainSession(userId, result.session, tenantId);
+        return res.json({ tenantId, member: result.member });
       });
-      const tenantId = result.member?.tenantId ?? result.tenant_id;
-      if (!tenantId) throw new Error("brain-core invite consume returned no tenant id");
-      await storage.createBrainIdentity({
-        userId,
-        externalRef: userId,
-        tenantId,
-        memberId: result.member?.id ?? null,
-      });
-      if (result.session) await registerBrainSession(userId, result.session, tenantId);
-      return res.json({ tenantId, member: result.member });
     } catch (err) {
       if (err instanceof TenancyApiError) {
         // Map the four contract rejection reasons to plain language - never silent.
