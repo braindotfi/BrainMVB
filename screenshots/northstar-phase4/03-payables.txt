@@ -1,0 +1,123 @@
+Menu
+
+Overview
+
+Inbox
+
+Ledger
+
+Other
+
+Settings
+
+Logout
+
+Your Financial Ledger
+
+Everything you still owe.
+
+Every outstanding payable, who it is owed to, and when it falls due.
+
+Accounts
+Cash Flow
+Payables
+Receivables
+Counterparties
+Rules
+
+PAYABLES
+
+7
+
+Fathom Security
+
+Upcoming
+
+Due 18 Aug 2026
+
+Subscription
+
+-$9,600.00
+
+Cascade Compute
+
+Upcoming
+
+Due 19 Aug 2026
+
+Subscription
+
+-$86,400.00
+
+Gridline Labs
+
+Upcoming
+
+Due 20 Aug 2026
+
+Bill
+
+-$14,500.00
+
+Atlas Cloud Infrastructure
+
+Upcoming
+
+Due 22 Aug 2026
+
+Subscription
+
+-$42,800.00
+
+Meridian Benefits
+
+Upcoming
+
+Due 30 Aug 2026
+
+Payroll
+
+-$31,250.00
+
+Redwood Legal
+
+Upcoming
+
+Due 1 Sep 2026
+
+Bill
+
+-$12,000.00
+
+Internal Revenue Service
+
+Upcoming
+
+Due 15 Sep 2026
+
+Tax
+
+-$24,750.00
+
+Payable Totals
+
+Across everything you still owe
+
+$221,300.00
+
+New Chat Session
+
+Hi, I'm Brain
+
+What can I help you with today?
+
+Are We Net Cash-Flow Positive This Month?
+How Many Transactions Do I Have This Month?
+Show My Last 10 Transactions
+Show Recent Cash Flow
+What Is My Average Transaction Amount This Month?
+What Is My Total Transaction Volume This Month?
+What's Our Total Accounts Receivable?
+What's Our Trailing Monthly Cash Flow?
+Which Customer Invoices Are Overdue?
+Copyright © 2026 Brain Finance. All rights reserved.

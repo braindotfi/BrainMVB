@@ -1,0 +1,156 @@
+Menu
+
+Overview
+
+Inbox
+
+Ledger
+
+Other
+
+Settings
+
+Logout
+
+Good morning, Northstar QA.
+
+Here's your financial snapshot for today.
+
+Updated Tuesday the 18th at 12:39 am.
+
+MONEY IN ALL ACCOUNTS
+
+$1,711,390.00
+
+Across bank, digital, and agent accounts.
+
+NET CASH FLOW
+
++$108,333.33/mo
+
+Trailing monthly average.
+
+RUNWAY
+
+Not applicable
+
+Cash flow is positive — there's no burn to run out of.
+
+LIABILITIES
+
+$221,300.00
+
+Everything you still owe.
+
+AR OVER 90 DAYS
+
+$0.00
+
+Nothing outstanding beyond 90 days.
+
+LARGEST CASH HOLDING
+
+100%
+
+In Harborline Bank. All of your cash is in one place.
+
+You have an overdue invoice of $184,000.00 due on Jul 4, 2026.
+
+76 Items Need Your Attention
+
+2 Urgent · 65 Waiting On You · 9 Insights
+
+Open Inbox
+
+CASH PROJECTION
+
+NEXT 21 DAYS
+
+Aug 18 – Sep 8
+
+Aug 18
+Aug 18
+Aug 19
+Aug 20
+Aug 22
+Aug 25
+Aug 30
+Sep 1
+Sep 1
+Sep 8
+$0
+$450k
+$900k
+$1.4M
+$1.8M
+
+Lowest point: $1,514,840.00 on Sep 1
+
+If no outstanding invoices are paid in this window.
+
+8 SCHEDULED EVENTS
+
+Aug 18
+CONFIRMED
+-$9,600.00
+Subscription
+Aug 19
+CONFIRMED
+-$86,400.00
+Subscription
+Aug 20
+CONFIRMED
+-$14,500.00
+Bill
+Aug 22
+CONFIRMED
+-$42,800.00
+Subscription
+Aug 25
+PROJECTED
++$72,000.00
+Invoice AR-KESTREL-2026-08
+Aug 30
+CONFIRMED
+-$31,250.00
+Payroll
+Sep 1
+CONFIRMED
+-$12,000.00
+Bill
+Sep 1
+PROJECTED
++$120,000.00
+Invoice AR-HORIZON-2026-08
+
+Confirmed = scheduled obligations (payroll, tax, bills). Projected = outstanding customer invoices, not yet received.
+
+New Chat Session
+
+Hi, I'm Brain
+
+What can I help you with today?
+
+Are We Net Cash-Flow Positive This Month?
+How Many Transactions Do I Have This Month?
+Show My Last 10 Transactions
+Show Recent Cash Flow
+What Is My Average Transaction Amount This Month?
+What Is My Total Transaction Volume This Month?
+What's Our Total Accounts Receivable?
+What's Our Trailing Monthly Cash Flow?
+Which Customer Invoices Are Overdue?
+Copyright © 2026 Brain Finance. All rights reserved.
+How Brain's rules work
+
+Step 1 of 3
+
+This is a rule.
+
+Rules define exactly what Brain is allowed to do without asking you first. Nothing runs outside them.
+
+northstar ap auto approved
+outbound payments · up to $50,000.00 · risk ≤ low · counterparty in vendors.policy_allowlisted
+Skip
+Next
+$0

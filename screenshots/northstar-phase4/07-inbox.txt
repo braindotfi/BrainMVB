@@ -1,0 +1,819 @@
+Menu
+
+Overview
+
+Inbox
+
+Ledger
+
+Other
+
+Settings
+
+Logout
+
+Your AI Inbox
+
+Know what needs your attention.
+
+Review recommended actions, important updates, and insights from Brain's AI agents in one place.
+
+All Recommendations
+All Labels
+All Status
+All Types
+Unresolved
+
+76
+
+Resolved
+
+0
+
+NEEDS YOUR APPROVAL
+
+67
+
+$184,000.00 receivable is 44 days overdue for Helio Manufacturing.
+
+Collections Agent
+, needs review
+
+Helio Manufacturing · AR-HELIO-2026-07 · $184,000.00
+
+1 other open proposal on invoice AR-HELIO-2026-07
+
+Reject
+Approve
+
+Gridline Labs vendor risk is high
+
+Vendor Risk Agent
+, needs review
+
+Gridline Labs
+
+Hold Vendor
+Clear Vendor
+
+$75,000.00 unreconciled transaction needs review.
+
+Reconciliation Agent
+, needs review
+
+Operating expense · $75,000.00
+
+Reject Match
+Accept Match
+
+$78,000.00 unreconciled transaction needs review.
+
+Reconciliation Agent
+, needs review
+
+Cloud infrastructure · $78,000.00
+
+Reject Match
+Accept Match
+
+$145,000.00 unreconciled transaction needs review.
+
+Reconciliation Agent
+, needs review
+
+Payroll and benefits · $145,000.00
+
+Reject Match
+Accept Match
+
+$460,000.00 unreconciled transaction needs review.
+
+Reconciliation Agent
+, needs review
+
+Subscription revenue · $460,000.00
+
+Reject Match
+Accept Match
+
+$72,000.00 unreconciled transaction needs review.
+
+Reconciliation Agent
+, needs review
+
+Operating expense · $72,000.00
+
+Reject Match
+Accept Match
+
+$72,000.00 unreconciled transaction needs review.
+
+Reconciliation Agent
+, needs review
+
+Cloud infrastructure · $72,000.00
+
+Reject Match
+Accept Match
+
+$142,000.00 unreconciled transaction needs review.
+
+Reconciliation Agent
+, needs review
+
+Payroll and benefits · $142,000.00
+
+Reject Match
+Accept Match
+
+$440,000.00 unreconciled transaction needs review.
+
+Reconciliation Agent
+, needs review
+
+Subscription revenue · $440,000.00
+
+Reject Match
+Accept Match
+
+Defer $31,250.00 for Meridian Benefits.
+
+Payment Agent
+, needs review
+
+Meridian Benefits · $31,250.00
+
+Reject
+Approve
+
+Pay now $42,800.00 for Atlas Cloud Infrastructure.
+
+Payment Agent
+, needs review
+
+Atlas Cloud Infrastructure · $42,800.00
+
+Reject
+Approve
+
+Pay now $14,500.00 for Gridline Labs.
+
+Payment Agent
+, needs review
+
+Gridline Labs · $14,500.00
+
+Reject
+Approve
+
+Pay now $86,400.00 for Cascade Compute.
+
+Payment Agent
+, needs review
+
+Cascade Compute · $86,400.00
+
+Reject
+Approve
+
+Pay now $9,600.00 for Fathom Security.
+
+Payment Agent
+, needs review
+
+Fathom Security · $9,600.00
+
+Reject
+Approve
+
+Fathom Security vendor risk is elevated
+
+Vendor Risk Agent
+, needs review
+
+Fathom Security
+
+Hold Vendor
+Clear Vendor
+
+Redwood Legal vendor risk is elevated
+
+Vendor Risk Agent
+, needs review
+
+Redwood Legal
+
+Hold Vendor
+Clear Vendor
+
+Meridian Benefits vendor risk is elevated
+
+Vendor Risk Agent
+, needs review
+
+Meridian Benefits
+
+Hold Vendor
+Clear Vendor
+
+Atlas Cloud Infrastructure vendor risk is elevated
+
+Vendor Risk Agent
+, needs review
+
+Atlas Cloud Infrastructure
+
+Hold Vendor
+Clear Vendor
+
+Cascade Compute vendor risk is elevated
+
+Vendor Risk Agent
+, needs review
+
+Cascade Compute
+
+Hold Vendor
+Clear Vendor
+
+$70,000.00 unreconciled transaction needs review.
+
+Reconciliation Agent
+, needs review
+
+Operating expense · $70,000.00
+
+Reject Match
+Accept Match
+
+$68,000.00 unreconciled transaction needs review.
+
+Reconciliation Agent
+, needs review
+
+Cloud infrastructure · $68,000.00
+
+Reject Match
+Accept Match
+
+$140,000.00 unreconciled transaction needs review.
+
+Reconciliation Agent
+, needs review
+
+Payroll and benefits · $140,000.00
+
+Reject Match
+Accept Match
+
+$420,000.00 unreconciled transaction needs review.
+
+Reconciliation Agent
+, needs review
+
+Subscription revenue · $420,000.00
+
+Reject Match
+Accept Match
+
+$68,000.00 unreconciled transaction needs review.
+
+Reconciliation Agent
+, needs review
+
+Operating expense · $68,000.00
+
+Reject Match
+Accept Match
+
+$64,000.00 unreconciled transaction needs review.
+
+Reconciliation Agent
+, needs review
+
+Cloud infrastructure · $64,000.00
+
+Reject Match
+Accept Match
+
+$138,000.00 unreconciled transaction needs review.
+
+Reconciliation Agent
+, needs review
+
+Payroll and benefits · $138,000.00
+
+Reject Match
+Accept Match
+
+$400,000.00 unreconciled transaction needs review.
+
+Reconciliation Agent
+, needs review
+
+Subscription revenue · $400,000.00
+
+Reject Match
+Accept Match
+
+$66,000.00 unreconciled transaction needs review.
+
+Reconciliation Agent
+, needs review
+
+Operating expense · $66,000.00
+
+Reject Match
+Accept Match
+
+$61,000.00 unreconciled transaction needs review.
+
+Reconciliation Agent
+, needs review
+
+Cloud infrastructure · $61,000.00
+
+Reject Match
+Accept Match
+
+$135,000.00 unreconciled transaction needs review.
+
+Reconciliation Agent
+, needs review
+
+Payroll and benefits · $135,000.00
+
+Reject Match
+Accept Match
+
+$385,000.00 unreconciled transaction needs review.
+
+Reconciliation Agent
+, needs review
+
+Subscription revenue · $385,000.00
+
+Reject Match
+Accept Match
+
+$64,000.00 unreconciled transaction needs review.
+
+Reconciliation Agent
+, needs review
+
+Operating expense · $64,000.00
+
+Reject Match
+Accept Match
+
+$58,000.00 unreconciled transaction needs review.
+
+Reconciliation Agent
+, needs review
+
+Cloud infrastructure · $58,000.00
+
+Reject Match
+Accept Match
+
+$132,000.00 unreconciled transaction needs review.
+
+Reconciliation Agent
+, needs review
+
+Payroll and benefits · $132,000.00
+
+Reject Match
+Accept Match
+
+$58,500.00 receivable is 2 days overdue for Vertex Retail.
+
+Collections Agent
+, needs review
+
+Vertex Retail · AR-VERTEX-2026-08 · $58,500.00
+
+1 other open proposal on invoice AR-VERTEX-2026-08
+
+Reject
+Approve
+
+$96,000.00 receivable is 14 days overdue for Apex Health.
+
+Collections Agent
+, needs review
+
+Apex Health · AR-APEX-2026-07 · $96,000.00
+
+1 other open proposal on invoice AR-APEX-2026-07
+
+Reject
+Approve
+
+Subscription detection matched.
+
+Subscription Agent
+, needs review
+
+Operating expense · $75,000.00
+
+Reject
+Approve
+
+Subscription detection matched.
+
+Subscription Agent
+, needs review
+
+Cloud infrastructure · $78,000.00
+
+Reject
+Approve
+
+Subscription detection not matched.
+
+Subscription Agent
+, needs review
+
+Payroll and benefits · $145,000.00
+
+Reject
+Approve
+
+$370,000.00 unreconciled transaction needs review.
+
+Reconciliation Agent
+, needs review
+
+Subscription revenue · $370,000.00
+
+Reject Match
+Accept Match
+
+$63,000.00 unreconciled transaction needs review.
+
+Reconciliation Agent
+, needs review
+
+Operating expense · $63,000.00
+
+Reject Match
+Accept Match
+
+$56,000.00 unreconciled transaction needs review.
+
+Reconciliation Agent
+, needs review
+
+Cloud infrastructure · $56,000.00
+
+Reject Match
+Accept Match
+
+$130,000.00 unreconciled transaction needs review.
+
+Reconciliation Agent
+, needs review
+
+Payroll and benefits · $130,000.00
+
+Reject Match
+Accept Match
+
+$350,000.00 unreconciled transaction needs review.
+
+Reconciliation Agent
+, needs review
+
+Subscription revenue · $350,000.00
+
+Reject Match
+Accept Match
+
+$62,000.00 unreconciled transaction needs review.
+
+Reconciliation Agent
+, needs review
+
+Operating expense · $62,000.00
+
+Reject Match
+Accept Match
+
+$54,000.00 unreconciled transaction needs review.
+
+Reconciliation Agent
+, needs review
+
+Cloud infrastructure · $54,000.00
+
+Reject Match
+Accept Match
+
+$126,000.00 unreconciled transaction needs review.
+
+Reconciliation Agent
+, needs review
+
+Payroll and benefits · $126,000.00
+
+Reject Match
+Accept Match
+
+$335,000.00 unreconciled transaction needs review.
+
+Reconciliation Agent
+, needs review
+
+Subscription revenue · $335,000.00
+
+Reject Match
+Accept Match
+
+$61,000.00 unreconciled transaction needs review.
+
+Reconciliation Agent
+, needs review
+
+Operating expense · $61,000.00
+
+Reject Match
+Accept Match
+
+$52,000.00 unreconciled transaction needs review.
+
+Reconciliation Agent
+, needs review
+
+Cloud infrastructure · $52,000.00
+
+Reject Match
+Accept Match
+
+$124,000.00 unreconciled transaction needs review.
+
+Reconciliation Agent
+, needs review
+
+Payroll and benefits · $124,000.00
+
+Reject Match
+Accept Match
+
+$320,000.00 unreconciled transaction needs review.
+
+Reconciliation Agent
+, needs review
+
+Subscription revenue · $320,000.00
+
+Reject Match
+Accept Match
+
+$60,000.00 unreconciled transaction needs review.
+
+Reconciliation Agent
+, needs review
+
+Operating expense · $60,000.00
+
+Reject Match
+Accept Match
+
+$50,000.00 unreconciled transaction needs review.
+
+Reconciliation Agent
+, needs review
+
+Cloud infrastructure · $50,000.00
+
+Reject Match
+Accept Match
+
+$122,000.00 unreconciled transaction needs review.
+
+Reconciliation Agent
+, needs review
+
+Payroll and benefits · $122,000.00
+
+Reject Match
+Accept Match
+
+$305,000.00 unreconciled transaction needs review.
+
+Reconciliation Agent
+, needs review
+
+Subscription revenue · $305,000.00
+
+Reject Match
+Accept Match
+
+$59,000.00 unreconciled transaction needs review.
+
+Reconciliation Agent
+, needs review
+
+Operating expense · $59,000.00
+
+Reject Match
+Accept Match
+
+$49,000.00 unreconciled transaction needs review.
+
+Reconciliation Agent
+, needs review
+
+Cloud infrastructure · $49,000.00
+
+Reject Match
+Accept Match
+
+$120,000.00 unreconciled transaction needs review.
+
+Reconciliation Agent
+, needs review
+
+Payroll and benefits · $120,000.00
+
+Reject Match
+Accept Match
+
+$295,000.00 unreconciled transaction needs review.
+
+Reconciliation Agent
+, needs review
+
+Subscription revenue · $295,000.00
+
+Reject Match
+Accept Match
+
+$58,000.00 unreconciled transaction needs review.
+
+Reconciliation Agent
+, needs review
+
+Operating expense · $58,000.00
+
+Reject Match
+Accept Match
+
+$48,000.00 unreconciled transaction needs review.
+
+Reconciliation Agent
+, needs review
+
+Cloud infrastructure · $48,000.00
+
+Reject Match
+Accept Match
+
+$118,000.00 unreconciled transaction needs review.
+
+Reconciliation Agent
+, needs review
+
+Payroll and benefits · $118,000.00
+
+Reject Match
+Accept Match
+
+$280,000.00 unreconciled transaction needs review.
+
+Reconciliation Agent
+, needs review
+
+Subscription revenue · $280,000.00
+
+Reject Match
+Accept Match
+
+Review collections outreach for AR-APEX-2026-07
+
+Collections Agent
+, needs review
+
+Apex Health · AR-APEX-2026-07 · $96,000.00
+
+1 other open proposal on invoice AR-APEX-2026-07
+
+Reject
+Approve
+
+Review collections outreach for AR-HELIO-2026-07
+
+Collections Agent
+, needs review
+
+Helio Manufacturing · AR-HELIO-2026-07 · $184,000.00
+
+1 other open proposal on invoice AR-HELIO-2026-07
+
+Reject
+Approve
+
+FOR YOUR AWARENESS
+
+9
+
+Revenue trend flat with 1 at-risk customers.
+
+Revenue Intelligence Agent
+, needs review
+
+Subscription revenue · AR-KESTREL-2026-08 · $72,000.00
+
+Acknowledge
+
+Revenue trend flat with 1 at-risk customers.
+
+Revenue Intelligence Agent
+, needs review
+
+Subscription revenue · AR-VERTEX-2026-08 · $58,500.00
+
+1 other open proposal on invoice AR-VERTEX-2026-08
+
+Acknowledge
+
+Revenue trend flat with 1 at-risk customers.
+
+Revenue Intelligence Agent
+, needs review
+
+Subscription revenue · AR-HORIZON-2026-08 · $120,000.00
+
+Acknowledge
+
+Gridline Labs payable: high-value obligation to unverified vendor.
+
+Invoice Integrity Agent
+, needs review
+
+Gridline Labs payable · $14,500.00
+
+Acknowledge
+
+Possible threshold avoidance.
+
+Invoice Integrity Agent
+, needs review
+
+Proposed by undefined
+
+Acknowledge
+
+Subscription: Fathom Security
+
+Subscription
+, informational
+
+$9,600.00 · due Aug 18, 2026
+
+Acknowledge
+
+Subscription: Cascade Compute
+
+Subscription
+, informational
+
+$86,400.00 · due Aug 19, 2026
+
+Acknowledge
+
+Subscription: Atlas Cloud Infrastructure
+
+Subscription
+, informational
+
+$42,800.00 · due Aug 22, 2026
+
+Acknowledge
+
+Trailing cash flow (USD)
+
+Cash Forecasting
+, informational
+
+$162,000.00 net inflow over 4 transactions
+
+Acknowledge
+Tap any item to see why Brain suggested it, what happens next, and what the risk is before you approve anything. Brain proposes. You decide. A separate execution service settles.
+New Chat Session
+
+Hi, I'm Brain
+
+What can I help you with today?
+
+Are We Net Cash-Flow Positive This Month?
+How Many Transactions Do I Have This Month?
+Show My Last 10 Transactions
+Show Recent Cash Flow
+What Is My Average Transaction Amount This Month?
+What Is My Total Transaction Volume This Month?
+What's Our Total Accounts Receivable?
+What's Our Trailing Monthly Cash Flow?
+Which Customer Invoices Are Overdue?
+Copyright © 2026 Brain Finance. All rights reserved.
