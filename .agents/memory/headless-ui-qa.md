@@ -153,3 +153,18 @@ and every walkthrough, probe and retry spends one. Exhausting it costs a long wa
 mid-investigation, so fold several questions into one scripted pass instead of
 re-running the whole suite per hypothesis — and prefer a direct API read over a
 browser run when the question is about data rather than rendering.
+
+## playwright-core: get it from an isolated dir, and unwrap the CJS default
+Two traps that each cost a run:
+- The **npx cache copy can be incomplete** — `/home/runner/.npm/_npx/*/node_modules/playwright-core`
+  held only `bin/ cli.js lib/ LICENSE NOTICE`, with no `package.json` and no entry point, so any
+  import failed. Install into a scratch dir instead (see the lockfile note about never installing
+  into the workspace) and import the absolute `.../node_modules/playwright-core/index.js`.
+- playwright-core is **CJS**, so `await import(abs)` yields a namespace where the launcher is under
+  `default`. Use `const chromium = pw.chromium ?? pw.default?.chromium;` or you get
+  `Cannot read properties of undefined (reading 'launch')`.
+
+**Query params only work where the route reads them.** In this app the Finances/Ledger tabs are
+driven by `?tab=` and are reliable, but the Settings sub-tabs ignore a `?tab=` param and must be
+clicked (`page.getByText("Audit Log", { exact: true }).first()`); a bad param silently renders the
+default tab, which looks like a passing screenshot of the wrong screen.
