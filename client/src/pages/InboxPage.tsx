@@ -37,9 +37,9 @@ import {
   proposalInvoiceIdentity,
   type DecisionButton,
 } from "@/lib/proposalCards";
-import { LiveProposalModal, AGENT_DISPLAY_NAME } from "@/components/AgentProposalModal";
+import { LiveProposalModal } from "@/components/AgentProposalModal";
 import type { AgentKey } from "@/lib/agentProposals";
-import { agentBadgeLabel } from "@/lib/agentProposals";
+import { agentBadgeLabel, agentDisplayName } from "@/lib/agentProposals";
 import { capitalCase } from "@/lib/displayLabels";
 import { useBrainAuditRecords, registerProposalAgentKey, useDecidedProposalIds } from "@/lib/brainAudit";
 import { inboxTapTarget } from "@/lib/inboxTap";
@@ -1009,7 +1009,7 @@ export function InboxPage() {
       // decision can recover the correct category (brain-core's proposing_agent
       // in the audit snapshot is the execution agent ULID, not the type key).
       registerProposalAgentKey(p.id, agentKey);
-      const agentName = p.agent?.display_name || AGENT_DISPLAY_NAME[agentKey];
+      const agentName = agentDisplayName(agentKey, p.agent?.display_name);
       const pillName = agentBadgeLabel(agentKey);
         const decisions = buildDecisionButtons(p.available_decisions, p.presentation?.actions);
       const headerCopy = buildProposalHeaderCopy(p, agentName, formatText);

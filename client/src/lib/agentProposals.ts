@@ -166,15 +166,36 @@ export const AGENT_DISPLAY_NAME: Record<AgentKey, string> = {
   travel_finance:    "Travel Finance",
 };
 
+/** Whether a proposal type belongs to the agent catalog BrainMVB currently
+ * supports. The proposal feed is an upstream passthrough, so this must remain a
+ * runtime guard rather than trusting the client-side union alone. */
+export function isKnownAgentKey(key: string): key is AgentKey {
+  return Object.prototype.hasOwnProperty.call(AGENT_DISPLAY_NAME, key);
+}
+
+/** A display-safe agent name for live proposal data.
+ *
+ * brain-core can add a proposal type before this client has an entry for it, or
+ * omit an agent object on a historical row. In either case, keep the record
+ * readable instead of returning undefined into a render path. */
+export function agentDisplayName(key: string, upstreamDisplayName?: string | null): string {
+  const upstream = typeof upstreamDisplayName === "string" ? upstreamDisplayName.trim() : "";
+  if (upstream) return upstream;
+
+  const known = AGENT_DISPLAY_NAME[key as AgentKey];
+  if (known) return known;
+
+  const readable = key.replace(/_/g, " ").replace(/\b\w/g, (character) => character.toUpperCase()).trim();
+  return readable || "Unknown";
+}
+
 /** Label for an agent badge chip/pill: "<Display Name> Agent"
  *  e.g. "Payment Agent", "Treasury Agent", "Dispute Agent".
  *  Use for every row-level tag.  Audit record TITLES omit the suffix —
  *  use AGENT_DISPLAY_NAME directly for those. */
 export function agentBadgeLabel(key: AgentKey | string): string {
-  const display = AGENT_DISPLAY_NAME[key as AgentKey];
-  if (display) return `${display} Agent`;
-  // Unknown key: best-effort capitalisation without an extra import.
-  return key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) + " Agent";
+  const display = agentDisplayName(key).replace(/\s+agent\s*$/i, "").trim();
+  return `${display} Agent`;
 }
 
 /* ── The 11 records ─────────────────────────────────────────────────────── */

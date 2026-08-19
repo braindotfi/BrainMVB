@@ -7,7 +7,7 @@ import {
   type ProposalStatus,
   type ProposalType,
 } from "./brainProposals";
-import type { AgentKey } from "./agentProposals";
+import { agentDisplayName, isKnownAgentKey, type AgentKey } from "./agentProposals";
 
 /**
  * Pure queue-membership helper (isNeedsReview) and the wire-type -> AgentKey
@@ -100,6 +100,14 @@ describe("agentKeyForProposalType", () => {
     for (const type of types) {
       expect(agentKeyForProposalType(type)).toBe(type as unknown as AgentKey);
     }
+  });
+
+  it("keeps an unknown upstream type readable rather than treating it as a supported agent", () => {
+    const key = agentKeyForProposalType("invoice_integrity");
+
+    expect(key).toBe("invoice_integrity");
+    expect(isKnownAgentKey(key)).toBe(false);
+    expect(agentDisplayName(key, null)).toBe("Invoice Integrity");
   });
 });
 

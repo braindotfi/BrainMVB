@@ -22,7 +22,7 @@ import {
  *  "Public Types"). The eight advisory domains after `fraud_anomaly` were promoted by
  *  the same contract; they reach this client through the identical row shape, so they
  *  render through the shared card rather than a fallback view. */
-export type ProposalType =
+export type KnownProposalType =
   | "vendor_risk"
   | "payment"
   | "collections"
@@ -42,6 +42,11 @@ export type ProposalType =
   | "savings"
   | "tax_prep"
   | "travel_finance";
+
+/** The live proposal feed is forwarded by the BFF without type normalization.
+ * Keep the known catalog for static guidance while allowing a newly introduced
+ * upstream type to be rendered safely as an unrecognized record. */
+export type ProposalType = KnownProposalType | (string & {});
 
 export type ProposalStatus = "pending" | "approved" | "acknowledged" | "rejected" | "undone" | (string & {});
 export type ProposalRiskBand = "low" | "standard" | "elevated" | "high";
@@ -276,9 +281,9 @@ export async function fetchAllBrainProposals(signal?: AbortSignal, status?: stri
   throw new Error("Brain proposals feed exceeded the maximum page count.");
 }
 
-/** `type` -> the client's AgentKey (agentProposals.ts) is now the identity
- *  function - all 11 ProposalType values are the identical AgentKey strings. */
-export function agentKeyForProposalType(type: ProposalType): AgentKey {
+/** `type` -> the client agent key is an identity mapping. The return stays open
+ * because brain-core may publish a type before BrainMVB's display catalog does. */
+export function agentKeyForProposalType(type: ProposalType): string {
   return type;
 }
 

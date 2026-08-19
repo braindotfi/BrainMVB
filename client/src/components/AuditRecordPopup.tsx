@@ -28,13 +28,10 @@ import { capitalCase } from "@/lib/displayLabels";
 
 import { Button } from "@/components/ui/button";
 import { useBrainProposals, agentKeyForProposalType, type BrainProposal } from "@/lib/brainProposals";
-import { AGENT_DISPLAY_NAME } from "@/lib/agentProposals";
+import { agentDisplayName } from "@/lib/agentProposals";
 
 function proposalEvidenceLabel(proposal: BrainProposal): string {
-  const agentName =
-    proposal.agent?.display_name?.trim() ||
-    AGENT_DISPLAY_NAME[agentKeyForProposalType(proposal.type)] ||
-    "Brain";
+  const agentName = agentDisplayName(agentKeyForProposalType(proposal.type), proposal.agent?.display_name);
   const agentBaseName = agentName.replace(/\s+Agent\s*$/i, "").trim();
   const subject = proposal.subject?.display?.trim();
   return subject

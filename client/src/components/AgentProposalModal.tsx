@@ -62,6 +62,8 @@ import {
 import { LiveEvidenceRecordPopup } from "./LiveEvidenceRecordPopup";
 import {
   RISK_META,
+  agentDisplayName,
+  isKnownAgentKey,
   type AgentKey,
   type AgentProposal,
   type EvidenceLine,
@@ -172,7 +174,8 @@ export function LiveProposalModal({
   if (!proposal) return null;
 
   const agentKey = agentKeyForProposalType(proposal.type);
-  const agentName = proposal.agent?.display_name || AGENT_DISPLAY_NAME[agentKey];
+  const agentName = agentDisplayName(agentKey, proposal.agent?.display_name);
+  const isKnownAgent = isKnownAgentKey(agentKey);
   const isPaymentAgent = agentKey === "payment" || /^(?:demo\s+)?payment agent$/i.test(agentName.trim());
   const normalizedAgentName = isPaymentAgent ? "Payment Agent" : agentName.trim();
   /* Card titles name the agent with the same suffix used by Inbox agent pills.
@@ -456,7 +459,7 @@ export function LiveProposalModal({
      display currency: the customer owes what the invoice says, and an FX-converted
      figure in a chase note would be wrong. Everything else on the card stays in
      the display currency. */
-  const messageDraft = SENDS_OUTBOUND_MESSAGE.has(agentKey)
+  const messageDraft = isKnownAgent && SENDS_OUTBOUND_MESSAGE.has(agentKey)
     ? buildCollectionsDraft(
         buildKeyFactRows(resolvedFacts, formatSourceAmount, headline.amount?.currency ?? null).primary,
         subjectName,
@@ -532,6 +535,13 @@ export function LiveProposalModal({
             </div>
 
             <CardBody>
+              {!isKnownAgent && (
+                <InfoBox testId="callout-live-proposal-unrecognized-agent">
+                  Brain sent the unrecognized proposal type “{proposal.type}”. It is not configured in
+                  BrainMVB’s supported agent catalog, but its source data is shown here safely.
+                </InfoBox>
+              )}
+
               {/* 1 — Why Brain Suggested This. The signals the engine itself
                   recorded (policy trace / ranked signals), never client-authored
                   copy; a record that recorded none drops the section. */}
@@ -831,7 +841,7 @@ export const LiveProposalRow = ({
     >
       <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
         <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-100 text-[16px] truncate min-w-0">
-          {AGENT_DISPLAY_NAME[agentKeyForProposalType(proposal.type)]}
+          {agentDisplayName(agentKeyForProposalType(proposal.type), proposal.agent?.display_name)}
         </p>
         {risk && (
           <span
