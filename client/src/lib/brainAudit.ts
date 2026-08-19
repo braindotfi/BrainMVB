@@ -568,18 +568,10 @@ export function resolveDetailAnchor(
  *    on-chain receipt. Covered-but-no-tx → "recorded_pending_anchor": no
  *    Verify link, no immutability claim, "Recorded at" (not "Anchored at").
  *
- *  KNOWN LIMITATION (list view only): coverage is computed against ONLY the
- *  most recent anchor window (/audit/anchor/latest returns a single row).
- *  Events covered by an EARLIER window are misclassified pending_next_batch
- *  here — coverage appears to "regress" as new windows open, which is
- *  impossible in reality. The detail popup avoids this by fetching the
- *  per-event /audit/event/{id} inclusion_proof (anchorFromInclusionProof
- *  above), but at 90+ list rows that endpoint is impractical and N requests
- *  is not an acceptable workaround. Correct list-level coverage needs a
- *  brain-core batched endpoint (all anchor windows for the tenant, or a bulk
- *  coverage lookup) — tracked in replit.md "Known upstream gaps". Until then
- *  the list may UNDER-claim (show Pending for covered events) but never
- *  over-claims. */
+ *  The latest-window result is a fast initial state. `useBrainAuditRecords`
+ *  subsequently verifies rows outside that window with the authoritative
+ *  per-event inclusion-proof endpoint, so an older anchored event never
+ *  appears to regress to Pending merely because a newer anchor was published. */
 function anchorFor(event: BrainAuditEvent, latest: BrainAnchor | undefined): AnchorProof {
   const auditId = event.id;
   if (latest?.anchoring_mode === "db_only") {
@@ -617,6 +609,56 @@ function anchorFor(event: BrainAuditEvent, latest: BrainAnchor | undefined): Anc
     anchoredAtLabel: label(new Date(latest.period_end).getTime()),
     verifyHref: explorerTxUrl(baseTx),
   };
+}
+
+const AUDIT_PROOF_CONCURRENCY = 6;
+
+/** Resolve the inclusion proofs needed to correct list rows that the
+ * tenant-level latest-anchor response cannot cover. Failed proof lookups are
+ * deliberately omitted: callers retain their conservative list-derived state,
+ * rather than claiming an on-chain anchor they could not verify. */
+export async function fetchAuditInclusionProofs(
+  events: readonly BrainAuditEvent[],
+  signal?: AbortSignal,
+): Promise<Record<string, AnchorProof>> {
+  const uniqueEvents = Array.from(
+    new Map(
+      events
+        .filter((event) => /^evt_/.test(event.id))
+        .map((event) => [event.id, event] as const),
+    ).values(),
+  );
+  const proofs: Record<string, AnchorProof> = {};
+  let nextIndex = 0;
+
+  const worker = async () => {
+    while (nextIndex < uniqueEvents.length) {
+      const event = uniqueEvents[nextIndex++];
+      try {
+        const response = await fetch(`/api/brain/audit/event/${encodeURIComponent(event.id)}`, {
+          credentials: "include",
+          signal,
+        });
+        if (!response.ok) continue;
+        const detail = (await response.json()) as Partial<BrainAuditEventDetail>;
+        if (!detail.inclusion_proof?.merkle_root) continue;
+        proofs[event.id] = anchorFromInclusionProof(
+          event.id,
+          detail.inclusion_proof,
+          detail.event?.created_at ?? event.created_at,
+        );
+      } catch (error) {
+        /* An abort must cancel the React Query request; a single unavailable
+           proof must not turn a complete audit feed into an empty history. */
+        if (signal?.aborted) throw error;
+      }
+    }
+  };
+
+  await Promise.all(
+    Array.from({ length: Math.min(AUDIT_PROOF_CONCURRENCY, uniqueEvents.length) }, worker),
+  );
+  return proofs;
 }
 
 function amountFrom(e: BrainAuditEvent): number | undefined {
@@ -1063,6 +1105,25 @@ export function useBrainAuditRecords(proposals?: ProposalForTracking[]) {
     queryKey: ["/api/brain/audit/anchor/latest"],
     retry: false,
   });
+  /* /audit/anchor/latest describes one window only. Ask each event that is
+     outside that window (or predates an on-chain tenant switching to db-only)
+     for its own inclusion proof. The worker is capped at six concurrent
+     requests; the list never waits on an unbounded request fan-out. */
+  const proofCandidates = useMemo(() => {
+    if (!anchor.data) return [];
+    return (events.data?.events ?? []).filter((event) => {
+      if (!/^evt_/.test(event.id)) return false;
+      const status = anchorFor(event, anchor.data).status;
+      return status === "pending_next_batch" || status === "db_only_hash_chain";
+    });
+  }, [events.data, anchor.data]);
+  const inclusionProofs = useQuery<Record<string, AnchorProof>>({
+    queryKey: ["brain-audit-inclusion-proofs", proofCandidates.map((event) => event.id)],
+    enabled: proofCandidates.length > 0,
+    queryFn: ({ signal }) => fetchAuditInclusionProofs(proofCandidates, signal),
+    retry: false,
+    staleTime: 60_000,
+  });
   const localQuestions = useQuery<LocalQuestionsResponse>({
     queryKey: ["/api/assistant/questions"],
     retry: false,
@@ -1120,9 +1181,16 @@ export function useBrainAuditRecords(proposals?: ProposalForTracking[]) {
      The local id prefix `local-question-` ensures no collision with brain-core ids. */
   const records = useMemo(() => {
     const brainEvents = events.data?.events ?? [];
+    const proofByEventId = inclusionProofs.data ?? {};
     const brainRecords = mergeRelatedAuditRecords(
       brainEvents,
-      brainEvents.map((e) => mapAuditEventToRecord(e, anchor.data, actorLookups.data, proposalTypeMapRef.current)),
+      brainEvents.map((e) => {
+        const record = mapAuditEventToRecord(e, anchor.data, actorLookups.data, proposalTypeMapRef.current);
+        const proofAnchor = proofByEventId[e.id];
+        return proofAnchor
+          ? { ...record, anchor: resolveDetailAnchor(record.anchor, proofAnchor) }
+          : record;
+      }),
     );
     /* Map: normalized question text → Set of timestamps from brain-core wiki.question events */
     const wikiTsByQuestion = new Map<string, Set<number>>();
@@ -1153,10 +1221,10 @@ export function useBrainAuditRecords(proposals?: ProposalForTracking[]) {
       });
     return [...brainRecords, ...localRecords]
       .sort((a, b) => b.occurredAtMs - a.occurredAtMs);
-  }, [events.data, anchor.data, actorLookups.data, localQuestions.data]);
+  }, [events.data, anchor.data, actorLookups.data, inclusionProofs.data, localQuestions.data]);
 
   return {
-    isLoading: events.isLoading || anchor.isLoading || localQuestions.isLoading,
+    isLoading: events.isLoading || anchor.isLoading || inclusionProofs.isLoading || localQuestions.isLoading,
     isError: events.isError,
     records,
     /* Raw count from the complete brain-core feed, BEFORE local assistant-question

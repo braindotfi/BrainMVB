@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { mapAuditEventToRecord, mergeRelatedAuditRecords, anchorFromInclusionProof, resolveDetailAnchor, localQuestionToRecord, applyTenantDbOnly, extractActorName, bffPathForActorLookup, truncateForCard, decidedProposalIdsFromEvents, CARD_TITLE_MAX, humanizeAuditAction, lifecycleStepsForDisplay, fetchAllBrainAuditEvents, type BrainAuditEvent, type BrainAnchor, type BrainInclusionProof } from "./brainAudit";
+import { mapAuditEventToRecord, mergeRelatedAuditRecords, anchorFromInclusionProof, resolveDetailAnchor, localQuestionToRecord, applyTenantDbOnly, extractActorName, bffPathForActorLookup, truncateForCard, decidedProposalIdsFromEvents, CARD_TITLE_MAX, humanizeAuditAction, lifecycleStepsForDisplay, fetchAllBrainAuditEvents, fetchAuditInclusionProofs, type BrainAuditEvent, type BrainAnchor, type BrainInclusionProof } from "./brainAudit";
 import type { AnchorProof } from "./auditTypes";
 
 /**
@@ -82,6 +82,32 @@ describe("fetchAllBrainAuditEvents", () => {
     ));
 
     await expect(fetchAllBrainAuditEvents()).rejects.toThrow(/pagination (returned a repeated event|did not advance)/i);
+  });
+});
+
+describe("fetchAuditInclusionProofs", () => {
+  it("restores an older event's anchored status from its authoritative inclusion proof", async () => {
+    const older = ev({ id: "evt_older", created_at: "2026-06-15T12:00:00.000Z" });
+    const uncovered = ev({ id: "evt_uncovered", created_at: "2026-06-16T12:00:00.000Z" });
+    vi.stubGlobal("fetch", vi.fn(async (input: string) => {
+      const id = input.split("/").at(-1);
+      const inclusion_proof = id === "evt_older"
+        ? { merkle_root: "0xolder-root", anchor_tx_hash: "0xolder-tx", anchor_block: 77 }
+        : null;
+      return new Response(JSON.stringify({ event: id === "evt_older" ? older : uncovered, inclusion_proof }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }));
+
+    const proofs = await fetchAuditInclusionProofs([older, uncovered]);
+
+    expect(proofs.evt_older).toMatchObject({
+      status: "anchored",
+      merkleRoot: "0xolder-root",
+      baseTx: "0xolder-tx",
+    });
+    expect(proofs.evt_uncovered).toBeUndefined();
   });
 });
 
