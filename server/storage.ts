@@ -94,6 +94,7 @@ export interface IStorage {
 
   // Brain identities (production tenancy: durable appUserId → external_ref/tenant mapping)
   getBrainIdentity(userId: string): Promise<BrainIdentity | undefined>;
+  hasBrainIdentityForTenant(tenantId: string): Promise<boolean>;
   createBrainIdentity(identity: InsertBrainIdentity): Promise<BrainIdentity>;
   /** Finalize a pending-create tombstone with the real tenant/member ids (durable tenancy). */
   updateBrainIdentityTenant(
@@ -757,6 +758,9 @@ export class MemStorage implements IStorage {
   private brainIdentitiesStore = new Map<string, BrainIdentity>();
   async getBrainIdentity(userId: string): Promise<BrainIdentity | undefined> {
     return this.brainIdentitiesStore.get(userId);
+  }
+  async hasBrainIdentityForTenant(tenantId: string): Promise<boolean> {
+    return Array.from(this.brainIdentitiesStore.values()).some((identity) => identity.tenantId === tenantId);
   }
   async createBrainIdentity(identity: InsertBrainIdentity): Promise<BrainIdentity> {
     const row: BrainIdentity = {
@@ -1465,6 +1469,14 @@ export class DatabaseStorage implements IStorage {
       .where(eq(brainIdentitiesTable.userId, userId))
       .limit(1);
     return row ?? undefined;
+  }
+  async hasBrainIdentityForTenant(tenantId: string): Promise<boolean> {
+    const [row] = await db
+      .select({ userId: brainIdentitiesTable.userId })
+      .from(brainIdentitiesTable)
+      .where(eq(brainIdentitiesTable.tenantId, tenantId))
+      .limit(1);
+    return row !== undefined;
   }
   async createBrainIdentity(identity: InsertBrainIdentity): Promise<BrainIdentity> {
     const [row] = await db.insert(brainIdentitiesTable).values(identity).returning();
