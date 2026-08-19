@@ -44,7 +44,7 @@ export interface BrainAccountsResponse {
 }
 
 /**
- * "Money in all accounts", computed honestly.
+ * Cash held in accounts, computed honestly.
  *
  * The old total added up `current_balance` across every account it was handed.
  * On a live demo tenant that meant summing two USD bank accounts and an ETH
@@ -72,6 +72,8 @@ export type AccountsTotalKind =
   | "incomplete"
   /** No accounts at all. */
   | "none"
+  /** Accounts exist, but all are cards or borrowing accounts. */
+  | "no_cash_accounts"
   /** Accounts exist, but none in the display currency. */
   | "no_matching_currency"
   /** Accounts exist in the display currency, but none reported a balance. */
@@ -86,6 +88,19 @@ export interface AccountsTotalView {
   excludedCount: number;
   /** Distinct currency codes of those accounts, for the caption. */
   excludedCurrencies: string[];
+  /** Credit and borrowing accounts shown separately, never included in cash. */
+  excludedNonCashCount: number;
+}
+
+const CASH_ACCOUNT_KINDS: ReadonlySet<AccountKind> = new Set([
+  "bank_checking",
+  "bank_savings",
+  "onchain",
+  "payment_processor",
+]);
+
+export function isCashAccount(account: BrainAccountDTO): boolean {
+  return CASH_ACCOUNT_KINDS.has(account.account_type);
 }
 
 export function accountsTotalView(input: {
@@ -100,6 +115,7 @@ export function accountsTotalView(input: {
     currency: null,
     excludedCount: 0,
     excludedCurrencies: [],
+    excludedNonCashCount: 0,
   };
 
   if (failed) return { kind: "failed", ...none };
@@ -109,7 +125,12 @@ export function accountsTotalView(input: {
 
   const matching: BrainAccountDTO[] = [];
   const excluded: string[] = [];
+  let excludedNonCashCount = 0;
   for (const a of read.rows) {
+    if (!isCashAccount(a)) {
+      excludedNonCashCount += 1;
+      continue;
+    }
     const code = (a.currency || "").toUpperCase();
     if (code && code === target) matching.push(a);
     /* A blank currency is not evidence of the display currency. Counting it in
@@ -117,9 +138,19 @@ export function accountsTotalView(input: {
     else excluded.push(code || "unspecified");
   }
   const excludedCurrencies = [...new Set(excluded)].sort();
-  const withExclusions = { ...none, excludedCount: excluded.length, excludedCurrencies };
+  const withExclusions = {
+    ...none,
+    excludedCount: excluded.length,
+    excludedCurrencies,
+    excludedNonCashCount,
+  };
 
-  if (matching.length === 0) return { kind: "no_matching_currency", ...withExclusions };
+  if (matching.length === 0) {
+    return {
+      kind: excluded.length === 0 && excludedNonCashCount > 0 ? "no_cash_accounts" : "no_matching_currency",
+      ...withExclusions,
+    };
+  }
 
   // A null balance is "not reported", not zero — it must not deflate the total.
   const readable = matching
@@ -133,6 +164,7 @@ export function accountsTotalView(input: {
     currency: target,
     excludedCount: excluded.length,
     excludedCurrencies,
+    excludedNonCashCount,
   };
 }
 

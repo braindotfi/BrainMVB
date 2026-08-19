@@ -34,6 +34,7 @@ import { AccountDetailPopup } from "@/components/AccountDetailPopup";
 import { UnavailableDataBox } from "@/components/Callout";
 import {
   ACCOUNT_KIND_LABEL as KIND_LABEL,
+  isCashAccount,
   type BrainAccountDTO,
   type BrainAccountsResponse,
 } from "@/lib/brainAccounts";
@@ -167,8 +168,23 @@ function mapBrainAccounts(list: BrainAccountDTO[]): AccountRow[] {
       currency: a.currency,
     };
   });
-  const total = list.reduce((sum, a) => sum + (a.current_balance != null ? Number(a.current_balance) || 0 : 0), 0);
-  rows.push({ name: "Account Totals", sub: "Across bank, crypto and agents", sub2: "", balance: total });
+  const cashTotals = new Map<string, number>();
+  for (const account of list) {
+    if (!isCashAccount(account) || account.current_balance == null) continue;
+    const value = Number(account.current_balance);
+    if (!Number.isFinite(value)) continue;
+    const currency = account.currency.toUpperCase();
+    cashTotals.set(currency, (cashTotals.get(currency) ?? 0) + value);
+  }
+  for (const [currency, total] of [...cashTotals].sort(([left], [right]) => left.localeCompare(right))) {
+    rows.push({
+      name: `${currency} Cash Total`,
+      sub: "Across checking, savings, processor, and on-chain cash",
+      sub2: "Cards and borrowing are shown separately",
+      balance: total,
+      currency,
+    });
+  }
   return rows;
 }
 

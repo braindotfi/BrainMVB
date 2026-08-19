@@ -29,7 +29,13 @@ import {
   Shield,
 } from "lucide-react";
 import { useRule, pauseRule, resumeRule, lowerCap, setThreshold, deleteRule } from "@/lib/rulesStore";
-import { usePolicyRule, APPLIES_TO_LABEL, EXECUTE_LABEL, describeWhen } from "@/lib/brainPolicy";
+import {
+  usePolicyRule,
+  APPLIES_TO_LABEL,
+  EXECUTE_LABEL,
+  describeWhen,
+  policyRuleLabel,
+} from "@/lib/brainPolicy";
 import type { PolicyContentRule } from "@/lib/brainPolicy";
 import { useCurrency } from "@/lib/useCurrency";
 import type { ProblemReport, RuleHistoryEvent } from "@/lib/proposalTypes";
@@ -50,7 +56,12 @@ export function RuleDetail() {
   const [, navigate] = useLocation();
   const { format, symbol } = useCurrency();
   const rule = useRule(params?.id);
-  const { rule: policyRule, isLoading: policyLoading, isError: policyError } = usePolicyRule(params?.id);
+  const {
+    rule: policyRule,
+    policyLabel,
+    isLoading: policyLoading,
+    isError: policyError,
+  } = usePolicyRule(params?.id);
   const isPolicy = params?.id?.startsWith("policy-") ?? false;
 
   const [resumeModalOpen, setResumeModalOpen] = useState(false);
@@ -170,7 +181,7 @@ export function RuleDetail() {
           )}
 
           {isPolicy && policyRule ? (
-            <PolicyDetailHeader rule={policyRule} />
+            <PolicyDetailHeader rule={policyRule} policyLabel={policyLabel} />
           ) : rule ? (
             <div className="flex items-start gap-[12px] w-full">
               <div className="flex flex-col gap-[6px] flex-1 min-w-px">
@@ -201,7 +212,9 @@ export function RuleDetail() {
           )}
 
           {/* Policy rule detail body: read-only, shows all DSL fields */}
-          {isPolicy && policyRule && <PolicyDetailBody rule={policyRule} />}
+          {isPolicy && policyRule && (
+            <PolicyDetailBody rule={policyRule} policyLabel={policyLabel} />
+          )}
 
           {/* Everything below is ONLY for app-local rules */}
           {!isPolicy && rule && (
@@ -708,9 +721,14 @@ function AmountRow({
    Shows all DSL fields: applies_to, when conditions, execute, require,
    plus policy version + quorum metadata. No Pause/Resume/Delete. */
 
-function PolicyDetailHeader({ rule }: { rule: PolicyContentRule }) {
+function PolicyDetailHeader({
+  rule,
+  policyLabel,
+}: {
+  rule: PolicyContentRule;
+  policyLabel: string;
+}) {
   const [, navigate] = useLocation();
-  const rawName = rule.id.replace(/[-_]/g, " ");
   const appliesTo = (rule.applies_to ?? [])
     .map((a) => APPLIES_TO_LABEL[a] ?? a)
     .join(", ") || "any action";
@@ -737,7 +755,7 @@ function PolicyDetailHeader({ rule }: { rule: PolicyContentRule }) {
               className="[font-family:'Gilroy',sans-serif] font-semibold leading-[32px] text-brain-v1baby-blue-100 text-[26px]"
               data-testid="text-rule-name"
             >
-              {titleCase(rawName)}
+              {policyRuleLabel(rule)}
             </p>
             <span
               data-testid="pill-rule-status"
@@ -749,8 +767,8 @@ function PolicyDetailHeader({ rule }: { rule: PolicyContentRule }) {
           <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[14px]">
             {titleCase(appliesTo)} · {titleCase(executeLabel)}
           </p>
-          <p className="[font-family:'JetBrains_Mono',monospace] leading-[16px] text-brain-v1baby-blue-60 text-[12px]">
-            {rule.id} · From your active Brain policy
+          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[12px]">
+            From {policyLabel}
           </p>
         </div>
       </div>
@@ -758,7 +776,13 @@ function PolicyDetailHeader({ rule }: { rule: PolicyContentRule }) {
   );
 }
 
-function PolicyDetailBody({ rule }: { rule: PolicyContentRule }) {
+function PolicyDetailBody({
+  rule,
+  policyLabel,
+}: {
+  rule: PolicyContentRule;
+  policyLabel: string;
+}) {
   const { format } = useCurrency();
   const conditions = describeWhen(rule.when ?? {}, format);
   const appliesTo = rule.applies_to ?? [];
@@ -781,22 +805,6 @@ function PolicyDetailBody({ rule }: { rule: PolicyContentRule }) {
         {/* Panel body - rows with dividers */}
         <div className="content-stretch flex flex-col items-start p-[8px] relative shrink-0 w-full">
           <div className="content-stretch flex flex-col gap-[8px] items-start relative shrink-0 w-full">
-            {/* ID row */}
-            <div className="bg-brain-v1highlight-dropdown-bg content-stretch flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
-              <div className="content-stretch flex flex-col items-start justify-center relative shrink-0 w-[160px]">
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[16px] whitespace-nowrap">
-                  ID
-                </p>
-              </div>
-              <div className="content-stretch flex flex-[1_0_0] flex-col items-end justify-center min-w-px relative">
-                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-100 text-[16px] whitespace-nowrap">
-                  {rule.id}
-                </p>
-              </div>
-            </div>
-
-            <Divider />
-
             {/* Applies To row */}
             <div className="bg-brain-v1highlight-dropdown-bg content-stretch flex gap-[16px] items-center p-[8px] relative rounded-[8px] shrink-0 w-full">
               <div className="content-stretch flex flex-col items-start justify-center relative shrink-0 w-[160px]">
@@ -806,7 +814,9 @@ function PolicyDetailBody({ rule }: { rule: PolicyContentRule }) {
               </div>
               <div className="content-stretch flex flex-[1_0_0] flex-col items-end justify-center min-w-px relative">
                 <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-100 text-[16px] whitespace-nowrap">
-                  {appliesTo.length > 0 ? appliesTo.join(", ") : "any action"}
+                  {appliesTo.length > 0
+                    ? appliesTo.map((scope) => APPLIES_TO_LABEL[scope] ?? "matching actions").join(", ")
+                    : "any action"}
                 </p>
               </div>
             </div>
@@ -838,7 +848,7 @@ function PolicyDetailBody({ rule }: { rule: PolicyContentRule }) {
               </div>
               <div className="content-stretch flex flex-[1_0_0] flex-col items-end justify-center min-w-px relative">
                 <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-100 text-[16px] whitespace-nowrap">
-                  {execute}
+                  {EXECUTE_LABEL[execute] ?? "requires review"}
                 </p>
               </div>
             </div>
@@ -866,7 +876,7 @@ function PolicyDetailBody({ rule }: { rule: PolicyContentRule }) {
 
       {/* Info banner — moved below the table; matches Inbox purple style */}
       <PolicyCallout testId="text-policy-info">
-        This rule is part of your Brain core default policy. It is enforced by Brain for every action and cannot be edited or paused from this app. Changes must be made through Brain core’s admin layer.
+        This rule is part of {policyLabel}. Brain enforces it for every matching action, and it cannot be edited or paused from this app. Changes must be made through Brain core’s admin layer.
       </PolicyCallout>
     </div>
   );
