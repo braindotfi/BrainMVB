@@ -997,15 +997,15 @@ export interface BrainAuditEvent {
 
 export interface ListAuditEventsResponse {
   events: BrainAuditEvent[];
-  next_cursor?: string | null;
 }
 
 /** GET /audit/events - audit trail (MEMBER token, audit:read). */
 export function listAuditEvents(
   token: string,
-  query?: { limit?: number; cursor?: string },
+  query?: { limit?: number; since?: string; until?: string },
+  timeoutMs?: number,
 ): Promise<ListAuditEventsResponse> {
-  return brainRequest<ListAuditEventsResponse>("/audit/events", { token, query });
+  return brainRequest<ListAuditEventsResponse>("/audit/events", { token, query, timeoutMs });
 }
 
 // ─── Tenant API keys (brain-core PR #309: /tenants/:id/keys, /keys/:id) ──────

@@ -83,6 +83,8 @@ interface UsageResponse {
   daily: Array<{ date: string; count: number }>;
   windowDays: number;
   environment: DevEnv;
+  /** False means the audit cursor did not prove the requested window was complete. */
+  complete: boolean;
 }
 
 /** brain-core per-key usage attribution (camelCase wire shape from the
@@ -144,7 +146,7 @@ const API_ENDPOINTS: Array<{ path: string; scope: string | null; description: st
   { path: "/api/v1/ping", scope: null, description: "Verify a key works and complete the checklist above" },
   { path: "/api/v1/ledger/accounts", scope: "ledger:read", description: "Ledger accounts for your tenant" },
   { path: "/api/v1/ledger/transactions", scope: "ledger:read", description: "Ledger transactions (supports ?limit=, max 200)" },
-  { path: "/api/v1/audit/events", scope: "audit:read", description: "Audit events (supports ?limit= and ?cursor=)" },
+  { path: "/api/v1/audit/events", scope: "audit:read", description: "Audit events (supports ?limit=)" },
 ];
 
 const GET_STARTED_STEP_ICONS = [stepOneIcon, stepTwoIcon, stepThreeIcon] as const;
@@ -1754,6 +1756,7 @@ function UsageSection({ env }: { env: DevEnv }) {
   const tier = planId ? PLAN_RATE_LIMITS[planId] : null;
 
   const data = usageQ.data;
+  const usageIsComplete = data?.complete !== false;
   let thisMonth = 0;
   let priorMonth = 0;
   if (data) {
@@ -1778,11 +1781,13 @@ function UsageSection({ env }: { env: DevEnv }) {
               Requests This Month
             </p>
             <p className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[40px] leading-[48px]">
-              {usageQ.isLoading ? "…" : usageQ.isError ? "-" : String(thisMonth)}
+              {usageQ.isLoading ? "…" : usageQ.isError ? "-" : `${usageIsComplete ? "" : "At least "}${thisMonth}`}
             </p>
             <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px]">
               {usageQ.isError
                 ? "Usage unavailable"
+                : !usageIsComplete
+                  ? "Partial audit read — trend unavailable"
                 : trend === null
                   ? "No prior-month data to compare"
                   : `${trend >= 0 ? "+" : ""}${trend}% vs. last month`}
@@ -1838,10 +1843,19 @@ function UsageSection({ env }: { env: DevEnv }) {
             <EmptyRow>Loading usage…</EmptyRow>
           ) : usageQ.isError ? (
             <EmptyRow>Usage is unavailable because brain-core audit events couldn't be read.</EmptyRow>
+          ) : data?.complete === false && !data.byAction.length ? (
+            <EmptyRow>
+              The audit feed did not prove the requested window was complete, so no usage total is available.
+            </EmptyRow>
           ) : !data?.byAction.length ? (
             <EmptyRow>No {env} calls recorded in the last {data?.windowDays ?? 60} days.</EmptyRow>
           ) : (
             <div className="flex flex-col gap-[16px] p-[16px]">
+              {data.complete === false && (
+                <PolicyCallout>
+                  The audit feed did not prove the requested window was complete. The counts below are minimums, not totals.
+                </PolicyCallout>
+              )}
               {data.byAction.map((a, i) => {
                 const max = data.byAction[0]?.count || 1;
                 const isOpen = expandedAction === a.action;

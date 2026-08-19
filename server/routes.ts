@@ -62,8 +62,8 @@ const SEED_EXPECTED_WITHIN_MS = 10 * 60_000;
 import { generateNonce } from "./nonce";
 import {
   aggregateUsage,
+  readUsageAuditEvents,
   API_KEY_SCOPES,
-  type UsageAuditEvent,
 } from "./developers";
 import { ANTHROPIC_MODEL } from "./anthropicModel";
 import { isDegenerateWikiPayload } from "./wikiAnswerGuard";
@@ -539,7 +539,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     // environment therefore honestly has zero traffic (not "unknown").
     const tenantEnvironment = brainTenancyMode() === "production" ? "live" : "sandbox";
     if (environment !== tenantEnvironment) {
-      return res.json({ ...aggregateUsage([], windowDays), environment });
+      return res.json({ ...aggregateUsage([], windowDays), environment, complete: true });
     }
     if (!brainAuthConfigured()) {
       return res.status(503).json({
@@ -549,25 +549,40 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
     try {
       const { token, baseUrl } = await getBrainSession(req.session.userId!);
-      // Page through audit events (bounded: 5 pages × 200 = 1000 events max —
-      // plenty for a 90-day demo/POC window; older events fall out of the window).
-      const events = await withBrainBaseUrl(baseUrl, async () => {
-        const evts: UsageAuditEvent[] = [];
-        let cursor: string | undefined = undefined;
-        for (let page = 0; page < 5; page++) {
-          const batch = await listAuditEvents(token, { limit: 200, cursor });
-          evts.push(...batch.events.map((e) => ({
+      /* Request only the UTC calendar window that aggregateUsage counts. The
+         documented audit endpoint does not expose a cursor or total; a full
+         page below is therefore an honest lower bound, never a complete total. */
+      const now = new Date();
+      const windowStart = new Date(Date.UTC(
+        now.getUTCFullYear(),
+        now.getUTCMonth(),
+        now.getUTCDate() - (windowDays - 1),
+      ));
+      const windowEnd = new Date(Date.UTC(
+        now.getUTCFullYear(),
+        now.getUTCMonth(),
+        now.getUTCDate() + 1,
+      ) - 1);
+      const auditRead = await withBrainBaseUrl(baseUrl, async () => {
+        const batch = await listAuditEvents(token, {
+          limit: 200,
+          since: windowStart.toISOString(),
+          until: windowEnd.toISOString(),
+        }, 10_000);
+        return readUsageAuditEvents(
+          batch.events.map((e) => ({
             id: e.id,
             layer: e.layer,
             action: e.action,
             created_at: e.created_at,
-          })));
-          if (!batch.next_cursor || batch.events.length === 0) break;
-          cursor = batch.next_cursor;
-        }
-        return evts;
+          })),
+        );
       });
-      return res.json({ ...aggregateUsage(events, windowDays), environment });
+      return res.json({
+        ...aggregateUsage(auditRead.events, windowDays, now),
+        environment,
+        complete: auditRead.complete,
+      });
     } catch (error: any) {
       console.error("Developers usage error:", error);
       if (error instanceof BrainApiError) {
@@ -683,7 +698,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   registerKeyAuthedRead("/api/v1/audit/events", (apiKey, req) =>
     listAuditEvents(apiKey, {
       limit: clampLimit(req.query.limit, 50, 200),
-      cursor: typeof req.query.cursor === "string" ? req.query.cursor : undefined,
     }),
   );
 

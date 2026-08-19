@@ -38,6 +38,49 @@ export interface UsageSummary {
   windowDays: number;
 }
 
+export interface UsageAuditRead {
+  events: UsageAuditEvent[];
+  /** The documented audit response never proves that its date range is exhausted. */
+  complete: boolean;
+}
+
+/**
+ * Assess one documented audit-events response for usage aggregation.
+ *
+ * The authoritative brain-core API surface supplies `{ events }` with a
+ * `limit`, but no cursor, total, or range-exhaustion indicator. The returned
+ * rows are useful as a lower bound, but the server must not present any count
+ * as a complete total until brain-core publishes an explicit proof.
+ */
+export function readUsageAuditEvents(
+  events: UsageAuditEvent[],
+): UsageAuditRead {
+  const receivedEventIds = new Set<string>();
+  const uniqueEvents: UsageAuditEvent[] = [];
+
+  for (const event of events) {
+    if (
+      !event ||
+      typeof event.id !== "string" ||
+      typeof event.layer !== "string" ||
+      typeof event.action !== "string" ||
+      typeof event.created_at !== "string"
+    ) {
+      throw new Error("Audit usage response contained an invalid event.");
+    }
+    /* An invalid response must not inflate the lower bound. The endpoint
+       cannot page, so an id repeated inside one response is the only replay
+       shape available to guard. */
+    if (receivedEventIds.has(event.id)) {
+      return { events: uniqueEvents, complete: false };
+    }
+    receivedEventIds.add(event.id);
+    uniqueEvents.push(event);
+  }
+
+  return { events: uniqueEvents, complete: false };
+}
+
 /**
  * Aggregate audit events into the Usage page shape. Window is the last
  * `windowDays` UTC days ending at `now` (inclusive); events outside it are

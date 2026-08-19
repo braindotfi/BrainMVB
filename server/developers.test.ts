@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { aggregateUsage, type UsageAuditEvent } from "./developers";
+import { aggregateUsage, readUsageAuditEvents, type UsageAuditEvent } from "./developers";
 
 describe("aggregateUsage", () => {
   const now = new Date("2026-07-21T12:00:00.000Z");
@@ -53,5 +53,36 @@ describe("aggregateUsage", () => {
   it("sorts byAction descending with alphabetical tie-break", () => {
     const out = aggregateUsage([ev(0, "b.act"), ev(0, "a.act")], 3, now);
     expect(out.byAction.map((a) => a.action)).toEqual(["a.act", "b.act"]);
+  });
+});
+
+describe("readUsageAuditEvents", () => {
+  const now = new Date("2026-07-21T12:00:00.000Z");
+  const event = (index: number): UsageAuditEvent => ({
+    id: `evt_${index}`,
+    layer: "ledger",
+    action: "ledger.read",
+    created_at: now.toISOString(),
+  });
+
+  it("marks a high-volume window as incomplete instead of understating its total", () => {
+    /* The authoritative audit contract exposes no cursor. A high-volume
+       window that would have needed six 200-event pages can only return the
+       first full page, so that lower bound must never look like a total. */
+    const read = readUsageAuditEvents(
+      Array.from({ length: 200 }, (_, index) => event(index)),
+    );
+
+    expect(read.complete).toBe(false);
+    expect(read.events).toHaveLength(200);
+    expect(aggregateUsage(read.events, 1, now).totalEvents).toBe(200);
+  });
+
+  it("reports repeated events as incomplete without counting either event twice", () => {
+    const first = event(0);
+    const read = readUsageAuditEvents([first, first]);
+
+    expect(read.complete).toBe(false);
+    expect(read.events).toEqual([first]);
   });
 });
