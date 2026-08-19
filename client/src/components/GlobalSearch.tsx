@@ -28,7 +28,7 @@ import { useBrainVendors } from "@/lib/brainVendors";
 import { useFeed } from "@/lib/feed";
 import { openVendorDetail } from "@/lib/openVendorDetail";
 import { buildProposalHeaderCopy } from "@/lib/proposalCards";
-import { AGENT_DISPLAY_NAME } from "@/components/AgentProposalModal";
+import { agentDisplayName } from "@/lib/agentProposals";
 import { ACCOUNT_KIND_LABEL, type BrainAccountsResponse } from "@/lib/brainAccounts";
 import searchIcon from "@assets/search_1785584120256.png";
 import {
@@ -66,7 +66,7 @@ export function GlobalSearch() {
     for (const p of decisionsQ.proposals) {
       /* Same headline helper the Decisions rows use, so a record is called the
          same thing in the search list and on the card it opens. */
-      const agentName = p.agent?.display_name || AGENT_DISPLAY_NAME[agentKeyForProposalType(p.type)];
+      const agentName = agentDisplayName(agentKeyForProposalType(p.type), p.agent?.display_name);
       const copy = buildProposalHeaderCopy(p, agentName, formatText);
       out.push(
         decisionResult({ id: p.id, title: copy.title, detail: copy.text, extra: `${agentName} ${p.type}` }),
