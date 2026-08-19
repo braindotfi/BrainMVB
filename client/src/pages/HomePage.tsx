@@ -618,7 +618,7 @@ export function HomePage() {
   ]);
 
 
-  // "Money in all accounts" total from brain-core's Ledger (via the BFF proxy).
+  // Cash total from brain-core's Ledger (via the BFF proxy).
   // Falls back to the static figure when brain-core is unreachable/unconfigured.
   /* The full DTO, not just `current_balance`: bank concentration needs each
      account's institution and type, and a second query for the same rows would
@@ -647,6 +647,11 @@ export function HomePage() {
     const left = accountsTotal.excludedCurrencies.join(", ");
     const n = accountsTotal.excludedCount;
     const plural = n === 1 ? "account" : "accounts";
+    const nonCash = accountsTotal.excludedNonCashCount;
+    const nonCashNote =
+      nonCash > 0
+        ? ` Excludes ${nonCash} card or borrowing ${nonCash === 1 ? "account" : "accounts"}.`
+        : "";
     switch (accountsTotal.kind) {
       case "failed":
         return "Couldn't read your accounts. This is a connection problem, not an empty balance.";
@@ -656,14 +661,16 @@ export function HomePage() {
         return "Part of your account list couldn't be read, so a total would understate this.";
       case "none":
         return "No accounts connected yet. Add one in Settings, under Sources.";
+      case "no_cash_accounts":
+        return "No cash accounts are connected. Cards and borrowing are shown separately in Ledger.";
       case "no_matching_currency":
         return `No ${currency} accounts. Your ${n} ${plural} are held in ${left}, which can't be converted.`;
       case "unreadable":
         return "Your accounts didn't report a balance.";
       case "value":
         return n > 0
-          ? `Across your ${currency} accounts. Excludes ${n} ${plural} held in ${left} — there's no conversion rate.`
-          : "Across bank, digital, and agent accounts.";
+          ? `Across your ${currency} cash accounts. Excludes ${n} ${plural} held in ${left} because there is no conversion rate.${nonCashNote}`
+          : `Across checking, savings, processor, and on-chain cash.${nonCashNote}`;
     }
   }, [accountsTotal, currency]);
   const { whole: totalWhole, cents: totalCents } = splitMetricAmount(totalFormatted);
@@ -950,7 +957,7 @@ export function HomePage() {
                 chat panel is collapsed. */}
             <div className="grid gap-[16px] w-full" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}>
               <MetricCard
-                label="Money in all accounts"
+                label="Cash in accounts"
                 whole={totalWhole}
                 cents={totalCents}
                 caption={totalCaption}

@@ -530,7 +530,7 @@ interface ActivePolicy {
    *  embedded inside the policy document body and is NOT the policy engine's
    *  active policy_version reported in proposal traces. */
   version?: number;
-  content?: { version?: number; rules?: PolicyContentRule[] };
+  content?: { version?: number; seed_key?: string; rules?: PolicyContentRule[] };
   quorum_required?: number;
 }
 
@@ -555,6 +555,8 @@ export interface ApprovalPolicyFacts {
   version: number | null;
   quorumRequired: number;
   rules: PolicyContentRule[];
+  /** Curated tenant-facing label derived server-side without exposing seed metadata. */
+  policyLabel: string;
 }
 
 /**
@@ -585,6 +587,10 @@ export async function getApprovalPolicyFacts(token: string, tenantId: string): P
     version: policy.version ?? null,
     quorumRequired: policy.quorum_required ?? 1,
     rules,
+    policyLabel:
+      policy.content?.seed_key === "northstar_labs_v1"
+        ? "Northstar curated policy"
+        : "Brain protection policy",
   };
 }
 
@@ -602,7 +608,7 @@ export async function askWikiQuestion(token: string, question: string): Promise<
   let raw = "";
   if (resp.answer !== null && resp.answer !== undefined && hasMeaningfulScalar(resp.answer)) {
     const answerStr = typeof resp.answer === "string" ? resp.answer : JSON.stringify(resp.answer);
-    raw = stripFence(answerStr);
+    raw = stripFence(answerStr).replace(/\bno_match\b/gi, "no matching ledger record");
   }
 
   // Dedup evidence by id; the richest record (one that carries an excerpt) wins.

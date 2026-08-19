@@ -62,6 +62,17 @@ describe("askWikiQuestion raw answer normalization", () => {
     expect(out.answered).toBe(true);
   });
 
+  it("never exposes the internal no_match recommendation marker", async () => {
+    mockWikiResponse({
+      answer: "Recommendation: no_match",
+      answered: true,
+      model: "structured-proposal-query",
+    });
+    const out = await askWikiQuestion("tok", "q");
+    expect(out.raw).toBe("Recommendation: no matching ledger record");
+    expect(out.raw).not.toContain("no_match");
+  });
+
   it("meaningful object answer is stringified and passes through", async () => {
     mockWikiResponse({ answer: { count: 19 }, answered: true, model: "claude-x" });
     const out = await askWikiQuestion("tok", "q");

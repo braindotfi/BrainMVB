@@ -26,6 +26,32 @@ describe("accountsTotalView", () => {
     expect(v.excludedCount).toBe(0);
   });
 
+  it("keeps a corporate card balance out of cash", () => {
+    const v = accountsTotalView({
+      failed: false,
+      read: complete([
+        acct({ current_balance: "482750.00" }),
+        acct({ id: "reserve", account_type: "bank_savings", current_balance: "1200000.00" }),
+        acct({ id: "card", account_type: "card", current_balance: "28640.00" }),
+      ]),
+      displayCurrency: "USD",
+    });
+
+    expect(v.total).toBe(1682750);
+    expect(v.excludedNonCashCount).toBe(1);
+  });
+
+  it("does not describe a card-only account list as cash", () => {
+    const v = accountsTotalView({
+      failed: false,
+      read: complete([acct({ account_type: "card", current_balance: "28640.00" })]),
+      displayCurrency: "USD",
+    });
+
+    expect(v.kind).toBe("no_cash_accounts");
+    expect(v.total).toBeNull();
+  });
+
   /* The bug this function exists for: a live demo tenant holds two USD banks and
      an ETH smart account, and the old total added the ETH figure to the dollars. */
   it("never adds a foreign-currency balance into the total", () => {

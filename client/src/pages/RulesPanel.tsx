@@ -527,6 +527,7 @@ export function RulesPanel() {
     isError: policyError,
     version: policyVersion,
     quorum: policyQuorum,
+    policyLabel,
   } = useBrainPolicy();
   const rulesHydration = useRulesHydration();
   const automations = rules.filter((r) => (r.kind ?? "automation") === "automation");
@@ -989,9 +990,10 @@ export function RulesPanel() {
       <div className="flex flex-col gap-[10px] w-full">
       <WidgetHeader title="Rules" count={activeCount}>
         {activeTab === "Default" && !policyLoading && !policyError && policyVersion != null && (
-          <p className="ml-auto [font-family:'JetBrains_Mono',monospace] text-[12px] leading-[16px] text-brain-v1baby-blue-60 whitespace-nowrap">
-            v{policyVersion} · quorum {policyQuorum}
-          </p>
+          <div className="ml-auto flex items-center gap-[8px] text-[12px] leading-[16px] text-brain-v1baby-blue-60 whitespace-nowrap">
+            <span className="[font-family:'Gilroy',sans-serif] font-semibold">{policyLabel}</span>
+            <span className="[font-family:'JetBrains_Mono',monospace]">v{policyVersion} · quorum {policyQuorum}</span>
+          </div>
         )}
       </WidgetHeader>
 
@@ -1007,7 +1009,7 @@ export function RulesPanel() {
             {/* Default-specific purple info banner */}
             {!policyLoading && !policyError && (
               <PolicyCallout>
-                These rules are created automatically by Brain as a default policy layer to protect every tenant. They establish essential safeguards from the start, ensuring consistent security, governance, and oversight before any custom rules are added.
+                These are the active rules in {policyLabel}. Brain enforces them for every matching action. Changes must be made through Brain core’s admin layer.
               </PolicyCallout>
             )}
           </>

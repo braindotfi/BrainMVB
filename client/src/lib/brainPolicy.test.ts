@@ -41,6 +41,21 @@ describe("mapPolicyRuleToCard", () => {
     expect(card.summary).not.toMatch(/requires/);
   });
 
+  it("renders curated Northstar policy labels without implementation identifiers", () => {
+    const card = mapPolicyRuleToCard({
+      id: "northstar-ap-auto-approved",
+      applies_to: ["outbound_payment"],
+      when: { "counterparty.in": "vendors.policy_allowlisted" },
+      execute: "auto",
+    });
+
+    expect(card.name).toBe("Approved Vendor Payments");
+    expect(card.id).toBe("policy-approved-vendor-payments");
+    expect(card.summary).toContain("the policy-approved vendor list");
+    expect(card.summary).not.toContain("northstar-ap-auto-approved");
+    expect(card.summary).not.toContain("vendors.policy_allowlisted");
+  });
+
   it("renders an amount threshold when the policy actually carries one", () => {
     const card = mapPolicyRuleToCard({
       id: "large-payment-dual-control",

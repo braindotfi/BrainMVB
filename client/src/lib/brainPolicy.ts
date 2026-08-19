@@ -53,6 +53,7 @@ export interface ApprovalPolicyFacts {
   version: number | null;
   quorumRequired: number;
   rules: PolicyContentRule[];
+  policyLabel?: string;
 }
 
 export const APPLIES_TO_LABEL: Record<string, string> = {
@@ -79,6 +80,34 @@ function fmtAmt(v: string): string {
 }
 
 const C_LEVEL = new Set(["cfo", "ceo", "coo", "cto", "cmo", "cpo", "cro"]);
+const POLICY_RULE_LABELS: Record<string, string> = {
+  "northstar-ap-auto-approved": "Approved Vendor Payments",
+  "northstar-ap-review": "Payment Review",
+  "northstar-collections-review": "Collections Outreach Review",
+  "default-money-requires-confirmation": "Money Movement Approval",
+  "default-non-money-confidence-floor": "Trusted Non-Money Actions",
+};
+const POLICY_LIST_LABELS: Record<string, string> = {
+  "vendors.policy_allowlisted": "the policy-approved vendor list",
+};
+
+export function policyRuleLabel(rule: PolicyContentRule): string {
+  const known = POLICY_RULE_LABELS[rule.id];
+  if (known) return known;
+  const scope = (rule.applies_to ?? [])[0];
+  const scopeLabel = scope ? APPLIES_TO_LABEL[scope] ?? "matching actions" : "matching actions";
+  if (rule.execute === "auto") return `Automated ${scopeLabel}`;
+  if (rule.execute === "reject") return `Blocked ${scopeLabel}`;
+  return `${scopeLabel.charAt(0).toUpperCase()}${scopeLabel.slice(1)} Approval`;
+}
+
+export function policyRuleCardId(rule: PolicyContentRule): string {
+  const slug = policyRuleLabel(rule)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+  return `policy-${slug}`;
+}
 /** Render a `require` field value (e.g. "single_signer", "cfo") as plain English
  *  with C-suite acronyms uppercased. */
 function formatRequire(require: string): string {
@@ -102,9 +131,15 @@ export function describeWhen(when: Record<string, unknown>, fmt: (v: string | nu
   const agentRole = when["agent.role"];
   if (typeof agentRole === "string") parts.push(`agent role: ${agentRole}`);
   const inList = when["counterparty.in"];
-  if (typeof inList === "string") parts.push(`counterparty in ${inList}`);
+  if (typeof inList === "string") {
+    parts.push(`counterparty in ${POLICY_LIST_LABELS[inList] ?? "the configured counterparty list"}`);
+  }
   const notInList = when["counterparty.not_in"];
-  if (typeof notInList === "string") parts.push(`counterparty not in ${notInList}`);
+  if (typeof notInList === "string") {
+    parts.push(
+      `counterparty not in ${POLICY_LIST_LABELS[notInList] ?? "the configured counterparty list"}`,
+    );
+  }
   return parts;
 }
 
@@ -126,10 +161,10 @@ export function mapPolicyRuleToCard(rule: PolicyContentRule, fmt?: (v: string | 
   const conditionInfix = conditions.length > 0 ? ` · ${conditions.join(" · ")}` : "";
 
   return {
-    id: `policy-${rule.id}`,
+    id: policyRuleCardId(rule),
     kind: "always_on",
     locked: true,
-    name: rule.id.replace(/[-_]/g, " "),
+    name: policyRuleLabel(rule),
     summary: `${scopes} - ${executeLabel}${conditionInfix}${requireSuffix}`,
     createdLabel: "From your active Brain policy",
     policyId: rule.id,
@@ -258,6 +293,7 @@ export function useBrainPolicy() {
     facts: notFound ? undefined : query.data,
     version: query.data?.version,
     quorum: query.data?.quorumRequired,
+    policyLabel: query.data?.policyLabel ?? "Brain protection policy",
   };
 }
 
@@ -270,11 +306,16 @@ export function usePolicyRule(cardId: string | undefined) {
     retry: false,
   });
   if (!cardId || !cardId.startsWith("policy-")) {
-    return { rule: undefined, isLoading: false, isError: false };
+    return {
+      rule: undefined,
+      policyLabel: "Brain protection policy",
+      isLoading: false,
+      isError: false,
+    };
   }
-  const rawId = cardId.slice("policy-".length);
   return {
-    rule: query.data?.rules.find((r) => r.id === rawId),
+    rule: query.data?.rules.find((rule) => policyRuleCardId(rule) === cardId),
+    policyLabel: query.data?.policyLabel ?? "Brain protection policy",
     isLoading: query.isLoading,
     isError: query.isError && !isPolicyNotFound(query.error),
   };
