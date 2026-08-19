@@ -144,7 +144,7 @@ const API_ENDPOINTS: Array<{ path: string; scope: string | null; description: st
   { path: "/api/v1/ping", scope: null, description: "Verify a key works and complete the checklist above" },
   { path: "/api/v1/ledger/accounts", scope: "ledger:read", description: "Ledger accounts for your tenant" },
   { path: "/api/v1/ledger/transactions", scope: "ledger:read", description: "Ledger transactions (supports ?limit=, max 200)" },
-  { path: "/api/v1/audit/events", scope: "audit:read", description: "Audit events (supports ?limit= and ?after=)" },
+  { path: "/api/v1/audit/events", scope: "audit:read", description: "Audit events (supports ?limit= and ?cursor=)" },
 ];
 
 const GET_STARTED_STEP_ICONS = [stepOneIcon, stepTwoIcon, stepThreeIcon] as const;
