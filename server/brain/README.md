@@ -104,6 +104,15 @@ not match an explicit route return 405.
 - `POST /api/brain/invites/consume` uses the same platform-service credential to bind an invite to
   the current app user after explicit confirmation.
 
+### Operational verification
+- `GET /health` is public and returns `{ ok, version, service, commit }`. The production bundle
+  embeds the source commit SHA at build time, so deployment checks can verify the code actually
+  serving requests.
+- `GET /internal/brain-identities/:tenantId` is read-only and requires the
+  `X-Platform-Service-Auth` header. It returns `{ tenant_id, linked }` without exposing app user
+  identifiers, allowing brain-core cleanup preflights to verify whether BrainMVB still maps a
+  tenant before deletion.
+
 ### Not exposed
 - No execute route is proxied.
 - Raw document ingestion is handled outside this router by `/api/integrations/documents/ingest` in

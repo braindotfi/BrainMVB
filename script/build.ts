@@ -1,6 +1,7 @@
 import { build as esbuild } from "esbuild";
 import { build as viteBuild } from "vite";
 import { rm, readFile } from "fs/promises";
+import { execFileSync } from "node:child_process";
 
 // server deps to bundle to reduce openat(2) syscalls
 // which helps cold start times
@@ -32,6 +33,22 @@ const allowlist = [
   "zod-validation-error",
 ];
 
+function resolveBuildCommit(): string {
+  for (const name of ["BUILD_COMMIT", "GIT_SHA", "REPLIT_GIT_COMMIT_SHA"]) {
+    const value = process.env[name]?.trim();
+    if (value && /^[0-9a-f]{7,64}$/i.test(value)) return value;
+  }
+  try {
+    const value = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+    if (/^[0-9a-f]{7,64}$/i.test(value)) return value;
+  } catch {
+    // A source archive may not include .git. Keep the response honest rather
+    // than failing a development build; deployment builds should provide Git
+    // metadata or BUILD_COMMIT.
+  }
+  return "unknown";
+}
+
 async function buildAll() {
   await rm("dist", { recursive: true, force: true });
 
@@ -40,6 +57,9 @@ async function buildAll() {
 
   console.log("building server...");
   const pkg = JSON.parse(await readFile("package.json", "utf-8"));
+  const buildCommit = resolveBuildCommit();
+  const buildVersion = process.env.BUILD_VERSION?.trim() || pkg.version || "unknown";
+  console.log(`[build] commit: ${buildCommit} | version: ${buildVersion}`);
   const allDeps = [
     ...Object.keys(pkg.dependencies || {}),
     ...Object.keys(pkg.devDependencies || {}),
@@ -57,6 +77,8 @@ async function buildAll() {
     },
     define: {
       "process.env.NODE_ENV": '"production"',
+      "process.env.BUILD_COMMIT": JSON.stringify(buildCommit),
+      "process.env.BUILD_VERSION": JSON.stringify(buildVersion),
     },
     minify: true,
     external: externals,

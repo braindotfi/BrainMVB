@@ -1,5 +1,6 @@
 import express, { type Express, type Request, type Response } from "express";
 import { createServer, type Server } from "http";
+import { timingSafeEqual } from "node:crypto";
 import Anthropic from "@anthropic-ai/sdk";
 import { setupAuth, googleEnabled, requireAuth, requireNonDemo, switchSession } from "./auth";
 import { storage } from "./storage";
@@ -9,7 +10,13 @@ import { createBrainProxyRouter } from "./brain/proxy";
 import { getBrainSession, getBrainSessionProvisionedAt, getBrainSessionExpiresAt } from "./brain/auth";
 import { withBrainBaseUrl, withKeyAuthedBrainCall } from "./brain/baseUrl";
 import { bffRequestIdMiddleware, currentBffRequestId } from "./brain/requestId";
-import { brainTenancyMode } from "./brain/config";
+import {
+  brainAuthConfigured,
+  brainConfig,
+  brainDurableTenancy,
+  brainTenancyMode,
+  platformServiceConfigured,
+} from "./brain/config";
 import {
   listLedgerAccounts,
   listLedgerTransactions,
@@ -53,7 +60,6 @@ import { isDemoEmail } from "./demoUsers";
  */
 const SEED_EXPECTED_WITHIN_MS = 10 * 60_000;
 import { generateNonce } from "./nonce";
-import { brainAuthConfigured, platformServiceConfigured, brainDurableTenancy } from "./brain/config";
 import {
   aggregateUsage,
   API_KEY_SCOPES,
@@ -62,6 +68,7 @@ import {
 import { ANTHROPIC_MODEL } from "./anthropicModel";
 import { isDegenerateWikiPayload } from "./wikiAnswerGuard";
 import { answerDeterministically } from "./brain/deterministicAnswers";
+import { BUILD_COMMIT, BUILD_VERSION } from "./buildInfo";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -177,6 +184,58 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // AUTH (session + email/password + Google OAuth)
   // ─────────────────────────────────────────────────────────────
   setupAuth(app);
+
+  // Public deployment probe. Keep this outside the authenticated API surface:
+  // operators and deployment checks must be able to verify the running bundle
+  // without minting an app session.
+  app.get("/health", (_req, res) => {
+    return res.json({
+      ok: true,
+      version: BUILD_VERSION,
+      service: "brain-mvb",
+      commit: BUILD_COMMIT,
+    });
+  });
+
+  function hasPlatformServiceAuth(req: Request): boolean {
+    const expected = brainConfig.platformServiceSecret;
+    const supplied = req.get("X-Platform-Service-Auth");
+    if (!expected || !supplied) return false;
+    const expectedBuffer = Buffer.from(expected);
+    const suppliedBuffer = Buffer.from(supplied);
+    return (
+      expectedBuffer.length === suppliedBuffer.length &&
+      timingSafeEqual(expectedBuffer, suppliedBuffer)
+    );
+  }
+
+  // Read-only preflight for brain-core tenant cleanup. It deliberately returns
+  // only existence, never app user IDs or identity details.
+  app.get("/internal/brain-identities/:tenantId", async (req, res) => {
+    if (!platformServiceConfigured()) {
+      return res.status(503).json({
+        error: "identity_lookup_unconfigured",
+        message: "The platform service credential is not configured.",
+      });
+    }
+    if (!hasPlatformServiceAuth(req)) {
+      return res.status(401).json({ error: "invalid_platform_service_auth" });
+    }
+    const tenantId = String(req.params.tenantId ?? "").trim();
+    if (!tenantId) {
+      return res.status(400).json({ error: "invalid_tenant_id" });
+    }
+    try {
+      const linked = await storage.hasBrainIdentityForTenant(tenantId);
+      return res.json({ tenant_id: tenantId, linked });
+    } catch (error) {
+      console.error("[identity-lookup] failed:", error);
+      return res.status(503).json({
+        error: "identity_lookup_unavailable",
+        message: "Could not read the BrainMVB identity store.",
+      });
+    }
+  });
 
   // ─────────────────────────────────────────────────────────────
   // BRAIN-CORE BFF PROXY (session → tenant JWT → api.brain.fi)
