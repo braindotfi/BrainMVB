@@ -53,6 +53,8 @@ BRAIN_PROVISION_SECRET = "fb6e50818f98255daac0588c341406623cc5230717c4971d49d52a
 [userenv.production]
 MAILERSEND_FROM_EMAIL = "damon@brain.fi"
 MAILERSEND_FROM_NAME = "Brain Finance"
+RESEND_FROM_EMAIL = "kevin@brain.fi"
+RESEND_FROM_NAME = "Kevin at Brain Finance"
 
 [postMerge]
 path = "scripts/post-merge.sh"
