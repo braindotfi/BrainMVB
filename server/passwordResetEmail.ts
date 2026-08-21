@@ -6,8 +6,8 @@ export type PasswordResetEmail = {
 
 type PasswordResetEmailSender = (message: PasswordResetEmail) => Promise<void>;
 
-const MAILERSEND_ENDPOINT = "https://api.mailersend.com/v1/email";
-const MAILER_SEND_FAILURE_CATEGORIES = new Set([
+const RESEND_ENDPOINT = "https://api.resend.com/emails";
+const RESEND_FAILURE_CATEGORIES = new Set([
   "configuration_missing",
   "credential_rejected",
   "permission_rejected",
@@ -19,7 +19,7 @@ const MAILER_SEND_FAILURE_CATEGORIES = new Set([
   "network_error",
   "unknown",
 ]);
-const SAFE_FAILURE_FIELDS = new Set(["api_token", "from_email", "from", "from.email"]);
+const SAFE_FAILURE_FIELDS = new Set(["api_key", "from_email", "from", "from.email"]);
 
 export type PasswordResetEmailFailure = {
   category: string;
@@ -28,7 +28,7 @@ export type PasswordResetEmailFailure = {
 };
 
 /**
- * Carries only diagnostics safe to retain in server logs. The MailerSend
+ * Carries only diagnostics safe to retain in server logs. The Resend
  * response body is intentionally discarded because it may contain a recipient
  * address or other request data.
  */
@@ -49,7 +49,7 @@ function knownProviderFailureFields(payload: unknown): string[] {
   return Object.keys(errors).filter((field) => SAFE_FAILURE_FIELDS.has(field));
 }
 
-export function classifyMailerSendFailure(status: number, payload: unknown): PasswordResetEmailFailure {
+export function classifyResendFailure(status: number, payload: unknown): PasswordResetEmailFailure {
   const fields = knownProviderFailureFields(payload);
   const base = { status, ...(fields.length > 0 ? { fields } : {}) };
   if (status === 401) return { ...base, category: "credential_rejected" };
@@ -69,7 +69,7 @@ export function classifyMailerSendFailure(status: number, payload: unknown): Pas
  */
 export function formatPasswordResetEmailFailure(error: unknown): string {
   if (!(error instanceof PasswordResetEmailDeliveryError)) return "category=unknown";
-  const category = MAILER_SEND_FAILURE_CATEGORIES.has(error.failure.category)
+  const category = RESEND_FAILURE_CATEGORIES.has(error.failure.category)
     ? error.failure.category
     : "unknown";
   const parts = [
@@ -110,14 +110,21 @@ function resetEmailCopy(message: PasswordResetEmail) {
   };
 }
 
-async function sendWithMailerSend(message: PasswordResetEmail): Promise<void> {
-  const token = process.env.MAILERSEND_API_TOKEN;
-  const fromEmail = process.env.MAILERSEND_FROM_EMAIL;
+async function sendWithResend(message: PasswordResetEmail): Promise<void> {
+  const token = process.env.RESEND_API_KEY;
+  // Keep the existing verified sender as the default during the provider
+  // migration; RESEND_FROM_EMAIL can override it when the new provider uses
+  // a different verified address.
+  const fromEmail = process.env.RESEND_FROM_EMAIL?.trim()
+    || process.env.MAILERSEND_FROM_EMAIL?.trim();
+  const fromName = process.env.RESEND_FROM_NAME?.trim()
+    || process.env.MAILERSEND_FROM_NAME?.trim()
+    || "Brain Finance";
   if (!token || !fromEmail) {
     throw new PasswordResetEmailDeliveryError({
       category: "configuration_missing",
       fields: [
-        ...(!token ? ["api_token"] : []),
+        ...(!token ? ["api_key"] : []),
         ...(!fromEmail ? ["from_email"] : []),
       ],
     });
@@ -126,15 +133,15 @@ async function sendWithMailerSend(message: PasswordResetEmail): Promise<void> {
   const copy = resetEmailCopy(message);
   let response: Response;
   try {
-    response = await fetch(MAILERSEND_ENDPOINT, {
+    response = await fetch(RESEND_ENDPOINT, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: { email: fromEmail, name: process.env.MAILERSEND_FROM_NAME || "Brain Finance" },
-        to: [{ email: message.to }],
+        from: `${fromName} <${fromEmail}>`,
+        to: [message.to],
         subject: copy.subject,
         text: copy.text,
         html: copy.html,
@@ -145,11 +152,11 @@ async function sendWithMailerSend(message: PasswordResetEmail): Promise<void> {
   }
   if (!response.ok) {
     const payload = await response.json().catch(() => undefined);
-    throw new PasswordResetEmailDeliveryError(classifyMailerSendFailure(response.status, payload));
+    throw new PasswordResetEmailDeliveryError(classifyResendFailure(response.status, payload));
   }
 }
 
-let sender: PasswordResetEmailSender = sendWithMailerSend;
+let sender: PasswordResetEmailSender = sendWithResend;
 
 export function sendPasswordResetEmail(message: PasswordResetEmail): Promise<void> {
   return sender(message);
@@ -157,5 +164,5 @@ export function sendPasswordResetEmail(message: PasswordResetEmail): Promise<voi
 
 /** Test-only seam. Never logs or stores the raw reset link in production. */
 export function setPasswordResetEmailSenderForTests(next: PasswordResetEmailSender | null): void {
-  sender = next ?? sendWithMailerSend;
+  sender = next ?? sendWithResend;
 }
