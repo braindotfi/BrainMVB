@@ -3,6 +3,8 @@ import {
   type User, type InsertUser,
   type Notification, type InsertNotification,
   users as usersTable,
+  passwordResetTokens as passwordResetTokensTable,
+  type PasswordResetToken,
   notifications as notificationsTable,
   siweNonces as siweNoncesTable,
   type SiweNonce,
@@ -16,7 +18,7 @@ import {
   assistantQuestions as assistantQuestionsTable,
   type AssistantQuestion, type InsertAssistantQuestion,
 } from "@shared/schema";
-import { eq, and, or, inArray, desc, count, ne, isNull, gte, lt, like, sql } from "drizzle-orm";
+import { eq, and, or, inArray, desc, count, ne, isNull, gte, gt, lt, like, sql } from "drizzle-orm";
 
 import { db } from "./db";
 import { encryptPlaidAccessToken, readPlaidAccessToken } from "./tokenCrypto";
@@ -47,6 +49,11 @@ export interface DeleteAccountResult {
   bankTokenRevocationsFailed: number;
 }
 
+export interface PasswordResetConsumption {
+  userId: string;
+  sessionVersion: number;
+}
+
 export interface IStorage {
   // Users
   getUser(id: string): Promise<User | undefined>;
@@ -55,6 +62,10 @@ export interface IStorage {
   getUserByGoogleId(googleId: string): Promise<User | undefined>;
   getUserByWallet(walletAddress: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  createPasswordResetToken(token: { userId: string; tokenHash: string; expiresAt: Date }): Promise<PasswordResetToken>;
+  isPasswordResetTokenValid(tokenHash: string, now: Date): Promise<boolean>;
+  consumePasswordResetToken(tokenHash: string, passwordHash: string, now: Date): Promise<PasswordResetConsumption | undefined>;
+  revokePasswordResetTokens(userId: string, now: Date): Promise<void>;
   updateUserWallet(id: string, walletAddress: string): Promise<User | undefined>;
   deleteUserAccount(ids: DeleteAccountIdentifiers): Promise<DeleteAccountResult>;
   deleteUserData(ids: DeleteAccountIdentifiers): Promise<DeleteAccountResult>;
@@ -315,6 +326,7 @@ export type InsertUserRule = {
 
 export class MemStorage implements IStorage {
   private users = new Map<string, User>();
+  private passwordResetTokensStore = new Map<string, PasswordResetToken>();
   private notifs = new Map<string, Notification>();
   private siweNoncesStore = new Map<string, SiweNonce>();
 
@@ -343,10 +355,51 @@ export class MemStorage implements IStorage {
       googleId: insertUser.googleId ?? null,
       name: insertUser.name ?? null,
       walletAddress: insertUser.walletAddress ?? null,
+      sessionVersion: 1,
       createdAt: new Date(),
     };
     this.users.set(id, user);
     return user;
+  }
+  async createPasswordResetToken(token: { userId: string; tokenHash: string; expiresAt: Date }): Promise<PasswordResetToken> {
+    const now = new Date();
+    for (const row of this.passwordResetTokensStore.values()) {
+      if (row.userId === token.userId && row.consumedAt === null) {
+        row.consumedAt = now;
+      }
+    }
+    const row: PasswordResetToken = {
+      id: randomUUID(),
+      userId: token.userId,
+      tokenHash: token.tokenHash,
+      expiresAt: token.expiresAt,
+      consumedAt: null,
+      createdAt: now,
+    };
+    this.passwordResetTokensStore.set(row.tokenHash, row);
+    return row;
+  }
+  async isPasswordResetTokenValid(tokenHash: string, now: Date): Promise<boolean> {
+    const row = this.passwordResetTokensStore.get(tokenHash);
+    return !!row && row.consumedAt === null && row.expiresAt > now;
+  }
+  async consumePasswordResetToken(tokenHash: string, passwordHash: string, now: Date): Promise<PasswordResetConsumption | undefined> {
+    const row = this.passwordResetTokensStore.get(tokenHash);
+    if (!row || row.consumedAt !== null || row.expiresAt <= now) return undefined;
+    const user = this.users.get(row.userId);
+    if (!user) return undefined;
+    row.consumedAt = now;
+    for (const other of this.passwordResetTokensStore.values()) {
+      if (other.userId === row.userId && other.consumedAt === null) other.consumedAt = now;
+    }
+    const sessionVersion = user.sessionVersion + 1;
+    this.users.set(user.id, { ...user, password: passwordHash, sessionVersion });
+    return { userId: user.id, sessionVersion };
+  }
+  async revokePasswordResetTokens(userId: string, now: Date): Promise<void> {
+    for (const row of this.passwordResetTokensStore.values()) {
+      if (row.userId === userId && row.consumedAt === null) row.consumedAt = now;
+    }
   }
   async updateUserWallet(id: string, walletAddress: string): Promise<User | undefined> {
     const user = this.users.get(id);
@@ -372,6 +425,9 @@ export class MemStorage implements IStorage {
     if (ids.email)           ownerKeys.add(ids.email);
 
     let notificationsDeleted = 0;
+    for (const [tokenHash, token] of Array.from(this.passwordResetTokensStore.entries())) {
+      if (ownerKeys.has(token.userId)) this.passwordResetTokensStore.delete(tokenHash);
+    }
     for (const [nid, n] of Array.from(this.notifs.entries())) {
       if (ownerKeys.has(n.userId)) {
         this.notifs.delete(nid);
@@ -897,6 +953,75 @@ export class DatabaseStorage implements IStorage {
     const [row] = await db.insert(usersTable).values(insertUser).returning();
     return row;
   }
+  async createPasswordResetToken(token: { userId: string; tokenHash: string; expiresAt: Date }): Promise<PasswordResetToken> {
+    const now = new Date();
+    return db.transaction(async (tx) => {
+      await tx
+        .update(passwordResetTokensTable)
+        .set({ consumedAt: now })
+        .where(and(
+          eq(passwordResetTokensTable.userId, token.userId),
+          isNull(passwordResetTokensTable.consumedAt),
+        ));
+      const [row] = await tx
+        .insert(passwordResetTokensTable)
+        .values({ ...token, consumedAt: null, createdAt: now })
+        .returning();
+      return row;
+    });
+  }
+  async isPasswordResetTokenValid(tokenHash: string, now: Date): Promise<boolean> {
+    const [row] = await db
+      .select({ id: passwordResetTokensTable.id })
+      .from(passwordResetTokensTable)
+      .where(and(
+        eq(passwordResetTokensTable.tokenHash, tokenHash),
+        isNull(passwordResetTokensTable.consumedAt),
+        gt(passwordResetTokensTable.expiresAt, now),
+      ))
+      .limit(1);
+    return row !== undefined;
+  }
+  async consumePasswordResetToken(tokenHash: string, passwordHash: string, now: Date): Promise<PasswordResetConsumption | undefined> {
+    return db.transaction(async (tx) => {
+      const [token] = await tx
+        .update(passwordResetTokensTable)
+        .set({ consumedAt: now })
+        .where(and(
+          eq(passwordResetTokensTable.tokenHash, tokenHash),
+          isNull(passwordResetTokensTable.consumedAt),
+          gt(passwordResetTokensTable.expiresAt, now),
+        ))
+        .returning();
+      if (!token) return undefined;
+      const [user] = await tx
+        .update(usersTable)
+        .set({
+          password: passwordHash,
+          sessionVersion: sql`${usersTable.sessionVersion} + 1`,
+        })
+        .where(eq(usersTable.id, token.userId))
+        .returning({ id: usersTable.id, sessionVersion: usersTable.sessionVersion });
+      if (!user) throw new Error("Password reset token references no user");
+      await tx
+        .update(passwordResetTokensTable)
+        .set({ consumedAt: now })
+        .where(and(
+          eq(passwordResetTokensTable.userId, token.userId),
+          isNull(passwordResetTokensTable.consumedAt),
+        ));
+      return { userId: user.id, sessionVersion: user.sessionVersion };
+    });
+  }
+  async revokePasswordResetTokens(userId: string, now: Date): Promise<void> {
+    await db
+      .update(passwordResetTokensTable)
+      .set({ consumedAt: now })
+      .where(and(
+        eq(passwordResetTokensTable.userId, userId),
+        isNull(passwordResetTokensTable.consumedAt),
+      ));
+  }
   async updateUserWallet(id: string, walletAddress: string): Promise<User | undefined> {
     const [row] = await db.update(usersTable).set({ walletAddress }).where(eq(usersTable.id, id)).returning();
     return row ?? undefined;
@@ -944,6 +1069,10 @@ export class DatabaseStorage implements IStorage {
 
     await db.transaction(async (tx) => {
       if (ownerKeyList.length > 0) {
+        await tx
+          .delete(passwordResetTokensTable)
+          .where(inArray(passwordResetTokensTable.userId, ownerKeyList));
+
         const notifDel = await tx
           .delete(notificationsTable)
           .where(inArray(notificationsTable.userId, ownerKeyList))
@@ -1196,6 +1325,7 @@ export class DatabaseStorage implements IStorage {
 
     // Batch-delete all related data in one transaction.
     await db.transaction(async (tx) => {
+      await tx.delete(passwordResetTokensTable).where(inArray(passwordResetTokensTable.userId, userIds));
       await tx.delete(notificationsTable).where(inArray(notificationsTable.userId, userIds));
       await tx.delete(bankConnectionsTable).where(inArray(bankConnectionsTable.userId, userIds));
       await tx.delete(sourceDocumentsTable).where(inArray(sourceDocumentsTable.userId, userIds));
