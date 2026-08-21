@@ -25,8 +25,9 @@ export function SignupPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Invite deep-link: stay on /invite/:token through auth so TenancyGate can hand the
-  // token to CompanySetupPage. Everywhere else, land on home after auth.
+  // Invite deep-links stay on their exact URL through every auth path. An invited account
+  // must only reach Brain tenancy through an explicit Join company action, never through
+  // signup's normal automatic workspace creation.
   const [onInviteRoute] = useRoute("/invite/:token");
 
   useEffect(() => {
@@ -110,7 +111,7 @@ export function SignupPage() {
         setError("Password must be at least 8 characters.");
         return;
       }
-      if (tenancyProduction && !companyName.trim()) {
+      if (tenancyProduction && !onInviteRoute && !companyName.trim()) {
         setError("Company name is required.");
         return;
       }
@@ -131,7 +132,7 @@ export function SignupPage() {
         // NOT retried automatically (tenant creation is not idempotent). If it fails,
         // the user is logged in but unlinked - the Company Setup screen takes over and
         // shows the failure so THEY decide whether to submit again.
-        if (tenancyProduction) {
+        if (tenancyProduction && !onInviteRoute) {
           try {
             const res = await fetch("/api/brain/tenants", {
               method: "POST",
@@ -228,7 +229,7 @@ export function SignupPage() {
                 variant="subtle"
                 size="large"
                 data-testid="button-google-signin"
-                onClick={loginWithGoogle}
+                onClick={() => loginWithGoogle(onInviteRoute ? window.location.pathname : undefined)}
                 className="w-full border border-brain-v1stroke-2 hover:border-[#7631ee]/40"
               >
                 <img src={googleLogo} alt="" className="h-[18px] w-[18px] rounded-full object-contain" />
@@ -244,7 +245,7 @@ export function SignupPage() {
           )}
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            {mode === "register" && tenancyProduction && (
+            {mode === "register" && tenancyProduction && !onInviteRoute && (
               <div className="flex flex-col gap-1.5">
                 <label className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px] pl-1">
                   Company name
@@ -384,13 +385,13 @@ export function SignupPage() {
           </form>
 
           {/* Demo access - explore the app without creating an account */}
-          {mode !== "forgot" && <div className="flex items-center gap-3 w-full my-5">
+          {mode !== "forgot" && !onInviteRoute && <div className="flex items-center gap-3 w-full my-5">
             <div className="flex-1 h-px bg-brain-v1stroke-2" />
             <span className="text-brain-v1baby-blue-30 text-xs [font-family:'Gilroy',sans-serif]">or continue with demo</span>
             <div className="flex-1 h-px bg-brain-v1stroke-2" />
           </div>}
 
-          {mode !== "forgot" && <Button
+          {mode !== "forgot" && !onInviteRoute && <Button
             variant="subtle"
             size="large"
             data-testid="button-demo-login"

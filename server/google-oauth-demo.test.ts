@@ -64,8 +64,10 @@ function mockGoogle(profile: {
 }
 
 /** Walks the real OAuth entry point so the callback sees a session state it will accept. */
-async function runCallback(): Promise<{ location: string; cookie: string }> {
-  const begin = await realFetch(`${baseUrl}/api/auth/google`, { redirect: "manual" });
+async function runCallback(returnTo?: string): Promise<{ location: string; cookie: string }> {
+  const beginUrl = new URL("/api/auth/google", baseUrl);
+  if (returnTo) beginUrl.searchParams.set("return_to", returnTo);
+  const begin = await realFetch(beginUrl, { redirect: "manual" });
   const cookie = (begin.headers.get("set-cookie") ?? "").split(";")[0];
   const authorizationUrl = new URL(begin.headers.get("location") ?? "");
   expect(authorizationUrl.searchParams.get("redirect_uri")).toBe(
@@ -168,5 +170,16 @@ describe("Google OAuth cannot resolve to a demo account", () => {
     const body = (await after.json()) as { user: { email: string; isDemo: boolean } };
     expect(body.user.email).toBe(email);
     expect(body.user.isDemo).toBe(false);
+  });
+
+  it("returns a Google-authenticated invitee to the original invite URL", async () => {
+    const email = "invited.google@example.com";
+    const invitePath = "/invite/invite-token_123";
+    mockGoogle({ sub: "google-sub-invite", email, email_verified: true, name: "Invited Google User" });
+    const { location, cookie } = await runCallback(invitePath);
+
+    expect(location).toBe(invitePath);
+    const after = await realFetch(`${baseUrl}/api/auth/user`, { headers: { cookie } });
+    expect(after.status).toBe(200);
   });
 });

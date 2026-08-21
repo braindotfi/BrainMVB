@@ -94,7 +94,6 @@ const AuditLogRedirect = () => {
 function AppLayout() {
   const { isLoggedIn, isLoading, logout } = useAuth();
   const [onPasswordResetRoute, resetParams] = useRoute("/reset-password/:token");
-  const [onInviteRoute] = useRoute("/invite/:token");
   const { timeoutMin } = useSessionTimeout();
   const alert = useAppAlert();
   const [, navigate] = useLocation();
@@ -202,13 +201,6 @@ function AppLayout() {
     );
   }
 
-  // Invite links are a top-level auth boundary. Keep the exact URL through sign-in,
-  // then show the explicit company-join screen before the main-shell route switch can
-  // answer an invite path with NotFound.
-  if (onInviteRoute) {
-    return isLoggedIn ? <CompanySetupPage /> : <SignupPage />;
-  }
-
   if (!isLoggedIn) {
     return <SignupPage />;
   }
@@ -225,7 +217,6 @@ function TenancyGate({ onLogout }: { onLogout: () => void }) {
     queryKey: ["/api/brain/tenancy"],
     staleTime: 60_000,
   });
-  const [onInviteRoute] = useRoute("/invite/:token");
 
   if (isLoading) {
     return (
@@ -235,10 +226,9 @@ function TenancyGate({ onLogout }: { onLogout: () => void }) {
     );
   }
 
-  // Production only: unlinked users always land on setup; an invite link also opens it
-  // explicitly (already-linked users get core's honest "already belongs" refusal if they
-  // try to consume - never a silent no-op). Demo mode is untouched, including /invite/*.
-  if (data?.mode === "production" && (!data.linked || onInviteRoute)) {
+  // Production only: unlinked users always land on setup. Invite links are handled by
+  // InviteRouteBoundary before this component (and before any Brain data providers mount).
+  if (data?.mode === "production" && !data.linked) {
     return <CompanySetupPage />;
   }
 
@@ -332,24 +322,52 @@ function MainShell({ onLogout }: { onLogout: () => void }) {
 }
 
 
+/** The invite URL is a hard boundary: only auth state may mount before the user explicitly
+ * accepts or abandons the invitation. In particular, this branch is above MainShell and every
+ * provider that can grow a Brain data read, preventing durable session provisioning races. */
+function InviteRouteBoundary() {
+  const [onInviteRoute] = useRoute("/invite/:token");
+  const { isLoggedIn, isLoading } = useAuth();
+
+  if (!onInviteRoute) return <AuthenticatedApplication />;
+
+  if (isLoading) {
+    return (
+      <div className="bg-shared-colorsheaderfooterbg w-full h-screen flex items-center justify-center">
+        <div className="h-8 w-8 rounded-full border-2 border-brain-v1stroke-2 border-t-brain-v1purple animate-spin" />
+      </div>
+    );
+  }
+
+  // Keep the exact invite URL through sign-in. CompanySetupPage's invite-only mode performs
+  // no tenancy query until its explicit Join company action succeeds.
+  return isLoggedIn ? <CompanySetupPage inviteOnly /> : <SignupPage />;
+}
+
+function AuthenticatedApplication() {
+  return (
+    <CurrencyProvider>
+      <TransactionProvider>
+        <IntentsProvider>
+          <AppLayout />
+          <MemberDetailHost />
+        </IntentsProvider>
+      </TransactionProvider>
+    </CurrencyProvider>
+  );
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <SessionTimeoutProvider>
-          <CurrencyProvider>
-            <TransactionProvider>
-              <IntentsProvider>
-                <TooltipProvider>
-                  <AppAlertProvider>
-                    <Toaster />
-                    <AppLayout />
-                    <MemberDetailHost />
-                  </AppAlertProvider>
-                </TooltipProvider>
-              </IntentsProvider>
-            </TransactionProvider>
-          </CurrencyProvider>
+          <TooltipProvider>
+            <AppAlertProvider>
+              <Toaster />
+              <InviteRouteBoundary />
+            </AppAlertProvider>
+          </TooltipProvider>
         </SessionTimeoutProvider>
       </AuthProvider>
     </QueryClientProvider>

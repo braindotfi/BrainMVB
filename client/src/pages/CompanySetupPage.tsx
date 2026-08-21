@@ -41,10 +41,11 @@ function upstreamMessage(data: any, fallback: string): string {
   return fallback;
 }
 
-export function CompanySetupPage() {
+export function CompanySetupPage({ inviteOnly = false }: { inviteOnly?: boolean }) {
   const { user, logout } = useAuth();
   const [, navigate] = useLocation();
   const [matchInvite, inviteParams] = useRoute("/invite/:token");
+  const isInviteFlow = inviteOnly || matchInvite;
   const urlToken = matchInvite ? inviteParams?.token ?? "" : "";
 
   // A failed tenant-create during signup hands its error (and the typed company name)
@@ -67,13 +68,14 @@ export function CompanySetupPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(handoff.err);
 
-  // The gate (App.tsx) may still be holding a stale "unlinked" tenancy query from before
-  // signup created the tenant. Re-check on mount so an already-linked account resolves
-  // straight into the app instead of showing this page and letting the user hit "Create
-  // company" into a 409 they can't act on.
+  // The regular setup page re-checks tenancy to recover from an explicit company creation.
+  // An invite URL is deliberately different: it must remain a zero-Brain-read boundary until
+  // the user presses Join company, otherwise a data read can trigger durable provisioning
+  // before the invite is consumed.
   useEffect(() => {
+    if (isInviteFlow) return;
     queryClient.invalidateQueries({ queryKey: ["/api/brain/tenancy"] });
-  }, []);
+  }, [isInviteFlow]);
 
   const finish = async () => {
     await queryClient.invalidateQueries({ queryKey: ["/api/brain/tenancy"] });
@@ -81,18 +83,17 @@ export function CompanySetupPage() {
     navigate("/");
   };
 
-  // Subscribe to the same tenancy query the gate (App.tsx) reads, and leave the moment it
-  // resolves linked — the mount-time invalidation above can race brain-core's own
-  // identity/session write and land linked:false, then sit there forever (staleTime,
-  // no remount/focus to retrigger). Poll every 3s only while unlinked to catch the flip.
+  // The regular setup page polls for a completed explicit company creation. This query is
+  // disabled on /invite/:token, so mounting an invite never calls /api/brain/tenancy.
   const { data: tenancy } = useQuery<{ mode: string; linked: boolean }>({
     queryKey: ["/api/brain/tenancy"],
+    enabled: !isInviteFlow,
     staleTime: 0,
-    refetchInterval: (query) => (query.state.data?.linked ? false : 3000),
+    refetchInterval: isInviteFlow ? false : (query) => (query.state.data?.linked ? false : 3000),
   });
   useEffect(() => {
-    if (tenancy?.linked && !matchInvite) finish();
-  }, [tenancy?.linked, matchInvite]);
+    if (tenancy?.linked && !isInviteFlow) finish();
+  }, [tenancy?.linked, isInviteFlow]);
 
   const createCompany = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -176,20 +177,24 @@ export function CompanySetupPage() {
         <div className="w-full max-w-[440px] bg-brain-v1baby-blue-5 border border-brain-v1stroke-2 rounded-modal px-7 py-8 shadow-2xl">
           <div className="flex flex-col items-center text-center mb-6">
             <h1 className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1white text-[24px] leading-[32px]">
-              Set Up Your Company
+              {isInviteFlow ? "Join Your Company" : "Set Up Your Company"}
             </h1>
             <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px] mt-1">
-              {user?.email ? `Signed in as ${user.email}. ` : ""}Your account isn't part of a company yet -
-              create one, or join with an invite from your admin.
+              {user?.email ? `Signed in as ${user.email}. ` : ""}
+              {isInviteFlow
+                ? "Review the invite link below, then join your company."
+                : "Your account isn't part of a company yet - create one, or join with an invite from your admin."}
             </p>
           </div>
 
-          <div className="flex gap-[8px] mb-6">
-            {tabBtn("create", "Create a company", "tab-create-company")}
-            {tabBtn("join", "I have an invite", "tab-join-company")}
-          </div>
+          {!isInviteFlow && (
+            <div className="flex gap-[8px] mb-6">
+              {tabBtn("create", "Create a company", "tab-create-company")}
+              {tabBtn("join", "I have an invite", "tab-join-company")}
+            </div>
+          )}
 
-          {tab === "create" ? (
+          {tab === "create" && !isInviteFlow ? (
             <form onSubmit={createCompany} className="flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
                 <label className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px] pl-1">
