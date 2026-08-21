@@ -15,6 +15,10 @@ export const users = pgTable("users", {
   googleId: text("google_id").unique(),        // Google OAuth subject id
   name: text("name"),                          // display name (from Google profile or signup)
   walletAddress: text("wallet_address").unique(),
+  // Captured in every authenticated browser session. Advancing this value
+  // invalidates every older session for this user without touching another
+  // user's persistent session records.
+  sessionVersion: integer("session_version").notNull().default(1),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -28,6 +32,28 @@ export const insertUserSchema = createInsertSchema(users).pick({
 });
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+
+/* ─── Password reset tokens ───
+ * The raw link secret never reaches this table. `tokenHash` is a SHA-256 digest
+ * of a random, URL-safe token and is useless for reconstructing the emailed link. */
+export const passwordResetTokens = pgTable("password_reset_tokens", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: text("user_id").notNull(),
+  tokenHash: text("token_hash").notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  consumedAt: timestamp("consumed_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => [
+  index("password_reset_tokens_user_id_idx").on(t.userId),
+  index("password_reset_tokens_expires_at_idx").on(t.expiresAt),
+  // A new request marks the prior link consumed before inserting its replacement.
+  // The partial uniqueness constraint keeps concurrent requests from leaving two
+  // live reset links for one account.
+  uniqueIndex("password_reset_tokens_active_user_idx")
+    .on(t.userId)
+    .where(sql`${t.consumedAt} is null`),
+]);
+export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
 
 /* ─── Notifications ─── */
 export const notifications = pgTable("notifications", {
