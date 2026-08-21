@@ -108,7 +108,7 @@ export function ResetPasswordPage({ token, returnTo }: { token: string; returnTo
     }
     if (state === "invalid") {
       return {
-        title: "This Link Is No Longer Valid",
+        title: "This link is no longer valid",
         body: "Password reset links expire 30 minutes after they are requested and can only be used once.",
         children: (
           <Button variant="cta" size="large" className="w-full" onClick={() => setState("resend")}>
@@ -159,7 +159,7 @@ export function ResetPasswordPage({ token, returnTo }: { token: string; returnTo
     }
     if (state === "complete") {
       return {
-        title: "Password Updated",
+        title: "Password updated",
         body: "Your password has been changed. You can sign in now.",
         children: (
           <Button variant="cta" size="large" className="w-full" onClick={() => navigate(inviteReturnTo ?? "/")}>
@@ -169,7 +169,7 @@ export function ResetPasswordPage({ token, returnTo }: { token: string; returnTo
       };
     }
     return {
-      title: "Set a New Password",
+      title: "Set a new password",
       body: "Choose a new password with at least 8 characters.",
       children: (
         <form onSubmit={submit} className="flex flex-col gap-4 text-left">
