@@ -3,7 +3,7 @@ import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import createMemoryStore from "memorystore";
 import { Pool } from "pg";
-import { scrypt, randomBytes, timingSafeEqual } from "crypto";
+import { scrypt, randomBytes, timingSafeEqual, createHash, createHmac } from "crypto";
 import { promisify } from "util";
 import { z } from "zod";
 import { storage } from "./storage";
@@ -11,6 +11,8 @@ import type { User } from "@shared/schema";
 import { brainTenancyMode } from "./brain/config";
 import { isDemoEmail } from "./demoUsers";
 import { evictBrainSession } from "./brain/auth";
+import { formatPasswordResetEmailFailure, sendPasswordResetEmail } from "./passwordResetEmail";
+import { PASSWORD_RESET_GENERIC_RESPONSE } from "./passwordResetRateLimit";
 
 const scryptAsync = promisify(scrypt);
 
@@ -27,14 +29,28 @@ const scryptAsync = promisify(scrypt);
  * completion must not race the client's next authenticated request.
  */
 export async function switchSession(req: Request, newUserId: string): Promise<void> {
-  if (req.session.userId && req.session.userId !== newUserId) {
+  const user = await storage.getUser(newUserId);
+  if (!user) throw new Error("Cannot create a session for a missing user");
+  const sessionVersion = user.sessionVersion;
+  if (
+    req.session.userId
+    && (req.session.userId !== newUserId || req.session.sessionVersion !== sessionVersion)
+  ) {
     await new Promise<void>((resolve, reject) => {
       req.session.regenerate((err) => (err ? reject(err) : resolve()));
     });
   }
   req.session.userId = newUserId;
+  req.session.sessionVersion = sessionVersion;
   await new Promise<void>((resolve, reject) => {
     req.session.save((err) => (err ? reject(err) : resolve()));
+  });
+  writeAuthAudit(req, {
+    route: "session",
+    event: "session_bound",
+    principalId: newUserId,
+    transition: "authenticated",
+    outcome: "success",
   });
 }
 
@@ -42,8 +58,45 @@ export async function switchSession(req: Request, newUserId: string): Promise<vo
 declare module "express-session" {
   interface SessionData {
     userId?: string;
+    sessionVersion?: number;
     googleState?: string;
   }
+}
+
+declare global {
+  namespace Express {
+    interface Request {
+      authAuditId?: string;
+    }
+  }
+}
+
+type AuthAuditFields = {
+  route: string;
+  event: string;
+  principalId?: string;
+  transition: string;
+  outcome: string;
+  revocationCount?: number;
+};
+
+const authAuditKey = process.env.SESSION_SECRET ?? randomBytes(32).toString("hex");
+
+function authPseudonym(value: string | undefined): string {
+  if (!value) return "none";
+  return createHmac("sha256", authAuditKey).update(value).digest("hex").slice(0, 16);
+}
+
+function writeAuthAudit(req: Request, fields: AuthAuditFields): void {
+  const correlationId = req.authAuditId ?? "missing";
+  const sessionFingerprint = authPseudonym(req.sessionID);
+  const principal = authPseudonym(fields.principalId);
+  const revocationCount = fields.revocationCount ?? 0;
+  console.info(
+    `[auth-audit] correlation=${correlationId} route=${fields.route} event=${fields.event}`
+    + ` principal=${principal} session=${sessionFingerprint} transition=${fields.transition}`
+    + ` outcome=${fields.outcome} revocation_count=${revocationCount}`,
+  );
 }
 
 // ─── Password hashing (scrypt, no external deps) ───
@@ -106,6 +159,91 @@ const loginSchema = z.object({
   identifier: z.string().min(1),
   password: z.string().min(1),
 });
+const passwordResetRequestSchema = z.object({
+  email: z.string().trim().email(),
+});
+const passwordResetTokenSchema = z.object({
+  token: z.string().min(32).max(512),
+});
+const passwordResetConfirmSchema = passwordResetTokenSchema.extend({
+  password: z.string().min(8, "Password must be at least 8 characters").max(256),
+});
+
+const PASSWORD_RESET_TTL_MS = 30 * 60 * 1000;
+
+export function passwordResetTokenDigest(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
+}
+
+function passwordResetUrl(token: string): string {
+  const baseUrl = process.env.APP_BASE_URL || "https://app.brain.fi";
+  const url = new URL(`/reset-password/${encodeURIComponent(token)}`, baseUrl);
+  return url.toString();
+}
+
+/**
+ * The public request endpoint must have the same response behavior for known,
+ * unknown, malformed, and operationally failing inputs. Run account lookup and
+ * mail delivery after the generic response has been sent so provider latency
+ * cannot become an account-enumeration signal.
+ */
+async function processPasswordResetRequest(email: string, req: Request): Promise<void> {
+  let user: User | undefined;
+  try {
+    user = await storage.getUserByEmail(email);
+    if (!user) {
+      writeAuthAudit(req, {
+        route: "password-reset/request",
+        event: "reset_delivery",
+        transition: "anonymous",
+        outcome: "no_matching_account",
+      });
+      return;
+    }
+
+    const rawToken = randomBytes(32).toString("base64url");
+    const now = new Date();
+    await storage.createPasswordResetToken({
+      userId: user.id,
+      tokenHash: passwordResetTokenDigest(rawToken),
+      expiresAt: new Date(now.getTime() + PASSWORD_RESET_TTL_MS),
+    });
+    await sendPasswordResetEmail({
+      to: user.email ?? email,
+      resetUrl: passwordResetUrl(rawToken),
+      expiresInMinutes: PASSWORD_RESET_TTL_MS / 60_000,
+    });
+    writeAuthAudit(req, {
+      route: "password-reset/request",
+      event: "reset_delivery",
+      principalId: user.id,
+      transition: "anonymous",
+      outcome: "accepted",
+    });
+  } catch (error) {
+    // An undeliverable token must not remain usable. Cleanup failure cannot
+    // alter the already-sent generic response or leak an account's existence.
+    let revokeFailed = false;
+    if (user) {
+      try {
+        await storage.revokePasswordResetTokens(user.id, new Date());
+      } catch {
+        revokeFailed = true;
+      }
+    }
+    const failure = formatPasswordResetEmailFailure(error);
+    console.error(
+      `[auth] password reset email delivery failed ${failure}${revokeFailed ? " revoke_failed=true" : ""}`,
+    );
+    writeAuthAudit(req, {
+      route: "password-reset/request",
+      event: "reset_delivery",
+      principalId: user?.id,
+      transition: "anonymous",
+      outcome: "failed",
+    });
+  }
+}
 
 export function setupAuth(app: Express) {
   app.set("trust proxy", 1);
@@ -115,6 +253,11 @@ export function setupAuth(app: Express) {
     throw new Error("SESSION_SECRET must be set in production");
   }
   const sessionSecret = configuredSessionSecret || randomBytes(32).toString("hex");
+
+  app.use((req, _res, next) => {
+    req.authAuditId = randomBytes(12).toString("hex");
+    next();
+  });
 
   let store: session.Store | undefined;
   if (process.env.DATABASE_URL) {
@@ -213,6 +356,85 @@ export function setupAuth(app: Express) {
     return res.json({ user: publicUser(user) });
   });
 
+  // ─── Password reset ───
+  // The response does not disclose whether an email address has an account.
+  app.post("/api/auth/password-reset/request", async (req, res) => {
+    const parsed = passwordResetRequestSchema.safeParse(req.body);
+    res.set("Cache-Control", "no-store, private");
+    res.json(PASSWORD_RESET_GENERIC_RESPONSE);
+    if (!parsed.success) {
+      writeAuthAudit(req, {
+        route: "password-reset/request",
+        event: "reset_request",
+        transition: "anonymous",
+        outcome: "invalid_input",
+      });
+      return;
+    }
+
+    // Deferring avoids starting a known-account lookup before Express flushes
+    // the fixed response. Do not await this work in the request lifecycle.
+    setImmediate(() => {
+      void processPasswordResetRequest(parsed.data.email.toLowerCase(), req);
+    });
+  });
+
+  app.post("/api/auth/password-reset/verify", async (req, res) => {
+    const parsed = passwordResetTokenSchema.safeParse(req.body);
+    const valid = parsed.success
+      && await storage.isPasswordResetTokenValid(passwordResetTokenDigest(parsed.data.token), new Date());
+    res.set("Cache-Control", "no-store, private");
+    writeAuthAudit(req, {
+      route: "password-reset/verify",
+      event: "reset_verify",
+      transition: "anonymous",
+      outcome: valid ? "valid" : "invalid",
+    });
+    return res.json({ valid });
+  });
+
+  app.post("/api/auth/password-reset/confirm", async (req, res) => {
+    const parsed = passwordResetConfirmSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: "Choose a password with at least 8 characters." });
+    }
+    const tokenHash = passwordResetTokenDigest(parsed.data.token);
+    if (!await storage.isPasswordResetTokenValid(tokenHash, new Date())) {
+      writeAuthAudit(req, {
+        route: "password-reset/confirm",
+        event: "reset_confirm",
+        transition: "anonymous",
+        outcome: "rejected",
+      });
+      return res.status(400).json({ error: "This password reset link is invalid or has expired." });
+    }
+    const consumed = await storage.consumePasswordResetToken(
+      tokenHash,
+      await hashPassword(parsed.data.password),
+      new Date(),
+    );
+    if (!consumed) {
+      writeAuthAudit(req, {
+        route: "password-reset/confirm",
+        event: "reset_confirm",
+        transition: "anonymous",
+        outcome: "rejected",
+      });
+      return res.status(400).json({ error: "This password reset link is invalid or has expired." });
+    }
+    writeAuthAudit(req, {
+      route: "password-reset/confirm",
+      event: "reset_confirm",
+      principalId: consumed.userId,
+      transition: "password_reset",
+      outcome: "success",
+      // One durable generation advance invalidates every prior session for this
+      // account; it never deletes or counts another account's session rows.
+      revocationCount: 1,
+    });
+    return res.json({ success: true });
+  });
+
   /* ── REMOVED: POST /api/auth/demo (shared demo@brain.fi login) ──────────────
      Deleted deliberately; do not reintroduce. It was unauthenticated and logged
      every caller into ONE app user backed by ONE persistent tenant, so each
@@ -264,22 +486,35 @@ export function setupAuth(app: Express) {
 
   // ─── Current session user ───
   app.get("/api/auth/user", async (req, res) => {
-    if (!req.session.userId) return res.status(401).json({ error: "Not authenticated" });
-    const user = await storage.getUser(req.session.userId);
-    if (!user) {
-      req.session.destroy(() => {});
-      return res.status(401).json({ error: "Not authenticated" });
-    }
+    const user = await getValidSessionUser(req, res);
+    if (!user) return res.status(401).json({ error: "Not authenticated" });
+    res.set("Cache-Control", "no-store, private");
     return res.json({ user: publicUser(user) });
   });
 
   // ─── Logout ───
-  app.post("/api/auth/logout", (req, res) => {
-    req.session.destroy((err) => {
-      if (err) return res.status(500).json({ error: "Logout failed" });
-      res.clearCookie("brain.sid");
+  app.post("/api/auth/logout", async (req, res) => {
+    const principalId = req.session.userId;
+    try {
+      await destroySession(req, res);
+      writeAuthAudit(req, {
+        route: "logout",
+        event: "session_destroyed",
+        principalId,
+        transition: "logout",
+        outcome: "success",
+      });
       return res.json({ success: true });
-    });
+    } catch {
+      writeAuthAudit(req, {
+        route: "logout",
+        event: "session_destroyed",
+        principalId,
+        transition: "logout",
+        outcome: "failed",
+      });
+      return res.status(500).json({ error: "Logout failed" });
+    }
   });
 
   // ─── Google OAuth: begin ───
@@ -391,9 +626,50 @@ export function setupAuth(app: Express) {
   });
 }
 
+async function destroySession(req: Request, res: Response): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    req.session.destroy((err) => (err ? reject(err) : resolve()));
+  });
+  res.clearCookie("brain.sid");
+}
+
+async function getValidSessionUser(req: Request, res: Response): Promise<User | undefined> {
+  const { userId, sessionVersion } = req.session;
+  if (!userId || !Number.isInteger(sessionVersion)) return undefined;
+
+  const cachedUser = res.locals.authenticatedUser as User | undefined;
+  if (cachedUser?.id === userId && cachedUser.sessionVersion === sessionVersion) {
+    return cachedUser;
+  }
+  let user: User | undefined;
+  try {
+    user = await storage.getUser(userId);
+  } catch {
+    return undefined;
+  }
+  if (!user || user.sessionVersion !== sessionVersion) {
+    try {
+      await destroySession(req, res);
+    } catch {
+      // The credential is still refused even if storage cleanup has failed.
+    }
+    writeAuthAudit(req, {
+      route: "protected",
+      event: "session_rejected",
+      principalId: userId,
+      transition: "session_validation",
+      outcome: user ? "generation_mismatch" : "missing_user",
+    });
+    return undefined;
+  }
+  return user;
+}
+
 // ─── Route guard helper ───
-export function requireAuth(req: Request, res: Response, next: NextFunction) {
-  if (!req.session.userId) return res.status(401).json({ error: "Not authenticated" });
+export async function requireAuth(req: Request, res: Response, next: NextFunction) {
+  const user = await getValidSessionUser(req, res);
+  if (!user) return res.status(401).json({ error: "Not authenticated" });
+  res.locals.authenticatedUser = user;
   next();
 }
 
@@ -412,17 +688,8 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
  * allowed, because the failure mode of guessing wrong is a real credential on a demo row.
  */
 export async function requireNonDemo(req: Request, res: Response, next: NextFunction) {
-  if (!req.session.userId) return res.status(401).json({ error: "Not authenticated" });
-  let user: User | undefined;
-  try {
-    user = await storage.getUser(req.session.userId);
-  } catch (err) {
-    console.error("[auth] requireNonDemo could not load the session user:", err);
-    return res.status(503).json({
-      error: "account_check_unavailable",
-      message: "Could not verify this account right now. Please try again.",
-    });
-  }
+  const user = (res.locals.authenticatedUser as User | undefined) ?? await getValidSessionUser(req, res);
+  if (!user) return res.status(401).json({ error: "Not authenticated" });
   if (!user || isDemoEmail(user.email)) {
     return res.status(403).json({
       error: "demo_account_not_permitted",

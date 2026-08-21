@@ -93,8 +93,12 @@ async function withServer(
 ): Promise<void> {
   const app: Express = express();
   app.use(express.json());
-  app.use((req, _res, next) => {
-    (req as unknown as { session: { userId: string } }).session = { userId: "user-recommendation" };
+  app.use((req, res, next) => {
+    (req as unknown as { session: { userId: string; sessionVersion: number } }).session = {
+      userId: "user-recommendation",
+      sessionVersion: 1,
+    };
+    res.locals.authenticatedUser = { id: "user-recommendation", sessionVersion: 1 };
     next();
   });
   app.use("/api/brain", createBrainProxyRouter());

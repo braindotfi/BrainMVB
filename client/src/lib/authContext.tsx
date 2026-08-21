@@ -29,7 +29,8 @@ interface AuthContextType {
   register: (params: { email: string; username?: string; password: string; name?: string }) => Promise<void>;
   loginDemoFresh: (opts?: { skipOnboarding?: boolean }) => Promise<void>;
   loginWithGoogle: () => void;
-  logout: () => Promise<void>;
+  /** Returns whether the server confirmed the session was destroyed. */
+  logout: () => Promise<boolean>;
   deleteAccount: () => Promise<void>;
   deleteAccountData: () => Promise<void>;
 }
@@ -84,6 +85,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     (async () => {
       try {
+        // A reset link is an anonymous-only surface. Do not bootstrap (and
+        // therefore fetch) an ambient account identity before the reset route
+        // clears that browser's server session.
+        if (/^\/reset-password\/[^/]+$/.test(window.location.pathname)) {
+          try {
+            await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+          } finally {
+            if (!cancelled) setUser(null);
+          }
+          return;
+        }
         const res = await fetch("/api/auth/user", { credentials: "include" });
         if (res.ok) {
           const data = await res.json();
@@ -186,14 +198,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
+    let serverEndedSession = false;
     try {
-      await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+      const response = await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+      serverEndedSession = response.ok;
     } catch {
       /* ignore */
     }
     setUser(null);
     queryClient.clear();
     clearMembers();
+    return serverEndedSession;
   }, []);
 
   const deleteAccount = useCallback(async () => {
