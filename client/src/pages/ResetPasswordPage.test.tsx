@@ -51,7 +51,7 @@ describe("ResetPasswordPage recovery path", () => {
     mount();
 
     await act(async () => {});
-    expect(container!.textContent).toContain("This link is no longer valid");
+    expect(container!.textContent).toContain("This Link Is No Longer Valid");
     expect(container!.textContent).toContain("expire 30 minutes after they are requested");
 
     click("Request a new link");
@@ -71,6 +71,6 @@ describe("ResetPasswordPage recovery path", () => {
       }),
     );
     expect(container!.textContent).toContain("Check your email");
-    expect(container!.textContent).not.toContain("Set a new password");
+    expect(container!.textContent).not.toContain("Set a New Password");
   });
 });
