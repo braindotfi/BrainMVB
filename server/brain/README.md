@@ -122,3 +122,7 @@ not match an explicit route return 405.
 In demo mode, each `provision-run` call creates a fresh seeded tenant. In production tenancy mode,
 the app user must be linked through `brain_identities`; unlinked users receive `403 no_tenant` and
 are routed to company setup.
+
+Before durable mode implicitly creates a tenant, it asks core whether the user's normalized email
+has a valid pending invite. A positive answer returns `409 pending_invite`. A lookup error fails
+closed. Both cases occur before the local pending tombstone and before `POST /v1/tenants`.

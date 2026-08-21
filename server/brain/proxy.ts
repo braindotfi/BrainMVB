@@ -18,7 +18,7 @@
 import { Router, type Request, type Response } from "express";
 import { requireAuth } from "../auth";
 import { brainAuthConfigured, brainConfig, brainTenancyMode, platformServiceConfigured } from "./config";
-import { getBrainSession, registerBrainSession, NoTenantError } from "./auth";
+import { getBrainSession, registerBrainSession, NoTenantError, PendingInviteError } from "./auth";
 import { withBrainBaseUrl } from "./baseUrl";
 import { bffRequestIdMiddleware, currentBffRequestId } from "./requestId";
 import { createTenant, consumeInvite, TenancyApiError } from "./tenancy";
@@ -820,6 +820,12 @@ function unconfigured(res: Response): Response {
 }
 
 function relayError(res: Response, err: unknown): Response {
+  if (err instanceof PendingInviteError) {
+    return res.status(409).json({
+      error: "pending_invite",
+      message: "This account has a pending company invite. Open that invite to continue.",
+    });
+  }
   if (err instanceof NoTenantError) {
     // Production tenancy: this app user isn't linked to any tenant. The client must route
     // to "Create a company" or "Enter your invite link" - nothing is auto-provisioned.
