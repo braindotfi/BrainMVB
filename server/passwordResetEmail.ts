@@ -7,6 +7,79 @@ export type PasswordResetEmail = {
 type PasswordResetEmailSender = (message: PasswordResetEmail) => Promise<void>;
 
 const MAILERSEND_ENDPOINT = "https://api.mailersend.com/v1/email";
+const MAILER_SEND_FAILURE_CATEGORIES = new Set([
+  "configuration_missing",
+  "credential_rejected",
+  "permission_rejected",
+  "sender_rejected",
+  "validation_rejected",
+  "rate_limited",
+  "provider_unavailable",
+  "http_rejected",
+  "network_error",
+  "unknown",
+]);
+const SAFE_FAILURE_FIELDS = new Set(["api_token", "from_email", "from", "from.email"]);
+
+export type PasswordResetEmailFailure = {
+  category: string;
+  status?: number;
+  fields?: string[];
+};
+
+/**
+ * Carries only diagnostics safe to retain in server logs. The MailerSend
+ * response body is intentionally discarded because it may contain a recipient
+ * address or other request data.
+ */
+export class PasswordResetEmailDeliveryError extends Error {
+  readonly failure: PasswordResetEmailFailure;
+
+  constructor(failure: PasswordResetEmailFailure) {
+    super("Password-reset email delivery failed");
+    this.name = "PasswordResetEmailDeliveryError";
+    this.failure = failure;
+  }
+}
+
+function knownProviderFailureFields(payload: unknown): string[] {
+  if (!payload || typeof payload !== "object") return [];
+  const errors = (payload as { errors?: unknown }).errors;
+  if (!errors || typeof errors !== "object" || Array.isArray(errors)) return [];
+  return Object.keys(errors).filter((field) => SAFE_FAILURE_FIELDS.has(field));
+}
+
+export function classifyMailerSendFailure(status: number, payload: unknown): PasswordResetEmailFailure {
+  const fields = knownProviderFailureFields(payload);
+  const base = { status, ...(fields.length > 0 ? { fields } : {}) };
+  if (status === 401) return { ...base, category: "credential_rejected" };
+  if (status === 403) return { ...base, category: "permission_rejected" };
+  if (status === 422 && fields.some((field) => field === "from" || field === "from.email")) {
+    return { ...base, category: "sender_rejected" };
+  }
+  if (status === 422) return { ...base, category: "validation_rejected" };
+  if (status === 429) return { ...base, category: "rate_limited" };
+  if (status >= 500) return { ...base, category: "provider_unavailable" };
+  return { ...base, category: "http_rejected" };
+}
+
+/**
+ * Deliberately formats a fixed, allowlisted diagnostic. It must never render an
+ * arbitrary error message, provider response, recipient, reset token, or link.
+ */
+export function formatPasswordResetEmailFailure(error: unknown): string {
+  if (!(error instanceof PasswordResetEmailDeliveryError)) return "category=unknown";
+  const category = MAILER_SEND_FAILURE_CATEGORIES.has(error.failure.category)
+    ? error.failure.category
+    : "unknown";
+  const parts = [
+    typeof error.failure.status === "number" ? `status=${error.failure.status}` : null,
+    `category=${category}`,
+  ];
+  const fields = error.failure.fields?.filter((field) => SAFE_FAILURE_FIELDS.has(field)) ?? [];
+  if (fields.length > 0) parts.push(`fields=${fields.join(",")}`);
+  return parts.filter((part): part is string => part !== null).join(" ");
+}
 
 function htmlEscape(value: string): string {
   return value.replace(/[&<>"']/g, (char) => ({
@@ -41,26 +114,38 @@ async function sendWithMailerSend(message: PasswordResetEmail): Promise<void> {
   const token = process.env.MAILERSEND_API_TOKEN;
   const fromEmail = process.env.MAILERSEND_FROM_EMAIL;
   if (!token || !fromEmail) {
-    throw new Error("Password-reset email is not configured");
+    throw new PasswordResetEmailDeliveryError({
+      category: "configuration_missing",
+      fields: [
+        ...(!token ? ["api_token"] : []),
+        ...(!fromEmail ? ["from_email"] : []),
+      ],
+    });
   }
 
   const copy = resetEmailCopy(message);
-  const response = await fetch(MAILERSEND_ENDPOINT, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: { email: fromEmail, name: process.env.MAILERSEND_FROM_NAME || "Brain Finance" },
-      to: [{ email: message.to }],
-      subject: copy.subject,
-      text: copy.text,
-      html: copy.html,
-    }),
-  });
+  let response: Response;
+  try {
+    response = await fetch(MAILERSEND_ENDPOINT, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: { email: fromEmail, name: process.env.MAILERSEND_FROM_NAME || "Brain Finance" },
+        to: [{ email: message.to }],
+        subject: copy.subject,
+        text: copy.text,
+        html: copy.html,
+      }),
+    });
+  } catch {
+    throw new PasswordResetEmailDeliveryError({ category: "network_error" });
+  }
   if (!response.ok) {
-    throw new Error(`MailerSend rejected password-reset email (${response.status})`);
+    const payload = await response.json().catch(() => undefined);
+    throw new PasswordResetEmailDeliveryError(classifyMailerSendFailure(response.status, payload));
   }
 }
 

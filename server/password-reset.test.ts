@@ -4,7 +4,12 @@ import type { AddressInfo } from "net";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { randomBytes } from "crypto";
 import { passwordResetTokenDigest, setupAuth } from "./auth";
-import { setPasswordResetEmailSenderForTests, type PasswordResetEmail } from "./passwordResetEmail";
+import {
+  classifyMailerSendFailure,
+  PasswordResetEmailDeliveryError,
+  setPasswordResetEmailSenderForTests,
+  type PasswordResetEmail,
+} from "./passwordResetEmail";
 import { storage } from "./storage";
 
 const sent: PasswordResetEmail[] = [];
@@ -118,14 +123,43 @@ describe("password reset", () => {
     const email = `reset-failure-${randomBytes(6).toString("hex")}@example.com`;
     await register(email);
     const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
-    setPasswordResetEmailSenderForTests(async () => { throw new Error("mail down"); });
+    const rawResetLink = `https://app.brain.fi/reset-password/${randomBytes(32).toString("base64url")}`;
+    setPasswordResetEmailSenderForTests(async () => {
+      throw new Error(`mail down for ${email}: ${rawResetLink}`);
+    });
 
     const response = await request("/api/auth/password-reset/request", { email });
 
     expect(response.status).toBe(200);
-    expect(log).toHaveBeenCalledWith("[auth] password reset email delivery failed");
+    expect(log).toHaveBeenCalledWith("[auth] password reset email delivery failed category=unknown");
     expect(log.mock.calls.flat().join(" ")).not.toContain(email);
+    expect(log.mock.calls.flat().join(" ")).not.toContain(rawResetLink);
     expect(sent).toHaveLength(0);
+    setPasswordResetEmailSenderForTests(async (message) => { sent.push(message); });
+    log.mockRestore();
+  });
+
+  it("logs only a safe MailerSend status and sender classification", async () => {
+    const email = `reset-provider-failure-${randomBytes(6).toString("hex")}@example.com`;
+    await register(email);
+    const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    setPasswordResetEmailSenderForTests(async () => {
+      throw new PasswordResetEmailDeliveryError(
+        classifyMailerSendFailure(422, {
+          errors: {
+            "from.email": [`Sender rejected for ${email}`],
+            "to.0.email": [`Recipient ${email} was rejected`],
+          },
+        }),
+      );
+    });
+
+    await request("/api/auth/password-reset/request", { email });
+
+    expect(log).toHaveBeenCalledWith(
+      "[auth] password reset email delivery failed status=422 category=sender_rejected fields=from.email",
+    );
+    expect(log.mock.calls.flat().join(" ")).not.toContain(email);
     setPasswordResetEmailSenderForTests(async (message) => { sent.push(message); });
     log.mockRestore();
   });

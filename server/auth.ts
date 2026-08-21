@@ -11,7 +11,7 @@ import type { User } from "@shared/schema";
 import { brainTenancyMode } from "./brain/config";
 import { isDemoEmail } from "./demoUsers";
 import { evictBrainSession } from "./brain/auth";
-import { sendPasswordResetEmail } from "./passwordResetEmail";
+import { formatPasswordResetEmailFailure, sendPasswordResetEmail } from "./passwordResetEmail";
 
 const scryptAsync = promisify(scrypt);
 
@@ -262,9 +262,10 @@ export function setupAuth(app: Express) {
       });
     } catch (error) {
       // A token that could not be delivered must not remain usable. Do not log
-      // the email, raw token, or link; production logs only carry this category.
+      // the email, raw token, link, or provider response. The formatter emits
+      // only a fixed provider status/category diagnostic.
       await storage.revokePasswordResetTokens(user.id, new Date());
-      console.error("[auth] password reset email delivery failed");
+      console.error(`[auth] password reset email delivery failed ${formatPasswordResetEmailFailure(error)}`);
     }
     return res.json(PASSWORD_RESET_GENERIC_RESPONSE);
   });
