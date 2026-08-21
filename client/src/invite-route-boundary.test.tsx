@@ -235,4 +235,51 @@ describe("/invite/:token route boundary", () => {
     expect(boundarySpies.googleReturnPaths).toEqual(["/invite/invite-token-for-boundary-test"]);
     expect(requests.filter((url) => url.startsWith("/api/brain/"))).toEqual([]);
   });
+
+  it("preserves the exact invite path when an invitee requests a password reset", async () => {
+    boundarySpies.signedIn = false;
+    globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = typeof input === "string" ? input : input.toString();
+      requests.push(url);
+      if (url === "/api/config") {
+        return new Response(JSON.stringify({ tenancyProduction: true, googleEnabled: false }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify({}), { status: 200, headers: { "content-type": "application/json" } });
+    }) as typeof fetch;
+
+    await act(async () => {
+      root.render(<App />);
+      await Promise.resolve();
+    });
+    act(() => {
+      container.querySelector('[data-testid="button-forgot-password"]')?.dispatchEvent(
+        new MouseEvent("click", { bubbles: true, cancelable: true }),
+      );
+    });
+    const email = container.querySelector('[data-testid="input-password-reset-email"]') as HTMLInputElement;
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")!.set!;
+    act(() => {
+      setter.call(email, "invitee@example.com");
+      email.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await act(async () => {
+      email.closest("form")?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+      await Promise.resolve();
+    });
+
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      "/api/auth/password-reset/request",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          email: "invitee@example.com",
+          return_to: "/invite/invite-token-for-boundary-test",
+        }),
+      }),
+    );
+    expect(requests.filter((url) => url.startsWith("/api/brain/"))).toEqual([]);
+  });
 });

@@ -4,6 +4,7 @@ import { useLocation, useRoute } from "wouter";
 import googleLogo from "@assets/pngtree-google-internet-icon-vector-png-image_9183287_1784767118256.png";
 import brainLogo from "@assets/BrainLogo_1781769246241.png";
 import { Button } from "@/components/ui/button";
+import { validInviteReturnTo } from "@/lib/inviteReturnTo";
 
 type Mode = "login" | "register" | "forgot";
 
@@ -29,6 +30,7 @@ export function SignupPage() {
   // must only reach Brain tenancy through an explicit Join company action, never through
   // signup's normal automatic workspace creation.
   const [onInviteRoute] = useRoute("/invite/:token");
+  const inviteReturnTo = onInviteRoute ? validInviteReturnTo(window.location.pathname) : undefined;
 
   useEffect(() => {
     if (isLoggedIn && !onInviteRoute) navigate("/");
@@ -84,7 +86,10 @@ export function SignupPage() {
         await fetch("/api/auth/password-reset/request", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: recoveryEmail.trim() }),
+          body: JSON.stringify({
+            email: recoveryEmail.trim(),
+            ...(inviteReturnTo ? { return_to: inviteReturnTo } : {}),
+          }),
         });
         setRecoverySubmitted(true);
       } catch {
@@ -229,7 +234,7 @@ export function SignupPage() {
                 variant="subtle"
                 size="large"
                 data-testid="button-google-signin"
-                onClick={() => loginWithGoogle(onInviteRoute ? window.location.pathname : undefined)}
+                onClick={() => loginWithGoogle(inviteReturnTo)}
                 className="w-full border border-brain-v1stroke-2 hover:border-[#7631ee]/40"
               >
                 <img src={googleLogo} alt="" className="h-[18px] w-[18px] rounded-full object-contain" />

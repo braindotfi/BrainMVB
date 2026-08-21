@@ -33,6 +33,7 @@ import { CurrencyProvider } from "@/lib/currencyContext";
 import { SessionTimeoutProvider } from "@/lib/sessionTimeoutContext";
 import { queryClient } from "@/lib/queryClient";
 import { formatRateLimitDescription, RATE_LIMIT_ALERT_TITLE, subscribeRateLimitReports } from "@/lib/rateLimit";
+import { inviteReturnToFromSearch } from "@/lib/inviteReturnTo";
 
 /**
  * Vendors and Rules are Ledger tabs now, not pages.
@@ -179,7 +180,12 @@ function AppLayout() {
   }
 
   if (onPasswordResetRoute && resetBoundaryState === "ready") {
-    return <ResetPasswordPage token={resetParams?.token ?? ""} />;
+    return (
+      <ResetPasswordPage
+        token={resetParams?.token ?? ""}
+        returnTo={inviteReturnToFromSearch(window.location.search)}
+      />
+    );
   }
 
   if (onPasswordResetRoute) {

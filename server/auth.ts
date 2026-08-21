@@ -143,9 +143,9 @@ export const googleEnabled = !!(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET);
 // code exchange below.
 const GOOGLE_CALLBACK_URL = "https://app.brain.fi/api/auth/google/callback";
 
-/** OAuth must never become an open redirect. Only a route-shaped invite token can survive
- * the Google round trip, and it is retained server-side in the session rather than state. */
-function validGoogleInviteReturnTo(value: unknown): string | undefined {
+/** Auth continuations must never become open redirects. Only a route-shaped invite token
+ * can survive OAuth or a password-reset round trip. */
+function validInviteReturnTo(value: unknown): string | undefined {
   return typeof value === "string" && /^\/invite\/[A-Za-z0-9._~-]+$/.test(value)
     ? value
     : undefined;
@@ -176,12 +176,19 @@ const loginSchema = z.object({
 });
 const passwordResetRequestSchema = z.object({
   email: z.string().trim().email(),
-});
+  // Invalid return paths must never block the generic reset response or create
+  // an open redirect. They are simply discarded below.
+  return_to: z.unknown().optional(),
+}).transform(({ email, return_to }) => ({
+  email,
+  returnTo: validInviteReturnTo(return_to),
+}));
 const passwordResetTokenSchema = z.object({
   token: z.string().min(32).max(512),
 });
 const passwordResetConfirmSchema = passwordResetTokenSchema.extend({
   password: z.string().min(8, "Password must be at least 8 characters").max(256),
+  return_to: z.unknown().optional(),
 });
 
 const PASSWORD_RESET_TTL_MS = 30 * 60 * 1000;
@@ -190,9 +197,10 @@ export function passwordResetTokenDigest(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
 
-function passwordResetUrl(token: string): string {
+function passwordResetUrl(token: string, returnTo?: string): string {
   const baseUrl = process.env.APP_BASE_URL || "https://app.brain.fi";
   const url = new URL(`/reset-password/${encodeURIComponent(token)}`, baseUrl);
+  if (returnTo) url.searchParams.set("return_to", returnTo);
   return url.toString();
 }
 
@@ -202,7 +210,7 @@ function passwordResetUrl(token: string): string {
  * mail delivery after the generic response has been sent so provider latency
  * cannot become an account-enumeration signal.
  */
-async function processPasswordResetRequest(email: string, req: Request): Promise<void> {
+async function processPasswordResetRequest(email: string, returnTo: string | undefined, req: Request): Promise<void> {
   let user: User | undefined;
   try {
     user = await storage.getUserByEmail(email);
@@ -225,7 +233,7 @@ async function processPasswordResetRequest(email: string, req: Request): Promise
     });
     await sendPasswordResetEmail({
       to: user.email ?? email,
-      resetUrl: passwordResetUrl(rawToken),
+      resetUrl: passwordResetUrl(rawToken, returnTo),
       expiresInMinutes: PASSWORD_RESET_TTL_MS / 60_000,
     });
     writeAuthAudit(req, {
@@ -390,7 +398,7 @@ export function setupAuth(app: Express) {
     // Deferring avoids starting a known-account lookup before Express flushes
     // the fixed response. Do not await this work in the request lifecycle.
     setImmediate(() => {
-      void processPasswordResetRequest(parsed.data.email.toLowerCase(), req);
+      void processPasswordResetRequest(parsed.data.email.toLowerCase(), parsed.data.returnTo, req);
     });
   });
 
@@ -539,7 +547,7 @@ export function setupAuth(app: Express) {
     }
     const state = randomBytes(16).toString("hex");
     req.session.googleState = state;
-    req.session.googleReturnTo = validGoogleInviteReturnTo(req.query.return_to);
+    req.session.googleReturnTo = validInviteReturnTo(req.query.return_to);
     const params = new URLSearchParams({
       client_id: GOOGLE_CLIENT_ID!,
       redirect_uri: GOOGLE_CALLBACK_URL,

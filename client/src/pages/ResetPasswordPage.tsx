@@ -2,11 +2,13 @@ import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import brainLogo from "@assets/BrainLogo_1781769246241.png";
 import { Button } from "@/components/ui/button";
+import { validInviteReturnTo } from "@/lib/inviteReturnTo";
 
 type ResetState = "checking" | "invalid" | "resend" | "resent" | "ready" | "complete";
 
-export function ResetPasswordPage({ token }: { token: string }) {
+export function ResetPasswordPage({ token, returnTo }: { token: string; returnTo?: string }) {
   const [, navigate] = useLocation();
+  const inviteReturnTo = validInviteReturnTo(returnTo);
   const [state, setState] = useState<ResetState>("checking");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -49,7 +51,11 @@ export function ResetPasswordPage({ token }: { token: string }) {
       const response = await fetch("/api/auth/password-reset/confirm", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, password }),
+        body: JSON.stringify({
+          token,
+          password,
+          ...(inviteReturnTo ? { return_to: inviteReturnTo } : {}),
+        }),
       });
       const body = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -78,7 +84,10 @@ export function ResetPasswordPage({ token }: { token: string }) {
       await fetch("/api/auth/password-reset/request", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: recoveryEmail.trim() }),
+        body: JSON.stringify({
+          email: recoveryEmail.trim(),
+          ...(inviteReturnTo ? { return_to: inviteReturnTo } : {}),
+        }),
       });
     } catch {
       // The server intentionally gives the same confirmation for all account
@@ -142,7 +151,7 @@ export function ResetPasswordPage({ token }: { token: string }) {
         title: "Check your email",
         body: "If an account matches that email, a password reset link will arrive shortly.",
         children: (
-          <Button variant="cta" size="large" className="w-full" onClick={() => navigate("/")}>
+          <Button variant="cta" size="large" className="w-full" onClick={() => navigate(inviteReturnTo ?? "/")}>
             Back to sign in
           </Button>
         ),
@@ -153,7 +162,7 @@ export function ResetPasswordPage({ token }: { token: string }) {
         title: "Password Updated",
         body: "Your password has been changed. You can sign in now.",
         children: (
-          <Button variant="cta" size="large" className="w-full" onClick={() => navigate("/")}>
+          <Button variant="cta" size="large" className="w-full" onClick={() => navigate(inviteReturnTo ?? "/")}>
             Go to sign in
           </Button>
         ),

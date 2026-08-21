@@ -118,6 +118,25 @@ describe("password reset", () => {
     expect(sent[0].to).toBe(email);
   });
 
+  it("carries only a validated invite continuation into a reset email", async () => {
+    const email = `reset-invite-return-${randomBytes(6).toString("hex")}@example.com`;
+    await register(email);
+    const invitePath = "/invite/invite-token_123";
+
+    await request("/api/auth/password-reset/request", { email, return_to: invitePath });
+    await waitFor(() => sent.length === 1);
+    const invitedReset = new URL(sent[0].resetUrl);
+    expect(invitedReset.pathname).toMatch(/^\/reset-password\/[A-Za-z0-9_-]+$/);
+    expect(invitedReset.searchParams.get("return_to")).toBe(invitePath);
+
+    await request("/api/auth/password-reset/request", {
+      email,
+      return_to: "https://attacker.example/invite/steal",
+    });
+    await waitFor(() => sent.length === 2);
+    expect(new URL(sent[1].resetUrl).searchParams.get("return_to")).toBeNull();
+  });
+
   it("invalidates a replacement link, rejects expired links, and consumes a link once", async () => {
     const email = `reset-lifecycle-${randomBytes(6).toString("hex")}@example.com`;
     const user = await register(email);
