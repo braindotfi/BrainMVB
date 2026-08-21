@@ -5,7 +5,7 @@ import googleLogo from "@assets/pngtree-google-internet-icon-vector-png-image_91
 import brainLogo from "@assets/BrainLogo_1781769246241.png";
 import { Button } from "@/components/ui/button";
 
-type Mode = "login" | "register";
+type Mode = "login" | "register" | "forgot";
 
 export function SignupPage() {
   const { isLoggedIn, loginWithPassword, register, loginDemoFresh, loginWithGoogle } = useAuth();
@@ -19,6 +19,8 @@ export function SignupPage() {
   const [identifier, setIdentifier] = useState(""); // login: username OR email
   const [username, setUsername] = useState(""); // register
   const [email, setEmail] = useState(""); // register
+  const [recoveryEmail, setRecoveryEmail] = useState("");
+  const [recoverySubmitted, setRecoverySubmitted] = useState(false);
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -70,6 +72,29 @@ export function SignupPage() {
     e.preventDefault();
     if (submitting) return;
     setError(null);
+
+    if (mode === "forgot") {
+      if (!recoveryEmail.trim()) {
+        setError("Email is required.");
+        return;
+      }
+      setSubmitting(true);
+      try {
+        await fetch("/api/auth/password-reset/request", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: recoveryEmail.trim() }),
+        });
+        setRecoverySubmitted(true);
+      } catch {
+        // The endpoint's promise is deliberately identical for known and
+        // unknown accounts. Keep the UI equally non-revealing on a network miss.
+        setRecoverySubmitted(true);
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
 
     if (mode === "login") {
       if (!identifier.trim() || !password) {
@@ -150,6 +175,7 @@ export function SignupPage() {
     setPassword("");
     setIdentifier("");
     setUsername("");
+    setRecoverySubmitted(false);
   };
 
   const handleDemo = async () => {
@@ -184,17 +210,19 @@ export function SignupPage() {
         <div className="w-full max-w-[420px] bg-brain-v1baby-blue-5 border border-brain-v1stroke-2 rounded-modal px-7 py-8 shadow-2xl">
           <div className="flex flex-col items-center text-center mb-6">
             <h1 className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1white text-[24px] leading-[32px]">
-              {mode === "login" ? "Welcome Back" : "Create Your Account"}
+              {mode === "login" ? "Welcome Back" : mode === "forgot" ? "Reset Your Password" : "Create Your Account"}
             </h1>
             <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px] mt-1">
               {mode === "login"
                 ? "Sign in to your Brain account."
+                : mode === "forgot"
+                  ? "Enter your email and we'll send a reset link if an account matches it."
                 : "Start managing your finances autonomously."}
             </p>
           </div>
 
-          {/* Google OAuth */}
-          {googleEnabled && (
+           {/* Google OAuth */}
+           {mode !== "forgot" && googleEnabled && (
             <>
               <Button
                 variant="subtle"
@@ -249,7 +277,28 @@ export function SignupPage() {
               </div>
             )}
 
-            {mode === "login" ? (
+            {mode === "forgot" ? (
+              recoverySubmitted ? (
+                <p data-testid="text-reset-request-confirmation" className="rounded-2xl border border-brain-v1stroke-2 bg-brain-v1highlight-dropdown-bg px-4 py-3 text-center text-[14px] leading-[20px] text-brain-v1baby-blue-60 [font-family:'Gilroy',sans-serif]">
+                  If an account matches that email, a password reset link will arrive shortly.
+                </p>
+              ) : (
+                <div className="flex flex-col gap-1.5">
+                  <label className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px] pl-1">
+                    Email
+                  </label>
+                  <input
+                    data-testid="input-password-reset-email"
+                    type="email"
+                    value={recoveryEmail}
+                    onChange={(e) => setRecoveryEmail(e.target.value)}
+                    autoComplete="email"
+                    placeholder="you@example.com"
+                    className="w-full h-[48px] px-4 rounded-2xl bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 focus:border-brain-v1purple outline-none transition-colors [font-family:'Gilroy',sans-serif] text-brain-v1white placeholder:text-brain-v1baby-blue-60 text-[16px] leading-[20px]"
+                  />
+                </div>
+              )
+            ) : mode === "login" ? (
               <div className="flex flex-col gap-1.5">
                 <label className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px] pl-1">
                   Username or Email
@@ -298,7 +347,7 @@ export function SignupPage() {
               </>
             )}
 
-            <div className="flex flex-col gap-1.5">
+            {mode !== "forgot" && <div className="flex flex-col gap-1.5">
               <label className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px] pl-1">
                 Password
               </label>
@@ -311,7 +360,7 @@ export function SignupPage() {
                 placeholder={mode === "register" ? "At least 8 characters" : "Your password"}
                 className="w-full h-[48px] px-4 rounded-2xl bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 focus:border-brain-v1purple outline-none transition-colors [font-family:'Gilroy',sans-serif] text-brain-v1white placeholder:text-brain-v1baby-blue-30 text-[16px] leading-[20px]"
               />
-            </div>
+            </div>}
 
             {error && (
               <p data-testid="text-auth-error" className="[font-family:'Gilroy',sans-serif] text-brain-v1error-text text-[14px] leading-[20px] px-1">
@@ -330,18 +379,18 @@ export function SignupPage() {
               {submitting && (
                 <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
               )}
-              {mode === "login" ? "Sign In" : "Create Account"}
+              {mode === "login" ? "Sign In" : mode === "forgot" ? "Send reset link" : "Create Account"}
             </Button>
           </form>
 
           {/* Demo access - explore the app without creating an account */}
-          <div className="flex items-center gap-3 w-full my-5">
+          {mode !== "forgot" && <div className="flex items-center gap-3 w-full my-5">
             <div className="flex-1 h-px bg-brain-v1stroke-2" />
             <span className="text-brain-v1baby-blue-30 text-xs [font-family:'Gilroy',sans-serif]">or continue with demo</span>
             <div className="flex-1 h-px bg-brain-v1stroke-2" />
-          </div>
+          </div>}
 
-          <Button
+          {mode !== "forgot" && <Button
             variant="subtle"
             size="large"
             data-testid="button-demo-login"
@@ -350,19 +399,29 @@ export function SignupPage() {
             className="w-full border border-brain-v1stroke-2 hover:border-[#7631ee]/40"
           >
             Continue with Demo
-          </Button>
+          </Button>}
 
           <p className="text-center mt-6 [font-family:'Gilroy',sans-serif] text-brain-v1baby-blue-60 text-[14px] leading-[20px]">
-            {mode === "login" ? "Don't have an account?" : "Already have an account?"}{" "}
+            {mode === "forgot" ? "Remember your password?" : mode === "login" ? "Don't have an account?" : "Already have an account?"}{" "}
             <button
               type="button"
               data-testid="button-toggle-mode"
-              onClick={() => switchMode(mode === "login" ? "register" : "login")}
+              onClick={() => switchMode(mode === "forgot" ? "login" : mode === "login" ? "register" : "login")}
               className="text-brain-v1baby-blue-100 hover:text-brain-v1purple transition-colors font-medium"
             >
-              {mode === "login" ? "Sign Up" : "Sign In"}
+              {mode === "forgot" ? "Sign In" : mode === "login" ? "Sign Up" : "Sign In"}
             </button>
           </p>
+          {mode === "login" && (
+            <button
+              type="button"
+              data-testid="button-forgot-password"
+              onClick={() => switchMode("forgot")}
+              className="mt-3 w-full text-center text-[14px] font-medium leading-[20px] text-brain-v1baby-blue-60 transition-colors hover:text-brain-v1purple [font-family:'Gilroy',sans-serif]"
+            >
+              Forgot password?
+            </button>
+          )}
         </div>
       </div>
 
