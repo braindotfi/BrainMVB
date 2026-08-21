@@ -5,7 +5,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 import { randomBytes } from "crypto";
 import { passwordResetTokenDigest, setupAuth } from "./auth";
 import {
-  classifyMailerSendFailure,
+  classifyResendFailure,
   PasswordResetEmailDeliveryError,
   setPasswordResetEmailSenderForTests,
   type PasswordResetEmail,
@@ -261,13 +261,13 @@ describe("password reset", () => {
     log.mockRestore();
   });
 
-  it("logs only a safe MailerSend status and sender classification", async () => {
+  it("logs only a safe Resend status and sender classification", async () => {
     const email = `reset-provider-failure-${randomBytes(6).toString("hex")}@example.com`;
     await register(email);
     const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
     setPasswordResetEmailSenderForTests(async () => {
       throw new PasswordResetEmailDeliveryError(
-        classifyMailerSendFailure(422, {
+        classifyResendFailure(422, {
           errors: {
             "from.email": [`Sender rejected for ${email}`],
             "to.0.email": [`Recipient ${email} was rejected`],
