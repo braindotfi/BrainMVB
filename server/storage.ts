@@ -49,6 +49,11 @@ export interface DeleteAccountResult {
   bankTokenRevocationsFailed: number;
 }
 
+export interface PasswordResetConsumption {
+  userId: string;
+  sessionVersion: number;
+}
+
 export interface IStorage {
   // Users
   getUser(id: string): Promise<User | undefined>;
@@ -59,7 +64,7 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   createPasswordResetToken(token: { userId: string; tokenHash: string; expiresAt: Date }): Promise<PasswordResetToken>;
   isPasswordResetTokenValid(tokenHash: string, now: Date): Promise<boolean>;
-  consumePasswordResetToken(tokenHash: string, passwordHash: string, now: Date): Promise<boolean>;
+  consumePasswordResetToken(tokenHash: string, passwordHash: string, now: Date): Promise<PasswordResetConsumption | undefined>;
   revokePasswordResetTokens(userId: string, now: Date): Promise<void>;
   updateUserWallet(id: string, walletAddress: string): Promise<User | undefined>;
   deleteUserAccount(ids: DeleteAccountIdentifiers): Promise<DeleteAccountResult>;
@@ -350,6 +355,7 @@ export class MemStorage implements IStorage {
       googleId: insertUser.googleId ?? null,
       name: insertUser.name ?? null,
       walletAddress: insertUser.walletAddress ?? null,
+      sessionVersion: 1,
       createdAt: new Date(),
     };
     this.users.set(id, user);
@@ -377,17 +383,18 @@ export class MemStorage implements IStorage {
     const row = this.passwordResetTokensStore.get(tokenHash);
     return !!row && row.consumedAt === null && row.expiresAt > now;
   }
-  async consumePasswordResetToken(tokenHash: string, passwordHash: string, now: Date): Promise<boolean> {
+  async consumePasswordResetToken(tokenHash: string, passwordHash: string, now: Date): Promise<PasswordResetConsumption | undefined> {
     const row = this.passwordResetTokensStore.get(tokenHash);
-    if (!row || row.consumedAt !== null || row.expiresAt <= now) return false;
+    if (!row || row.consumedAt !== null || row.expiresAt <= now) return undefined;
     const user = this.users.get(row.userId);
-    if (!user) return false;
+    if (!user) return undefined;
     row.consumedAt = now;
     for (const other of this.passwordResetTokensStore.values()) {
       if (other.userId === row.userId && other.consumedAt === null) other.consumedAt = now;
     }
-    this.users.set(user.id, { ...user, password: passwordHash });
-    return true;
+    const sessionVersion = user.sessionVersion + 1;
+    this.users.set(user.id, { ...user, password: passwordHash, sessionVersion });
+    return { userId: user.id, sessionVersion };
   }
   async revokePasswordResetTokens(userId: string, now: Date): Promise<void> {
     for (const row of this.passwordResetTokensStore.values()) {
@@ -975,7 +982,7 @@ export class DatabaseStorage implements IStorage {
       .limit(1);
     return row !== undefined;
   }
-  async consumePasswordResetToken(tokenHash: string, passwordHash: string, now: Date): Promise<boolean> {
+  async consumePasswordResetToken(tokenHash: string, passwordHash: string, now: Date): Promise<PasswordResetConsumption | undefined> {
     return db.transaction(async (tx) => {
       const [token] = await tx
         .update(passwordResetTokensTable)
@@ -986,12 +993,15 @@ export class DatabaseStorage implements IStorage {
           gt(passwordResetTokensTable.expiresAt, now),
         ))
         .returning();
-      if (!token) return false;
+      if (!token) return undefined;
       const [user] = await tx
         .update(usersTable)
-        .set({ password: passwordHash })
+        .set({
+          password: passwordHash,
+          sessionVersion: sql`${usersTable.sessionVersion} + 1`,
+        })
         .where(eq(usersTable.id, token.userId))
-        .returning({ id: usersTable.id });
+        .returning({ id: usersTable.id, sessionVersion: usersTable.sessionVersion });
       if (!user) throw new Error("Password reset token references no user");
       await tx
         .update(passwordResetTokensTable)
@@ -1000,7 +1010,7 @@ export class DatabaseStorage implements IStorage {
           eq(passwordResetTokensTable.userId, token.userId),
           isNull(passwordResetTokensTable.consumedAt),
         ));
-      return true;
+      return { userId: user.id, sessionVersion: user.sessionVersion };
     });
   }
   async revokePasswordResetTokens(userId: string, now: Date): Promise<void> {

@@ -223,9 +223,13 @@ beforeAll(async () => {
 
   const app: Express = express();
   app.use(express.json());
-  // Inject an authenticated session so requireAuth passes.
-  app.use((req, _res, next) => {
-    (req as unknown as { session: { userId: string } }).session = { userId: "user-test-1" };
+  // Inject a complete authenticated session so requireAuth passes.
+  app.use((req, res, next) => {
+    (req as unknown as { session: { userId: string; sessionVersion: number } }).session = {
+      userId: "user-test-1",
+      sessionVersion: 1,
+    };
+    res.locals.authenticatedUser = { id: "user-test-1", sessionVersion: 1 };
     next();
   });
   app.use("/api/brain", createBrainProxyRouter());

@@ -100,12 +100,12 @@ function resetEmailCopy(message: PasswordResetEmail) {
       "",
       `Reset your password: ${message.resetUrl}`,
       "",
-      `This link expires in ${message.expiresInMinutes} minutes and can be used once.`,
+      `This link expires ${message.expiresInMinutes} minutes after it was requested and can be used once.`,
       "If this was not requested, no action is needed.",
     ].join("\n"),
     html: `<p>A password reset was requested for your Brain Finance account.</p>
 <p><a href="${url}">Reset your password</a></p>
-<p>This link expires in ${message.expiresInMinutes} minutes and can be used once.</p>
+<p>This link expires ${message.expiresInMinutes} minutes after it was requested and can be used once.</p>
 <p>If this was not requested, no action is needed.</p>`,
   };
 }

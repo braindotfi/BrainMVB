@@ -130,10 +130,12 @@ beforeAll(async () => {
 
   const app: Express = express();
   app.use(express.json());
-  app.use((req, _res, next) => {
-    (req as unknown as { session: { userId: string } }).session = {
+  app.use((req, res, next) => {
+    (req as unknown as { session: { userId: string; sessionVersion: number } }).session = {
       userId: "user-trust-routes",
+      sessionVersion: 1,
     };
+    res.locals.authenticatedUser = { id: "user-trust-routes", sessionVersion: 1 };
     next();
   });
   app.use("/api/brain", createBrainProxyRouter());

@@ -98,6 +98,7 @@ function AppLayout() {
   const alert = useAppAlert();
   const [, navigate] = useLocation();
   const inactivityTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [resetBoundaryState, setResetBoundaryState] = useState<"idle" | "clearing" | "ready" | "failed">("idle");
   // Refs hold the latest function/value references so the listener-binding
   // effect below depends only on `isLoggedIn` + `timeoutMin` and does not
   // re-bind window listeners every render.
@@ -116,6 +117,23 @@ function AppLayout() {
       "brain-rate-limit",
     );
   }), []);
+
+  // Password-reset links are an explicit anonymous boundary. A link may be
+  // opened on a shared browser or in a tab retaining another person's cookie;
+  // do not render reset content or permit a redirect until that server session
+  // has been destroyed and the client identity/cache are cleared.
+  useEffect(() => {
+    if (!onPasswordResetRoute) {
+      setResetBoundaryState("idle");
+      return;
+    }
+    let cancelled = false;
+    setResetBoundaryState("clearing");
+    void logout().then((serverEndedSession) => {
+      if (!cancelled) setResetBoundaryState(serverEndedSession ? "ready" : "failed");
+    });
+    return () => { cancelled = true; };
+  }, [onPasswordResetRoute, logout]);
 
   // Inactivity-based auto-logout. Resets on any user interaction.
   useEffect(() => {
@@ -160,8 +178,27 @@ function AppLayout() {
     );
   }
 
-  if (onPasswordResetRoute) {
+  if (onPasswordResetRoute && resetBoundaryState === "ready") {
     return <ResetPasswordPage token={resetParams?.token ?? ""} />;
+  }
+
+  if (onPasswordResetRoute) {
+    const failed = resetBoundaryState === "failed";
+    return (
+      <div className="bg-shared-colorsheaderfooterbg w-full h-screen flex items-center justify-center px-4">
+        <div className="w-full max-w-[420px] rounded-modal border border-brain-v1stroke-2 bg-brain-v1baby-blue-5 px-7 py-8 text-center shadow-2xl">
+          <h1 className="text-[24px] font-semibold leading-[32px] text-brain-v1white [font-family:'Gilroy',sans-serif]">
+            {failed ? "We couldn't secure this reset session" : "Securing your reset session"}
+          </h1>
+          <p className="mt-1 text-[14px] font-medium leading-[20px] text-brain-v1baby-blue-60 [font-family:'Gilroy',sans-serif]">
+            {failed
+              ? "Please reload this page before continuing. We won't show password reset details until any existing session is signed out."
+              : "Please wait while we sign out any existing account in this browser."}
+          </p>
+          {!failed && <div className="mx-auto mt-6 h-7 w-7 rounded-full border-2 border-brain-v1stroke-2 border-t-brain-v1purple animate-spin" />}
+        </div>
+      </div>
+    );
   }
 
   if (!isLoggedIn) {

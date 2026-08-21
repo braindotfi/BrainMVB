@@ -25,6 +25,26 @@ async function request(path: string, body: unknown) {
   return { status: response.status, body: await response.json() as Record<string, unknown> };
 }
 
+class SessionClient {
+  private cookie = "";
+
+  constructor(private readonly base: string) {}
+
+  async request(path: string, body?: unknown): Promise<{ status: number; body: Record<string, unknown> }> {
+    const headers: Record<string, string> = {};
+    if (body !== undefined) headers["Content-Type"] = "application/json";
+    if (this.cookie) headers.cookie = this.cookie;
+    const response = await fetch(`${this.base}${path}`, {
+      method: body === undefined ? "GET" : "POST",
+      headers,
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    const setCookie = response.headers.get("set-cookie");
+    if (setCookie) this.cookie = setCookie.split(";")[0];
+    return { status: response.status, body: await response.json() as Record<string, unknown> };
+  }
+}
+
 async function waitFor(condition: () => boolean, timeoutMs = 1_000): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   while (!condition()) {
@@ -43,6 +63,16 @@ async function register(email: string): Promise<{ id: string }> {
     email,
     password: "correct-horse-battery",
     name: "Reset Test",
+  });
+  expect(response.status).toBe(201);
+  return response.body.user as { id: string };
+}
+
+async function registerSession(client: SessionClient, email: string): Promise<{ id: string }> {
+  const response = await client.request("/api/auth/register", {
+    email,
+    password: "correct-horse-battery",
+    name: "Reset Session Test",
   });
   expect(response.status).toBe(201);
   return response.body.user as { id: string };
@@ -106,7 +136,7 @@ describe("password reset", () => {
     await storage.createPasswordResetToken({
       userId: user.id,
       tokenHash: passwordResetTokenDigest(expired),
-      expiresAt: new Date(Date.now() - 1),
+      expiresAt: new Date(),
     });
     expect((await request("/api/auth/password-reset/verify", { token: expired })).body).toEqual({ valid: false });
 
@@ -129,6 +159,85 @@ describe("password reset", () => {
       password: "new-correct-horse-battery",
     });
     expect(signedIn.status).toBe(200);
+  });
+
+  it("keeps reset routes anonymous and clears an unrelated ambient session at the reset boundary", async () => {
+    const targetEmail = `reset-boundary-target-${randomBytes(6).toString("hex")}@example.com`;
+    await register(targetEmail);
+    await request("/api/auth/password-reset/request", { email: targetEmail });
+    await waitFor(() => sent.length === 1);
+    const token = resetToken(sent[0]);
+
+    const otherSession = new SessionClient(baseUrl);
+    const otherEmail = `reset-boundary-other-${randomBytes(6).toString("hex")}@example.com`;
+    const other = await registerSession(otherSession, otherEmail);
+
+    // The public reset API never authenticates or switches the browser to the
+    // reset target, even when an unrelated session cookie is present.
+    expect((await otherSession.request("/api/auth/password-reset/verify", { token })).body).toEqual({ valid: true });
+    expect((await otherSession.request("/api/auth/user")).body.user).toMatchObject({ id: other.id });
+
+    // AppLayout performs this before rendering reset content. Once it succeeds,
+    // no unrelated identity remains to be restored by a reset-page exit.
+    expect((await otherSession.request("/api/auth/logout", {})).status).toBe(200);
+    expect((await otherSession.request("/api/auth/user")).status).toBe(401);
+  });
+
+  it("invalidates every target session after reset without touching another account", async () => {
+    const targetEmail = `reset-session-target-${randomBytes(6).toString("hex")}@example.com`;
+    const firstTargetSession = new SessionClient(baseUrl);
+    const target = await registerSession(firstTargetSession, targetEmail);
+    const secondTargetSession = new SessionClient(baseUrl);
+    expect((await secondTargetSession.request("/api/auth/login", {
+      identifier: targetEmail,
+      password: "correct-horse-battery",
+    })).status).toBe(200);
+
+    const otherSession = new SessionClient(baseUrl);
+    const other = await registerSession(
+      otherSession,
+      `reset-session-other-${randomBytes(6).toString("hex")}@example.com`,
+    );
+
+    await request("/api/auth/password-reset/request", { email: targetEmail });
+    await waitFor(() => sent.length === 1);
+    const token = resetToken(sent[0]);
+    const changed = await request("/api/auth/password-reset/confirm", {
+      token,
+      password: "new-correct-horse-battery",
+    });
+    expect(changed.status).toBe(200);
+
+    expect((await firstTargetSession.request("/api/auth/user")).status).toBe(401);
+    expect((await secondTargetSession.request("/api/auth/user")).status).toBe(401);
+    expect((await otherSession.request("/api/auth/user")).body.user).toMatchObject({ id: other.id });
+
+    const freshTargetSession = new SessionClient(baseUrl);
+    const relogin = await freshTargetSession.request("/api/auth/login", {
+      identifier: targetEmail,
+      password: "new-correct-horse-battery",
+    });
+    expect(relogin.status).toBe(200);
+    expect(relogin.body.user).toMatchObject({ id: target.id });
+  });
+
+  it("records reset activity without writing raw emails, tokens, or session identifiers", async () => {
+    const email = `reset-audit-${randomBytes(6).toString("hex")}@example.com`;
+    const audit = vi.spyOn(console, "info").mockImplementation(() => undefined);
+    await register(email);
+
+    await request("/api/auth/password-reset/request", { email });
+    await waitFor(() => sent.length === 1);
+    const token = resetToken(sent[0]);
+    await request("/api/auth/password-reset/verify", { token });
+
+    const output = audit.mock.calls.flat().join(" ");
+    expect(output).toContain("[auth-audit]");
+    expect(output).toContain("route=password-reset/request");
+    expect(output).toContain("route=password-reset/verify");
+    expect(output).not.toContain(email);
+    expect(output).not.toContain(token);
+    audit.mockRestore();
   });
 
   it("revokes an undeliverable link without logging reset secrets", async () => {

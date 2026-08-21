@@ -1,0 +1,76 @@
+// @vitest-environment jsdom
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { act } from "react-dom/test-utils";
+import { createRoot, type Root } from "react-dom/client";
+import { ResetPasswordPage } from "./ResetPasswordPage";
+
+(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+
+let root: Root | undefined;
+let container: HTMLDivElement | undefined;
+
+function mount() {
+  container = document.createElement("div");
+  document.body.appendChild(container);
+  root = createRoot(container);
+  act(() => {
+    root!.render(<ResetPasswordPage token="opaque-test-token" />);
+  });
+}
+
+function click(text: string) {
+  const button = Array.from(container!.querySelectorAll("button")).find((node) => node.textContent?.includes(text));
+  expect(button).toBeTruthy();
+  act(() => {
+    button!.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+  });
+}
+
+function setInput(input: HTMLInputElement, value: string) {
+  const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")!.set!;
+  act(() => {
+    setter.call(input, value);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+}
+
+afterEach(() => {
+  act(() => root?.unmount());
+  container?.remove();
+  root = undefined;
+  container = undefined;
+  vi.unstubAllGlobals();
+});
+
+describe("ResetPasswordPage recovery path", () => {
+  it("requests a replacement link from the invalid-link page without navigating into an account", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ json: async () => ({ valid: false }) })
+      .mockResolvedValueOnce({ ok: true });
+    vi.stubGlobal("fetch", fetchMock);
+    mount();
+
+    await act(async () => {});
+    expect(container!.textContent).toContain("This link is no longer valid");
+    expect(container!.textContent).toContain("expire 30 minutes after they are requested");
+
+    click("Request a new link");
+    const email = container!.querySelector('[data-testid="input-reset-resend-email"]') as HTMLInputElement;
+    setInput(email, "invitee@example.com");
+    const form = email.closest("form")!;
+    await act(async () => {
+      form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    });
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      "/api/auth/password-reset/request",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ email: "invitee@example.com" }),
+      }),
+    );
+    expect(container!.textContent).toContain("Check your email");
+    expect(container!.textContent).not.toContain("Set a new password");
+  });
+});

@@ -15,6 +15,10 @@ export const users = pgTable("users", {
   googleId: text("google_id").unique(),        // Google OAuth subject id
   name: text("name"),                          // display name (from Google profile or signup)
   walletAddress: text("wallet_address").unique(),
+  // Captured in every authenticated browser session. Advancing this value
+  // invalidates every older session for this user without touching another
+  // user's persistent session records.
+  sessionVersion: integer("session_version").notNull().default(1),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

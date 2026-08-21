@@ -3,13 +3,14 @@ import { useLocation } from "wouter";
 import brainLogo from "@assets/BrainLogo_1781769246241.png";
 import { Button } from "@/components/ui/button";
 
-type ResetState = "checking" | "invalid" | "ready" | "complete";
+type ResetState = "checking" | "invalid" | "resend" | "resent" | "ready" | "complete";
 
 export function ResetPasswordPage({ token }: { token: string }) {
   const [, navigate] = useLocation();
   const [state, setState] = useState<ResetState>("checking");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [recoveryEmail, setRecoveryEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -64,6 +65,30 @@ export function ResetPasswordPage({ token }: { token: string }) {
     }
   };
 
+  const resend = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (submitting) return;
+    setError(null);
+    if (!recoveryEmail.trim()) {
+      setError("Email is required.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await fetch("/api/auth/password-reset/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: recoveryEmail.trim() }),
+      });
+    } catch {
+      // The server intentionally gives the same confirmation for all account
+      // states; retain that behavior for a network failure as well.
+    } finally {
+      setSubmitting(false);
+      setState("resent");
+    }
+  };
+
   const content = (() => {
     if (state === "checking") {
       return {
@@ -75,10 +100,50 @@ export function ResetPasswordPage({ token }: { token: string }) {
     if (state === "invalid") {
       return {
         title: "This link is no longer valid",
-        body: "Password reset links expire after 30 minutes and can only be used once.",
+        body: "Password reset links expire 30 minutes after they are requested and can only be used once.",
+        children: (
+          <Button variant="cta" size="large" className="w-full" onClick={() => setState("resend")}>
+            Request a new link
+          </Button>
+        ),
+      };
+    }
+    if (state === "resend") {
+      return {
+        title: "Request a new link",
+        body: "Enter your email and we'll send a reset link if an account matches it.",
+        children: (
+          <form onSubmit={resend} className="flex flex-col gap-4 text-left">
+            <div className="flex flex-col gap-1.5">
+              <label className="pl-1 [font-family:'Gilroy',sans-serif] text-[14px] font-medium leading-[20px] text-brain-v1baby-blue-60">
+                Email address
+              </label>
+              <input
+                data-testid="input-reset-resend-email"
+                type="email"
+                autoComplete="email"
+                value={recoveryEmail}
+                onChange={(event) => setRecoveryEmail(event.target.value)}
+                placeholder="you@example.com"
+                className="h-[48px] w-full rounded-2xl border border-brain-v1stroke-2 bg-brain-v1highlight-dropdown-bg px-4 text-[16px] leading-[20px] text-brain-v1white outline-none transition-colors placeholder:text-brain-v1baby-blue-60 focus:border-brain-v1purple [font-family:'Gilroy',sans-serif]"
+              />
+            </div>
+            {error && <p className="px-1 text-[14px] leading-[20px] text-brain-v1error-text [font-family:'Gilroy',sans-serif]">{error}</p>}
+            <Button type="submit" variant="cta" size="large" disabled={submitting} className="mt-1 w-full">
+              {submitting && <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />}
+              Send reset link
+            </Button>
+          </form>
+        ),
+      };
+    }
+    if (state === "resent") {
+      return {
+        title: "Check your email",
+        body: "If an account matches that email, a password reset link will arrive shortly.",
         children: (
           <Button variant="cta" size="large" className="w-full" onClick={() => navigate("/")}>
-            Request a new link
+            Back to sign in
           </Button>
         ),
       };
