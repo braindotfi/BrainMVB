@@ -51,7 +51,7 @@ BRAIN_TENANCY_MODE = "durable"
 BRAIN_PROVISION_SECRET = "fb6e50818f98255daac0588c341406623cc5230717c4971d49d52ad8576227fe"
 
 [userenv.production]
-MAILERSEND_FROM_EMAIL = "no-reply@test-2p0347z19mklzdrn.mlsender.net"
+MAILERSEND_FROM_EMAIL = "damon@brain.fi"
 MAILERSEND_FROM_NAME = "Brain Finance"
 
 [postMerge]
