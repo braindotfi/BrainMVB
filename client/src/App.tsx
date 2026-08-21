@@ -13,6 +13,7 @@ import { useAppAlert } from "@/components/AppAlert";
 import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { SettingsPage } from "@/pages/SettingsPage";
 import { SignupPage } from "@/pages/SignupPage";
+import { ResetPasswordPage } from "@/pages/ResetPasswordPage";
 import { CompanySetupPage } from "@/pages/CompanySetupPage";
 import { HomePage } from "@/pages/HomePage";
 import { FinancesPage } from "@/pages/FinancesPage";
@@ -92,6 +93,7 @@ const AuditLogRedirect = () => {
 };
 function AppLayout() {
   const { isLoggedIn, isLoading, logout } = useAuth();
+  const [onPasswordResetRoute, resetParams] = useRoute("/reset-password/:token");
   const { timeoutMin } = useSessionTimeout();
   const alert = useAppAlert();
   const [, navigate] = useLocation();
@@ -156,6 +158,10 @@ function AppLayout() {
         <div className="h-8 w-8 rounded-full border-2 border-brain-v1stroke-2 border-t-brain-v1purple animate-spin" />
       </div>
     );
+  }
+
+  if (onPasswordResetRoute) {
+    return <ResetPasswordPage token={resetParams?.token ?? ""} />;
   }
 
   if (!isLoggedIn) {

@@ -3,7 +3,7 @@ import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import createMemoryStore from "memorystore";
 import { Pool } from "pg";
-import { scrypt, randomBytes, timingSafeEqual } from "crypto";
+import { scrypt, randomBytes, timingSafeEqual, createHash } from "crypto";
 import { promisify } from "util";
 import { z } from "zod";
 import { storage } from "./storage";
@@ -11,6 +11,7 @@ import type { User } from "@shared/schema";
 import { brainTenancyMode } from "./brain/config";
 import { isDemoEmail } from "./demoUsers";
 import { evictBrainSession } from "./brain/auth";
+import { sendPasswordResetEmail } from "./passwordResetEmail";
 
 const scryptAsync = promisify(scrypt);
 
@@ -106,6 +107,30 @@ const loginSchema = z.object({
   identifier: z.string().min(1),
   password: z.string().min(1),
 });
+const passwordResetRequestSchema = z.object({
+  email: z.string().trim().email(),
+});
+const passwordResetTokenSchema = z.object({
+  token: z.string().min(32).max(512),
+});
+const passwordResetConfirmSchema = passwordResetTokenSchema.extend({
+  password: z.string().min(8, "Password must be at least 8 characters").max(256),
+});
+
+const PASSWORD_RESET_TTL_MS = 30 * 60 * 1000;
+const PASSWORD_RESET_GENERIC_RESPONSE = {
+  message: "If an account matches that email, a password reset link will arrive shortly.",
+};
+
+export function passwordResetTokenDigest(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
+}
+
+function passwordResetUrl(token: string): string {
+  const baseUrl = process.env.APP_BASE_URL || "https://app.brain.fi";
+  const url = new URL(`/reset-password/${encodeURIComponent(token)}`, baseUrl);
+  return url.toString();
+}
 
 export function setupAuth(app: Express) {
   app.set("trust proxy", 1);
@@ -211,6 +236,60 @@ export function setupAuth(app: Express) {
 
     await switchSession(req, user.id);
     return res.json({ user: publicUser(user) });
+  });
+
+  // ─── Password reset ───
+  // The response does not disclose whether an email address has an account.
+  app.post("/api/auth/password-reset/request", async (req, res) => {
+    const parsed = passwordResetRequestSchema.safeParse(req.body);
+    if (!parsed.success) return res.json(PASSWORD_RESET_GENERIC_RESPONSE);
+
+    const user = await storage.getUserByEmail(parsed.data.email.toLowerCase());
+    if (!user) return res.json(PASSWORD_RESET_GENERIC_RESPONSE);
+
+    const rawToken = randomBytes(32).toString("base64url");
+    const now = new Date();
+    try {
+      await storage.createPasswordResetToken({
+        userId: user.id,
+        tokenHash: passwordResetTokenDigest(rawToken),
+        expiresAt: new Date(now.getTime() + PASSWORD_RESET_TTL_MS),
+      });
+      await sendPasswordResetEmail({
+        to: user.email ?? parsed.data.email.toLowerCase(),
+        resetUrl: passwordResetUrl(rawToken),
+        expiresInMinutes: PASSWORD_RESET_TTL_MS / 60_000,
+      });
+    } catch (error) {
+      // A token that could not be delivered must not remain usable. Do not log
+      // the email, raw token, or link; production logs only carry this category.
+      await storage.revokePasswordResetTokens(user.id, new Date());
+      console.error("[auth] password reset email delivery failed");
+    }
+    return res.json(PASSWORD_RESET_GENERIC_RESPONSE);
+  });
+
+  app.post("/api/auth/password-reset/verify", async (req, res) => {
+    const parsed = passwordResetTokenSchema.safeParse(req.body);
+    const valid = parsed.success
+      && await storage.isPasswordResetTokenValid(passwordResetTokenDigest(parsed.data.token), new Date());
+    return res.json({ valid });
+  });
+
+  app.post("/api/auth/password-reset/confirm", async (req, res) => {
+    const parsed = passwordResetConfirmSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: "Choose a password with at least 8 characters." });
+    }
+    const consumed = await storage.consumePasswordResetToken(
+      passwordResetTokenDigest(parsed.data.token),
+      await hashPassword(parsed.data.password),
+      new Date(),
+    );
+    if (!consumed) {
+      return res.status(400).json({ error: "This password reset link is invalid or has expired." });
+    }
+    return res.json({ success: true });
   });
 
   /* ── REMOVED: POST /api/auth/demo (shared demo@brain.fi login) ──────────────
