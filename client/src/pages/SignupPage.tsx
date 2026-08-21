@@ -207,7 +207,7 @@ export function SignupPage() {
       </header>
 
       <div className="flex-1 flex items-center justify-center z-10 relative px-4">
-        <div className="w-full max-w-[420px] bg-brain-v1baby-blue-5 border border-brain-v1stroke-2 rounded-modal px-7 py-8 shadow-2xl">
+        <div className="w-full max-w-[420px] bg-brain-v1baby-blue-5 border border-brain-v1stroke-2 rounded-modal px-7 pt-8 pb-9 shadow-2xl">
           <div className="flex flex-col items-center text-center mb-6">
             <h1 className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1white text-[24px] leading-[32px]">
               {mode === "login" ? "Welcome Back" : mode === "forgot" ? "Reset Your Password" : "Create Your Account"}
@@ -417,7 +417,7 @@ export function SignupPage() {
               type="button"
               data-testid="button-forgot-password"
               onClick={() => switchMode("forgot")}
-              className="mt-3 w-full text-center text-[14px] font-medium leading-[20px] text-brain-v1baby-blue-60 transition-colors hover:text-brain-v1purple [font-family:'Gilroy',sans-serif]"
+              className="mt-4 w-full text-center text-[14px] font-medium leading-[20px] text-brain-v1baby-blue-60 transition-colors hover:text-brain-v1purple [font-family:'Gilroy',sans-serif]"
             >
               Forgot password?
             </button>
