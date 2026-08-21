@@ -25,6 +25,14 @@ async function request(path: string, body: unknown) {
   return { status: response.status, body: await response.json() as Record<string, unknown> };
 }
 
+async function waitFor(condition: () => boolean, timeoutMs = 1_000): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (!condition()) {
+    if (Date.now() >= deadline) throw new Error("Timed out waiting for asynchronous password-reset work");
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+}
+
 function resetToken(message: PasswordResetEmail): string {
   const url = new URL(message.resetUrl);
   return url.pathname.split("/").at(-1)!;
@@ -75,6 +83,7 @@ describe("password reset", () => {
     expect(malformed.status).toBe(200);
     expect(known.body).toEqual(unknown.body);
     expect(unknown.body).toEqual(malformed.body);
+    await waitFor(() => sent.length === 1);
     expect(sent).toHaveLength(1);
     expect(sent[0].to).toBe(email);
   });
@@ -84,8 +93,10 @@ describe("password reset", () => {
     const user = await register(email);
 
     await request("/api/auth/password-reset/request", { email });
+    await waitFor(() => sent.length === 1);
     const first = resetToken(sent[0]);
     await request("/api/auth/password-reset/request", { email });
+    await waitFor(() => sent.length === 2);
     const second = resetToken(sent[1]);
 
     expect((await request("/api/auth/password-reset/verify", { token: first })).body).toEqual({ valid: false });
@@ -100,6 +111,7 @@ describe("password reset", () => {
     expect((await request("/api/auth/password-reset/verify", { token: expired })).body).toEqual({ valid: false });
 
     await request("/api/auth/password-reset/request", { email });
+    await waitFor(() => sent.length === 3);
     const usable = resetToken(sent.at(-1)!);
     const changed = await request("/api/auth/password-reset/confirm", {
       token: usable,
@@ -131,6 +143,7 @@ describe("password reset", () => {
     const response = await request("/api/auth/password-reset/request", { email });
 
     expect(response.status).toBe(200);
+    await waitFor(() => log.mock.calls.length > 0);
     expect(log).toHaveBeenCalledWith("[auth] password reset email delivery failed category=unknown");
     expect(log.mock.calls.flat().join(" ")).not.toContain(email);
     expect(log.mock.calls.flat().join(" ")).not.toContain(rawResetLink);
@@ -156,10 +169,53 @@ describe("password reset", () => {
 
     await request("/api/auth/password-reset/request", { email });
 
+    await waitFor(() => log.mock.calls.length > 0);
     expect(log).toHaveBeenCalledWith(
       "[auth] password reset email delivery failed status=422 category=sender_rejected fields=from.email",
     );
     expect(log.mock.calls.flat().join(" ")).not.toContain(email);
+    setPasswordResetEmailSenderForTests(async (message) => { sent.push(message); });
+    log.mockRestore();
+  });
+
+  it("returns the generic response before a slow provider completes", async () => {
+    const email = `reset-async-${randomBytes(6).toString("hex")}@example.com`;
+    await register(email);
+    let releaseDelivery: (() => void) | undefined;
+    let deliveryStarted = false;
+    const deliveryFinished = new Promise<void>((resolve) => {
+      releaseDelivery = resolve;
+    });
+    setPasswordResetEmailSenderForTests(async () => {
+      deliveryStarted = true;
+      await deliveryFinished;
+    });
+
+    const response = await request("/api/auth/password-reset/request", { email });
+
+    expect(response.status).toBe(200);
+    await waitFor(() => deliveryStarted);
+    releaseDelivery?.();
+    setPasswordResetEmailSenderForTests(async (message) => { sent.push(message); });
+  });
+
+  it("keeps the public response generic when delivery-token cleanup fails", async () => {
+    const email = `reset-revoke-failure-${randomBytes(6).toString("hex")}@example.com`;
+    await register(email);
+    const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const revoke = vi.spyOn(storage, "revokePasswordResetTokens").mockRejectedValueOnce(new Error("database down"));
+    setPasswordResetEmailSenderForTests(async () => {
+      throw new PasswordResetEmailDeliveryError({ category: "credential_rejected", status: 401 });
+    });
+
+    const response = await request("/api/auth/password-reset/request", { email });
+
+    expect(response.status).toBe(200);
+    await waitFor(() => log.mock.calls.length > 0);
+    expect(log).toHaveBeenCalledWith(
+      "[auth] password reset email delivery failed status=401 category=credential_rejected revoke_failed=true",
+    );
+    revoke.mockRestore();
     setPasswordResetEmailSenderForTests(async (message) => { sent.push(message); });
     log.mockRestore();
   });

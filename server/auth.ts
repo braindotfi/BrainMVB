@@ -132,6 +132,48 @@ function passwordResetUrl(token: string): string {
   return url.toString();
 }
 
+/**
+ * The public request endpoint must have the same response behavior for known,
+ * unknown, malformed, and operationally failing inputs. Run account lookup and
+ * mail delivery after the generic response has been sent so provider latency
+ * cannot become an account-enumeration signal.
+ */
+async function processPasswordResetRequest(email: string): Promise<void> {
+  let user: User | undefined;
+  try {
+    user = await storage.getUserByEmail(email);
+    if (!user) return;
+
+    const rawToken = randomBytes(32).toString("base64url");
+    const now = new Date();
+    await storage.createPasswordResetToken({
+      userId: user.id,
+      tokenHash: passwordResetTokenDigest(rawToken),
+      expiresAt: new Date(now.getTime() + PASSWORD_RESET_TTL_MS),
+    });
+    await sendPasswordResetEmail({
+      to: user.email ?? email,
+      resetUrl: passwordResetUrl(rawToken),
+      expiresInMinutes: PASSWORD_RESET_TTL_MS / 60_000,
+    });
+  } catch (error) {
+    // An undeliverable token must not remain usable. Cleanup failure cannot
+    // alter the already-sent generic response or leak an account's existence.
+    let revokeFailed = false;
+    if (user) {
+      try {
+        await storage.revokePasswordResetTokens(user.id, new Date());
+      } catch {
+        revokeFailed = true;
+      }
+    }
+    const failure = formatPasswordResetEmailFailure(error);
+    console.error(
+      `[auth] password reset email delivery failed ${failure}${revokeFailed ? " revoke_failed=true" : ""}`,
+    );
+  }
+}
+
 export function setupAuth(app: Express) {
   app.set("trust proxy", 1);
 
@@ -242,32 +284,14 @@ export function setupAuth(app: Express) {
   // The response does not disclose whether an email address has an account.
   app.post("/api/auth/password-reset/request", async (req, res) => {
     const parsed = passwordResetRequestSchema.safeParse(req.body);
-    if (!parsed.success) return res.json(PASSWORD_RESET_GENERIC_RESPONSE);
+    res.json(PASSWORD_RESET_GENERIC_RESPONSE);
+    if (!parsed.success) return;
 
-    const user = await storage.getUserByEmail(parsed.data.email.toLowerCase());
-    if (!user) return res.json(PASSWORD_RESET_GENERIC_RESPONSE);
-
-    const rawToken = randomBytes(32).toString("base64url");
-    const now = new Date();
-    try {
-      await storage.createPasswordResetToken({
-        userId: user.id,
-        tokenHash: passwordResetTokenDigest(rawToken),
-        expiresAt: new Date(now.getTime() + PASSWORD_RESET_TTL_MS),
-      });
-      await sendPasswordResetEmail({
-        to: user.email ?? parsed.data.email.toLowerCase(),
-        resetUrl: passwordResetUrl(rawToken),
-        expiresInMinutes: PASSWORD_RESET_TTL_MS / 60_000,
-      });
-    } catch (error) {
-      // A token that could not be delivered must not remain usable. Do not log
-      // the email, raw token, link, or provider response. The formatter emits
-      // only a fixed provider status/category diagnostic.
-      await storage.revokePasswordResetTokens(user.id, new Date());
-      console.error(`[auth] password reset email delivery failed ${formatPasswordResetEmailFailure(error)}`);
-    }
-    return res.json(PASSWORD_RESET_GENERIC_RESPONSE);
+    // Deferring avoids starting a known-account lookup before Express flushes
+    // the fixed response. Do not await this work in the request lifecycle.
+    setImmediate(() => {
+      void processPasswordResetRequest(parsed.data.email.toLowerCase());
+    });
   });
 
   app.post("/api/auth/password-reset/verify", async (req, res) => {
