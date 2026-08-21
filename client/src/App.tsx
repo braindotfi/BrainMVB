@@ -94,6 +94,7 @@ const AuditLogRedirect = () => {
 function AppLayout() {
   const { isLoggedIn, isLoading, logout } = useAuth();
   const [onPasswordResetRoute, resetParams] = useRoute("/reset-password/:token");
+  const [onInviteRoute] = useRoute("/invite/:token");
   const { timeoutMin } = useSessionTimeout();
   const alert = useAppAlert();
   const [, navigate] = useLocation();
@@ -199,6 +200,13 @@ function AppLayout() {
         </div>
       </div>
     );
+  }
+
+  // Invite links are a top-level auth boundary. Keep the exact URL through sign-in,
+  // then show the explicit company-join screen before the main-shell route switch can
+  // answer an invite path with NotFound.
+  if (onInviteRoute) {
+    return isLoggedIn ? <CompanySetupPage /> : <SignupPage />;
   }
 
   if (!isLoggedIn) {
