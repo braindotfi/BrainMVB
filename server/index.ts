@@ -6,6 +6,11 @@ import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import { assertEncryptionKeyConfigured } from "./tokenCrypto";
 import { storage } from "./storage";
+import {
+  createPasswordResetConfirmLimiter,
+  createPasswordResetRequestLimiter,
+  createPasswordResetVerifyLimiter,
+} from "./passwordResetRateLimit";
 
 if (process.env.NODE_ENV === "production") {
   assertEncryptionKeyConfigured();
@@ -92,6 +97,9 @@ const demoLimiter = rateLimit({
 });
 
 app.use(["/api/auth/login", "/api/auth/register"], authLimiter);
+app.use("/api/auth/password-reset/request", createPasswordResetRequestLimiter());
+app.use("/api/auth/password-reset/verify", createPasswordResetVerifyLimiter());
+app.use("/api/auth/password-reset/confirm", createPasswordResetConfirmLimiter());
 // /api/auth/demo-fresh is the only demo entry point; the shared /api/auth/demo route was
 // deleted (see server/auth.ts). It stays unauthenticated, so the ceiling above is what stops
 // a caller from provisioning tenants — and paying for their anchor transactions — in bulk.
