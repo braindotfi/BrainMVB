@@ -91,8 +91,8 @@ export function CompanySetupPage() {
     refetchInterval: (query) => (query.state.data?.linked ? false : 3000),
   });
   useEffect(() => {
-    if (tenancy?.linked) finish();
-  }, [tenancy?.linked]);
+    if (tenancy?.linked && !matchInvite) finish();
+  }, [tenancy?.linked, matchInvite]);
 
   const createCompany = async (e: React.FormEvent) => {
     e.preventDefault();
