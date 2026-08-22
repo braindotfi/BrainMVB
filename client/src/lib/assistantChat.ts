@@ -36,6 +36,23 @@ export interface WireMessage {
 }
 
 /**
+ * Strip synthetic context-note messages (isContextNote: true) from a session
+ * messages array before building the wire payload. Notes are UI-only: they must
+ * never be sent to the server, must not count toward the CHAT_HISTORY_LIMIT
+ * budget, and must not be visible to the assistant as conversation turns.
+ *
+ * Returns the original array reference when no notes are present (avoids an
+ * unnecessary allocation on every send in the common case).
+ */
+export function filterPayloadMessages<T extends { isContextNote?: boolean }>(
+  messages: T[],
+): T[] {
+  return messages.some((m) => m.isContextNote)
+    ? messages.filter((m) => !m.isContextNote)
+    : messages;
+}
+
+/**
  * Build the wire payload for a /api/assistant/chat request from raw session
  * messages. Applies both guards the server schema enforces:
  *   1. Array trimmed to the most recent CHAT_HISTORY_LIMIT items (max(50) constraint).
@@ -43,6 +60,9 @@ export interface WireMessage {
  *
  * Doing both here keeps the call-site simple and makes the invariants testable
  * without mounting the full component.
+ *
+ * Call filterPayloadMessages() on the input before passing it here so that
+ * synthetic context notes are excluded from the budget and the request body.
  */
 export function buildChatPayload(
   messages: Array<{ role: "user" | "assistant"; text: string }>,

@@ -4,6 +4,7 @@ import {
   CHAT_HISTORY_LIMIT,
   MESSAGE_CONTENT_LIMIT,
   buildChatPayload,
+  filterPayloadMessages,
   parseAssistantResponse,
   trimChatHistory,
 } from "./assistantChat";
@@ -102,6 +103,50 @@ describe("buildChatPayload", () => {
     expect(payload).toHaveLength(CHAT_HISTORY_LIMIT);
     // Most recent CHAT_HISTORY_LIMIT messages must be kept.
     expect(payload[payload.length - 1].content).toBe("message 59");
+  });
+});
+
+describe("filterPayloadMessages", () => {
+  it("returns the original array reference when no notes are present", () => {
+    const msgs = [
+      { role: "user" as const, text: "Hello" },
+      { role: "assistant" as const, text: "Hi" },
+    ];
+    expect(filterPayloadMessages(msgs)).toBe(msgs);
+  });
+
+  it("strips isContextNote messages so they never reach the wire payload", () => {
+    const NOTE_TEXT =
+      "Earlier messages were not sent — start a new conversation for full context";
+    const msgs = [
+      { role: "user" as const, text: "First message" },
+      { role: "assistant" as const, text: NOTE_TEXT, isContextNote: true },
+      { role: "user" as const, text: "Follow-up question" },
+    ];
+    const filtered = filterPayloadMessages(msgs);
+    expect(filtered).toHaveLength(2);
+    expect(filtered.every((m) => !m.isContextNote)).toBe(true);
+    // Verify the note text is absent from the wire payload produced downstream.
+    const payload = buildChatPayload(filtered);
+    expect(payload.some((m) => m.content === NOTE_TEXT)).toBe(false);
+  });
+
+  it("strips multiple notes from different sends in the same session", () => {
+    const msgs = [
+      { role: "user" as const, text: "Message 1" },
+      { role: "assistant" as const, text: "Note 1", isContextNote: true },
+      { role: "user" as const, text: "Message 2" },
+      { role: "assistant" as const, text: "Reply" },
+      { role: "assistant" as const, text: "Note 2", isContextNote: true },
+      { role: "user" as const, text: "Message 3" },
+    ];
+    const filtered = filterPayloadMessages(msgs);
+    expect(filtered).toHaveLength(4);
+    expect(filtered.every((m) => !m.isContextNote)).toBe(true);
+  });
+
+  it("returns an empty array unchanged when the input is empty", () => {
+    expect(filterPayloadMessages([])).toEqual([]);
   });
 });
 

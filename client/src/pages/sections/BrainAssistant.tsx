@@ -25,7 +25,7 @@ import {
 import { openMemberDetail } from "@/lib/membersStore";
 import { useSuggestedQuestions, resolveSuggestionChips } from "@/lib/brainSuggestedQuestions";
 import { resolveVendor, openVendorDetail } from "@/lib/openVendorDetail";
-import { parseAssistantResponse, trimChatHistory, buildChatPayload, ASSISTANT_GENERIC_ERROR } from "@/lib/assistantChat";
+import { parseAssistantResponse, trimChatHistory, buildChatPayload, filterPayloadMessages, ASSISTANT_GENERIC_ERROR, CHAT_HISTORY_LIMIT, MESSAGE_CONTENT_LIMIT } from "@/lib/assistantChat";
 import { isAssistantBulletLine, stripAssistantBullet } from "@/lib/assistantFormatting";
 import brainLogo from "@assets/Brain_1_1783374797129.png";
 import timeIcon from "@assets/Time_1781821466642.png";
@@ -65,6 +65,9 @@ interface ChatMessage {
   answerError?: boolean;
   /** True when the assistant answered without access to live ledger data. */
   ungrounded?: boolean;
+  /** True for synthetic inline notes (e.g. truncation warnings) — rendered
+   *  differently from user/assistant bubbles and never sent to the server. */
+  isContextNote?: boolean;
 }
 
 interface ChatSession {
@@ -604,19 +607,60 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
     let sessionId = activeSession?.id ?? null;
 
     // History to send to the assistant (messages BEFORE this turn + the new user msg).
-    // Trimmed to the most recent CHAT_HISTORY_LIMIT messages so the payload never
-    // exceeds the server's Zod max(50) constraint — older context is dropped rather
-    // than letting a long session hit an unrecoverable permanent 400.
-    const priorMessages = sessionId
+    // Context notes (isContextNote) are UI-only and must never be sent to the server:
+    // strip them first so they don't consume the CHAT_HISTORY_LIMIT budget or appear
+    // as conversation turns in the request body.
+    const rawPrior = sessionId
       ? sessions.find((s) => s.id === sessionId)?.messages ?? []
       : [];
-    const history = buildChatPayload([...priorMessages, userMsg]);
+    const priorMessages = filterPayloadMessages(rawPrior);
+    const allMessages = [...priorMessages, userMsg];
+
+    // Detect what buildChatPayload will silently drop or shorten so the user can
+    // be given an accurate warning before the assistant's reply arrives.
+    // — wasTrimmed:              older turns are dropped entirely (history > 40)
+    // — wasCurrentMsgTruncated:  the new user message itself exceeds 8 000 chars
+    // — wasPriorContentTruncated: a prior turn's content exceeds 8 000 chars
+    const wasTrimmed = allMessages.length > CHAT_HISTORY_LIMIT;
+    const wasCurrentMsgTruncated = userMsg.text.length > MESSAGE_CONTENT_LIMIT;
+    const wasPriorContentTruncated = priorMessages.some(
+      (m) => m.text.length > MESSAGE_CONTENT_LIMIT,
+    );
+
+    const history = buildChatPayload(allMessages);
+
+    // Inject a one-off inline note just before the user turn. Each case uses
+    // copy that honestly describes what actually happened:
+    //   • history trimmed + current message cut → cover both
+    //   • history trimmed (or prior content shortened) → emphasise dropped turns
+    //   • only the new message was cut → focus on that
+    let noteText: string | null = null;
+    if (wasTrimmed && wasCurrentMsgTruncated) {
+      noteText =
+        "Your message and some earlier messages were not sent in full — start a new conversation for full context";
+    } else if (wasTrimmed || wasPriorContentTruncated) {
+      noteText =
+        "Earlier messages were not sent in full — start a new conversation for full context";
+    } else if (wasCurrentMsgTruncated) {
+      noteText =
+        "Your message was too long and was shortened before sending";
+    }
+    const noteMsg: ChatMessage | null = noteText
+      ? {
+          id: nextId(),
+          role: "assistant",
+          text: noteText,
+          isContextNote: true,
+        }
+      : null;
 
     // Optimistically append the user message (creating a session if needed).
     if (sessionId) {
       setSessions((prev) =>
         prev.map((s) =>
-          s.id === sessionId ? { ...s, messages: [...s.messages, userMsg] } : s,
+          s.id === sessionId
+            ? { ...s, messages: [...s.messages, ...(noteMsg ? [noteMsg] : []), userMsg] }
+            : s,
         ),
       );
     } else {
@@ -624,7 +668,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
         id: `session-${nextId()}`,
         title: trimmed.length > 40 ? `${trimmed.slice(0, 40)}…` : trimmed,
         createdAt: Date.now(),
-        messages: [{ ...userMsg, dateTag: "Today" }],
+        messages: [...(noteMsg ? [noteMsg] : []), { ...userMsg, dateTag: "Today" }],
       };
       sessionId = newSession.id;
       setSessions((prev) => [newSession, ...prev]);
@@ -986,6 +1030,19 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                     </span>
                   </div>
                 )}
+                {msg.isContextNote ? (
+                  /* Subtle inline note — not a chat bubble. Informs the user
+                     that older context was dropped from this send. */
+                  <div
+                    className="flex items-center justify-center py-[2px] px-[4px]"
+                    data-testid="context-truncation-note"
+                  >
+                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[11px] leading-[14px] text-center">
+                      {msg.text}
+                    </span>
+                  </div>
+                ) : (
+                <>
                 {/* items-end/start keeps the bubble off full width; max-w-[75%]
                     caps where the text wraps. ChatBubble then pins the box to
                     the widest laid-out line so it hugs the text — max-width
@@ -1146,6 +1203,8 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                       </div>
                     )}
                   </div>
+                )}
+                </>
                 )}
               </div>
             ))}
