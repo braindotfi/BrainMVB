@@ -305,3 +305,45 @@ describe("Monthly Breakdown placement in CashFlowTab", () => {
     expect(card).toContain('data-testid="chart-monthly-breakdown"');
   });
 });
+
+// ─── MonthlyBreakdownCard — nameOf null-safety contract ───────────────────────
+//
+// The "Top expenses" panel resolves counterparty ids via a `nameOf` prop that
+// may be undefined, or may return null for ids it cannot resolve.  Two fallbacks
+// guard against a blank or crashing panel:
+//
+//   a. nameOf?.(id)  — optional-call so a missing/undefined prop cannot throw.
+//   b. id ? `${id.slice(0,12)}…` : "Unknown"  — when nameOf returns null:
+//        • a non-null id  → truncated id string (spend is real but source unknown)
+//        • a null id      → literal "Unknown"
+//
+// A future signature change to nameOf (e.g. throw on null input rather than
+// return null) or a refactor of the fallback rendering logic could silently
+// produce a blank or crashing panel.  These source-scan checks pin each
+// invariant without a DOM render so the suite fails before the change ships.
+
+describe("MonthlyBreakdownCard nameOf null-safety", () => {
+  // Re-use the card source already read in the sibling describe blocks above.
+  const cardSrc = readFileSync(CARD_SRC, "utf8");
+
+  it("uses the optional-call pattern nameOf?.(id) so an undefined prop cannot throw", () => {
+    // The ?. guards the entire call: if nameOf is not passed, the expression
+    // evaluates to undefined and falls through to the ?? fallback instead of
+    // throwing "nameOf is not a function".
+    expect(cardSrc).toContain("nameOf?.(id)");
+  });
+
+  it('renders "Unknown" when the counterparty id itself is null', () => {
+    // When id is null/undefined there is no string to truncate.  The literal
+    // "Unknown" must be present so the panel shows something meaningful rather
+    // than an empty slot for real spend with no source.
+    expect(cardSrc).toContain('"Unknown"');
+  });
+
+  it("truncates the id to 12 characters when nameOf returns null but id is present", () => {
+    // When nameOf is not available (or returns null) but an id string exists,
+    // a truncated prefix is shown so the user has a partial identifier rather
+    // than nothing.  The slice(0, 12) call must remain so this fallback works.
+    expect(cardSrc).toContain("id.slice(0, 12)");
+  });
+});
