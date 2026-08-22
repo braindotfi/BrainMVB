@@ -1,3 +1,4 @@
+- [Source-scan test patterns](source-scan-test-patterns.md) — assertion pitfalls: indexOf searches full file (hits imports), [^)]* stops at first ), handler windows must be 2000+ chars for nested blocks; prefer regex over indexOf for route registrations.
 - [BFF request-ID forwarding](bff-request-id-forwarding.md) — AsyncLocalStorage threads one X-Request-Id per Express request through all brain-core calls; errors log both bff_request_id + brain_request_id.
 - [WidgetPanel primitive](widget-panel-primitive.md) — sole shared panel chrome; WidgetCard=header+panel; noBorder only when Figma shows no stroke; DevelopersSection now has the border it was silently missing.
 - [Brain URL split (demo vs production)](brain-url-split.md) — demo → staging, real users → prod; per-request AsyncLocalStorage; every new proxy handler must wrap with withBrainBaseUrl(baseUrl, …).
