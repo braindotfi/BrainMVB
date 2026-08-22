@@ -670,4 +670,83 @@ describe("buildMonthlyWindow", () => {
     expect(window).toHaveLength(12);
     expect(window.every((e) => e.income === 100)).toBe(true);
   });
+
+  // ── Dec / Jan year-boundary bucketing ─────────────────────────────────────
+
+  it("keeps Dec 2025 transactions in 2025-12 and Jan 2026 transactions in 2026-01", () => {
+    /* This is the primary guard for the year-boundary bucketing bug: a transaction
+       dated 2025-12-xx must never land in 2025-11 or 2026-01. */
+    const keys = ["2025-11", "2025-12", "2026-01", "2026-02"];
+    const window = buildMonthlyWindow(
+      [
+        TX({ id: "nov", direction: "inflow",  amount: "100",  transaction_date: "2025-11-15" }),
+        TX({ id: "dec", direction: "outflow", amount: "500",  transaction_date: "2025-12-31" }),
+        TX({ id: "jan", direction: "inflow",  amount: "2000", transaction_date: "2026-01-01" }),
+        TX({ id: "feb", direction: "outflow", amount: "300",  transaction_date: "2026-02-14" }),
+      ],
+      keys,
+    );
+
+    expect(window).toHaveLength(4);
+    expect(window[0]).toMatchObject({ monthKey: "2025-11", income: 100,  expenses: 0   });
+    expect(window[1]).toMatchObject({ monthKey: "2025-12", income: 0,    expenses: 500 });
+    expect(window[2]).toMatchObject({ monthKey: "2026-01", income: 2000, expenses: 0   });
+    expect(window[3]).toMatchObject({ monthKey: "2026-02", income: 0,    expenses: 300 });
+  });
+
+  it("does not bleed a Dec transaction into Jan even on the last day of the year", () => {
+    /* 2025-12-31 is the edge most likely to trip an off-by-one that increments the
+       month past 12 and wraps into the new year. */
+    const window = buildMonthlyWindow(
+      [TX({ id: "last", direction: "outflow", amount: "999", transaction_date: "2025-12-31" })],
+      ["2025-12", "2026-01"],
+    );
+    expect(window[0]).toMatchObject({ monthKey: "2025-12", expenses: 999 });
+    expect(window[1]).toMatchObject({ monthKey: "2026-01", income: 0, expenses: 0 });
+  });
+
+  it("does not bleed a Jan transaction into Dec even on the first day of the year", () => {
+    /* 2026-01-01 is the other edge: a bucketing error that subtracts one from month 1
+       would produce "2025-12" and steal the transaction from January. */
+    const window = buildMonthlyWindow(
+      [TX({ id: "first", direction: "inflow", amount: "750", transaction_date: "2026-01-01" })],
+      ["2025-12", "2026-01"],
+    );
+    expect(window[0]).toMatchObject({ monthKey: "2025-12", income: 0, expenses: 0 });
+    expect(window[1]).toMatchObject({ monthKey: "2026-01", income: 750 });
+  });
+
+  it("accumulates multiple Dec and multiple Jan transactions independently", () => {
+    /* Two inflows in Dec and two outflows in Jan: totals must not bleed across the
+       boundary even when the same counterparty appears on both sides. */
+    const window = buildMonthlyWindow(
+      [
+        TX({ id: "d1", direction: "inflow",  amount: "1000", transaction_date: "2025-12-01", counterparty_id: "cp_x" }),
+        TX({ id: "d2", direction: "inflow",  amount: "2000", transaction_date: "2025-12-20", counterparty_id: "cp_x" }),
+        TX({ id: "j1", direction: "outflow", amount: "400",  transaction_date: "2026-01-10", counterparty_id: "cp_x" }),
+        TX({ id: "j2", direction: "outflow", amount: "600",  transaction_date: "2026-01-25", counterparty_id: "cp_x" }),
+      ],
+      ["2025-12", "2026-01"],
+    );
+    expect(window[0]).toMatchObject({ monthKey: "2025-12", income: 3000, expenses: 0    });
+    expect(window[1]).toMatchObject({ monthKey: "2026-01", income: 0,    expenses: 1000 });
+  });
+
+  it("silently drops transactions that fall outside the Dec-to-Jan window, not into a boundary month", () => {
+    /* Transactions from Oct 2025 and Mar 2026 must vanish entirely, not overflow
+       into November or February. */
+    const window = buildMonthlyWindow(
+      [
+        TX({ id: "before", direction: "inflow",  amount: "9000", transaction_date: "2025-10-01" }),
+        TX({ id: "dec",    direction: "outflow", amount: "500",  transaction_date: "2025-12-15" }),
+        TX({ id: "jan",    direction: "inflow",  amount: "800",  transaction_date: "2026-01-20" }),
+        TX({ id: "after",  direction: "outflow", amount: "9999", transaction_date: "2026-03-01" }),
+      ],
+      ["2025-11", "2025-12", "2026-01", "2026-02"],
+    );
+    expect(window[0]).toMatchObject({ monthKey: "2025-11", income: 0,   expenses: 0   });
+    expect(window[1]).toMatchObject({ monthKey: "2025-12", income: 0,   expenses: 500 });
+    expect(window[2]).toMatchObject({ monthKey: "2026-01", income: 800, expenses: 0   });
+    expect(window[3]).toMatchObject({ monthKey: "2026-02", income: 0,   expenses: 0   });
+  });
 });
