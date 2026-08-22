@@ -4,6 +4,7 @@ import { useLocation, useRoute } from "wouter";
 import googleLogo from "@assets/pngtree-google-internet-icon-vector-png-image_9183287_1784767118256.png";
 import brainLogo from "@assets/BrainLogo_1781769246241.png";
 import { Button } from "@/components/ui/button";
+import { validInviteReturnTo } from "@/lib/inviteReturnTo";
 
 type Mode = "login" | "register" | "forgot";
 
@@ -25,9 +26,11 @@ export function SignupPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Invite deep-link: stay on /invite/:token through auth so TenancyGate can hand the
-  // token to CompanySetupPage. Everywhere else, land on home after auth.
+  // Invite deep-links stay on their exact URL through every auth path. An invited account
+  // must only reach Brain tenancy through an explicit Join company action, never through
+  // signup's normal automatic workspace creation.
   const [onInviteRoute] = useRoute("/invite/:token");
+  const inviteReturnTo = onInviteRoute ? validInviteReturnTo(window.location.pathname) : undefined;
 
   useEffect(() => {
     if (isLoggedIn && !onInviteRoute) navigate("/");
@@ -83,7 +86,10 @@ export function SignupPage() {
         await fetch("/api/auth/password-reset/request", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: recoveryEmail.trim() }),
+          body: JSON.stringify({
+            email: recoveryEmail.trim(),
+            ...(inviteReturnTo ? { return_to: inviteReturnTo } : {}),
+          }),
         });
         setRecoverySubmitted(true);
       } catch {
@@ -110,7 +116,7 @@ export function SignupPage() {
         setError("Password must be at least 8 characters.");
         return;
       }
-      if (tenancyProduction && !companyName.trim()) {
+      if (tenancyProduction && !onInviteRoute && !companyName.trim()) {
         setError("Company name is required.");
         return;
       }
@@ -131,7 +137,7 @@ export function SignupPage() {
         // NOT retried automatically (tenant creation is not idempotent). If it fails,
         // the user is logged in but unlinked - the Company Setup screen takes over and
         // shows the failure so THEY decide whether to submit again.
-        if (tenancyProduction) {
+        if (tenancyProduction && !onInviteRoute) {
           try {
             const res = await fetch("/api/brain/tenants", {
               method: "POST",
@@ -207,7 +213,7 @@ export function SignupPage() {
       </header>
 
       <div className="flex-1 flex items-center justify-center z-10 relative px-4">
-        <div className="w-full max-w-[420px] bg-brain-v1baby-blue-5 border border-brain-v1stroke-2 rounded-modal px-7 py-8 shadow-2xl">
+        <div className="w-full max-w-[420px] bg-brain-v1baby-blue-5 border border-brain-v1stroke-2 rounded-modal px-7 pt-8 pb-8 shadow-2xl">
           <div className="flex flex-col items-center text-center mb-6">
             <h1 className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1white text-[24px] leading-[32px]">
               {mode === "login" ? "Welcome Back" : mode === "forgot" ? "Reset Your Password" : "Create Your Account"}
@@ -228,7 +234,7 @@ export function SignupPage() {
                 variant="subtle"
                 size="large"
                 data-testid="button-google-signin"
-                onClick={loginWithGoogle}
+                onClick={() => loginWithGoogle(inviteReturnTo)}
                 className="w-full border border-brain-v1stroke-2 hover:border-[#7631ee]/40"
               >
                 <img src={googleLogo} alt="" className="h-[18px] w-[18px] rounded-full object-contain" />
@@ -244,7 +250,7 @@ export function SignupPage() {
           )}
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            {mode === "register" && tenancyProduction && (
+            {mode === "register" && tenancyProduction && !onInviteRoute && (
               <div className="flex flex-col gap-1.5">
                 <label className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px] pl-1">
                   Company name
@@ -384,13 +390,13 @@ export function SignupPage() {
           </form>
 
           {/* Demo access - explore the app without creating an account */}
-          {mode !== "forgot" && <div className="flex items-center gap-3 w-full my-5">
+          {mode !== "forgot" && !onInviteRoute && <div className="flex items-center gap-3 w-full my-5">
             <div className="flex-1 h-px bg-brain-v1stroke-2" />
             <span className="text-brain-v1baby-blue-30 text-xs [font-family:'Gilroy',sans-serif]">or continue with demo</span>
             <div className="flex-1 h-px bg-brain-v1stroke-2" />
           </div>}
 
-          {mode !== "forgot" && <Button
+          {mode !== "forgot" && !onInviteRoute && <Button
             variant="subtle"
             size="large"
             data-testid="button-demo-login"

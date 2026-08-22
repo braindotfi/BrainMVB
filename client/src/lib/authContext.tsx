@@ -28,7 +28,8 @@ interface AuthContextType {
   loginWithPassword: (identifier: string, password: string) => Promise<void>;
   register: (params: { email: string; username?: string; password: string; name?: string }) => Promise<void>;
   loginDemoFresh: (opts?: { skipOnboarding?: boolean }) => Promise<void>;
-  loginWithGoogle: () => void;
+  /** Starts Google OAuth. An invite path is retained server-side across the callback. */
+  loginWithGoogle: (returnTo?: string) => void;
   /** Returns whether the server confirmed the session was destroyed. */
   logout: () => Promise<boolean>;
   deleteAccount: () => Promise<void>;
@@ -193,8 +194,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const loginWithGoogle = useCallback(() => {
-    window.location.href = "/api/auth/google";
+  const loginWithGoogle = useCallback((returnTo?: string) => {
+    const params = new URLSearchParams();
+    if (returnTo) params.set("return_to", returnTo);
+    window.location.href = `/api/auth/google${params.size ? `?${params.toString()}` : ""}`;
   }, []);
 
   const logout = useCallback(async () => {

@@ -21,7 +21,7 @@ import { randomUUID } from "node:crypto";
 import { brainConfig, brainTokenMode, brainTenancyMode, brainDurableTenancy } from "./config";
 import { withBrainBaseUrl, currentBrainBaseUrl } from "./baseUrl";
 import { brainUserSubject } from "./ids";
-import { exchangeSession, refreshSession, mintAgentToken, createTenant, TenancyApiError, type TenantSessionShape } from "./tenancy";
+import { exchangeSession, refreshSession, mintAgentToken, createTenant, getPendingInviteStatus, TenancyApiError, type TenantSessionShape } from "./tenancy";
 import { storage } from "../storage";
 import { seedTenantDocuments } from "./seed";
 import { isDemoEmail } from "../demoUsers";
@@ -36,6 +36,17 @@ export class NoTenantError extends Error {
   constructor(appUserId: string) {
     super(`app user ${appUserId} is not linked to a brain-core tenant`);
     this.name = "NoTenantError";
+  }
+}
+
+/**
+ * Thrown before implicit durable provisioning when the account has an invite it can consume.
+ * The caller should keep the user on the invite path and must not create a blank tenant.
+ */
+export class PendingInviteError extends Error {
+  constructor(appUserId: string) {
+    super(`app user ${appUserId} has a pending brain-core invite`);
+    this.name = "PendingInviteError";
   }
 }
 
@@ -563,6 +574,15 @@ async function createDurableSession(
   // NOTE: demo users are routed to createDemoSession() by createSession() and never reach
   // here. The isDemo flag is kept as a belt-and-suspenders guard (e.g. direct calls).
   const isDemo = isDemoEmail(user?.email);
+
+  // This is the server-side invite boundary. It applies regardless of which authenticated
+  // browser route caused the first Brain request. A lookup failure also propagates and fails
+  // closed, so neither the local tombstone nor POST /tenants can run without a definitive
+  // answer from core.
+  if (user?.email) {
+    const invite = await getPendingInviteStatus(user.email);
+    if (invite.pending) throw new PendingInviteError(appUserId);
+  }
 
   // Anti-retry guard for the NON-idempotent upstream create: persist a tombstone row
   // FIRST, so that if we crash after a successful POST /tenants but before finalizing,

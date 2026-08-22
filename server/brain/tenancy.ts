@@ -14,6 +14,8 @@
  *  - POST /v1/invites/consume    - bind an invitee's external_ref to a tenant membership.
  *                                  Rejections: invite_invalid | invite_expired | invite_consumed
  *                                  | invite_revoked (mapped to plain language at the route).
+ *  - POST /v1/invites/pending    - check whether an email has a valid pending invite before
+ *                                  the BFF implicitly provisions a durable tenant.
  */
 
 import { brainConfig } from "./config";
@@ -130,6 +132,14 @@ export function exchangeSession(externalRef: string): Promise<TenantSessionShape
 /** Rotate a session. Reuse-detected rejections mean the refresh family is revoked. */
 export function refreshSession(refreshToken: string): Promise<TenantSessionShape> {
   return serviceCall("/sessions/refresh", { refresh_token: refreshToken });
+}
+
+/**
+ * Check whether an email has an unexpired, unconsumed, unrevoked invite.
+ * This call intentionally returns no token or membership details.
+ */
+export function getPendingInviteStatus(email: string): Promise<{ pending: boolean }> {
+  return serviceCall("/invites/pending", { email: email.trim().toLowerCase() });
 }
 
 /**

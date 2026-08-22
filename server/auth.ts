@@ -60,6 +60,8 @@ declare module "express-session" {
     userId?: string;
     sessionVersion?: number;
     googleState?: string;
+    /** A validated local invite path to restore after Google OAuth. */
+    googleReturnTo?: string;
   }
 }
 
@@ -141,6 +143,19 @@ export const googleEnabled = !!(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET);
 // code exchange below.
 const GOOGLE_CALLBACK_URL = "https://app.brain.fi/api/auth/google/callback";
 
+/** Auth continuations must never become open redirects. Only a route-shaped invite token
+ * can survive OAuth or a password-reset round trip. */
+function validInviteReturnTo(value: unknown): string | undefined {
+  return typeof value === "string" && /^\/invite\/[A-Za-z0-9._~-]+$/.test(value)
+    ? value
+    : undefined;
+}
+
+function googleRedirect(returnTo: string | undefined, error?: string): string {
+  const target = returnTo ?? "/";
+  return error ? `${target}?auth_error=${encodeURIComponent(error)}` : target;
+}
+
 const registerSchema = z.object({
   email: z.string().email(),
   username: z
@@ -161,12 +176,19 @@ const loginSchema = z.object({
 });
 const passwordResetRequestSchema = z.object({
   email: z.string().trim().email(),
-});
+  // Invalid return paths must never block the generic reset response or create
+  // an open redirect. They are simply discarded below.
+  return_to: z.unknown().optional(),
+}).transform(({ email, return_to }) => ({
+  email,
+  returnTo: validInviteReturnTo(return_to),
+}));
 const passwordResetTokenSchema = z.object({
   token: z.string().min(32).max(512),
 });
 const passwordResetConfirmSchema = passwordResetTokenSchema.extend({
   password: z.string().min(8, "Password must be at least 8 characters").max(256),
+  return_to: z.unknown().optional(),
 });
 
 const PASSWORD_RESET_TTL_MS = 30 * 60 * 1000;
@@ -175,9 +197,10 @@ export function passwordResetTokenDigest(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
 
-function passwordResetUrl(token: string): string {
+function passwordResetUrl(token: string, returnTo?: string): string {
   const baseUrl = process.env.APP_BASE_URL || "https://app.brain.fi";
   const url = new URL(`/reset-password/${encodeURIComponent(token)}`, baseUrl);
+  if (returnTo) url.searchParams.set("return_to", returnTo);
   return url.toString();
 }
 
@@ -187,7 +210,7 @@ function passwordResetUrl(token: string): string {
  * mail delivery after the generic response has been sent so provider latency
  * cannot become an account-enumeration signal.
  */
-async function processPasswordResetRequest(email: string, req: Request): Promise<void> {
+async function processPasswordResetRequest(email: string, returnTo: string | undefined, req: Request): Promise<void> {
   let user: User | undefined;
   try {
     user = await storage.getUserByEmail(email);
@@ -210,7 +233,7 @@ async function processPasswordResetRequest(email: string, req: Request): Promise
     });
     await sendPasswordResetEmail({
       to: user.email ?? email,
-      resetUrl: passwordResetUrl(rawToken),
+      resetUrl: passwordResetUrl(rawToken, returnTo),
       expiresInMinutes: PASSWORD_RESET_TTL_MS / 60_000,
     });
     writeAuthAudit(req, {
@@ -375,7 +398,7 @@ export function setupAuth(app: Express) {
     // Deferring avoids starting a known-account lookup before Express flushes
     // the fixed response. Do not await this work in the request lifecycle.
     setImmediate(() => {
-      void processPasswordResetRequest(parsed.data.email.toLowerCase(), req);
+      void processPasswordResetRequest(parsed.data.email.toLowerCase(), parsed.data.returnTo, req);
     });
   });
 
@@ -524,6 +547,7 @@ export function setupAuth(app: Express) {
     }
     const state = randomBytes(16).toString("hex");
     req.session.googleState = state;
+    req.session.googleReturnTo = validInviteReturnTo(req.query.return_to);
     const params = new URLSearchParams({
       client_id: GOOGLE_CLIENT_ID!,
       redirect_uri: GOOGLE_CALLBACK_URL,
@@ -539,10 +563,12 @@ export function setupAuth(app: Express) {
 
   // ─── Google OAuth: callback ───
   app.get("/api/auth/google/callback", async (req, res) => {
-    if (!googleEnabled) return res.redirect("/?auth_error=google_unconfigured");
+    const returnTo = req.session.googleReturnTo;
+    req.session.googleReturnTo = undefined;
+    if (!googleEnabled) return res.redirect(googleRedirect(returnTo, "google_unconfigured"));
     const { code, state } = req.query as { code?: string; state?: string };
     if (!code || !state || state !== req.session.googleState) {
-      return res.redirect("/?auth_error=google_state");
+      return res.redirect(googleRedirect(returnTo, "google_state"));
     }
     req.session.googleState = undefined;
 
@@ -560,17 +586,17 @@ export function setupAuth(app: Express) {
       });
       if (!tokenResp.ok) {
         console.error("[Google OAuth] token exchange failed:", tokenResp.status, await tokenResp.text());
-        return res.redirect("/?auth_error=google_token");
+        return res.redirect(googleRedirect(returnTo, "google_token"));
       }
       const tokens = (await tokenResp.json()) as { access_token?: string };
-      if (!tokens.access_token) return res.redirect("/?auth_error=google_token");
+      if (!tokens.access_token) return res.redirect(googleRedirect(returnTo, "google_token"));
 
       const profResp = await fetch("https://openidconnect.googleapis.com/v1/userinfo", {
         headers: { Authorization: `Bearer ${tokens.access_token}` },
       });
       if (!profResp.ok) {
         console.error("[Google OAuth] userinfo failed:", profResp.status);
-        return res.redirect("/?auth_error=google_profile");
+        return res.redirect(googleRedirect(returnTo, "google_profile"));
       }
       const profile = (await profResp.json()) as {
         sub: string;
@@ -587,7 +613,7 @@ export function setupAuth(app: Express) {
          must still be able to sign in with Google, they just cannot land on a demo row. */
       const profileEmail = profile.email?.toLowerCase() ?? null;
       if (isDemoEmail(profileEmail)) {
-        return res.redirect("/?auth_error=google_demo_account");
+        return res.redirect(googleRedirect(returnTo, "google_demo_account"));
       }
 
       let user = await storage.getUserByGoogleId(profile.sub);
@@ -595,7 +621,7 @@ export function setupAuth(app: Express) {
         const byEmail = await storage.getUserByEmail(profileEmail);
         if (byEmail) {
           if (profile.email_verified !== true) {
-            return res.redirect("/?auth_error=google_unverified_email");
+            return res.redirect(googleRedirect(returnTo, "google_unverified_email"));
           }
           user = byEmail;
         }
@@ -604,7 +630,7 @@ export function setupAuth(app: Express) {
          adoption just above — checked AFTER both resolve `user`, not only after the
          googleId lookup, so a demo row reached via email adoption is still caught. */
       if (isDemoEmail(user?.email)) {
-        return res.redirect("/?auth_error=google_demo_account");
+        return res.redirect(googleRedirect(returnTo, "google_demo_account"));
       }
       if (!user) {
         const email = profile.email_verified === true ? profile.email?.toLowerCase() : undefined;
@@ -618,10 +644,10 @@ export function setupAuth(app: Express) {
       }
 
       await switchSession(req, user.id);
-      return res.redirect("/");
+      return res.redirect(googleRedirect(returnTo));
     } catch (err) {
       console.error("[Google OAuth] callback error:", err);
-      return res.redirect("/?auth_error=google_failed");
+      return res.redirect(googleRedirect(returnTo, "google_failed"));
     }
   });
 }

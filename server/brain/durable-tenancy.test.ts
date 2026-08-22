@@ -50,6 +50,10 @@ interface RecordedCall {
 let calls: RecordedCall[] = [];
 const realFetch = globalThis.fetch;
 let failTenantCreation = false;
+/** Whether core reports a valid pending invite for the current app user's email. */
+let pendingInvite = false;
+/** Whether core fails before it can answer the pending-invite status query. */
+let failPendingInviteLookup = false;
 /** When true, POST /tenants answers with core's already-linked conflict (invariant J). */
 let tenantAlreadyLinked = false;
 /** Tenant id POST /sessions attributes its token to; null omits `member` entirely. */
@@ -86,6 +90,12 @@ function routeBrainCore(fullUrl: string, method: string): Response {
       agent: { id: "agt_1", token: AGENT_TOKEN, expires_in: 900 },
       demo_seed: { sources: 6, invoices: 12 },
     }, 201);
+  }
+  if (url.endsWith("/invites/pending") && method === "POST") {
+    if (failPendingInviteLookup) {
+      return json({ error: { code: "dependency_unavailable" } }, 503);
+    }
+    return json({ pending: pendingInvite });
   }
   if (url.endsWith(`/tenants/${TENANT_ID}/agent-token`) && method === "POST") {
     return json({ id: "agt_1", token: AGENT_TOKEN, expires_in: 900 });
@@ -198,6 +208,8 @@ beforeEach(async () => {
   expect(await whenSeedsSettle(10_000), "a seed run never settled - later assertions would see its ingests").toBe(true);
   calls = [];
   failTenantCreation = false;
+  pendingInvite = false;
+  failPendingInviteLookup = false;
   tenantAlreadyLinked = false;
   sessionTenantId = TENANT_ID;
   clearBrainTokenCache();
@@ -304,6 +316,47 @@ describe("durable tenancy invariants", () => {
     await new Promise((r) => setTimeout(r, 150));
     expect(calls.filter((c) => c.url.endsWith("/raw/ingest")).length).toBe(0);
     expect((await storage.listSourceDocuments(real.id)).length).toBe(0);
+  });
+
+  it("vetoes blank-tenant provisioning when any authenticated route finds a pending invite", async () => {
+    const invited = await storage.createUser({
+      username: "pending-invite@realco.com",
+      email: "Pending-Invite+Test@RealCo.COM",
+      password: "x.x",
+      name: "Pending Invite",
+    });
+    sessionUserId = invited.id;
+    pendingInvite = true;
+
+    const res = await realFetch(`${signupBaseUrl}/api/brain/ledger/accounts`);
+    expect(res.status).toBe(409);
+    expect(await res.json()).toMatchObject({ error: "pending_invite" });
+
+    const inviteChecks = calls.filter(
+      (call) => call.url.endsWith("/invites/pending") && call.method === "POST",
+    );
+    expect(inviteChecks).toHaveLength(1);
+    expect(inviteChecks[0].svcAuth).toBe(SERVICE_SECRET);
+    expect(inviteChecks[0].body).toEqual({ email: "pending-invite+test@realco.com" });
+    expect(calls.filter((call) => call.url.endsWith("/tenants"))).toHaveLength(0);
+    expect(await storage.getBrainIdentity(invited.id)).toBeUndefined();
+  });
+
+  it("fails closed before provisioning when pending-invite status is unavailable", async () => {
+    const invited = await storage.createUser({
+      username: "invite-status-down@realco.com",
+      email: "invite-status-down@realco.com",
+      password: "x.x",
+      name: "Invite Status Down",
+    });
+    sessionUserId = invited.id;
+    failPendingInviteLookup = true;
+
+    const res = await realFetch(`${signupBaseUrl}/api/brain/ledger/accounts`);
+    expect(res.status).toBe(503);
+    expect(calls.filter((call) => call.url.endsWith("/invites/pending"))).toHaveLength(1);
+    expect(calls.filter((call) => call.url.endsWith("/tenants"))).toHaveLength(0);
+    expect(await storage.getBrainIdentity(invited.id)).toBeUndefined();
   });
 
   it("D: a failed tenant creation rolls the tombstone back and is not auto-retried in-call", async () => {

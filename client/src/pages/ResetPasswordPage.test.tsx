@@ -9,12 +9,12 @@ import { ResetPasswordPage } from "./ResetPasswordPage";
 let root: Root | undefined;
 let container: HTMLDivElement | undefined;
 
-function mount() {
+function mount(returnTo?: string) {
   container = document.createElement("div");
   document.body.appendChild(container);
   root = createRoot(container);
   act(() => {
-    root!.render(<ResetPasswordPage token="opaque-test-token" />);
+    root!.render(<ResetPasswordPage token="opaque-test-token" returnTo={returnTo} />);
   });
 }
 
@@ -40,6 +40,7 @@ afterEach(() => {
   root = undefined;
   container = undefined;
   vi.unstubAllGlobals();
+  window.history.pushState({}, "", "/");
 });
 
 describe("ResetPasswordPage recovery path", () => {
@@ -72,5 +73,64 @@ describe("ResetPasswordPage recovery path", () => {
     );
     expect(container!.textContent).toContain("Check your email");
     expect(container!.textContent).not.toContain("Set a new password");
+  });
+
+  it("carries an invite return path through resend and back to the invite sign-in screen", async () => {
+    const invitePath = "/invite/invite-token_123";
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ json: async () => ({ valid: false }) })
+      .mockResolvedValueOnce({ ok: true });
+    vi.stubGlobal("fetch", fetchMock);
+    mount(invitePath);
+
+    await act(async () => {});
+    click("Request a new link");
+    const email = container!.querySelector('[data-testid="input-reset-resend-email"]') as HTMLInputElement;
+    setInput(email, "invitee@example.com");
+    await act(async () => {
+      email.closest("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    });
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      "/api/auth/password-reset/request",
+      expect.objectContaining({
+        body: JSON.stringify({ email: "invitee@example.com", return_to: invitePath }),
+      }),
+    );
+    click("Back to sign in");
+    expect(window.location.pathname).toBe(invitePath);
+  });
+
+  it("sends an invite return path with confirmation and never falls back to home after a successful reset", async () => {
+    const invitePath = "/invite/invite-token_123";
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ json: async () => ({ valid: true }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ success: true }) });
+    vi.stubGlobal("fetch", fetchMock);
+    mount(invitePath);
+
+    await act(async () => {});
+    const password = container!.querySelector('[data-testid="input-reset-password"]') as HTMLInputElement;
+    const confirmation = container!.querySelector('[data-testid="input-reset-password-confirm"]') as HTMLInputElement;
+    setInput(password, "new-correct-horse");
+    setInput(confirmation, "new-correct-horse");
+    await act(async () => {
+      password.closest("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    });
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      "/api/auth/password-reset/confirm",
+      expect.objectContaining({
+        body: JSON.stringify({
+          token: "opaque-test-token",
+          password: "new-correct-horse",
+          return_to: invitePath,
+        }),
+      }),
+    );
+    click("Go to sign in");
+    expect(window.location.pathname).toBe(invitePath);
   });
 });

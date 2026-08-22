@@ -118,6 +118,25 @@ describe("password reset", () => {
     expect(sent[0].to).toBe(email);
   });
 
+  it("carries only a validated invite continuation into a reset email", async () => {
+    const email = `reset-invite-return-${randomBytes(6).toString("hex")}@example.com`;
+    await register(email);
+    const invitePath = "/invite/invite-token_123";
+
+    await request("/api/auth/password-reset/request", { email, return_to: invitePath });
+    await waitFor(() => sent.length === 1);
+    const invitedReset = new URL(sent[0].resetUrl);
+    expect(invitedReset.pathname).toMatch(/^\/reset-password\/[A-Za-z0-9_-]+$/);
+    expect(invitedReset.searchParams.get("return_to")).toBe(invitePath);
+
+    await request("/api/auth/password-reset/request", {
+      email,
+      return_to: "https://attacker.example/invite/steal",
+    });
+    await waitFor(() => sent.length === 2);
+    expect(new URL(sent[1].resetUrl).searchParams.get("return_to")).toBeNull();
+  });
+
   it("invalidates a replacement link, rejects expired links, and consumes a link once", async () => {
     const email = `reset-lifecycle-${randomBytes(6).toString("hex")}@example.com`;
     const user = await register(email);
@@ -267,7 +286,12 @@ describe("password reset", () => {
     const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
     setPasswordResetEmailSenderForTests(async () => {
       throw new PasswordResetEmailDeliveryError(
-        classifyResendFailure(403, { message: `Sender rejected for ${email}` }),
+        classifyResendFailure(422, {
+          errors: {
+            "from.email": [`Sender rejected for ${email}`],
+            "to.0.email": [`Recipient ${email} was rejected`],
+          },
+        }),
       );
     });
 
@@ -275,7 +299,7 @@ describe("password reset", () => {
 
     await waitFor(() => log.mock.calls.length > 0);
     expect(log).toHaveBeenCalledWith(
-      "[auth] password reset email delivery failed status=403 category=permission_rejected",
+      "[auth] password reset email delivery failed status=422 category=sender_rejected fields=from.email",
     );
     expect(log.mock.calls.flat().join(" ")).not.toContain(email);
     setPasswordResetEmailSenderForTests(async (message) => { sent.push(message); });
