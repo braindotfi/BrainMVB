@@ -39,6 +39,8 @@ import { WidgetCard, Divider } from "@/components/LedgerWidgets";
 import {
   buildMonthlyWindow,
   monthSeriesDesc,
+  showYtdChip,
+  ytdWindowKeys,
   type CashFlowTxLike,
 } from "@/lib/cashFlow";
 
@@ -125,7 +127,7 @@ export function MonthlyBreakdownCard({
   // "Year to date" is meaningful when there are ≥ 2 months to show (Feb+)
   // but not when it covers a full calendar year (December = 12 months, which
   // makes it the same as "Last 12 months" for the same year).
-  const showYtd = thisMonthNumber >= 2 && thisMonthNumber <= 11;
+  const showYtd = showYtdChip(thisMonthNumber);
 
   const activePeriod: Period = period === "ytd" && !showYtd ? "6" : period;
 
@@ -134,11 +136,11 @@ export function MonthlyBreakdownCard({
   const windowKeys = useMemo((): readonly string[] => {
     if (activePeriod === "ytd") {
       // Jan of current year through current month (oldest → newest).
-      return monthSeriesDesc(thisMonth, thisMonthNumber).reverse();
+      return ytdWindowKeys(thisMonth);
     }
     const n = activePeriod === "12" ? 12 : 6;
     return monthSeriesDesc(thisMonth, n).reverse(); // oldest → newest
-  }, [activePeriod, thisMonth, thisMonthNumber]);
+  }, [activePeriod, thisMonth]);
 
   // Fill every window slot: data months get their real figures, empty months
   // get income=0/expenses=0 so gaps are visible, not hidden.

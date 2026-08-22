@@ -514,6 +514,32 @@ export function buildMonthlyWindow(
 }
 
 /**
+ * Whether the "Year to date" period chip should be shown.
+ *
+ * YTD is meaningful when there are ≥ 2 months to compare (February onwards) but
+ * not when it covers a full calendar year (December), which would duplicate the
+ * "Last 12 months" window.
+ *
+ * @param thisMonthNumber - calendar month number, 1 = January … 12 = December.
+ */
+export function showYtdChip(thisMonthNumber: number): boolean {
+  return thisMonthNumber >= 2 && thisMonthNumber <= 11;
+}
+
+/**
+ * The ordered list of YYYY-MM keys for the "Year to date" window.
+ *
+ * Returns every month from January of the current year through (and including)
+ * `thisMonth`, oldest first — i.e. the same order the chart reads left-to-right.
+ *
+ * @param thisMonth - the current calendar month as "YYYY-MM".
+ */
+export function ytdWindowKeys(thisMonth: string): readonly string[] {
+  const thisMonthNumber = Number(thisMonth.split("-")[1]); // 1–12
+  return monthSeriesDesc(thisMonth, thisMonthNumber).reverse();
+}
+
+/**
  * A label naming the period the totals actually cover — "Feb – Jun 2026" — rather
  * than a fixed window.
  *

@@ -8,6 +8,8 @@ import {
   cashFlowPeriodLabel,
   detailLine,
   incompleteMessage,
+  showYtdChip,
+  ytdWindowKeys,
   type CashFlowTxLike,
   type CashFlowInvoiceLike,
 } from "./cashFlow";
@@ -748,5 +750,77 @@ describe("buildMonthlyWindow", () => {
     expect(window[1]).toMatchObject({ monthKey: "2025-12", income: 0,   expenses: 500 });
     expect(window[2]).toMatchObject({ monthKey: "2026-01", income: 800, expenses: 0   });
     expect(window[3]).toMatchObject({ monthKey: "2026-02", income: 0,   expenses: 0   });
+  });
+});
+
+// ─── YTD window (MonthlyBreakdownCard arithmetic) ─────────────────────────────
+//
+// MonthlyBreakdownCard computes the YTD window as:
+//   monthSeriesDesc(thisMonth, thisMonthNumber).reverse()
+// and guards the chip with:
+//   const showYtd = thisMonthNumber >= 2 && thisMonthNumber <= 11;
+//
+// These tests pin both predicates for every month 1–12 so an off-by-one in
+// either cannot slip through undetected.
+
+// ─── YTD window (MonthlyBreakdownCard arithmetic) ─────────────────────────────
+//
+// MonthlyBreakdownCard delegates its YTD logic to two exported helpers in
+// cashFlow.ts: showYtdChip (the chip-visibility guard) and ytdWindowKeys (the
+// ordered key list).  These tests exercise the real exported code so that any
+// change to the component's behaviour must first break a test here.
+
+describe("showYtdChip", () => {
+  it("returns false for January — a 1-month window is not a meaningful YTD", () => {
+    expect(showYtdChip(1)).toBe(false);
+  });
+
+  it("returns false for December — same span as 'Last 12 months'", () => {
+    expect(showYtdChip(12)).toBe(false);
+  });
+
+  it("returns true for every month from February through November", () => {
+    for (let m = 2; m <= 11; m++) {
+      expect(showYtdChip(m), `showYtdChip should be true for month ${m}`).toBe(true);
+    }
+  });
+});
+
+describe("ytdWindowKeys", () => {
+  it("produces exactly thisMonthNumber keys for every month of the year", () => {
+    for (let m = 1; m <= 12; m++) {
+      const thisMonth = `2026-${String(m).padStart(2, "0")}`;
+      const keys = ytdWindowKeys(thisMonth);
+      expect(keys, `month ${m} should produce ${m} keys`).toHaveLength(m);
+    }
+  });
+
+  it("always starts with YYYY-01 — the window anchors to January of the current year", () => {
+    for (let m = 1; m <= 12; m++) {
+      const thisMonth = `2026-${String(m).padStart(2, "0")}`;
+      const keys = ytdWindowKeys(thisMonth);
+      expect(keys[0], `month ${m} should start at 2026-01`).toBe("2026-01");
+    }
+  });
+
+  it("always ends with the current month — the window is Jan → now, inclusive", () => {
+    for (let m = 1; m <= 12; m++) {
+      const thisMonth = `2026-${String(m).padStart(2, "0")}`;
+      const keys = ytdWindowKeys(thisMonth);
+      expect(keys[keys.length - 1], `month ${m} should end at ${thisMonth}`).toBe(thisMonth);
+    }
+  });
+
+  it("the key list is contiguous — each entry steps exactly one calendar month forward", () => {
+    for (let m = 2; m <= 12; m++) {
+      const thisMonth = `2026-${String(m).padStart(2, "0")}`;
+      const keys = ytdWindowKeys(thisMonth);
+      for (let i = 1; i < keys.length; i++) {
+        const prev = new Date(`${keys[i - 1]}-01`);
+        prev.setMonth(prev.getMonth() + 1);
+        const expected = `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, "0")}`;
+        expect(keys[i], `gap at index ${i} of month-${m} series`).toBe(expected);
+      }
+    }
   });
 });
