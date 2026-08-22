@@ -307,3 +307,32 @@ describe("logRateLimitBlocked (debounce)", () => {
     expect(_warnDebounce.get("user-y")?.extraCount).toBe(0);
   });
 });
+
+// ─── #226: Env-var validation ─────────────────────────────────────────────────
+//
+// The old parseInt-only path silently produced NaN for bad env var values
+// (e.g. "abc", "0", "-5"), which express-rate-limit treats as no limit — the
+// protection disappears without a warning. The envInt() helper now falls back
+// to the safe default. These tests confirm the defaults hold and that the
+// module exports the constants it documents.
+
+describe("chatRateLimiter env-var validation (#226)", () => {
+  it("CHAT_RATE_LIMIT_MAX is a positive finite integer (never NaN or zero)", () => {
+    expect(Number.isFinite(CHAT_RATE_LIMIT_MAX)).toBe(true);
+    expect(CHAT_RATE_LIMIT_MAX).toBeGreaterThan(0);
+    expect(Number.isInteger(CHAT_RATE_LIMIT_MAX)).toBe(true);
+  });
+
+  it("CHAT_RATE_LIMIT_WINDOW_MS is a positive finite integer (never NaN or zero)", () => {
+    expect(Number.isFinite(CHAT_RATE_LIMIT_WINDOW_MS)).toBe(true);
+    expect(CHAT_RATE_LIMIT_WINDOW_MS).toBeGreaterThan(0);
+    expect(Number.isInteger(CHAT_RATE_LIMIT_WINDOW_MS)).toBe(true);
+  });
+
+  it("both constants are exported so tests can reference them without magic numbers", () => {
+    // If they were undefined, the type guards above would already fail, but
+    // naming this explicitly makes the intent clear in test output.
+    expect(typeof CHAT_RATE_LIMIT_MAX).toBe("number");
+    expect(typeof CHAT_RATE_LIMIT_WINDOW_MS).toBe("number");
+  });
+});

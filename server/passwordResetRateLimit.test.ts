@@ -281,3 +281,94 @@ describe("password-reset logRateLimitBlocked debounce (unit)", () => {
     expect(logger._warnDebounce.get("2.2.2.2")?.extraCount).toBe(0);
   });
 });
+
+// ─── #231: Token-verify and confirm-reset debounce ───────────────────────────
+//
+// The task-#230 work added debounce logging to the password-reset REQUEST
+// limiter. The TOKEN-VERIFY and CONFIRM-RESET limiters use the same
+// createRateLimitLogger factory, so they must also suppress duplicate blocked
+// entries. These tests confirm that contract is in place for all three limiters.
+
+describe("password-reset VERIFY rate limiting (logging debounce, #231)", () => {
+  it("emits exactly one warn when multiple token-verify requests are blocked in the same window", async () => {
+    const { createPasswordResetVerifyLimiter } = await import("./passwordResetRateLimit");
+    const limiter = createPasswordResetVerifyLimiter({ windowMs: 60_000, limit: 1 });
+    const app: import("express").Express = (await import("express")).default();
+    app.use("/api/auth/password-reset/verify", limiter);
+    app.post("/api/auth/password-reset/verify", (_req, res) => res.json({ ok: true }));
+
+    const { createServer } = await import("node:http");
+    const server = createServer(app);
+    const baseUrl = await new Promise<string>((resolve) => {
+      server.listen(0, "127.0.0.1", () => {
+        const { port } = server.address() as import("net").AddressInfo;
+        resolve(`http://127.0.0.1:${port}`);
+      });
+    });
+
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const request = () =>
+      fetch(`${baseUrl}/api/auth/password-reset/verify`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ token: "tok_test" }),
+      });
+
+    try {
+      await request(); // allowed (consumes quota)
+      await request(); // blocked — first blocked → warn
+      await request(); // blocked — suppressed
+
+      expect(warnSpy).toHaveBeenCalledOnce();
+      const [msg] = warnSpy.mock.calls[0] as [string];
+      expect(msg).toBe("[rate-limit] password-reset-verify blocked");
+    } finally {
+      warnSpy.mockRestore();
+      limiter._logger._warnDebounce.forEach((e) => clearTimeout(e.timer));
+      limiter._logger._warnDebounce.clear();
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  });
+});
+
+describe("password-reset CONFIRM rate limiting (logging debounce, #231)", () => {
+  it("emits exactly one warn when multiple confirm-reset requests are blocked in the same window", async () => {
+    const { createPasswordResetConfirmLimiter } = await import("./passwordResetRateLimit");
+    const limiter = createPasswordResetConfirmLimiter({ windowMs: 60_000, limit: 1 });
+    const app: import("express").Express = (await import("express")).default();
+    app.use("/api/auth/password-reset/confirm", limiter);
+    app.post("/api/auth/password-reset/confirm", (_req, res) => res.json({ ok: true }));
+
+    const { createServer } = await import("node:http");
+    const server = createServer(app);
+    const baseUrl = await new Promise<string>((resolve) => {
+      server.listen(0, "127.0.0.1", () => {
+        const { port } = server.address() as import("net").AddressInfo;
+        resolve(`http://127.0.0.1:${port}`);
+      });
+    });
+
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const request = () =>
+      fetch(`${baseUrl}/api/auth/password-reset/confirm`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ token: "tok_test", password: "newpass" }),
+      });
+
+    try {
+      await request(); // allowed
+      await request(); // blocked → warn
+      await request(); // blocked → suppressed
+
+      expect(warnSpy).toHaveBeenCalledOnce();
+      const [msg] = warnSpy.mock.calls[0] as [string];
+      expect(msg).toBe("[rate-limit] password-reset-confirm blocked");
+    } finally {
+      warnSpy.mockRestore();
+      limiter._logger._warnDebounce.forEach((e) => clearTimeout(e.timer));
+      limiter._logger._warnDebounce.clear();
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  });
+});

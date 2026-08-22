@@ -271,9 +271,14 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     id: k.id,
     name: k.name,
     environment: k.environment,
-    scopes: k.scopes ?? [],
-    keyPrefix: k.key_prefix,
-    keyLast4: k.key_last4,
+    // scopes may be absent on older brain-core key records; default to empty so
+    // .length checks and scope-badge rendering never throw.
+    scopes: Array.isArray(k.scopes) ? k.scopes : [],
+    // key_prefix / key_last4 may be absent when a key was issued before brain-core
+    // started returning them. Null-coalesce here so the client can render a safe
+    // placeholder instead of "undefinedundefined" or crashing on .slice().
+    keyPrefix: k.key_prefix ?? null,
+    keyLast4: k.key_last4 ?? null,
     createdAt: k.created_at ?? null,
     lastUsedAt: k.last_used_at ?? null,
     revokedAt: k.revoked_at ?? null,
