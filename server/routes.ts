@@ -52,6 +52,7 @@ import { shouldSettle, needsExtractSettle } from "./brain/settleTargets";
 import { isSeedInFlight, seedStillExpected } from "./brain/seed";
 import { isDemoEmail } from "./demoUsers";
 import { trimMessageContents, trimMessageHistory } from "./brain/messageTrim";
+import { chatRateLimiter } from "./brain/chatRateLimit";
 
 /**
  * How long after a demo account is created its starter documents are still expected.
@@ -1033,7 +1034,7 @@ When you mention a money amount, always reproduce it exactly as the grounding da
     return dataWords.test(q);
   }
 
-  app.post("/api/assistant/chat", requireAuth, bffRequestIdMiddleware, async (req, res) => {
+  app.post("/api/assistant/chat", requireAuth, chatRateLimiter, bffRequestIdMiddleware, async (req, res) => {
     // Defense-in-depth: trim the history and per-message content before the Zod
     // schema validation runs. A crafted or buggy client that skips client-side
     // pruning would otherwise receive a permanent invalid_messages 400 the user
