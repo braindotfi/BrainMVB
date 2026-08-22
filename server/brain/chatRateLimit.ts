@@ -24,6 +24,7 @@
  */
 import rateLimit from "express-rate-limit";
 import type { Request, Response } from "express";
+import { createRateLimitLogger } from "../rateLimitLogger";
 
 export const CHAT_RATE_LIMIT_MAX = process.env.CHAT_RATE_LIMIT_MAX
   ? parseInt(process.env.CHAT_RATE_LIMIT_MAX, 10)
@@ -34,20 +35,19 @@ export const CHAT_RATE_LIMIT_WINDOW_MS = process.env.CHAT_RATE_LIMIT_WINDOW_MS
 
 // ─── Per-user warning debounce ───────────────────────────────────────────────
 
-interface DebounceEntry {
-  /** Number of blocked requests after the first (which was already logged). */
-  extraCount: number;
-  path: string;
-  resetAt: string;
-  retryAfterSeconds: number;
-  timer: ReturnType<typeof setTimeout>;
-}
+const _chatLogger = createRateLimitLogger({
+  windowMs: CHAT_RATE_LIMIT_WINDOW_MS,
+  blockedMessage: "[rate-limit] chat request blocked",
+  suppressedMessage: "[rate-limit] chat requests suppressed",
+  keyFieldName: "userId",
+});
 
 /**
- * Keyed by userId.  Exported for test inspection and cleanup only —
+ * In-memory debounce state keyed by userId.
+ * Exported for test inspection and cleanup only —
  * production code must not mutate this map directly.
  */
-export const _warnDebounce = new Map<string, DebounceEntry>();
+export const _warnDebounce = _chatLogger._warnDebounce;
 
 /**
  * Log at most one warn line per user per window.
@@ -58,55 +58,7 @@ export const _warnDebounce = new Map<string, DebounceEntry>();
  * - When the flush timer fires: if `extraCount > 0`, emit a summary line that
  *   includes `blockedCount`; then remove the entry.
  */
-export function logRateLimitBlocked(
-  userId: string,
-  path: string,
-  resetAt: string,
-  retryAfterSeconds: number,
-): void {
-  const existing = _warnDebounce.get(userId);
-
-  if (existing) {
-    // Already logged once this window — just count the suppressed hit.
-    existing.extraCount += 1;
-    return;
-  }
-
-  // First blocked request for this user in this window — log it now.
-  console.warn("[rate-limit] chat request blocked", {
-    userId,
-    path,
-    resetAt,
-    retryAfterSeconds,
-  });
-
-  const timer = setTimeout(() => {
-    const entry = _warnDebounce.get(userId);
-    if (entry && entry.extraCount > 0) {
-      console.warn("[rate-limit] chat requests suppressed", {
-        userId,
-        path: entry.path,
-        resetAt: entry.resetAt,
-        blockedCount: entry.extraCount,
-      });
-    }
-    _warnDebounce.delete(userId);
-  }, CHAT_RATE_LIMIT_WINDOW_MS);
-
-  // Allow the Node.js process (and test runners) to exit without waiting for
-  // the flush timer — it is purely informational.
-  if (typeof timer === "object" && timer !== null && "unref" in timer) {
-    (timer as { unref(): void }).unref();
-  }
-
-  _warnDebounce.set(userId, {
-    extraCount: 0,
-    path,
-    resetAt,
-    retryAfterSeconds,
-    timer,
-  });
-}
+export const logRateLimitBlocked = _chatLogger.logRateLimitBlocked;
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
 
