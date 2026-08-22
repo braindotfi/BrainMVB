@@ -25,7 +25,7 @@ import {
 import { openMemberDetail } from "@/lib/membersStore";
 import { useSuggestedQuestions, resolveSuggestionChips } from "@/lib/brainSuggestedQuestions";
 import { resolveVendor, openVendorDetail } from "@/lib/openVendorDetail";
-import { parseAssistantResponse, trimChatHistory, ASSISTANT_GENERIC_ERROR } from "@/lib/assistantChat";
+import { parseAssistantResponse, trimChatHistory, buildChatPayload, ASSISTANT_GENERIC_ERROR } from "@/lib/assistantChat";
 import { isAssistantBulletLine, stripAssistantBullet } from "@/lib/assistantFormatting";
 import brainLogo from "@assets/Brain_1_1783374797129.png";
 import timeIcon from "@assets/Time_1781821466642.png";
@@ -610,10 +610,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
     const priorMessages = sessionId
       ? sessions.find((s) => s.id === sessionId)?.messages ?? []
       : [];
-    const history = trimChatHistory([...priorMessages, userMsg]).map((m) => ({
-      role: m.role,
-      content: m.text,
-    }));
+    const history = buildChatPayload([...priorMessages, userMsg]);
 
     // Optimistically append the user message (creating a session if needed).
     if (sessionId) {

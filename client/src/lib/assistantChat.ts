@@ -21,6 +21,41 @@ export function trimChatHistory<T>(messages: T[]): T[] {
     : messages;
 }
 
+/**
+ * Maximum number of characters allowed per message by the server's Zod schema.
+ * A single assistant reply that exceeds this limit would be stored in session
+ * history and sent back verbatim on the next request, hitting the same permanent
+ * 400. Content is truncated here, before the wire payload is built.
+ */
+export const MESSAGE_CONTENT_LIMIT = 8000;
+
+/** One message in the shape the /api/assistant/chat server schema expects. */
+export interface WireMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+/**
+ * Build the wire payload for a /api/assistant/chat request from raw session
+ * messages. Applies both guards the server schema enforces:
+ *   1. Array trimmed to the most recent CHAT_HISTORY_LIMIT items (max(50) constraint).
+ *   2. Each message's content capped to MESSAGE_CONTENT_LIMIT chars (max(8000) constraint).
+ *
+ * Doing both here keeps the call-site simple and makes the invariants testable
+ * without mounting the full component.
+ */
+export function buildChatPayload(
+  messages: Array<{ role: "user" | "assistant"; text: string }>,
+): WireMessage[] {
+  return trimChatHistory(messages).map((m) => ({
+    role: m.role,
+    content:
+      m.text.length > MESSAGE_CONTENT_LIMIT
+        ? m.text.slice(0, MESSAGE_CONTENT_LIMIT)
+        : m.text,
+  }));
+}
+
 type AssistantPayload = Record<string, unknown>;
 
 function asPayload(value: unknown): AssistantPayload | null {

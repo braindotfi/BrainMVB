@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   ASSISTANT_GENERIC_ERROR,
   CHAT_HISTORY_LIMIT,
+  MESSAGE_CONTENT_LIMIT,
+  buildChatPayload,
   parseAssistantResponse,
   trimChatHistory,
 } from "./assistantChat";
@@ -54,6 +56,52 @@ describe("parseAssistantResponse", () => {
     // Must mention starting a new conversation — retrying is pointless.
     expect(result.reply.toLowerCase()).toMatch(/new/);
     expect(result.reply.toLowerCase()).not.toMatch(/try again/);
+  });
+});
+
+describe("buildChatPayload", () => {
+  it("maps role and text to role and content", () => {
+    const msgs = [
+      { role: "user" as const, text: "Hello" },
+      { role: "assistant" as const, text: "Hi there" },
+    ];
+    const payload = buildChatPayload(msgs);
+    expect(payload).toEqual([
+      { role: "user", content: "Hello" },
+      { role: "assistant", content: "Hi there" },
+    ]);
+  });
+
+  // Regression: a single assistant reply exceeding 8 000 chars would be stored
+  // in session history and sent back verbatim on the next request, triggering
+  // the same permanent invalid_messages 400 the history-trim fix targeted.
+  it("truncates a 9 000-char message to exactly MESSAGE_CONTENT_LIMIT chars", () => {
+    const longText = "a".repeat(9000);
+    const payload = buildChatPayload([{ role: "assistant" as const, text: longText }]);
+    expect(payload[0].content).toHaveLength(MESSAGE_CONTENT_LIMIT);
+  });
+
+  it("does not truncate a message that is exactly MESSAGE_CONTENT_LIMIT chars", () => {
+    const exactText = "b".repeat(MESSAGE_CONTENT_LIMIT);
+    const payload = buildChatPayload([{ role: "user" as const, text: exactText }]);
+    expect(payload[0].content).toHaveLength(MESSAGE_CONTENT_LIMIT);
+  });
+
+  it("does not truncate a message shorter than MESSAGE_CONTENT_LIMIT", () => {
+    const shortText = "hello world";
+    const payload = buildChatPayload([{ role: "user" as const, text: shortText }]);
+    expect(payload[0].content).toBe(shortText);
+  });
+
+  it("also trims the array to CHAT_HISTORY_LIMIT items", () => {
+    const msgs = Array.from({ length: 60 }, (_, i) => ({
+      role: (i % 2 === 0 ? "user" : "assistant") as "user" | "assistant",
+      text: `message ${i}`,
+    }));
+    const payload = buildChatPayload(msgs);
+    expect(payload).toHaveLength(CHAT_HISTORY_LIMIT);
+    // Most recent CHAT_HISTORY_LIMIT messages must be kept.
+    expect(payload[payload.length - 1].content).toBe("message 59");
   });
 });
 
