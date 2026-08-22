@@ -14,7 +14,11 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import express, { type Express } from "express";
 import { type Server } from "node:http";
 import { type AddressInfo } from "node:net";
-import { chatRateLimiter, CHAT_RATE_LIMIT_MAX } from "./chatRateLimit";
+import {
+  chatRateLimiter,
+  CHAT_RATE_LIMIT_MAX,
+  CHAT_RATE_LIMIT_WINDOW_MS,
+} from "./chatRateLimit";
 
 // ─── Minimal stub app ────────────────────────────────────────────────────────
 
@@ -78,6 +82,14 @@ async function chatRequest(userId: string): Promise<Response> {
 // ─── Tests ───────────────────────────────────────────────────────────────────
 
 describe("chatRateLimiter", () => {
+  it("applies default values when env vars are absent", () => {
+    // The test process does not set CHAT_RATE_LIMIT_MAX or
+    // CHAT_RATE_LIMIT_WINDOW_MS, so the module must fall back to its
+    // hardcoded defaults: 20 requests per 60-second window.
+    expect(CHAT_RATE_LIMIT_MAX).toBe(20);
+    expect(CHAT_RATE_LIMIT_WINDOW_MS).toBe(60_000);
+  });
+
   it("allows requests up to the configured maximum within a window", async () => {
     const userId = "user-allow-test";
 

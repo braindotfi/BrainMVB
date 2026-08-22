@@ -16,8 +16,12 @@
 import rateLimit from "express-rate-limit";
 import type { Request, Response } from "express";
 
-export const CHAT_RATE_LIMIT_MAX = 20;
-export const CHAT_RATE_LIMIT_WINDOW_MS = 60_000; // 1 minute
+export const CHAT_RATE_LIMIT_MAX = process.env.CHAT_RATE_LIMIT_MAX
+  ? parseInt(process.env.CHAT_RATE_LIMIT_MAX, 10)
+  : 20;
+export const CHAT_RATE_LIMIT_WINDOW_MS = process.env.CHAT_RATE_LIMIT_WINDOW_MS
+  ? parseInt(process.env.CHAT_RATE_LIMIT_WINDOW_MS, 10)
+  : 60_000; // 1 minute
 
 export const chatRateLimiter = rateLimit({
   windowMs: CHAT_RATE_LIMIT_WINDOW_MS,
