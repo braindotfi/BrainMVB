@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
+const ASSISTANT_CHAT_LIB = "client/src/lib/assistantChat.ts";
+
 /**
  * Grounded-answer citations in the Brain Assistant must land on real routes.
  *
@@ -34,6 +36,51 @@ function navigateTargets(file: string): string[] {
     .map((m) => m[1])
     .filter((t) => t.startsWith("/"));
 }
+
+describe("Truncation note rendering contract", () => {
+  it("renders data-testid='context-truncation-note' only for isContextNote messages", () => {
+    const src = readFileSync(ASSISTANT, "utf8");
+    // The testid must appear inside the isContextNote branch.
+    const isContextNoteIdx = src.indexOf("msg.isContextNote ?");
+    const testidIdx = src.indexOf('data-testid="context-truncation-note"');
+    expect(isContextNoteIdx, "isContextNote branch not found in BrainAssistant").toBeGreaterThan(-1);
+    expect(testidIdx, "context-truncation-note testid not found in BrainAssistant").toBeGreaterThan(-1);
+    // The testid must come after the isContextNote check, never before it.
+    expect(testidIdx).toBeGreaterThan(isContextNoteIdx);
+    // It must also appear before the JSX element that renders regular chat
+    // bubbles. Search for "<ChatBubble" (JSX open-tag) rather than
+    // "ChatBubble" which also hits the component function definition near the
+    // top of the file.
+    const chatBubbleJsxIdx = src.indexOf("<ChatBubble");
+    expect(chatBubbleJsxIdx, "<ChatBubble JSX not found in BrainAssistant").toBeGreaterThan(-1);
+    expect(testidIdx).toBeLessThan(chatBubbleJsxIdx);
+  });
+
+  it("regular chat bubbles are gated behind the !isContextNote branch", () => {
+    const src = readFileSync(ASSISTANT, "utf8");
+    // The <ChatBubble JSX is rendered in the else branch of isContextNote,
+    // meaning context notes and chat bubbles are mutually exclusive.
+    // Use "<ChatBubble" to target the JSX usage, not the function definition.
+    const isContextNoteIdx = src.indexOf("msg.isContextNote ?");
+    const chatBubbleJsxIdx = src.indexOf("<ChatBubble");
+    expect(isContextNoteIdx).toBeGreaterThan(-1);
+    expect(chatBubbleJsxIdx).toBeGreaterThan(isContextNoteIdx);
+  });
+
+  it("isContextNote flag is sourced from buildTruncationNote in the send path", () => {
+    const src = readFileSync(ASSISTANT, "utf8");
+    // The component must import and call buildTruncationNote so the note-creation
+    // logic is the pure-function variant that is unit-tested separately.
+    expect(src).toContain("buildTruncationNote");
+    // The isContextNote field must be set to true on the note message.
+    expect(src).toContain("isContextNote: true");
+  });
+
+  it("buildTruncationNote is exported from assistantChat for use in the component", () => {
+    const src = readFileSync(ASSISTANT_CHAT_LIB, "utf8");
+    expect(src).toContain("export function buildTruncationNote");
+  });
+});
 
 describe("Brain Assistant citation links", () => {
   it("does not label operational-error context as a grounded answer", () => {

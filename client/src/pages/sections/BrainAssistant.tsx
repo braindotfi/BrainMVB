@@ -25,7 +25,7 @@ import {
 import { openMemberDetail } from "@/lib/membersStore";
 import { useSuggestedQuestions, resolveSuggestionChips } from "@/lib/brainSuggestedQuestions";
 import { resolveVendor, openVendorDetail } from "@/lib/openVendorDetail";
-import { parseAssistantResponse, trimChatHistory, ASSISTANT_GENERIC_ERROR } from "@/lib/assistantChat";
+import { parseAssistantResponse, trimChatHistory, buildChatPayload, filterPayloadMessages, buildTruncationNote, ASSISTANT_GENERIC_ERROR, CHAT_HISTORY_LIMIT, MESSAGE_CONTENT_LIMIT } from "@/lib/assistantChat";
 import { isAssistantBulletLine, stripAssistantBullet } from "@/lib/assistantFormatting";
 import brainLogo from "@assets/Brain_1_1783374797129.png";
 import timeIcon from "@assets/Time_1781821466642.png";
@@ -65,6 +65,9 @@ interface ChatMessage {
   answerError?: boolean;
   /** True when the assistant answered without access to live ledger data. */
   ungrounded?: boolean;
+  /** True for synthetic inline notes (e.g. truncation warnings) — rendered
+   *  differently from user/assistant bubbles and never sent to the server. */
+  isContextNote?: boolean;
 }
 
 interface ChatSession {
@@ -604,22 +607,55 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
     let sessionId = activeSession?.id ?? null;
 
     // History to send to the assistant (messages BEFORE this turn + the new user msg).
-    // Trimmed to the most recent CHAT_HISTORY_LIMIT messages so the payload never
-    // exceeds the server's Zod max(50) constraint — older context is dropped rather
-    // than letting a long session hit an unrecoverable permanent 400.
-    const priorMessages = sessionId
+    // Context notes (isContextNote) are UI-only and must never be sent to the server:
+    // strip them first so they don't consume the CHAT_HISTORY_LIMIT budget or appear
+    // as conversation turns in the request body.
+    const rawPrior = sessionId
       ? sessions.find((s) => s.id === sessionId)?.messages ?? []
       : [];
-    const history = trimChatHistory([...priorMessages, userMsg]).map((m) => ({
-      role: m.role,
-      content: m.text,
-    }));
+    const priorMessages = filterPayloadMessages(rawPrior);
+    const allMessages = [...priorMessages, userMsg];
+
+    const history = buildChatPayload(allMessages);
+
+    // Inject a one-off inline note just before the user turn describing what
+    // buildChatPayload silently dropped or shortened. Delegated to the pure
+    // buildTruncationNote helper so the logic is unit-testable in isolation.
+    const priorMsgMaxLength = priorMessages.reduce(
+      (max, m) => Math.max(max, m.text.length),
+      0,
+    );
+    const noteText = buildTruncationNote({
+      allMessagesCount: allMessages.length,
+      currentMsgLength: userMsg.text.length,
+      priorMsgMaxLength,
+    });
+    const noteMsg: ChatMessage | null = noteText
+      ? {
+          id: nextId(),
+          role: "assistant",
+          text: noteText,
+          isContextNote: true,
+        }
+      : null;
 
     // Optimistically append the user message (creating a session if needed).
+    // Any prior context notes are removed first — only the most-recent note is
+    // meaningful; stale ones from earlier trims clutter the conversation and
+    // confuse the user about which send was affected (#223).
     if (sessionId) {
       setSessions((prev) =>
         prev.map((s) =>
-          s.id === sessionId ? { ...s, messages: [...s.messages, userMsg] } : s,
+          s.id === sessionId
+            ? {
+                ...s,
+                messages: [
+                  ...s.messages.filter((m) => !m.isContextNote),
+                  ...(noteMsg ? [noteMsg] : []),
+                  userMsg,
+                ],
+              }
+            : s,
         ),
       );
     } else {
@@ -627,7 +663,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
         id: `session-${nextId()}`,
         title: trimmed.length > 40 ? `${trimmed.slice(0, 40)}…` : trimmed,
         createdAt: Date.now(),
-        messages: [{ ...userMsg, dateTag: "Today" }],
+        messages: [...(noteMsg ? [noteMsg] : []), { ...userMsg, dateTag: "Today" }],
       };
       sessionId = newSession.id;
       setSessions((prev) => [newSession, ...prev]);
@@ -989,6 +1025,40 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                     </span>
                   </div>
                 )}
+                {msg.isContextNote ? (
+                  /* Subtle inline note — not a chat bubble. Informs the user
+                     that older context was dropped from this send. When the
+                     note mentions "start a new conversation" that phrase is
+                     rendered as a button so the user can act immediately. */
+                  <div
+                    className="flex items-center justify-center py-[2px] px-[4px]"
+                    data-testid="context-truncation-note"
+                  >
+                    {(() => {
+                      const ACTION = "start a new conversation";
+                      const idx = msg.text.indexOf(ACTION);
+                      const cls =
+                        "[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[11px] leading-[14px] text-center";
+                      if (idx === -1) {
+                        return <span className={cls}>{msg.text}</span>;
+                      }
+                      return (
+                        <span className={cls}>
+                          {msg.text.slice(0, idx)}
+                          <button
+                            type="button"
+                            onClick={startNewSession}
+                            className="underline hover:text-brain-v1baby-blue-100 transition-colors cursor-pointer"
+                          >
+                            {ACTION}
+                          </button>
+                          {msg.text.slice(idx + ACTION.length)}
+                        </span>
+                      );
+                    })()}
+                  </div>
+                ) : (
+                <>
                 {/* items-end/start keeps the bubble off full width; max-w-[75%]
                     caps where the text wraps. ChatBubble then pins the box to
                     the widest laid-out line so it hugs the text — max-width
@@ -1149,6 +1219,8 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                       </div>
                     )}
                   </div>
+                )}
+                </>
                 )}
               </div>
             ))}

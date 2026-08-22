@@ -21,6 +21,103 @@ export function trimChatHistory<T>(messages: T[]): T[] {
     : messages;
 }
 
+/**
+ * Maximum number of characters allowed per message by the server's Zod schema.
+ * A single assistant reply that exceeds this limit would be stored in session
+ * history and sent back verbatim on the next request, hitting the same permanent
+ * 400. Content is truncated here, before the wire payload is built.
+ */
+export const MESSAGE_CONTENT_LIMIT = 8000;
+
+/** One message in the shape the /api/assistant/chat server schema expects. */
+export interface WireMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+/**
+ * Strip synthetic context-note messages (isContextNote: true) from a session
+ * messages array before building the wire payload. Notes are UI-only: they must
+ * never be sent to the server, must not count toward the CHAT_HISTORY_LIMIT
+ * budget, and must not be visible to the assistant as conversation turns.
+ *
+ * Returns the original array reference when no notes are present (avoids an
+ * unnecessary allocation on every send in the common case).
+ */
+export function filterPayloadMessages<T extends { isContextNote?: boolean }>(
+  messages: T[],
+): T[] {
+  return messages.some((m) => m.isContextNote)
+    ? messages.filter((m) => !m.isContextNote)
+    : messages;
+}
+
+/**
+ * Build the wire payload for a /api/assistant/chat request from raw session
+ * messages. Applies both guards the server schema enforces:
+ *   1. Array trimmed to the most recent CHAT_HISTORY_LIMIT items (max(50) constraint).
+ *   2. Each message's content capped to MESSAGE_CONTENT_LIMIT chars (max(8000) constraint).
+ *
+ * Doing both here keeps the call-site simple and makes the invariants testable
+ * without mounting the full component.
+ *
+ * Call filterPayloadMessages() on the input before passing it here so that
+ * synthetic context notes are excluded from the budget and the request body.
+ */
+export function buildChatPayload(
+  messages: Array<{ role: "user" | "assistant"; text: string }>,
+): WireMessage[] {
+  return trimChatHistory(messages).map((m) => ({
+    role: m.role,
+    content:
+      m.text.length > MESSAGE_CONTENT_LIMIT
+        ? m.text.slice(0, MESSAGE_CONTENT_LIMIT)
+        : m.text,
+  }));
+}
+
+/**
+ * Examine what buildChatPayload will silently drop or shorten and return the
+ * text for an inline context note, or null when the payload goes out intact.
+ *
+ * Extracted from sendMessage() so the note-generation logic can be unit-tested
+ * independently of the component lifecycle.
+ *
+ * Parameters
+ * ----------
+ * allMessagesCount      — total messages in this turn (prior filtered + new user msg)
+ * currentMsgLength      — character length of the new user message
+ * priorMsgMaxLength     — longest character length among prior (non-note) messages
+ *                         (0 when there are no prior messages)
+ *
+ * Return value is always a single string or null — never more than one note is
+ * produced per send, so the UI cannot accumulate duplicate notes from one call.
+ */
+export function buildTruncationNote({
+  allMessagesCount,
+  currentMsgLength,
+  priorMsgMaxLength,
+}: {
+  allMessagesCount: number;
+  currentMsgLength: number;
+  priorMsgMaxLength: number;
+}): string | null {
+  const wasTrimmed = allMessagesCount > CHAT_HISTORY_LIMIT;
+  const wasCurrentMsgTruncated = currentMsgLength > MESSAGE_CONTENT_LIMIT;
+  const wasPriorContentTruncated = priorMsgMaxLength > MESSAGE_CONTENT_LIMIT;
+
+  if (wasTrimmed && wasCurrentMsgTruncated) {
+    return "Your message and some earlier messages were not sent in full — start a new conversation for full context";
+  }
+  if (wasTrimmed || wasPriorContentTruncated) {
+    return "Earlier messages were not sent in full — start a new conversation for full context";
+  }
+  if (wasCurrentMsgTruncated) {
+    return "Your message was too long and was shortened before sending";
+  }
+  return null;
+}
+
 type AssistantPayload = Record<string, unknown>;
 
 function asPayload(value: unknown): AssistantPayload | null {
