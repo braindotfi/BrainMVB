@@ -11,7 +11,9 @@ import { useBrainSources } from "@/lib/useBrainSources";
 import {
   categoryForBrainSource,
   brainSourceLabel,
+  brainSourceSubtitle,
   isDisconnectHidden,
+  isHistoricalBrainSource,
   isSyncDisabled,
   type BrainSource,
 } from "@/lib/brainSources";
@@ -337,12 +339,14 @@ export function SourcesSection() {
      that something is. */
   const failedFeeds = [
     bankState === "failed" ? "bank connections" : null,
-    brainState === "failed" ? "connected accounts" : null,
+    brainState === "failed" ? "source records" : null,
     toolState === "failed" ? "connected tools" : null,
     docState === "failed" ? "documents" : null,
   ].filter((s): s is string => s !== null);
 
   const shown = banks.length + brainSources.length + tools.length + docs.length;
+  const liveBrainSources = brainSources.filter((source) => !isHistoricalBrainSource(source));
+  const historicalBrainSources = brainSources.filter(isHistoricalBrainSource);
 
   const brainKind = (s: BrainSource) => CATEGORY_KIND_LABEL[categoryForBrainSource(s)];
   const toolKind = (toolId: string) => {
@@ -369,7 +373,7 @@ export function SourcesSection() {
       onRemove: () => disconnectBank.mutate(b.itemId),
       removing: disconnectBank.isPending,
     })),
-    ...brainSources.map((s) => ({
+    ...liveBrainSources.map((s) => ({
       key: `brain-${s.id}`,
       testId: `source-brain-${s.id}`,
       removeTestId: `button-remove-source-${s.id}`,
@@ -403,6 +407,14 @@ export function SourcesSection() {
       removing: disconnectTool.isPending,
     })),
   ];
+
+  const historicalRows = historicalBrainSources.map((source) => ({
+    key: `brain-${source.id}`,
+    testId: `source-brain-${source.id}`,
+    title: brainSourceLabel(source),
+    accountId: accountIdFor(source.id, brainSourceLabel(source), source.metadata),
+    subtitle: `${brainKind(source)} · ${brainSourceSubtitle(source)}`,
+  }));
 
   const mechanism = mechanismFor(category);
 
@@ -518,6 +530,33 @@ export function SourcesSection() {
           )}
         </TableCard>
       </div>
+
+      {historicalRows.length > 0 && (
+        <div className="flex flex-col gap-[4px]">
+          <SectionLabel
+            testId="label-historical-imports"
+            count={historicalRows.length}
+            countTestId="count-historical-imports"
+          >
+            Historical Imports
+          </SectionLabel>
+          <TableCard testId="list-historical-imports">
+            {historicalRows.map((row, index) => (
+              <SourceRow
+                key={row.key}
+                testId={row.testId}
+                title={row.title}
+                subtitle={row.subtitle}
+                accountId={row.accountId}
+                onOpenAccount={
+                  row.accountId ? () => setOpenAccountId(row.accountId!) : undefined
+                }
+                last={index === historicalRows.length - 1}
+              />
+            ))}
+          </TableCard>
+        </div>
+      )}
 
       <AccountDetailPopup
         accountId={openAccountId}

@@ -84,16 +84,15 @@ export function syncCaption(input: SyncCaptionInput, nowMs: number): string {
   return input.kind;
 }
 
-/** The line above the lists. `shown` counts rows actually rendered, so it can only
-    ever under-report - hence the explicit qualifier whenever a feed has failed or
-    has not answered yet. */
+/** The line above the lists. `shown` counts live, historical, and document rows
+    actually rendered, so it can only ever under-report. */
 export function sourceCountCaption(shown: number, states: ReadState[]): string {
   const failed = states.filter((s) => s === "failed").length;
   const pending = states.filter((s) => s === "pending").length;
 
   if (states.length > 0 && pending === states.length) return "Checking your sources…";
 
-  const noun = `${shown} connected source${shown === 1 ? "" : "s"}`;
+  const noun = `${shown} source${shown === 1 ? "" : "s"}`;
   if (failed > 0) {
     return `${noun} shown · ${failed} list${failed === 1 ? "" : "s"} couldn't be loaded`;
   }

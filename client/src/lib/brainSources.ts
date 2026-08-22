@@ -7,17 +7,16 @@
    storage. The two populations are disjoint today; see categoryCounts() for the
    dedupe rule that keeps them disjoint if that ever changes.
 
-   Demo tenants get fake-connected sources seeded upstream so the demo looks
-   coherent. Those rows carry metadata telling us the connection is not really
-   ours to sever:
+   Historical provenance rows are real upstream records but are not live
+   connections. They use status `historical` and carry metadata that prevents
+   sync and disconnect controls:
 
      disconnectable:    false
      disconnect_hidden: true
      sync_disabled:     true
 
-   The disconnect affordance is HIDDEN (not disabled, not a no-op) for those, so
-   a seeded connection reads as real rather than as broken. Real tenants never
-   carry this metadata, so the checks below default to "show the control".
+   The disconnect affordance is hidden for those rows. They render separately
+   from connected accounts with an explicit no-live-connection label.
 
    Parsing is defensive on purpose: these rows reach the UI through the BFF's
    generic GET passthrough, which relays brain-core's response verbatim without
@@ -82,6 +81,7 @@ const SOURCE_CATEGORY_ALIASES: Readonly<Record<string, CategoryId>> = {
   payroll_hr: "payroll",
   payments_revenue: "payments",
   documents_email: "documents",
+  tax_records: "tax",
 };
 
 /** Fallback display names. Real metadata (below) wins whenever upstream sends it. */
@@ -144,9 +144,14 @@ export function parseBrainSources(raw: unknown): BrainSource[] {
   return out;
 }
 
-/** A source still worth showing as connected. Unknown/absent status counts as live. */
+/** A source still worth showing. Historical rows are split from live rows by the caller. */
 export function isConnectedBrainSource(s: BrainSource): boolean {
   return !DEAD_STATUSES.has(s.status);
+}
+
+/** A provenance row that explicitly does not represent a live connection. */
+export function isHistoricalBrainSource(s: BrainSource): boolean {
+  return s.status === "historical";
 }
 
 /**
@@ -213,7 +218,12 @@ export function brainSourceLabel(s: BrainSource): string {
 
 /** Row subtitle: "Connected" plus a mask/account hint when upstream sent one. */
 export function brainSourceSubtitle(s: BrainSource): string {
-  const head = s.status === "" ? "Connected" : s.status.charAt(0).toUpperCase() + s.status.slice(1);
+  const head =
+    s.status === "historical"
+      ? "Historical import · no live connection"
+      : s.status === ""
+        ? "Connected"
+        : s.status.charAt(0).toUpperCase() + s.status.slice(1);
   const mask = s.metadata.account_mask ?? s.metadata.mask;
   if (typeof mask === "string" && mask.trim() !== "") return `${head} · ····${mask}`;
   return head;

@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   parseBrainSources,
   isConnectedBrainSource,
+  isHistoricalBrainSource,
   isDisconnectHidden,
   isProviderRemoveHidden,
   categoryForBrainSource,
@@ -154,6 +155,13 @@ describe("isConnectedBrainSource", () => {
       expect(isConnectedBrainSource(src({ status }))).toBe(false);
     }
   });
+
+  it("keeps historical provenance visible for a separate historical section", () => {
+    const historical = src({ status: "historical" });
+    expect(isConnectedBrainSource(historical)).toBe(true);
+    expect(isHistoricalBrainSource(historical)).toBe(true);
+    expect(brainSourceSubtitle(historical)).toBe("Historical import · no live connection");
+  });
 });
 
 describe("categoryForBrainSource", () => {
@@ -173,6 +181,14 @@ describe("categoryForBrainSource", () => {
 
   it("falls through to Documents for an unknown connector rather than dropping it", () => {
     expect(categoryForBrainSource(src({ type: "netsuite" }))).toBe("documents");
+  });
+
+  it("maps historical tax records from source metadata", () => {
+    expect(
+      categoryForBrainSource(
+        src({ type: "pdf_upload", metadata: { source_category: "tax_records" } }),
+      ),
+    ).toBe("tax");
   });
 });
 

@@ -78,8 +78,8 @@ describe("syncCaption", () => {
 
 describe("sourceCountCaption", () => {
   it("counts plainly once every feed has answered", () => {
-    expect(sourceCountCaption(8, ["done", "done", "done", "done"])).toBe("8 connected sources");
-    expect(sourceCountCaption(1, ["done"])).toBe("1 connected source");
+    expect(sourceCountCaption(8, ["done", "done", "done", "done"])).toBe("8 sources");
+    expect(sourceCountCaption(1, ["done"])).toBe("1 source");
   });
 
   it("does not report a total while every feed is still loading", () => {
@@ -88,14 +88,14 @@ describe("sourceCountCaption", () => {
 
   it("qualifies the count when a feed failed", () => {
     expect(sourceCountCaption(3, ["done", "failed", "done", "done"]))
-      .toBe("3 connected sources shown · 1 list couldn't be loaded");
+      .toBe("3 sources shown · 1 list couldn't be loaded");
     expect(sourceCountCaption(3, ["failed", "failed", "done", "done"]))
       .toContain("2 lists couldn't be loaded");
   });
 
   it("qualifies the count while a feed is still answering", () => {
     expect(sourceCountCaption(3, ["done", "pending", "done", "done"]))
-      .toBe("3 connected sources so far · still checking");
+      .toBe("3 sources so far · still checking");
   });
 
   it("reports a failure ahead of a pending read", () => {
