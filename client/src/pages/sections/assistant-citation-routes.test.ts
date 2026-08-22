@@ -185,3 +185,62 @@ describe("Ledger tab deep links", () => {
     }
   });
 });
+
+// ─── Monthly Breakdown state contract ────────────────────────────────────────
+//
+// MonthlyBreakdownCard must distinguish three mutually exclusive states:
+//   1. failed   → explicit "couldn't load" copy (NOT "no data", NOT zero chart)
+//   2. loading  → loading copy
+//   3. empty    → "no transaction data" copy
+//
+// A regression that merges failed+empty into one code path would silently let
+// users mistake a source availability problem for a business fact (nothing moved).
+//
+// These source-scan checks pin the structural invariants without a DOM render:
+//   a. The `failed` prop is declared in MonthlyBreakdownCard.
+//   b. The failed branch renders a distinct testid and explicit "couldn't" text.
+//   c. CashFlowTab passes `failed={txFailed}` (not omitting it) to the card.
+//   d. Loading and empty states have their own distinct testids.
+
+const CARD_SRC = "client/src/components/MonthlyBreakdownCard.tsx";
+const TAB_SRC  = "client/src/components/CashFlowTab.tsx";
+
+describe("Monthly Breakdown state contract", () => {
+  const card = readFileSync(CARD_SRC, "utf8");
+  const tab  = readFileSync(TAB_SRC, "utf8");
+
+  it("declares the `failed` prop in MonthlyBreakdownCard", () => {
+    expect(card).toMatch(/failed\??\s*:\s*boolean/);
+  });
+
+  it("renders a distinct testid for the failed state (not loading, not empty)", () => {
+    expect(card).toContain('data-testid="text-monthly-breakdown-unavailable"');
+    // Confirm the loading and empty testids are separate code paths.
+    expect(card).toContain('data-testid="text-monthly-breakdown-loading"');
+    expect(card).toContain('data-testid="text-monthly-breakdown-empty"');
+    // All three must be distinct strings.
+    const ids = [
+      "text-monthly-breakdown-unavailable",
+      "text-monthly-breakdown-loading",
+      "text-monthly-breakdown-empty",
+    ];
+    expect(new Set(ids).size).toBe(3);
+  });
+
+  it("uses explicit 'couldn't' copy in the failed branch (not zero / not 'no data')", () => {
+    // The failed branch must say "couldn't" (or equivalent honest qualifier)
+    // and must appear BEFORE the empty-state branch in source order so the
+    // render logic checks failure before drawing any chart.
+    // Match either a straight apostrophe (') or a curly one (\u2019).
+    const failedIdx = Math.max(card.indexOf("couldn't"), card.indexOf("couldn\u2019t"));
+    const emptyIdx  = card.indexOf("No transaction data");
+    expect(failedIdx).toBeGreaterThan(-1);
+    expect(emptyIdx).toBeGreaterThan(-1);
+    expect(failedIdx).toBeLessThan(emptyIdx);
+  });
+
+  it("CashFlowTab wires `failed={txFailed}` into MonthlyBreakdownCard", () => {
+    // The tab must pass the failure flag, not rely on a default of undefined.
+    expect(tab).toMatch(/failed=\{txFailed\}/);
+  });
+});

@@ -368,11 +368,149 @@ export function incompleteMessage(f: { tx: boolean; inv: boolean; ob: boolean; i
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-function monthYear(iso: string): string | null {
+/** "2026-08-15" or "2026-08" → "Aug 2026"; returns null for unrecognised input. */
+export function monthYear(iso: string): string | null {
   const [y, m] = iso.split("-");
   const mi = Number(m) - 1;
   if (!y || !MONTHS[mi]) return null;
   return `${MONTHS[mi]} ${y}`;
+}
+
+/**
+ * Advance or retreat a YYYY-MM key by `delta` calendar months.
+ * E.g. stepMonth("2026-01", -1) → "2025-12".
+ */
+function stepMonth(monthKey: string, delta: number): string {
+  const [y, m] = monthKey.split("-").map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+/**
+ * Generate `count` consecutive YYYY-MM keys ending at `endMonthKey`, returned
+ * newest first.
+ *
+ * monthSeriesDesc("2026-08", 3) → ["2026-08", "2026-07", "2026-06"]
+ */
+export function monthSeriesDesc(endMonthKey: string, count: number): string[] {
+  const result: string[] = [];
+  for (let i = 0; i < count; i++) result.push(stepMonth(endMonthKey, -i));
+  return result;
+}
+
+// ─── monthly breakdown ────────────────────────────────────────────────────────
+
+export interface MonthlyBreakdownEntry {
+  /** Calendar month in YYYY-MM form, e.g. "2026-08". */
+  monthKey: string;
+  /** Human label, e.g. "Aug 2026". */
+  label: string;
+  income: number;
+  expenses: number;
+  /**
+   * Top expense counterparty ids ranked by total spend, descending.
+   * The id may be null when a transaction carried no counterparty reference.
+   * The caller is responsible for resolving ids to display names — this module
+   * holds no access to the counterparty feed, so it never looks up names.
+   */
+  topExpenseCounterpartyIds: Array<{ id: string | null; amount: number }>;
+}
+
+/**
+ * Group raw transactions into calendar-month buckets and return them newest
+ * first.
+ *
+ * Only inflows (income) and outflows (expenses) are counted. Transfers and
+ * adjustments are deliberately excluded: they are neither revenue nor spend,
+ * and including them in either total would inflate a figure the user is being
+ * asked to compare month-over-month.
+ *
+ * Returns ALL months that appear in the data. The component decides which
+ * window ("Last 6 months", "Last 12 months", "Year to date") to display.
+ */
+export function buildMonthlyBreakdown(
+  transactions: readonly CashFlowTxLike[],
+): MonthlyBreakdownEntry[] {
+  const byMonth = new Map<
+    string,
+    { income: number; expenses: number; byCp: Map<string | null, number> }
+  >();
+
+  for (const t of transactions) {
+    const kind = KIND_OF[String(t?.direction ?? "")];
+    if (kind !== "income" && kind !== "expense") continue;
+    const raw = t.transaction_date;
+    if (!raw) continue;
+    const monthKey = String(raw).slice(0, 7); // "YYYY-MM"
+    if (!/^\d{4}-\d{2}$/.test(monthKey)) continue;
+
+    let entry = byMonth.get(monthKey);
+    if (!entry) {
+      entry = { income: 0, expenses: 0, byCp: new Map() };
+      byMonth.set(monthKey, entry);
+    }
+
+    const amt = num(t.amount);
+    if (kind === "income") {
+      entry.income += amt;
+    } else {
+      entry.expenses += amt;
+      const cpId = t.counterparty_id ?? null;
+      entry.byCp.set(cpId, (entry.byCp.get(cpId) ?? 0) + amt);
+    }
+  }
+
+  return Array.from(byMonth.entries())
+    .sort(([a], [b]) => b.localeCompare(a)) // newest first
+    .map(([monthKey, { income, expenses, byCp }]) => ({
+      monthKey,
+      label: monthYear(monthKey) ?? monthKey,
+      income,
+      expenses,
+      topExpenseCounterpartyIds: Array.from(byCp.entries())
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 5)
+        .map(([id, amount]) => ({ id, amount })),
+    }));
+}
+
+/**
+ * Build a contiguous calendar-month window of income/expense entries.
+ *
+ * Unlike `buildMonthlyBreakdown`, which returns only months that appear in the
+ * data, this fills in zero-income/zero-expense entries for every month in
+ * `monthKeys` that has no transactions. The caller always receives exactly
+ * `monthKeys.length` entries — gaps are visible rather than silently hidden.
+ *
+ * `monthKeys` must be YYYY-MM strings in the order the caller wants returned
+ * (typically oldest-first so the chart reads left-to-right).
+ *
+ * Transactions whose month falls outside `monthKeys` are ignored — they do not
+ * bleed into adjacent buckets.
+ */
+export function buildMonthlyWindow(
+  transactions: readonly CashFlowTxLike[],
+  monthKeys: readonly string[],
+): MonthlyBreakdownEntry[] {
+  const keySet = new Set(monthKeys);
+  // Re-use the grouping logic but restrict to the requested window.
+  const restricted = transactions.filter((t) => {
+    const raw = t.transaction_date;
+    if (!raw) return false;
+    const mk = String(raw).slice(0, 7);
+    return keySet.has(mk);
+  });
+  const grouped = new Map(buildMonthlyBreakdown(restricted).map((e) => [e.monthKey, e]));
+  return monthKeys.map(
+    (mk) =>
+      grouped.get(mk) ?? {
+        monthKey: mk,
+        label: monthYear(mk) ?? mk,
+        income: 0,
+        expenses: 0,
+        topExpenseCounterpartyIds: [],
+      },
+  );
 }
 
 /**

@@ -1,6 +1,9 @@
 import { describe, it, expect } from "vitest";
 import {
   buildCashFlowRows,
+  buildMonthlyBreakdown,
+  buildMonthlyWindow,
+  monthSeriesDesc,
   cashFlowTotals,
   cashFlowPeriodLabel,
   detailLine,
@@ -478,5 +481,193 @@ describe("cashFlowPeriodLabel", () => {
     });
     expect(cashFlowPeriodLabel(t.periodStart, t.periodEnd)).toBe("Feb to Jun 2026");
     expect(t.income).toBe(144000);
+  });
+});
+
+// ─── buildMonthlyBreakdown ────────────────────────────────────────────────────
+
+describe("buildMonthlyBreakdown", () => {
+  it("groups inflows and outflows into separate month buckets", () => {
+    const entries = buildMonthlyBreakdown([
+      TX({ id: "a", direction: "inflow", amount: "1000", transaction_date: "2026-06-01" }),
+      TX({ id: "b", direction: "outflow", amount: "400", transaction_date: "2026-06-15" }),
+      TX({ id: "c", direction: "inflow", amount: "2000", transaction_date: "2026-07-10" }),
+    ]);
+    expect(entries).toHaveLength(2);
+    // newest first
+    const [jul, jun] = entries;
+    expect(jul.monthKey).toBe("2026-07");
+    expect(jul.income).toBe(2000);
+    expect(jul.expenses).toBe(0);
+    expect(jun.monthKey).toBe("2026-06");
+    expect(jun.income).toBe(1000);
+    expect(jun.expenses).toBe(400);
+  });
+
+  it("excludes transfers and adjustments from both income and expenses", () => {
+    const entries = buildMonthlyBreakdown([
+      TX({ id: "a", direction: "transfer", amount: "5000", transaction_date: "2026-06-01" }),
+      TX({ id: "b", direction: "adjustment", amount: "200", transaction_date: "2026-06-05" }),
+      TX({ id: "c", direction: "inflow", amount: "1000", transaction_date: "2026-06-10" }),
+    ]);
+    expect(entries).toHaveLength(1);
+    expect(entries[0].income).toBe(1000);
+    expect(entries[0].expenses).toBe(0);
+  });
+
+  it("returns an empty array when there are no inflow or outflow transactions", () => {
+    const entries = buildMonthlyBreakdown([
+      TX({ id: "a", direction: "transfer", amount: "5000", transaction_date: "2026-06-01" }),
+    ]);
+    expect(entries).toHaveLength(0);
+  });
+
+  it("returns entries newest-first", () => {
+    const entries = buildMonthlyBreakdown([
+      TX({ id: "b", direction: "inflow", amount: "100", transaction_date: "2026-08-01" }),
+      TX({ id: "a", direction: "inflow", amount: "100", transaction_date: "2026-05-01" }),
+      TX({ id: "c", direction: "inflow", amount: "100", transaction_date: "2026-11-01" }),
+    ]);
+    const keys = entries.map((e) => e.monthKey);
+    expect(keys).toEqual(["2026-11", "2026-08", "2026-05"]);
+  });
+
+  it("ranks top expense counterparties by total spend descending", () => {
+    const entries = buildMonthlyBreakdown([
+      TX({ id: "a", direction: "outflow", amount: "100", transaction_date: "2026-06-01", counterparty_id: "cp_small" }),
+      TX({ id: "b", direction: "outflow", amount: "900", transaction_date: "2026-06-10", counterparty_id: "cp_big" }),
+      TX({ id: "c", direction: "outflow", amount: "500", transaction_date: "2026-06-20", counterparty_id: "cp_mid" }),
+    ]);
+    expect(entries).toHaveLength(1);
+    const top = entries[0].topExpenseCounterpartyIds;
+    expect(top[0]).toEqual({ id: "cp_big", amount: 900 });
+    expect(top[1]).toEqual({ id: "cp_mid", amount: 500 });
+    expect(top[2]).toEqual({ id: "cp_small", amount: 100 });
+  });
+
+  it("aggregates multiple transactions from the same counterparty in a month", () => {
+    const entries = buildMonthlyBreakdown([
+      TX({ id: "a", direction: "outflow", amount: "300", transaction_date: "2026-06-01", counterparty_id: "cp_1" }),
+      TX({ id: "b", direction: "outflow", amount: "200", transaction_date: "2026-06-15", counterparty_id: "cp_1" }),
+    ]);
+    expect(entries[0].expenses).toBe(500);
+    expect(entries[0].topExpenseCounterpartyIds[0]).toEqual({ id: "cp_1", amount: 500 });
+  });
+
+  it("uses a human-readable label derived from the month key", () => {
+    const entries = buildMonthlyBreakdown([
+      TX({ id: "a", direction: "inflow", amount: "1", transaction_date: "2026-08-15" }),
+    ]);
+    expect(entries[0].label).toBe("Aug 2026");
+  });
+
+  it("handles a null counterparty_id as a separate bucket", () => {
+    const entries = buildMonthlyBreakdown([
+      TX({ id: "a", direction: "outflow", amount: "100", transaction_date: "2026-06-01", counterparty_id: null }),
+      TX({ id: "b", direction: "outflow", amount: "200", transaction_date: "2026-06-10", counterparty_id: null }),
+    ]);
+    expect(entries[0].expenses).toBe(300);
+    expect(entries[0].topExpenseCounterpartyIds[0]).toEqual({ id: null, amount: 300 });
+  });
+
+  it("skips transactions with no date", () => {
+    const entries = buildMonthlyBreakdown([
+      TX({ id: "a", direction: "inflow", amount: "1000", transaction_date: null }),
+      TX({ id: "b", direction: "inflow", amount: "500", transaction_date: "2026-06-01" }),
+    ]);
+    expect(entries).toHaveLength(1);
+    expect(entries[0].income).toBe(500);
+  });
+});
+
+// ─── monthSeriesDesc ──────────────────────────────────────────────────────────
+
+describe("monthSeriesDesc", () => {
+  it("returns count keys ending at endMonthKey, newest first", () => {
+    expect(monthSeriesDesc("2026-08", 3)).toEqual(["2026-08", "2026-07", "2026-06"]);
+  });
+
+  it("wraps correctly across year boundaries", () => {
+    expect(monthSeriesDesc("2026-02", 3)).toEqual(["2026-02", "2026-01", "2025-12"]);
+  });
+
+  it("returns a single-element array for count=1", () => {
+    expect(monthSeriesDesc("2026-05", 1)).toEqual(["2026-05"]);
+  });
+
+  it("handles 12-month windows spanning a year boundary", () => {
+    const series = monthSeriesDesc("2026-06", 12);
+    expect(series).toHaveLength(12);
+    expect(series[0]).toBe("2026-06");
+    expect(series[11]).toBe("2025-07");
+  });
+});
+
+// ─── buildMonthlyWindow ───────────────────────────────────────────────────────
+
+describe("buildMonthlyWindow", () => {
+  it("returns exactly the requested months in order, including gaps as zeros", () => {
+    const keys = ["2026-04", "2026-05", "2026-06"];
+    const window = buildMonthlyWindow(
+      [
+        TX({ id: "a", direction: "inflow", amount: "1000", transaction_date: "2026-04-10" }),
+        // May has no transactions — should appear as zero
+        TX({ id: "b", direction: "inflow", amount: "2000", transaction_date: "2026-06-05" }),
+      ],
+      keys,
+    );
+    expect(window).toHaveLength(3);
+    expect(window[0]).toMatchObject({ monthKey: "2026-04", income: 1000, expenses: 0 });
+    expect(window[1]).toMatchObject({ monthKey: "2026-05", income: 0, expenses: 0 });
+    expect(window[2]).toMatchObject({ monthKey: "2026-06", income: 2000, expenses: 0 });
+  });
+
+  it("excludes transactions outside the requested window", () => {
+    const keys = ["2026-06", "2026-07"];
+    const window = buildMonthlyWindow(
+      [
+        TX({ id: "old", direction: "inflow", amount: "9000", transaction_date: "2025-01-15" }),
+        TX({ id: "a", direction: "inflow", amount: "1000", transaction_date: "2026-06-01" }),
+        TX({ id: "future", direction: "inflow", amount: "5000", transaction_date: "2027-03-01" }),
+      ],
+      keys,
+    );
+    expect(window).toHaveLength(2);
+    expect(window[0]).toMatchObject({ monthKey: "2026-06", income: 1000 });
+    expect(window[1]).toMatchObject({ monthKey: "2026-07", income: 0 });
+  });
+
+  it("returns all zeros when transactions array is empty", () => {
+    const keys = ["2026-04", "2026-05", "2026-06"];
+    const window = buildMonthlyWindow([], keys);
+    expect(window).toHaveLength(3);
+    expect(window.every((e) => e.income === 0 && e.expenses === 0)).toBe(true);
+  });
+
+  it("fills human-readable labels for zero-fill months", () => {
+    const window = buildMonthlyWindow([], ["2026-08"]);
+    expect(window[0].label).toBe("Aug 2026");
+  });
+
+  it("correctly separates income and expenses within the window", () => {
+    const window = buildMonthlyWindow(
+      [
+        TX({ id: "a", direction: "inflow", amount: "3000", transaction_date: "2026-05-01" }),
+        TX({ id: "b", direction: "outflow", amount: "1200", transaction_date: "2026-05-15" }),
+        TX({ id: "c", direction: "transfer", amount: "500", transaction_date: "2026-05-20" }),
+      ],
+      ["2026-05"],
+    );
+    expect(window[0]).toMatchObject({ income: 3000, expenses: 1200 });
+  });
+
+  it("handles a large window efficiently — all 12 months present without duplication", () => {
+    const keys = monthSeriesDesc("2026-12", 12).reverse();
+    const txs = keys.map((mk, i) =>
+      TX({ id: `t${i}`, direction: "inflow", amount: "100", transaction_date: `${mk}-01` }),
+    );
+    const window = buildMonthlyWindow(txs, keys);
+    expect(window).toHaveLength(12);
+    expect(window.every((e) => e.income === 100)).toBe(true);
   });
 });
