@@ -355,6 +355,11 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
         />
       </div>
 
+      {/* Separator — same h-px hairline + mb-[26px] as the one before Transactions,
+          giving identical breathing room between the metric cards and the
+          Monthly Breakdown section label. */}
+      <div className="h-px relative shrink-0 w-full mb-[26px]" style={{ background: "#1d2132" }} />
+
       {/* Monthly Breakdown — grouped income/expense chart per calendar month.
           Placed between the cumulative headline figures and the transaction
           list so the user can see the trend context before reading each row.
