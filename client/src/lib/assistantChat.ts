@@ -1,6 +1,26 @@
 export const ASSISTANT_GENERIC_ERROR =
   "Something went wrong reaching the assistant. Please try again.";
 
+/**
+ * Maximum number of messages sent to the server per /api/assistant/chat request.
+ * The server's Zod schema caps the array at 50; we trim to 40 to stay comfortably
+ * under that limit. Older context is dropped — the wiki/question primary path uses
+ * only the latest user message anyway, and the Anthropic fallback benefits from
+ * recent context far more than a distant exchange.
+ */
+export const CHAT_HISTORY_LIMIT = 40;
+
+/**
+ * Trim a conversation history array so it never exceeds CHAT_HISTORY_LIMIT items.
+ * Always keeps the most recent messages. Returns the original array reference when
+ * no trimming is needed (avoids an unnecessary allocation on every send).
+ */
+export function trimChatHistory<T>(messages: T[]): T[] {
+  return messages.length > CHAT_HISTORY_LIMIT
+    ? messages.slice(-CHAT_HISTORY_LIMIT)
+    : messages;
+}
+
 type AssistantPayload = Record<string, unknown>;
 
 function asPayload(value: unknown): AssistantPayload | null {
@@ -42,14 +62,25 @@ export async function parseAssistantResponse(res: Response): Promise<{
     };
   }
 
+  // A conversation history that exceeds the server's message-count or
+  // content-length limits arrives as invalid_messages. Retrying with the same
+  // history will always fail, so "try again" is actively misleading — tell the
+  // user to start a new conversation instead.
+  if (stringField(data, "error") === "invalid_messages") {
+    return {
+      data,
+      reply: "This conversation has gotten too long. Please start a new one to continue.",
+      answerError: true,
+    };
+  }
+
   // Prefer a human-readable server reply for known operational failures, then
   // a specific error/message when one is available. Never invent a preview
   // answer for a failed or malformed response.
   const detail =
     reply ||
     stringField(data, "message") ||
-    (stringField(data, "error") &&
-    !["assistant_failed", "invalid_messages"].includes(stringField(data, "error"))
+    (stringField(data, "error") && stringField(data, "error") !== "assistant_failed"
       ? stringField(data, "error")
       : "");
 
