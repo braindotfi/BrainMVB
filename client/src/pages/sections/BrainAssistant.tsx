@@ -25,7 +25,7 @@ import {
 import { openMemberDetail } from "@/lib/membersStore";
 import { useSuggestedQuestions, resolveSuggestionChips } from "@/lib/brainSuggestedQuestions";
 import { resolveVendor, openVendorDetail } from "@/lib/openVendorDetail";
-import { parseAssistantResponse, ASSISTANT_GENERIC_ERROR } from "@/lib/assistantChat";
+import { parseAssistantResponse, trimChatHistory, ASSISTANT_GENERIC_ERROR } from "@/lib/assistantChat";
 import { isAssistantBulletLine, stripAssistantBullet } from "@/lib/assistantFormatting";
 import brainLogo from "@assets/Brain_1_1783374797129.png";
 import timeIcon from "@assets/Time_1781821466642.png";
@@ -603,11 +603,14 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
     const userMsg: ChatMessage = { id: nextId(), role: "user", text: trimmed };
     let sessionId = activeSession?.id ?? null;
 
-    // History to send to Claude (messages BEFORE this turn + the new user msg).
+    // History to send to the assistant (messages BEFORE this turn + the new user msg).
+    // Trimmed to the most recent CHAT_HISTORY_LIMIT messages so the payload never
+    // exceeds the server's Zod max(50) constraint — older context is dropped rather
+    // than letting a long session hit an unrecoverable permanent 400.
     const priorMessages = sessionId
       ? sessions.find((s) => s.id === sessionId)?.messages ?? []
       : [];
-    const history = [...priorMessages, userMsg].map((m) => ({
+    const history = trimChatHistory([...priorMessages, userMsg]).map((m) => ({
       role: m.role,
       content: m.text,
     }));
