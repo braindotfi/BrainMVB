@@ -42,6 +42,7 @@ import { LedgerRecordRow } from "@/components/LedgerRecordRow";
 import { dueLabel, statusColors } from "@/lib/obligationRows";
 import type { Obligation } from "@/lib/brainObligations";
 import { ICONS } from "@/assets/figma-icons";
+import { MonthlyBreakdownCard } from "@/components/MonthlyBreakdownCard";
 
 interface TxDTO {
   id: string;
@@ -353,6 +354,23 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
           format={format}
         />
       </div>
+
+      {/* Separator — same h-px hairline + mb-[26px] as the one before Transactions,
+          giving identical breathing room between the metric cards and the
+          Monthly Breakdown section label. */}
+      <div className="h-px relative shrink-0 w-full mb-[26px]" style={{ background: "#1d2132" }} />
+
+      {/* Monthly Breakdown — grouped income/expense chart per calendar month.
+          Placed between the cumulative headline figures and the transaction
+          list so the user can see the trend context before reading each row.
+          Passes the already-fetched txs array: no additional network call. */}
+      <MonthlyBreakdownCard
+        transactions={txs}
+        isLoading={txPending}
+        failed={txFailed}
+        format={format}
+        nameOf={nameOf}
+      />
 
       {/* Separator — same pattern as Overview: h-px hairline + mb-[26px] gives the
           same breathing room between the metric block and the section label below. */}

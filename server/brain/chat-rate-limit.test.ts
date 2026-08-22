@@ -9,6 +9,8 @@
  *   3. The 429 body carries { error: "rate_limit_exceeded", retryAfterSeconds }.
  *   4. A Retry-After header is present on the 429 response.
  *   5. A different user ID gets a fresh, independent bucket.
+ *   6. Multiple blocked requests from the same user only log once (debounce).
+ *   7. When the flush timer fires, a summary with blockedCount is logged.
  */
 import { describe, it, expect, beforeAll, afterAll, vi, beforeEach, afterEach } from "vitest";
 import express, { type Express } from "express";
@@ -18,6 +20,8 @@ import {
   chatRateLimiter,
   CHAT_RATE_LIMIT_MAX,
   CHAT_RATE_LIMIT_WINDOW_MS,
+  logRateLimitBlocked,
+  _warnDebounce,
 } from "./chatRateLimit";
 
 // ─── Minimal stub app ────────────────────────────────────────────────────────
@@ -169,6 +173,7 @@ describe("chatRateLimiter", () => {
       });
     } finally {
       warnSpy.mockRestore();
+      _warnDebounce.delete(userId);
     }
   });
 
@@ -186,5 +191,118 @@ describe("chatRateLimiter", () => {
     // userB must still have a full, untouched quota.
     const forB = await chatRequest(userB);
     expect(forB.status).toBe(200);
+  });
+});
+
+// ─── Debounce unit tests ──────────────────────────────────────────────────────
+// These tests call logRateLimitBlocked directly so they can control fake timers
+// without the rate-limit store interfering.
+
+describe("logRateLimitBlocked (debounce)", () => {
+  let warnSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    warnSpy.mockRestore();
+    // Clear any debounce entries left by the test so they don't bleed into
+    // subsequent tests.
+    _warnDebounce.forEach((_entry, key) => {
+      clearTimeout(_warnDebounce.get(key)?.timer);
+      _warnDebounce.delete(key);
+    });
+    vi.useRealTimers();
+  });
+
+  it("logs the first blocked request immediately", () => {
+    logRateLimitBlocked("user-a", "/api/assistant/chat", new Date().toISOString(), 30);
+
+    expect(warnSpy).toHaveBeenCalledOnce();
+    const [message, payload] = warnSpy.mock.calls[0] as [string, Record<string, unknown>];
+    expect(message).toBe("[rate-limit] chat request blocked");
+    expect(payload).toMatchObject({ userId: "user-a" });
+  });
+
+  it("does not emit additional warn lines for subsequent blocked requests from the same user", () => {
+    const userId = "user-debounce-suppress";
+
+    logRateLimitBlocked(userId, "/api/assistant/chat", new Date().toISOString(), 30);
+    logRateLimitBlocked(userId, "/api/assistant/chat", new Date().toISOString(), 30);
+    logRateLimitBlocked(userId, "/api/assistant/chat", new Date().toISOString(), 30);
+
+    // Only the first call should have logged.
+    expect(warnSpy).toHaveBeenCalledOnce();
+  });
+
+  it("tracks the count of suppressed hits in the debounce entry", () => {
+    const userId = "user-debounce-count";
+
+    logRateLimitBlocked(userId, "/api/assistant/chat", new Date().toISOString(), 30);
+    logRateLimitBlocked(userId, "/api/assistant/chat", new Date().toISOString(), 30);
+    logRateLimitBlocked(userId, "/api/assistant/chat", new Date().toISOString(), 30);
+
+    // extraCount = calls after the first = 2
+    expect(_warnDebounce.get(userId)?.extraCount).toBe(2);
+  });
+
+  it("emits a summary log with blockedCount when the flush timer fires", () => {
+    const userId = "user-debounce-flush";
+
+    logRateLimitBlocked(userId, "/api/assistant/chat", new Date().toISOString(), 30);
+    logRateLimitBlocked(userId, "/api/assistant/chat", new Date().toISOString(), 30);
+    logRateLimitBlocked(userId, "/api/assistant/chat", new Date().toISOString(), 30);
+
+    // First warn already fired; now advance time past the window.
+    vi.runAllTimers();
+
+    // A second warn should have been emitted with the summary.
+    expect(warnSpy).toHaveBeenCalledTimes(2);
+    const [summaryMessage, summaryPayload] = warnSpy.mock.calls[1] as [string, Record<string, unknown>];
+    expect(summaryMessage).toBe("[rate-limit] chat requests suppressed");
+    expect(summaryPayload).toMatchObject({
+      userId,
+      blockedCount: 2,
+    });
+  });
+
+  it("does not emit a summary log when no requests were suppressed", () => {
+    const userId = "user-debounce-no-summary";
+
+    // Only one blocked request — nothing to summarise.
+    logRateLimitBlocked(userId, "/api/assistant/chat", new Date().toISOString(), 30);
+
+    vi.runAllTimers();
+
+    // Only the initial warn; no flush summary.
+    expect(warnSpy).toHaveBeenCalledOnce();
+  });
+
+  it("clears the debounce entry after the flush timer fires", () => {
+    const userId = "user-debounce-clear";
+
+    logRateLimitBlocked(userId, "/api/assistant/chat", new Date().toISOString(), 30);
+
+    expect(_warnDebounce.has(userId)).toBe(true);
+
+    vi.runAllTimers();
+
+    expect(_warnDebounce.has(userId)).toBe(false);
+  });
+
+  it("treats different user IDs as independent debounce entries", () => {
+    logRateLimitBlocked("user-x", "/api/assistant/chat", new Date().toISOString(), 30);
+    logRateLimitBlocked("user-y", "/api/assistant/chat", new Date().toISOString(), 30);
+
+    // Each user triggers their own first-warn.
+    expect(warnSpy).toHaveBeenCalledTimes(2);
+
+    // Suppressed hits on user-x do not affect user-y's count.
+    logRateLimitBlocked("user-x", "/api/assistant/chat", new Date().toISOString(), 30);
+
+    expect(_warnDebounce.get("user-x")?.extraCount).toBe(1);
+    expect(_warnDebounce.get("user-y")?.extraCount).toBe(0);
   });
 });

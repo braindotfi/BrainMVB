@@ -185,3 +185,165 @@ describe("Ledger tab deep links", () => {
     }
   });
 });
+
+// ─── Monthly Breakdown state contract ────────────────────────────────────────
+//
+// MonthlyBreakdownCard must distinguish three mutually exclusive states:
+//   1. failed   → explicit "couldn't load" copy (NOT "no data", NOT zero chart)
+//   2. loading  → loading copy
+//   3. empty    → "no transaction data" copy
+//
+// A regression that merges failed+empty into one code path would silently let
+// users mistake a source availability problem for a business fact (nothing moved).
+//
+// These source-scan checks pin the structural invariants without a DOM render:
+//   a. The `failed` prop is declared in MonthlyBreakdownCard.
+//   b. The failed branch renders a distinct testid and explicit "couldn't" text.
+//   c. CashFlowTab passes `failed={txFailed}` (not omitting it) to the card.
+//   d. Loading and empty states have their own distinct testids.
+
+const CARD_SRC = "client/src/components/MonthlyBreakdownCard.tsx";
+const TAB_SRC  = "client/src/components/CashFlowTab.tsx";
+
+describe("Monthly Breakdown state contract", () => {
+  const card = readFileSync(CARD_SRC, "utf8");
+  const tab  = readFileSync(TAB_SRC, "utf8");
+
+  it("declares the `failed` prop in MonthlyBreakdownCard", () => {
+    expect(card).toMatch(/failed\??\s*:\s*boolean/);
+  });
+
+  it("renders a distinct testid for the failed state (not loading, not empty)", () => {
+    expect(card).toContain('data-testid="text-monthly-breakdown-unavailable"');
+    // Confirm the loading and empty testids are separate code paths.
+    expect(card).toContain('data-testid="text-monthly-breakdown-loading"');
+    expect(card).toContain('data-testid="text-monthly-breakdown-empty"');
+    // All three must be distinct strings.
+    const ids = [
+      "text-monthly-breakdown-unavailable",
+      "text-monthly-breakdown-loading",
+      "text-monthly-breakdown-empty",
+    ];
+    expect(new Set(ids).size).toBe(3);
+  });
+
+  it("uses explicit 'couldn't' copy in the failed branch (not zero / not 'no data')", () => {
+    // The failed branch must say "couldn't" (or equivalent honest qualifier)
+    // and must appear BEFORE the empty-state branch in source order so the
+    // render logic checks failure before drawing any chart.
+    // Match either a straight apostrophe (') or a curly one (\u2019).
+    const failedIdx = Math.max(card.indexOf("couldn't"), card.indexOf("couldn\u2019t"));
+    const emptyIdx  = card.indexOf("No transaction data");
+    expect(failedIdx).toBeGreaterThan(-1);
+    expect(emptyIdx).toBeGreaterThan(-1);
+    expect(failedIdx).toBeLessThan(emptyIdx);
+  });
+
+  it("CashFlowTab wires `failed={txFailed}` into MonthlyBreakdownCard", () => {
+    // The tab must pass the failure flag, not rely on a default of undefined.
+    expect(tab).toMatch(/failed=\{txFailed\}/);
+  });
+});
+
+// ─── Monthly Breakdown placement in CashFlowTab ───────────────────────────────
+//
+// MonthlyBreakdownCard must sit between the metric grid and the Transactions
+// WidgetCard. A careless refactor could move or remove it with no failing test
+// because the placement is invisible to the existing DOM-free suite.
+//
+// Three invariants are pinned here (source-scan, no DOM):
+//   1. MonthlyBreakdownCard is imported in CashFlowTab.tsx.
+//   2. <MonthlyBreakdownCard appears AFTER the metric grid (last <Metric) and
+//      BEFORE <WidgetCard title="Transactions" in source order.
+//   3. data-testid="chart-monthly-breakdown" lives inside MonthlyBreakdownCard.tsx.
+
+describe("Monthly Breakdown placement in CashFlowTab", () => {
+  const tab  = readFileSync(TAB_SRC, "utf8");
+  const card = readFileSync(CARD_SRC, "utf8");
+
+  it("CashFlowTab imports MonthlyBreakdownCard", () => {
+    // A rename or removal of the import would silently break the JSX below it.
+    expect(tab).toMatch(/import\s*\{[^}]*MonthlyBreakdownCard[^}]*\}\s*from/);
+  });
+
+  it("<MonthlyBreakdownCard is placed after the metric grid and before the Transactions WidgetCard", () => {
+    const breakdownIdx   = tab.indexOf("<MonthlyBreakdownCard");
+    const transactionsIdx = tab.indexOf('<WidgetCard title="Transactions"');
+
+    expect(
+      breakdownIdx,
+      "<MonthlyBreakdownCard not found in CashFlowTab.tsx",
+    ).toBeGreaterThan(-1);
+    expect(
+      transactionsIdx,
+      '<WidgetCard title="Transactions" not found in CashFlowTab.tsx',
+    ).toBeGreaterThan(-1);
+
+    // The metric grid contains <Metric components; find the LAST one so we
+    // can assert MonthlyBreakdownCard follows the whole grid, not just its start.
+    const lastMetricIdx = tab.lastIndexOf("<Metric");
+    expect(
+      lastMetricIdx,
+      "<Metric not found in CashFlowTab.tsx — the metric grid may have been removed",
+    ).toBeGreaterThan(-1);
+
+    expect(
+      breakdownIdx,
+      "<MonthlyBreakdownCard must appear after the last <Metric (metric grid) in CashFlowTab.tsx",
+    ).toBeGreaterThan(lastMetricIdx);
+
+    expect(
+      breakdownIdx,
+      '<MonthlyBreakdownCard must appear before <WidgetCard title="Transactions" in CashFlowTab.tsx',
+    ).toBeLessThan(transactionsIdx);
+  });
+
+  it('data-testid="chart-monthly-breakdown" is present inside MonthlyBreakdownCard.tsx', () => {
+    // This testid is the hook that QA scripts and future DOM tests use to
+    // locate the chart. If it disappears — or moves into CashFlowTab — the
+    // tests look in the wrong place and the chart becomes untestable.
+    expect(card).toContain('data-testid="chart-monthly-breakdown"');
+  });
+});
+
+// ─── MonthlyBreakdownCard — nameOf null-safety contract ───────────────────────
+//
+// The "Top expenses" panel resolves counterparty ids via a `nameOf` prop that
+// may be undefined, or may return null for ids it cannot resolve.  Two fallbacks
+// guard against a blank or crashing panel:
+//
+//   a. nameOf?.(id)  — optional-call so a missing/undefined prop cannot throw.
+//   b. id ? `${id.slice(0,12)}…` : "Unknown"  — when nameOf returns null:
+//        • a non-null id  → truncated id string (spend is real but source unknown)
+//        • a null id      → literal "Unknown"
+//
+// A future signature change to nameOf (e.g. throw on null input rather than
+// return null) or a refactor of the fallback rendering logic could silently
+// produce a blank or crashing panel.  These source-scan checks pin each
+// invariant without a DOM render so the suite fails before the change ships.
+
+describe("MonthlyBreakdownCard nameOf null-safety", () => {
+  // Re-use the card source already read in the sibling describe blocks above.
+  const cardSrc = readFileSync(CARD_SRC, "utf8");
+
+  it("uses the optional-call pattern nameOf?.(id) so an undefined prop cannot throw", () => {
+    // The ?. guards the entire call: if nameOf is not passed, the expression
+    // evaluates to undefined and falls through to the ?? fallback instead of
+    // throwing "nameOf is not a function".
+    expect(cardSrc).toContain("nameOf?.(id)");
+  });
+
+  it('renders "Unknown" when the counterparty id itself is null', () => {
+    // When id is null/undefined there is no string to truncate.  The literal
+    // "Unknown" must be present so the panel shows something meaningful rather
+    // than an empty slot for real spend with no source.
+    expect(cardSrc).toContain('"Unknown"');
+  });
+
+  it("truncates the id to 12 characters when nameOf returns null but id is present", () => {
+    // When nameOf is not available (or returns null) but an id string exists,
+    // a truncated prefix is shown so the user has a partial identifier rather
+    // than nothing.  The slice(0, 12) call must remain so this fallback works.
+    expect(cardSrc).toContain("id.slice(0, 12)");
+  });
+});

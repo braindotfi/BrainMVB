@@ -12,9 +12,19 @@
  * On breach the middleware returns:
  *   HTTP 429  { error: "rate_limit_exceeded", retryAfterSeconds: N }
  * with a Retry-After header so clients know how long to back off.
+ *
+ * Logging debounce
+ * ─────────────────
+ * The first blocked request per user per window emits a console.warn
+ * immediately.  Subsequent blocked requests from the same user in the same
+ * window only increment an in-memory counter — no extra log lines.
+ * When the flush timer fires (after one window duration) a single summary
+ * line is emitted that includes `blockedCount` so the operator can see the
+ * total suppressed hits without being buried under duplicate entries.
  */
 import rateLimit from "express-rate-limit";
 import type { Request, Response } from "express";
+import { createRateLimitLogger } from "../rateLimitLogger";
 
 export const CHAT_RATE_LIMIT_MAX = process.env.CHAT_RATE_LIMIT_MAX
   ? parseInt(process.env.CHAT_RATE_LIMIT_MAX, 10)
@@ -22,6 +32,35 @@ export const CHAT_RATE_LIMIT_MAX = process.env.CHAT_RATE_LIMIT_MAX
 export const CHAT_RATE_LIMIT_WINDOW_MS = process.env.CHAT_RATE_LIMIT_WINDOW_MS
   ? parseInt(process.env.CHAT_RATE_LIMIT_WINDOW_MS, 10)
   : 60_000; // 1 minute
+
+// ─── Per-user warning debounce ───────────────────────────────────────────────
+
+const _chatLogger = createRateLimitLogger({
+  windowMs: CHAT_RATE_LIMIT_WINDOW_MS,
+  blockedMessage: "[rate-limit] chat request blocked",
+  suppressedMessage: "[rate-limit] chat requests suppressed",
+  keyFieldName: "userId",
+});
+
+/**
+ * In-memory debounce state keyed by userId.
+ * Exported for test inspection and cleanup only —
+ * production code must not mutate this map directly.
+ */
+export const _warnDebounce = _chatLogger._warnDebounce;
+
+/**
+ * Log at most one warn line per user per window.
+ *
+ * - First call for a given userId: emits the warn immediately and starts a
+ *   flush timer.
+ * - Subsequent calls within the same window: increment `extraCount` silently.
+ * - When the flush timer fires: if `extraCount > 0`, emit a summary line that
+ *   includes `blockedCount`; then remove the entry.
+ */
+export const logRateLimitBlocked = _chatLogger.logRateLimitBlocked;
+
+// ─── Middleware ───────────────────────────────────────────────────────────────
 
 export const chatRateLimiter = rateLimit({
   windowMs: CHAT_RATE_LIMIT_WINDOW_MS,
@@ -53,12 +92,12 @@ export const chatRateLimiter = rateLimit({
     const userId =
       (req.session as { userId?: string } | undefined)?.userId ?? "unknown";
 
-    console.warn("[rate-limit] chat request blocked", {
+    logRateLimitBlocked(
       userId,
-      path: req.path,
-      resetAt: new Date(resetSec * 1000).toISOString(),
+      req.path,
+      new Date(resetSec * 1000).toISOString(),
       retryAfterSeconds,
-    });
+    );
 
     res.setHeader("Retry-After", String(retryAfterSeconds));
     res.status(429).json({
