@@ -76,6 +76,48 @@ export function buildChatPayload(
   }));
 }
 
+/**
+ * Examine what buildChatPayload will silently drop or shorten and return the
+ * text for an inline context note, or null when the payload goes out intact.
+ *
+ * Extracted from sendMessage() so the note-generation logic can be unit-tested
+ * independently of the component lifecycle.
+ *
+ * Parameters
+ * ----------
+ * allMessagesCount      — total messages in this turn (prior filtered + new user msg)
+ * currentMsgLength      — character length of the new user message
+ * priorMsgMaxLength     — longest character length among prior (non-note) messages
+ *                         (0 when there are no prior messages)
+ *
+ * Return value is always a single string or null — never more than one note is
+ * produced per send, so the UI cannot accumulate duplicate notes from one call.
+ */
+export function buildTruncationNote({
+  allMessagesCount,
+  currentMsgLength,
+  priorMsgMaxLength,
+}: {
+  allMessagesCount: number;
+  currentMsgLength: number;
+  priorMsgMaxLength: number;
+}): string | null {
+  const wasTrimmed = allMessagesCount > CHAT_HISTORY_LIMIT;
+  const wasCurrentMsgTruncated = currentMsgLength > MESSAGE_CONTENT_LIMIT;
+  const wasPriorContentTruncated = priorMsgMaxLength > MESSAGE_CONTENT_LIMIT;
+
+  if (wasTrimmed && wasCurrentMsgTruncated) {
+    return "Your message and some earlier messages were not sent in full — start a new conversation for full context";
+  }
+  if (wasTrimmed || wasPriorContentTruncated) {
+    return "Earlier messages were not sent in full — start a new conversation for full context";
+  }
+  if (wasCurrentMsgTruncated) {
+    return "Your message was too long and was shortened before sending";
+  }
+  return null;
+}
+
 type AssistantPayload = Record<string, unknown>;
 
 function asPayload(value: unknown): AssistantPayload | null {

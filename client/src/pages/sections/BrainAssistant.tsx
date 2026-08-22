@@ -25,7 +25,7 @@ import {
 import { openMemberDetail } from "@/lib/membersStore";
 import { useSuggestedQuestions, resolveSuggestionChips } from "@/lib/brainSuggestedQuestions";
 import { resolveVendor, openVendorDetail } from "@/lib/openVendorDetail";
-import { parseAssistantResponse, trimChatHistory, buildChatPayload, filterPayloadMessages, ASSISTANT_GENERIC_ERROR, CHAT_HISTORY_LIMIT, MESSAGE_CONTENT_LIMIT } from "@/lib/assistantChat";
+import { parseAssistantResponse, trimChatHistory, buildChatPayload, filterPayloadMessages, buildTruncationNote, ASSISTANT_GENERIC_ERROR, CHAT_HISTORY_LIMIT, MESSAGE_CONTENT_LIMIT } from "@/lib/assistantChat";
 import { isAssistantBulletLine, stripAssistantBullet } from "@/lib/assistantFormatting";
 import brainLogo from "@assets/Brain_1_1783374797129.png";
 import timeIcon from "@assets/Time_1781821466642.png";
@@ -616,35 +616,20 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
     const priorMessages = filterPayloadMessages(rawPrior);
     const allMessages = [...priorMessages, userMsg];
 
-    // Detect what buildChatPayload will silently drop or shorten so the user can
-    // be given an accurate warning before the assistant's reply arrives.
-    // — wasTrimmed:              older turns are dropped entirely (history > 40)
-    // — wasCurrentMsgTruncated:  the new user message itself exceeds 8 000 chars
-    // — wasPriorContentTruncated: a prior turn's content exceeds 8 000 chars
-    const wasTrimmed = allMessages.length > CHAT_HISTORY_LIMIT;
-    const wasCurrentMsgTruncated = userMsg.text.length > MESSAGE_CONTENT_LIMIT;
-    const wasPriorContentTruncated = priorMessages.some(
-      (m) => m.text.length > MESSAGE_CONTENT_LIMIT,
-    );
-
     const history = buildChatPayload(allMessages);
 
-    // Inject a one-off inline note just before the user turn. Each case uses
-    // copy that honestly describes what actually happened:
-    //   • history trimmed + current message cut → cover both
-    //   • history trimmed (or prior content shortened) → emphasise dropped turns
-    //   • only the new message was cut → focus on that
-    let noteText: string | null = null;
-    if (wasTrimmed && wasCurrentMsgTruncated) {
-      noteText =
-        "Your message and some earlier messages were not sent in full — start a new conversation for full context";
-    } else if (wasTrimmed || wasPriorContentTruncated) {
-      noteText =
-        "Earlier messages were not sent in full — start a new conversation for full context";
-    } else if (wasCurrentMsgTruncated) {
-      noteText =
-        "Your message was too long and was shortened before sending";
-    }
+    // Inject a one-off inline note just before the user turn describing what
+    // buildChatPayload silently dropped or shortened. Delegated to the pure
+    // buildTruncationNote helper so the logic is unit-testable in isolation.
+    const priorMsgMaxLength = priorMessages.reduce(
+      (max, m) => Math.max(max, m.text.length),
+      0,
+    );
+    const noteText = buildTruncationNote({
+      allMessagesCount: allMessages.length,
+      currentMsgLength: userMsg.text.length,
+      priorMsgMaxLength,
+    });
     const noteMsg: ChatMessage | null = noteText
       ? {
           id: nextId(),

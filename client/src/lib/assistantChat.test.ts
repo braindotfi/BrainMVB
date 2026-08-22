@@ -4,6 +4,7 @@ import {
   CHAT_HISTORY_LIMIT,
   MESSAGE_CONTENT_LIMIT,
   buildChatPayload,
+  buildTruncationNote,
   filterPayloadMessages,
   parseAssistantResponse,
   trimChatHistory,
@@ -147,6 +148,97 @@ describe("filterPayloadMessages", () => {
 
   it("returns an empty array unchanged when the input is empty", () => {
     expect(filterPayloadMessages([])).toEqual([]);
+  });
+});
+
+describe("buildTruncationNote", () => {
+  // Helper: build the allMessagesCount for a conversation of `prior` real
+  // messages plus one new user message.
+  function countFor(prior: number) {
+    return prior + 1;
+  }
+
+  it("returns a note when allMessagesCount exceeds CHAT_HISTORY_LIMIT", () => {
+    const note = buildTruncationNote({
+      allMessagesCount: countFor(CHAT_HISTORY_LIMIT), // prior = 40, total = 41
+      currentMsgLength: 10,
+      priorMsgMaxLength: 10,
+    });
+    expect(note).not.toBeNull();
+    // The note must name the problem plainly, not invent copy about "try again".
+    expect(note!.toLowerCase()).toContain("earlier messages");
+  });
+
+  it("returns null for a short conversation that does not hit any limit", () => {
+    const note = buildTruncationNote({
+      allMessagesCount: countFor(3), // well under 40
+      currentMsgLength: 50,
+      priorMsgMaxLength: 100,
+    });
+    expect(note).toBeNull();
+  });
+
+  it("returns null at the boundary — exactly CHAT_HISTORY_LIMIT messages is not trimmed", () => {
+    // 39 prior + 1 new = 40, which equals (not exceeds) CHAT_HISTORY_LIMIT.
+    const note = buildTruncationNote({
+      allMessagesCount: CHAT_HISTORY_LIMIT,
+      currentMsgLength: 10,
+      priorMsgMaxLength: 10,
+    });
+    expect(note).toBeNull();
+  });
+
+  it("returns a single note per call — never produces more than one note for one send", () => {
+    // Even when every condition fires together, the function always returns
+    // exactly one string (or null). This pins that a long conversation with
+    // multiple sends accumulates at most one note per send, not two or more.
+    const note = buildTruncationNote({
+      allMessagesCount: countFor(CHAT_HISTORY_LIMIT), // triggers wasTrimmed
+      currentMsgLength: MESSAGE_CONTENT_LIMIT + 1,    // triggers wasCurrentMsgTruncated
+      priorMsgMaxLength: MESSAGE_CONTENT_LIMIT + 1,   // triggers wasPriorContentTruncated
+    });
+    // Must be exactly one string — not an array, not null.
+    expect(typeof note).toBe("string");
+    expect(note!.length).toBeGreaterThan(0);
+  });
+
+  it("covers the case where only the new user message was too long", () => {
+    const note = buildTruncationNote({
+      allMessagesCount: countFor(2), // short history — no trimming
+      currentMsgLength: MESSAGE_CONTENT_LIMIT + 1,
+      priorMsgMaxLength: 10,
+    });
+    expect(note).not.toBeNull();
+    // Copy must describe the current message, not prior context.
+    expect(note!.toLowerCase()).toContain("your message");
+    expect(note!.toLowerCase()).not.toContain("earlier messages");
+  });
+
+  it("covers prior-content truncation even when history count is under the limit", () => {
+    const note = buildTruncationNote({
+      allMessagesCount: countFor(2),
+      currentMsgLength: 10,
+      priorMsgMaxLength: MESSAGE_CONTENT_LIMIT + 1,
+    });
+    expect(note).not.toBeNull();
+    expect(note!.toLowerCase()).toContain("earlier messages");
+  });
+
+  it("covers combined trim + current-message truncation with distinct copy", () => {
+    const combined = buildTruncationNote({
+      allMessagesCount: countFor(CHAT_HISTORY_LIMIT),
+      currentMsgLength: MESSAGE_CONTENT_LIMIT + 1,
+      priorMsgMaxLength: 0,
+    });
+    const trimOnly = buildTruncationNote({
+      allMessagesCount: countFor(CHAT_HISTORY_LIMIT),
+      currentMsgLength: 10,
+      priorMsgMaxLength: 0,
+    });
+    // The combined case must produce copy, and it must differ from the trim-only
+    // copy so the user knows their own message was also shortened.
+    expect(combined).not.toBeNull();
+    expect(combined).not.toBe(trimOnly);
   });
 });
 
