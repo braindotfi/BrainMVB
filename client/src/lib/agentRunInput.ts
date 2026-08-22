@@ -520,8 +520,16 @@ export function inputRowFixPath(item: MissingEvidenceItem): string {
     case "payment_method":
       return "/settings?section=billing";
     case "transaction_record":
-    case "transaction":
-      return "/ledger?tab=cash-flow";
+    case "transaction": {
+      // Pick the first entity ref that looks like a transaction (txn_ prefix), or
+      // fall back to the first ref in the list. Appended as ?tx= so FinancesPage
+      // can auto-open the matching Transaction Detail popup directly.
+      const txRef =
+        item.entityRefs.find((r) => r.startsWith("txn_")) ?? item.entityRefs[0];
+      return txRef
+        ? `/ledger?tab=cash-flow&tx=${encodeURIComponent(txRef)}`
+        : "/ledger?tab=cash-flow";
+    }
     default:
       return "/settings?section=audit";
   }

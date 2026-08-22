@@ -698,6 +698,40 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.delete("/api/account", requireAuth, async (req, res) => {
     try {
       const userId = req.session.userId!;
+
+      // Revoke all brain-core API keys before deleting the local account.
+      // Keys are issued and stored by brain-core — local deletion does not reach
+      // them. Without this step a deleted user's key would remain usable
+      // indefinitely. Revocation failures are logged but must not block deletion:
+      // the user asked to be gone, and a partial upstream error cannot strand them.
+      try {
+        const session = await getBrainSession(userId);
+        const { keys } = await withBrainBaseUrl(session.baseUrl, () =>
+          listTenantKeys(session.token, session.tenantId),
+        );
+        if (keys && keys.length > 0) {
+          const results = await Promise.allSettled(
+            keys.map((key: any) =>
+              withBrainBaseUrl(session.baseUrl, () =>
+                revokeTenantKey(session.token, String(key.id)),
+              ),
+            ),
+          );
+          const failed = results.filter((r) => r.status === "rejected").length;
+          console.log(
+            `Delete account: revoked ${keys.length - failed}/${keys.length} brain-core key(s) for user ${userId}` +
+              (failed > 0 ? ` (${failed} revocation(s) failed — upstream may have already removed them)` : ""),
+          );
+        }
+      } catch (revokeErr) {
+        // No brain session (demo user, unlinked account) or network failure —
+        // nothing to revoke, or the tenant is already gone upstream.
+        console.warn(
+          "Delete account: could not reach brain-core to revoke keys (continuing with deletion):",
+          revokeErr instanceof Error ? revokeErr.message : revokeErr,
+        );
+      }
+
       const result = await storage.deleteUserAccount({ userId });
       req.session.destroy(() => {});
       return res.json({ success: true, deleted: result });

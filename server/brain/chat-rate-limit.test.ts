@@ -148,7 +148,9 @@ describe("chatRateLimiter", () => {
   });
 
   it("emits a structured console.warn log when a request is blocked", async () => {
-    const userId = "user-log-test";
+    // Use a fresh userId so leftover debounce state from the preceding tests
+    // (which also exhaust "user-log-test") does not suppress the first warn.
+    const userId = "user-warn-spy-isolated";
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
     try {
