@@ -12,6 +12,15 @@
  * On breach the middleware returns:
  *   HTTP 429  { error: "rate_limit_exceeded", retryAfterSeconds: N }
  * with a Retry-After header so clients know how long to back off.
+ *
+ * Logging debounce
+ * ─────────────────
+ * The first blocked request per user per window emits a console.warn
+ * immediately.  Subsequent blocked requests from the same user in the same
+ * window only increment an in-memory counter — no extra log lines.
+ * When the flush timer fires (after one window duration) a single summary
+ * line is emitted that includes `blockedCount` so the operator can see the
+ * total suppressed hits without being buried under duplicate entries.
  */
 import rateLimit from "express-rate-limit";
 import type { Request, Response } from "express";
@@ -22,6 +31,84 @@ export const CHAT_RATE_LIMIT_MAX = process.env.CHAT_RATE_LIMIT_MAX
 export const CHAT_RATE_LIMIT_WINDOW_MS = process.env.CHAT_RATE_LIMIT_WINDOW_MS
   ? parseInt(process.env.CHAT_RATE_LIMIT_WINDOW_MS, 10)
   : 60_000; // 1 minute
+
+// ─── Per-user warning debounce ───────────────────────────────────────────────
+
+interface DebounceEntry {
+  /** Number of blocked requests after the first (which was already logged). */
+  extraCount: number;
+  path: string;
+  resetAt: string;
+  retryAfterSeconds: number;
+  timer: ReturnType<typeof setTimeout>;
+}
+
+/**
+ * Keyed by userId.  Exported for test inspection and cleanup only —
+ * production code must not mutate this map directly.
+ */
+export const _warnDebounce = new Map<string, DebounceEntry>();
+
+/**
+ * Log at most one warn line per user per window.
+ *
+ * - First call for a given userId: emits the warn immediately and starts a
+ *   flush timer.
+ * - Subsequent calls within the same window: increment `extraCount` silently.
+ * - When the flush timer fires: if `extraCount > 0`, emit a summary line that
+ *   includes `blockedCount`; then remove the entry.
+ */
+export function logRateLimitBlocked(
+  userId: string,
+  path: string,
+  resetAt: string,
+  retryAfterSeconds: number,
+): void {
+  const existing = _warnDebounce.get(userId);
+
+  if (existing) {
+    // Already logged once this window — just count the suppressed hit.
+    existing.extraCount += 1;
+    return;
+  }
+
+  // First blocked request for this user in this window — log it now.
+  console.warn("[rate-limit] chat request blocked", {
+    userId,
+    path,
+    resetAt,
+    retryAfterSeconds,
+  });
+
+  const timer = setTimeout(() => {
+    const entry = _warnDebounce.get(userId);
+    if (entry && entry.extraCount > 0) {
+      console.warn("[rate-limit] chat requests suppressed", {
+        userId,
+        path: entry.path,
+        resetAt: entry.resetAt,
+        blockedCount: entry.extraCount,
+      });
+    }
+    _warnDebounce.delete(userId);
+  }, CHAT_RATE_LIMIT_WINDOW_MS);
+
+  // Allow the Node.js process (and test runners) to exit without waiting for
+  // the flush timer — it is purely informational.
+  if (typeof timer === "object" && timer !== null && "unref" in timer) {
+    (timer as { unref(): void }).unref();
+  }
+
+  _warnDebounce.set(userId, {
+    extraCount: 0,
+    path,
+    resetAt,
+    retryAfterSeconds,
+    timer,
+  });
+}
+
+// ─── Middleware ───────────────────────────────────────────────────────────────
 
 export const chatRateLimiter = rateLimit({
   windowMs: CHAT_RATE_LIMIT_WINDOW_MS,
@@ -53,12 +140,12 @@ export const chatRateLimiter = rateLimit({
     const userId =
       (req.session as { userId?: string } | undefined)?.userId ?? "unknown";
 
-    console.warn("[rate-limit] chat request blocked", {
+    logRateLimitBlocked(
       userId,
-      path: req.path,
-      resetAt: new Date(resetSec * 1000).toISOString(),
+      req.path,
+      new Date(resetSec * 1000).toISOString(),
       retryAfterSeconds,
-    });
+    );
 
     res.setHeader("Retry-After", String(retryAfterSeconds));
     res.status(429).json({
