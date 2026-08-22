@@ -244,3 +244,64 @@ describe("Monthly Breakdown state contract", () => {
     expect(tab).toMatch(/failed=\{txFailed\}/);
   });
 });
+
+// ─── Monthly Breakdown placement in CashFlowTab ───────────────────────────────
+//
+// MonthlyBreakdownCard must sit between the metric grid and the Transactions
+// WidgetCard. A careless refactor could move or remove it with no failing test
+// because the placement is invisible to the existing DOM-free suite.
+//
+// Three invariants are pinned here (source-scan, no DOM):
+//   1. MonthlyBreakdownCard is imported in CashFlowTab.tsx.
+//   2. <MonthlyBreakdownCard appears AFTER the metric grid (last <Metric) and
+//      BEFORE <WidgetCard title="Transactions" in source order.
+//   3. data-testid="chart-monthly-breakdown" lives inside MonthlyBreakdownCard.tsx.
+
+describe("Monthly Breakdown placement in CashFlowTab", () => {
+  const tab  = readFileSync(TAB_SRC, "utf8");
+  const card = readFileSync(CARD_SRC, "utf8");
+
+  it("CashFlowTab imports MonthlyBreakdownCard", () => {
+    // A rename or removal of the import would silently break the JSX below it.
+    expect(tab).toMatch(/import\s*\{[^}]*MonthlyBreakdownCard[^}]*\}\s*from/);
+  });
+
+  it("<MonthlyBreakdownCard is placed after the metric grid and before the Transactions WidgetCard", () => {
+    const breakdownIdx   = tab.indexOf("<MonthlyBreakdownCard");
+    const transactionsIdx = tab.indexOf('<WidgetCard title="Transactions"');
+
+    expect(
+      breakdownIdx,
+      "<MonthlyBreakdownCard not found in CashFlowTab.tsx",
+    ).toBeGreaterThan(-1);
+    expect(
+      transactionsIdx,
+      '<WidgetCard title="Transactions" not found in CashFlowTab.tsx',
+    ).toBeGreaterThan(-1);
+
+    // The metric grid contains <Metric components; find the LAST one so we
+    // can assert MonthlyBreakdownCard follows the whole grid, not just its start.
+    const lastMetricIdx = tab.lastIndexOf("<Metric");
+    expect(
+      lastMetricIdx,
+      "<Metric not found in CashFlowTab.tsx — the metric grid may have been removed",
+    ).toBeGreaterThan(-1);
+
+    expect(
+      breakdownIdx,
+      "<MonthlyBreakdownCard must appear after the last <Metric (metric grid) in CashFlowTab.tsx",
+    ).toBeGreaterThan(lastMetricIdx);
+
+    expect(
+      breakdownIdx,
+      '<MonthlyBreakdownCard must appear before <WidgetCard title="Transactions" in CashFlowTab.tsx',
+    ).toBeLessThan(transactionsIdx);
+  });
+
+  it('data-testid="chart-monthly-breakdown" is present inside MonthlyBreakdownCard.tsx', () => {
+    // This testid is the hook that QA scripts and future DOM tests use to
+    // locate the chart. If it disappears — or moves into CashFlowTab — the
+    // tests look in the wrong place and the chart becomes untestable.
+    expect(card).toContain('data-testid="chart-monthly-breakdown"');
+  });
+});
