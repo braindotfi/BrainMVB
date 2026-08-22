@@ -51,6 +51,7 @@ import { projectionStatusFrom, isTerminalProjectionStatus } from "./brain/projec
 import { shouldSettle, needsExtractSettle } from "./brain/settleTargets";
 import { isSeedInFlight, seedStillExpected } from "./brain/seed";
 import { isDemoEmail } from "./demoUsers";
+import { trimMessageContents } from "./brain/messageTrim";
 
 /**
  * How long after a demo account is created its starter documents are still expected.
@@ -1033,6 +1034,13 @@ When you mention a money amount, always reproduce it exactly as the grounding da
   }
 
   app.post("/api/assistant/chat", requireAuth, bffRequestIdMiddleware, async (req, res) => {
+    // Defense-in-depth: trim each message's content to the per-message limit before
+    // the Zod schema validation runs. A crafted or buggy client that skips the
+    // client-side cap would otherwise receive a permanent invalid_messages 400 the
+    // user cannot recover from. Trimming here keeps that path silent.
+    if (req.body?.messages && Array.isArray(req.body.messages)) {
+      req.body.messages = trimMessageContents(req.body.messages);
+    }
     const parsed = assistantChatSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json({ error: "invalid_messages" });
