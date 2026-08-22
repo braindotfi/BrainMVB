@@ -16,10 +16,15 @@ export const MESSAGE_CONTENT_LIMIT = 8000;
  * the client sends; non-object items are passed through unchanged.
  */
 export function trimMessageContents(messages: unknown[]): unknown[] {
-  return messages.map((m) => {
+  return messages.map((m, messageIndex) => {
     if (m && typeof m === "object") {
       const msg = m as Record<string, unknown>;
       if (typeof msg.content === "string" && msg.content.length > MESSAGE_CONTENT_LIMIT) {
+        console.warn("message content trimmed", {
+          originalLength: msg.content.length,
+          trimmedTo: MESSAGE_CONTENT_LIMIT,
+          messageIndex,
+        });
         return { ...msg, content: msg.content.slice(0, MESSAGE_CONTENT_LIMIT) };
       }
     }

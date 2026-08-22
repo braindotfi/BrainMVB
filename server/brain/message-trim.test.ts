@@ -7,7 +7,7 @@
  * max(8000) constraint and return a permanent invalid_messages 400 the
  * user cannot recover from.
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { trimMessageContents, MESSAGE_CONTENT_LIMIT } from "./messageTrim";
 
 describe("trimMessageContents", () => {
@@ -62,5 +62,58 @@ describe("trimMessageContents", () => {
     expect(out.content.length).toBe(MESSAGE_CONTENT_LIMIT);
     // Exactly-at-limit content must be the same object reference (no copy).
     expect(result[0]).toBe(msg);
+  });
+
+  describe("console.warn logging", () => {
+    let warnSpy: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+      warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      warnSpy.mockRestore();
+    });
+
+    it("emits a structured warn when a message is trimmed", () => {
+      const oversized = "z".repeat(9000);
+      trimMessageContents([{ role: "user", content: oversized }]);
+
+      expect(warnSpy).toHaveBeenCalledOnce();
+      expect(warnSpy).toHaveBeenCalledWith("message content trimmed", {
+        originalLength: 9000,
+        trimmedTo: MESSAGE_CONTENT_LIMIT,
+        messageIndex: 0,
+      });
+    });
+
+    it("includes the correct messageIndex when a later message is trimmed", () => {
+      trimMessageContents([
+        { role: "user", content: "short" },
+        { role: "assistant", content: "a".repeat(9000) },
+      ]);
+
+      expect(warnSpy).toHaveBeenCalledOnce();
+      expect(warnSpy).toHaveBeenCalledWith("message content trimmed", {
+        originalLength: 9000,
+        trimmedTo: MESSAGE_CONTENT_LIMIT,
+        messageIndex: 1,
+      });
+    });
+
+    it("does not emit a warn when all messages are within the limit", () => {
+      trimMessageContents([
+        { role: "user", content: "short" },
+        { role: "assistant", content: "also fine" },
+      ]);
+
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
+
+    it("does not emit a warn when content is exactly at the limit", () => {
+      trimMessageContents([{ role: "user", content: "y".repeat(MESSAGE_CONTENT_LIMIT) }]);
+
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
   });
 });
