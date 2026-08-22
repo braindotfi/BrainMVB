@@ -640,11 +640,21 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
       : null;
 
     // Optimistically append the user message (creating a session if needed).
+    // Any prior context notes are removed first — only the most-recent note is
+    // meaningful; stale ones from earlier trims clutter the conversation and
+    // confuse the user about which send was affected (#223).
     if (sessionId) {
       setSessions((prev) =>
         prev.map((s) =>
           s.id === sessionId
-            ? { ...s, messages: [...s.messages, ...(noteMsg ? [noteMsg] : []), userMsg] }
+            ? {
+                ...s,
+                messages: [
+                  ...s.messages.filter((m) => !m.isContextNote),
+                  ...(noteMsg ? [noteMsg] : []),
+                  userMsg,
+                ],
+              }
             : s,
         ),
       );
@@ -1017,14 +1027,35 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
                 )}
                 {msg.isContextNote ? (
                   /* Subtle inline note — not a chat bubble. Informs the user
-                     that older context was dropped from this send. */
+                     that older context was dropped from this send. When the
+                     note mentions "start a new conversation" that phrase is
+                     rendered as a button so the user can act immediately. */
                   <div
                     className="flex items-center justify-center py-[2px] px-[4px]"
                     data-testid="context-truncation-note"
                   >
-                    <span className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[11px] leading-[14px] text-center">
-                      {msg.text}
-                    </span>
+                    {(() => {
+                      const ACTION = "start a new conversation";
+                      const idx = msg.text.indexOf(ACTION);
+                      const cls =
+                        "[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[11px] leading-[14px] text-center";
+                      if (idx === -1) {
+                        return <span className={cls}>{msg.text}</span>;
+                      }
+                      return (
+                        <span className={cls}>
+                          {msg.text.slice(0, idx)}
+                          <button
+                            type="button"
+                            onClick={startNewSession}
+                            className="underline hover:text-brain-v1baby-blue-100 transition-colors cursor-pointer"
+                          >
+                            {ACTION}
+                          </button>
+                          {msg.text.slice(idx + ACTION.length)}
+                        </span>
+                      );
+                    })()}
                   </div>
                 ) : (
                 <>
