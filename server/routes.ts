@@ -553,9 +553,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       // plenty for a 90-day demo/POC window; older events fall out of the window).
       const events = await withBrainBaseUrl(baseUrl, async () => {
         const evts: UsageAuditEvent[] = [];
-        let after: string | undefined = undefined;
+        let cursor: string | undefined = undefined;
         for (let page = 0; page < 5; page++) {
-          const batch = await listAuditEvents(token, { limit: 200, after });
+          const batch = await listAuditEvents(token, { limit: 200, cursor });
           evts.push(...batch.events.map((e) => ({
             id: e.id,
             layer: e.layer,
@@ -563,7 +563,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
             created_at: e.created_at,
           })));
           if (!batch.next_cursor || batch.events.length === 0) break;
-          after = batch.next_cursor;
+          cursor = batch.next_cursor;
         }
         return evts;
       });
@@ -683,7 +683,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   registerKeyAuthedRead("/api/v1/audit/events", (apiKey, req) =>
     listAuditEvents(apiKey, {
       limit: clampLimit(req.query.limit, 50, 200),
-      after: typeof req.query.after === "string" ? req.query.after : undefined,
+      cursor: typeof req.query.cursor === "string" ? req.query.cursor : undefined,
     }),
   );
 

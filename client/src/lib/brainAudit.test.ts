@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { mapAuditEventToRecord, mergeRelatedAuditRecords, anchorFromInclusionProof, resolveDetailAnchor, localQuestionToRecord, applyTenantDbOnly, extractActorName, bffPathForActorLookup, truncateForCard, decidedProposalIdsFromEvents, CARD_TITLE_MAX, humanizeAuditAction, lifecycleStepsForDisplay, type BrainAuditEvent, type BrainAnchor, type BrainInclusionProof } from "./brainAudit";
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { mapAuditEventToRecord, mergeRelatedAuditRecords, anchorFromInclusionProof, resolveDetailAnchor, localQuestionToRecord, applyTenantDbOnly, extractActorName, bffPathForActorLookup, truncateForCard, decidedProposalIdsFromEvents, CARD_TITLE_MAX, humanizeAuditAction, lifecycleStepsForDisplay, fetchAllBrainAuditEvents, type BrainAuditEvent, type BrainAnchor, type BrainInclusionProof } from "./brainAudit";
 import type { AnchorProof } from "./auditTypes";
 
 /**
@@ -40,6 +40,50 @@ function anchor(overrides: Partial<BrainAnchor> = {}): BrainAnchor {
     ...overrides,
   };
 }
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+describe("fetchAllBrainAuditEvents", () => {
+  it("follows brain-core's cursor through multiple pages and returns older anchored events exactly once", async () => {
+    const newest = ev({ id: "evt_newest", created_at: "2026-07-02T12:00:00.000Z" });
+    const anchoredOlder = ev({ id: "evt_anchored_older", created_at: "2026-06-15T12:00:00.000Z" });
+    const requests: URL[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (input: string) => {
+      const url = new URL(input, "http://brainmvb.test");
+      requests.push(url);
+      const page = url.searchParams.get("cursor")
+        ? { events: [anchoredOlder], next_cursor: null }
+        : { events: [newest], next_cursor: "older-page" };
+      return new Response(JSON.stringify(page), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }));
+
+    const result = await fetchAllBrainAuditEvents();
+
+    expect(requests).toHaveLength(2);
+    expect(requests[0].searchParams.get("cursor")).toBeNull();
+    expect(requests[1].searchParams.get("cursor")).toBe("older-page");
+    expect(requests.every((request) => !request.searchParams.has("after"))).toBe(true);
+    expect(result.events.map((event) => event.id)).toEqual(["evt_newest", "evt_anchored_older"]);
+    expect(new Set(result.events.map((event) => event.id)).size).toBe(result.events.length);
+  });
+
+  it("fails explicitly instead of returning an incomplete history when a page repeats", async () => {
+    const newest = ev({ id: "evt_newest" });
+    vi.stubGlobal("fetch", vi.fn(async () =>
+      new Response(JSON.stringify({ events: [newest], next_cursor: "stuck" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    ));
+
+    await expect(fetchAllBrainAuditEvents()).rejects.toThrow(/pagination (returned a repeated event|did not advance)/i);
+  });
+});
 
 describe("mapAuditEventToRecord", () => {
   it("shows demo audit records as database-only rather than pending on-chain", () => {
