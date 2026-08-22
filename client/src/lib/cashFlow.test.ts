@@ -751,6 +751,75 @@ describe("buildMonthlyWindow", () => {
     expect(window[2]).toMatchObject({ monthKey: "2026-01", income: 800, expenses: 0   });
     expect(window[3]).toMatchObject({ monthKey: "2026-02", income: 0,   expenses: 0   });
   });
+
+  // ── topExpenseCounterpartyIds is month-local at the Dec / Jan boundary ───────
+
+  it("ranks topExpenseCounterpartyIds using only that month's outflows — Dec and Jan are separate", () => {
+    /* cp_big spends more in Jan than in Dec. If bucketing bleeds across the year
+       boundary, cp_big would rank #1 in Dec as well. It must not: the Dec list is
+       determined solely by December outflows. */
+    const window = buildMonthlyWindow(
+      [
+        // December 2025 outflows — cp_small spends most in Dec
+        TX({ id: "d1", direction: "outflow", amount: "900",  transaction_date: "2025-12-05", counterparty_id: "cp_small" }),
+        TX({ id: "d2", direction: "outflow", amount: "200",  transaction_date: "2025-12-20", counterparty_id: "cp_big"   }),
+        // January 2026 outflows — cp_big spends most in Jan
+        TX({ id: "j1", direction: "outflow", amount: "300",  transaction_date: "2026-01-10", counterparty_id: "cp_small" }),
+        TX({ id: "j2", direction: "outflow", amount: "1500", transaction_date: "2026-01-25", counterparty_id: "cp_big"   }),
+      ],
+      ["2025-12", "2026-01"],
+    );
+
+    const dec = window[0];
+    const jan = window[1];
+
+    // Dec: cp_small is rank #1 (900 > 200), cp_big is rank #2
+    expect(dec.monthKey).toBe("2025-12");
+    expect(dec.topExpenseCounterpartyIds[0]).toEqual({ id: "cp_small", amount: 900 });
+    expect(dec.topExpenseCounterpartyIds[1]).toEqual({ id: "cp_big",   amount: 200 });
+
+    // Jan: cp_big is rank #1 (1500 > 300), cp_small is rank #2
+    expect(jan.monthKey).toBe("2026-01");
+    expect(jan.topExpenseCounterpartyIds[0]).toEqual({ id: "cp_big",   amount: 1500 });
+    expect(jan.topExpenseCounterpartyIds[1]).toEqual({ id: "cp_small", amount: 300  });
+  });
+
+  it("topExpenseCounterpartyIds for Dec is empty when Dec has no outflows, even if Jan does", () => {
+    /* A zero-fill month must produce an empty top-expenses list, not inherit
+       entries from a neighbouring month that does have outflows. */
+    const window = buildMonthlyWindow(
+      [
+        TX({ id: "j1", direction: "outflow", amount: "800", transaction_date: "2026-01-15", counterparty_id: "cp_1" }),
+      ],
+      ["2025-12", "2026-01"],
+    );
+
+    expect(window[0]).toMatchObject({ monthKey: "2025-12", expenses: 0 });
+    expect(window[0].topExpenseCounterpartyIds).toEqual([]);
+
+    expect(window[1].monthKey).toBe("2026-01");
+    expect(window[1].topExpenseCounterpartyIds[0]).toEqual({ id: "cp_1", amount: 800 });
+  });
+
+  it("aggregates Dec outflows per counterparty independently of Jan outflows from the same counterparty", () => {
+    /* The same counterparty appears in both months. Its Dec total must be the sum
+       of Dec transactions only; its Jan total the sum of Jan transactions only. */
+    const window = buildMonthlyWindow(
+      [
+        TX({ id: "d1", direction: "outflow", amount: "400",  transaction_date: "2025-12-10", counterparty_id: "cp_shared" }),
+        TX({ id: "d2", direction: "outflow", amount: "600",  transaction_date: "2025-12-28", counterparty_id: "cp_shared" }),
+        TX({ id: "j1", direction: "outflow", amount: "1200", transaction_date: "2026-01-05", counterparty_id: "cp_shared" }),
+        TX({ id: "j2", direction: "outflow", amount: "800",  transaction_date: "2026-01-30", counterparty_id: "cp_shared" }),
+      ],
+      ["2025-12", "2026-01"],
+    );
+
+    // Dec: 400 + 600 = 1000
+    expect(window[0].topExpenseCounterpartyIds).toEqual([{ id: "cp_shared", amount: 1000 }]);
+
+    // Jan: 1200 + 800 = 2000
+    expect(window[1].topExpenseCounterpartyIds).toEqual([{ id: "cp_shared", amount: 2000 }]);
+  });
 });
 
 // ─── YTD window (MonthlyBreakdownCard arithmetic) ─────────────────────────────
