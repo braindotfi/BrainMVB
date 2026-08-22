@@ -474,7 +474,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
                 id: identity.tenantId,
                 companyName: identity.companyName,
                 environment: "live",
-                createdAt: identity.linkedAt ? identity.linkedAt.toISOString() : null,
+                // Normalize: Drizzle returns a JS Date for timestamp columns, but
+                // legacy rows or MemStorage shims may supply a string/number.
+                // new Date(x) is safe for any of those representations.
+                createdAt: identity.linkedAt ? new Date(identity.linkedAt).toISOString() : null,
                 ephemeral: false,
               }]
             : [],
@@ -497,7 +500,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
                 id: identity.tenantId,
                 companyName: identity.companyName,
                 environment: "sandbox",
-                createdAt: identity.linkedAt ? identity.linkedAt.toISOString() : null,
+                createdAt: identity.linkedAt ? new Date(identity.linkedAt).toISOString() : null,
                 ephemeral: false,
               }]
             : [],
