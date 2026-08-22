@@ -1,14 +1,12 @@
 /**
- * Server-side message-content trim (defense-in-depth against oversized payloads).
+ * Server-side message trim utilities (defense-in-depth against oversized payloads).
  *
- * The /api/assistant/chat handler trims each message's content to
- * MESSAGE_CONTENT_LIMIT chars BEFORE the Zod schema validation runs.
- * Without the trim a crafted 9 000-char message would hit the schema's
- * max(8000) constraint and return a permanent invalid_messages 400 the
- * user cannot recover from.
+ * The /api/assistant/chat handler trims both the history array and per-message
+ * content BEFORE the Zod schema validation runs so crafted or buggy clients
+ * cannot trigger a permanent invalid_messages 400 the user cannot recover from.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { trimMessageContents, MESSAGE_CONTENT_LIMIT } from "./messageTrim";
+import { trimMessageContents, MESSAGE_CONTENT_LIMIT, trimMessageHistory, MESSAGE_HISTORY_LIMIT } from "./messageTrim";
 
 describe("trimMessageContents", () => {
   it("passes through a message whose content is within the limit unchanged", () => {
@@ -115,5 +113,44 @@ describe("trimMessageContents", () => {
 
       expect(warnSpy).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe("trimMessageHistory", () => {
+  it("passes through an array within the limit unchanged (same reference)", () => {
+    const messages = Array.from({ length: MESSAGE_HISTORY_LIMIT }, (_, i) => ({
+      role: "user",
+      content: `msg ${i}`,
+    }));
+    const result = trimMessageHistory(messages);
+    expect(result).toBe(messages);
+  });
+
+  it("trims a 60-message array to the last MESSAGE_HISTORY_LIMIT items", () => {
+    const messages = Array.from({ length: 60 }, (_, i) => ({
+      role: i % 2 === 0 ? "user" : "assistant",
+      content: `message ${i}`,
+    }));
+    const result = trimMessageHistory(messages);
+    expect(result.length).toBe(MESSAGE_HISTORY_LIMIT);
+    // The result must be the tail, not the head.
+    expect((result[0] as { content: string }).content).toBe("message 10");
+    expect((result[result.length - 1] as { content: string }).content).toBe("message 59");
+  });
+
+  it("preserves all items when the array is exactly at the limit", () => {
+    const messages = Array.from({ length: MESSAGE_HISTORY_LIMIT }, (_, i) => ({
+      role: "user",
+      content: `msg ${i}`,
+    }));
+    const result = trimMessageHistory(messages);
+    expect(result.length).toBe(MESSAGE_HISTORY_LIMIT);
+    expect(result).toBe(messages);
+  });
+
+  it("returns a single-item array unchanged", () => {
+    const messages = [{ role: "user", content: "hello" }];
+    const result = trimMessageHistory(messages);
+    expect(result).toBe(messages);
   });
 });
