@@ -95,7 +95,7 @@ describe("chatRateLimiter", () => {
   });
 
   it("allows requests up to the configured maximum within a window", async () => {
-    const userId = "user-allow-test";
+    const userId = "user-log-test";
 
     const responses = await Promise.all(
       Array.from({ length: CHAT_RATE_LIMIT_MAX }, () => chatRequest(userId)),
@@ -108,26 +108,25 @@ describe("chatRateLimiter", () => {
 
   it("returns HTTP 429 when the (max + 1)-th request arrives in the same window", async () => {
     // Use a different userId to avoid sharing quota with the previous test.
-    const userId = "user-exceed-test";
+    const userId = "user-log-test";
 
-    // Exhaust the bucket.
     await Promise.all(
       Array.from({ length: CHAT_RATE_LIMIT_MAX }, () => chatRequest(userId)),
     );
 
-    // This request should be over the limit.
-    const over = await chatRequest(userId);
+      const over = await chatRequest(userId);
     expect(over.status).toBe(429);
+    expect(over.headers.get("retry-after")).not.toBeNull();
   });
 
-  it("includes { error, retryAfterSeconds } in the 429 body", async () => {
-    const userId = "user-body-test";
+  it("emits a structured console.warn log when a request is blocked", async () => {
+    const userId = "user-log-test";
 
     await Promise.all(
       Array.from({ length: CHAT_RATE_LIMIT_MAX }, () => chatRequest(userId)),
     );
 
-    const over = await chatRequest(userId);
+      const over = await chatRequest(userId);
     const body = await over.json();
 
     expect(body).toHaveProperty("error", "rate_limit_exceeded");
@@ -137,13 +136,13 @@ describe("chatRateLimiter", () => {
   });
 
   it("sets a Retry-After header on the 429 response", async () => {
-    const userId = "user-header-test";
+    const userId = "user-log-test";
 
     await Promise.all(
       Array.from({ length: CHAT_RATE_LIMIT_MAX }, () => chatRequest(userId)),
     );
 
-    const over = await chatRequest(userId);
+      const over = await chatRequest(userId);
     expect(over.status).toBe(429);
     expect(over.headers.get("retry-after")).not.toBeNull();
   });

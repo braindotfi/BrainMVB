@@ -29,11 +29,15 @@
  * through to its normal behaviour; that is the only non-answer that is not a refusal.
  */
 
-import { type BrainObligation, type BrainInvoice, type WikiEvidence, type CounterpartyLite } from "./client";
-import { readAllObligations, readAllInvoices, readAllCounterparties, type PagedRead } from "./ledgerRead";
+import { type BrainObligation, type BrainInvoice, type BrainTransaction, type WikiEvidence, type CounterpartyLite } from "./client";
+import { readAllObligations, readAllInvoices, readAllCounterparties, readAllTransactions, type PagedRead } from "./ledgerRead";
 
 /** Which structured question was recognised. Surfaced for tests and logs. */
-export type DeterministicPath = "payable-by-counterparty" | "overdue-ar" | "payroll-total";
+export type DeterministicPath =
+  | "payable-by-counterparty"
+  | "overdue-ar"
+  | "payroll-total"
+  | "monthly-income-expenses";
 
 export interface DeterministicAnswer {
   reply: string;
@@ -145,6 +149,73 @@ function refuseUnverifiedCounterparty(path: DeterministicPath, term: string): De
    the existing assistant behaviour, which is what happens today. Over-matching is not:
    it answers a question the user did not ask with a confident number. */
 
+/* ── monthly income / expenses helpers ───────────────────────────────────── */
+
+const MONTH_NAMES_MAP: Record<string, number> = {
+  january: 1, jan: 1,
+  february: 2, feb: 2,
+  march: 3, mar: 3,
+  april: 4, apr: 4,
+  may: 5,
+  june: 6, jun: 6,
+  july: 7, jul: 7,
+  august: 8, aug: 8,
+  september: 9, sep: 9, sept: 9,
+  october: 10, oct: 10,
+  november: 11, nov: 11,
+  december: 12, dec: 12,
+};
+
+/** "2026-07" → "July 2026". */
+function monthLabel(monthKey: string): string {
+  const [y, m] = monthKey.split("-");
+  const labels = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  return `${labels[Number(m) - 1] ?? m} ${y}`;
+}
+
+/**
+ * Parse a YYYY-MM key from the question using month names ("July 2026") or
+ * relative references ("last month", "this month").
+ * Returns null when no recognisable month reference is present.
+ */
+function parseMonthKey(question: string, now: Date): string | null {
+  const q = question;
+  if (/\b(last|previous|past)\s+month\b/i.test(q)) {
+    const d = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  }
+  if (/\bthis\s+month\b/i.test(q)) {
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  }
+  /* Named month with optional year. The non-word-boundary after the year keeps
+     "July 2026" from matching just "July" when a year follows. */
+  const m = /\b(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|sept|oct|nov|dec)\b(?:[^a-z0-9]+(\d{4}))?\b/i.exec(q);
+  if (!m) return null;
+  const monthNum = MONTH_NAMES_MAP[m[1].toLowerCase()];
+  if (!monthNum) return null;
+  const year = m[2] ? parseInt(m[2], 10) : now.getFullYear();
+  if (year < 2000 || year > 2100) return null;
+  return `${year}-${String(monthNum).padStart(2, "0")}`;
+}
+
+/**
+ * Signals that the question is about income/expenses for a calendar month.
+ * High-precision to avoid capturing "what happened in July?" as a financial question.
+ */
+const MONTHLY_INCOME_EXPENSE_WORDS =
+  /\b(income|revenue|earnings?|earned|earn|inflows?|expenses?|spending|spent|spend|outflows?|cash[-\s]?flow|financials?|results?|breakdown|summary|performance|profit|loss)\b/i;
+
+/** A calendar month reference: a named month OR "last/this/previous month". */
+const MONTH_REF_PATTERN =
+  /\b(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|sept|oct|nov|dec)\b|\b(last|previous|past|this)\s+month\b/i;
+
+/** Same direction mapping as buildMonthlyBreakdown in client/src/lib/cashFlow.ts. */
+const TX_DIRECTION: Record<string, "income" | "expense"> = {
+  inflow: "income",
+  outflow: "expense",
+  // transfer and adjustment are deliberately absent: they do not count in either total.
+};
+
 const OVERDUE_WORDS = /\b(overdue|past[-\s]?due|late|behind)\b/i;
 const INVOICE_WORDS = /\b(invoice|invoices|receivable|receivables)\b/i;
 const CUSTOMER_WORDS = /\b(customer|customers|client|clients|receivable|receivables|ar|owed to us|owes? us)\b/i;
@@ -240,12 +311,107 @@ export function resolveCounterparty(
 /** Which structured path, if any, this question belongs to. */
 export function classify(question: string): DeterministicPath | null {
   const q = question ?? "";
-  /* Payroll first: it is the most specific, and "how much payroll do we owe" would
-     otherwise be caught by the counterparty path and refused as an unknown vendor. */
+  /* Monthly income/expenses first: a question with a calendar month reference AND an
+     income/expense signal is about historical reporting, not outstanding balances. This
+     must precede payroll-total so "last month's payroll expenses" routes here (historical
+     transactions) rather than to payroll-total (outstanding obligations). */
+  if (MONTH_REF_PATTERN.test(q) && MONTHLY_INCOME_EXPENSE_WORDS.test(q)) return "monthly-income-expenses";
+  /* Payroll next: most specific of the balance questions. "how much payroll do we owe"
+     contains "owe" and would otherwise be caught by the counterparty path. */
   if (PAYROLL_WORD.test(q) && AMOUNT_WORDS.test(q)) return "payroll-total";
   if (OVERDUE_WORDS.test(q) && INVOICE_WORDS.test(q) && CUSTOMER_WORDS.test(q)) return "overdue-ar";
   if (OWE_WORDS.test(q)) return "payable-by-counterparty";
   return null;
+}
+
+/* ── monthly income / expenses answer ────────────────────────────────────── */
+
+/**
+ * Answer a monthly income/expense question from a proven-complete transaction walk.
+ *
+ * Applies the same direction-based bucketing as `buildMonthlyBreakdown` in
+ * `client/src/lib/cashFlow.ts`: inflows count as income, outflows as expenses,
+ * and transfers/adjustments contribute to neither total. Given identical
+ * transaction data, this function and the chart produce identical figures.
+ *
+ * Unlike the chart — which reads one un-paginated page from the BFF — this path
+ * walks the cursor to the end, so its figures cover the full ledger and do not
+ * suffer the page-cap truncation the chart notes in its opening comment.
+ */
+async function answerMonthlyIncomeExpenses(
+  token: string,
+  question: string,
+  now: Date,
+): Promise<DeterministicAnswer | null> {
+  const path: DeterministicPath = "monthly-income-expenses";
+
+  const monthKey = parseMonthKey(question, now);
+  if (!monthKey) return null; // cannot determine which month — fall through to the normal path
+
+  let read: PagedRead<BrainTransaction>;
+  try {
+    read = await readAllTransactions(token);
+  } catch {
+    return refuseUnreachable(path, `the figures for ${monthLabel(monthKey)}`);
+  }
+  if (!read.complete) return refuseIncomplete(path, `the figures for ${monthLabel(monthKey)}`);
+
+  /* Sum amounts the same way buildMonthlyBreakdown does in client/src/lib/cashFlow.ts:
+     all amounts are treated as a single pool regardless of currency. This is the same
+     policy the chart uses so both surfaces produce identical figures from the same
+     transaction feed. If the tenant transacts in multiple currencies, the total is a
+     mixed sum — the same mixed sum the chart would show — and a disclosure note is
+     added so the user can judge its meaning. */
+  let income = 0;
+  let expense = 0;
+  const currencies = new Set<string>();
+
+  for (const t of read.rows) {
+    const kind = TX_DIRECTION[t.direction ?? ""];
+    if (!kind) continue; // transfer or adjustment — excluded from both totals
+    const txMonth = (t.transaction_date ?? "").slice(0, 7); // "YYYY-MM"
+    if (txMonth !== monthKey) continue;
+    if (kind === "income") income += num(t.amount);
+    else expense += num(t.amount);
+    currencies.add((t.currency ?? "USD").toUpperCase());
+  }
+
+  const label = monthLabel(monthKey);
+
+  if (income === 0 && expense === 0) {
+    return {
+      reply:
+        `No income or expense transactions were recorded for ${label}. ` +
+        `Transfers between your own accounts and adjustments are excluded — ` +
+        `they do not represent money earned or spent.`,
+      sources: [],
+      answered: true,
+      grounded: true,
+      engine: "deterministic",
+      path,
+    };
+  }
+
+  const [currency] = [...currencies]; // dominant currency for formatting
+  const currencyNote =
+    currencies.size > 1
+      ? `\n\nNote: transactions in multiple currencies (${[...currencies].join(", ")}) were summed without conversion — the same way the Monthly Breakdown chart totals them.`
+      : "";
+
+  return {
+    reply:
+      `For ${label}:\n\n` +
+      `  • Income:   ${money(income, currency ?? "USD")}\n` +
+      `  • Expenses: ${money(expense, currency ?? "USD")}` +
+      `${currencyNote}\n\n` +
+      `These figures count settled transactions only. Inflows are counted as income, ` +
+      `outflows as expenses. Transfers between your own accounts and adjustments are excluded.`,
+    sources: [],
+    answered: true,
+    grounded: true,
+    engine: "deterministic",
+    path,
+  };
 }
 
 /* ── the three answers ────────────────────────────────────────────────────── */
@@ -491,6 +657,8 @@ export async function answerDeterministically(
   if (!path) return null;
 
   switch (path) {
+    case "monthly-income-expenses":
+      return answerMonthlyIncomeExpenses(token, question, now);
     case "payroll-total":
       return answerPayrollTotal(token);
     case "overdue-ar":

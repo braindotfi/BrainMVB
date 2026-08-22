@@ -14,13 +14,33 @@
  * No new network request is needed — the grouping is pure client-side
  * arithmetic on the same feed via buildMonthlyWindow() in cashFlow.ts.
  *
- * Note on parity with the Assistant: the Brain Assistant answers monthly
- * questions through brain-core's intelligence layer, which may apply its own
- * categorisation logic on top of the raw transaction feed. Small numeric
- * differences between the chart and an Assistant answer are therefore expected
- * and do not indicate a bug — they indicate that two different surfaces are
- * counting slightly different things (raw transactions vs interpreted ledger
- * entries). The chart is honest about what it shows.
+ * Note on parity with the Brain Assistant: differences between this chart and
+ * an Assistant answer for the same month can be material, not just rounding,
+ * for three distinct reasons established by code analysis:
+ *
+ * 1. Page cap. CashFlowTab fetches `GET /ledger/transactions` as a single
+ *    un-paginated call with no cursor walk. The response declares `next_cursor`
+ *    (see ListTransactionsResponse in server/brain/client.ts), but CashFlowTab
+ *    never follows it. When brain-core returns a partial page, the monthly
+ *    figures here are a floor, not the real totals. The `truncated` prop is set
+ *    to true in that case and a notice is shown below. Whether the Assistant's
+ *    answer covers a larger set of transactions depends on brain-core's internal
+ *    aggregation — that has not been confirmed by direct observation.
+ *
+ * 2. Categorisation. The chart classifies transactions by the raw `direction`
+ *    field (inflow → income, outflow → expense). Brain-core's intelligence
+ *    layer may reclassify some entries — for example reclassifying an outflow
+ *    between the tenant's own accounts as a transfer. The extent of any such
+ *    reclassification has not been measured against a live tenant.
+ *
+ * 3. Currency mixing. `absAmount()` adds all amounts regardless of currency.
+ *    A tenant transacting in multiple currencies will see totals that mix units.
+ *    The Assistant may report per-currency breakdowns or refuse to aggregate
+ *    across currencies. Single-currency tenants are unaffected.
+ *
+ * The chart's arithmetic is verified to be correct for the transactions it
+ * receives (see the parity tests in cashFlow.test.ts). The only open question
+ * on a live tenant is whether those transactions represent the full ledger.
  */
 
 import { useState, useMemo } from "react";
@@ -89,6 +109,7 @@ export function MonthlyBreakdownCard({
   transactions,
   isLoading,
   failed,
+  truncated,
   format,
   nameOf,
 }: {
@@ -111,6 +132,13 @@ export function MonthlyBreakdownCard({
    * how CashFlowTab already handles the same failure for every other metric.
    */
   failed?: boolean;
+  /**
+   * True when brain-core returned a partial page of transactions (next_cursor
+   * was non-null). The chart's monthly figures are then a floor — actual
+   * totals may be higher. A notice is rendered so the user is not misled by
+   * numbers that look complete but are not.
+   */
+  truncated?: boolean;
   format: Format;
   nameOf?: (id: string | null | undefined) => string | null;
 }): JSX.Element {
@@ -356,7 +384,11 @@ export function MonthlyBreakdownCard({
                   style={{ color: INCOME_COLOR }}
                   data-testid="text-monthly-breakdown-income"
                 >
-                  {format(selectedEntry.income)}
+                  {/* When the transaction feed is known to be partial, withhold
+                      the figure rather than displaying a number that is lower
+                      than the real total. Mirrors how the headline liabilities
+                      metric shows "—" when the obligations read is incomplete. */}
+                  {truncated ? "—" : format(selectedEntry.income)}
                 </p>
               </div>
               <div className="flex-1 flex flex-col gap-[2px] px-[12px] py-[10px] rounded-[8px] bg-brain-v1baby-blue-5 border border-solid border-brain-v1stroke-2">
@@ -371,7 +403,7 @@ export function MonthlyBreakdownCard({
                   style={{ color: EXPENSE_COLOR }}
                   data-testid="text-monthly-breakdown-expenses"
                 >
-                  {format(selectedEntry.expenses)}
+                  {truncated ? "—" : format(selectedEntry.expenses)}
                 </p>
               </div>
             </div>
@@ -432,6 +464,19 @@ export function MonthlyBreakdownCard({
           label="Breakdown period"
           testIdPrefix="chip-monthly-period"
         />
+        {/* Transaction feed was a partial page — figures are a floor, not the
+            real totals. Surfaced so the user is not misled by numbers that look
+            complete. Mirrors how invTruncated is surfaced in the bills list. */}
+        {truncated && !failed && (
+          <p
+            className={`${BODY} text-brain-v1baby-blue-60`}
+            style={{ fontSize: 11 }}
+            data-testid="text-monthly-breakdown-truncated"
+          >
+            Monthly totals are based on a partial transaction feed — actual
+            figures may be higher.
+          </p>
+        )}
         {inner}
       </div>
     </WidgetCard>

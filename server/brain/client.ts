@@ -168,7 +168,7 @@ export interface ListTransactionsResponse {
 /** GET /ledger/transactions */
 export function listLedgerTransactions(
   token: string,
-  query?: { limit?: number; direction?: string; status?: string },
+  query?: { limit?: number; direction?: string; status?: string; cursor?: string },
   timeoutMs?: number,
 ): Promise<ListTransactionsResponse> {
   return brainRequest<ListTransactionsResponse>("/ledger/transactions", { token, query, timeoutMs });

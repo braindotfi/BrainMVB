@@ -24,8 +24,10 @@ import {
   listObligations,
   listLedgerInvoices,
   listLedgerCounterparties,
+  listLedgerTransactions,
   type BrainObligation,
   type BrainInvoice,
+  type BrainTransaction,
   type CounterpartyLite,
 } from "./client";
 
@@ -183,6 +185,44 @@ export function readAllInvoices(
     return {
       rows: page.invoices,
       next: page.next_cursor ?? null,
+      cursorDeclared: page != null && typeof page === "object" && "next_cursor" in page,
+    };
+  }, opts);
+}
+
+/**
+ * Every transaction for the tenant, walked to completion.
+ *
+ * The transaction endpoint declares `next_cursor` explicitly (unlike the invoice
+ * endpoint, which is silent about cursors today), so a null cursor here IS a
+ * statement that the list ended — not just a page that happened to be small.
+ * The cursor-walk therefore reaches `complete: true` more readily than for
+ * invoices, and the deterministic monthly answer can quote figures from this
+ * read without the page-cap fallback applying.
+ */
+export function readAllTransactions(
+  token: string,
+  opts: ReadAllOptions = {},
+): Promise<PagedRead<BrainTransaction>> {
+  const timeoutMs = opts.timeoutMs ?? PAGE_TIMEOUT_MS;
+  return walk<BrainTransaction>(async (cursor, limit) => {
+    const page = await listLedgerTransactions(
+      token,
+      { limit, cursor: cursor ?? undefined },
+      timeoutMs,
+    );
+    /* A payload with no `transactions` array is a shape we do not understand.
+       Treating it as [] would render as "no transactions" — the opposite of what
+       a parse failure means and the precise bug this module exists to prevent. */
+    if (!Array.isArray(page?.transactions)) {
+      throw new Error('/ledger/transactions: response carried no "transactions" array');
+    }
+    return {
+      rows: page.transactions,
+      next: page.next_cursor ?? null,
+      /* `next_cursor` is declared on ListTransactionsResponse, so any well-formed
+         response speaks the cursor contract. An explicit null therefore PROVES the
+         walk finished, unlike the invoice endpoint which is silent about cursors. */
       cursorDeclared: page != null && typeof page === "object" && "next_cursor" in page,
     };
   }, opts);
