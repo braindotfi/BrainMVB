@@ -1009,7 +1009,7 @@ export interface ListAuditEventsResponse {
 /** GET /audit/events - audit trail (MEMBER token, audit:read). */
 export function listAuditEvents(
   token: string,
-  query?: { limit?: number; after?: string },
+  query?: { limit?: number; cursor?: string },
 ): Promise<ListAuditEventsResponse> {
   return brainRequest<ListAuditEventsResponse>("/audit/events", { token, query });
 }

@@ -74,16 +74,17 @@ interface AuditEventsResponse {
 
 const MAX_AUDIT_PAGES = 50;
 
-/** Read the complete audit feed. `next_cursor` is passed back as `after`, which
- * is the pagination contract exposed by the BFF for `/audit/events`. */
+/** Read the complete audit feed. `next_cursor` is passed back as `cursor`, the
+ * upstream brain-core pagination contract for `/audit/events`. */
 export async function fetchAllBrainAuditEvents(signal?: AbortSignal): Promise<AuditEventsResponse> {
   const events: BrainAuditEvent[] = [];
-  const followed = new Set<string>();
-  let after: string | null = null;
+  const followedCursors = new Set<string>();
+  const receivedEventIds = new Set<string>();
+  let cursor: string | null = null;
 
   for (let page = 0; page < MAX_AUDIT_PAGES; page++) {
     const params = new URLSearchParams({ limit: String(AUDIT_EVENTS_LIMIT) });
-    if (after) params.set("after", after);
+    if (cursor) params.set("cursor", cursor);
     const response = await fetch(`/api/brain/audit/events?${params.toString()}`, {
       credentials: "include",
       signal,
@@ -96,17 +97,23 @@ export async function fetchAllBrainAuditEvents(signal?: AbortSignal): Promise<Au
     if (!Array.isArray(body.events)) {
       throw new Error("Brain audit response did not contain an events array.");
     }
+    for (const event of body.events) {
+      if (receivedEventIds.has(event.id)) {
+        throw new Error("Brain audit pagination returned a repeated event and did not advance.");
+      }
+      receivedEventIds.add(event.id);
+    }
     events.push(...body.events);
 
     const next = typeof body.next_cursor === "string" && body.next_cursor.length > 0
       ? body.next_cursor
       : null;
     if (!next) return { events, next_cursor: null };
-    if (followed.has(next)) {
+    if (next === cursor || followedCursors.has(next)) {
       throw new Error("Brain audit pagination did not advance.");
     }
-    followed.add(next);
-    after = next;
+    followedCursors.add(next);
+    cursor = next;
   }
 
   throw new Error("Brain audit feed exceeded the maximum page count.");
