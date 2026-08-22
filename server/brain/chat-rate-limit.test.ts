@@ -10,7 +10,7 @@
  *   4. A Retry-After header is present on the 429 response.
  *   5. A different user ID gets a fresh, independent bucket.
  */
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, vi, beforeEach, afterEach } from "vitest";
 import express, { type Express } from "express";
 import { type Server } from "node:http";
 import { type AddressInfo } from "node:net";
@@ -142,6 +142,34 @@ describe("chatRateLimiter", () => {
     const over = await chatRequest(userId);
     expect(over.status).toBe(429);
     expect(over.headers.get("retry-after")).not.toBeNull();
+  });
+
+  it("emits a structured console.warn log when a request is blocked", async () => {
+    const userId = "user-log-test";
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    try {
+      // Exhaust the bucket.
+      await Promise.all(
+        Array.from({ length: CHAT_RATE_LIMIT_MAX }, () => chatRequest(userId)),
+      );
+
+      // This request should be over the limit.
+      const over = await chatRequest(userId);
+      expect(over.status).toBe(429);
+
+      expect(warnSpy).toHaveBeenCalledOnce();
+      const [message, payload] = warnSpy.mock.calls[0] as [string, Record<string, unknown>];
+      expect(message).toBe("[rate-limit] chat request blocked");
+      expect(payload).toMatchObject({
+        userId,
+        path: "/api/assistant/chat",
+        retryAfterSeconds: expect.any(Number),
+        resetAt: expect.any(String),
+      });
+    } finally {
+      warnSpy.mockRestore();
+    }
   });
 
   it("gives each user ID an independent bucket", async () => {

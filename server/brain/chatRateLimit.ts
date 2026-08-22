@@ -50,6 +50,16 @@ export const chatRateLimiter = rateLimit({
     const resetSec = typeof resetMs === "number" ? resetMs : nowSec + 60;
     const retryAfterSeconds = Math.max(0, resetSec - nowSec);
 
+    const userId =
+      (req.session as { userId?: string } | undefined)?.userId ?? "unknown";
+
+    console.warn("[rate-limit] chat request blocked", {
+      userId,
+      path: req.path,
+      resetAt: new Date(resetSec * 1000).toISOString(),
+      retryAfterSeconds,
+    });
+
     res.setHeader("Retry-After", String(retryAfterSeconds));
     res.status(429).json({
       error: "rate_limit_exceeded",
