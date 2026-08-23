@@ -23,7 +23,7 @@
 import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import type { AddressInfo } from "net";
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { registerRoutes } from "./routes";
 import { storage } from "./storage";
 
@@ -51,8 +51,17 @@ vi.mock("./brain/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./brain/client")>();
   return {
     ...actual,
-    withBrainBaseUrl: brainMocks.withBrainBaseUrl,
     issueTenantKey: brainMocks.issueTenantKey,
+  };
+});
+
+// Keep the rest of brain/baseUrl; only override withBrainBaseUrl so the handler
+// does not need a real AsyncLocalStorage context.
+vi.mock("./brain/baseUrl", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./brain/baseUrl")>();
+  return {
+    ...actual,
+    withBrainBaseUrl: brainMocks.withBrainBaseUrl,
   };
 });
 
@@ -208,6 +217,10 @@ beforeEach(() => {
   identitySpy = vi.spyOn(storage, "getBrainIdentity").mockResolvedValue(undefined);
 });
 
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe("POST /api/developers/keys — sandbox happy path", () => {
@@ -255,11 +268,7 @@ describe("POST /api/developers/keys — sandbox happy path", () => {
     );
 
     const client = await registerAndLogin(uid(), baseUrl);
-    const res = await client.request<{ error: string }>(
-      "POST",
-      "/api/developers/keys",
-      ISSUE_BODY,
-    );
+    const res = await client.request<{ error: string }>("POST", "/api/developers/keys", ISSUE_BODY);
 
     expect(res.status).toBe(502);
   });
@@ -325,10 +334,36 @@ describe("POST /api/developers/keys — live-key guard", () => {
     expect(calledBody.environment).toBe("live");
     expect(calledBody.scopes).toEqual(LIVE_BODY.scopes);
   });
+
+  it("calls getBrainIdentity with the authenticated user's ID, not a constant or session tenantId", async () => {
+    brainMocks.platformServiceConfigured.mockReturnValue(true);
+    identitySpy.mockResolvedValue(BRAIN_IDENTITY);
+    brainMocks.issueTenantKey.mockResolvedValue(LIVE_ISSUE_SUCCESS);
+
+    // Register directly so we can capture the returned user ID — the real ID
+    // that the session will carry into the handler.
+    const client = new SessionClient(baseUrl);
+    const registerRes = await client.request<{ user: { id: string } }>("POST", "/api/auth/register", {
+      email: `issuekey-idcheck-${uid()}@example.com`,
+      password: "correct-horse-battery",
+      name: "Identity Check User",
+    });
+    expect(registerRes.status, "register should succeed").toBe(201);
+    const authenticatedUserId = (registerRes.json as { user: { id: string } }).user.id;
+
+    await client.request("POST", "/api/developers/keys", LIVE_BODY);
+
+    // getBrainIdentity must be called with the session user's actual ID —
+    // not a hardcoded constant and not session.tenantId (the most likely
+    // wrong-ID substitution after a refactor).
+    expect(identitySpy).toHaveBeenCalledWith(authenticatedUserId);
+    expect(identitySpy).not.toHaveBeenCalledWith(DEFAULT_SESSION.tenantId);
+  });
 });
 
 describe("POST /api/developers/keys — authentication", () => {
   it("rejects an unauthenticated request before brain-core is reached", async () => {
+    // No session cookie — requireAuth must short-circuit to 401.
     const client = new SessionClient(baseUrl);
     const res = await client.request<{ error: string }>(
       "POST",
@@ -337,6 +372,7 @@ describe("POST /api/developers/keys — authentication", () => {
     );
 
     expect(res.status).toBe(401);
+    expect(brainMocks.getBrainSession).not.toHaveBeenCalled();
     expect(brainMocks.issueTenantKey).not.toHaveBeenCalled();
   });
 });
