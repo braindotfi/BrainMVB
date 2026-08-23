@@ -712,6 +712,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       // them. Without this step a deleted user's key would remain usable
       // indefinitely. Revocation failures are logged but must not block deletion:
       // the user asked to be gone, and a partial upstream error cannot strand them.
+      let brainKeysRevoked = 0;
+      let brainKeyRevocationsFailed = 0;
       try {
         const session = await getBrainSession(userId);
         const { keys } = await withBrainBaseUrl(session.baseUrl, () =>
@@ -725,10 +727,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
               ),
             ),
           );
-          const failed = results.filter((r) => r.status === "rejected").length;
+          brainKeyRevocationsFailed = results.filter((r) => r.status === "rejected").length;
+          brainKeysRevoked = keys.length - brainKeyRevocationsFailed;
           console.log(
-            `Delete account: revoked ${keys.length - failed}/${keys.length} brain-core key(s) for user ${userId}` +
-              (failed > 0 ? ` (${failed} revocation(s) failed — upstream may have already removed them)` : ""),
+            `Delete account: revoked ${brainKeysRevoked}/${keys.length} brain-core key(s) for user ${userId}` +
+              (brainKeyRevocationsFailed > 0
+                ? ` (${brainKeyRevocationsFailed} revocation(s) failed — upstream may have already removed them)`
+                : ""),
           );
         }
       } catch (revokeErr) {
@@ -742,7 +747,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
       const result = await storage.deleteUserAccount({ userId });
       req.session.destroy(() => {});
-      return res.json({ success: true, deleted: result });
+      return res.json({ success: true, deleted: result, brainKeysRevoked, brainKeyRevocationsFailed });
     } catch (error: any) {
       console.error("Delete account error:", error);
       return res.status(500).json({ error: error?.message || "Failed to delete account" });

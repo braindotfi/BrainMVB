@@ -165,7 +165,11 @@ describe("DELETE /api/account — brain-core key revocation", () => {
 
     try {
       const client = await registerAndLogin(uid(), baseUrl);
-      const res = await client.request<{ success: boolean }>("DELETE", "/api/account");
+      const res = await client.request<{
+        success: boolean;
+        brainKeysRevoked: number;
+        brainKeyRevocationsFailed: number;
+      }>("DELETE", "/api/account");
       expect(res.status).toBe(200);
       expect(res.json.success).toBe(true);
       // All three phases must appear in strict order: list → revoke(s) → delete.
@@ -173,6 +177,9 @@ describe("DELETE /api/account — brain-core key revocation", () => {
       // "revoke:key_a" (because the 20 ms mock delay hasn't resolved yet), and
       // this assertion fails — which is exactly the regression we're guarding.
       expect(callOrder).toEqual(["listTenantKeys", "revoke:key_a", "deleteUserAccount"]);
+      // All keys revoked successfully — no failures.
+      expect(res.json.brainKeysRevoked).toBe(1);
+      expect(res.json.brainKeyRevocationsFailed).toBe(0);
     } finally {
       deleteSpy.mockRestore();
     }
@@ -187,7 +194,11 @@ describe("DELETE /api/account — brain-core key revocation", () => {
     });
 
     const client = await registerAndLogin(uid(), baseUrl);
-    const res = await client.request<{ success: boolean }>("DELETE", "/api/account");
+    const res = await client.request<{
+      success: boolean;
+      brainKeysRevoked: number;
+      brainKeyRevocationsFailed: number;
+    }>("DELETE", "/api/account");
     expect(res.status).toBe(200);
 
     expect(brainMocks.revokeTenantKey).toHaveBeenCalledTimes(2);
@@ -197,6 +208,9 @@ describe("DELETE /api/account — brain-core key revocation", () => {
     );
     expect(revokedIds).toContain("key_sandbox");
     expect(revokedIds).toContain("key_live");
+    // Both keys revoked successfully — counts must reflect the full set.
+    expect(res.json.brainKeysRevoked).toBe(2);
+    expect(res.json.brainKeyRevocationsFailed).toBe(0);
   });
 
   it("a revocation failure does not block account deletion", async () => {
@@ -214,7 +228,11 @@ describe("DELETE /api/account — brain-core key revocation", () => {
     });
 
     const client = await registerAndLogin(uid(), baseUrl);
-    const res = await client.request<{ success: boolean }>("DELETE", "/api/account");
+    const res = await client.request<{
+      success: boolean;
+      brainKeysRevoked: number;
+      brainKeyRevocationsFailed: number;
+    }>("DELETE", "/api/account");
 
     // Deletion must succeed regardless of the upstream failure.
     expect(res.status).toBe(200);
@@ -222,6 +240,10 @@ describe("DELETE /api/account — brain-core key revocation", () => {
 
     // Both keys must have been attempted (not short-circuited by the first failure).
     expect(brainMocks.revokeTenantKey).toHaveBeenCalledTimes(2);
+
+    // Partial revocation counts must be surfaced so operators can detect orphaned keys.
+    expect(res.json.brainKeysRevoked).toBe(1);
+    expect(res.json.brainKeyRevocationsFailed).toBe(1);
   });
 
   it("a missing brain session (demo / unlinked account) still completes deletion", async () => {
