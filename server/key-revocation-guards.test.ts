@@ -90,7 +90,9 @@ describe("Orphaned brain-core keys are logged on account deletion failure (#250)
     const src = readFileSync(ROUTES, "utf8");
     const deleteAcctIdx = src.indexOf('app.delete("/api/account"');
     expect(deleteAcctIdx, "DELETE account route not found").toBeGreaterThan(-1);
-    const handlerBlock = src.slice(deleteAcctIdx, deleteAcctIdx + 800);
+    // 2600-char window: console.warn is ~2249 chars into this handler (after
+    // the nested inner try/catch block), so the window must exceed that.
+    const handlerBlock = src.slice(deleteAcctIdx, deleteAcctIdx + 2600);
     expect(
       handlerBlock,
       "handler must call listTenantKeys to discover keys before deletion",
@@ -133,7 +135,7 @@ describe("Orphaned brain-core keys are logged on account deletion failure (#250)
   it("if brain-core is unreachable, a console.warn is emitted and deletion continues (not aborted)", () => {
     const src = readFileSync(ROUTES, "utf8");
     const deleteAcctIdx = src.indexOf('app.delete("/api/account"');
-    const handlerBlock = src.slice(deleteAcctIdx, deleteAcctIdx + 2200);
+    const handlerBlock = src.slice(deleteAcctIdx, deleteAcctIdx + 2600);
     expect(
       handlerBlock,
       "warn must be emitted when brain-core is unreachable during account deletion",

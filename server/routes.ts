@@ -714,6 +714,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       // the user asked to be gone, and a partial upstream error cannot strand them.
       let brainKeysRevoked = 0;
       let brainKeyRevocationsFailed = 0;
+      // True when brain-core session/network failed before we could list keys.
+      // In this case the real key count is UNKNOWN (not zero) — the response
+      // must surface this so the client can warn operators appropriately.
+      let brainCoreUnreachable = false;
       try {
         const session = await getBrainSession(userId);
         const { keys } = await withBrainBaseUrl(session.baseUrl, () =>
@@ -738,16 +742,27 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         }
       } catch (revokeErr) {
         // No brain session (demo user, unlinked account) or network failure —
-        // nothing to revoke, or the tenant is already gone upstream.
+        // key count is UNKNOWN (not zero): we never reached listTenantKeys.
+        // #252: explicitly state "key count unknown" so operators reading logs
+        // know the zero counts are indeterminate, not a confirmed clean state.
+        brainCoreUnreachable = true;
         console.warn(
-          "Delete account: could not reach brain-core to revoke keys (continuing with deletion):",
+          "Delete account: could not reach brain-core to revoke keys (key count unknown; continuing with deletion):",
           revokeErr instanceof Error ? revokeErr.message : revokeErr,
         );
       }
 
       const result = await storage.deleteUserAccount({ userId });
       req.session.destroy(() => {});
-      return res.json({ success: true, deleted: result, brainKeysRevoked, brainKeyRevocationsFailed });
+      return res.json({
+        success: true,
+        deleted: result,
+        brainKeysRevoked,
+        brainKeyRevocationsFailed,
+        // #251: tells the client that brain-core was unreachable so it can warn
+        // operators that orphaned keys may remain — counts are not trustworthy.
+        brainCoreUnreachable,
+      });
     } catch (error: any) {
       console.error("Delete account error:", error);
       return res.status(500).json({ error: error?.message || "Failed to delete account" });

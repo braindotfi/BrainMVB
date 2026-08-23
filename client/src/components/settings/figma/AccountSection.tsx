@@ -157,12 +157,29 @@ export default function AccountSection() {
     if (isDeleting) return;
     setIsDeleting(true);
     try {
-      await deleteAccount();
+      const result = await deleteAccount();
       setModal(null);
       appAlert.success(
         "Account closed",
         "Your Brain account and all associated records have been permanently deleted.",
       );
+      // #251: surface orphaned-key warnings so operators can act on them.
+      // brainCoreUnreachable means the key count is unknown (not confirmed zero).
+      // brainKeyRevocationsFailed > 0 means some known keys could not be revoked.
+      if (result?.brainCoreUnreachable) {
+        toast({
+          title: "API key status unknown",
+          description:
+            "Your account was deleted, but Brain couldn't be reached to revoke your API keys. Contact support if you need to confirm all keys are inactive.",
+          variant: "destructive",
+        });
+      } else if (result?.brainKeyRevocationsFailed && result.brainKeyRevocationsFailed > 0) {
+        toast({
+          title: "Some API keys may still be active",
+          description: `${result.brainKeyRevocationsFailed} key${result.brainKeyRevocationsFailed === 1 ? "" : "s"} couldn't be revoked. They may have already been removed upstream — contact support if you need to confirm.`,
+          variant: "destructive",
+        });
+      }
     } catch (err: any) {
       toast({
         title: "Couldn't delete account",

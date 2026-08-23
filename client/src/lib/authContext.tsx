@@ -32,7 +32,11 @@ interface AuthContextType {
   loginWithGoogle: (returnTo?: string) => void;
   /** Returns whether the server confirmed the session was destroyed. */
   logout: () => Promise<boolean>;
-  deleteAccount: () => Promise<void>;
+  deleteAccount: () => Promise<{
+    brainKeysRevoked: number;
+    brainKeyRevocationsFailed: number;
+    brainCoreUnreachable: boolean;
+  } | undefined>;
   deleteAccountData: () => Promise<void>;
 }
 
@@ -231,10 +235,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err?.error || `Account deletion failed (${res.status})`);
     }
+    // #251: parse revocation summary so the UI can warn when orphaned keys
+    // may remain. brainCoreUnreachable means the count is unknown (not zero).
+    const body = await res.json().catch(() => ({})) as {
+      brainKeysRevoked?: number;
+      brainKeyRevocationsFailed?: number;
+      brainCoreUnreachable?: boolean;
+    };
     try { await fetch("/api/auth/logout", { method: "POST", credentials: "include" }); } catch {}
     setUser(null);
     queryClient.clear();
     clearMembers();
+    return {
+      brainKeysRevoked: body.brainKeysRevoked ?? 0,
+      brainKeyRevocationsFailed: body.brainKeyRevocationsFailed ?? 0,
+      brainCoreUnreachable: body.brainCoreUnreachable ?? false,
+    };
   }, [user]);
 
   const deleteAccountData = useCallback(async () => {
