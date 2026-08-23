@@ -347,4 +347,33 @@ describe("password reset", () => {
     setPasswordResetEmailSenderForTests(async (message) => { sent.push(message); });
     log.mockRestore();
   });
+
+  it("passes a reset URL whose domain matches the runtime environment signal, not a hardcoded value", async () => {
+    const email = `reset-url-domain-${randomBytes(6).toString("hex")}@example.com`;
+    await register(email);
+
+    // Snapshot and override env vars so passwordResetUrl() sees the dev signal.
+    const savedDevDomain = process.env.REPLIT_DEV_DOMAIN;
+    const savedAppBaseUrl = process.env.APP_BASE_URL;
+    const testDomain = "test-env-signal.replit.dev";
+    delete process.env.APP_BASE_URL;
+    process.env.REPLIT_DEV_DOMAIN = testDomain;
+
+    try {
+      await request("/api/auth/password-reset/request", { email });
+      await waitFor(() => sent.length === 1);
+
+      const resetUrl = new URL(sent[0].resetUrl);
+      expect(resetUrl.host).toBe(testDomain);
+      expect(resetUrl.protocol).toBe("https:");
+      expect(resetUrl.pathname).toMatch(/^\/reset-password\/[A-Za-z0-9_-]+$/);
+      expect(sent[0].resetUrl).not.toContain("app.brain.fi");
+    } finally {
+      // Always restore env so subsequent tests see the original values.
+      if (savedDevDomain === undefined) delete process.env.REPLIT_DEV_DOMAIN;
+      else process.env.REPLIT_DEV_DOMAIN = savedDevDomain;
+      if (savedAppBaseUrl === undefined) delete process.env.APP_BASE_URL;
+      else process.env.APP_BASE_URL = savedAppBaseUrl;
+    }
+  });
 });

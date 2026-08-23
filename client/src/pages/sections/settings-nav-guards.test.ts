@@ -114,6 +114,58 @@ describe("Settings nav testids contract (#76)", () => {
   });
 });
 
+// ─── #76: Key management controls ────────────────────────────────────────────
+
+describe("Key management controls contract (#76)", () => {
+  it("'New Key' button has testid and opens the create modal", () => {
+    const src = readFileSync(DEVELOPERS_TSX, "utf8");
+    expect(src, '"button-new-key" testid must be wired to setShowCreate(true)').toMatch(
+      /data-testid="button-new-key"[\s\S]{0,400}setShowCreate\(true\)/,
+    );
+  });
+
+  it("'Create Key' submit has testid and fires createMut", () => {
+    const src = readFileSync(DEVELOPERS_TSX, "utf8");
+    expect(src, '"button-create-key" testid must call createMut.mutate()').toMatch(
+      /data-testid="button-create-key"[\s\S]{0,400}createMut\.mutate\(\)/,
+    );
+  });
+
+  it("rotate button has dynamic testid and fires rotateMut", () => {
+    const src = readFileSync(DEVELOPERS_TSX, "utf8");
+    // PillButton receives testId as a prop (rendered as data-testid by the component).
+    expect(src, 'button-rotate-${k.id} must call rotateMut.mutate(k.id)').toMatch(
+      /testId=\{`button-rotate-\$\{k\.id\}`\}[\s\S]{0,400}rotateMut\.mutate\(k\.id\)/,
+    );
+  });
+
+  it("revoke initiation button has dynamic testid and sets confirmRevoke", () => {
+    const src = readFileSync(DEVELOPERS_TSX, "utf8");
+    expect(src, 'button-revoke-${k.id} must call setConfirmRevoke(k.id)').toMatch(
+      /testId=\{`button-revoke-\$\{k\.id\}`\}[\s\S]{0,400}setConfirmRevoke\(k\.id\)/,
+    );
+  });
+
+  it("revoke confirmation button has dynamic testid and fires revokeMut", () => {
+    const src = readFileSync(DEVELOPERS_TSX, "utf8");
+    expect(src, 'button-revoke-confirm-${k.id} must call revokeMut.mutate(k.id)').toMatch(
+      /testId=\{`button-revoke-confirm-\$\{k\.id\}`\}[\s\S]{0,400}revokeMut\.mutate\(k\.id\)/,
+    );
+  });
+
+  it("plaintext key modal and copy button have stable testids", () => {
+    const src = readFileSync(DEVELOPERS_TSX, "utf8");
+    expect(src, '"modal-plaintext-key" testid must exist').toMatch(/data-testid="modal-plaintext-key"/);
+    expect(src, '"button-copy-key" testid must exist').toMatch(/data-testid="button-copy-key"/);
+  });
+
+  it("create key modal has stable testid", () => {
+    const src = readFileSync(DEVELOPERS_TSX, "utf8");
+    // PopupShell/component receives testId as a prop.
+    expect(src, '"modal-create-key" testid must exist').toMatch(/testId="modal-create-key"/);
+  });
+});
+
 // ─── #29: Endpoint scope drift ───────────────────────────────────────────────
 
 describe("Developer endpoint scope consistency (#29)", () => {

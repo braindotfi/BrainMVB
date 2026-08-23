@@ -197,7 +197,7 @@ export function passwordResetTokenDigest(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
 
-function passwordResetUrl(token: string, returnTo?: string): string {
+export function passwordResetUrl(token: string, returnTo?: string): string {
   // Development and production use separate databases. A token stored in the
   // dev DB must link back to the dev app; sending a link to app.brain.fi lets
   // the production DB reject it as invalid. REPLIT_DEV_DOMAIN being present is

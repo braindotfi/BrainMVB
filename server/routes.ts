@@ -287,7 +287,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   /** The one-time plaintext from an issue/rotate response (field name tolerant). */
-  const issuedPlaintext = (r: IssuedTenantKeyResponse): string | null => {
+  const issuedPlaintext = (r: IssuedTenantKeyResponse | null | undefined): string | null => {
+    if (!r) return null;
     for (const f of ["secret", "plaintext", "key_secret", "api_key"]) {
       const v = (r as Record<string, unknown>)[f];
       if (typeof v === "string" && v.startsWith("brain_sk_")) return v;
@@ -378,7 +379,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         issueTenantKey(session.token, session.tenantId, { name, environment, scopes }),
       );
       const plaintext = issuedPlaintext(issued);
-      if (!issued.key || !plaintext) {
+      if (!plaintext || !issued.key) {
         console.error("Issue key: unexpected brain-core response shape", Object.keys(issued ?? {}));
         return res.status(502).json({ error: "unexpected_upstream_shape", message: "brain-core issued a key but the response shape was unexpected." });
       }
@@ -398,7 +399,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         rotateTenantKey(session.token, String(req.params.id)),
       );
       const plaintext = issuedPlaintext(issued);
-      if (!issued.key || !plaintext) {
+      if (!plaintext || !issued.key) {
         console.error("Rotate key: unexpected brain-core response shape", Object.keys(issued ?? {}));
         return res.status(502).json({ error: "unexpected_upstream_shape", message: "brain-core rotated the key but the response shape was unexpected." });
       }
