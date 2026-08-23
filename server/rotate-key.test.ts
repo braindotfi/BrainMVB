@@ -1,16 +1,18 @@
 /**
- * POST /api/developers/keys/:id/rotate — brain-core single-key rotation guard
+ * POST /api/developers/keys/:id/rotate — brain-core single-key rotate guard
  *
  * Pins the upstream call sequence that rotates one key from the Settings →
  * Developers page.  The guarded sequence is:
  *   1. requireBrainMemberSession — obtain member token + baseUrl from brain-core
  *   2. rotateTenantKey           — call brain-core to atomically revoke + reissue
- *   3. respond 200               — relay the new key + one-time plaintext
+ *   3. respond 200 with { key, plaintext }
  *
  * Verified cases:
  *   • rotateTenantKey is called with the exact key id from the URL param
  *   • the member token (session.token) — not the agent token — is used
  *   • an upstream 5xx surfaces as a 502 to the caller
+ *   • a 404 api_key_not_found (double-click double-rotate) surfaces as a clean
+ *     404 rather than a 502 or 500, so the Settings page does not crash
  *   • an unauthenticated request is rejected before brain-core is reached
  */
 
@@ -150,7 +152,7 @@ afterAll(() => {
 const DEFAULT_SESSION = {
   token: "member-token-test",
   agentToken: "agent-token-test",
-  tenantId: "tenant-test-1",
+  tenantId: "tenant-test-rotate",
   baseUrl: "https://api.brain.fi/v1",
 };
 
@@ -166,13 +168,13 @@ beforeEach(() => {
 describe("POST /api/developers/keys/:id/rotate — brain-core single-key rotation", () => {
   it("calls rotateTenantKey with the exact key id from the URL param", async () => {
     const client = await registerAndLogin(uid(), baseUrl);
-    const res = await client.request("POST", "/api/developers/keys/key_target_123/rotate");
+    const res = await client.request("POST", "/api/developers/keys/key_target_rotate/rotate");
 
     expect(res.status).toBe(200);
 
     expect(brainMocks.rotateTenantKey).toHaveBeenCalledOnce();
     const [, calledKeyId] = brainMocks.rotateTenantKey.mock.calls[0] as [string, string];
-    expect(calledKeyId).toBe("key_target_123");
+    expect(calledKeyId).toBe("key_target_rotate");
   });
 
   it("uses the member token (session.token), not the agent token", async () => {
@@ -199,6 +201,30 @@ describe("POST /api/developers/keys/:id/rotate — brain-core single-key rotatio
     const res = await client.request<{ error: string }>("POST", "/api/developers/keys/key_failing/rotate");
 
     expect(res.status).toBe(502);
+  });
+
+  it("returns 404 api_key_not_found when the key is gone (double-click resilience)", async () => {
+    // Import BrainApiError from the real module (unmocked) so instanceof checks work.
+    const { BrainApiError } = await import("./brain/client");
+
+    // Simulate brain-core responding with 404 api_key_not_found — the case where
+    // the user double-clicked Rotate and the key was already rotated/gone on the
+    // second hit.  This is explicitly noted in the route comment as idempotent-unsafe.
+    brainMocks.rotateTenantKey.mockRejectedValue(
+      new BrainApiError(404, "/keys/key_already_rotated/rotate", { error: "api_key_not_found" }),
+    );
+
+    const client = await registerAndLogin(uid(), baseUrl);
+    const res = await client.request<{ error: string }>(
+      "POST",
+      "/api/developers/keys/key_already_rotated/rotate",
+    );
+
+    // sendKeyApiError must map this to a clean 404 — not a 502 or 500 — so the
+    // Settings page does not crash and the client's error handler can show a
+    // "Key no longer exists" message rather than an unexpected error.
+    expect(res.status).toBe(404);
+    expect((res.json as { error: string }).error).toBe("api_key_not_found");
   });
 
   it("unauthenticated requests are rejected before any brain-core call is made", async () => {
