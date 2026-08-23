@@ -236,4 +236,76 @@ describe("POST /api/developers/keys/:id/rotate — brain-core single-key rotatio
     expect(brainMocks.getBrainSession).not.toHaveBeenCalled();
     expect(brainMocks.rotateTenantKey).not.toHaveBeenCalled();
   });
+
+  // ── Response-shape guard tests ────────────────────────────────────────────
+  // The handler checks `!issued.key || !plaintext` and returns 502
+  // unexpected_upstream_shape when either is absent or malformed.  These
+  // tests pin that branch so a change to issuedPlaintext() or the shape
+  // check cannot silently pass broken data through.
+
+  it("returns 502 unexpected_upstream_shape when the key object is absent from the rotate response", async () => {
+    // brain-core returns a valid-looking secret but omits the .key object.
+    brainMocks.rotateTenantKey.mockResolvedValue(
+      { secret: "brain_sk_testabcd1234" } as unknown as typeof ROTATE_SUCCESS,
+    );
+
+    const client = await registerAndLogin(uid(), baseUrl);
+    const res = await client.request<{ error: string }>(
+      "POST",
+      "/api/developers/keys/key_no_key_obj/rotate",
+    );
+
+    expect(res.status).toBe(502);
+    expect((res.json as { error: string }).error).toBe("unexpected_upstream_shape");
+  });
+
+  it("returns 502 unexpected_upstream_shape when the plaintext is absent or has a malformed prefix", async () => {
+    // Two sub-cases: missing secret and a secret that does not start with
+    // "brain_sk_".  issuedPlaintext() returns null for both, so the handler
+    // must surface 502 for both.
+
+    // Case A: secret field entirely absent.
+    brainMocks.rotateTenantKey.mockResolvedValue(
+      { key: ROTATE_SUCCESS.key } as unknown as typeof ROTATE_SUCCESS,
+    );
+
+    const clientA = await registerAndLogin(uid(), baseUrl);
+    const resA = await clientA.request<{ error: string }>(
+      "POST",
+      "/api/developers/keys/key_no_secret/rotate",
+    );
+
+    expect(resA.status).toBe(502);
+    expect((resA.json as { error: string }).error).toBe("unexpected_upstream_shape");
+
+    // Case B: secret field present but with wrong prefix (not "brain_sk_").
+    brainMocks.rotateTenantKey.mockResolvedValue(
+      { key: ROTATE_SUCCESS.key, secret: "bad_prefix_shouldfail" } as unknown as typeof ROTATE_SUCCESS,
+    );
+
+    const clientB = await registerAndLogin(uid(), baseUrl);
+    const resB = await clientB.request<{ error: string }>(
+      "POST",
+      "/api/developers/keys/key_bad_prefix/rotate",
+    );
+
+    expect(resB.status).toBe(502);
+    expect((resB.json as { error: string }).error).toBe("unexpected_upstream_shape");
+  });
+
+  it("returns 200 with key and plaintext for a fully valid rotate response (regression guard)", async () => {
+    // Default mock (ROTATE_SUCCESS) is already set by beforeEach.
+    // This test ensures a well-formed response is never downgraded to an error.
+    const client = await registerAndLogin(uid(), baseUrl);
+    const res = await client.request<{ key: { id: string }; plaintext: string }>(
+      "POST",
+      "/api/developers/keys/key_target_123/rotate",
+    );
+
+    expect(res.status).toBe(200);
+    const body = res.json as { key: { id: string }; plaintext: string };
+    expect(body.plaintext).toBe(ROTATE_SUCCESS.secret);
+    expect(body.key).toBeDefined();
+    expect(body.key.id).toBe(ROTATE_SUCCESS.key.id);
+  });
 });
