@@ -423,7 +423,7 @@ export function SignupPage() {
               type="button"
               data-testid="button-forgot-password"
               onClick={() => switchMode("forgot")}
-              className="mt-3 w-full text-center text-[14px] font-medium leading-[20px] text-brain-v1baby-blue-60 transition-colors hover:text-brain-v1purple [font-family:'Gilroy',sans-serif]"
+              className="mt-4 w-full text-center text-[14px] font-medium leading-[20px] text-brain-v1baby-blue-60 transition-colors hover:text-brain-v1purple [font-family:'Gilroy',sans-serif]"
             >
               Forgot password?
             </button>
