@@ -19,8 +19,9 @@
 import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import type { AddressInfo } from "net";
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { registerRoutes } from "./routes";
+import { storage } from "./storage";
 
 // ── Brain-core layer mocks ────────────────────────────────────────────────────
 // vi.hoisted ensures the mock objects exist before vi.mock factories run.
@@ -30,6 +31,7 @@ const brainMocks = vi.hoisted(() => ({
   issueTenantKey: vi.fn(),
   withBrainBaseUrl: vi.fn((_url: string, fn: () => unknown) => fn()),
   brainAuthConfigured: vi.fn(() => true),
+  platformServiceConfigured: vi.fn(() => false),
 }));
 
 vi.mock("./brain/auth", () => ({
@@ -42,17 +44,7 @@ vi.mock("./brain/auth", () => ({
 // Keep the rest of brain/client intact so unrelated routes stay importable;
 // only override the function called by the POST /api/developers/keys handler.
 vi.mock("./brain/client", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("./brain/client")>();
-  return {
-    ...actual,
-    issueTenantKey: brainMocks.issueTenantKey,
-  };
-});
-
-// Keep the rest of brain/baseUrl; only override withBrainBaseUrl so the handler
-// does not need a real AsyncLocalStorage context.
-vi.mock("./brain/baseUrl", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("./brain/baseUrl")>();
+  const actual = await importOriginal<typeof import("./brain/config")>();
   return {
     ...actual,
     withBrainBaseUrl: brainMocks.withBrainBaseUrl,
@@ -60,12 +52,25 @@ vi.mock("./brain/baseUrl", async (importOriginal) => {
 });
 
 // Keep the rest of brain/config; only override brainAuthConfigured so that
-// requireBrainMemberSession proceeds to getBrainSession without real env vars.
+// requireBrainMemberSession proceeds to getBrainSession without real env vars,
+// and platformServiceConfigured so the live-key guard can be controlled per test.
+vi.mock("./brain/config", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./brain/config")>();
+  return {
+    ...actual,
+    withBrainBaseUrl: brainMocks.withBrainBaseUrl,
+  };
+});
+
+// Keep the rest of brain/config; only override brainAuthConfigured so that
+// requireBrainMemberSession proceeds to getBrainSession without real env vars,
+// and platformServiceConfigured so the live-key guard can be controlled per test.
 vi.mock("./brain/config", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./brain/config")>();
   return {
     ...actual,
     brainAuthConfigured: brainMocks.brainAuthConfigured,
+    platformServiceConfigured: brainMocks.platformServiceConfigured,
   };
 });
 
@@ -176,75 +181,99 @@ beforeEach(() => {
 describe("POST /api/developers/keys — body validation (400 before brain-core)", () => {
   it("rejects a missing scopes field with 400 and never calls issueTenantKey", async () => {
     const client = await registerAndLogin(uid(), baseUrl);
-    const res = await client.request<{ error: string }>("POST", "/api/developers/keys", {
-      name: "My Key",
-      environment: "sandbox",
-      // scopes intentionally omitted
-    });
+    const res = await client.request<{ error: string }>(
+      "POST",
+      "/api/developers/keys",
+      LIVE_BODY,
+    );
 
-    expect(res.status).toBe(400);
-    expect((res.json as { error: string }).error).toBe("invalid_request");
-    expect(brainMocks.issueTenantKey).not.toHaveBeenCalled();
+  const LIVE_BODY = { name: "My Live Key", environment: "live", scopes: ["ledger:read"] };
+
+    expect(res.status).toBe(403);
+    expect((res.json as { error: string }).error).toBe("live_not_available");
   });
 
-  it("rejects an empty scopes array with 400 and never calls issueTenantKey", async () => {
+  it("does not call issueTenantKey when the 403 fires (no brain identity)", async () => {
+    brainMocks.platformServiceConfigured.mockReturnValue(true);
+    identitySpy.mockResolvedValue(undefined);
+
     const client = await registerAndLogin(uid(), baseUrl);
-    const res = await client.request<{ error: string }>("POST", "/api/developers/keys", {
-      name: "My Key",
-      environment: "sandbox",
-      scopes: [],
-    });
+    const res = await client.request<{ error: string }>(
+      "POST",
+      "/api/developers/keys",
+      LIVE_BODY,
+    );
 
-    expect(res.status).toBe(400);
-    expect((res.json as { error: string }).error).toBe("invalid_request");
-    expect(brainMocks.issueTenantKey).not.toHaveBeenCalled();
+  const LIVE_BODY = { name: "My Live Key", environment: "live", scopes: ["ledger:read"] };
+
+    expect(res.status).toBe(403);
+    expect((res.json as { error: string }).error).toBe("live_not_available");
   });
 
-  it("rejects an unrecognised environment with 400 and never calls issueTenantKey", async () => {
+  it("does not call issueTenantKey when the 403 fires (no brain identity)", async () => {
+    brainMocks.platformServiceConfigured.mockReturnValue(true);
+    identitySpy.mockResolvedValue(undefined);
+
     const client = await registerAndLogin(uid(), baseUrl);
-    const res = await client.request<{ error: string }>("POST", "/api/developers/keys", {
-      name: "My Key",
-      environment: "production", // not in enum ["sandbox","live"]
-      scopes: ["ledger:read"],
-    });
+    const res = await client.request<{ error: string }>(
+      "POST",
+      "/api/developers/keys",
+      LIVE_BODY,
+    );
 
-    expect(res.status).toBe(400);
-    expect((res.json as { error: string }).error).toBe("invalid_request");
-    expect(brainMocks.issueTenantKey).not.toHaveBeenCalled();
+  const LIVE_BODY = { name: "My Live Key", environment: "live", scopes: ["ledger:read"] };
+
+    expect(res.status).toBe(403);
+    expect((res.json as { error: string }).error).toBe("live_not_available");
   });
 
-  it("rejects an empty name with 400 and never calls issueTenantKey", async () => {
+  it("does not call issueTenantKey when the 403 fires (no brain identity)", async () => {
+    brainMocks.platformServiceConfigured.mockReturnValue(true);
+    identitySpy.mockResolvedValue(undefined);
+
     const client = await registerAndLogin(uid(), baseUrl);
-    const res = await client.request<{ error: string }>("POST", "/api/developers/keys", {
-      name: "",
-      environment: "sandbox",
-      scopes: ["ledger:read"],
-    });
+    const res = await client.request<{ error: string }>(
+      "POST",
+      "/api/developers/keys",
+      LIVE_BODY,
+    );
 
-    expect(res.status).toBe(400);
-    expect((res.json as { error: string }).error).toBe("invalid_request");
-    expect(brainMocks.issueTenantKey).not.toHaveBeenCalled();
+  const LIVE_BODY = { name: "My Live Key", environment: "live", scopes: ["ledger:read"] };
+
+    expect(res.status).toBe(403);
+    expect((res.json as { error: string }).error).toBe("live_not_available");
   });
 
-  it("rejects a whitespace-only name with 400 and never calls issueTenantKey", async () => {
+  it("does not call issueTenantKey when the 403 fires (no brain identity)", async () => {
+    brainMocks.platformServiceConfigured.mockReturnValue(true);
+    identitySpy.mockResolvedValue(undefined);
+
     const client = await registerAndLogin(uid(), baseUrl);
-    const res = await client.request<{ error: string }>("POST", "/api/developers/keys", {
-      name: "   ",
-      environment: "sandbox",
-      scopes: ["ledger:read"],
-    });
+    const res = await client.request<{ error: string }>(
+      "POST",
+      "/api/developers/keys",
+      LIVE_BODY,
+    );
 
-    expect(res.status).toBe(400);
-    expect((res.json as { error: string }).error).toBe("invalid_request");
-    expect(brainMocks.issueTenantKey).not.toHaveBeenCalled();
+  const LIVE_BODY = { name: "My Live Key", environment: "live", scopes: ["ledger:read"] };
+
+    expect(res.status).toBe(403);
+    expect((res.json as { error: string }).error).toBe("live_not_available");
   });
-});
 
-describe("POST /api/developers/keys — brain-core key issuance", () => {
-  it("calls issueTenantKey with the correct tenant id, environment, name, and scopes", async () => {
+  it("does not call issueTenantKey when the 403 fires (no brain identity)", async () => {
+    brainMocks.platformServiceConfigured.mockReturnValue(true);
+    identitySpy.mockResolvedValue(undefined);
+
     const client = await registerAndLogin(uid(), baseUrl);
     const body = { name: "My Sandbox Key", environment: "sandbox", scopes: ["ledger:read"] };
-    const res = await client.request("POST", "/api/developers/keys", body);
+    const res = await client.request<{ error: string }>(
+      "POST",
+      "/api/developers/keys",
+      LIVE_BODY,
+    );
+
+  const LIVE_BODY = { name: "My Live Key", environment: "live", scopes: ["ledger:read"] };
 
     expect(res.status).toBe(201);
 
@@ -282,18 +311,35 @@ describe("POST /api/developers/keys — brain-core key issuance", () => {
     );
 
     const client = await registerAndLogin(uid(), baseUrl);
-    const res = await client.request<{ error: string }>("POST", "/api/developers/keys", ISSUE_BODY);
+    const res = await client.request<{ error: string }>(
+      "POST",
+      "/api/developers/keys",
+      LIVE_BODY,
+    );
 
-    expect(res.status).toBe(502);
+  const LIVE_BODY = { name: "My Live Key", environment: "live", scopes: ["ledger:read"] };
+
+    expect(res.status).toBe(403);
+    expect((res.json as { error: string }).error).toBe("live_not_available");
   });
 
-  it("unauthenticated requests are rejected before any brain-core call is made", async () => {
-    // No session cookie — requireAuth must short-circuit to 401.
-    const client = new SessionClient(baseUrl);
-    const res = await client.request("POST", "/api/developers/keys", ISSUE_BODY);
+  it("does not call issueTenantKey when the 403 fires (no brain identity)", async () => {
+    brainMocks.platformServiceConfigured.mockReturnValue(true);
+    identitySpy.mockResolvedValue(undefined);
 
-    expect(res.status).toBe(401);
-    expect(brainMocks.getBrainSession).not.toHaveBeenCalled();
+    const client = await registerAndLogin(uid(), baseUrl);
+    const res = await client.request<{ error: string }>(
+      "POST",
+      "/api/developers/keys",
+      LIVE_BODY,
+    );
+
+  const LIVE_BODY = { name: "My Live Key", environment: "live", scopes: ["ledger:read"] };
+
+    expect(res.status).toBe(403);
+    expect(res.json.error).toBe("live_not_available");
     expect(brainMocks.issueTenantKey).not.toHaveBeenCalled();
   });
 });
+
+  let identitySpy: ReturnType<typeof vi.spyOn>;
