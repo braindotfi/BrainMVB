@@ -18,6 +18,12 @@
  *   • a live-key request with no brain identity is rejected 403
  *   • a live-key request with platformServiceConfigured=true + a valid identity
  *     reaches issueTenantKey and returns 201
+ *
+ * Also verified (rotate / revoke — no live-key guard):
+ *   • rotate succeeds (200) even when platformServiceConfigured=false + no brain identity
+ *   • rotate forwards the key id and member token to rotateTenantKey
+ *   • revoke succeeds (204) even when platformServiceConfigured=false + no brain identity
+ *   • revoke forwards the key id and member token to revokeTenantKey
  */
 
 import express, { type Express } from "express";
@@ -33,6 +39,8 @@ import { storage } from "./storage";
 const brainMocks = vi.hoisted(() => ({
   getBrainSession: vi.fn(),
   issueTenantKey: vi.fn(),
+  rotateTenantKey: vi.fn(),
+  revokeTenantKey: vi.fn(),
   withBrainBaseUrl: vi.fn((_url: string, fn: () => unknown) => fn()),
   brainAuthConfigured: vi.fn(() => true),
   platformServiceConfigured: vi.fn(() => false),
@@ -46,12 +54,14 @@ vi.mock("./brain/auth", () => ({
 }));
 
 // Keep the rest of brain/client intact so unrelated routes stay importable;
-// override only the functions called by the POST /api/developers/keys handler.
+// override only the key-management functions called by the handlers.
 vi.mock("./brain/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./brain/client")>();
   return {
     ...actual,
     issueTenantKey: brainMocks.issueTenantKey,
+    rotateTenantKey: brainMocks.rotateTenantKey,
+    revokeTenantKey: brainMocks.revokeTenantKey,
   };
 });
 
@@ -96,7 +106,8 @@ class SessionClient {
     });
     const setCookie = res.headers.get("set-cookie");
     if (setCookie) this.cookie = setCookie.split(";")[0];
-    const json = (await res.json()) as T;
+    const text = await res.text();
+    const json = (text ? JSON.parse(text) : null) as T;
     return { status: res.status, json };
   }
 }
@@ -150,6 +161,24 @@ const LIVE_ISSUE_SUCCESS = {
     rotated_from_id: null,
   },
   secret: "brain_sk_liveabcdef5678",
+};
+
+// A minimal valid rotate response — same shape as issue, key id changes.
+const ROTATE_SUCCESS = {
+  key: {
+    id: "key_live_rotated99",
+    name: "My Live Key",
+    environment: "live" as const,
+    scopes: ["ledger:read"],
+    key_prefix: "brain_sk_live",
+    key_last4: "cc44",
+    status: "active",
+    created_at: null,
+    last_used_at: null,
+    revoked_at: null,
+    rotated_from_id: "key_live_xyz789",
+  },
+  secret: "brain_sk_liverotated9999",
 };
 
 // ── Standard request bodies ───────────────────────────────────────────────────
@@ -211,6 +240,8 @@ let identitySpy: ReturnType<typeof vi.spyOn>;
 beforeEach(() => {
   brainMocks.getBrainSession.mockReset().mockResolvedValue(DEFAULT_SESSION);
   brainMocks.issueTenantKey.mockReset().mockResolvedValue(ISSUE_SUCCESS);
+  brainMocks.rotateTenantKey.mockReset().mockResolvedValue(ROTATE_SUCCESS);
+  brainMocks.revokeTenantKey.mockReset().mockResolvedValue(undefined);
   brainMocks.withBrainBaseUrl.mockReset().mockImplementation((_url: string, fn: () => unknown) => fn());
   brainMocks.brainAuthConfigured.mockReset().mockReturnValue(true);
   brainMocks.platformServiceConfigured.mockReset().mockReturnValue(false);
@@ -223,8 +254,8 @@ afterEach(() => {
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
-describe("POST /api/developers/keys — sandbox happy path", () => {
-  it("issues a sandbox key with the correct tenant id, environment, name, and scopes", async () => {
+describe("POST /api/developers/keys — brain-core key issuance", () => {
+  it("calls issueTenantKey with the correct tenant id, environment, name, and scopes", async () => {
     const client = await registerAndLogin(uid(), baseUrl);
     const res = await client.request<{ key: unknown; plaintext: string }>(
       "POST",
@@ -271,6 +302,16 @@ describe("POST /api/developers/keys — sandbox happy path", () => {
     const res = await client.request<{ error: string }>("POST", "/api/developers/keys", ISSUE_BODY);
 
     expect(res.status).toBe(502);
+  });
+
+  it("unauthenticated requests are rejected before any brain-core call is made", async () => {
+    // No session cookie — requireAuth must short-circuit to 401.
+    const client = new SessionClient(baseUrl);
+    const res = await client.request("POST", "/api/developers/keys", ISSUE_BODY);
+
+    expect(res.status).toBe(401);
+    expect(brainMocks.getBrainSession).not.toHaveBeenCalled();
+    expect(brainMocks.issueTenantKey).not.toHaveBeenCalled();
   });
 });
 
@@ -374,5 +415,66 @@ describe("POST /api/developers/keys — authentication", () => {
     expect(res.status).toBe(401);
     expect(brainMocks.getBrainSession).not.toHaveBeenCalled();
     expect(brainMocks.issueTenantKey).not.toHaveBeenCalled();
+  });
+});
+
+// ── Rotate — no live-key guard ────────────────────────────────────────────────
+//
+// rotate and revoke must never be blocked by platformServiceConfigured or the
+// brain-identity check.  A user who already holds a live key must be able to
+// rotate or revoke it even if their tenant link is later removed.
+
+describe("POST /api/developers/keys/:id/rotate — no live-key guard", () => {
+  const KEY_ID = "key_live_xyz789";
+
+  it("succeeds (200 + key + plaintext) even when platformServiceConfigured is false and no brain identity exists", async () => {
+    // Defaults from beforeEach: platformServiceConfigured=false, identitySpy=undefined.
+    const client = await registerAndLogin(uid(), baseUrl);
+    const res = await client.request<{ key: unknown; plaintext: string }>(
+      "POST",
+      `/api/developers/keys/${KEY_ID}/rotate`,
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.json).toHaveProperty("key");
+    expect(typeof (res.json as { plaintext: string }).plaintext).toBe("string");
+    // The upstream rotate was called — not gated.
+    expect(brainMocks.rotateTenantKey).toHaveBeenCalledOnce();
+  });
+
+  it("forwards the key id and member token to rotateTenantKey", async () => {
+    const client = await registerAndLogin(uid(), baseUrl);
+    await client.request("POST", `/api/developers/keys/${KEY_ID}/rotate`);
+
+    expect(brainMocks.rotateTenantKey).toHaveBeenCalledOnce();
+    const [calledToken, calledKeyId] = brainMocks.rotateTenantKey.mock.calls[0] as [string, string];
+    expect(calledToken).toBe(DEFAULT_SESSION.token);
+    expect(calledKeyId).toBe(KEY_ID);
+  });
+});
+
+// ── Revoke — no live-key guard ────────────────────────────────────────────────
+
+describe("DELETE /api/developers/keys/:id — no live-key guard", () => {
+  const KEY_ID = "key_live_xyz789";
+
+  it("succeeds (204) even when platformServiceConfigured is false and no brain identity exists", async () => {
+    // Defaults from beforeEach: platformServiceConfigured=false, identitySpy=undefined.
+    const client = await registerAndLogin(uid(), baseUrl);
+    const res = await client.request("DELETE", `/api/developers/keys/${KEY_ID}`);
+
+    expect(res.status).toBe(204);
+    // The upstream revoke was called — not gated.
+    expect(brainMocks.revokeTenantKey).toHaveBeenCalledOnce();
+  });
+
+  it("forwards the key id and member token to revokeTenantKey", async () => {
+    const client = await registerAndLogin(uid(), baseUrl);
+    await client.request("DELETE", `/api/developers/keys/${KEY_ID}`);
+
+    expect(brainMocks.revokeTenantKey).toHaveBeenCalledOnce();
+    const [calledToken, calledKeyId] = brainMocks.revokeTenantKey.mock.calls[0] as [string, string];
+    expect(calledToken).toBe(DEFAULT_SESSION.token);
+    expect(calledKeyId).toBe(KEY_ID);
   });
 });
