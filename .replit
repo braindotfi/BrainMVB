@@ -56,6 +56,10 @@ MAILERSEND_FROM_NAME = "Brain Finance"
 RESEND_FROM_EMAIL = "kevin@brain.fi"
 RESEND_FROM_NAME = "Kevin at Brain Finance"
 
+[userenv.development]
+RESEND_FROM_EMAIL = "kevin@brain.fi"
+RESEND_FROM_NAME = "Kevin at Brain Finance"
+
 [postMerge]
 path = "scripts/post-merge.sh"
 timeoutMs = 60000
