@@ -1040,6 +1040,22 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
   );
 }
 
+/** Parse a structured error from apiRequest's "STATUS: {json}" format. */
+function parseKeyMutationError(e: Error): { status: number; code: string; message: string } | null {
+  const m = e.message.match(/^(\d{3}):\s*(\{[\s\S]*\})$/);
+  if (!m) return null;
+  try {
+    const body = JSON.parse(m[2]) as Record<string, unknown>;
+    return {
+      status: Number(m[1]),
+      code: typeof body.error === "string" ? body.error : "",
+      message: typeof body.message === "string" ? body.message : e.message,
+    };
+  } catch {
+    return null;
+  }
+}
+
 /* ─── API Keys ─── */
 function KeysSection({ env }: { env: DevEnv }) {
   const alert = useAppAlert();
@@ -1077,7 +1093,18 @@ function KeysSection({ env }: { env: DevEnv }) {
       setScopes(["ledger:read"]);
       invalidate();
     },
-    onError: (e: Error) => alert.error("Couldn't create key", e.message),
+    onError: (e: Error) => {
+      const parsed = parseKeyMutationError(e);
+      if (parsed?.code === "live_not_available") {
+        alert.error("Live keys not available", parsed.message);
+        return;
+      }
+      if (parsed?.status === 429) {
+        alert.error("Rate limit hit", parsed.message);
+        return;
+      }
+      alert.error("Couldn't create key", e.message);
+    },
   });
 
   const rotateMut = useMutation({
@@ -1096,6 +1123,11 @@ function KeysSection({ env }: { env: DevEnv }) {
         setSelectedKeyId(null);
         alert.error("Key no longer exists", "This key was already rotated or revoked. The list has been refreshed.");
         invalidate();
+        return;
+      }
+      const parsed = parseKeyMutationError(e);
+      if (parsed?.status === 429) {
+        alert.error("Rate limit hit", parsed.message);
         return;
       }
       alert.error("Couldn't rotate key", e.message);
@@ -1118,6 +1150,11 @@ function KeysSection({ env }: { env: DevEnv }) {
         setSelectedKeyId(null);
         alert.success("Key already revoked", "This key was already revoked.");
         invalidate();
+        return;
+      }
+      const parsed = parseKeyMutationError(e);
+      if (parsed?.status === 429) {
+        alert.error("Rate limit hit", parsed.message);
         return;
       }
       alert.error("Couldn't revoke key", e.message);
