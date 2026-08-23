@@ -52,10 +52,10 @@ describe("ResetPasswordPage recovery path", () => {
     mount();
 
     await act(async () => {});
-    expect(container!.textContent).toContain("This link is no longer valid");
+    expect(container!.textContent).toContain("This Link Is No Longer Valid");
     expect(container!.textContent).toContain("expire 30 minutes after they are requested");
 
-    click("Request a new link");
+    click("Request A New Link");
     const email = container!.querySelector('[data-testid="input-reset-resend-email"]') as HTMLInputElement;
     setInput(email, "invitee@example.com");
     const form = email.closest("form")!;
@@ -71,8 +71,8 @@ describe("ResetPasswordPage recovery path", () => {
         body: JSON.stringify({ email: "invitee@example.com" }),
       }),
     );
-    expect(container!.textContent).toContain("Check your email");
-    expect(container!.textContent).not.toContain("Set a new password");
+    expect(container!.textContent).toContain("Check Your Email");
+    expect(container!.textContent).not.toContain("Set A New Password");
   });
 
   it("carries an invite return path through resend and back to the invite sign-in screen", async () => {
@@ -84,7 +84,7 @@ describe("ResetPasswordPage recovery path", () => {
     mount(invitePath);
 
     await act(async () => {});
-    click("Request a new link");
+    click("Request A New Link");
     const email = container!.querySelector('[data-testid="input-reset-resend-email"]') as HTMLInputElement;
     setInput(email, "invitee@example.com");
     await act(async () => {
@@ -98,7 +98,7 @@ describe("ResetPasswordPage recovery path", () => {
         body: JSON.stringify({ email: "invitee@example.com", return_to: invitePath }),
       }),
     );
-    click("Back to sign in");
+    click("Back To Sign In");
     expect(window.location.pathname).toBe(invitePath);
   });
 
@@ -130,7 +130,7 @@ describe("ResetPasswordPage recovery path", () => {
         }),
       }),
     );
-    click("Go to sign in");
+    click("Go To Sign In");
     expect(window.location.pathname).toBe(invitePath);
   });
 });

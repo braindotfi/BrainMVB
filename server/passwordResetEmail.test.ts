@@ -35,8 +35,10 @@ afterEach(() => {
 describe("Resend password reset delivery", () => {
   it("uses Resend's email endpoint with the existing verified sender", async () => {
     process.env.RESEND_API_KEY = "test-resend-key";
-    process.env.MAILERSEND_FROM_EMAIL = "sender@example.com";
-    process.env.MAILERSEND_FROM_NAME = "Brain Finance";
+    process.env.RESEND_FROM_EMAIL = "sender@example.com";
+    process.env.RESEND_FROM_NAME = "Brain Finance";
+    delete process.env.MAILERSEND_FROM_EMAIL;
+    delete process.env.MAILERSEND_FROM_NAME;
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ id: "email_test" }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
@@ -68,7 +70,8 @@ describe("Resend password reset delivery", () => {
 
   it("redacts a Resend provider response that includes reset-sensitive values", async () => {
     process.env.RESEND_API_KEY = "test-resend-key";
-    process.env.MAILERSEND_FROM_EMAIL = "sender@example.com";
+    process.env.RESEND_FROM_EMAIL = "sender@example.com";
+    delete process.env.MAILERSEND_FROM_EMAIL;
     const recipient = "recipient@example.com";
     const resetUrl = "https://app.brain.fi/reset-password/test-token";
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({

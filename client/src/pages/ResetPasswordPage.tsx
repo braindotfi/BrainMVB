@@ -101,31 +101,31 @@ export function ResetPasswordPage({ token, returnTo }: { token: string; returnTo
   const content = (() => {
     if (state === "checking") {
       return {
-        title: "Checking your link",
+        title: "Checking Your Link",
         body: "Please wait while we verify your password reset link.",
         children: <div className="mx-auto h-7 w-7 rounded-full border-2 border-brain-v1stroke-2 border-t-brain-v1purple animate-spin" />,
       };
     }
     if (state === "invalid") {
       return {
-        title: "This link is no longer valid",
+        title: "This Link Is No Longer Valid",
         body: "Password reset links expire 30 minutes after they are requested and can only be used once.",
         children: (
           <Button variant="cta" size="large" className="w-full" onClick={() => setState("resend")}>
-            Request a new link
+            Request A New Link
           </Button>
         ),
       };
     }
     if (state === "resend") {
       return {
-        title: "Request a new link",
+        title: "Request A New Link",
         body: "Enter your email and we'll send a reset link if an account matches it.",
         children: (
           <form onSubmit={resend} className="flex flex-col gap-4 text-left">
             <div className="flex flex-col gap-1.5">
               <label className="pl-1 [font-family:'Gilroy',sans-serif] text-[14px] font-medium leading-[20px] text-brain-v1baby-blue-60">
-                Email address
+                Email Address
               </label>
               <input
                 data-testid="input-reset-resend-email"
@@ -140,7 +140,7 @@ export function ResetPasswordPage({ token, returnTo }: { token: string; returnTo
             {error && <p className="px-1 text-[14px] leading-[20px] text-brain-v1error-text [font-family:'Gilroy',sans-serif]">{error}</p>}
             <Button type="submit" variant="cta" size="large" disabled={submitting} className="mt-1 w-full">
               {submitting && <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />}
-              Send reset link
+              Send Reset Link
             </Button>
           </form>
         ),
@@ -148,34 +148,34 @@ export function ResetPasswordPage({ token, returnTo }: { token: string; returnTo
     }
     if (state === "resent") {
       return {
-        title: "Check your email",
+        title: "Check Your Email",
         body: "If an account matches that email, a password reset link will arrive shortly.",
         children: (
           <Button variant="cta" size="large" className="w-full" onClick={() => navigate(inviteReturnTo ?? "/")}>
-            Back to sign in
+            Back To Sign In
           </Button>
         ),
       };
     }
     if (state === "complete") {
       return {
-        title: "Password updated",
+        title: "Password Updated",
         body: "Your password has been changed. You can sign in now.",
         children: (
           <Button variant="cta" size="large" className="w-full" onClick={() => navigate(inviteReturnTo ?? "/")}>
-            Go to sign in
+            Go To Sign In
           </Button>
         ),
       };
     }
     return {
-      title: "Set a new password",
+      title: "Set A New Password",
       body: "Choose a new password with at least 8 characters.",
       children: (
         <form onSubmit={submit} className="flex flex-col gap-4 text-left">
           <div className="flex flex-col gap-1.5">
             <label className="pl-1 [font-family:'Gilroy',sans-serif] text-[14px] font-medium leading-[20px] text-brain-v1baby-blue-60">
-              New password
+              New Password
             </label>
             <input
               data-testid="input-reset-password"
@@ -189,7 +189,7 @@ export function ResetPasswordPage({ token, returnTo }: { token: string; returnTo
           </div>
           <div className="flex flex-col gap-1.5">
             <label className="pl-1 [font-family:'Gilroy',sans-serif] text-[14px] font-medium leading-[20px] text-brain-v1baby-blue-60">
-              Confirm new password
+              Confirm New Password
             </label>
             <input
               data-testid="input-reset-password-confirm"
@@ -204,7 +204,7 @@ export function ResetPasswordPage({ token, returnTo }: { token: string; returnTo
           {error && <p className="px-1 text-[14px] leading-[20px] text-brain-v1error-text [font-family:'Gilroy',sans-serif]">{error}</p>}
           <Button type="submit" variant="cta" size="large" disabled={submitting} className="mt-1 w-full">
             {submitting && <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />}
-            Update password
+            Update Password
           </Button>
         </form>
       ),
