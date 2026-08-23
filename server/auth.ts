@@ -198,12 +198,14 @@ export function passwordResetTokenDigest(token: string): string {
 }
 
 function passwordResetUrl(token: string, returnTo?: string): string {
-  // Development and production use separate databases. A development token
-  // must link back to the development app, otherwise app.brain.fi checks it
-  // against production and reports a valid fresh token as expired/invalid.
+  // Development and production use separate databases. A token stored in the
+  // dev DB must link back to the dev app; sending a link to app.brain.fi lets
+  // the production DB reject it as invalid. REPLIT_DEV_DOMAIN being present is
+  // the reliable signal that we are running inside a Replit preview — NODE_ENV
+  // is intentionally left unset in this environment.
   const baseUrl =
     process.env.APP_BASE_URL
-    || (process.env.NODE_ENV === "development" && process.env.REPLIT_DEV_DOMAIN
+    || (process.env.REPLIT_DEV_DOMAIN
       ? `https://${process.env.REPLIT_DEV_DOMAIN}`
       : "https://app.brain.fi");
   const url = new URL(`/reset-password/${encodeURIComponent(token)}`, baseUrl);
