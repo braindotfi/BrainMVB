@@ -451,6 +451,16 @@ describe("POST /api/developers/keys/:id/rotate — no live-key guard", () => {
     expect(calledToken).toBe(DEFAULT_SESSION.token);
     expect(calledKeyId).toBe(KEY_ID);
   });
+
+  it("rejects an unauthenticated request before brain-core is reached", async () => {
+    // No session cookie — requireAuth must short-circuit to 401 before rotateTenantKey is called.
+    const client = new SessionClient(baseUrl);
+    const res = await client.request("POST", `/api/developers/keys/${KEY_ID}/rotate`);
+
+    expect(res.status).toBe(401);
+    expect(brainMocks.getBrainSession).not.toHaveBeenCalled();
+    expect(brainMocks.rotateTenantKey).not.toHaveBeenCalled();
+  });
 });
 
 // ── Revoke — no live-key guard ────────────────────────────────────────────────
@@ -476,5 +486,15 @@ describe("DELETE /api/developers/keys/:id — no live-key guard", () => {
     const [calledToken, calledKeyId] = brainMocks.revokeTenantKey.mock.calls[0] as [string, string];
     expect(calledToken).toBe(DEFAULT_SESSION.token);
     expect(calledKeyId).toBe(KEY_ID);
+  });
+
+  it("rejects an unauthenticated request before brain-core is reached", async () => {
+    // No session cookie — requireAuth must short-circuit to 401 before revokeTenantKey is called.
+    const client = new SessionClient(baseUrl);
+    const res = await client.request("DELETE", `/api/developers/keys/${KEY_ID}`);
+
+    expect(res.status).toBe(401);
+    expect(brainMocks.getBrainSession).not.toHaveBeenCalled();
+    expect(brainMocks.revokeTenantKey).not.toHaveBeenCalled();
   });
 });
