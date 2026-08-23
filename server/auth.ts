@@ -198,7 +198,14 @@ export function passwordResetTokenDigest(token: string): string {
 }
 
 function passwordResetUrl(token: string, returnTo?: string): string {
-  const baseUrl = process.env.APP_BASE_URL || "https://app.brain.fi";
+  // Development and production use separate databases. A development token
+  // must link back to the development app, otherwise app.brain.fi checks it
+  // against production and reports a valid fresh token as expired/invalid.
+  const baseUrl =
+    process.env.APP_BASE_URL
+    || (process.env.NODE_ENV === "development" && process.env.REPLIT_DEV_DOMAIN
+      ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+      : "https://app.brain.fi");
   const url = new URL(`/reset-password/${encodeURIComponent(token)}`, baseUrl);
   if (returnTo) url.searchParams.set("return_to", returnTo);
   return url.toString();
