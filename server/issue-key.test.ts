@@ -173,6 +173,73 @@ beforeEach(() => {
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
+describe("POST /api/developers/keys — body validation (400 before brain-core)", () => {
+  it("rejects a missing scopes field with 400 and never calls issueTenantKey", async () => {
+    const client = await registerAndLogin(uid(), baseUrl);
+    const res = await client.request<{ error: string }>("POST", "/api/developers/keys", {
+      name: "My Key",
+      environment: "sandbox",
+      // scopes intentionally omitted
+    });
+
+    expect(res.status).toBe(400);
+    expect((res.json as { error: string }).error).toBe("invalid_request");
+    expect(brainMocks.issueTenantKey).not.toHaveBeenCalled();
+  });
+
+  it("rejects an empty scopes array with 400 and never calls issueTenantKey", async () => {
+    const client = await registerAndLogin(uid(), baseUrl);
+    const res = await client.request<{ error: string }>("POST", "/api/developers/keys", {
+      name: "My Key",
+      environment: "sandbox",
+      scopes: [],
+    });
+
+    expect(res.status).toBe(400);
+    expect((res.json as { error: string }).error).toBe("invalid_request");
+    expect(brainMocks.issueTenantKey).not.toHaveBeenCalled();
+  });
+
+  it("rejects an unrecognised environment with 400 and never calls issueTenantKey", async () => {
+    const client = await registerAndLogin(uid(), baseUrl);
+    const res = await client.request<{ error: string }>("POST", "/api/developers/keys", {
+      name: "My Key",
+      environment: "production", // not in enum ["sandbox","live"]
+      scopes: ["ledger:read"],
+    });
+
+    expect(res.status).toBe(400);
+    expect((res.json as { error: string }).error).toBe("invalid_request");
+    expect(brainMocks.issueTenantKey).not.toHaveBeenCalled();
+  });
+
+  it("rejects an empty name with 400 and never calls issueTenantKey", async () => {
+    const client = await registerAndLogin(uid(), baseUrl);
+    const res = await client.request<{ error: string }>("POST", "/api/developers/keys", {
+      name: "",
+      environment: "sandbox",
+      scopes: ["ledger:read"],
+    });
+
+    expect(res.status).toBe(400);
+    expect((res.json as { error: string }).error).toBe("invalid_request");
+    expect(brainMocks.issueTenantKey).not.toHaveBeenCalled();
+  });
+
+  it("rejects a whitespace-only name with 400 and never calls issueTenantKey", async () => {
+    const client = await registerAndLogin(uid(), baseUrl);
+    const res = await client.request<{ error: string }>("POST", "/api/developers/keys", {
+      name: "   ",
+      environment: "sandbox",
+      scopes: ["ledger:read"],
+    });
+
+    expect(res.status).toBe(400);
+    expect((res.json as { error: string }).error).toBe("invalid_request");
+    expect(brainMocks.issueTenantKey).not.toHaveBeenCalled();
+  });
+});
+
 describe("POST /api/developers/keys — brain-core key issuance", () => {
   it("calls issueTenantKey with the correct tenant id, environment, name, and scopes", async () => {
     const client = await registerAndLogin(uid(), baseUrl);
