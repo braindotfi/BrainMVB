@@ -2,6 +2,7 @@ import { Switch, Route, useRoute } from "wouter";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppAlertProvider } from "@/components/AppAlert";
+import { SourceIngestToastProvider } from "@/components/SourceIngestToast";
 import { useAuth } from "@/lib/authContext";
 import NotFound from "@/pages/not-found";
 import { useState, useEffect, useRef } from "react";
@@ -370,8 +371,10 @@ function App() {
         <SessionTimeoutProvider>
           <TooltipProvider>
             <AppAlertProvider>
-              <Toaster />
-              <InviteRouteBoundary />
+              <SourceIngestToastProvider>
+                <Toaster />
+                <InviteRouteBoundary />
+              </SourceIngestToastProvider>
             </AppAlertProvider>
           </TooltipProvider>
         </SessionTimeoutProvider>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSourceIngestToast } from "@/components/SourceIngestToast";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { categoryCounts, CATEGORY_ORDER, type CategoryId } from "@/lib/sourceCategories";
@@ -399,6 +400,7 @@ export function DocumentUpload({ category, onDone }: { category: string; onDone:
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { notifyUploadStart, notifyUploadSuccess, notifyUploadError } = useSourceIngestToast();
   const [objectType, setObjectType] = useState<DocumentObjectType | "">(
     () => defaultObjectTypeForCategory(category as CategoryId) ?? "",
   );
@@ -432,8 +434,14 @@ export function DocumentUpload({ category, onDone }: { category: string; onDone:
       }
       return json;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/integrations/documents"] }),
-    onError: (err: Error) => setError(err.message.replace(/^\d+:\s*/, "")),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/integrations/documents"] });
+      notifyUploadSuccess(data);
+    },
+    onError: (err: Error) => {
+      setError(err.message.replace(/^\d+:\s*/, ""));
+      notifyUploadError();
+    },
   });
 
   const removeDoc = useMutation({
@@ -463,13 +471,18 @@ export function DocumentUpload({ category, onDone }: { category: string; onDone:
       const firstSuggestion = suggestObjectTypeFromFilename(supported[0]?.name ?? "");
       if (firstSuggestion && firstSuggestion !== objectType) setObjectType(firstSuggestion);
     }
+    if (supported.length > 0) {
+      // Show the global progress toast. For a single file use its name; for a
+      // batch use a generic label so the title doesn't flicker between files.
+      notifyUploadStart(supported.length === 1 ? supported[0].name : undefined);
+    }
     supported.forEach((file) => {
       const forFile = !objectTypeTouched
         ? (suggestObjectTypeFromFilename(file.name) ?? objectType)
         : objectType;
       uploadMut.mutate({ file, objectType: forFile });
     });
-  }, [uploadMut, objectType, objectTypeTouched]);
+  }, [uploadMut, objectType, objectTypeTouched, notifyUploadStart]);
 
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
