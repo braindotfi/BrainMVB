@@ -479,6 +479,25 @@ describe("POST /api/developers/keys/:id/rotate — no live-key guard", () => {
     expect(res.status).toBe(502);
     expect((res.json as { error: string }).error).toBe("unexpected_upstream_shape");
   });
+
+  it("returns a non-2xx status and does not crash when brain-core returns null", async () => {
+    // Simulate brain-core resolving to null (e.g. a silent upstream failure).
+    // Accessing `issued.key` inside the handler throws a TypeError which must
+    // be caught and converted to an error response — not a server crash.
+    brainMocks.rotateTenantKey.mockResolvedValue(null);
+
+    const client = await registerAndLogin(uid(), baseUrl);
+    const res = await client.request<{ error: string }>(
+      "POST",
+      `/api/developers/keys/${KEY_ID}/rotate`,
+    );
+
+    // rotateTenantKey was reached — this is not a guard-layer rejection.
+    expect(brainMocks.rotateTenantKey).toHaveBeenCalledOnce();
+    // The server must surface a clear error status, not a 2xx.
+    expect(res.status).toBeGreaterThanOrEqual(500);
+    expect(res.status).toBeLessThan(600);
+  });
 });
 
 // ── Revoke — no live-key guard ────────────────────────────────────────────────
