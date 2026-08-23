@@ -121,20 +121,22 @@ function progressForStatus(
 /* ─── Card component ─────────────────────────────────────────────────────── */
 
 function SourceIngestCard({
-  label,
+  sourceName,
   pct,
   transitionMs,
 }: {
-  label: string;
+  /** Filename or source label shown beneath the fixed "Adding Source" title. */
+  sourceName?: string;
   pct: number;
   transitionMs: number;
 }) {
   const clamped = Math.max(5, Math.min(100, pct));
+  const ariaLabel = sourceName ? `Adding Source: ${sourceName}` : "Adding Source";
   return createPortal(
     <div
       role="status"
       aria-live="polite"
-      aria-label={label}
+      aria-label={ariaLabel}
       data-testid="source-ingest-toast"
       className="fixed bottom-[20px] right-[20px] z-[101] pointer-events-none"
     >
@@ -153,11 +155,16 @@ function SourceIngestCard({
           className="shrink-0 size-[24px] rounded-full object-cover"
         />
 
-        {/* Title + progress bar */}
+        {/* Fixed "Adding Source" title + optional filename subtitle + progress bar */}
         <div className="flex flex-col gap-[6px] flex-1 min-w-0">
-          <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[24px] truncate">
-            {label}
-          </p>
+          <div className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[24px]">
+            {/* Permanent title — always visible */}
+            <p className="text-brain-v1baby-blue-100 truncate">Adding Source</p>
+            {/* Source / filename — single truncated line when present */}
+            {sourceName && (
+              <p className="text-brain-v1baby-blue-60 truncate">{sourceName}</p>
+            )}
+          </div>
 
           {/* Track */}
           <div
@@ -329,15 +336,11 @@ export function SourceIngestToastProvider({ children }: { children: ReactNode })
     [notifyUploadStart, notifyUploadSuccess, notifyUploadError],
   );
 
-  const displayLabel = state.label
-    ? `Adding "${state.label}"`
-    : "Adding Source";
-
   return (
     <SourceIngestContext.Provider value={value}>
       {children}
       {visible && (
-        <SourceIngestCard label={displayLabel} pct={pct} transitionMs={transitionMs} />
+        <SourceIngestCard sourceName={state.label} pct={pct} transitionMs={transitionMs} />
       )}
     </SourceIngestContext.Provider>
   );
