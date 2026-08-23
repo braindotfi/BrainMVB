@@ -461,6 +461,24 @@ describe("POST /api/developers/keys/:id/rotate — no live-key guard", () => {
     expect(brainMocks.getBrainSession).not.toHaveBeenCalled();
     expect(brainMocks.rotateTenantKey).not.toHaveBeenCalled();
   });
+
+  it("returns 502 unexpected_upstream_shape when brain-core returns a malformed payload (missing key/secret)", async () => {
+    // Simulate an upstream response that is structurally wrong — the `key`
+    // object and `secret` are both absent.  The handler must detect this and
+    // return 502 rather than silently forwarding broken data to the client.
+    brainMocks.rotateTenantKey.mockResolvedValue({ unexpected_field: true });
+
+    const client = await registerAndLogin(uid(), baseUrl);
+    const res = await client.request<{ error: string }>(
+      "POST",
+      `/api/developers/keys/${KEY_ID}/rotate`,
+    );
+
+    // The guard must have fired — upstream was reached, the shape was wrong.
+    expect(brainMocks.rotateTenantKey).toHaveBeenCalledOnce();
+    expect(res.status).toBe(502);
+    expect((res.json as { error: string }).error).toBe("unexpected_upstream_shape");
+  });
 });
 
 // ── Revoke — no live-key guard ────────────────────────────────────────────────
