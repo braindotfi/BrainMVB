@@ -893,3 +893,76 @@ describe("ytdWindowKeys", () => {
     }
   });
 });
+
+// ─── chart–assistant parity for controlled fixtures ───────────────────────────
+//
+// These tests establish that the chart's arithmetic is correct and internally
+// consistent for a given transaction feed. The only open question on a live
+// tenant is whether the feed itself is complete (see the `truncated` prop on
+// MonthlyBreakdownCard and the page-cap note in its opening comment).
+//
+// Both buildMonthlyWindow (what the chart renders) and buildMonthlyBreakdown
+// (what the chart's detail panel derives from) must agree on identical input.
+// A deterministic server calculation using the same direction-based rules would
+// produce the same figures for the same feed — so a discrepancy between the
+// chart and any other surface that uses the same data is a sign that one of
+// them is working from a different set of transactions, not that the arithmetic
+// differs.
+
+describe("chart arithmetic parity — controlled single-currency fixture", () => {
+  // Fixed July 2026 transactions: 3 inflows, 2 outflows, 1 transfer (must not count).
+  const JUL_TXS: CashFlowTxLike[] = [
+    TX({ id: "in1", direction: "inflow",  amount: "4200.00", transaction_date: "2026-07-05" }),
+    TX({ id: "in2", direction: "inflow",  amount: "1800.00", transaction_date: "2026-07-14" }),
+    TX({ id: "in3", direction: "inflow",  amount:  "600.00", transaction_date: "2026-07-31" }),
+    TX({ id: "out1", direction: "outflow", amount:  "900.00", transaction_date: "2026-07-10" }),
+    TX({ id: "out2", direction: "outflow", amount:  "350.00", transaction_date: "2026-07-22" }),
+    // transfer: real money movement, but counts toward neither income nor expenses
+    TX({ id: "xfer", direction: "transfer", amount: "5000.00", transaction_date: "2026-07-15" }),
+  ];
+
+  it("buildMonthlyWindow and buildMonthlyBreakdown produce identical figures for the same feed", () => {
+    const window = buildMonthlyWindow(JUL_TXS, ["2026-07"]);
+    const breakdown = buildMonthlyBreakdown(JUL_TXS);
+    const julBreakdown = breakdown.find((e) => e.monthKey === "2026-07");
+
+    // Both surfaces must agree — they share the same arithmetic, so any
+    // discrepancy in a live comparison means the feeds differ, not the math.
+    expect(window[0].income).toBe(julBreakdown?.income);
+    expect(window[0].expenses).toBe(julBreakdown?.expenses);
+  });
+
+  it("income is the exact sum of inflows, no more", () => {
+    const [entry] = buildMonthlyWindow(JUL_TXS, ["2026-07"]);
+    // 4200 + 1800 + 600 = 6600; the $5000 transfer must not be added
+    expect(entry.income).toBe(6600);
+  });
+
+  it("expenses is the exact sum of outflows, no more", () => {
+    const [entry] = buildMonthlyWindow(JUL_TXS, ["2026-07"]);
+    // 900 + 350 = 1250; the transfer must not inflate this either
+    expect(entry.expenses).toBe(1250);
+  });
+
+  it("a transfer never contributes to income or expenses", () => {
+    const transferOnly: CashFlowTxLike[] = [
+      TX({ id: "t", direction: "transfer", amount: "99999.00", transaction_date: "2026-07-01" }),
+    ];
+    const [entry] = buildMonthlyWindow(transferOnly, ["2026-07"]);
+    expect(entry.income).toBe(0);
+    expect(entry.expenses).toBe(0);
+  });
+
+  it("matches a manual month sum — the reference a live comparison must equal", () => {
+    // This is the deterministic expected answer for these transactions.
+    // If the chart and the Brain Assistant disagree on a tenant that returned
+    // exactly these records, the categorisation or page-cap differences apply
+    // (see the parity note in MonthlyBreakdownCard.tsx).
+    const [entry] = buildMonthlyWindow(JUL_TXS, ["2026-07"]);
+    expect(entry).toMatchObject({
+      monthKey: "2026-07",
+      income:   6600,
+      expenses: 1250,
+    });
+  });
+});

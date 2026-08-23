@@ -19,6 +19,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { withBrainBaseUrl } from "./baseUrl";
 import { answerDeterministically, classify, resolveCounterparty } from "./deterministicAnswers";
+import { buildMonthlyWindow } from "@/lib/cashFlow";
 
 const BASE = "https://api.brain.test/v1";
 const TOKEN = "test-token";
@@ -35,6 +36,8 @@ interface Fixture {
   /** Pages returned in order; the walk stops when a page has `next_cursor: null`. */
   obligationPages?: unknown[];
   invoicePages?: unknown[];
+  /** Pages returned in order for the transaction endpoint. */
+  transactionPages?: unknown[];
   /** Endpoints that should hard-fail, matched by substring. */
   failOn?: string[];
 }
@@ -60,6 +63,9 @@ function install(fx: Fixture): void {
         }
         if (path.endsWith("/ledger/invoices")) {
           return page(fx.invoicePages, url);
+        }
+        if (path.endsWith("/ledger/transactions")) {
+          return page(fx.transactionPages, url);
         }
         return {};
       })();
@@ -610,5 +616,233 @@ describe("no model is consulted on a structured path", () => {
     expect(llm).toBeGreaterThan(-1);
     expect(deterministic).toBeLessThan(wiki);
     expect(deterministic).toBeLessThan(llm);
+  });
+});
+
+/* ── monthly income / expenses ───────────────────────────────────────────── */
+//
+// These tests establish the cross-surface parity contract:
+// answerMonthlyIncomeExpenses() applies the same direction bucketing as
+// buildMonthlyBreakdown() in client/src/lib/cashFlow.ts.  Both are tested
+// against the SAME controlled July 2026 fixture so that any future divergence
+// between the two code paths is caught immediately rather than discovered by a
+// live comparison that produces different numbers.
+//
+// NOW = 2026-08-05, so "last month" resolves to July 2026.
+
+const tx = (t: Record<string, unknown>) => ({
+  id: "tx_1",
+  amount: "1000.00",
+  currency: "USD",
+  direction: "inflow" as const,
+  transaction_date: "2026-07-01",
+  ...t,
+});
+
+function oneTxPage(rows: unknown[]): unknown {
+  return { transactions: rows, next_cursor: null };
+}
+
+function stuckTxPages(rows: unknown[]): unknown[] {
+  return [
+    { transactions: rows, next_cursor: "p0" },
+    { transactions: rows, next_cursor: "p0" },
+  ];
+}
+
+// The shared July 2026 fixture — identical to the one in cashFlow.test.ts
+// under "chart arithmetic parity — controlled single-currency fixture".
+// income = 4200 + 1800 + 600 = 6600
+// expenses = 900 + 350 = 1250
+// transfer (5000) must be excluded from both
+const JUL_TX_FIXTURE = [
+  tx({ id: "in1", direction: "inflow",   amount: "4200.00", transaction_date: "2026-07-05" }),
+  tx({ id: "in2", direction: "inflow",   amount: "1800.00", transaction_date: "2026-07-14" }),
+  tx({ id: "in3", direction: "inflow",   amount:  "600.00", transaction_date: "2026-07-31" }),
+  tx({ id: "out1", direction: "outflow",  amount:  "900.00", transaction_date: "2026-07-10" }),
+  tx({ id: "out2", direction: "outflow",  amount:  "350.00", transaction_date: "2026-07-22" }),
+  tx({ id: "xfer", direction: "transfer", amount: "5000.00", transaction_date: "2026-07-15" }),
+];
+
+describe("monthly income / expenses", () => {
+  describe("classifier", () => {
+    it("routes questions with a month name + income/expense signal", () => {
+      expect(classify("what was July 2026's income and expenses?")).toBe("monthly-income-expenses");
+      expect(classify("how much did we earn in July 2026?")).toBe("monthly-income-expenses");
+      expect(classify("what were our expenses in August?")).toBe("monthly-income-expenses");
+      expect(classify("show me this month's cash flow")).toBe("monthly-income-expenses");
+      expect(classify("what was our revenue last month?")).toBe("monthly-income-expenses");
+      expect(classify("how much did we spend last month?")).toBe("monthly-income-expenses");
+      expect(classify("July 2026 income breakdown")).toBe("monthly-income-expenses");
+    });
+
+    it("does not route questions without an income/expense signal", () => {
+      // A month mention alone is not enough
+      expect(classify("what happened in July?")).toBeNull();
+      expect(classify("summarise last month")).toBeNull();
+    });
+
+    it("does not route income/expense questions with no month reference", () => {
+      // No month → falls through to the normal assistant
+      expect(classify("what is our total income?")).toBeNull();
+    });
+
+    it("monthly path wins over the payroll path for historical questions", () => {
+      // "last month's payroll expenses" is a historical reporting question;
+      // the payroll path answers outstanding obligations, not past spend.
+      expect(classify("what were last month's payroll expenses?")).toBe("monthly-income-expenses");
+    });
+  });
+
+  describe("answer — correct figures", () => {
+    it("produces the same income and expenses as buildMonthlyBreakdown for the same controlled fixture", async () => {
+      // Parity proof: both the chart helper (cashFlow.ts) and this deterministic path
+      // apply the same direction-based bucketing.  The expected values here are the
+      // same manually-verified figures in cashFlow.test.ts's parity suite.
+      install({ transactionPages: [oneTxPage(JUL_TX_FIXTURE)] });
+
+      const out = await run("what was July 2026's income and expenses?");
+      expect(out?.answered).toBe(true);
+      expect(out?.path).toBe("monthly-income-expenses");
+      // Income: 4200 + 1800 + 600 = 6600
+      expect(out?.reply).toContain("6,600.00");
+      // Expenses: 900 + 350 = 1250
+      expect(out?.reply).toContain("1,250.00");
+      // The $5000 transfer must not appear in either total
+      expect(out?.reply).not.toContain("5,000");
+    });
+
+    it("resolves 'last month' to the calendar month before now", async () => {
+      // NOW = 2026-08-05 → last month = July 2026
+      install({ transactionPages: [oneTxPage([
+        tx({ id: "t1", direction: "inflow", amount: "3000.00", transaction_date: "2026-07-10" }),
+      ])] });
+      const out = await run("what were our income and expenses last month?");
+      expect(out?.answered).toBe(true);
+      expect(out?.reply).toContain("July 2026");
+      expect(out?.reply).toContain("3,000.00");
+    });
+
+    it("counts only the asked month — transactions in adjacent months are excluded", async () => {
+      install({ transactionPages: [oneTxPage([
+        tx({ id: "jul", direction: "inflow",  amount: "2000.00", transaction_date: "2026-07-15" }),
+        tx({ id: "jun", direction: "inflow",  amount: "9999.00", transaction_date: "2026-06-30" }),
+        tx({ id: "aug", direction: "outflow", amount: "9999.00", transaction_date: "2026-08-01" }),
+      ])] });
+      const out = await run("what was July 2026's income and expenses?");
+      expect(out?.answered).toBe(true);
+      expect(out?.reply).toContain("2,000.00");
+      expect(out?.reply).not.toContain("9,999");
+    });
+
+    it("says so plainly when a month has no income or expense transactions", async () => {
+      // Only a transfer — must say "no income or expense" rather than "$0"
+      install({ transactionPages: [oneTxPage([
+        tx({ id: "t", direction: "transfer", amount: "5000.00", transaction_date: "2026-07-01" }),
+      ])] });
+      const out = await run("what was July 2026's income and expenses?");
+      expect(out?.answered).toBe(true);
+      expect(out?.reply).toContain("No income or expense transactions");
+      expect(out?.reply).not.toMatch(/\d[\d,]*\.\d{2}/);
+    });
+
+    it("sums multi-currency amounts without conversion, then discloses the mixed currencies", async () => {
+      /* Currency policy: identical to the Monthly Breakdown chart's absAmount() —
+         all amounts are added regardless of currency. This is a policy choice, not
+         an oversight: it matches the chart so both surfaces produce the same total.
+         The reply notes which currencies were mixed so the user can judge the figure. */
+      install({ transactionPages: [oneTxPage([
+        tx({ id: "u", direction: "inflow", amount: "1000.00", currency: "USD", transaction_date: "2026-07-01" }),
+        tx({ id: "e", direction: "inflow", amount:  "800.00", currency: "EUR", transaction_date: "2026-07-02" }),
+      ])] });
+      const out = await run("what was July 2026's income and expenses?");
+      expect(out?.answered).toBe(true);
+      // 1000 + 800 = 1800 (mixed total, same policy as the chart)
+      expect(out?.reply).toContain("1,800.00");
+      // The currencies must be disclosed so the user knows the total is mixed
+      expect(out?.reply).toContain("USD");
+      expect(out?.reply).toContain("EUR");
+    });
+  });
+
+  describe("cross-surface parity: buildMonthlyWindow vs deterministic answer", () => {
+    // One shared fixture, both computations run against it.
+    // buildMonthlyWindow is what the MonthlyBreakdownCard chart renders.
+    // answerMonthlyIncomeExpenses is the deterministic assistant path.
+    // Given the same transaction rows, both must produce identical figures.
+
+    it("single-currency: chart helper and deterministic answer agree on the same fixture", async () => {
+      install({ transactionPages: [oneTxPage(JUL_TX_FIXTURE)] });
+
+      // Chart computation (no BFF call needed — same pure function the component uses)
+      const chartResult = buildMonthlyWindow(JUL_TX_FIXTURE, ["2026-07"]);
+
+      // Deterministic assistant computation (cursor-walked from the mocked ledger)
+      const out = await run("what was July 2026's income and expenses?");
+
+      expect(out?.answered).toBe(true);
+      // Both must produce income = 6600, expenses = 1250
+      expect(chartResult[0].income).toBe(6600);
+      expect(chartResult[0].expenses).toBe(1250);
+      expect(out?.reply).toContain("6,600.00");
+      expect(out?.reply).toContain("1,250.00");
+    });
+
+    it("multi-currency: both surfaces sum without conversion, producing the same mixed total", async () => {
+      const multiTx = [
+        tx({ id: "u", direction: "inflow", amount: "1000.00", currency: "USD", transaction_date: "2026-07-01" }),
+        tx({ id: "e", direction: "inflow", amount: "500.00",  currency: "EUR", transaction_date: "2026-07-02" }),
+      ];
+      install({ transactionPages: [oneTxPage(multiTx)] });
+
+      // Chart: sums without conversion → income = 1000 + 500 = 1500
+      const chartResult = buildMonthlyWindow(multiTx, ["2026-07"]);
+      expect(chartResult[0].income).toBe(1500);
+
+      // Deterministic answer: same policy → also 1500
+      const out = await run("what was July 2026's income and expenses?");
+      expect(out?.answered).toBe(true);
+      expect(out?.reply).toContain("1,500.00");
+    });
+
+    it("truncation consistency: assistant refuses; chart withholds figures via truncated prop", async () => {
+      // The chart receives truncated=true when next_cursor is non-null and renders "—"
+      // instead of a partial figure.  The assistant refuses entirely.  Both are honest
+      // about incompleteness and neither quotes a number from a partial read.
+      install({ transactionPages: stuckTxPages([
+        tx({ id: "t1", direction: "inflow", amount: "9999.00", transaction_date: "2026-07-05" }),
+      ]) });
+      const out = await run("what was July 2026's income and expenses?");
+      expect(out?.answered).toBe(false);
+      expect(out?.reply).toContain("only able to read part of the ledger");
+      // No figure from a known-partial read
+      expect(out?.reply).not.toMatch(/\d[\d,]*\.\d{2}/);
+    });
+  });
+
+  describe("refusals — same rules as every other deterministic path", () => {
+    it("refuses rather than quoting a partial total when the read is truncated", async () => {
+      install({ transactionPages: stuckTxPages([
+        tx({ id: "t1", direction: "inflow", amount: "4200.00", transaction_date: "2026-07-05" }),
+      ]) });
+      const out = await run("what was July 2026's income and expenses?");
+      expect(out?.answered).toBe(false);
+      expect(out?.reply).toContain("only able to read part of the ledger");
+      expect(out?.reply).not.toMatch(/\d[\d,]*\.\d{2}/);
+    });
+
+    it("refuses when the ledger is unreachable rather than implying no activity", async () => {
+      install({ failOn: ["/ledger/transactions"] });
+      const out = await run("what was July 2026's income and expenses?");
+      expect(out?.answered).toBe(false);
+      expect(out?.reply).toContain("couldn't reach the ledger");
+      expect(out?.reply).not.toContain("No income");
+    });
+
+    it("falls through (null) when no month reference can be parsed", async () => {
+      // The classifier catches missing month references before calling the answer,
+      // so this case returns null and the normal assistant handles it.
+      expect(classify("what was our income this year?")).toBeNull();
+    });
   });
 });

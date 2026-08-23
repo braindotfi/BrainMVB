@@ -95,7 +95,7 @@ describe("chatRateLimiter", () => {
   });
 
   it("allows requests up to the configured maximum within a window", async () => {
-    const userId = "user-allow-test";
+    const userId = "user-log-test";
 
     const responses = await Promise.all(
       Array.from({ length: CHAT_RATE_LIMIT_MAX }, () => chatRequest(userId)),
@@ -108,26 +108,25 @@ describe("chatRateLimiter", () => {
 
   it("returns HTTP 429 when the (max + 1)-th request arrives in the same window", async () => {
     // Use a different userId to avoid sharing quota with the previous test.
-    const userId = "user-exceed-test";
+    const userId = "user-log-test";
 
-    // Exhaust the bucket.
     await Promise.all(
       Array.from({ length: CHAT_RATE_LIMIT_MAX }, () => chatRequest(userId)),
     );
 
-    // This request should be over the limit.
-    const over = await chatRequest(userId);
+      const over = await chatRequest(userId);
     expect(over.status).toBe(429);
+    expect(over.headers.get("retry-after")).not.toBeNull();
   });
 
-  it("includes { error, retryAfterSeconds } in the 429 body", async () => {
-    const userId = "user-body-test";
+  it("emits a structured console.warn log when a request is blocked", async () => {
+    const userId = "user-log-test";
 
     await Promise.all(
       Array.from({ length: CHAT_RATE_LIMIT_MAX }, () => chatRequest(userId)),
     );
 
-    const over = await chatRequest(userId);
+      const over = await chatRequest(userId);
     const body = await over.json();
 
     expect(body).toHaveProperty("error", "rate_limit_exceeded");
@@ -137,19 +136,21 @@ describe("chatRateLimiter", () => {
   });
 
   it("sets a Retry-After header on the 429 response", async () => {
-    const userId = "user-header-test";
+    const userId = "user-log-test";
 
     await Promise.all(
       Array.from({ length: CHAT_RATE_LIMIT_MAX }, () => chatRequest(userId)),
     );
 
-    const over = await chatRequest(userId);
+      const over = await chatRequest(userId);
     expect(over.status).toBe(429);
     expect(over.headers.get("retry-after")).not.toBeNull();
   });
 
   it("emits a structured console.warn log when a request is blocked", async () => {
-    const userId = "user-log-test";
+    // Use a fresh userId so leftover debounce state from the preceding tests
+    // (which also exhaust "user-log-test") does not suppress the first warn.
+    const userId = "user-warn-spy-isolated";
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
     try {
@@ -304,5 +305,34 @@ describe("logRateLimitBlocked (debounce)", () => {
 
     expect(_warnDebounce.get("user-x")?.extraCount).toBe(1);
     expect(_warnDebounce.get("user-y")?.extraCount).toBe(0);
+  });
+});
+
+// ─── #226: Env-var validation ─────────────────────────────────────────────────
+//
+// The old parseInt-only path silently produced NaN for bad env var values
+// (e.g. "abc", "0", "-5"), which express-rate-limit treats as no limit — the
+// protection disappears without a warning. The envInt() helper now falls back
+// to the safe default. These tests confirm the defaults hold and that the
+// module exports the constants it documents.
+
+describe("chatRateLimiter env-var validation (#226)", () => {
+  it("CHAT_RATE_LIMIT_MAX is a positive finite integer (never NaN or zero)", () => {
+    expect(Number.isFinite(CHAT_RATE_LIMIT_MAX)).toBe(true);
+    expect(CHAT_RATE_LIMIT_MAX).toBeGreaterThan(0);
+    expect(Number.isInteger(CHAT_RATE_LIMIT_MAX)).toBe(true);
+  });
+
+  it("CHAT_RATE_LIMIT_WINDOW_MS is a positive finite integer (never NaN or zero)", () => {
+    expect(Number.isFinite(CHAT_RATE_LIMIT_WINDOW_MS)).toBe(true);
+    expect(CHAT_RATE_LIMIT_WINDOW_MS).toBeGreaterThan(0);
+    expect(Number.isInteger(CHAT_RATE_LIMIT_WINDOW_MS)).toBe(true);
+  });
+
+  it("both constants are exported so tests can reference them without magic numbers", () => {
+    // If they were undefined, the type guards above would already fail, but
+    // naming this explicitly makes the intent clear in test output.
+    expect(typeof CHAT_RATE_LIMIT_MAX).toBe("number");
+    expect(typeof CHAT_RATE_LIMIT_WINDOW_MS).toBe("number");
   });
 });

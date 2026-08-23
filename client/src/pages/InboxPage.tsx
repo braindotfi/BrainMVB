@@ -784,6 +784,16 @@ export function InboxPage() {
     setReturnTo(null);
   };
 
+  /* Undo a previously recorded decision, putting the proposal back in the pending
+     queue. Brain-core must offer `undo` in `available_decisions` for it to appear
+     — the button is gated on `decision.writable` so it cannot fire on a proposal
+     that core has already finalised and can no longer reopen. */
+  const undoItem = (item: InboxItem) => {
+    if (!item.liveAgentProposal) return;
+    if (!item.liveDecisions?.some((d) => d.id === "undo" && d.writable)) return;
+    decideProposal.mutate({ id: item.liveAgentProposal.id, decision: "undo" });
+  };
+
   const acknowledgeItem = (item: InboxItem) => {
     /* An acknowledge-only live proposal (compliance finding, fraud hold) is a real
        brain-core decision, not the local insight store. */
@@ -1640,7 +1650,8 @@ export function InboxPage() {
         const supported =
           decision.id === "approve" ||
           decision.id === "reject" ||
-          decision.id === "acknowledge";
+          decision.id === "acknowledge" ||
+          decision.id === "undo";
         actions.push({
           id: decision.id,
           label,
@@ -1650,6 +1661,7 @@ export function InboxPage() {
             if (!decision.writable || !supported) return;
             if (decision.id === "approve") approveItem(item);
             else if (decision.id === "reject") rejectItem(item);
+            else if (decision.id === "undo") undoItem(item);
             else acknowledgeItem(item);
           },
         });

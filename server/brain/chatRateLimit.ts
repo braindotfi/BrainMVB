@@ -26,12 +26,18 @@ import rateLimit from "express-rate-limit";
 import type { Request, Response } from "express";
 import { createRateLimitLogger } from "../rateLimitLogger";
 
-export const CHAT_RATE_LIMIT_MAX = process.env.CHAT_RATE_LIMIT_MAX
-  ? parseInt(process.env.CHAT_RATE_LIMIT_MAX, 10)
-  : 20;
-export const CHAT_RATE_LIMIT_WINDOW_MS = process.env.CHAT_RATE_LIMIT_WINDOW_MS
-  ? parseInt(process.env.CHAT_RATE_LIMIT_WINDOW_MS, 10)
-  : 60_000; // 1 minute
+/**
+ * Read a positive integer from an env var, falling back to `fallback` when the
+ * var is absent, non-numeric, NaN, zero, or negative.  Mirrors the same helper
+ * in server/passwordResetRateLimit.ts so both limiters fail safely on bad config.
+ */
+function envInt(name: string, fallback: number): number {
+  const parsed = Number.parseInt(process.env[name] ?? "", 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+export const CHAT_RATE_LIMIT_MAX = envInt("CHAT_RATE_LIMIT_MAX", 20);
+export const CHAT_RATE_LIMIT_WINDOW_MS = envInt("CHAT_RATE_LIMIT_WINDOW_MS", 60_000);
 
 // ─── Per-user warning debounce ───────────────────────────────────────────────
 

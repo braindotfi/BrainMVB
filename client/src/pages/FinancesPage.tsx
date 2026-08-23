@@ -110,7 +110,7 @@ export function resolveLedgerTab(param: string | null | undefined): LedgerTab | 
 
 /** Params owned by an individual tab, cleared when leaving it so a stale
  *  `?vendor=` cannot re-open a popup on a tab that has no vendors. */
-const TAB_SCOPED_PARAMS = ["vendor", "from", "rules", "create"];
+const TAB_SCOPED_PARAMS = ["vendor", "from", "rules", "create", "tx"];
 
 const TAB_COPY: Record<LedgerTab, { heading: string; sub: string | null }> = {
   Accounts: { heading: "Every account. One source of financial truth.", sub: "See balances, cash flow, vendors, and financial rules across your business in one place." },
@@ -261,6 +261,24 @@ export function FinancesPage() {
     navigate(`/ledger${qs ? `?${qs}` : ""}`, { replace: true });
   };
 
+  /* `?tx=` lets another surface (Needs Your Input "Find Transaction" button) open
+     a specific transaction detail popup directly. Same read-on-every-search-change
+     pattern as `?account=` — a second deep-link to a different tx without leaving
+     the page must reopen the popup, so a mount-only initializer is not enough. */
+  const txParam = new URLSearchParams(search).get("tx");
+  useEffect(() => {
+    if (txParam) setOpenTxId(txParam);
+  }, [txParam]);
+
+  const closeTx = () => {
+    setOpenTxId(null);
+    if (!txParam) return;
+    const params = new URLSearchParams(search);
+    params.delete("tx");
+    const qs = params.toString();
+    navigate(`/ledger${qs ? `?${qs}` : ""}`, { replace: true });
+  };
+
   // Dynamic "last updated" timestamp. Refreshes every 10s
   const [lastUpdated, setLastUpdated] = useState(Date.now());
   useEffect(() => {
@@ -386,7 +404,7 @@ export function FinancesPage() {
 
       </div>
 
-      <TransactionDetailPopup txId={openTxId} onClose={() => setOpenTxId(null)} onSelectTransaction={(id) => setOpenTxId(id)} />
+      <TransactionDetailPopup txId={openTxId} onClose={closeTx} onSelectTransaction={(id) => setOpenTxId(id)} />
       <AccountDetailPopup
         accountId={openAccountId}
         onClose={closeAccount}

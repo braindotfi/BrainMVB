@@ -1,3 +1,4 @@
+- [Source-scan test patterns](source-scan-test-patterns.md) — assertion pitfalls: indexOf searches full file (hits imports), [^)]* stops at first ), handler windows must be 2000+ chars for nested blocks; prefer regex over indexOf for route registrations.
 - [BFF request-ID forwarding](bff-request-id-forwarding.md) — AsyncLocalStorage threads one X-Request-Id per Express request through all brain-core calls; errors log both bff_request_id + brain_request_id.
 - [WidgetPanel primitive](widget-panel-primitive.md) — sole shared panel chrome; WidgetCard=header+panel; noBorder only when Figma shows no stroke; DevelopersSection now has the border it was silently missing.
 - [Brain URL split (demo vs production)](brain-url-split.md) — demo → staging, real users → prod; per-request AsyncLocalStorage; every new proxy handler must wrap with withBrainBaseUrl(baseUrl, …).
@@ -26,6 +27,7 @@
 - [brain-core API surface wiring](brain-api-surface-wiring.md) — api-surface artifact is sole truth; writes via WRITE_ROUTES allowlist; proxied READS reach the UI unnormalized, so client types lie.
 - [Replit git branch tracking](replit-git-branch-tracking.md) — auto-checkpoints push to a branch's upstream AND author commits on the checked-out branch sweeping in unstaged files; diff against @{u} before every push.
 - [Git sync stale locks](git-sync-stale-locks.md) — generic Sync fatal errors can come from abandoned .git/*.lock files; remove only confirmed stale locks, never reset refs.
+- [Git sync task-branch trap](git-sync-task-branch-trap.md) — task-agent merges land on the checked-out branch; if that's a feature branch, local main and origin/main diverge; recover via a reconciliation PR, never hard-reset to origin.
 - [Stacked PR rebases](stacked-pr-rebase.md) — squash merges hide the parent's commits: always `rebase --onto origin/main <parent's old tip>`, never plain rebase, and re-test after.
 - [CI red + armed auto-merge](ci-red-and-auto-merge.md) — npm ci fails on lock drift so every PR is red before tests run; fixing it squash-merges open PRs unreviewed (main unprotected).
 - [No admin-merge bypass](merge-bypass-rule.md) — every PR to main needs a real review; a memory note is not evidence of a user decision, and a zero-review merge is not proof of a policy.

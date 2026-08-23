@@ -271,9 +271,14 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     id: k.id,
     name: k.name,
     environment: k.environment,
-    scopes: k.scopes ?? [],
-    keyPrefix: k.key_prefix,
-    keyLast4: k.key_last4,
+    // scopes may be absent on older brain-core key records; default to empty so
+    // .length checks and scope-badge rendering never throw.
+    scopes: Array.isArray(k.scopes) ? k.scopes : [],
+    // key_prefix / key_last4 may be absent when a key was issued before brain-core
+    // started returning them. Null-coalesce here so the client can render a safe
+    // placeholder instead of "undefinedundefined" or crashing on .slice().
+    keyPrefix: k.key_prefix ?? null,
+    keyLast4: k.key_last4 ?? null,
     createdAt: k.created_at ?? null,
     lastUsedAt: k.last_used_at ?? null,
     revokedAt: k.revoked_at ?? null,
@@ -469,7 +474,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
                 id: identity.tenantId,
                 companyName: identity.companyName,
                 environment: "live",
-                createdAt: identity.linkedAt ? identity.linkedAt.toISOString() : null,
+                // Normalize: Drizzle returns a JS Date for timestamp columns, but
+                // legacy rows or MemStorage shims may supply a string/number.
+                // new Date(x) is safe for any of those representations.
+                createdAt: identity.linkedAt ? new Date(identity.linkedAt).toISOString() : null,
                 ephemeral: false,
               }]
             : [],
@@ -492,7 +500,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
                 id: identity.tenantId,
                 companyName: identity.companyName,
                 environment: "sandbox",
-                createdAt: identity.linkedAt ? identity.linkedAt.toISOString() : null,
+                createdAt: identity.linkedAt ? new Date(identity.linkedAt).toISOString() : null,
                 ephemeral: false,
               }]
             : [],
@@ -698,9 +706,63 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.delete("/api/account", requireAuth, async (req, res) => {
     try {
       const userId = req.session.userId!;
+
+      // Revoke all brain-core API keys before deleting the local account.
+      // Keys are issued and stored by brain-core — local deletion does not reach
+      // them. Without this step a deleted user's key would remain usable
+      // indefinitely. Revocation failures are logged but must not block deletion:
+      // the user asked to be gone, and a partial upstream error cannot strand them.
+      let brainKeysRevoked = 0;
+      let brainKeyRevocationsFailed = 0;
+      // True when brain-core session/network failed before we could list keys.
+      // In this case the real key count is UNKNOWN (not zero) — the response
+      // must surface this so the client can warn operators appropriately.
+      let brainCoreUnreachable = false;
+      try {
+        const session = await getBrainSession(userId);
+        const { keys } = await withBrainBaseUrl(session.baseUrl, () =>
+          listTenantKeys(session.token, session.tenantId),
+        );
+        if (keys && keys.length > 0) {
+          const results = await Promise.allSettled(
+            keys.map((key: any) =>
+              withBrainBaseUrl(session.baseUrl, () =>
+                revokeTenantKey(session.token, String(key.id)),
+              ),
+            ),
+          );
+          brainKeyRevocationsFailed = results.filter((r) => r.status === "rejected").length;
+          brainKeysRevoked = keys.length - brainKeyRevocationsFailed;
+          console.log(
+            `Delete account: revoked ${brainKeysRevoked}/${keys.length} brain-core key(s) for user ${userId}` +
+              (brainKeyRevocationsFailed > 0
+                ? ` (${brainKeyRevocationsFailed} revocation(s) failed — upstream may have already removed them)`
+                : ""),
+          );
+        }
+      } catch (revokeErr) {
+        // No brain session (demo user, unlinked account) or network failure —
+        // key count is UNKNOWN (not zero): we never reached listTenantKeys.
+        // #252: explicitly state "key count unknown" so operators reading logs
+        // know the zero counts are indeterminate, not a confirmed clean state.
+        brainCoreUnreachable = true;
+        console.warn(
+          "Delete account: could not reach brain-core to revoke keys (key count unknown; continuing with deletion):",
+          revokeErr instanceof Error ? revokeErr.message : revokeErr,
+        );
+      }
+
       const result = await storage.deleteUserAccount({ userId });
       req.session.destroy(() => {});
-      return res.json({ success: true, deleted: result });
+      return res.json({
+        success: true,
+        deleted: result,
+        brainKeysRevoked,
+        brainKeyRevocationsFailed,
+        // #251: tells the client that brain-core was unreachable so it can warn
+        // operators that orphaned keys may remain — counts are not trustworthy.
+        brainCoreUnreachable,
+      });
     } catch (error: any) {
       console.error("Delete account error:", error);
       return res.status(500).json({ error: error?.message || "Failed to delete account" });

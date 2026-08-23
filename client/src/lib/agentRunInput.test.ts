@@ -425,3 +425,48 @@ describe("inputRowFixPath — navigation path per missing field", () => {
     expect(fallback).not.toBe("/ledger?tab=cash-flow");
   });
 });
+
+/* ── inputRowFixPath — transaction ?tx= entity-ref deep-link ─────────────── */
+//
+// The "Find Transaction" button appends ?tx=<entityRef> so FinancesPage can
+// auto-open the matching TransactionDetailPopup.  These tests confirm the
+// ref-picking logic: txn_-prefix wins, falls back to first ref, empty = no param.
+
+describe("inputRowFixPath — transaction entity-ref deep-link (?tx=)", () => {
+  it("appends ?tx=<txn_ref> when a txn_-prefixed entity ref is present (transaction_record)", () => {
+    const path = inputRowFixPath(makeItem("transaction_record", ["txn_01ABCDEF"]));
+    expect(path).toContain("tab=cash-flow");
+    expect(path).toContain("tx=txn_01ABCDEF");
+  });
+
+  it("appends ?tx=<txn_ref> for the 'transaction' field alias too", () => {
+    // brain-core may emit either spelling; both must produce the deep-link.
+    const path = inputRowFixPath(makeItem("transaction", ["txn_01XYZUVW"]));
+    expect(path).toContain("tab=cash-flow");
+    expect(path).toContain("tx=txn_01XYZUVW");
+  });
+
+  it("prefers the txn_-prefixed ref when a non-txn_ ref also appears in the list", () => {
+    const path = inputRowFixPath(
+      makeItem("transaction_record", ["cp_01VENDOR", "txn_01THEONE"]),
+    );
+    expect(path).toContain("tx=txn_01THEONE");
+    expect(path).not.toContain("tx=cp_01VENDOR");
+  });
+
+  it("falls back to the first entityRef when no txn_-prefixed ref exists", () => {
+    // Some events carry only an obligation or counterparty ref; still deep-links.
+    const path = inputRowFixPath(makeItem("transaction_record", ["obl_01FALLBK"]));
+    expect(path).toContain("tab=cash-flow");
+    expect(path).toContain("tx=obl_01FALLBK");
+  });
+
+  it("URL-encodes the ref so special characters cannot break the query string", () => {
+    const path = inputRowFixPath(makeItem("transaction_record", ["txn_abc def+x"]));
+    // The ref must NOT appear raw in the URL.
+    expect(path).not.toContain("txn_abc def+x");
+    // After decoding, the original ref must be recoverable.
+    const url = new URL(path, "http://x");
+    expect(url.searchParams.get("tx")).toBe("txn_abc def+x");
+  });
+});

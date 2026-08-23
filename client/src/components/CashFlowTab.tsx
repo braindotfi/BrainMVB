@@ -56,6 +56,11 @@ interface TxDTO {
 }
 interface TxResponse {
   transactions: TxDTO[];
+  /** Non-null when brain-core's response was a partial page.
+   *  The chart cannot walk the remaining pages, so the monthly figures it shows
+   *  will be lower than the actual totals for any month that had transactions
+   *  on the unseen pages. Surfaced as a notice in MonthlyBreakdownCard. */
+  next_cursor?: string | null;
 }
 
 type Format = (a: string | number) => string;
@@ -239,6 +244,10 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
   const txs = txQ.data?.transactions ?? null;
   const invs = invQ.read?.rows ?? null;
   const txFailed = txQ.isError || (txQ.data != null && txQ.data.transactions == null);
+  /* True when brain-core returned a partial page of transactions (next_cursor is
+     non-null). The chart's monthly figures are then a floor, not the real totals.
+     Mirror of invTruncated, which handles the same situation on the invoice feed. */
+  const txTruncated = !txFailed && (txQ.data?.next_cursor ?? null) !== null;
   const invFailed = invQ.failed;
   /* Rows may still be listed from a partial invoice walk — a bill that came back is a
      real bill — but the shortfall must be visible rather than rendering as a short,
@@ -368,6 +377,7 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
         transactions={txs}
         isLoading={txPending}
         failed={txFailed}
+        truncated={txTruncated}
         format={format}
         nameOf={nameOf}
       />
