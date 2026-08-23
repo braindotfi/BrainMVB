@@ -186,6 +186,25 @@ describe("DELETE /api/developers/keys/:id — brain-core single-key revocation",
     expect(res.status).toBe(502);
   });
 
+  it("returns 404 api_key_not_found when the key is already revoked (double-click resilience)", async () => {
+    // Import BrainApiError from the real module (unmocked) so instanceof checks work.
+    const { BrainApiError } = await import("./brain/client");
+
+    // Simulate brain-core responding with 404 api_key_not_found — the case where
+    // the user double-clicked Revoke and the key was already gone on the second hit.
+    brainMocks.revokeTenantKey.mockRejectedValue(
+      new BrainApiError(404, "/keys/key_already_gone", { error: "api_key_not_found" }),
+    );
+
+    const client = await registerAndLogin(uid(), baseUrl);
+    const res = await client.request<{ error: string }>("DELETE", "/api/developers/keys/key_already_gone");
+
+    // sendKeyApiError must map this to a clean 404 — not a 502 or 500 — so the
+    // client's double-click handling works and the Settings page does not crash.
+    expect(res.status).toBe(404);
+    expect((res.json as { error: string }).error).toBe("api_key_not_found");
+  });
+
   it("unauthenticated requests are rejected before any brain-core call is made", async () => {
     // No session cookie — requireAuth must short-circuit to 401.
     const client = new SessionClient(baseUrl);
