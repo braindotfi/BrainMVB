@@ -599,6 +599,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
     retry: (count, err) => !isKeysApiUnavailable(err) && count < 2,
   });
   const keysUnavailable = isKeysApiUnavailable(keysQ.error);
+  const keyUsageUnavailable = isKeysApiUnavailable(keyUsageQ.error);
   const tenantsQ = useQuery<TenantsResponse>({ queryKey: ["/api/developers/tenants"] });
   const usageQ = useQuery<UsageResponse>({ queryKey: [`/api/developers/usage?environment=${env}`] });
   const activityQ = useQuery<AuditEventsResponse>({ queryKey: ["/api/brain/audit/events?limit=8"] });
@@ -639,7 +640,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
   type StepState = "done" | "todo" | "unknown" | "checking";
   const stepState = (pending: boolean, failed: boolean, done: boolean): StepState =>
     done ? "done" : failed ? "unknown" : pending ? "checking" : "todo";
-  const steps: { label: string; state: StepState }[] = [
+  const steps: { label: string; state: StepState; keyApiUnavailable?: boolean }[] = [
     {
       label: "Create a Tenant",
       state: stepState(tenantsQ.isPending, tenantsQ.isError, hasTenant),
@@ -647,6 +648,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
     {
       label: "Issue an API Key",
       state: stepState(keysQ.isPending, keysQ.isError, hasKey),
+      keyApiUnavailable: keysUnavailable,
     },
     {
       label: "Make a Key-Authenticated Call",
@@ -655,6 +657,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
         keysQ.isError || keyUsageQ.isError,
         hasKeyAuthedCall,
       ),
+      keyApiUnavailable: keysUnavailable || keyUsageUnavailable,
     },
   ];
 
@@ -905,7 +908,9 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
                       className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px]"
                       data-testid={`step-get-started-${i}-unknown`}
                     >
-        Couldn't check this. brain-core is unreachable. It may already be done.
+                      {s.keyApiUnavailable
+                        ? "API key issuance is not yet enabled."
+                        : "Couldn't check this. brain-core is unreachable. It may already be done."}
                     </p>
                   )}
                   {s.state === "checking" && (
