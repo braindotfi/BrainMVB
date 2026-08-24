@@ -97,6 +97,24 @@ describe("Key service off shows 'not yet enabled', not a generic error (#259)", 
     );
   });
 
+  it("the Overview checklist distinguishes a disabled key service from a connectivity error", () => {
+    const src = readFileSync(DEVELOPERS, "utf8");
+    const overviewIdx = src.indexOf("function OverviewSection");
+    const overview = src.slice(overviewIdx);
+    expect(overview, "Overview must carry the specific key-service state into each step").toMatch(
+      /keyApiUnavailable/,
+    );
+    const disabledCopyIdx = overview.indexOf("API key issuance is not yet enabled");
+    expect(disabledCopyIdx, "disabled key service must have specific copy").toBeGreaterThan(-1);
+    const copyBranch = overview.slice(disabledCopyIdx - 180, disabledCopyIdx + 260);
+    expect(copyBranch, "specific copy must be selected by the key-service state").toMatch(
+      /s\.keyApiUnavailable/,
+    );
+    expect(copyBranch, "real connectivity failures must retain the unreachable fallback").toMatch(
+      /brain-core is unreachable/,
+    );
+  });
+
   it("retry is suppressed when the key service is unavailable (no pointless retries)", () => {
     const src = readFileSync(DEVELOPERS, "utf8");
     // retry: (count, err) => !isKeysApiUnavailable(err) && count < N
