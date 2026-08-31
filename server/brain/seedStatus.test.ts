@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { seedStillExpected } from "./seed";
 
 /**
- * The defect: a freshly created demo tenant showed a settled-looking $211,200.00 owed
+ * The defect: a freshly created seeded tenant showed a settled-looking $211,200.00 owed
  * when the real figure was $287,223.39. Its records arrive in waves, and nothing the
  * browser can see says so — no document exists yet, so there is no extraction to be in
  * progress, and every ledger read comes back complete, consistent and short.
@@ -19,7 +19,7 @@ const WINDOW = 10 * MINUTE;
 const ask = (over: Partial<Parameters<typeof seedStillExpected>[0]> = {}) =>
   seedStillExpected({
     inFlight: false,
-    isDemo: true,
+    seedEligible: true,
     createdAt: agoMs(20_000),
     documentCount: 0,
     expectedDocuments: 4,
@@ -29,7 +29,7 @@ const ask = (over: Partial<Parameters<typeof seedStillExpected>[0]> = {}) =>
   });
 
 describe("seedStillExpected", () => {
-  it("is true for a brand-new demo tenant with nothing ingested yet", () => {
+  it("is true for a brand-new seeded tenant with nothing ingested yet", () => {
     /* The exact window the old UI got wrong: the tenant is provisioned lazily on the
        first brain call, so for the first seconds there is no run in flight AND no
        document — indistinguishable, from the client, from an account that has nothing. */
@@ -53,15 +53,14 @@ describe("seedStillExpected", () => {
     expect(ask({ inFlight: false, documentCount: 1 })).toBe(true);
   });
 
-  it("never claims a real account is being seeded", () => {
-    /* Real signups start empty on purpose and are never seeded, so a low document
-       count says nothing about them. Reporting "still importing" would put a
-       permanent caveat under every figure a real user has. */
-    expect(ask({ isDemo: false, documentCount: 0 })).toBe(false);
+  it("never claims an ineligible tenant is being seeded", () => {
+    /* Explicit company creation and invited memberships do not receive this Raw
+       fixture manifest, so a low document count says nothing about them. */
+    expect(ask({ seedEligible: false, documentCount: 0 })).toBe(false);
   });
 
   it("stops expecting a seed once the account is no longer young", () => {
-    /* A demo user who DELETES a starter document drops below the manifest for good.
+    /* A seeded user who DELETES a starter document drops below the manifest for good.
        Without the window, their totals would carry "still reading your documents"
        forever — a caveat that is not just useless but false. */
     expect(ask({ documentCount: 2, createdAt: agoMs(WINDOW + MINUTE) })).toBe(false);
@@ -86,7 +85,7 @@ describe("seedStillExpected", () => {
        the silence being fixed. */
     expect(seedStillExpected({
       inFlight: false,
-      isDemo: true,
+      seedEligible: true,
       createdAt: agoMs(20_000),
       documentCount: 0,
       expectedWithinMs: WINDOW,

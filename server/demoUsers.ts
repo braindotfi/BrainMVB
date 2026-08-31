@@ -1,14 +1,13 @@
 /* ── Demo-user detection (single source of truth) ─────────────────────────────
-   The ONLY accounts that may ever see seeded/synthetic data are the demo
-   accounts created by POST /api/auth/demo-fresh (demo-fresh-<id>@brain.fi).
+   These are the ONLY accounts that may see client-side demo-only presentation data.
+   Durable ordinary signups also receive backend-persisted Brightline and Raw fixtures,
+   but remain real authenticated users and do not cross this client presentation fence.
    SHARED_DEMO_EMAIL stays recognised here even though its route was deleted:
    the account may still exist from before the removal, and it must keep
-   classifying as demo so it is never mistaken for a real signup. Real signups
-   must
-   start genuinely empty — zero sources, zero ledger, zero raw-layer seed.
-   Both the auth layer (publicUser.isDemo) and the brain-core starter seed
-   gate (server/brain/auth.ts) check through here so the definition can
-   never drift between them. */
+   classifying as demo so it is never mistaken for a real signup.
+   The auth layer uses this single predicate for publicUser.isDemo and the
+   resulting client-side demo-presentation fence. Durable signup seeding is
+   intentionally independent of this classification. */
 
 export const SHARED_DEMO_EMAIL = "demo@brain.fi";
 

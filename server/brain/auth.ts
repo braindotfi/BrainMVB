@@ -522,9 +522,9 @@ function assertSessionTenant(
  *     per-tenant agent token). The user re-attaches to the SAME tenant every login,
  *     restart, and redeploy — documents, audit events, and proposals all persist.
  *  2. No row → auto-create a production tenant ONCE (upstream creation is NOT idempotent
- *     and is never retried), store the durable mapping + agent token, then fire the
- *     one-time starter seed (bundled demo documents through the real ingestion pipeline)
- *     WITHOUT blocking the session. Ledger figures come from whatever brain-core derives.
+ *     and is never retried) with demo_seed:true, store the durable mapping + agent token,
+ *     then fire the one-time Raw fixture seed through the real ingestion pipeline WITHOUT
+ *     blocking the session. Ledger figures come from whatever brain-core derives.
  *
  * Why not reuse the demo tenant, as originally requested: verified live 2026-07-24 that
  * brain-core's demo fence cannot re-attach to an existing demo tenant (provision-run
@@ -571,10 +571,6 @@ async function createDurableSession(
   // have none, so synthesize a stable, clearly-non-routable one from the user id.
   const founderEmail = user?.email || `${appUserId}@users.brainmvb.invalid`;
   const companyName = `${displayName}'s Workspace`;
-  // NOTE: demo users are routed to createDemoSession() by createSession() and never reach
-  // here. The isDemo flag is kept as a belt-and-suspenders guard (e.g. direct calls).
-  const isDemo = isDemoEmail(user?.email);
-
   // This is the server-side invite boundary. It applies regardless of which authenticated
   // browser route caused the first Brain request. A lookup failure also propagates and fails
   // closed, so neither the local tombstone nor POST /tenants can run without a definitive
@@ -602,9 +598,11 @@ async function createDurableSession(
       founderEmail,
       founderDisplayName: displayName,
       founderExternalRef: appUserId, // external_ref = stable platform user id, never an email
-      // Run brain-core's own seedBrainSaasDemo during creation (tenant.kind stays
-      // 'production', so durability is unaffected). Demo accounts only.
-      demoSeed: isDemo,
+      // Ordinary signup converges with "Continue with Demo": core runs its existing
+      // seedBrainSaasDemo before returning while the tenant remains kind='production'.
+      // This stays in the one durable create path, so the stable external ref, bootstrap
+      // admin transaction, pending-invite veto, and tombstone safety are unchanged.
+      demoSeed: true,
     });
   } catch (err) {
     // The create PROVABLY failed upstream - roll the tombstone back so a later login
@@ -632,43 +630,35 @@ async function createDurableSession(
       new Date(Date.now() + (result.agent.expires_in ?? 900) * 1000),
     );
   }
-  // One-time starter seed — DEMO ACCOUNTS ONLY. Real signups must start genuinely
-  // empty (zero sources, zero raw-layer ingestion, zero ledger); only the
-  // "Continue with Demo" accounts (demo@brain.fi / demo-fresh-*) get the bundled
-  // synthetic raw-layer scenario, which then flows through the REAL brain-core
-  // pipeline (ingest → extract → ledger/wiki/policy/agent/audit).
+  // One-time Raw fixture seed for every newly auto-provisioned durable signup tenant.
+  // Core's demo_seed covers Ledger, sources, policy, agents, and proposals; this BFF
+  // layer adds the generated uploadable fixtures through the real Raw pipeline
+  // (ingest → extract → ledger/wiki/policy/agent/audit).
   // Fire and forget so login is never blocked on ingestion. Runs ONLY here (the
   // create-tenant branch), so an existing tenant is never re-seeded.
   // Raw ingestion needs the raw:write scope, which the durable MEMBER token does not
   // hold (verified live 2026-07-24: member /raw/ingest → 403 auth_scope_insufficient,
   // agent token → 201). Fall back to the member token only if no agent token exists,
   // so the failure surfaces as an honest 403 in the document status.
-  //
-  // NOTE: demo users are now routed to createDemoSession() and do NOT create durable
-  // tenants, so this branch is belt-and-suspenders (isDemo guard stays as a safety net).
-  if (isDemo) {
-    // Confirmation that core's own seeder ran. Absent means the core predates the flag (or
-    // ignored it) - the tenant will have no fake-connected sources, so say so plainly rather
-    // than letting a silently-unseeded demo look like a UI bug.
-    if (result.demo_seed) {
-      console.log(`[brain-auth] tenant ${result.tenant_id} demo_seed summary:`, JSON.stringify(result.demo_seed));
-    } else {
-      console.warn(
-        `[brain-auth] tenant ${result.tenant_id} was created with demo_seed: true but the response ` +
-          `carried no demo_seed summary - core may predate the flag. Expect NO core-side seed ` +
-          `(no fake-connected sources, empty ledger); the local document seed below still runs.`,
-      );
-    }
-    // Capture the current base URL from AsyncLocalStorage before the fire-and-forget so
-    // seed calls reach the same brain-core target as the session that triggered them.
-    const seedBaseUrl = currentBrainBaseUrl(brainConfig.baseUrl);
-    console.log(`[brain-auth] durable tenant ${result.tenant_id} created for DEMO user ${appUserId} - seeding starter documents on ${seedBaseUrl}`);
-    void seedTenantDocuments(appUserId, result.agent?.token ?? result.session.token, seedBaseUrl).catch((err) =>
-      console.error(`[brain-seed] seeding for tenant ${result.tenant_id} failed:`, (err as Error).message),
-    );
+  // Confirmation that core's own seeder ran. Absent means the core predates the flag (or
+  // ignored it), so report the incomplete state instead of presenting an empty tenant as
+  // a successful seeded signup.
+  if (result.demo_seed) {
+    console.log(`[brain-auth] tenant ${result.tenant_id} demo_seed summary:`, JSON.stringify(result.demo_seed));
   } else {
-    console.log(`[brain-auth] durable tenant ${result.tenant_id} created for user ${appUserId} - real account, NO seed (starts empty)`);
+    console.warn(
+      `[brain-auth] tenant ${result.tenant_id} was created with demo_seed: true but the response ` +
+        `carried no demo_seed summary - core may predate the flag. Expect NO core-side seed ` +
+        `(no fake-connected sources, empty ledger); the local document seed below still runs.`,
+    );
   }
+  // Capture the current base URL from AsyncLocalStorage before the fire-and-forget so
+  // seed calls reach the same brain-core target as the session that triggered them.
+  const seedBaseUrl = currentBrainBaseUrl(brainConfig.baseUrl);
+  console.log(`[brain-auth] durable tenant ${result.tenant_id} created for user ${appUserId} - seeding starter documents on ${seedBaseUrl}`);
+  void seedTenantDocuments(appUserId, result.agent?.token ?? result.session.token, seedBaseUrl).catch((err) =>
+    console.error(`[brain-seed] seeding for tenant ${result.tenant_id} failed:`, (err as Error).message),
+  );
 
   return toProductionCached(result.session, result.tenant_id, result.agent?.token ?? null);
 }
