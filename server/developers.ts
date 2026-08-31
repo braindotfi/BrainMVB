@@ -7,9 +7,34 @@
  * server/routes.ts — no key material is minted, hashed, or stored here.
  */
 
-/** The only scopes brain-core recognizes for tenant API keys. */
-export const API_KEY_SCOPES = ["ledger:read", "audit:read"] as const;
+/** Scopes brain-core recognizes for tenant API keys.
+ *
+ * Raw scopes remain conditionally issuable. The BFF accepts their wire values,
+ * but only offers them for a verified synthetic demo tenant. brain-core repeats
+ * that check when a key is issued and whenever a Raw-scoped key is used. */
+export const API_KEY_SCOPES = [
+  "ledger:read",
+  "audit:read",
+  "governance:read",
+  "raw:read",
+  "raw:write",
+] as const;
 export type ApiKeyScope = (typeof API_KEY_SCOPES)[number];
+
+export interface RawScopeTenantState {
+  provisioningState?: string | null;
+  dataProfile?: string | null;
+  accessStage?: string | null;
+}
+
+/** Must stay aligned with brain-core's synthetic demo key gate. */
+export function isRawScopeEligible(state: RawScopeTenantState): boolean {
+  return (
+    state.provisioningState === "ready_demo" &&
+    state.dataProfile === "synthetic_brightline_v1" &&
+    state.accessStage === "demo"
+  );
+}
 
 // ─── Usage aggregation over brain-core audit events ───
 

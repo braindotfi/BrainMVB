@@ -117,6 +117,19 @@ describe("Settings nav testids contract (#76)", () => {
 // ─── #76: Key management controls ────────────────────────────────────────────
 
 describe("Key management controls contract (#76)", () => {
+  it("server-derived admin access gates key-management controls", () => {
+    const src = readFileSync(DEVELOPERS_TSX, "utf8");
+    expect(src).toMatch(/canManageKeys\s*=\s*tenantsQ\.data\?\.canManageKeys\s*===\s*true/);
+    expect(src).toMatch(/canManageKeys\s*&&\s*\([\s\S]{0,300}button-new-key/);
+    expect(src).toMatch(/k\.status\s*===\s*"active"\s*&&\s*canManageKeys/);
+  });
+
+  it("Raw scope options are filtered by server-reported tenant eligibility", () => {
+    const src = readFileSync(DEVELOPERS_TSX, "utf8");
+    expect(src).toMatch(/tenant\.rawScopesEligible/);
+    expect(src).toMatch(/SCOPE_OPTIONS\.filter\(\(scope\)\s*=>\s*!scope\.syntheticDemoOnly\s*\|\|\s*rawScopesEligible\)/);
+  });
+
   it("'New Key' button has testid and opens the create modal", () => {
     const src = readFileSync(DEVELOPERS_TSX, "utf8");
     expect(src, '"button-new-key" testid must be wired to setShowCreate(true)').toMatch(

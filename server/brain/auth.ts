@@ -615,6 +615,16 @@ async function createDurableSession(
   const finalized = await storage.updateBrainIdentityTenant(appUserId, {
     tenantId: result.tenant_id,
     memberId: result.member?.id ?? null,
+    // A demo_seed summary is returned only after core's seeder completes and
+    // core advances the tenant to ready_demo. Persist that trusted observation
+    // for the Developers UI. Missing summary stays unknown and fails closed.
+    ...(result.demo_seed
+      ? {
+          provisioningState: "ready_demo",
+          dataProfile: "synthetic_brightline_v1",
+          accessStage: "demo",
+        }
+      : {}),
   });
   if (!finalized) {
     // Should be impossible (we just wrote the tombstone) - but never proceed silently.

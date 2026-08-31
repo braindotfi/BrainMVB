@@ -24,6 +24,7 @@ import {
   listLedgerInvoices,
   listObligations,
   listMembers,
+  getMember,
   getApprovalPolicyFacts,
   listProposals,
   getPaymentIntent,
@@ -65,6 +66,7 @@ import { generateNonce } from "./nonce";
 import {
   aggregateUsage,
   API_KEY_SCOPES,
+  isRawScopeEligible,
   type UsageAuditEvent,
 } from "./developers";
 import { ANTHROPIC_MODEL } from "./anthropicModel";
@@ -341,6 +343,31 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     return await getBrainSession(req.session.userId!);
   }
 
+  /** Resolve key-management ability from core's current member record. The
+   * browser never supplies a role, and any lookup failure fails closed. */
+  async function canManageDeveloperKeys(
+    userId: string,
+    identity: Awaited<ReturnType<typeof storage.getBrainIdentity>>,
+  ): Promise<boolean> {
+    if (!identity?.memberId || !brainAuthConfigured()) return false;
+    try {
+      const session = await getBrainSession(userId);
+      if (session.tenantId !== identity.tenantId) return false;
+      const member = await withBrainBaseUrl(session.baseUrl, () =>
+        getMember(session.token, identity.memberId!),
+      );
+      return (
+        member.id === identity.memberId &&
+        member.tenantId === identity.tenantId &&
+        member.active === true &&
+        member.role === "admin"
+      );
+    } catch (error) {
+      console.error("Developers member access check failed:", error);
+      return false;
+    }
+  }
+
   // GET /api/developers/keys - brain-core key list (masked fields only).
   app.get("/api/developers/keys", requireAuth, async (req, res) => {
     try {
@@ -464,12 +491,14 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       if (mode === "production") {
         const identity = await storage.getBrainIdentity(userId);
+        const canManageKeys = await canManageDeveloperKeys(userId, identity);
         return res.json({
           mode,
           canCreate: platformServiceConfigured() && !identity,
           // Single readiness signal for live keys — MUST match the gate on
           // POST /api/developers/keys so the UI never offers a create that 403s.
           liveKeysAvailable: platformServiceConfigured() && !!identity,
+          canManageKeys,
           tenants: identity
             ? [{
                 id: identity.tenantId,
@@ -480,22 +509,34 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
                 // new Date(x) is safe for any of those representations.
                 createdAt: identity.linkedAt ? new Date(identity.linkedAt).toISOString() : null,
                 ephemeral: false,
+                provisioningState: identity.provisioningState,
+                dataProfile: identity.dataProfile,
+                accessStage: identity.accessStage,
+                rawScopesEligible: isRawScopeEligible(identity),
               }]
             : [],
         });
       }
       // Demo mode: the tenant is the provisioned demo tenant of the current session.
       if (!brainAuthConfigured()) {
-        return res.json({ mode, canCreate: false, liveKeysAvailable: false, tenants: [] });
+        return res.json({
+          mode,
+          canCreate: false,
+          liveKeysAvailable: false,
+          canManageKeys: false,
+          tenants: [],
+        });
       }
       // Durable tenancy: the tenant is persistent (per-user, stored in brain_identities),
       // so it is NOT ephemeral and never "resets" — no expiry countdown.
       if (brainDurableTenancy()) {
         const identity = await storage.getBrainIdentity(userId);
+        const canManageKeys = await canManageDeveloperKeys(userId, identity);
         return res.json({
           mode,
           canCreate: false,
           liveKeysAvailable: false,
+          canManageKeys,
           tenants: identity
             ? [{
                 id: identity.tenantId,
@@ -503,6 +544,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
                 environment: "sandbox",
                 createdAt: identity.linkedAt ? new Date(identity.linkedAt).toISOString() : null,
                 ephemeral: false,
+                provisioningState: identity.provisioningState,
+                dataProfile: identity.dataProfile,
+                accessStage: identity.accessStage,
+                rawScopesEligible: isRawScopeEligible(identity),
               }]
             : [],
         });
@@ -519,6 +564,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         mode,
         canCreate: false,
         liveKeysAvailable: false,
+        canManageKeys: false,
         tenants: [{
           id: tenantId,
           companyName: null,
@@ -526,6 +572,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           createdAt: provisionedAt ? new Date(provisionedAt).toISOString() : null,
           ephemeral: true,
           expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null,
+          provisioningState: null,
+          dataProfile: null,
+          accessStage: null,
+          rawScopesEligible: false,
         }],
       });
     } catch (error: any) {

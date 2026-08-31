@@ -110,7 +110,13 @@ export interface IStorage {
   /** Finalize a pending-create tombstone with the real tenant/member ids (durable tenancy). */
   updateBrainIdentityTenant(
     userId: string,
-    patch: { tenantId: string; memberId?: string | null },
+    patch: {
+      tenantId: string;
+      memberId?: string | null;
+      provisioningState?: string | null;
+      dataProfile?: string | null;
+      accessStage?: string | null;
+    },
   ): Promise<BrainIdentity | undefined>;
   /** Remove an identity row — ONLY for rolling back a tombstone after a provably failed create. */
   deleteBrainIdentity(userId: string): Promise<void>;
@@ -825,6 +831,9 @@ export class MemStorage implements IStorage {
       tenantId: identity.tenantId,
       memberId: identity.memberId ?? null,
       companyName: identity.companyName ?? null,
+      provisioningState: identity.provisioningState ?? null,
+      dataProfile: identity.dataProfile ?? null,
+      accessStage: identity.accessStage ?? null,
       linkedAt: new Date(),
     };
     this.brainIdentitiesStore.set(row.userId, row);
@@ -832,7 +841,13 @@ export class MemStorage implements IStorage {
   }
   async updateBrainIdentityTenant(
     userId: string,
-    patch: { tenantId: string; memberId?: string | null },
+    patch: {
+      tenantId: string;
+      memberId?: string | null;
+      provisioningState?: string | null;
+      dataProfile?: string | null;
+      accessStage?: string | null;
+    },
   ): Promise<BrainIdentity | undefined> {
     const row = this.brainIdentitiesStore.get(userId);
     if (!row) return undefined;
@@ -840,6 +855,10 @@ export class MemStorage implements IStorage {
       ...row,
       tenantId: patch.tenantId,
       memberId: patch.memberId !== undefined ? patch.memberId : row.memberId,
+      provisioningState:
+        patch.provisioningState !== undefined ? patch.provisioningState : row.provisioningState,
+      dataProfile: patch.dataProfile !== undefined ? patch.dataProfile : row.dataProfile,
+      accessStage: patch.accessStage !== undefined ? patch.accessStage : row.accessStage,
     };
     this.brainIdentitiesStore.set(userId, updated);
     return updated;
@@ -1614,10 +1633,19 @@ export class DatabaseStorage implements IStorage {
   }
   async updateBrainIdentityTenant(
     userId: string,
-    patch: { tenantId: string; memberId?: string | null },
+    patch: {
+      tenantId: string;
+      memberId?: string | null;
+      provisioningState?: string | null;
+      dataProfile?: string | null;
+      accessStage?: string | null;
+    },
   ): Promise<BrainIdentity | undefined> {
     const values: Partial<BrainIdentity> = { tenantId: patch.tenantId };
     if (patch.memberId !== undefined) values.memberId = patch.memberId;
+    if (patch.provisioningState !== undefined) values.provisioningState = patch.provisioningState;
+    if (patch.dataProfile !== undefined) values.dataProfile = patch.dataProfile;
+    if (patch.accessStage !== undefined) values.accessStage = patch.accessStage;
     const [row] = await db
       .update(brainIdentitiesTable)
       .set(values)
@@ -1743,4 +1771,3 @@ async function createStorage(): Promise<IStorage> {
 }
 
 export const storage: IStorage = await createStorage();
-
