@@ -16,12 +16,12 @@ import { type AddressInfo } from "node:net";
  *   E. The one-time starter seed ingests the bundled documents into the new tenant
  *      (POST /raw/ingest with the raw:write-capable AGENT token) and never runs for
  *      an existing tenant.
- *   F. The seed runs ONLY for demo accounts (demo@brain.fi / demo-fresh-*): a real
- *      signup's tenant is created with ZERO raw-layer ingestion - genuinely empty.
- *   G. The demo flow sends demo_seed: true on POST /tenants (core seeds the tenant while
- *      keeping kind='production'); a real signup omits the key entirely.
- *   H. The EXPLICIT company-signup route never sends demo_seed - not even for an account
- *      whose email happens to be a demo address. Only "Continue with Demo" seeds.
+ *   F. An ordinary registered user's first durable tenant receives the same generated
+ *      Raw fixtures as "Continue with Demo" and uses the agent token for ingestion.
+ *   G. Both ordinary signup and the demo flow send demo_seed: true on POST /tenants,
+ *      so core runs seedBrainSaasDemo while keeping kind='production'.
+ *   H. The EXPLICIT company-signup route never sends demo_seed. Seeding belongs to the
+ *      durable auto-provisioning path, not an unrelated manual tenant-create request.
  */
 
 const SERVICE_SECRET = "test-platform-service-secret-DO-NOT-LEAK";
@@ -142,6 +142,10 @@ let whenSeedsSettle: typeof import("./seed").whenSeedsSettle;
 let signupServer: Server;
 let signupBaseUrl: string;
 let sessionUserId = "durable-signup-user";
+/** Real auth harness: POST /api/auth/register followed by an authenticated route that
+ *  triggers the lazy createDurableSession path. */
+let registrationServer: Server;
+let registrationBaseUrl: string;
 
 beforeAll(async () => {
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -194,17 +198,31 @@ beforeAll(async () => {
     signupServer = app.listen(0, resolve);
   });
   signupBaseUrl = `http://127.0.0.1:${(signupServer.address() as AddressInfo).port}`;
+
+  const { setupAuth, requireAuth } = await import("../auth");
+  const registrationApp: Express = express();
+  registrationApp.use(express.json());
+  setupAuth(registrationApp);
+  registrationApp.get("/trigger-brain-session", requireAuth, async (req, res) => {
+    const session = await getBrainSession(req.session.userId!);
+    res.json({ tenantId: session.tenantId });
+  });
+  await new Promise<void>((resolve) => {
+    registrationServer = registrationApp.listen(0, resolve);
+  });
+  registrationBaseUrl = `http://127.0.0.1:${(registrationServer.address() as AddressInfo).port}`;
 });
 
 afterAll(() => {
   globalThis.fetch = realFetch;
   signupServer?.close();
+  registrationServer?.close();
 });
 
 beforeEach(async () => {
   // The seed is fire-and-forget, so a previous test's run can still be issuing
   // /raw/ingest calls. Drain it BEFORE clearing `calls`, or its ingests leak into the
-  // next test and invariant F ("real users are never seeded") fails on borrowed calls.
+  // next test and makes assertions observe another user's ingestion calls.
   expect(await whenSeedsSettle(10_000), "a seed run never settled - later assertions would see its ingests").toBe(true);
   calls = [];
   failTenantCreation = false;
@@ -216,7 +234,7 @@ beforeEach(async () => {
 });
 
 describe("durable tenancy invariants", () => {
-  /** The starter seed is gated on the app user's email being a demo address. */
+  /** Creates the system-generated identity used by "Continue with Demo". */
   async function createDemoAppUser(): Promise<string> {
     const u = await storage.createUser({
       username: `demo-fresh-${crypto.randomUUID().slice(0, 8)}@brain.fi`,
@@ -278,7 +296,9 @@ describe("durable tenancy invariants", () => {
     });
     const userId = real.id;
     await getBrainSession(userId);
-    await whenSeedsSettle();
+    expect(await whenSeedsSettle()).toBe(true);
+    expect(calls.filter((c) => c.url.endsWith("/tenants") && c.method === "POST")).toHaveLength(1);
+    expect(calls.filter((c) => c.url.endsWith("/raw/ingest"))).toHaveLength(SEED_MANIFEST.length);
     clearBrainTokenCache(); // simulate restart/redeploy: cache gone, identity row remains
     calls = [];
 
@@ -296,26 +316,55 @@ describe("durable tenancy invariants", () => {
     expect(calls.filter((c) => c.url.endsWith("/raw/ingest")).length).toBe(0);
   });
 
-  it("F: a REAL (non-demo) user's tenant is created with ZERO seed ingestion", async () => {
-    const real = await storage.createUser({
-      username: "founder@realco.com",
-      email: "founder@realco.com",
-      password: "x.x",
-      name: "Real Founder",
+  it("F+G: an ordinary signup gets one isolated tenant with core and Raw demo seeding", async () => {
+    const registered = await realFetch(`${registrationBaseUrl}/api/auth/register`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        email: "founder@realco.com",
+        password: "correct-horse-battery",
+        name: "Real Founder",
+      }),
     });
-    const session = await getBrainSession(real.id);
-    expect(session.tenantId).toBe(TENANT_ID);
+    expect(registered.status).toBe(201);
+    const cookie = registered.headers.get("set-cookie")?.split(";")[0];
+    expect(cookie).toBeTruthy();
+    const registration = (await registered.json()) as { user: { id: string } };
 
-    // Tenant IS created for the real user...
+    // Registration itself creates only the BrainMVB user. The first authenticated
+    // Brain-backed request enters createDurableSession exactly once.
+    expect(calls.filter((c) => c.url.endsWith("/tenants") && c.method === "POST")).toHaveLength(0);
+    const triggered = await realFetch(`${registrationBaseUrl}/trigger-brain-session`, {
+      headers: { cookie: cookie! },
+    });
+    expect(triggered.status).toBe(200);
+    expect(await triggered.json()).toEqual({ tenantId: TENANT_ID });
+
+    // The durable create remains bound to the stable app-user identity.
     const realTenantCalls = calls.filter((c) => c.url.endsWith("/tenants") && c.method === "POST");
     expect(realTenantCalls.length).toBe(1);
-    // ...with NO demo_seed key at all - not `false`. A real signup's request body must stay
-    // byte-identical to the pre-flag one, so a core that predates #364 cannot misread it.
-    expect((realTenantCalls[0].body as Record<string, unknown>)).not.toHaveProperty("demo_seed");
-    // ...but the raw layer stays untouched: no seed, no documents, genuinely empty.
-    await new Promise((r) => setTimeout(r, 150));
-    expect(calls.filter((c) => c.url.endsWith("/raw/ingest")).length).toBe(0);
-    expect((await storage.listSourceDocuments(real.id)).length).toBe(0);
+    expect((realTenantCalls[0].body as { founder_external_ref?: string }).founder_external_ref).toBe(registration.user.id);
+    // Core's existing Brightline seeder runs before POST /tenants returns.
+    expect((realTenantCalls[0].body as { demo_seed?: unknown }).demo_seed).toBe(true);
+
+    const identity = await storage.getBrainIdentity(registration.user.id);
+    expect(identity).toMatchObject({
+      userId: registration.user.id,
+      externalRef: registration.user.id,
+      tenantId: TENANT_ID,
+      memberId: "m1",
+    });
+
+    // BrainMVB adds the generated Raw fixtures once, through the same real pipeline
+    // and raw:write-capable agent credential as "Continue with Demo".
+    expect(await whenSeedsSettle()).toBe(true);
+    const ingests = calls.filter((c) => c.url.endsWith("/raw/ingest"));
+    expect(ingests).toHaveLength(SEED_MANIFEST.length);
+    for (const call of ingests) {
+      expect(call.auth).toBe(`Bearer ${AGENT_TOKEN}`);
+      expect((call.body as Record<string, unknown>).source_schema).toBe("brain.upload.document.v1");
+    }
+    expect(await storage.listSourceDocuments(registration.user.id)).toHaveLength(SEED_MANIFEST.length);
   });
 
   it("vetoes blank-tenant provisioning when any authenticated route finds a pending invite", async () => {
@@ -368,9 +417,9 @@ describe("durable tenancy invariants", () => {
     expect(await storage.getBrainIdentity(userId)).toBeUndefined();
   });
 
-  it("H: the EXPLICIT company-signup route never sends demo_seed - even for a demo-address account", async () => {
+  it("H: the explicit company-signup route remains separate from auto-provisioned seeding", async () => {
     // Deliberately the hostile case: a demo EMAIL going through the real signup surface.
-    // Only the "Continue with Demo" path may seed, so the email alone must not be enough.
+    // The email alone must not turn this separate manual route into auto-provisioning.
     const u = await storage.createUser({
       username: `demo-fresh-${crypto.randomUUID().slice(0, 8)}@brain.fi`,
       email: `demo-fresh-${crypto.randomUUID().slice(0, 8)}@brain.fi`,

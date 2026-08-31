@@ -96,10 +96,10 @@ async function serviceCall<T>(path: string, body: unknown): Promise<T> {
  * Create a company tenant + bootstrap admin. NOT idempotent - call exactly once per signup.
  *
  * `demoSeed` opts the new tenant into brain-core's `seedBrainSaasDemo` while keeping
- * tenant.kind = 'production', so durable tenancy and demo seeding can coexist. Pass it ONLY
- * for the "Continue with Demo" flow - a real company signup must start genuinely empty.
- * The key is omitted entirely when false, so real signups send the same body as before and
- * a core that predates the flag is unaffected.
+ * tenant.kind = 'production', so durable tenancy and demo seeding can coexist. The
+ * durable auto-provisioning path uses it for both ordinary signup and "Continue with
+ * Demo". Explicit company creation and invite consumption remain separate paths.
+ * The key is omitted entirely when false.
  */
 export function createTenant(params: {
   companyName: string;

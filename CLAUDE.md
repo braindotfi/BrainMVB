@@ -179,11 +179,11 @@ without failing any behavioural test.
   persist a real access token. Reads (`/status`, `/connections`) and `/disconnect` stay
   open to demo accounts.
 - **`GET /api/integrations/ingest-status`** (`requireAuth`) is the only signal that a
-  fresh demo tenant's starter seed is still being projected into the ledger — the
+  fresh seeded tenant's starter data is still being projected into the ledger. The
   document list alone cannot distinguish "seeding in progress" from "genuinely nothing
   yet", which is how a fresh account once showed a settled-looking, understated total.
-  Bounded to a young demo account, so a user who later deletes a starter document is
-  not told forever that their ledger is still importing.
+  Bounded to a young seed-eligible account, so a user who later deletes a starter
+  document is not told forever that their ledger is still importing.
 - **Unmatched `/api/*` → JSON 404**, registered LAST in `routes.ts`, after every real
   API route and before the SPA catch-all `server/vite.ts`(dev)/`server/static.ts`(prod)
   install. Without it, an unknown or deleted API path falls through to that catch-all
@@ -198,22 +198,24 @@ understated what the tenant owed. Three surfaces share this one figure by constr
 (the Overview metric card, the Cash Flow metric, the Payables tab total) — see the
 module's own doc comment and `liabilities.test.ts`'s cross-surface guard.
 
-**The `"ap"` scenario marker is demo-seed-only — never test an invoice for it
+**The `"ap"` scenario marker is Brightline-seed-only. Never test an invoice for it
 directly.** `metadata.scenario === "ap"` is written ONLY by brain-core's demo seeder;
-no real tenant's invoice is ever marked `"ap"`. `metadata.scenario === "ar"`, by
-contrast, is written by brain-core's production projection path for every tenant, real
-or demo, and is reliable. So AP must be derived as the COMPLEMENT of AR
+customer-data projection does not add it. `metadata.scenario === "ar"`, by contrast,
+is written by brain-core's production projection path for every tenant and is reliable.
+So AP must be derived as the COMPLEMENT of AR
 (`scenario !== "ar"`), never as a positive `"ap"` test — `unpaidApInvoices()` in
 `lib/liabilities.ts` is the one place this filter lives, and every consumer (Cash
 Flow's bill rows, the Payables bill popup, `debtIdentity.ts`'s obligation↔invoice
 matching, the overdue-receivables banner) goes through it rather than re-implementing
 the filter inline.
 
-## Demo vs real accounts — synthetic data fence
+## Demo presentation vs seeded signup data
 
-Real signups must start **genuinely empty**: zero connected sources, zero raw-layer
-ingestion, zero ledger, no disguised mock data. Only the demo accounts may ever see
-seeded/synthetic data.
+Ordinary durable signups and "Continue with Demo" now converge on the same backend
+provisioning behavior: one isolated `kind='production'` tenant, `demo_seed:true` for
+core's Brightline seed, then the generated Raw fixture manifest once through the real
+ingest and extraction pipeline. The data is synthetic but backend-persisted; it is not
+a shared tenant or a frontend display mock.
 
 - **Who is demo:** decided ONLY by `server/demoUsers.ts` (`isDemoEmail`) —
   `demo-fresh-*@brain.fi` (`POST /api/auth/demo-fresh`) and `demo@brain.fi`, whose
@@ -223,21 +225,21 @@ seeded/synthetic data.
   a real signup. Do not reintroduce the route — `server/auth-security.test.ts` pins
   it as 404. `publicUser` (server/auth.ts) exposes demo-ness to the client as
   `user.isDemo`; never re-derive it anywhere else.
-- **Server fence:** the one-time starter seed (`server/brain/seed.ts`, durable-mode
-  create-tenant branch in `server/brain/auth.ts`) runs ONLY when the app user's email
-  is a demo address. A real user's tenant is created with NO `/raw/ingest` calls.
-  Pinned by `server/brain/durable-tenancy.test.ts` invariant F.
+- **Server provisioning:** the one-time starter seed (`server/brain/seed.ts`,
+  durable-mode create-tenant branch in `server/brain/auth.ts`) runs for every newly
+  auto-provisioned durable signup tenant. It does not run when reattaching an existing
+  tenant, consuming an invite, or using the separate explicit company-create route.
+  Pinned by `server/brain/durable-tenancy.test.ts` invariants E through H.
 - **Client fence:** `client/src/lib/demoMode.ts` holds a module-level flag set
   exclusively by `AuthProvider` from `user.isDemo`. Gated surfaces: the synthetic
   proposal corpus (`openProposalDetail.allProposals()` → `[]` for real accounts, so
   proposal refs fall back to plain text) and the HomePage starter goals
   (`DEMO_GOALS`). Everything else (rules, suggestions, documents, vendors, audit,
-  finances, review queue) is live-backed and starts empty.
-- **Demo stays real downstream of ingestion:** the demo seed goes through the real
-  ingest→extract pipeline; ledger/wiki/policy/agent/audit responses are never faked
-  in the frontend. Where mock data used to leak: the starter seed ran for EVERY new
-  durable user, `MOCK_PROPOSALS` resolved for everyone, and `SEED_GOALS` rendered
-  for everyone — all now demo-gated.
+  finances, review queue) is live-backed and reflects persisted tenant data.
+- **Seeded data stays real downstream of ingestion:** the generated fixtures go through
+  the real ingest→extract pipeline; ledger/wiki/policy/agent/audit responses are never
+  faked in the frontend. Client-only presentation fixtures such as `MOCK_PROPOSALS` and
+  `DEMO_GOALS` remain demo-gated and do not leak into ordinary registered accounts.
 
 ### The auth-transition reset funnel (`applyUserScopedResets`)
 

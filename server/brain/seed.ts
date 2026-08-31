@@ -1,5 +1,6 @@
 /**
- * One-time starter seed for a freshly created DURABLE tenant (config.brainDurableTenancy).
+ * One-time Raw fixture seed for a freshly created DURABLE signup tenant
+ * (config.brainDurableTenancy).
  *
  * Runs the five demo documents through the SAME pipeline the Add Source modal uses:
  *   local sourceDocuments metadata record → brain-core /raw/ingest → /raw/{id}/extract.
@@ -12,7 +13,8 @@
  * be static files pinned to June 2026, which slid out of the trailing windows the UI
  * queries as wall-clock time passed. See demo-seed/scenario.ts for the date model.
  *
- * Invoked exactly once, fire-and-forget, right after tenant creation in auth.ts.
+ * Invoked exactly once, fire-and-forget, right after auto-provisioned tenant creation
+ * in auth.ts for both ordinary signup and "Continue with Demo".
  * Failures are LOUD (console.error + "failed"/"unavailable" document statuses the UI
  * shows honestly) but never block the login/session path. It is never re-run for an
  * existing tenant: the caller only invokes it in the create-tenant branch.
@@ -86,14 +88,14 @@ export function isSeedInFlight(appUserId: string): boolean {
  * `isSeedInFlight` only knows about a run this process is currently performing. Two
  * stretches sit outside it, and the figures on screen are provisional in both:
  *
- *   - **Before it starts.** A demo tenant is provisioned lazily, on the session's
+ *   - **Before it starts.** A seeded tenant is provisioned lazily, on the session's
  *     first brain call, and only then are documents ingested. Measured: nothing is in
  *     flight and no document exists for the first seconds of a new account.
  *   - **After a restart.** The in-flight set is per-process.
  *
- * Both are covered by a durable fact rather than more in-memory state: a seeded demo
- * tenant ends up with the whole starter manifest, so a demo account holding fewer
- * documents than that has not finished being set up.
+ * Both are covered by a durable fact rather than more in-memory state: a seeded
+ * tenant ends up with the whole starter manifest, so an eligible account holding
+ * fewer documents than that has not finished being set up.
  *
  * `expectedWithinMs` bounds it. A user who later deletes a starter document must not
  * be told forever that their ledger is still importing — this flag exists to caveat a
@@ -101,7 +103,7 @@ export function isSeedInFlight(appUserId: string): boolean {
  */
 export function seedStillExpected(input: {
   inFlight: boolean;
-  isDemo: boolean;
+  seedEligible: boolean;
   createdAt: Date | null | undefined;
   documentCount: number;
   expectedDocuments?: number;
@@ -109,16 +111,16 @@ export function seedStillExpected(input: {
   now: number;
 }): boolean {
   if (input.inFlight) return true;
-  // Only demo accounts are ever seeded. A real account starts empty and stays empty
-  // until its owner connects something, so "fewer documents than the manifest" says
-  // nothing at all about it.
-  if (!input.isDemo) return false;
+  // Only auto-provisioned seeded accounts use the starter manifest. Explicit company
+  // creation and invited memberships do not, so "fewer documents than the manifest"
+  // says nothing about them.
+  if (!input.seedEligible) return false;
   if (input.createdAt == null) return false;
   if (input.now - input.createdAt.getTime() > input.expectedWithinMs) return false;
   return input.documentCount < (input.expectedDocuments ?? SEED_MANIFEST_LENGTH);
 }
 
-/** How many documents a fully seeded demo tenant ends up with. */
+/** How many documents a fully seeded tenant ends up with. */
 const SEED_MANIFEST_LENGTH = MANIFEST.length;
 
 /**

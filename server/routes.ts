@@ -55,7 +55,7 @@ import { trimMessageContents, trimMessageHistory } from "./brain/messageTrim";
 import { chatRateLimiter } from "./brain/chatRateLimit";
 
 /**
- * How long after a demo account is created its starter documents are still expected.
+ * How long after a seed-eligible account is created its starter documents are expected.
  * A seed takes about a minute end to end; this is generous enough to cover a slow
  * brain-core and short enough that a half-deleted starter set stops being reported as
  * an import in progress.
@@ -1699,28 +1699,36 @@ When you mention a money amount, always reproduce it exactly as the grounding da
       // The run itself, while this process is doing it.
       if (isSeedInFlight(userId)) return res.json({ seeding: true });
 
-      /* ...and the stretches the in-flight flag cannot see. A demo tenant is
+      /* ...and the stretches the in-flight flag cannot see. A seeded tenant is
          provisioned lazily on the session's first brain call, so between opening the
          app and the seed starting there is nothing in flight and nothing on disk — the
          window in which the old UI printed its confident, wrong total. The flag is also
          per-process, so a restart mid-seed would forget.
 
-         Both are covered by a durable fact instead: a seeded demo tenant ends up with
-         the whole starter manifest, so a demo account that has fewer documents than
+         Both are covered by a durable fact instead: a seeded tenant ends up with the
+         whole starter manifest, so an eligible account that has fewer documents than
          that has not finished being set up. Bounded to a young account, because a user
          who later DELETES a starter document must not be told forever that their
          ledger is still importing — the point of this flag is to caveat a figure while
          it is genuinely provisional, not to add a permanent disclaimer. */
       const user = await storage.getUser(userId);
       const isDemo = isDemoEmail(user?.email);
-      // Only a young demo account can still be waiting on a seed, so the document read
-      // — the expensive part — is skipped for everyone else.
+      const identity = brainDurableTenancy() ? await storage.getBrainIdentity(userId) : undefined;
+      // Durable auto-provisioning writes companyName; invite consumption does not. Before
+      // first use, no identity exists yet and the ordinary signup is still seed-eligible.
+      // The explicit manual company route belongs to production tenancy mode, not durable
+      // auto-provisioning, so it does not enter this branch.
+      const seedEligible = isDemo || (
+        brainDurableTenancy() && (identity === undefined || identity.companyName != null)
+      );
+      // Only a young seed-eligible account can still be waiting, so the document read,
+      // the expensive part, is skipped for everyone else.
       const documentCount =
-        isDemo && user?.createdAt != null ? (await storage.listSourceDocuments(userId)).length : 0;
+        seedEligible && user?.createdAt != null ? (await storage.listSourceDocuments(userId)).length : 0;
       res.json({
         seeding: seedStillExpected({
           inFlight: false,
-          isDemo,
+          seedEligible,
           createdAt: user?.createdAt,
           documentCount,
           expectedWithinMs: SEED_EXPECTED_WITHIN_MS,
