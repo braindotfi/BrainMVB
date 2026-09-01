@@ -1094,7 +1094,23 @@ export interface TenantKeyUsage {
 export interface TenantUsageResponse {
   tenant_id: string;
   window: string;
+  total_requests: number;
   total_events: number;
+  entitlement: {
+    tier_id: string;
+    display_name: string;
+    entitlement_version: number;
+    status: "active" | "suspended";
+    window_seconds: number;
+    key_limit: number;
+    tenant_limit: number;
+    effective_key_limit: number;
+    key_override: {
+      key_limit: number;
+      version: number | null;
+      expires_at: string | null;
+    } | null;
+  } | null;
   keys: TenantKeyUsage[];
 }
 

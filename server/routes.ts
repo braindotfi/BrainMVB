@@ -467,7 +467,27 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       );
       return res.json({
         window: usage.window ?? "30d",
+        totalRequests: usage.total_requests ?? usage.total_events ?? 0,
         totalEvents: usage.total_events ?? 0,
+        entitlement: usage.entitlement
+          ? {
+              tierId: usage.entitlement.tier_id,
+              displayName: usage.entitlement.display_name,
+              entitlementVersion: usage.entitlement.entitlement_version,
+              status: usage.entitlement.status,
+              windowSeconds: usage.entitlement.window_seconds,
+              keyLimit: usage.entitlement.key_limit,
+              tenantLimit: usage.entitlement.tenant_limit,
+              effectiveKeyLimit: usage.entitlement.effective_key_limit,
+              keyOverride: usage.entitlement.key_override
+                ? {
+                    keyLimit: usage.entitlement.key_override.key_limit,
+                    version: usage.entitlement.key_override.version,
+                    expiresAt: usage.entitlement.key_override.expires_at,
+                  }
+                : null,
+            }
+          : null,
         keys: (usage.keys ?? []).map((k) => ({
           keyId: k.key_id,
           environment: k.environment,
@@ -642,9 +662,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // KEY-AUTHENTICATED PLATFORM API (v1)
   //
   // The raw `Authorization: Bearer brain_sk_...` key is forwarded STRAIGHT
-  // to brain-core, which owns validation, scope enforcement, and per-key
-  // rate limiting (600 req/60s). The platform never stores or resolves
-  // keys locally. brain-core error codes (auth_invalid_key, rate_limited)
+  // to brain-core, which owns validation, scope enforcement, and server-owned
+  // per-key and per-tenant rate limits. The platform never stores
+  // or resolves keys locally. brain-core error codes (auth_invalid_key, rate_limited)
   // pass through with their upstream status.
   // ─────────────────────────────────────────────────────────────
 

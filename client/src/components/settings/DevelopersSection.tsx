@@ -12,8 +12,9 @@
  * Home metric cards / list rows, existing pill buttons and badges). No mock
  * data: keys are issued and stored by brain-core (proxied via
  * /api/developers/keys; plaintext relayed exactly once), usage aggregates
- * REAL brain-core audit events plus brain-core's per-key usage attribution,
- * tenants read the existing tenancy layer. While brain-core's key API flag
+ * REAL brain-core audit events plus brain-core's per-key usage attribution.
+ * The displayed rate tier is the server-owned core entitlement, and tenants
+ * read the existing tenancy layer. While brain-core's key API flag
  * is off upstream, the server answers 503 keys_api_unavailable and this page
  * shows an honest "not yet enabled" state — never a local fallback.
  *
@@ -25,7 +26,6 @@ import { Plus } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAppAlert } from "@/components/AppAlert";
-import { usePlanId, PLAN_RATE_LIMITS } from "@/lib/planStore";
 import { AlertCallout, PolicyCallout } from "@/components/Callout";
 import { Button } from "@/components/ui/button";
 import stepOneIcon from "@assets/1_1785602525964.png";
@@ -95,7 +95,23 @@ interface UsageResponse {
  *  platform proxy; 30-day window). */
 interface KeyUsageResponse {
   window: string;
+  totalRequests: number;
   totalEvents: number;
+  entitlement: {
+    tierId: string;
+    displayName: string;
+    entitlementVersion: number;
+    status: "active" | "suspended";
+    windowSeconds: number;
+    keyLimit: number;
+    tenantLimit: number;
+    effectiveKeyLimit: number;
+    keyOverride: {
+      keyLimit: number;
+      version: number | null;
+      expiresAt: string | null;
+    } | null;
+  } | null;
   keys: Array<{
     keyId: string;
     environment: string;
@@ -1951,12 +1967,9 @@ function UsageSection({ env }: { env: DevEnv }) {
   const envKeys = (keysQ.data?.keys ?? [])
     .filter((k) => k.environment === env)
     .sort((a, b) => keyCount(b.id) - keyCount(a.id) || (a.name < b.name ? -1 : 1));
-  // Rate-limit tier comes from the SAME plan source as Settings → Billing.
-  const planId = usePlanId();
   // In-place accordion for the by-method rows (ONE open at a time).
   const [expandedAction, setExpandedAction] = useState<string | null>(null);
-  const navigate = useLocation()[1];
-  const tier = planId ? PLAN_RATE_LIMITS[planId] : null;
+  const entitlement = keyUsageQ.data?.entitlement ?? null;
 
   const data = usageQ.data;
   let thisMonth = 0;
@@ -1999,35 +2012,25 @@ function UsageSection({ env }: { env: DevEnv }) {
               Rate-Limit Tier
             </p>
             <p className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[20px] leading-[48px]">
-              {tier ? tier.tier : "No plan selected"}
+              {keyUsageQ.isLoading
+                ? "Loading…"
+                : keyUsageQ.isError
+                  ? "Unavailable"
+                  : entitlement?.displayName ?? "Not assigned"}
             </p>
             <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px]">
-              {tier ? (
+              {keyUsageQ.isLoading ? (
+                <>Loading the server-owned entitlement.</>
+              ) : keyUsageQ.isError ? (
+                <>The server-owned entitlement is unavailable.</>
+              ) : entitlement ? (
                 <>
-                  {tier.requestsPerMin} req/min, burst {tier.burst}. From your{" "}
-                  <button
-                    type="button"
-                    onClick={() => navigate("/settings?section=billing")}
-                    className="text-brain-v1purple hover:underline cursor-pointer"
-                    data-testid="link-settings-billing"
-                  >
-                    Settings → Billing
-                  </button>{" "}
-                  plan.
+                  {entitlement.effectiveKeyLimit} per key and {entitlement.tenantLimit} per tenant
+                  every {entitlement.windowSeconds} seconds. Managed by Brain core, revision{" "}
+                  {entitlement.entitlementVersion}.
                 </>
               ) : (
-                <>
-                  Choose a plan in{" "}
-                  <button
-                    type="button"
-                    onClick={() => navigate("/settings?section=billing")}
-                    className="text-brain-v1purple hover:underline cursor-pointer"
-                    data-testid="link-settings-billing"
-                  >
-                    Settings → Billing
-                  </button>{" "}
-                  to set your tier
-                </>
+                <>No server-owned entitlement was returned for this environment.</>
               )}
             </p>
           </div>
