@@ -34,12 +34,14 @@ const allowlist = [
 ];
 
 function resolveBuildCommit(): string {
-  for (const name of ["BUILD_COMMIT", "GIT_SHA", "REPLIT_GIT_COMMIT_SHA"]) {
+  for (const name of ["BUILD_COMMIT", "GIT_SHA"]) {
     const value = process.env[name]?.trim();
     if (value && /^[0-9a-f]{7,64}$/i.test(value)) return value;
   }
   try {
-    const value = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+    const value = execFileSync("git", ["rev-parse", "HEAD"], {
+      encoding: "utf8",
+    }).trim();
     if (/^[0-9a-f]{7,64}$/i.test(value)) return value;
   } catch {
     // A source archive may not include .git. Keep the response honest rather
@@ -58,7 +60,8 @@ async function buildAll() {
   console.log("building server...");
   const pkg = JSON.parse(await readFile("package.json", "utf-8"));
   const buildCommit = resolveBuildCommit();
-  const buildVersion = process.env.BUILD_VERSION?.trim() || pkg.version || "unknown";
+  const buildVersion =
+    process.env.BUILD_VERSION?.trim() || pkg.version || "unknown";
   console.log(`[build] commit: ${buildCommit} | version: ${buildVersion}`);
   const allDeps = [
     ...Object.keys(pkg.dependencies || {}),
