@@ -83,20 +83,46 @@ interface TenantsResponse {
 }
 
 interface UsageResponse {
-  totalEvents: number;
-  byAction: Array<{ action: string; count: number; daily: Array<{ date: string; count: number }> }>;
-  byLayer: Array<{ layer: string; count: number }>;
+  totalRequests: number;
+  authenticatedRequests: number;
+  rejectedRequests: number;
+  billableUnits: number;
+  periodStart: string;
+  periodEnd: string;
+  source: "raw_meter" | "closed_period";
+  completeness: {
+    status: "unreconciled" | "reconciled" | "mismatch" | "incomplete" | "closed";
+    last_reconciled_at: string | null;
+    meter_persistence_failures: number;
+  };
+  methods: Array<{ method: string; count: number; daily: Array<{ date: string; count: number }> }>;
+  scopes: Array<{ scope: string; count: number }>;
+  routes: Array<{ operationId: string; count: number }>;
+  outcomes: Array<{ outcome: string; count: number }>;
   daily: Array<{ date: string; count: number }>;
-  windowDays: number;
   environment: DevEnv;
 }
 
 /** brain-core per-key usage attribution (camelCase wire shape from the
- *  platform proxy; 30-day window). */
+ *  platform proxy; current UTC month). */
 interface KeyUsageResponse {
   window: string;
+  periodStart: string;
+  periodEnd: string;
   totalRequests: number;
   totalEvents: number;
+  authenticatedRequests: number;
+  rejectedRequests: number;
+  billableUnits: number;
+  source: "raw_meter" | "closed_period";
+  completeness: UsageResponse["completeness"];
+  breakdowns: {
+    methods: Array<{ method: string; requestCount: number; daily: Array<{ date: string; requestCount: number }> }>;
+    scopes: Array<{ scope: string; requestCount: number }>;
+    routes: Array<{ operationId: string; requestCount: number }>;
+    outcomes: Array<{ outcome: string; requestCount: number }>;
+    daily: Array<{ date: string; requestCount: number }>;
+  };
   entitlement: {
     tierId: string;
     displayName: string;
@@ -1120,7 +1146,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
                 {usageQ.isLoading ? "…" : usageQ.isError ? "?" : String(today ?? 0)}
               </p>
               <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px]">
-                {usageQ.isError ? "Usage unavailable" : "From brain-core audit events"}
+                {usageQ.isError ? "Usage unavailable" : "From API-key request meter events"}
               </p>
             </button>
             <div className="w-px shrink-0 self-stretch bg-brain-v1stroke-2" />
@@ -1613,7 +1639,7 @@ function KeysSection({ env }: { env: DevEnv }) {
       {canManageKeys && !keysUnavailable && !keysQ.isLoading && !keysQ.isError && (
         <PolicyCallout className="shrink-0">
           Keys are issued and stored hashed by brain-core, and enforced on every key-authenticated call.
-          Rate limit: 600 requests per 60 seconds per key.
+          Rate limits use the server-owned tenant entitlement and any restrictive key override shown above.
         </PolicyCallout>
       )}
     </div>
@@ -1944,15 +1970,11 @@ function TenantsSection({ env, onNavigate }: { env: DevEnv; onNavigate: (s: DevS
 
 /* ─── Usage and Limits ─── */
 function UsageSection({ env }: { env: DevEnv }) {
-  // Environment-scoped usage: the server attributes tenant traffic to the
-  // environment implied by the tenancy mode (demo→sandbox, production→live),
-  // so the non-matching environment honestly reports zero.
+  // Environment-scoped, API-key-only UTC calendar-month usage from core.
   const usageQ = useQuery<UsageResponse>({
-    queryKey: [`/api/developers/usage?window=60&environment=${env}`],
+    queryKey: [`/api/developers/usage?environment=${env}`],
   });
-  // Per-key breakdown from brain-core's key-usage attribution (30-day
-  // window) — a DIFFERENT measurement than the tenant-wide audit events
-  // above, so it is labeled explicitly and never summed with them.
+  // The per-key panel reads the same request-meter facts and period.
   const keysQ = useQuery<{ keys: MaskedKey[] }>({
     queryKey: ["/api/developers/keys"],
     retry: (count, err) => !isKeysApiUnavailable(err) && count < 2,
@@ -1972,18 +1994,7 @@ function UsageSection({ env }: { env: DevEnv }) {
   const entitlement = keyUsageQ.data?.entitlement ?? null;
 
   const data = usageQ.data;
-  let thisMonth = 0;
-  let priorMonth = 0;
-  if (data) {
-    const now = new Date();
-    const monthKey = now.toISOString().slice(0, 7);
-    const prior = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1)).toISOString().slice(0, 7);
-    for (const d of data.daily) {
-      if (d.date.startsWith(monthKey)) thisMonth += d.count;
-      else if (d.date.startsWith(prior)) priorMonth += d.count;
-    }
-  }
-  const trend = priorMonth > 0 ? Math.round(((thisMonth - priorMonth) / priorMonth) * 100) : null;
+  const thisMonth = data?.totalRequests ?? 0;
 
   return (
     <div className="flex flex-col flex-1 min-h-0 gap-[16px]">
@@ -2001,9 +2012,7 @@ function UsageSection({ env }: { env: DevEnv }) {
             <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px]">
               {usageQ.isError
                 ? "Usage unavailable"
-                : trend === null
-                  ? "No prior-month data to compare"
-                  : `${trend >= 0 ? "+" : ""}${trend}% vs. last month`}
+                : "API-key traffic in the current UTC month"}
             </p>
           </div>
           <div className="w-px shrink-0 self-stretch bg-brain-v1stroke-2" />
@@ -2045,30 +2054,30 @@ function UsageSection({ env }: { env: DevEnv }) {
           {usageQ.isLoading ? (
             <EmptyRow>Loading usage…</EmptyRow>
           ) : usageQ.isError ? (
-            <EmptyRow>Usage is unavailable because brain-core audit events couldn't be read.</EmptyRow>
-          ) : !data?.byAction.length ? (
-            <EmptyRow>No {env} calls recorded in the last {data?.windowDays ?? 60} days.</EmptyRow>
+            <EmptyRow>Usage is unavailable because the API request meter couldn't be read.</EmptyRow>
+          ) : !data?.methods.length ? (
+            <EmptyRow>No {env} API-key calls recorded in the current UTC month.</EmptyRow>
           ) : (
             <div className="flex flex-col gap-[16px] p-[16px]">
-              {data.byAction.map((a, i) => {
-                const max = data.byAction[0]?.count || 1;
-                const isOpen = expandedAction === a.action;
-                // Show the trailing 14 days of the per-action series so the
-                // expanded trend stays readable (full window is 60 days).
+              {data.methods.map((a, i) => {
+                const max = data.methods[0]?.count || 1;
+                const isOpen = expandedAction === a.method;
+                // Show the trailing 14 days of the per-method series so the
+                // expanded current-month trend stays readable.
                 const trend = (a.daily ?? []).slice(-14);
                 const trendMax = Math.max(1, ...trend.map((d) => d.count));
                 return (
-                  <div key={a.action} className="flex flex-col gap-[16px] w-full">
+                  <div key={a.method} className="flex flex-col gap-[16px] w-full">
                     {i > 0 && <div className="w-full border-t border-brain-v1stroke-2" />}
                     <div className="flex flex-col gap-[16px] w-full">
                       <button
                         type="button"
-                        onClick={() => setExpandedAction(isOpen ? null : a.action)}
+                        onClick={() => setExpandedAction(isOpen ? null : a.method)}
                         className="flex flex-col gap-[8px] w-full text-left cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple rounded-[8px]"
-                        data-testid={`row-method-${a.action}`}
+                        data-testid={`row-method-${a.method}`}
                         aria-expanded={isOpen}
                       >
-                        <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[20px] w-full break-words group-hover:text-white transition-colors" title={a.action}>{humanizeAction(a.action)}</p>
+                        <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[20px] w-full break-words group-hover:text-white transition-colors" title={a.method}>{a.method}</p>
                         <div className="flex gap-[7px] items-center w-full">
                           <div className="flex-1 min-w-px h-[6px] rounded-[3px] bg-brain-v1baby-blue-15 overflow-hidden">
                             <div className="h-full rounded-[3px] bg-brain-v1purple" style={{ width: `${Math.max((a.count / max) * 100, 2)}%` }} />
@@ -2077,11 +2086,11 @@ function UsageSection({ env }: { env: DevEnv }) {
                         </div>
                       </button>
                       {isOpen && (
-                        <div className="flex flex-col gap-[16px]" data-testid={`panel-method-daily-${a.action}`}>
+                        <div className="flex flex-col gap-[16px]" data-testid={`panel-method-daily-${a.method}`}>
                           <div className="flex gap-[8px] items-center w-full">
                             <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-60 text-[14px] leading-[20px] whitespace-nowrap shrink-0">
                               <span>Daily requests, last {trend.length} days: </span>
-                              <span className="text-brain-v1baby-blue-100">{a.action}</span>
+                              <span className="text-brain-v1baby-blue-100">{a.method}</span>
                             </p>
                             <div className="flex-1 min-w-px h-px bg-brain-v1stroke-2" />
                           </div>
@@ -2167,12 +2176,11 @@ function UsageSection({ env }: { env: DevEnv }) {
         !keyUsageQ.isError && (
           <PolicyCallout>
             <p className="mb-[12px]">
-              Key counts come from brain-core&apos;s per-key usage attribution ({keyUsageQ.data?.window ?? "30d"} window).
-              They are a different measurement than the tenant-wide audit events above and won&apos;t match those totals.
+              Summary, method, and key totals come from the same append-only API request meter for the current UTC month.
             </p>
             <p>
-              Usage is aggregated from brain-core audit events for your tenant, attributed to the environment your
-              tenancy mode runs in (demo to sandbox, production to live).
+              General member, seeding, and agent audit activity is excluded. Measured billable units remain zero-charge
+              during the shadow period. Meter completeness: {usageQ.data?.completeness.status ?? "unavailable"}.
             </p>
           </PolicyCallout>
         )}
