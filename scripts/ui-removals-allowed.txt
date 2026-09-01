@@ -27,3 +27,4 @@ input-avatar-file   superseded — avatar upload controls were removed from Sett
 button-close-invoice-preview   removed — Invoice Record no longer exposes a thumbnail preview overlay
 invoice-preview-overlay   removed — Invoice Record no longer exposes a thumbnail preview overlay
 invoice-thumbnail   removed — Invoice Record header now matches Bill Details without an invoice thumbnail
+link-settings-billing   superseded: Developers now displays the server-owned rate entitlement instead of a local billing-plan selection
