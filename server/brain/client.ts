@@ -1094,8 +1094,26 @@ export interface TenantKeyUsage {
 export interface TenantUsageResponse {
   tenant_id: string;
   window: string;
+  period_start: string;
+  period_end: string;
   total_requests: number;
   total_events: number;
+  authenticated_requests: number;
+  rejected_requests: number;
+  billable_units: number;
+  source: "raw_meter" | "closed_period";
+  completeness: {
+    status: "unreconciled" | "reconciled" | "mismatch" | "incomplete" | "closed";
+    last_reconciled_at: string | null;
+    meter_persistence_failures: number;
+  };
+  breakdowns: {
+    methods: Array<{ method: string; request_count: number; daily: Array<{ date: string; request_count: number }> }>;
+    scopes: Array<{ scope: string; request_count: number }>;
+    routes: Array<{ operation_id: string; request_count: number }>;
+    outcomes: Array<{ outcome: string; request_count: number }>;
+    daily: Array<{ date: string; request_count: number }>;
+  };
   entitlement: {
     tier_id: string;
     display_name: string;
@@ -1122,7 +1140,7 @@ export function getTenantKeyUsage(
   return brainRequest<TenantUsageResponse>(`/tenants/${tenantId}/usage`, {
     token,
     query: {
-      window: query?.window ?? "30d",
+      window: query?.window ?? "current_month",
       environment: query?.environment,
       key_id: query?.key_id,
     },

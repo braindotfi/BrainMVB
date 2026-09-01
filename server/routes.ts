@@ -63,12 +63,7 @@ import { chatRateLimiter } from "./brain/chatRateLimit";
  */
 const SEED_EXPECTED_WITHIN_MS = 10 * 60_000;
 import { generateNonce } from "./nonce";
-import {
-  aggregateUsage,
-  API_KEY_SCOPES,
-  isRawScopeEligible,
-  type UsageAuditEvent,
-} from "./developers";
+import { API_KEY_SCOPES, isRawScopeEligible } from "./developers";
 import { ANTHROPIC_MODEL } from "./anthropicModel";
 import { isDegenerateWikiPayload } from "./wikiAnswerGuard";
 import { answerDeterministically } from "./brain/deterministicAnswers";
@@ -317,7 +312,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return;
       }
       if (code === "rate_limited" || error.status === 429) {
-        res.status(429).json({ error: "rate_limited", message: "Rate limit hit (600 requests per 60s per key). Try again shortly." });
+        res.status(429).json({ error: "rate_limited", message: "The server-owned key or tenant rate limit was reached. Try again after the reset window." });
         return;
       }
       if (code === "auth_invalid_key" || error.status === 401) {
@@ -450,7 +445,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   // GET /api/developers/key-usage?environment=&keyId= - brain-core per-key
-  // usage attribution (30d window). keyId optional: omit for the tenant-wide
+  // usage attribution (current UTC month). keyId optional: omit for the tenant-wide
   // Usage page, include for a single key's detail modal.
   app.get("/api/developers/key-usage", requireAuth, async (req, res) => {
     const envParsed = z.enum(["sandbox", "live"]).safeParse(req.query.environment ?? "sandbox");
@@ -460,15 +455,33 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!session) return;
       const usage = await withBrainBaseUrl(session.baseUrl, () =>
         getTenantKeyUsage(session.token, session.tenantId, {
-          window: "30d",
+          window: typeof req.query.window === "string" ? req.query.window : "current_month",
           environment: envParsed.data,
           key_id: typeof req.query.keyId === "string" ? req.query.keyId : undefined,
         }),
       );
       return res.json({
-        window: usage.window ?? "30d",
+        window: usage.window ?? "current_month",
+        periodStart: usage.period_start,
+        periodEnd: usage.period_end,
         totalRequests: usage.total_requests ?? usage.total_events ?? 0,
         totalEvents: usage.total_events ?? 0,
+        authenticatedRequests: usage.authenticated_requests ?? usage.total_requests ?? 0,
+        rejectedRequests: usage.rejected_requests ?? 0,
+        billableUnits: usage.billable_units ?? 0,
+        source: usage.source ?? "raw_meter",
+        completeness: usage.completeness,
+        breakdowns: {
+          methods: (usage.breakdowns?.methods ?? []).map((row) => ({
+            method: row.method,
+            requestCount: row.request_count,
+            daily: row.daily.map((day) => ({ date: day.date, requestCount: day.request_count })),
+          })),
+          scopes: (usage.breakdowns?.scopes ?? []).map((row) => ({ scope: row.scope, requestCount: row.request_count })),
+          routes: (usage.breakdowns?.routes ?? []).map((row) => ({ operationId: row.operation_id, requestCount: row.request_count })),
+          outcomes: (usage.breakdowns?.outcomes ?? []).map((row) => ({ outcome: row.outcome, requestCount: row.request_count })),
+          daily: (usage.breakdowns?.daily ?? []).map((row) => ({ date: row.date, requestCount: row.request_count })),
+        },
         entitlement: usage.entitlement
           ? {
               tierId: usage.entitlement.tier_id,
@@ -604,57 +617,46 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
-  // GET /api/developers/usage?window=30 - server-side aggregation over REAL
-  // brain-core audit events (member token via the BFF session). No analytics
-  // pipeline, no mock data; empty tenant → honest zeros.
+  // GET /api/developers/usage - API-key-only calendar-month usage from core's
+  // append-only request meter. General audit activity never enters this view.
   app.get("/api/developers/usage", requireAuth, async (req, res) => {
-    const windowDays = Math.min(Math.max(parseInt(String(req.query.window ?? "30"), 10) || 30, 1), 90);
     const envParsed = z.enum(["sandbox", "live"]).safeParse(req.query.environment ?? "sandbox");
     if (!envParsed.success) {
       return res.status(400).json({ error: "invalid_environment" });
     }
     const environment = envParsed.data;
-    // Environment attribution: brain-core doesn't tag audit events with an API
-    // environment, but the tenancy mode determines it unambiguously — demo-mode
-    // tenants are sandbox, production-mode tenants are live. The non-matching
-    // environment therefore honestly has zero traffic (not "unknown").
-    const tenantEnvironment = brainTenancyMode() === "production" ? "live" : "sandbox";
-    if (environment !== tenantEnvironment) {
-      return res.json({ ...aggregateUsage([], windowDays), environment });
-    }
-    if (!brainAuthConfigured()) {
-      return res.status(503).json({
-        error: "brain_unconfigured",
-        message: "brain-core token source not configured (set BRAIN_DEMO_PROVISION_SECRET).",
-      });
-    }
     try {
-      const { token, baseUrl } = await getBrainSession(req.session.userId!);
-      // Page through audit events (bounded: 5 pages × 200 = 1000 events max —
-      // plenty for a 90-day demo/POC window; older events fall out of the window).
-      const events = await withBrainBaseUrl(baseUrl, async () => {
-        const evts: UsageAuditEvent[] = [];
-        let cursor: string | undefined = undefined;
-        for (let page = 0; page < 5; page++) {
-          const batch = await listAuditEvents(token, { limit: 200, cursor });
-          evts.push(...batch.events.map((e) => ({
-            id: e.id,
-            layer: e.layer,
-            action: e.action,
-            created_at: e.created_at,
-          })));
-          if (!batch.next_cursor || batch.events.length === 0) break;
-          cursor = batch.next_cursor;
-        }
-        return evts;
+      const session = await requireBrainMemberSession(req, res);
+      if (!session) return;
+      const usage = await withBrainBaseUrl(session.baseUrl, () =>
+        getTenantKeyUsage(session.token, session.tenantId, { window: "current_month", environment }),
+      );
+      return res.json({
+        totalRequests: usage.total_requests,
+        authenticatedRequests: usage.authenticated_requests,
+        rejectedRequests: usage.rejected_requests,
+        billableUnits: usage.billable_units,
+        periodStart: usage.period_start,
+        periodEnd: usage.period_end,
+        source: usage.source,
+        completeness: usage.completeness,
+        methods: usage.breakdowns.methods.map((row) => ({
+          method: row.method,
+          count: row.request_count,
+          daily: row.daily.map((day) => ({ date: day.date, count: day.request_count })),
+        })),
+        scopes: usage.breakdowns.scopes.map((row) => ({ scope: row.scope, count: row.request_count })),
+        routes: usage.breakdowns.routes.map((row) => ({ operationId: row.operation_id, count: row.request_count })),
+        outcomes: usage.breakdowns.outcomes.map((row) => ({ outcome: row.outcome, count: row.request_count })),
+        daily: usage.breakdowns.daily.map((row) => ({ date: row.date, count: row.request_count })),
+        environment,
       });
-      return res.json({ ...aggregateUsage(events, windowDays), environment });
     } catch (error: any) {
       console.error("Developers usage error:", error);
       if (error instanceof BrainApiError) {
         return res.status(error.status).json({ error: "brain_upstream_error", status: error.status });
       }
-      return res.status(502).json({ error: "Failed to aggregate usage" });
+      return res.status(502).json({ error: "Failed to read API request usage" });
     }
   });
 
@@ -698,7 +700,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       res.status(error.status).json({
         error: code ?? "brain_upstream_error",
         message: error.status === 429
-          ? "Rate limit hit (600 requests per 60s per key). Try again shortly."
+          ? "The server-owned key or tenant rate limit was reached. Try again after the reset window."
           : error.status === 401
             ? "The key is invalid or revoked."
             : undefined,
