@@ -278,6 +278,36 @@ describe("POST /api/developers/keys — brain-core key issuance", () => {
     expect(calledBody.scopes).toEqual(ISSUE_BODY.scopes);
   });
 
+  it("accepts governance and Raw scope values and forwards them unchanged to core", async () => {
+    const client = await registerAndLogin(uid(), baseUrl);
+    const scopes = ["governance:read", "raw:read", "raw:write"];
+    const res = await client.request(
+      "POST",
+      "/api/developers/keys",
+      { name: "Synthetic pipeline", environment: "sandbox", scopes },
+    );
+
+    expect(res.status).toBe(201);
+    expect(brainMocks.issueTenantKey).toHaveBeenCalledOnce();
+    expect(brainMocks.issueTenantKey.mock.calls[0]?.[2]).toEqual({
+      name: "Synthetic pipeline",
+      environment: "sandbox",
+      scopes,
+    });
+  });
+
+  it("still rejects unknown scope values before calling core", async () => {
+    const client = await registerAndLogin(uid(), baseUrl);
+    const res = await client.request(
+      "POST",
+      "/api/developers/keys",
+      { name: "Invalid scope", environment: "sandbox", scopes: ["admin:write"] },
+    );
+
+    expect(res.status).toBe(400);
+    expect(brainMocks.issueTenantKey).not.toHaveBeenCalled();
+  });
+
   it("uses the member token (session.token), not the agent token", async () => {
     const client = await registerAndLogin(uid(), baseUrl);
     await client.request("POST", "/api/developers/keys", ISSUE_BODY);

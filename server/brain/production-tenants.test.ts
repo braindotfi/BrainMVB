@@ -13,7 +13,8 @@ import { type AddressInfo } from "node:net";
  *   - identity present → canCreate false, liveKeysAvailable true
  *     (platformServiceConfigured() is true throughout this suite)
  *
- * brain-core is never called by this route in production mode; storage-only.
+ * Tenant identity and timestamps remain storage-backed. Key-management ability
+ * is resolved separately from the current core member record and fails closed.
  */
 
 // Config reads env at module-eval, so set it BEFORE the dynamic imports below.
@@ -29,7 +30,8 @@ delete process.env.BRAIN_AUTH_JWT_SECRET;
 
 const realFetch = globalThis.fetch;
 
-// Guard: this route must never reach brain-core in production mode.
+// The only allowed core read is the current member lookup used for the admin
+// gate. No tenant metadata or key mutation may occur while listing tenants.
 function installFetchMock(): void {
   globalThis.fetch = (async (input: unknown, init: RequestInit = {}) => {
     const url =
@@ -40,6 +42,25 @@ function installFetchMock(): void {
           : (input as Request).url;
     if (!url.startsWith("https://api.brain.fi")) {
       return realFetch(input as never, init as never);
+    }
+    if (url.endsWith("/sessions") && init.method === "POST") {
+      return new Response(JSON.stringify({
+        token: "member-session-token",
+        refresh_token: "member-refresh-token",
+        expires_in: 900,
+        member: { id: "mem_1", tenantId: "tnt_prod_created_at" },
+      }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+    if (url.endsWith("/members/mem_1") && (init.method ?? "GET") === "GET") {
+      return new Response(JSON.stringify({
+        id: "mem_1",
+        tenantId: "tnt_prod_created_at",
+        email: "admin@example.com",
+        displayName: "Admin",
+        role: "admin",
+        active: true,
+        approval: { domains: [], perItemLimit: 0, requiresSecondApproverAbove: null },
+      }), { status: 200, headers: { "content-type": "application/json" } });
     }
     throw new Error(`unexpected brain-core call in test: ${url}`);
   }) as typeof fetch;
@@ -54,12 +75,14 @@ interface TenantsBody {
   mode: string;
   canCreate: boolean;
   liveKeysAvailable: boolean;
+  canManageKeys: boolean;
   tenants: Array<{
     id: string;
     companyName: string | null;
     environment: string;
     createdAt: string | null;
     ephemeral: boolean;
+    rawScopesEligible: boolean;
   }>;
 }
 
@@ -135,18 +158,25 @@ describe("GET /api/developers/tenants (production mode)", () => {
       memberId: "mem_1",
       companyName: "Acme Robotics",
     });
+    await storage.upsertBrainAgentToken(
+      identity.tenantId,
+      "agent-token",
+      new Date(Date.now() + 900_000),
+    );
     expect(identity.linkedAt).toBeInstanceOf(Date);
 
     const body = await getTenants(cookie);
     expect(body.mode).toBe("production");
     expect(body.canCreate).toBe(false);
     expect(body.liveKeysAvailable).toBe(true);
+    expect(body.canManageKeys).toBe(true);
     expect(body.tenants).toHaveLength(1);
     const tenant = body.tenants[0];
     expect(tenant.id).toBe("tnt_prod_created_at");
     expect(tenant.companyName).toBe("Acme Robotics");
     expect(tenant.environment).toBe("live");
     expect(tenant.ephemeral).toBe(false);
+    expect(tenant.rawScopesEligible).toBe(false);
     // The heart of the task: createdAt comes from the durable mapping's
     // linkedAt, byte-for-byte as ISO — no clock reads, no fabrication.
     expect(tenant.createdAt).toBe(identity.linkedAt!.toISOString());

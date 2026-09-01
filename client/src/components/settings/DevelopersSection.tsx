@@ -65,12 +65,18 @@ interface TenantsResponse {
   canCreate: boolean;
   /** Server-computed readiness signal — matches the gate on POST /keys exactly. */
   liveKeysAvailable: boolean;
+  /** Server-computed from the current brain-core member record. */
+  canManageKeys: boolean;
   tenants: Array<{
     id: string;
     companyName: string | null;
     environment: string;
     createdAt: string | null;
     ephemeral: boolean;
+    provisioningState?: string | null;
+    dataProfile?: string | null;
+    accessStage?: string | null;
+    rawScopesEligible: boolean;
     /** Demo tenants only: when the ephemeral session (and tenant) resets. */
     expiresAt?: string | null;
   }>;
@@ -116,11 +122,40 @@ interface AuditEventsResponse {
   events: DevAuditEvent[];
 }
 
-/** The only scopes brain-core recognizes on tenant API keys — enforced by
- *  brain-core's gateway on every key-authenticated call. */
+/** Scopes brain-core recognizes on tenant API keys. Raw scopes are filtered
+ *  out unless the server confirms the selected tenant is a ready synthetic
+ *  demo tenant. */
 const SCOPE_OPTIONS = [
-  { id: "ledger:read", label: "Ledger read", hint: "Accounts, transactions, invoices" },
-  { id: "audit:read", label: "Audit read", hint: "Audit events and anchors" },
+  {
+    id: "ledger:read",
+    label: "Ledger read",
+    hint: "Accounts, transactions, invoices",
+    syntheticDemoOnly: false,
+  },
+  {
+    id: "audit:read",
+    label: "Audit read",
+    hint: "Audit events and anchors",
+    syntheticDemoOnly: false,
+  },
+  {
+    id: "governance:read",
+    label: "Governance read",
+    hint: "Agent governance and lifecycle records",
+    syntheticDemoOnly: false,
+  },
+  {
+    id: "raw:read",
+    label: "Raw read",
+    hint: "Read synthetic source artifacts",
+    syntheticDemoOnly: true,
+  },
+  {
+    id: "raw:write",
+    label: "Raw write",
+    hint: "Ingest synthetic source artifacts",
+    syntheticDemoOnly: true,
+  },
 ] as const;
 
 const ENV_STORAGE_KEY = "brain_developers_env";
@@ -138,13 +173,67 @@ const ACTION_LABELS: Record<string, string> = {
 };
 const humanizeAction = (action: string): string => ACTION_LABELS[action] ?? action;
 
-/** Key-authed platform endpoints — paths and scopes MUST mirror the
- *  registerKeyAuthedRead registrations in server/routes.ts exactly. */
-const API_ENDPOINTS: Array<{ path: string; scope: string | null; description: string }> = [
-  { path: "/api/v1/ping", scope: null, description: "Verify a key works and complete the checklist above" },
-  { path: "/api/v1/ledger/accounts", scope: "ledger:read", description: "Ledger accounts for your tenant" },
-  { path: "/api/v1/ledger/transactions", scope: "ledger:read", description: "Ledger transactions (supports ?limit=, max 200)" },
-  { path: "/api/v1/audit/events", scope: "audit:read", description: "Audit events (supports ?limit= and ?cursor=)" },
+/** Key-authenticated endpoint reference. Ledger and audit reads use the app
+ *  pass-through. Governance and Raw calls intentionally go straight to core,
+ *  where the API-key principal and conditional Raw scopes are enforced. */
+const API_ENDPOINTS: Array<{
+  method: "GET" | "POST";
+  path: string;
+  scope: string | null;
+  description: string;
+  target: "app" | "core";
+  curlArgs?: string;
+}> = [
+  {
+    method: "GET",
+    path: "/api/v1/ping",
+    scope: null,
+    description: "Verify a key works and complete the checklist above",
+    target: "app",
+  },
+  {
+    method: "GET",
+    path: "/api/v1/ledger/accounts",
+    scope: "ledger:read",
+    description: "Ledger accounts for your tenant",
+    target: "app",
+  },
+  {
+    method: "GET",
+    path: "/api/v1/ledger/transactions",
+    scope: "ledger:read",
+    description: "Ledger transactions (supports ?limit=, max 200)",
+    target: "app",
+  },
+  {
+    method: "GET",
+    path: "/api/v1/audit/events",
+    scope: "audit:read",
+    description: "Audit events (supports ?limit= and ?cursor=)",
+    target: "app",
+  },
+  {
+    method: "GET",
+    path: "/v1/governance/agents",
+    scope: "governance:read",
+    description: "Direct brain-core call for tenant-bound agent governance records",
+    target: "core",
+  },
+  {
+    method: "GET",
+    path: "/v1/raw/{raw_id}",
+    scope: "raw:read",
+    description: "Direct brain-core call for a synthetic Raw artifact",
+    target: "core",
+  },
+  {
+    method: "POST",
+    path: "/v1/raw/ingest",
+    scope: "raw:write",
+    description: "Direct brain-core upload for synthetic demo data",
+    target: "core",
+    curlArgs: '-F "source_type=csv_upload" -F "file=@./data.csv"',
+  },
 ];
 
 const GET_STARTED_STEP_ICONS = [stepOneIcon, stepTwoIcon, stepThreeIcon] as const;
@@ -525,16 +614,26 @@ function useCountdown(targetIso: string | null | undefined): string | null {
 /* ─── API reference (copy-paste curl examples for key-authed endpoints).
    Figma frame 5985:65819: pill tags (GET / scope), 16px path in baby blue,
    curl inside a #06070a bordered box with the Copy pill INSIDE the box. ─── */
-const EndpointRow = ({ path, scope, description }: { path: string; scope: string | null; description: string }) => {
+const EndpointRow = ({
+  method,
+  path,
+  scope,
+  description,
+  target,
+  curlArgs,
+}: (typeof API_ENDPOINTS)[number]) => {
   const [copied, setCopied] = useState(false);
-  const curl = `curl ${window.location.origin}${path} -H "Authorization: Bearer brain_sk_..."`;
+  const origin = target === "core" ? "https://api.brain.fi" : window.location.origin;
+  const curl =
+    `curl${method === "POST" ? " -X POST" : ""} ${origin}${path} ` +
+    `-H "Authorization: Bearer brain_sk_..."${curlArgs ? ` ${curlArgs}` : ""}`;
   const slug = path.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "");
   return (
     <div className="flex flex-col gap-[16px] w-full" data-testid={`row-endpoint-${slug}`}>
       <div className="flex flex-col gap-[4px] justify-center w-full">
         <div className="flex gap-[12px] items-start w-full flex-wrap">
           <span className="bg-brain-v1baby-blue-15 border border-[rgba(108,119,157,0.2)] flex items-center justify-center px-[8px] py-[3px] rounded-pill shrink-0 [font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-brain-v1baby-blue-60 text-[12px] text-center whitespace-nowrap">
-            GET
+            {method}
           </span>
           <p className="flex-1 min-w-0 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[16px] break-all" data-testid={`text-endpoint-path-${slug}`}>
             {path}
@@ -550,6 +649,11 @@ const EndpointRow = ({ path, scope, description }: { path: string; scope: string
           </span>
         </div>
         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px]">{description}</p>
+        {target === "core" && (
+          <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[12px]">
+            Direct API: this endpoint is served by api.brain.fi, not the app.brain.fi pass-through.
+          </p>
+        )}
       </div>
       <div className="bg-brain-v1headerfooterbg border border-brain-v1stroke-2 flex gap-[12px] items-center p-[12px] rounded-row w-full">
         <p className="flex-1 min-w-0 [font-family:'JetBrains_Mono',monospace] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[14px] truncate" data-testid={`text-curl-${slug}`}>
@@ -580,12 +684,15 @@ const EndpointRow = ({ path, scope, description }: { path: string; scope: string
 
 /* ─── Overview ─── */
 function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envControl: ReactNode; onNavigate: (s: DevSection) => void }) {
+  const tenantsQ = useQuery<TenantsResponse>({ queryKey: ["/api/developers/tenants"] });
+  const canManageKeys = tenantsQ.data?.canManageKeys === true;
   // Poll keys ONLY while an active key has never been used, so the
   // "Make a key-authenticated call" step lights up in-session when the
   // user makes their first real key-authed call (e.g. curl /api/v1/ping).
   // Once every active key has a lastUsedAt (or there are no keys), stop.
   const keysQ = useQuery<{ keys: MaskedKey[] }>({
     queryKey: ["/api/developers/keys"],
+    enabled: canManageKeys,
     retry: (count, err) => !isKeysApiUnavailable(err) && count < 2,
     refetchInterval: (query) => {
       if (isKeysApiUnavailable(query.state.error)) return false;
@@ -596,11 +703,11 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
   });
   const keyUsageQ = useQuery<KeyUsageResponse>({
     queryKey: [`/api/developers/key-usage?environment=${env}`],
+    enabled: canManageKeys,
     retry: (count, err) => !isKeysApiUnavailable(err) && count < 2,
   });
   const keysUnavailable = isKeysApiUnavailable(keysQ.error);
   const keyUsageUnavailable = isKeysApiUnavailable(keyUsageQ.error);
-  const tenantsQ = useQuery<TenantsResponse>({ queryKey: ["/api/developers/tenants"] });
   const usageQ = useQuery<UsageResponse>({ queryKey: [`/api/developers/usage?environment=${env}`] });
   const activityQ = useQuery<AuditEventsResponse>({ queryKey: ["/api/brain/audit/events?limit=8"] });
   const [selectedEvent, setSelectedEvent] = useState<DevAuditEvent | null>(null);
@@ -640,24 +747,39 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
   type StepState = "done" | "todo" | "unknown" | "checking";
   const stepState = (pending: boolean, failed: boolean, done: boolean): StepState =>
     done ? "done" : failed ? "unknown" : pending ? "checking" : "todo";
-  const steps: { label: string; state: StepState; keyApiUnavailable?: boolean }[] = [
+  const steps: {
+    label: string;
+    state: StepState;
+    keyApiUnavailable?: boolean;
+    adminRequired?: boolean;
+  }[] = [
     {
       label: "Create a Tenant",
       state: stepState(tenantsQ.isPending, tenantsQ.isError, hasTenant),
     },
     {
       label: "Issue an API Key",
-      state: stepState(keysQ.isPending, keysQ.isError, hasKey),
+      state: canManageKeys
+        ? stepState(keysQ.isPending, keysQ.isError, hasKey)
+        : tenantsQ.isPending
+          ? "checking"
+          : "unknown",
       keyApiUnavailable: keysUnavailable,
+      adminRequired: !tenantsQ.isPending && !canManageKeys,
     },
     {
       label: "Make a Key-Authenticated Call",
-      state: stepState(
-        keysQ.isPending || keyUsageQ.isPending,
-        keysQ.isError || keyUsageQ.isError,
-        hasKeyAuthedCall,
-      ),
+      state: canManageKeys
+        ? stepState(
+            keysQ.isPending || keyUsageQ.isPending,
+            keysQ.isError || keyUsageQ.isError,
+            hasKeyAuthedCall,
+          )
+        : tenantsQ.isPending
+          ? "checking"
+          : "unknown",
       keyApiUnavailable: keysUnavailable || keyUsageUnavailable,
+      adminRequired: !tenantsQ.isPending && !canManageKeys,
     },
   ];
 
@@ -908,7 +1030,9 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
                       className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px]"
                       data-testid={`step-get-started-${i}-unknown`}
                     >
-                      {s.keyApiUnavailable
+                      {s.adminRequired
+                        ? "Tenant admin access is required to manage API keys."
+                        : s.keyApiUnavailable
                         ? "API key issuance is not yet enabled."
                         : "Couldn't check this. brain-core is unreachable. It may already be done."}
                     </p>
@@ -933,7 +1057,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
                     Add Tenant
                   </Button>
                 )}
-                {i === 1 && (
+                {i === 1 && canManageKeys && (
                   <Button
                     variant="primary"
                     size="compact"
@@ -1064,12 +1188,21 @@ function parseKeyMutationError(e: Error): { status: number; code: string; messag
 /* ─── API Keys ─── */
 function KeysSection({ env }: { env: DevEnv }) {
   const alert = useAppAlert();
+  const tenantsQ = useQuery<TenantsResponse>({ queryKey: ["/api/developers/tenants"] });
+  const canManageKeys = tenantsQ.data?.canManageKeys === true;
+  const rawScopesEligible =
+    env === "sandbox" &&
+    tenantsQ.data?.tenants.some(
+      (tenant) => tenant.environment === "sandbox" && tenant.rawScopesEligible,
+    ) === true;
   const keysQ = useQuery<{ keys: MaskedKey[] }>({
     queryKey: ["/api/developers/keys"],
+    enabled: canManageKeys,
     retry: (count, err) => !isKeysApiUnavailable(err) && count < 2,
   });
   const usageQ = useQuery<KeyUsageResponse>({
     queryKey: [`/api/developers/key-usage?environment=${env}`],
+    enabled: canManageKeys,
     retry: (count, err) => !isKeysApiUnavailable(err) && count < 2,
   });
   const usageByKey = new Map((usageQ.data?.keys ?? []).map((u) => [u.keyId, u]));
@@ -1080,6 +1213,14 @@ function KeysSection({ env }: { env: DevEnv }) {
   const [plaintext, setPlaintext] = useState<string | null>(null);
   const [confirmRevoke, setConfirmRevoke] = useState<string | null>(null);
   const [selectedKeyId, setSelectedKeyId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!rawScopesEligible) {
+      setScopes((current) =>
+        current.filter((scope) => scope !== "raw:read" && scope !== "raw:write"),
+      );
+    }
+  }, [rawScopesEligible]);
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["/api/developers/keys"] });
@@ -1166,7 +1307,6 @@ function KeysSection({ env }: { env: DevEnv }) {
     },
   });
 
-  const tenantsQ = useQuery<TenantsResponse>({ queryKey: ["/api/developers/tenants"] });
   const liveAvailable = tenantsQ.data?.liveKeysAvailable === true;
   const keys = (keysQ.data?.keys ?? []).filter((k) => k.environment === env);
 
@@ -1183,7 +1323,7 @@ function KeysSection({ env }: { env: DevEnv }) {
             onClose={close}
             testId="modal-key-detail"
             footer={
-              k.status === "active" ? (
+              k.status === "active" && canManageKeys ? (
                 <div className="flex items-center gap-2 w-full">
                   <PillButton tone="neutral" testId={`button-rotate-${k.id}`} onClick={() => rotateMut.mutate(k.id)} disabled={rotateMut.isPending || revokeMut.isPending}>
                     {rotateMut.isPending ? "Rotating…" : "Rotate"}
@@ -1250,10 +1390,11 @@ function KeysSection({ env }: { env: DevEnv }) {
       <div className="flex flex-col gap-[4px] shrink-0">
         <div className="flex min-h-[36px] items-center justify-between gap-4">
           <SectionLabel testId="text-page-title">{env === "live" ? "Live Keys" : "Sandbox Keys"}</SectionLabel>
-          <Button
-            variant="primary"
-            size="compact"
-            data-testid="button-new-key"
+          {canManageKeys && (
+            <Button
+              variant="primary"
+              size="compact"
+              data-testid="button-new-key"
               onClick={() => {
                 if (env === "live" && !liveAvailable) {
                   alert.info("Live keys are gated", "Live key issuance unlocks when this workspace has a production tenant.");
@@ -1265,7 +1406,21 @@ function KeysSection({ env }: { env: DevEnv }) {
               <Plus className="relative shrink-0 size-[16px] text-brain-v1purple" />
               Create Key
             </Button>
+          )}
         </div>
+
+        {!tenantsQ.isPending && !canManageKeys && (
+          <WidgetPanel testId="card-key-admin-required">
+            <div className="p-[16px] flex flex-col gap-[4px]">
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[20px]">
+                Tenant admin access required
+              </p>
+              <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[16px]">
+                Only an active tenant admin can create, rotate, or revoke API keys.
+              </p>
+            </div>
+          </WidgetPanel>
+        )}
 
         {env === "live" && !liveAvailable && (
         <WidgetPanel testId="card-live-gated">
@@ -1293,7 +1448,7 @@ function KeysSection({ env }: { env: DevEnv }) {
         </WidgetPanel>
       )}
 
-      {showCreate && (env === "sandbox" || liveAvailable) && (
+      {showCreate && canManageKeys && (env === "sandbox" || liveAvailable) && (
         <PopupShell
           title="Create Key"
           onClose={() => setShowCreate(false)}
@@ -1327,9 +1482,9 @@ function KeysSection({ env }: { env: DevEnv }) {
           </PopupSection>
           <PopupSection label="Requested Scopes">
             <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[20px] w-full">
-              Enforced on the platform data endpoints (ledger/audit reads). See the API reference on Overview.
+              Choose only what this integration needs. The Overview reference identifies app pass-through and direct brain-core endpoints.
             </p>
-            {SCOPE_OPTIONS.map((s) => {
+            {SCOPE_OPTIONS.filter((scope) => !scope.syntheticDemoOnly || rawScopesEligible).map((s) => {
               const checked = scopes.includes(s.id);
               return (
                 <button
@@ -1356,6 +1511,14 @@ function KeysSection({ env }: { env: DevEnv }) {
                 </button>
               );
             })}
+            {env === "sandbox" && !rawScopesEligible && (
+              <p
+                className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[13px] leading-[18px]"
+                data-testid="text-raw-scopes-ineligible"
+              >
+                Raw scopes unlock only after this tenant is confirmed as a ready synthetic Brightline demo.
+              </p>
+            )}
           </PopupSection>
           {!keysUnavailable && !keysQ.isLoading && !keysQ.isError && (
             <PolicyCallout>
@@ -1366,7 +1529,7 @@ function KeysSection({ env }: { env: DevEnv }) {
         </PopupShell>
       )}
 
-        {keysUnavailable ? (
+        {canManageKeys && (keysUnavailable ? (
           <KeysUnavailableCard testId="card-keys-unavailable-keys" />
         ) : (
           <WidgetPanel testId="card-keys-list">
@@ -1428,10 +1591,10 @@ function KeysSection({ env }: { env: DevEnv }) {
           </div>
         )}
       </WidgetPanel>
-      )}
+      ))}
       </div>
 
-      {!keysUnavailable && !keysQ.isLoading && !keysQ.isError && (
+      {canManageKeys && !keysUnavailable && !keysQ.isLoading && !keysQ.isError && (
         <PolicyCallout className="shrink-0">
           Keys are issued and stored hashed by brain-core, and enforced on every key-authenticated call.
           Rate limit: 600 requests per 60 seconds per key.

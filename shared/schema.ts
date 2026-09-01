@@ -160,6 +160,12 @@ export const brainIdentities = pgTable("brain_identities", {
   tenantId: text("tenant_id").notNull(),               // brain-core tnt_… id
   memberId: text("member_id"),                         // brain-core user_… member id
   companyName: text("company_name"),                   // what the founder typed at tenant creation; brain-core has no GET-by-member-token for this, so we keep our own copy
+  // Trusted provisioning classification observed from brain-core. These values are
+  // never accepted from the browser. Unknown and invited tenants remain null and
+  // therefore cannot be offered conditional Raw API-key scopes.
+  provisioningState: text("provisioning_state"),
+  dataProfile: text("data_profile"),
+  accessStage: text("access_stage"),
   linkedAt: timestamp("linked_at").defaultNow().notNull(),
 }, (t) => [
   index("brain_identities_tenant_id_idx").on(t.tenantId),

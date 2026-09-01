@@ -38,6 +38,7 @@ const brainMocks = vi.hoisted(() => ({
   platformServiceConfigured: vi.fn(() => false),
   brainTenancyMode: vi.fn(() => "production" as const),
   brainDurableTenancy: vi.fn(() => false),
+  getMember: vi.fn(),
 }));
 
 vi.mock("./brain/auth", async (importOriginal) => {
@@ -62,6 +63,11 @@ vi.mock("./brain/config", async (importOriginal) => {
     brainTenancyMode: brainMocks.brainTenancyMode,
     brainDurableTenancy: brainMocks.brainDurableTenancy,
   };
+});
+
+vi.mock("./brain/client", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./brain/client")>();
+  return { ...actual, getMember: brainMocks.getMember };
 });
 
 // ── HTTP helpers ──────────────────────────────────────────────────────────────
@@ -117,10 +123,14 @@ async function registerAndLogin(
 // ── A minimal BrainIdentity row ───────────────────────────────────────────────
 
 const SAMPLE_IDENTITY = {
-  id: 1,
   userId: "user-placeholder",
+  externalRef: "user-placeholder",
   tenantId: "tenant-abc123",
+  memberId: "member-abc123",
   companyName: "Acme Corp",
+  provisioningState: "ready_demo",
+  dataProfile: "synthetic_brightline_v1",
+  accessStage: "demo",
   linkedAt: new Date("2026-01-15T10:00:00.000Z"),
 };
 
@@ -158,8 +168,17 @@ beforeEach(() => {
   brainMocks.getBrainSession.mockReset().mockResolvedValue({
     token: "member-token-test",
     agentToken: "agent-token-test",
-    tenantId: "tenant-test-1",
+    tenantId: SAMPLE_IDENTITY.tenantId,
     baseUrl: "https://api.brain.fi/v1",
+  });
+  brainMocks.getMember.mockReset().mockResolvedValue({
+    id: SAMPLE_IDENTITY.memberId,
+    tenantId: SAMPLE_IDENTITY.tenantId,
+    email: "admin@example.com",
+    displayName: "Admin",
+    role: "admin",
+    active: true,
+    approval: { domains: [], perItemLimit: 0, requiresSecondApproverAbove: null },
   });
 
   identitySpy = vi
@@ -201,14 +220,57 @@ describe("GET /api/developers/tenants — canCreate / liveKeysAvailable flags", 
       liveKeysAvailable: boolean;
       mode: string;
       tenants: unknown[];
+      canManageKeys: boolean;
     }>("GET", "/api/developers/tenants");
 
     expect(res.status).toBe(200);
     expect(res.json.mode).toBe("production");
     expect(res.json.canCreate).toBe(false);
     expect(res.json.liveKeysAvailable).toBe(true);
+    expect(res.json.canManageKeys).toBe(true);
     // The tenant row should also be populated.
     expect(res.json.tenants).toHaveLength(1);
+  });
+
+  it("fails key-management visibility closed for a non-admin member", async () => {
+    identitySpy.mockResolvedValue(SAMPLE_IDENTITY as any);
+    brainMocks.getMember.mockResolvedValue({
+      id: SAMPLE_IDENTITY.memberId,
+      tenantId: SAMPLE_IDENTITY.tenantId,
+      role: "viewer",
+      active: true,
+    });
+
+    const client = await registerAndLogin(uid(), baseUrl);
+    const res = await client.request<{ canManageKeys: boolean }>(
+      "GET",
+      "/api/developers/tenants",
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.json.canManageKeys).toBe(false);
+  });
+
+  it("returns the exact Raw scope eligibility state for a seeded demo tenant", async () => {
+    identitySpy.mockResolvedValue(SAMPLE_IDENTITY as any);
+
+    const client = await registerAndLogin(uid(), baseUrl);
+    const res = await client.request<{
+      tenants: Array<{
+        provisioningState: string;
+        dataProfile: string;
+        accessStage: string;
+        rawScopesEligible: boolean;
+      }>;
+    }>("GET", "/api/developers/tenants");
+
+    expect(res.status).toBe(200);
+    expect(res.json.tenants[0]).toMatchObject({
+      provisioningState: "ready_demo",
+      dataProfile: "synthetic_brightline_v1",
+      accessStage: "demo",
+      rawScopesEligible: true,
+    });
   });
 
   it("canCreate=false, liveKeysAvailable=false when platformServiceConfigured() is false", async () => {

@@ -263,7 +263,14 @@ describe("durable tenancy invariants", () => {
     const identity = await storage.getBrainIdentity(userId);
     // Durable mode deliberately treats demo users as production tenants so the
     // returned member JWT is accepted by the production ledger API on every call.
-    expect(identity).toMatchObject({ userId, externalRef: userId, tenantId: TENANT_ID });
+    expect(identity).toMatchObject({
+      userId,
+      externalRef: userId,
+      tenantId: TENANT_ID,
+      provisioningState: "ready_demo",
+      dataProfile: "synthetic_brightline_v1",
+      accessStage: "demo",
+    });
 
     // The one-time seed streams every bundled document with the AGENT token -
     // the durable member token lacks the raw:write scope (verified live 2026-07-24).
@@ -353,6 +360,9 @@ describe("durable tenancy invariants", () => {
       externalRef: registration.user.id,
       tenantId: TENANT_ID,
       memberId: "m1",
+      provisioningState: "ready_demo",
+      dataProfile: "synthetic_brightline_v1",
+      accessStage: "demo",
     });
 
     // BrainMVB adds the generated Raw fixtures once, through the same real pipeline

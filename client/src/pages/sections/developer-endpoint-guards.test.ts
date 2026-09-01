@@ -6,8 +6,8 @@
  * The DevelopersSection shows API_ENDPOINTS with paths, required scopes, and
  * curl examples. This test pins that:
  *   - API_ENDPOINTS is non-empty (the list cannot be accidentally cleared).
- *   - Every listed endpoint has a path starting with /api/v1/ (consistent with
- *     the server's key-authenticated read registrations).
+ *   - App pass-through paths start with /api/v1/ and direct core paths start
+ *     with /v1/, so the displayed host and path cannot be mixed up.
  *   - The ping endpoint (scope: null — no scope required) is always present so
  *     developers can verify a key works without needing a specific scope.
  *   - Each endpoint with a non-null scope lists a scope that matches the
@@ -20,21 +20,24 @@ import { readFileSync } from "node:fs";
 
 const DEVELOPERS = "client/src/components/settings/DevelopersSection.tsx";
 
-function parseApiEndpoints(src: string): Array<{ path: string; scope: string | null }> {
+function parseApiEndpoints(src: string): Array<{
+  path: string;
+  scope: string | null;
+  target: "app" | "core";
+}> {
   const match = src.match(/const API_ENDPOINTS[^=]*=\s*\[([\s\S]*?)\];/);
   if (!match) return [];
   const block = match[1];
-  const entries: Array<{ path: string; scope: string | null }> = [];
-  // Each entry is { path: "...", scope: "..." | null, description: "..." }
-  for (const entryMatch of block.matchAll(/\{[^}]+\}/g)) {
-    const entry = entryMatch[0];
-    const pathM = entry.match(/path:\s*"([^"]+)"/);
-    const scopeM = entry.match(/scope:\s*"([^"]+)"/);
-    const scopeNull = entry.match(/scope:\s*null/);
-    if (!pathM) continue;
+  const entries: Array<{ path: string; scope: string | null; target: "app" | "core" }> = [];
+  // Parse the ordered path, scope, target fields without treating a path
+  // placeholder such as {raw_id} as the end of the object literal.
+  for (const entryMatch of block.matchAll(
+    /path:\s*"([^"]+)"[\s\S]*?scope:\s*(?:"([^"]+)"|(null))[\s\S]*?target:\s*"(app|core)"/g,
+  )) {
     entries.push({
-      path: pathM[1],
-      scope: scopeM ? scopeM[1] : scopeNull ? null : null,
+      path: entryMatch[1],
+      scope: entryMatch[2] ?? null,
+      target: entryMatch[4] as "app" | "core",
     });
   }
   return entries;
@@ -47,14 +50,11 @@ describe("Developer API endpoint list contract (#28)", () => {
     expect(endpoints.length, "API_ENDPOINTS must list at least one endpoint").toBeGreaterThan(0);
   });
 
-  it("every endpoint path starts with /api/v1/ matching server registrations", () => {
+  it("each endpoint path matches its documented app or direct-core target", () => {
     const src = readFileSync(DEVELOPERS, "utf8");
     const endpoints = parseApiEndpoints(src);
     for (const ep of endpoints) {
-      expect(
-        ep.path,
-        `Endpoint "${ep.path}" must start with /api/v1/`,
-      ).toMatch(/^\/api\/v1\//);
+      expect(ep.path).toMatch(ep.target === "app" ? /^\/api\/v1\// : /^\/v1\//);
     }
   });
 
@@ -78,5 +78,14 @@ describe("Developer API endpoint list contract (#28)", () => {
     expect(src, "DevelopersSection must include Authorization: Bearer in curl examples").toMatch(
       /Authorization.*Bearer/,
     );
+  });
+
+  it("direct governance and Raw references use api.brain.fi rather than the app pass-through", () => {
+    const src = readFileSync(DEVELOPERS, "utf8");
+    const endpoints = parseApiEndpoints(src);
+    expect(endpoints.some((ep) => ep.scope === "governance:read" && ep.target === "core")).toBe(true);
+    expect(endpoints.some((ep) => ep.scope === "raw:read" && ep.target === "core")).toBe(true);
+    expect(endpoints.some((ep) => ep.scope === "raw:write" && ep.target === "core")).toBe(true);
+    expect(src).toContain('target === "core" ? "https://api.brain.fi"');
   });
 });

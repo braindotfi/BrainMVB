@@ -325,6 +325,9 @@ export function createBrainProxyRouter(): Router {
         tenantId: result.tenant_id,
         memberId: result.member?.id ?? null,
         companyName,
+        provisioningState: null,
+        dataProfile: "customer",
+        accessStage: "production",
       });
       // Capture the agent token core mints at tenant creation (production-agents contract)
       // - never discarded, never sent to the browser. Older cores omit `agent`; the token
