@@ -63,6 +63,22 @@ function mockGoogle(profile: {
   });
 }
 
+function mockGoogleTokenFailure(payload: Record<string, unknown>, status = 401) {
+  vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+    const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+    if (url.startsWith("https://oauth2.googleapis.com/token")) {
+      return new Response(JSON.stringify(payload), {
+        status,
+        headers: {
+          "content-type": "application/json; charset=utf-8",
+          "x-request-id": "google-request-123",
+        },
+      });
+    }
+    return realFetch(input as RequestInfo);
+  });
+}
+
 /** Walks the real OAuth entry point so the callback sees a session state it will accept. */
 async function runCallback(returnTo?: string): Promise<{ location: string; cookie: string }> {
   const beginUrl = new URL("/api/auth/google", baseUrl);
@@ -181,5 +197,55 @@ describe("Google OAuth cannot resolve to a demo account", () => {
     expect(location).toBe(invitePath);
     const after = await realFetch(`${baseUrl}/api/auth/user`, { headers: { cookie } });
     expect(after.status).toBe(200);
+  });
+});
+
+describe("Google OAuth token-exchange diagnostics", () => {
+  it("logs Google's exact error and configured public values without secrets", async () => {
+    const errorLog = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    mockGoogleTokenFailure({
+      error: "invalid_client",
+      error_description: "The OAuth client was not found.",
+      error_uri: "https://developers.google.com/identity/protocols/oauth2",
+      error_subtype: "client_not_found",
+    });
+
+    const { location } = await runCallback();
+
+    expect(location).toBe("/?auth_error=google_token");
+    expect(errorLog).toHaveBeenCalledWith(
+      "[Google OAuth] token exchange failed",
+      expect.objectContaining({
+        status: 401,
+        client_id: "test-google-client-id",
+        redirect_uri: "https://app.brain.fi/api/auth/google/callback",
+        reason: "client_id_not_found",
+        google_error: "invalid_client",
+        google_error_description: "The OAuth client was not found.",
+        google_error_subtype: "client_not_found",
+        google_request_id: "google-request-123",
+      }),
+    );
+    const serializedLog = JSON.stringify(errorLog.mock.calls);
+    expect(serializedLog).not.toContain("test-google-client-secret");
+    expect(serializedLog).not.toContain("test-code");
+  });
+
+  it("classifies redirect URI mismatches distinctly", async () => {
+    const errorLog = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    mockGoogleTokenFailure({
+      error: "redirect_uri_mismatch",
+      error_description: "Bad Request: redirect_uri_mismatch",
+    }, 400);
+
+    await runCallback();
+
+    expect(errorLog).toHaveBeenCalledWith(
+      "[Google OAuth] token exchange failed",
+      expect.objectContaining({
+        reason: "redirect_uri_mismatch",
+        google_error: "redirect_uri_mismatch",
+      }),
+    );
   });
 });
