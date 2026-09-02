@@ -1,8 +1,8 @@
 /**
- * Settings → Developers — Overview, API Keys, Tenants, Usage and Limits (+ Docs).
+ * Settings > Developers: Overview, API Keys, Tenants, Usage and Limits (+ Docs).
  *
  * Lives INSIDE Settings as a section; there is no top-level /developers page.
- * The four subsections below are unchanged from that page — only the shell
+ * The four subsections below are unchanged from that page. Only the shell
  * around them differs. Settings already supplies the 240px nav and the card
  * border, so this renders a horizontal sub-tab row rather than a second
  * sidebar, which leaves the content column at exactly the width it had before
@@ -11,12 +11,12 @@
  * Assembled ONLY from existing design patterns (Settings list rows,
  * Home metric cards / list rows, existing pill buttons and badges). No mock
  * data: keys are issued and stored by brain-core (proxied via
- * /api/developers/keys; plaintext relayed exactly once), usage aggregates
- * REAL brain-core audit events plus brain-core's per-key usage attribution.
+ * /api/developers/keys; plaintext relayed exactly once), and usage reads the
+ * append-only brain-core API request meter with per-key attribution.
  * The displayed rate tier is the server-owned core entitlement, and tenants
  * read the existing tenancy layer. While brain-core's key API flag
  * is off upstream, the server answers 503 keys_api_unavailable and this page
- * shows an honest "not yet enabled" state — never a local fallback.
+ * shows an honest "not yet enabled" state, never a local fallback.
  *
  * Webhooks are deliberately excluded from this section (v2).
  */
@@ -362,6 +362,70 @@ const EmptyRow = ({ children, testId }: { children: ReactNode; testId?: string }
     <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px]">{children}</p>
   </div>
 );
+
+const UsageBreakdownCard = ({
+  label,
+  rows,
+  loading,
+  failed,
+  emptyText,
+  testId,
+  rowTestId,
+}: {
+  label: string;
+  rows: Array<{ label: string; count: number }>;
+  loading: boolean;
+  failed: boolean;
+  emptyText: string;
+  testId: string;
+  rowTestId: string;
+}) => {
+  const max = rows[0]?.count || 1;
+  return (
+    <div className="flex flex-col gap-[4px] min-w-0">
+      <SectionLabel>{label}</SectionLabel>
+      <WidgetPanel testId={testId}>
+        {loading ? (
+          <EmptyRow>Loading usage...</EmptyRow>
+        ) : failed ? (
+          <EmptyRow>Usage is unavailable because the API request meter couldn't be read.</EmptyRow>
+        ) : rows.length === 0 ? (
+          <EmptyRow>{emptyText}</EmptyRow>
+        ) : (
+          <div className="flex flex-col gap-[16px] p-[16px]">
+            {rows.map((row, index) => (
+              <div key={row.label} className="flex flex-col gap-[16px] w-full">
+                {index > 0 && <div className="w-full border-t border-brain-v1stroke-2" />}
+                <div
+                  className="flex flex-col gap-[8px] w-full"
+                  data-testid={`${rowTestId}-${index}`}
+                >
+                  <p
+                    className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[20px] w-full break-words"
+                    title={row.label}
+                  >
+                    {row.label}
+                  </p>
+                  <div className="flex gap-[7px] items-center w-full">
+                    <div className="flex-1 min-w-px h-[6px] rounded-[3px] bg-brain-v1baby-blue-15 overflow-hidden">
+                      <div
+                        className="h-full rounded-[3px] bg-brain-v1purple"
+                        style={{ width: `${Math.max((row.count / max) * 100, 2)}%` }}
+                      />
+                    </div>
+                    <p className="[font-family:'JetBrains_Mono',monospace] font-semibold text-brain-v1baby-blue-60 text-[14px] leading-[20px] text-right min-w-[24px] shrink-0">
+                      {row.count.toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </WidgetPanel>
+    </div>
+  );
+};
 
 function formatDate(iso: string | null): string {
   if (!iso) return "";
@@ -1564,8 +1628,8 @@ function KeysSection({ env }: { env: DevEnv }) {
           </PopupSection>
           {!keysUnavailable && !keysQ.isLoading && !keysQ.isError && (
             <PolicyCallout>
-              Keys are issued by brain-core and stored hashed. Enforcement inside brain-core's API gateway is rolling
-              out. Until then, keys authenticate against platform endpoints only.
+              Keys are issued by brain-core and stored hashed. They authenticate at brain-core's API gateway and are
+              restricted to their tenant, selected scopes, and server-owned rate limits.
             </PolicyCallout>
           )}
         </PopupShell>
@@ -2016,6 +2080,18 @@ function UsageSection({ env }: { env: DevEnv }) {
             </p>
           </div>
           <div className="w-px shrink-0 self-stretch bg-brain-v1stroke-2" />
+          <div className="flex-1 min-w-px flex flex-col gap-[4px] justify-center" data-testid="metric-billable-units">
+            <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[20px]">
+              Billable Units
+            </p>
+            <p className="[font-family:'Gilroy',sans-serif] font-medium text-white text-[40px] leading-[48px]">
+              {usageQ.isLoading ? "..." : usageQ.isError ? "-" : String(data?.billableUnits ?? 0)}
+            </p>
+            <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px]">
+              Shadow-metered only. No charges are applied.
+            </p>
+          </div>
+          <div className="w-px shrink-0 self-stretch bg-brain-v1stroke-2" />
           <div className="flex-1 min-w-px flex flex-col gap-[4px] justify-center" data-testid="metric-rate-limit-tier">
             <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[20px]">
               Rate-Limit Tier
@@ -2121,6 +2197,36 @@ function UsageSection({ env }: { env: DevEnv }) {
         </WidgetPanel>
       </div>
 
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-[16px]">
+        <UsageBreakdownCard
+          label="Requests by Scope"
+          rows={data?.scopes.map((row) => ({ label: row.scope, count: row.count })) ?? []}
+          loading={usageQ.isLoading}
+          failed={usageQ.isError}
+          emptyText={`No ${env} API-key scopes recorded in the current UTC month.`}
+          testId="card-usage-by-scope"
+          rowTestId="row-usage-scope"
+        />
+        <UsageBreakdownCard
+          label="Requests by Route"
+          rows={data?.routes.map((row) => ({ label: row.operationId, count: row.count })) ?? []}
+          loading={usageQ.isLoading}
+          failed={usageQ.isError}
+          emptyText={`No ${env} API-key routes recorded in the current UTC month.`}
+          testId="card-usage-by-route"
+          rowTestId="row-usage-route"
+        />
+        <UsageBreakdownCard
+          label="Requests by Outcome"
+          rows={data?.outcomes.map((row) => ({ label: row.outcome, count: row.count })) ?? []}
+          loading={usageQ.isLoading}
+          failed={usageQ.isError}
+          emptyText={`No ${env} API-key outcomes recorded in the current UTC month.`}
+          testId="card-usage-by-outcome"
+          rowTestId="row-usage-outcome"
+        />
+      </div>
+
       <div className="flex flex-col gap-[4px]">
         <SectionLabel>Requests by Key</SectionLabel>
         {keysUnavailable ? (
@@ -2176,7 +2282,8 @@ function UsageSection({ env }: { env: DevEnv }) {
         !keyUsageQ.isError && (
           <PolicyCallout>
             <p className="mb-[12px]">
-              Summary, method, and key totals come from the same append-only API request meter for the current UTC month.
+              Summary, method, scope, route, outcome, and key totals come from the same append-only API request meter
+              for the current UTC month.
             </p>
             <p>
               General member, seeding, and agent audit activity is excluded. Measured billable units remain zero-charge
