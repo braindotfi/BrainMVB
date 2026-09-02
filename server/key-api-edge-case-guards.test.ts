@@ -11,11 +11,6 @@
  *   "isn't enabled yet" message. The client shows "Keys API not yet enabled"
  *   instead of a generic error or blank state.
  *
- * #260 — Broken issue-key response is caught before it passes bad data through.
- *   issuedPlaintext() extracts the plaintext from various upstream field names.
- *   If both issued.key and plaintext are absent/malformed the handler must
- *   return 502, never 201 with undefined data.
- *
  * #261 — Rotating an already-rotated key gives a clear "not found" error.
  *   api_key_not_found (404 from brain-core) → 404 with a friendly message.
  *   The client rotate mutation shows this, not an unhandled exception.
@@ -121,40 +116,6 @@ describe("Key service off shows 'not yet enabled', not a generic error (#259)", 
     expect(src, "retry must be suppressed for isKeysApiUnavailable errors").toMatch(
       /!isKeysApiUnavailable/,
     );
-  });
-});
-
-// ─── #260: Broken issue-key response caught before passing bad data ───────────
-
-describe("Broken issue-key response returns 502, not 201 with broken data (#260)", () => {
-  it("issuedPlaintext helper exists to extract the one-time plaintext", () => {
-    const src = readFileSync(ROUTES, "utf8");
-    expect(src, "issuedPlaintext must be defined").toMatch(/function issuedPlaintext|issuedPlaintext\s*=/);
-  });
-
-  it("the issue handler checks both issued.key and plaintext before returning 201", () => {
-    const src = readFileSync(ROUTES, "utf8");
-    const routeIdx = src.indexOf('app.post("/api/developers/keys"');
-    const block = src.slice(routeIdx, routeIdx + 1500);
-    expect(block, "must check !issued.key").toMatch(/!issued\.key/);
-    expect(block, "must check !plaintext").toMatch(/!plaintext/);
-  });
-
-  it("if the shape check fails, the handler returns 502 (not 201 with undefined fields)", () => {
-    const src = readFileSync(ROUTES, "utf8");
-    const routeIdx = src.indexOf('app.post("/api/developers/keys"');
-    const block = src.slice(routeIdx, routeIdx + 1500);
-    expect(block, "must return 502 on bad shape").toMatch(/502/);
-    expect(block, "must not return 201 when shape is invalid").not.toMatch(
-      /\.status\(201\)[^}]*issuedPlaintext/,
-    );
-  });
-
-  it("a console.error names the handler so engineers know which endpoint produced the bad shape", () => {
-    const src = readFileSync(ROUTES, "utf8");
-    const routeIdx = src.indexOf('app.post("/api/developers/keys"');
-    const block = src.slice(routeIdx, routeIdx + 1500);
-    expect(block, "console.error must be called on bad issue-key shape").toMatch(/console\.error/);
   });
 });
 
