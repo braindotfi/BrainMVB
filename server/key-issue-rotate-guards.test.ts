@@ -7,10 +7,9 @@
  *   that short-circuits (e.g. environment-gate without issuing) or returns a
  *   fabricated key object.
  *
- * #257 — Confirm a malformed brain-core rotate response returns a clear error
- *   instead of a 200 with broken data. Both issue and rotate handlers validate
- *   the upstream response shape and return 502 unexpected_upstream_shape when
- *   the key object or plaintext is missing.
+ * The issued-key contract is flat: the created key fields and one-time secret
+ * share one response object. The BFF maps that object directly instead of
+ * tolerating obsolete wrapper and alternate-secret shapes.
  *
  * #255 — Confirm a double-click rotate doesn't crash the Settings page with an
  *   unexpected error. The rotate mutation's error handler checks for
@@ -69,64 +68,23 @@ describe("Issue key calls brain-core upstream (#256)", () => {
   });
 });
 
-// ─── #257: Malformed rotate/issue response → 502, not 200 with broken data ──
-
-describe("Malformed brain-core response returns 502, not 200 with broken data (#257)", () => {
-  it("issue-key handler validates upstream response shape before returning 201", () => {
+describe("Issued key responses follow the flat brain-core contract", () => {
+  it("issue maps the flat key resource and required secret", () => {
     const src = readFileSync(ROUTES, "utf8");
     const routeIdx = src.indexOf('app.post("/api/developers/keys"');
-    // 1500 chars covers the full handler including the shape-validation block.
     const handlerBlock = src.slice(routeIdx, routeIdx + 1500);
-    expect(
-      handlerBlock,
-      "issue handler must check issued.key and plaintext",
-    ).toMatch(/!issued\.key|!plaintext/);
-    expect(
-      handlerBlock,
-      "issue handler must return 502 for unexpected shape",
-    ).toMatch(/502/);
-    expect(
-      handlerBlock,
-      "502 response must use unexpected_upstream_shape error code",
-    ).toMatch(/unexpected_upstream_shape/);
+    expect(handlerBlock).toMatch(/toDevKey\(issued\)/);
+    expect(handlerBlock).toMatch(/plaintext:\s*issued\.secret/);
+    expect(handlerBlock).not.toMatch(/issued\.key|issuedPlaintext/);
   });
 
-  it("rotate handler validates upstream response shape before returning 200", () => {
+  it("rotate maps the same flat key resource and required secret", () => {
     const src = readFileSync(ROUTES, "utf8");
     const rotateIdx = src.indexOf('app.post("/api/developers/keys/:id/rotate"');
-    expect(rotateIdx, "rotate route not found").toBeGreaterThan(-1);
     const handlerBlock = src.slice(rotateIdx, rotateIdx + 800);
-    expect(
-      handlerBlock,
-      "rotate handler must check issued.key and plaintext",
-    ).toMatch(/!issued\.key|!plaintext/);
-    expect(
-      handlerBlock,
-      "rotate handler must return 502 for unexpected shape",
-    ).toMatch(/502/);
-  });
-
-  it("the error code is 'unexpected_upstream_shape' so the client can distinguish it from auth errors", () => {
-    const src = readFileSync(ROUTES, "utf8");
-    expect(src, "unexpected_upstream_shape error code must exist").toMatch(
-      /unexpected_upstream_shape/,
-    );
-  });
-
-  it("a console.error is emitted with the actual response keys so engineers can diagnose the mismatch", () => {
-    const src = readFileSync(ROUTES, "utf8");
-    const issueIdx = src.indexOf('app.post("/api/developers/keys"');
-    const issueBlock = src.slice(issueIdx, issueIdx + 1200);
-    expect(
-      issueBlock,
-      "issue handler must console.error the response keys on bad shape",
-    ).toMatch(/console\.error.*[Ii]ssue key/);
-    const rotateIdx = src.indexOf('app.post("/api/developers/keys/:id/rotate"');
-    const rotateBlock = src.slice(rotateIdx, rotateIdx + 800);
-    expect(
-      rotateBlock,
-      "rotate handler must console.error the response keys on bad shape",
-    ).toMatch(/console\.error.*[Rr]otate key/);
+    expect(handlerBlock).toMatch(/toDevKey\(issued\)/);
+    expect(handlerBlock).toMatch(/plaintext:\s*issued\.secret/);
+    expect(handlerBlock).not.toMatch(/issued\.key|issuedPlaintext/);
   });
 });
 

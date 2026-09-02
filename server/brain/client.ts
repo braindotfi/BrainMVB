@@ -1041,13 +1041,10 @@ export interface ListTenantKeysResponse {
   keys: BrainTenantKey[];
 }
 
-/** brain-core returns the plaintext secret EXACTLY ONCE on issue/rotate.
- *  Field name tolerated across secret/plaintext/key. */
-export interface IssuedTenantKeyResponse {
-  key?: BrainTenantKey;
-  secret?: string;
-  plaintext?: string;
-  [k: string]: unknown;
+/** brain-core returns the created key resource with its plaintext secret
+ * exactly once on issue or rotate. */
+export interface IssuedTenantKeyResponse extends BrainTenantKey {
+  secret: string;
 }
 
 /** GET /tenants/{tenantId}/keys — masked list (key_prefix + key_last4 only). */

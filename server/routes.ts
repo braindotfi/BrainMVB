@@ -42,7 +42,6 @@ import {
   brainErrorDetail,
   BrainApiError,
   type BrainTenantKey,
-  type IssuedTenantKeyResponse,
   type RawSourceType,
   type WikiEvidence,
 } from "./brain/client";
@@ -283,17 +282,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     status: (k.status === "revoked" || k.revoked_at) ? "revoked" : "active",
   });
 
-  /** The one-time plaintext from an issue/rotate response (field name tolerant). */
-  const issuedPlaintext = (r: IssuedTenantKeyResponse | null | undefined): string | null => {
-    if (!r) return null;
-    for (const f of ["secret", "plaintext", "key_secret", "api_key"]) {
-      const v = (r as Record<string, unknown>)[f];
-      if (typeof v === "string" && v.startsWith("brain_sk_")) return v;
-    }
-    const keyObj = r.key as unknown as Record<string, unknown> | undefined;
-    return keyObj && typeof keyObj.secret === "string" ? keyObj.secret : null;
-  };
-
   /** Map brain-core key-API errors to honest platform responses.
    * route_not_found = the upstream key flag is off → 503 keys_api_unavailable
    * (the UI shows a "not yet enabled" state and auto-recovers when it flips). */
@@ -400,12 +388,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const issued = await withBrainBaseUrl(session.baseUrl, () =>
         issueTenantKey(session.token, session.tenantId, { name, environment, scopes }),
       );
-      const plaintext = issuedPlaintext(issued);
-      if (!plaintext || !issued.key) {
-        console.error("Issue key: unexpected brain-core response shape", Object.keys(issued ?? {}));
-        return res.status(502).json({ error: "unexpected_upstream_shape", message: "brain-core issued a key but the response shape was unexpected." });
-      }
-      return res.status(201).json({ key: toDevKey(issued.key), plaintext });
+      return res.status(201).json({ key: toDevKey(issued), plaintext: issued.secret });
     } catch (error) {
       return sendKeyApiError(res, error, "create key");
     }
@@ -420,12 +403,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const issued = await withBrainBaseUrl(session.baseUrl, () =>
         rotateTenantKey(session.token, String(req.params.id)),
       );
-      const plaintext = issuedPlaintext(issued);
-      if (!plaintext || !issued.key) {
-        console.error("Rotate key: unexpected brain-core response shape", Object.keys(issued ?? {}));
-        return res.status(502).json({ error: "unexpected_upstream_shape", message: "brain-core rotated the key but the response shape was unexpected." });
-      }
-      return res.json({ key: toDevKey(issued.key), plaintext });
+      return res.json({ key: toDevKey(issued), plaintext: issued.secret });
     } catch (error) {
       return sendKeyApiError(res, error, "rotate key");
     }

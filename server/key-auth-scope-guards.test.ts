@@ -30,9 +30,6 @@
  *   requireAuth is in the route registration for both routes, so a caller
  *   without a valid session gets a 401 before the handler runs at all.
  *
- * #274 — Rotate handler validates the upstream response before returning 200.
- *   A missing key or plaintext in the rotate response → 502
- *   unexpected_upstream_shape, not a 200 with undefined fields.
  */
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
@@ -263,55 +260,6 @@ describe("Rotate and revoke reject unauthenticated callers before touching brain
     const registration = src.slice(listIdx, listIdx + 80);
     expect(registration, "requireAuth must be in the list-keys route registration").toMatch(
       /requireAuth/,
-    );
-  });
-});
-
-// ─── #274: Rotate validates upstream response shape before returning 200 ──────
-
-describe("Rotate handler validates the upstream response before returning 200 (#274)", () => {
-  it("rotate handler checks issued.key before returning 200", () => {
-    const src = readFileSync(ROUTES, "utf8");
-    const rotateIdx = src.indexOf('app.post("/api/developers/keys/:id/rotate"');
-    const block = src.slice(rotateIdx, rotateIdx + 600);
-    expect(block, "rotate handler must check !issued.key").toMatch(/!issued\.key/);
-  });
-
-  it("rotate handler checks plaintext (via issuedPlaintext) before returning 200", () => {
-    const src = readFileSync(ROUTES, "utf8");
-    const rotateIdx = src.indexOf('app.post("/api/developers/keys/:id/rotate"');
-    const block = src.slice(rotateIdx, rotateIdx + 600);
-    expect(block, "rotate handler must use issuedPlaintext").toMatch(/issuedPlaintext/);
-    expect(block, "rotate handler must check !plaintext").toMatch(/!plaintext/);
-  });
-
-  it("a missing key or plaintext returns 502 unexpected_upstream_shape, not 200", () => {
-    const src = readFileSync(ROUTES, "utf8");
-    const rotateIdx = src.indexOf('app.post("/api/developers/keys/:id/rotate"');
-    const block = src.slice(rotateIdx, rotateIdx + 700);
-    expect(block, "rotate handler must return 502 on bad shape").toMatch(/502/);
-    expect(block, "rotate handler must use unexpected_upstream_shape error code").toMatch(
-      /unexpected_upstream_shape/,
-    );
-  });
-
-  it("a console.error logs the actual response keys so engineers can diagnose the mismatch", () => {
-    const src = readFileSync(ROUTES, "utf8");
-    const rotateIdx = src.indexOf('app.post("/api/developers/keys/:id/rotate"');
-    const block = src.slice(rotateIdx, rotateIdx + 700);
-    expect(block, "rotate handler must console.error on bad shape").toMatch(
-      /console\.error.*[Rr]otate key/,
-    );
-  });
-
-  it("a valid rotate response returns 200 with key + plaintext (not 201)", () => {
-    const src = readFileSync(ROUTES, "utf8");
-    const rotateIdx = src.indexOf('app.post("/api/developers/keys/:id/rotate"');
-    const block = src.slice(rotateIdx, rotateIdx + 700);
-    // Rotate returns 200 res.json (not 201 res.status(201).json).
-    expect(block, "rotate must return plain 200 res.json (not 201)").toMatch(/res\.json\(\s*\{/);
-    expect(block, "rotate response must include plaintext field").toMatch(
-      /plaintext/,
     );
   });
 });

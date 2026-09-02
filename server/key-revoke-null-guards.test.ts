@@ -25,11 +25,6 @@
  *   happy-path; errors go through sendKeyApiError. The handler never tries
  *   to read a response body that could be null.
  *
- * #283 — Null brain-core response on key creation returns a clear 502.
- *   If brain-core returns null the issuedPlaintext helper returns null,
- *   !issued.key || !plaintext triggers the shape-guard, and the handler
- *   returns 502 unexpected_upstream_shape — never a crash or 201 with
- *   undefined fields.
  */
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
@@ -206,49 +201,5 @@ describe("Null brain-core response on revocation is handled correctly (#282)", (
     const revokeIdx = src.indexOf('app.delete("/api/developers/keys/:id"');
     const block = src.slice(revokeIdx, revokeIdx + 400);
     expect(block, "revoke errors must be caught by sendKeyApiError").toMatch(/sendKeyApiError/);
-  });
-});
-
-// ─── #283: Null issue-key response returns 502, not a crash ──────────────────
-
-describe("Null brain-core response on key creation returns 502, not a crash (#283)", () => {
-  it("issuedPlaintext returns null when the response has no recognised plaintext field", () => {
-    const src = readFileSync(ROUTES, "utf8");
-    expect(src, "issuedPlaintext must exist").toMatch(/issuedPlaintext/);
-    // The helper returns null rather than throwing on unexpected shapes.
-    // The null-return is ~365 chars into the helper — use 450 to be safe.
-    const helperIdx = src.indexOf("issuedPlaintext");
-    const block = src.slice(helperIdx, helperIdx + 450);
-    expect(block, "issuedPlaintext must return null as its fallback").toMatch(/return.*null/);
-  });
-
-  it("the issue handler treats a null issued object as a shape failure", () => {
-    const src = readFileSync(ROUTES, "utf8");
-    const routeIdx = src.indexOf('app.post("/api/developers/keys"');
-    const block = src.slice(routeIdx, routeIdx + 1500);
-    // issued ?? {} prevents a null-pointer when calling Object.keys in the error log.
-    expect(block, "must guard against null issued with ?? {} in the error path").toMatch(
-      /issued\s*\?\?\s*\{\}/,
-    );
-  });
-
-  it("the shape guard fires before res.status(201) so null never becomes a 201 response", () => {
-    const src = readFileSync(ROUTES, "utf8");
-    const routeIdx = src.indexOf('app.post("/api/developers/keys"');
-    const block = src.slice(routeIdx, routeIdx + 1500);
-    const guardIdx = block.indexOf("!issued.key");
-    const createdIdx = block.indexOf("201");
-    expect(guardIdx, "shape guard must exist").toBeGreaterThan(-1);
-    expect(createdIdx, "201 status must exist").toBeGreaterThan(-1);
-    expect(guardIdx, "shape guard must come before 201").toBeLessThan(createdIdx);
-  });
-
-  it("the 502 unexpected_upstream_shape error code is used for null/malformed responses", () => {
-    const src = readFileSync(ROUTES, "utf8");
-    const routeIdx = src.indexOf('app.post("/api/developers/keys"');
-    const block = src.slice(routeIdx, routeIdx + 1500);
-    expect(block, "must use unexpected_upstream_shape for bad shapes").toMatch(
-      /unexpected_upstream_shape/,
-    );
   });
 });
