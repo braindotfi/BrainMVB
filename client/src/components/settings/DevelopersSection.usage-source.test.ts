@@ -32,4 +32,21 @@ describe("Developers API-key-only usage", () => {
       "different measurement than the tenant-wide audit events",
     );
   });
+
+  it("renders every request-meter breakdown and shadow billable units", () => {
+    expect(component).toContain('label="Requests by Scope"');
+    expect(component).toContain('label="Requests by Route"');
+    expect(component).toContain('label="Requests by Outcome"');
+    expect(component).toContain("data?.scopes.map");
+    expect(component).toContain("data?.routes.map");
+    expect(component).toContain("data?.outcomes.map");
+    expect(component).toContain("data?.billableUnits");
+    expect(component).toContain('data-testid="metric-billable-units"');
+  });
+
+  it("describes the live gateway behavior accurately", () => {
+    expect(component).toContain("authenticate at brain-core's API gateway");
+    expect(component).not.toContain("gateway is rolling out");
+    expect(component).not.toContain("platform endpoints only");
+  });
 });
