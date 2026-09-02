@@ -143,6 +143,72 @@ export const googleEnabled = !!(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET);
 // code exchange below.
 const GOOGLE_CALLBACK_URL = "https://app.brain.fi/api/auth/google/callback";
 
+type GoogleTokenErrorPayload = {
+  error?: string;
+  error_description?: string;
+  error_uri?: string;
+  error_subtype?: string;
+};
+
+function googleTokenFailureReason(payload: GoogleTokenErrorPayload): string {
+  const error = payload.error?.toLowerCase();
+  const description = payload.error_description?.toLowerCase() ?? "";
+  if (error === "redirect_uri_mismatch" || description.includes("redirect_uri")) {
+    return "redirect_uri_mismatch";
+  }
+  if (error === "invalid_client") {
+    return /not found|unknown|deleted/.test(description)
+      ? "client_id_not_found"
+      : "client_credentials_rejected";
+  }
+  if (error === "invalid_grant") {
+    return /expired|revoked/.test(description)
+      ? "authorization_code_expired_or_revoked"
+      : "authorization_code_rejected";
+  }
+  if (error === "unauthorized_client") return "oauth_client_not_authorized";
+  return error || "unclassified_provider_error";
+}
+
+async function logGoogleTokenExchangeFailure(
+  response: Awaited<ReturnType<typeof fetch>>,
+  correlationId: string,
+): Promise<void> {
+  const body = await response.text();
+  let payload: GoogleTokenErrorPayload = {};
+  let responseFields: string[] = [];
+  try {
+    const parsed = JSON.parse(body) as unknown;
+    if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) {
+      const record = parsed as Record<string, unknown>;
+      responseFields = Object.keys(record).sort();
+      for (const field of ["error", "error_description", "error_uri", "error_subtype"] as const) {
+        if (typeof record[field] === "string") payload[field] = record[field];
+      }
+    }
+  } catch {
+    // Do not log an unstructured provider body because it could echo request data.
+  }
+
+  console.error("[Google OAuth] token exchange failed", {
+    correlation_id: correlationId,
+    status: response.status,
+    client_id: GOOGLE_CLIENT_ID,
+    redirect_uri: GOOGLE_CALLBACK_URL,
+    reason: googleTokenFailureReason(payload),
+    google_error: payload.error ?? null,
+    google_error_description: payload.error_description ?? null,
+    google_error_uri: payload.error_uri ?? null,
+    google_error_subtype: payload.error_subtype ?? null,
+    google_request_id:
+      response.headers.get("x-request-id")
+      ?? response.headers.get("x-guploader-uploadid")
+      ?? null,
+    response_fields: responseFields,
+    response_content_type: response.headers.get("content-type"),
+  });
+}
+
 /** Auth continuations must never become open redirects. Only a route-shaped invite token
  * can survive OAuth or a password-reset round trip. */
 function validInviteReturnTo(value: unknown): string | undefined {
@@ -594,11 +660,20 @@ export function setupAuth(app: Express) {
         }),
       });
       if (!tokenResp.ok) {
-        console.error("[Google OAuth] token exchange failed:", tokenResp.status, await tokenResp.text());
+        await logGoogleTokenExchangeFailure(tokenResp, req.authAuditId ?? "missing");
         return res.redirect(googleRedirect(returnTo, "google_token"));
       }
       const tokens = (await tokenResp.json()) as { access_token?: string };
-      if (!tokens.access_token) return res.redirect(googleRedirect(returnTo, "google_token"));
+      if (!tokens.access_token) {
+        console.error("[Google OAuth] token exchange returned no access token", {
+          correlation_id: req.authAuditId ?? "missing",
+          status: tokenResp.status,
+          client_id: GOOGLE_CLIENT_ID,
+          redirect_uri: GOOGLE_CALLBACK_URL,
+          response_fields: Object.keys(tokens).sort(),
+        });
+        return res.redirect(googleRedirect(returnTo, "google_token"));
+      }
 
       const profResp = await fetch("https://openidconnect.googleapis.com/v1/userinfo", {
         headers: { Authorization: `Bearer ${tokens.access_token}` },
