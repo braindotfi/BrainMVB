@@ -276,7 +276,7 @@ async function createDemoSession(
     return provisionDemoTenant(appUserId, preloadedUser);
   }
   if (brainConfig.demoProvisionSecret !== undefined) {
-    return provisionSession();
+    return provisionSession(appUserId);
   }
   if (brainConfig.demoBaseUrl.includes("staging-api.brain.fi")) {
     return provisionStagingDemoToken();
@@ -346,6 +346,7 @@ async function adoptLinkedDemoTenant(
         "payload nor the session response named a tenant id",
     );
   }
+  await storage.upsertDemoTenantLifecycle(appUserId, tenantId);
 
   /* Fresh agent token for raw:write. Not fatal if core refuses: mirroring the
      member token keeps reads working and lets propose 403 honestly, which is the
@@ -420,6 +421,9 @@ async function provisionDemoTenant(
     }
     throw err;
   }
+  // Demo lifecycle tracking is distinct from production brain_identities and
+  // is written before any asynchronous fixture seeding can fail.
+  await storage.upsertDemoTenantLifecycle(appUserId, result.tenant_id);
 
   if (result.demo_seed) {
     console.log(`[brain-auth] demo tenant ${result.tenant_id} seeded by core:`, JSON.stringify(result.demo_seed));
@@ -633,6 +637,12 @@ async function createDurableSession(
         `could not finalize the brain_identities row - repair it manually before next login.`,
     );
   }
+  // A demo-fresh account can use durable tenancy in some deployments. Keep the
+  // production mapping above untouched, but also record its remote-cleanup
+  // lifecycle in the dedicated demo table.
+  if (isDemoEmail(user?.email)) {
+    await storage.upsertDemoTenantLifecycle(appUserId, result.tenant_id);
+  }
   if (result.agent?.token) {
     await storage.upsertBrainAgentToken(
       result.tenant_id,
@@ -779,7 +789,7 @@ async function provisionStagingDemoToken(): Promise<CachedSession> {
 }
 
 /** Ask the live demo fence to provision a tenant and hand back a scoped token. */
-async function provisionSession(): Promise<CachedSession> {
+async function provisionSession(appUserId?: string): Promise<CachedSession> {
   const baseUrl = currentBrainBaseUrl(brainConfig.baseUrl);
   const res = await fetch(`${baseUrl}/demo/provision-run`, {
     method: "POST",
@@ -821,6 +831,9 @@ async function provisionSession(): Promise<CachedSession> {
     );
   }
   const exp = Math.floor(Date.now() / 1000) + (json.expires_in ?? 30 * 60);
+  if (appUserId) {
+    await storage.upsertDemoTenantLifecycle(appUserId, json.tenant_id);
+  }
   return { token: memberToken, agentToken, secondApproverToken, tenantId: json.tenant_id, exp, baseUrl: currentBrainBaseUrl(brainConfig.baseUrl) };
 }
 

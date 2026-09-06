@@ -235,6 +235,19 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  // Operator-only queue for demo tenant deletions which could not be finalized.
+  // It is intentionally platform-service authenticated and never exposes app user ids.
+  app.get("/internal/brain-tenant-deletions/needs-attention", async (req, res) => {
+    if (!platformServiceConfigured()) return res.status(503).json({ error: "identity_lookup_unconfigured" });
+    if (!hasPlatformServiceAuth(req)) return res.status(401).json({ error: "invalid_platform_service_auth" });
+    try {
+      return res.json({ deletions: await storage.listBrainTenantDeletionNeedsAttention() });
+    } catch (error) {
+      console.error("[demo-tenant-delete] could not list needs-attention queue:", error);
+      return res.status(503).json({ error: "tenant_deletion_queue_unavailable" });
+    }
+  });
+
   // ─────────────────────────────────────────────────────────────
   // BRAIN-CORE BFF PROXY (session → tenant JWT → api.brain.fi)
   // Reads flow through here; the browser never sees a brain-core JWT.
@@ -571,6 +584,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       // effectively resets (a refresh provisions a fresh tenant). Real expiry
       // from the token source — null if the cache is gone.
       const expiresAt = getBrainSessionExpiresAt(userId);
+      const deletion = await storage.getDemoTenantLifecycle(userId);
       return res.json({
         mode,
         canCreate: false,
@@ -587,6 +601,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           dataProfile: null,
           accessStage: null,
           rawScopesEligible: false,
+           deletionStatus: deletion?.deletionStatus ?? null,
+           deletionError: deletion?.deletionStatus === "needs_attention" ? deletion.deletionError : null,
         }],
       });
     } catch (error: any) {

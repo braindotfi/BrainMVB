@@ -79,6 +79,8 @@ interface TenantsResponse {
     rawScopesEligible: boolean;
     /** Demo tenants only: when the ephemeral session (and tenant) resets. */
     expiresAt?: string | null;
+    deletionStatus?: string | null;
+    deletionError?: string | null;
   }>;
 }
 
@@ -2020,6 +2022,11 @@ function TenantsSection({ env, onNavigate }: { env: DevEnv; onNavigate: (s: DevS
                   <p className="settings-record-detail text-right whitespace-nowrap" data-testid={`text-tenant-created-${t.id}`}>
                     Created {t.ephemeral ? formatRelative(t.createdAt) : formatDate(t.createdAt)}
                   </p>
+                   {t.deletionStatus === "needs_attention" && (
+                     <p className="settings-record-detail text-right text-red-500" data-testid={`text-tenant-deletion-attention-${t.id}`}>
+                       Deletion needs attention{t.deletionError ? `: ${t.deletionError}` : ""}
+                     </p>
+                   )}
                 </div>
               </button>
             ))}

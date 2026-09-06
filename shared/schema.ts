@@ -175,6 +175,24 @@ export const insertBrainIdentitySchema = createInsertSchema(brainIdentities).omi
 export type InsertBrainIdentity = z.infer<typeof insertBrainIdentitySchema>;
 export type BrainIdentity = typeof brainIdentities.$inferSelect;
 
+/* ─── Ephemeral demo tenant lifecycle ───────────────────────────────────────
+ * This is intentionally separate from brain_identities: demo tenants are not
+ * production tenancy mappings. There is no FK to users so the terminal audit
+ * state survives the normal local-account cleanup. */
+export const demoTenantLifecycles = pgTable("demo_tenant_lifecycles", {
+  userId: text("user_id").primaryKey(),
+  tenantId: text("tenant_id").notNull().unique(),
+  linkedAt: timestamp("linked_at").defaultNow().notNull(),
+  deletionJobId: text("deletion_job_id"),
+  deletionStatus: text("deletion_status"),
+  deletionError: text("deletion_error"),
+  deletionAttemptedAt: timestamp("deletion_attempted_at"),
+  deletionStartedAt: timestamp("deletion_started_at"),
+  deletionLastPolledAt: timestamp("deletion_last_polled_at"),
+  deletionCompletedAt: timestamp("deletion_completed_at"),
+}, (t) => [index("demo_tenant_lifecycles_status_idx").on(t.deletionStatus)]);
+export type DemoTenantLifecycle = typeof demoTenantLifecycles.$inferSelect;
+
 /* ─── Brain Agent Tokens (production tenancy: per-TENANT agent principal) ───
  * brain-core mints a real agent token at tenant creation (production-agents contract) and
  * re-issues it idempotently via POST /v1/tenants/{tenantId}/agent-token. One row per tenant
