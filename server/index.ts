@@ -6,6 +6,7 @@ import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import { assertEncryptionKeyConfigured } from "./tokenCrypto";
 import { storage } from "./storage";
+import { processExpiredDemoTenantDeletions } from "./brain/demoTenantDeletion";
 import {
   createPasswordResetConfirmLimiter,
   createPasswordResetRequestLimiter,
@@ -150,19 +151,25 @@ app.use((req, res, next) => {
   // ── Demo tenant cleanup ──────────────────────────────────────────────────
   // Each "Continue with Demo" tap provisions a real brain-core tenant + an
   // on-chain audit anchor. Without expiry, demo tenants accumulate indefinitely.
-  // We cannot delete the brain-core tenant (no delete-tenant API endpoint), but
-  // dropping the local user + all its linked rows prevents BrainMVB from ever
-  // re-authenticating as that tenant again, bounds local row growth, and limits
-  // exposure to any future cost-per-tenant billing.
+  // By default this preserves the original local-only cleanup. Operators may
+  // explicitly opt into remote-first deletion with BRAIN_TENANT_DELETE_ENABLED;
+  // local data is then removed only after brain-core reports completion.
   //
   // Both values are env-overridable so an ops team can tune without a deploy:
   //   DEMO_TENANT_TTL_HOURS       (default 24)
   //   DEMO_CLEANUP_INTERVAL_HOURS (default 1)
+  //   BRAIN_TENANT_DELETE_ENABLED (default false)
+  //   BRAIN_TENANT_DELETE_DRY_RUN (default false)
   const demoTtlMs = envInt("DEMO_TENANT_TTL_HOURS", 24) * 60 * 60 * 1000;
   const demoCleanupIntervalMs = envInt("DEMO_CLEANUP_INTERVAL_HOURS", 1) * 60 * 60 * 1000;
 
   async function runDemoCleanup() {
     try {
+      const deleteEnabled = process.env.BRAIN_TENANT_DELETE_ENABLED === "true";
+      if (deleteEnabled) {
+        await processExpiredDemoTenantDeletions(storage, new Date(Date.now() - demoTtlMs));
+        return;
+      }
       const count = await storage.deleteExpiredDemoUsers(demoTtlMs);
       if (count > 0) log(`demo cleanup: removed ${count} expired demo tenant(s)`, "cleanup");
     } catch (err) {

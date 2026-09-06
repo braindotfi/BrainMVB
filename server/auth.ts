@@ -11,6 +11,7 @@ import type { User } from "@shared/schema";
 import { brainTenancyMode } from "./brain/config";
 import { isDemoEmail } from "./demoUsers";
 import { evictBrainSession } from "./brain/auth";
+import { processExpiredDemoTenantDeletions, startDemoTenantDeletionPolling } from "./brain/demoTenantDeletion";
 import { formatPasswordResetEmailFailure, sendPasswordResetEmail } from "./passwordResetEmail";
 import { PASSWORD_RESET_GENERIC_RESPONSE } from "./passwordResetRateLimit";
 
@@ -345,6 +346,12 @@ async function processPasswordResetRequest(email: string, returnTo: string | und
 
 export function setupAuth(app: Express) {
   app.set("trust proxy", 1);
+  // Resume pending remote demo deletions after a process restart. The helper is
+  // inert unless the explicitly opt-in flag is exactly true.
+  startDemoTenantDeletionPolling(storage, () => {
+    const ttlHours = Math.max(1, parseInt(process.env.DEMO_TENANT_TTL_HOURS ?? "", 10) || 24);
+    return new Date(Date.now() - ttlHours * 60 * 60 * 1000);
+  });
 
   const configuredSessionSecret = process.env.SESSION_SECRET;
   if (process.env.NODE_ENV === "production" && !configuredSessionSecret) {
@@ -569,7 +576,12 @@ export function setupAuth(app: Express) {
       parseInt(process.env.DEMO_TENANT_TTL_HOURS ?? "", 10) || 24,
     );
     const olderThan = new Date(Date.now() - ttlHours * 60 * 60 * 1000);
-    void storage.cleanupExpiredDemoFreshUsers(olderThan).then((evictedIds) => {
+    const deleteEnabled = process.env.BRAIN_TENANT_DELETE_ENABLED === "true";
+    const cleanup = deleteEnabled
+      ? processExpiredDemoTenantDeletions(storage, olderThan).then(() => [])
+      : storage.cleanupExpiredDemoFreshUsers(olderThan);
+    if (deleteEnabled) startDemoTenantDeletionPolling(storage, () => new Date(Date.now() - ttlHours * 60 * 60 * 1000));
+    void cleanup.then((evictedIds) => {
       if (evictedIds.length > 0) {
         // Evict stale brain session cache entries so they don't linger in memory.
         for (const uid of evictedIds) evictBrainSession(uid);
