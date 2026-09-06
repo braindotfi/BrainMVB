@@ -1006,7 +1006,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
             <img src={brainLogo} alt="Brain" className="size-[72px]" />
             <div className="flex flex-col items-center text-center">
               <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[24px] leading-[32px]">
-                Hi, I'm Brain
+                Hi, I'm Robo
               </p>
               <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[18px] leading-[24px]">
                 What can I help you with today?
