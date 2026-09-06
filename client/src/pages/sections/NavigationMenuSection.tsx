@@ -42,8 +42,8 @@ const LogoutConfirmModal = ({ show, onCancel, onConfirm }: { show: boolean; onCa
 import robotMoneyLogo from "@assets/robotmoney_1788696284094.png";
 
 const BrainLogo = () => (
-  <div className="h-[40px] relative shrink-0 w-[150px] flex items-center pl-[17px]">
-    <img alt="RobotMoney" className="w-[135px] h-auto object-contain" src={robotMoneyLogo} />
+  <div className="h-[40px] relative shrink-0 w-[180px] flex items-center pl-[17px]">
+    <img alt="RobotMoney" className="w-[165px] h-auto object-contain" src={robotMoneyLogo} />
   </div>
 );
 
