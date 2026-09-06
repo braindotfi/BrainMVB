@@ -21,7 +21,7 @@
 - [Post-merge boot failures](post-merge-boot-failures.md) — after a task merge check conflict markers, uninstalled new deps, AND new required env vars; auth-security bankConns test fails when DATABASE_URL set.
 - [PostgreSQL pool error handling](postgres-pool-error-handling.md) — every pg Pool needs an error listener so managed idle-client termination cannot crash Node.
 - [Durable brain tenancy](durable-tenancy.md) — "Continue with Demo" provisions a PRODUCTION tenant, never /demo/provision-run; create is non-idempotent + founder-email-unique; agent token for raw:write.
-- [Demo tenant TTL cleanup](demo-tenant-ttl.md) — expires demo-fresh users via email pattern + createdAt age; no schema change; brain-core tenant deletion impossible (no API).
+- [Demo tenant TTL cleanup](demo-tenant-ttl.md) — remote-first deletion is opt-in; persist demo lifecycle separately and claim starts under a DB advisory lock for cross-worker limits.
 - [Brain staging demo-token](brain-staging-demo-token.md) — staging's key-free /demo/token route currently 401s on its own documented curl example; don't re-diagnose client-side, check with staging owners first.
 - [brain extract is async](brain-extract-async.md) — /raw/{id}/extract returns 202 "queued" with null parsed_id; re-POST is the idempotent poll; never record the first response as success.
 - [Agent proposal pipeline](agent-proposal-pipeline.md) — empty Needs Review is upstream: no tenant policy blocks propose/execute agents, and apar rebuild drops obligations; /v1/agents/proposals is a 404.
