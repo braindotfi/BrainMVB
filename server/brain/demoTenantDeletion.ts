@@ -9,9 +9,9 @@ function enabled() {
   return process.env.BRAIN_TENANT_DELETE_ENABLED === "true";
 }
 
-function endpoint(path: string) {
+function endpoint(brainBaseUrl: string, path: string) {
   // The configured Brain URLs conventionally already end in /v1.
-  return `${brainConfig.demoBaseUrl.replace(/\/v1$/, "")}${path}`;
+  return `${brainBaseUrl.replace(/\/v1\/?$/, "").replace(/\/$/, "")}${path}`;
 }
 
 function errorText(value: unknown): string {
@@ -27,6 +27,40 @@ function errorText(value: unknown): string {
     if (typeof message === "string") return message.slice(0, 1000);
   }
   return "Brain tenant deletion request failed";
+}
+
+function machineErrorCode(value: unknown): string | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const candidate = value as { code?: unknown; error?: unknown };
+  if (typeof candidate.code === "string") return candidate.code;
+  if (candidate.error && typeof candidate.error === "object") {
+    const code = (candidate.error as { code?: unknown }).code;
+    if (typeof code === "string") return code;
+  }
+  return undefined;
+}
+
+function deletionAuthority(storedBaseUrl: string | null): string {
+  // Lifecycle rows created before authority provenance was added are durable
+  // production tenants, so the safe compatibility default is baseUrl.
+  return storedBaseUrl || brainConfig.baseUrl;
+}
+
+async function finishLocalCleanup(
+  storage: IStorage,
+  userId: string,
+  tenantId: string,
+  now: Date,
+  outcome: "deleted_by_job" | "remote_already_absent",
+  polled: boolean,
+) {
+  await storage.finalizeDemoTenantDeletion(
+    userId,
+    outcome,
+    now,
+    polled ? now : undefined,
+  );
+  console.log(`[demo-tenant-delete] ${outcome} tenant=${tenantId}; local user cleaned up`);
 }
 
 /** Drives remote deletion only for expired isolated demo tenants. It never uses a
@@ -53,13 +87,28 @@ export async function processExpiredDemoTenantDeletions(storage: IStorage, older
     for (const candidate of candidates) {
       if (candidate.deletionStatus === "deleted" || candidate.deletionStatus === "protected_skipped") continue;
       if (candidate.deletionJobId && isActiveStatus(candidate.deletionStatus)) {
-        await poll(storage, candidate.userId, candidate.tenantId, candidate.deletionJobId, candidate.deletionStartedAt, jwt);
+        await poll(
+          storage,
+          candidate.userId,
+          candidate.tenantId,
+          candidate.deletionJobId,
+          candidate.deletionStartedAt,
+          jwt,
+          deletionAuthority(candidate.brainBaseUrl),
+        );
         continue;
       }
       const claimedAt = new Date();
       const claimed = await storage.claimDemoTenantDeletionAttempt(candidate.userId, claimedAt);
       if (!claimed) continue;
-      await start(storage, candidate.userId, candidate.tenantId, jwt, claimedAt);
+      await start(
+        storage,
+        candidate.userId,
+        candidate.tenantId,
+        jwt,
+        claimedAt,
+        deletionAuthority(candidate.brainBaseUrl),
+      );
     }
   } finally {
     passInFlight = false;
@@ -73,9 +122,16 @@ function isActiveStatus(status: string | null): boolean {
     || status === "purging_blobs";
 }
 
-async function start(storage: IStorage, userId: string, tenantId: string, jwt: string, attemptedAt: Date) {
+async function start(
+  storage: IStorage,
+  userId: string,
+  tenantId: string,
+  jwt: string,
+  attemptedAt: Date,
+  brainBaseUrl: string,
+) {
   try {
-    const response = await fetch(endpoint(`/v1/admin/tenants/${encodeURIComponent(tenantId)}/delete`), {
+    const response = await fetch(endpoint(brainBaseUrl, `/v1/admin/tenants/${encodeURIComponent(tenantId)}/delete`), {
       method: "POST", headers: { Authorization: `Bearer ${jwt}` },
     });
     const json = await response.json().catch(() => ({}));
@@ -89,8 +145,28 @@ async function start(storage: IStorage, userId: string, tenantId: string, jwt: s
       });
       return;
     }
+    if (
+      response.status === 404
+      && machineErrorCode(json) === "tenant_not_found"
+    ) {
+      await finishLocalCleanup(
+        storage,
+        userId,
+        tenantId,
+        attemptedAt,
+        "remote_already_absent",
+        false,
+      );
+      return;
+    }
     if (!response.ok) {
-      await storage.updateDemoTenantLifecycle(userId, { deletionStatus: "needs_attention", deletionError: errorText(json), deletionAttemptedAt: attemptedAt });
+      await storage.updateDemoTenantLifecycle(userId, {
+        deletionStatus: "needs_attention",
+        deletionJobId: null,
+        deletionOutcome: null,
+        deletionError: errorText(json),
+        deletionAttemptedAt: attemptedAt,
+      });
       return;
     }
     const jobId = typeof json.job_id === "string" ? json.job_id : typeof json.id === "string" ? json.id : undefined;
@@ -99,22 +175,28 @@ async function start(storage: IStorage, userId: string, tenantId: string, jwt: s
       return;
     }
     await storage.updateDemoTenantLifecycle(userId, {
-      deletionStatus: "queued", deletionJobId: jobId, deletionError: null,
+      deletionStatus: "queued", deletionJobId: jobId, deletionOutcome: null, deletionError: null,
       deletionAttemptedAt: attemptedAt, deletionStartedAt: attemptedAt,
     });
   } catch (error) {
-    await storage.updateDemoTenantLifecycle(userId, { deletionStatus: "needs_attention", deletionError: errorText(error), deletionAttemptedAt: attemptedAt });
+    await storage.updateDemoTenantLifecycle(userId, {
+      deletionStatus: "needs_attention",
+      deletionJobId: null,
+      deletionOutcome: null,
+      deletionError: errorText(error),
+      deletionAttemptedAt: attemptedAt,
+    });
   }
 }
 
-async function poll(storage: IStorage, userId: string, tenantId: string, jobId: string, startedAt: Date | null, jwt: string) {
+async function poll(storage: IStorage, userId: string, tenantId: string, jobId: string, startedAt: Date | null, jwt: string, brainBaseUrl: string) {
   const now = new Date();
   if (!startedAt || now.getTime() - startedAt.getTime() >= TIMEOUT_MS) {
     await storage.updateDemoTenantLifecycle(userId, { deletionStatus: "needs_attention", deletionJobId: null, deletionError: "Deletion polling timed out after 15 minutes", deletionLastPolledAt: now });
     return;
   }
   try {
-    const response = await fetch(endpoint(`/v1/admin/tenant-deletions/${encodeURIComponent(jobId)}`), { headers: { Authorization: `Bearer ${jwt}` } });
+    const response = await fetch(endpoint(brainBaseUrl, `/v1/admin/tenant-deletions/${encodeURIComponent(jobId)}`), { headers: { Authorization: `Bearer ${jwt}` } });
     const json = await response.json().catch(() => ({}));
     const status = typeof json.status === "string" ? json.status.toLowerCase() : "";
     if (response.status === 403) {
@@ -128,11 +210,7 @@ async function poll(storage: IStorage, userId: string, tenantId: string, jobId: 
     } else if (!response.ok || status === "failed") {
       await storage.updateDemoTenantLifecycle(userId, { deletionStatus: "needs_attention", deletionJobId: null, deletionError: errorText(json), deletionLastPolledAt: now });
     } else if (status === "completed") {
-      // Preserve the normal account/data cleanup semantics, then write the
-      // terminal lifecycle record (which deliberately has no user-row FK).
-      await storage.deleteUserAccount({ userId });
-      await storage.updateDemoTenantLifecycle(userId, { deletionStatus: "deleted", deletionError: null, deletionCompletedAt: now, deletionLastPolledAt: now });
-      console.log(`[demo-tenant-delete] completed tenant=${tenantId}; local user cleaned up`);
+      await finishLocalCleanup(storage, userId, tenantId, now, "deleted_by_job", true);
     } else {
       const nextStatus = isActiveStatus(status) ? status : "needs_attention";
       await storage.updateDemoTenantLifecycle(userId, {
@@ -146,6 +224,25 @@ async function poll(storage: IStorage, userId: string, tenantId: string, jobId: 
   } catch (error) {
     await storage.updateDemoTenantLifecycle(userId, { deletionStatus: "needs_attention", deletionError: errorText(error), deletionLastPolledAt: now });
   }
+}
+
+/** Operator-only immediate retry. The storage claim bypasses the daily delay
+ * only for needs_attention rows and retains the shared starts-per-minute cap. */
+export async function retryDemoTenantDeletion(storage: IStorage, tenantId: string) {
+  const jwt = process.env.BRAIN_TENANT_DELETE_JWT;
+  if (!jwt) throw new Error("BRAIN_TENANT_DELETE_JWT is not configured");
+  const attemptedAt = new Date();
+  const claimed = await storage.claimDemoTenantDeletionRetry(tenantId, attemptedAt);
+  if (!claimed) return undefined;
+  await start(
+    storage,
+    claimed.userId,
+    claimed.tenantId,
+    jwt,
+    attemptedAt,
+    deletionAuthority(claimed.brainBaseUrl),
+  );
+  return storage.getDemoTenantLifecycle(claimed.userId);
 }
 
 let timer: ReturnType<typeof setInterval> | undefined;

@@ -119,17 +119,28 @@ export interface IStorage {
       accessStage?: string | null;
     },
   ): Promise<BrainIdentity | undefined>;
-  upsertDemoTenantLifecycle(userId: string, tenantId: string): Promise<DemoTenantLifecycle>;
+  upsertDemoTenantLifecycle(userId: string, tenantId: string, brainBaseUrl?: string): Promise<DemoTenantLifecycle>;
   getDemoTenantLifecycle(userId: string): Promise<DemoTenantLifecycle | undefined>;
-  listExpiredDemoTenantCandidates(olderThan: Date): Promise<Array<{ userId: string; tenantId: string; deletionStatus: string | null; deletionJobId: string | null; deletionError: string | null; deletionAttemptedAt: Date | null; deletionStartedAt: Date | null }>>;
+  listExpiredDemoTenantCandidates(olderThan: Date): Promise<Array<{ userId: string; tenantId: string; brainBaseUrl: string | null; deletionStatus: string | null; deletionJobId: string | null; deletionError: string | null; deletionAttemptedAt: Date | null; deletionStartedAt: Date | null }>>;
   /** Atomically reserve one remote deletion POST while enforcing the shared
    * one-attempt-per-day and ten-starts-per-minute limits. */
   claimDemoTenantDeletionAttempt(userId: string, now: Date): Promise<boolean>;
+  /** Operator retry: atomically bypass the daily delay only for needs_attention,
+   * while retaining the shared ten-starts-per-minute limit. */
+  claimDemoTenantDeletionRetry(tenantId: string, now: Date): Promise<{ userId: string; tenantId: string; brainBaseUrl: string | null } | undefined>;
   updateDemoTenantLifecycle(userId: string, patch: {
-    deletionStatus?: string | null; deletionJobId?: string | null; deletionError?: string | null;
+    deletionStatus?: string | null; deletionJobId?: string | null; deletionOutcome?: string | null; deletionError?: string | null;
     deletionAttemptedAt?: Date | null; deletionStartedAt?: Date | null;
     deletionLastPolledAt?: Date | null; deletionCompletedAt?: Date | null;
   }): Promise<DemoTenantLifecycle | undefined>;
+  /** Atomically remove local demo-account data and persist the terminal remote
+   * deletion audit row. The lifecycle intentionally survives user deletion. */
+  finalizeDemoTenantDeletion(
+    userId: string,
+    outcome: "deleted_by_job" | "remote_already_absent",
+    completedAt: Date,
+    polledAt?: Date,
+  ): Promise<void>;
   listBrainTenantDeletionNeedsAttention(): Promise<Array<{ tenantId: string; deletionJobId: string | null; deletionError: string | null; deletionAttemptedAt: Date | null; deletionLastPolledAt: Date | null }>>;
   /** Remove an identity row — ONLY for rolling back a tombstone after a provably failed create. */
   deleteBrainIdentity(userId: string): Promise<void>;
@@ -880,11 +891,11 @@ export class MemStorage implements IStorage {
     this.brainIdentitiesStore.delete(userId);
   }
   private demoTenantLifecyclesStore = new Map<string, DemoTenantLifecycle>();
-  async upsertDemoTenantLifecycle(userId: string, tenantId: string): Promise<DemoTenantLifecycle> {
+  async upsertDemoTenantLifecycle(userId: string, tenantId: string, brainBaseUrl?: string): Promise<DemoTenantLifecycle> {
     const existing = this.demoTenantLifecyclesStore.get(userId);
     const row: DemoTenantLifecycle = existing && existing.tenantId === tenantId
-      ? existing
-      : { userId, tenantId, linkedAt: new Date(), deletionJobId: null, deletionStatus: null, deletionError: null, deletionAttemptedAt: null, deletionStartedAt: null, deletionLastPolledAt: null, deletionCompletedAt: null };
+      ? { ...existing, brainBaseUrl: brainBaseUrl ?? existing.brainBaseUrl }
+      : { userId, tenantId, brainBaseUrl: brainBaseUrl ?? null, linkedAt: new Date(), deletionJobId: null, deletionStatus: null, deletionOutcome: null, deletionError: null, deletionAttemptedAt: null, deletionStartedAt: null, deletionLastPolledAt: null, deletionCompletedAt: null };
     this.demoTenantLifecyclesStore.set(userId, row);
     return row;
   }
@@ -898,7 +909,7 @@ export class MemStorage implements IStorage {
       .map((user) => this.demoTenantLifecyclesStore.get(user.id))
       .filter((lifecycle): lifecycle is DemoTenantLifecycle => lifecycle !== undefined)
       .map((lifecycle) => ({
-        userId: lifecycle.userId, tenantId: lifecycle.tenantId, deletionStatus: lifecycle.deletionStatus,
+        userId: lifecycle.userId, tenantId: lifecycle.tenantId, brainBaseUrl: lifecycle.brainBaseUrl, deletionStatus: lifecycle.deletionStatus,
         deletionJobId: lifecycle.deletionJobId, deletionError: lifecycle.deletionError, deletionAttemptedAt: lifecycle.deletionAttemptedAt,
         deletionStartedAt: lifecycle.deletionStartedAt,
       }));
@@ -921,8 +932,31 @@ export class MemStorage implements IStorage {
     });
     return true;
   }
+  async claimDemoTenantDeletionRetry(tenantId: string, now: Date) {
+    const row = Array.from(this.demoTenantLifecyclesStore.values()).find(
+      (item) => item.tenantId === tenantId,
+    );
+    if (!row || row.deletionStatus !== "needs_attention") return undefined;
+    const oneMinuteAgo = now.getTime() - 60_000;
+    const recentStarts = Array.from(this.demoTenantLifecyclesStore.values()).filter(
+      (item) => item.deletionAttemptedAt && item.deletionAttemptedAt.getTime() >= oneMinuteAgo,
+    ).length;
+    if (recentStarts >= 10) return undefined;
+    this.demoTenantLifecyclesStore.set(row.userId, {
+      ...row,
+      deletionStatus: "starting",
+      deletionJobId: null,
+      deletionOutcome: null,
+      deletionError: null,
+      deletionAttemptedAt: now,
+      deletionStartedAt: null,
+      deletionLastPolledAt: null,
+      deletionCompletedAt: null,
+    });
+    return { userId: row.userId, tenantId: row.tenantId, brainBaseUrl: row.brainBaseUrl };
+  }
   async updateDemoTenantLifecycle(userId: string, patch: {
-    deletionStatus?: string | null; deletionJobId?: string | null; deletionError?: string | null;
+    deletionStatus?: string | null; deletionJobId?: string | null; deletionOutcome?: string | null; deletionError?: string | null;
     deletionAttemptedAt?: Date | null; deletionStartedAt?: Date | null;
     deletionLastPolledAt?: Date | null; deletionCompletedAt?: Date | null;
   }): Promise<DemoTenantLifecycle | undefined> {
@@ -931,6 +965,25 @@ export class MemStorage implements IStorage {
     const updated = { ...row, ...patch };
     this.demoTenantLifecyclesStore.set(userId, updated);
     return updated;
+  }
+  async finalizeDemoTenantDeletion(
+    userId: string,
+    outcome: "deleted_by_job" | "remote_already_absent",
+    completedAt: Date,
+    polledAt?: Date,
+  ): Promise<void> {
+    await this.deleteUserAccount({ userId });
+    const row = this.demoTenantLifecyclesStore.get(userId);
+    if (!row) throw new Error(`demo tenant lifecycle missing for user ${userId}`);
+    this.demoTenantLifecyclesStore.set(userId, {
+      ...row,
+      deletionStatus: "deleted",
+      deletionJobId: null,
+      deletionOutcome: outcome,
+      deletionError: null,
+      deletionCompletedAt: completedAt,
+      ...(polledAt ? { deletionLastPolledAt: polledAt } : {}),
+    });
   }
   async listBrainTenantDeletionNeedsAttention() {
     return Array.from(this.demoTenantLifecyclesStore.values())
@@ -1731,9 +1784,11 @@ export class DatabaseStorage implements IStorage {
   async deleteBrainIdentity(userId: string): Promise<void> {
     await db.delete(brainIdentitiesTable).where(eq(brainIdentitiesTable.userId, userId));
   }
-  async upsertDemoTenantLifecycle(userId: string, tenantId: string): Promise<DemoTenantLifecycle> {
-    const [row] = await db.insert(demoTenantLifecyclesTable).values({ userId, tenantId })
-      .onConflictDoUpdate({ target: demoTenantLifecyclesTable.userId, set: { tenantId } }).returning();
+  async upsertDemoTenantLifecycle(userId: string, tenantId: string, brainBaseUrl?: string): Promise<DemoTenantLifecycle> {
+    const values = { userId, tenantId, brainBaseUrl: brainBaseUrl ?? null };
+    const set = brainBaseUrl === undefined ? { tenantId } : { tenantId, brainBaseUrl };
+    const [row] = await db.insert(demoTenantLifecyclesTable).values(values)
+      .onConflictDoUpdate({ target: demoTenantLifecyclesTable.userId, set }).returning();
     return row;
   }
   async getDemoTenantLifecycle(userId: string) {
@@ -1743,6 +1798,7 @@ export class DatabaseStorage implements IStorage {
   async listExpiredDemoTenantCandidates(olderThan: Date) {
     const rows = await db.select({
       userId: demoTenantLifecyclesTable.userId, tenantId: demoTenantLifecyclesTable.tenantId,
+      brainBaseUrl: demoTenantLifecyclesTable.brainBaseUrl,
       deletionStatus: demoTenantLifecyclesTable.deletionStatus, deletionJobId: demoTenantLifecyclesTable.deletionJobId, deletionError: demoTenantLifecyclesTable.deletionError,
       deletionAttemptedAt: demoTenantLifecyclesTable.deletionAttemptedAt, deletionStartedAt: demoTenantLifecyclesTable.deletionStartedAt,
     }).from(demoTenantLifecyclesTable).innerJoin(usersTable, eq(demoTenantLifecyclesTable.userId, usersTable.id))
@@ -1779,13 +1835,114 @@ export class DatabaseStorage implements IStorage {
       return true;
     });
   }
+  async claimDemoTenantDeletionRetry(tenantId: string, now: Date) {
+    const oneMinuteAgo = new Date(now.getTime() - 60_000);
+    return db.transaction(async (tx) => {
+      await tx.execute(sql`select pg_advisory_xact_lock(74291061)`);
+      const [row] = await tx
+        .select({
+          userId: demoTenantLifecyclesTable.userId,
+          tenantId: demoTenantLifecyclesTable.tenantId,
+          brainBaseUrl: demoTenantLifecyclesTable.brainBaseUrl,
+          deletionStatus: demoTenantLifecyclesTable.deletionStatus,
+        })
+        .from(demoTenantLifecyclesTable)
+        .where(eq(demoTenantLifecyclesTable.tenantId, tenantId))
+        .limit(1);
+      if (!row || row.deletionStatus !== "needs_attention") return undefined;
+      const [recent] = await tx
+        .select({ value: count() })
+        .from(demoTenantLifecyclesTable)
+        .where(gte(demoTenantLifecyclesTable.deletionAttemptedAt, oneMinuteAgo));
+      if (Number(recent?.value ?? 0) >= 10) return undefined;
+      await tx
+        .update(demoTenantLifecyclesTable)
+        .set({
+          deletionStatus: "starting",
+          deletionJobId: null,
+          deletionOutcome: null,
+          deletionError: null,
+          deletionAttemptedAt: now,
+          deletionStartedAt: null,
+          deletionLastPolledAt: null,
+          deletionCompletedAt: null,
+        })
+        .where(and(
+          eq(demoTenantLifecyclesTable.userId, row.userId),
+          eq(demoTenantLifecyclesTable.deletionStatus, "needs_attention"),
+        ));
+      return { userId: row.userId, tenantId: row.tenantId, brainBaseUrl: row.brainBaseUrl };
+    });
+  }
   async updateDemoTenantLifecycle(userId: string, patch: {
-    deletionStatus?: string | null; deletionJobId?: string | null; deletionError?: string | null;
+    deletionStatus?: string | null; deletionJobId?: string | null; deletionOutcome?: string | null; deletionError?: string | null;
     deletionAttemptedAt?: Date | null; deletionStartedAt?: Date | null;
     deletionLastPolledAt?: Date | null; deletionCompletedAt?: Date | null;
   }): Promise<DemoTenantLifecycle | undefined> {
     const [row] = await db.update(demoTenantLifecyclesTable).set(patch).where(eq(demoTenantLifecyclesTable.userId, userId)).returning();
     return row ?? undefined;
+  }
+  async finalizeDemoTenantDeletion(
+    userId: string,
+    outcome: "deleted_by_job" | "remote_already_absent",
+    completedAt: Date,
+    polledAt?: Date,
+  ): Promise<void> {
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+    const ownerKeys = [userId, ...(user?.walletAddress ? [user.walletAddress] : [])];
+    const identities = await db
+      .select({ tenantId: brainIdentitiesTable.tenantId })
+      .from(brainIdentitiesTable)
+      .where(inArray(brainIdentitiesTable.userId, ownerKeys));
+    const tenantIds = identities.map((identity) => identity.tenantId);
+    const bankRows = await db
+      .select()
+      .from(bankConnectionsTable)
+      .where(inArray(bankConnectionsTable.userId, ownerKeys));
+    await revokePlaidTokens(bankRows.map((row) => readPlaidAccessToken(row.accessToken)));
+
+    await db.transaction(async (tx) => {
+      const [lifecycle] = await tx
+        .update(demoTenantLifecyclesTable)
+        .set({
+          deletionStatus: "deleted",
+          deletionJobId: null,
+          deletionOutcome: outcome,
+          deletionError: null,
+          deletionCompletedAt: completedAt,
+          ...(polledAt ? { deletionLastPolledAt: polledAt } : {}),
+        })
+        .where(eq(demoTenantLifecyclesTable.userId, userId))
+        .returning({ userId: demoTenantLifecyclesTable.userId });
+      if (!lifecycle) throw new Error(`demo tenant lifecycle missing for user ${userId}`);
+
+      await tx.delete(passwordResetTokensTable).where(inArray(passwordResetTokensTable.userId, ownerKeys));
+      await tx.delete(notificationsTable).where(inArray(notificationsTable.userId, ownerKeys));
+      await tx.delete(bankConnectionsTable).where(inArray(bankConnectionsTable.userId, ownerKeys));
+      await tx.delete(sourceDocumentsTable).where(inArray(sourceDocumentsTable.userId, ownerKeys));
+      await tx.delete(userRulesTable).where(inArray(userRulesTable.userId, ownerKeys));
+      await tx.delete(brainIdentitiesTable).where(inArray(brainIdentitiesTable.userId, ownerKeys));
+      await tx.delete(assistantQuestionsTable).where(inArray(assistantQuestionsTable.userId, ownerKeys));
+      if (user?.walletAddress) {
+        await tx.delete(siweNoncesTable).where(eq(siweNoncesTable.walletAddress, user.walletAddress));
+      }
+      if (tenantIds.length > 0) {
+        const stillLinked = await tx
+          .select({ tenantId: brainIdentitiesTable.tenantId })
+          .from(brainIdentitiesTable)
+          .where(inArray(brainIdentitiesTable.tenantId, tenantIds));
+        const stillLinkedSet = new Set(stillLinked.map((identity) => identity.tenantId));
+        const orphaned = tenantIds.filter((tenantId) => !stillLinkedSet.has(tenantId));
+        if (orphaned.length > 0) {
+          await tx.delete(brainAgentTokensTable).where(inArray(brainAgentTokensTable.tenantId, orphaned));
+        }
+      }
+      await tx.delete(usersTable).where(eq(usersTable.id, userId));
+    });
+
+    for (const [key, connection] of Array.from(this.toolConns.entries())) {
+      if (ownerKeys.includes(connection.userId)) this.toolConns.delete(key);
+    }
   }
   async listBrainTenantDeletionNeedsAttention() {
     return db.select({

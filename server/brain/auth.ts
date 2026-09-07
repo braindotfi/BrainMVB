@@ -346,7 +346,11 @@ async function adoptLinkedDemoTenant(
         "payload nor the session response named a tenant id",
     );
   }
-  await storage.upsertDemoTenantLifecycle(appUserId, tenantId);
+  await storage.upsertDemoTenantLifecycle(
+    appUserId,
+    tenantId,
+    currentBrainBaseUrl(brainConfig.demoBaseUrl),
+  );
 
   /* Fresh agent token for raw:write. Not fatal if core refuses: mirroring the
      member token keeps reads working and lets propose 403 honestly, which is the
@@ -423,7 +427,11 @@ async function provisionDemoTenant(
   }
   // Demo lifecycle tracking is distinct from production brain_identities and
   // is written before any asynchronous fixture seeding can fail.
-  await storage.upsertDemoTenantLifecycle(appUserId, result.tenant_id);
+  await storage.upsertDemoTenantLifecycle(
+    appUserId,
+    result.tenant_id,
+    currentBrainBaseUrl(brainConfig.demoBaseUrl),
+  );
 
   if (result.demo_seed) {
     console.log(`[brain-auth] demo tenant ${result.tenant_id} seeded by core:`, JSON.stringify(result.demo_seed));
@@ -641,7 +649,11 @@ async function createDurableSession(
   // production mapping above untouched, but also record its remote-cleanup
   // lifecycle in the dedicated demo table.
   if (isDemoEmail(user?.email)) {
-    await storage.upsertDemoTenantLifecycle(appUserId, result.tenant_id);
+    await storage.upsertDemoTenantLifecycle(
+      appUserId,
+      result.tenant_id,
+      currentBrainBaseUrl(brainConfig.baseUrl),
+    );
   }
   if (result.agent?.token) {
     await storage.upsertBrainAgentToken(
