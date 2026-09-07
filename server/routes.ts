@@ -8,6 +8,7 @@ import { z } from "zod";
 import { verifyMessage } from "viem";
 import { createBrainProxyRouter } from "./brain/proxy";
 import { getBrainSession, getBrainSessionProvisionedAt, getBrainSessionExpiresAt } from "./brain/auth";
+import { retryDemoTenantDeletion } from "./brain/demoTenantDeletion";
 import { withBrainBaseUrl, withKeyAuthedBrainCall } from "./brain/baseUrl";
 import { bffRequestIdMiddleware, currentBffRequestId } from "./brain/requestId";
 import {
@@ -245,6 +246,37 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     } catch (error) {
       console.error("[demo-tenant-delete] could not list needs-attention queue:", error);
       return res.status(503).json({ error: "tenant_deletion_queue_unavailable" });
+    }
+  });
+
+  // Operator-only immediate retry for a needs_attention deletion. This bypasses
+  // the daily automatic delay, but the storage claim still enforces the shared
+  // start-rate cap and refuses non-attention lifecycle records.
+  app.post("/internal/brain-tenant-deletions/:tenantId/retry", async (req, res) => {
+    if (!platformServiceConfigured()) return res.status(503).json({ error: "identity_lookup_unconfigured" });
+    if (!hasPlatformServiceAuth(req)) return res.status(401).json({ error: "invalid_platform_service_auth" });
+    if (!process.env.BRAIN_TENANT_DELETE_JWT) {
+      return res.status(503).json({ error: "tenant_deletion_unconfigured" });
+    }
+    const tenantId = String(req.params.tenantId ?? "").trim();
+    if (!tenantId) return res.status(400).json({ error: "invalid_tenant_id" });
+    try {
+      const lifecycle = await retryDemoTenantDeletion(storage, tenantId);
+      if (!lifecycle) {
+        return res.status(409).json({
+          error: "tenant_deletion_retry_unavailable",
+          message: "The tenant is not awaiting attention, is already being retried, or the start-rate limit was reached.",
+        });
+      }
+      return res.status(lifecycle.deletionStatus === "deleted" ? 200 : 202).json({
+        tenant_id: lifecycle.tenantId,
+        status: lifecycle.deletionStatus,
+        outcome: lifecycle.deletionOutcome,
+        deletion_job_id: lifecycle.deletionJobId,
+      });
+    } catch (error) {
+      console.error(`[demo-tenant-delete] retry failed tenant=${tenantId}:`, error);
+      return res.status(503).json({ error: "tenant_deletion_retry_failed" });
     }
   });
 

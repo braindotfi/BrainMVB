@@ -182,9 +182,13 @@ export type BrainIdentity = typeof brainIdentities.$inferSelect;
 export const demoTenantLifecycles = pgTable("demo_tenant_lifecycles", {
   userId: text("user_id").primaryKey(),
   tenantId: text("tenant_id").notNull().unique(),
+  // The brain-core base URL which created this tenant. Older rows predate
+  // provenance tracking and intentionally fall back to the production base URL.
+  brainBaseUrl: text("brain_base_url"),
   linkedAt: timestamp("linked_at").defaultNow().notNull(),
   deletionJobId: text("deletion_job_id"),
   deletionStatus: text("deletion_status"),
+  deletionOutcome: text("deletion_outcome"),
   deletionError: text("deletion_error"),
   deletionAttemptedAt: timestamp("deletion_attempted_at"),
   deletionStartedAt: timestamp("deletion_started_at"),
