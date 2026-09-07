@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/authContext";
 import { useLocation, useRoute } from "wouter";
 import googleLogo from "@assets/pngtree-google-internet-icon-vector-png-image_9183287_1784767118256.png";
-import brainLogo from "@assets/BrainLogo_1781769246241.png";
+import robotMoneyLogo from "@assets/robotmoney_1788696284094.png";
 import { Button } from "@/components/ui/button";
 import { validInviteReturnTo } from "@/lib/inviteReturnTo";
 
@@ -208,8 +208,10 @@ export function SignupPage() {
       {/* Ambient glow */}
       <div className="pointer-events-none absolute -top-[160px] left-1/2 -translate-x-1/2 w-[640px] h-[420px] bg-brain-v1purple opacity-[0.18] blur-[120px] rounded-full" />
 
-      <header className="flex items-center px-6 h-[50px] flex-shrink-0 z-10 relative">
-        <img src={brainLogo} alt="Brain Finance" className="h-[24px] w-auto object-contain mt-[13px]" />
+      <header className="relative z-10 flex h-[50px] flex-shrink-0 items-start px-8">
+        <div className="mt-[15px] flex h-[40px] w-[180px] shrink-0 items-center">
+          <img src={robotMoneyLogo} alt="RobotMoney" className="h-auto w-[165px] object-contain" />
+        </div>
       </header>
 
       <div className="flex-1 flex items-center justify-center z-10 relative px-4">
