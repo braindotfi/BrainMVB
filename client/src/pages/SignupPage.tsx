@@ -222,7 +222,7 @@ export function SignupPage() {
             </h1>
             <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[14px] leading-[20px] mt-1">
               {mode === "login"
-                ? "Sign in to your Brain account."
+                ? "Sign in to your RobotMoney account."
                 : mode === "forgot"
                   ? "Enter your email and we'll send a reset link if an account matches it."
                 : "Start managing your finances autonomously."}
@@ -435,7 +435,7 @@ export function SignupPage() {
 
       <footer className="flex items-center justify-between px-6 h-14 flex-shrink-0 z-10 relative">
         <span className="[font-family:'Gilroy',sans-serif] text-brain-v1baby-blue-30 text-sm">
-          Copyright © 2026 Brain Finance. All rights reserved.
+          Copyright © 2026 RobotMoney Inc. All rights reserved.
         </span>
         <img alt="Socials" src="/figmaAssets/socials.svg" className="opacity-40" />
       </footer>
