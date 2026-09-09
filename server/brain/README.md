@@ -81,6 +81,19 @@ not match an explicit route return 405.
   evaluates policy for the trace; the agent token creates the PaymentIntent. The route proposes
   only and does not expose execution.
 
+### Phase 3 agent API key migration
+
+Production tenant agents migrate in reviewed batches of at most five. A legacy JWT row remains
+supported while an exchange-only `brain_ak_live_*` row uses RFC 8693 at
+`https://auth.brain.fi/token`. The resulting audience-restricted JWT is cached in memory,
+refreshed 60 seconds early, shared across concurrent refreshes, and retried once after a 401.
+The API key is never sent to a resource route.
+
+Every production start exchanges all already-migrated credentials before readiness. The reviewed
+batch manifest also proves direct key rejection, the exact `bff_service_v1` profile, a denied
+approval attempt, a payment proposal lifecycle, and attributed audit evidence before the new
+revision can serve traffic. The legacy `/agent-token` path remains available for unmigrated rows.
+
 ### Explicit member-token writes
 - `POST /api/brain/reject` uses the member token to reject a proposed or pending PaymentIntent.
 - `POST /api/brain/payment-intents/:id/approve` uses member tokens. When brain-core returns

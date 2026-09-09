@@ -25,6 +25,7 @@ import { exchangeSession, refreshSession, mintAgentToken, createTenant, getPendi
 import { storage } from "../storage";
 import { seedTenantDocuments } from "./seed";
 import { isDemoEmail } from "../demoUsers";
+import { getAgentAccessToken, isAgentApiKeyCredential } from "./agentApiKey";
 
 /**
  * Thrown by the PRODUCTION strategy when the app user has no durable
@@ -121,6 +122,10 @@ export async function getBrainSession(appUserId: string): Promise<BrainSession> 
   const now = Math.floor(Date.now() / 1000);
   const cached = cache.get(appUserId);
   if (cached && cached.exp - REFRESH_SKEW > now) {
+    if (brainDurableTenancy() || brainTenancyMode() === "production") {
+      const currentAgentToken = await getProductionAgentToken(cached.tenantId);
+      if (currentAgentToken !== null) cached.agentToken = currentAgentToken;
+    }
     return {
       token: cached.token,
       agentToken: cached.agentToken,
@@ -714,6 +719,16 @@ const AGENT_TOKEN_REFRESH_SKEW = 120;
  */
 async function getProductionAgentToken(tenantId: string): Promise<string | null> {
   const stored = await storage.getBrainAgentToken(tenantId);
+  if (stored && isAgentApiKeyCredential(stored.token)) {
+    const resource = `${new URL(currentBrainBaseUrl(brainConfig.baseUrl)).origin}/`;
+    const exchanged = await getAgentAccessToken({
+      tenantId,
+      agentApiKey: stored.token,
+      tokenUrl: brainConfig.agentTokenUrl,
+      resource,
+    });
+    return exchanged.token;
+  }
   const now = Date.now();
   if (stored && stored.expiresAt.getTime() - AGENT_TOKEN_REFRESH_SKEW * 1000 > now) {
     return stored.token;
@@ -730,6 +745,25 @@ async function getProductionAgentToken(tenantId: string): Promise<string | null>
         (stored ? "using stored (possibly stale) agent token" : "no agent token; propose will 403 until core ships the agent contract"),
     );
     return stored?.token ?? null;
+  }
+}
+
+/**
+ * Exchange every stored Phase 3 credential before the server becomes ready. A
+ * bad or revoked key must fail the new revision rather than serving requests
+ * and silently falling back to the legacy agent-token route.
+ */
+export async function preflightStoredAgentApiKeys(): Promise<void> {
+  const stored = await storage.listBrainAgentTokens();
+  const resource = `${new URL(brainConfig.baseUrl).origin}/`;
+  for (const row of stored) {
+    if (!isAgentApiKeyCredential(row.token)) continue;
+    await getAgentAccessToken({
+      tenantId: row.tenantId,
+      agentApiKey: row.token,
+      tokenUrl: brainConfig.agentTokenUrl,
+      resource,
+    });
   }
 }
 

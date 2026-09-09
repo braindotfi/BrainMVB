@@ -152,6 +152,7 @@ export interface IStorage {
 
   // Brain agent tokens (production tenancy: per-tenant agent principal, server-side only)
   getBrainAgentToken(tenantId: string): Promise<BrainAgentToken | undefined>;
+  listBrainAgentTokens(): Promise<BrainAgentToken[]>;
   upsertBrainAgentToken(tenantId: string, token: string, expiresAt: Date): Promise<BrainAgentToken>;
 
   // Assistant question audit trail (local — guarantees every question is recorded)
@@ -999,6 +1000,9 @@ export class MemStorage implements IStorage {
   private brainAgentTokensStore = new Map<string, BrainAgentToken>();
   async getBrainAgentToken(tenantId: string): Promise<BrainAgentToken | undefined> {
     return this.brainAgentTokensStore.get(tenantId);
+  }
+  async listBrainAgentTokens(): Promise<BrainAgentToken[]> {
+    return Array.from(this.brainAgentTokensStore.values());
   }
   async upsertBrainAgentToken(tenantId: string, token: string, expiresAt: Date): Promise<BrainAgentToken> {
     const row: BrainAgentToken = { tenantId, token, expiresAt, updatedAt: new Date() };
@@ -1960,6 +1964,9 @@ export class DatabaseStorage implements IStorage {
       .where(eq(brainAgentTokensTable.tenantId, tenantId))
       .limit(1);
     return row ?? undefined;
+  }
+  async listBrainAgentTokens(): Promise<BrainAgentToken[]> {
+    return db.select().from(brainAgentTokensTable);
   }
   async upsertBrainAgentToken(tenantId: string, token: string, expiresAt: Date): Promise<BrainAgentToken> {
     const [row] = await db

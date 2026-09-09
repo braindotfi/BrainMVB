@@ -197,15 +197,13 @@ export const demoTenantLifecycles = pgTable("demo_tenant_lifecycles", {
 }, (t) => [index("demo_tenant_lifecycles_status_idx").on(t.deletionStatus)]);
 export type DemoTenantLifecycle = typeof demoTenantLifecycles.$inferSelect;
 
-/* ─── Brain Agent Tokens (production tenancy: per-TENANT agent principal) ───
- * brain-core mints a real agent token at tenant creation (production-agents contract) and
- * re-issues it idempotently via POST /v1/tenants/{tenantId}/agent-token. One row per tenant
- * (shared by every member of that tenant); refreshed server-side before expiry. The token
- * NEVER reaches the browser. Tenants created before this contract have no row - the next
- * session use mints one (idempotent backfill, no data migration). */
+/* Brain agent credentials, one per production tenant.
+ * During the Phase 3 rollout, `token` contains either the legacy agent JWT or
+ * the replacement exchange-only brain_ak credential. The server infers the
+ * mode from the prefix. Neither credential ever reaches the browser. */
 export const brainAgentTokens = pgTable("brain_agent_tokens", {
   tenantId: text("tenant_id").primaryKey(),            // brain-core tnt_… id
-  token: text("token").notNull(),                      // agent principal token (propose-only)
+  token: text("token").notNull(),                      // legacy JWT or exchange-only API key
   expiresAt: timestamp("expires_at").notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
