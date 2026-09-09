@@ -160,61 +160,6 @@ export function resolveSuggestionChips(params: {
   return { chips: [...fallback], source: "fallback" };
 }
 
-/**
- * Set an upstream chip in sentence case for display.
- *
- * The wording stays core's — this only changes how it is *set*, at the point of
- * use, so nothing about eligibility, order, or the strings we store moves. The
- * component sends the cased string too, so the user's own message in the
- * transcript reads back exactly as the chip they tapped. That is safe because
- * the composer accepts free text: a matcher that cared about capitalisation
- * would already miss most typed questions.
- *
- * **It only fires on wholesale Title Case** — every word after the first
- * starting with a capital, with at least two such words. That guard is the
- * whole point. Down-casing capitals unconditionally would turn a tenant's own
- * "Show Brightline invoices" into "show brightline invoices", and no chip is
- * worth mangling a counterparty's name over. A string that is already a
- * sentence, proper nouns and all, has lowercase words in it and is returned
- * untouched.
- *
- * Within a Title Case string, a word is lowered only when it is plainly title
- * cased: an initial capital, then lowercase letters, optionally trailed by
- * punctuation. Acronyms (`AED`, `USDT`), numbers (`10`, `Q3`), the pronoun `I`,
- * and internally capitalised names (`McKinsey`) survive as core wrote them.
- *
- * Note this is not what fixes the fallback chips. Those are authored in
- * sentence case and were being Title Cased by the platform's global
- * `button { text-transform: capitalize }` rule; the chip button opts out of it.
- */
-export function toSentenceCase(text: string): string {
-  const trimmed = text.trim();
-  if (trimmed.length === 0) return trimmed;
-
-  const tokens = trimmed.split(/(\s+)/).filter((t) => t.length > 0);
-  const words = tokens.filter((t) => !/^\s+$/.test(t));
-  const rest = words.slice(1).filter((w) => /\p{L}/u.test(w));
-
-  /* Not Title Case → core meant this casing. Leave it entirely alone. */
-  const isTitleCase = rest.length >= 2 && rest.every((w) => /^[^\p{L}]*\p{Lu}/u.test(w));
-  if (!isTitleCase) {
-    return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
-  }
-
-  let seenWord = false;
-  return tokens
-    .map((token) => {
-      if (/^\s+$/.test(token)) return token;
-      if (!seenWord) {
-        seenWord = true;
-        return token.charAt(0).toUpperCase() + token.slice(1);
-      }
-      const titleCased = token.match(/^([A-Z][a-z]+)([^\p{L}\p{N}]*)$/u);
-      return titleCased ? titleCased[1].toLowerCase() + titleCased[2] : token;
-    })
-    .join("");
-}
-
 export interface UseSuggestedQuestionsResult {
   /** Eligible, upstream-ranked questions. Empty when none qualify OR the read failed. */
   questions: EligibleQuestion[];

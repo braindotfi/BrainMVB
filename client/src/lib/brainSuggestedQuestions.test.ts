@@ -3,7 +3,6 @@ import {
   eligibleSuggestedQuestions,
   resolveSuggestionChips,
   SUGGESTED_QUESTIONS_ENDPOINT,
-  toSentenceCase,
   type EligibleQuestion,
 } from "./brainSuggestedQuestions";
 
@@ -263,55 +262,5 @@ describe("resolveSuggestionChips", () => {
     out.chips.push("injected");
 
     expect(FALLBACK).toEqual(["Show recent cash flow", "What needs attention?"]);
-  });
-});
-
-describe("toSentenceCase", () => {
-  it("lowercases Title Case words after the first", () => {
-    expect(toSentenceCase("Show Last 10 Transactions")).toBe("Show last 10 transactions");
-    expect(toSentenceCase("Show My Wallet Balance")).toBe("Show my wallet balance");
-  });
-
-  it("capitalises the first word of an all-lowercase chip", () => {
-    expect(toSentenceCase("show recent cash flow")).toBe("Show recent cash flow");
-  });
-
-  it("leaves an already sentence-cased chip untouched", () => {
-    for (const chip of ["Show recent cash flow", "Anything change overnight?", "What needs attention?"]) {
-      expect(toSentenceCase(chip)).toBe(chip);
-    }
-  });
-
-  it("keeps acronyms, numbers and the pronoun I as core wrote them", () => {
-    expect(toSentenceCase("Show My AED Balance")).toBe("Show my AED balance");
-    expect(toSentenceCase("What Did I Spend In Q3?")).toBe("What did I spend in Q3?");
-    expect(toSentenceCase("Send USDT To")).toBe("Send USDT to");
-  });
-
-  /* The guard that keeps this from vandalising tenant data. A chip core wrote
-     as a sentence keeps every capital it has, because the only thing capitalised
-     mid-sentence is a name. */
-  it("never lowercases a proper noun inside an already-sentence-cased chip", () => {
-    expect(toSentenceCase("Show Brightline invoices")).toBe("Show Brightline invoices");
-    expect(toSentenceCase("What do we owe Stripe?")).toBe("What do we owe Stripe?");
-    expect(toSentenceCase("Reconcile the Acme Corp account")).toBe("Reconcile the Acme Corp account");
-  });
-
-  it("does not treat a two-word chip as Title Case on one capital alone", () => {
-    expect(toSentenceCase("Pay Brightline")).toBe("Pay Brightline");
-  });
-
-  it("lowercases a Title Case word carrying trailing punctuation", () => {
-    expect(toSentenceCase("What Needs Attention?")).toBe("What needs attention?");
-    expect(toSentenceCase("Cash Flow, Weekly.")).toBe("Cash flow, weekly.");
-  });
-
-  it("leaves internally capitalised names alone", () => {
-    expect(toSentenceCase("Invoices From McKinsey")).toBe("Invoices from McKinsey");
-  });
-
-  it("returns empty input unchanged", () => {
-    expect(toSentenceCase("")).toBe("");
-    expect(toSentenceCase("   ")).toBe("");
   });
 });

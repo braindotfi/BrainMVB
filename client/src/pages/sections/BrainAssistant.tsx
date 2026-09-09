@@ -21,7 +21,7 @@ import {
   sourceTypeForDocument,
 } from "@/lib/documentUpload";
 import { openMemberDetail } from "@/lib/membersStore";
-import { useSuggestedQuestions, resolveSuggestionChips, toSentenceCase } from "@/lib/brainSuggestedQuestions";
+import { useSuggestedQuestions, resolveSuggestionChips } from "@/lib/brainSuggestedQuestions";
 import { resolveVendor, openVendorDetail } from "@/lib/openVendorDetail";
 import { parseAssistantResponse, trimChatHistory, buildChatPayload, filterPayloadMessages, buildTruncationNote, ASSISTANT_GENERIC_ERROR, CHAT_HISTORY_LIMIT, MESSAGE_CONTENT_LIMIT } from "@/lib/assistantChat";
 import { isAssistantBulletLine, stripAssistantBullet } from "@/lib/assistantFormatting";
@@ -946,23 +946,25 @@ export function BrainAssistant() {
           its own pill rather than running past the column, and the block
           scrolls once it would eat the transcript.
 
-          `normal-case` is load-bearing: the platform sets
-          `button { text-transform: capitalize }` in @layer base, which was
-          rendering these sentence-case questions as "Show Recent Cash Flow".
-          Title Case is right for a command label and wrong for a question. */}
+          `normal-case` is load-bearing, and is the whole of the sentence-case
+          fix: the platform sets `button { text-transform: capitalize }` in
+          @layer base, which was rendering these sentence-case questions as
+          "Show Recent Cash Flow". Title Case is right for a command label and
+          wrong for a question.
+
+          Chips are otherwise rendered and sent verbatim. A client-side
+          re-casing pass was tried and removed: no rule that reads capitals
+          alone can tell core's Title Case from a tenant's counterparty, so
+          "Pay Acme Corp" came back as "Pay acme corp". If a tenant's live
+          chips ever arrive Title Cased, that is core's copy to fix. */}
       {isEmpty && (
         <div className="flex max-h-[88px] flex-wrap items-start justify-center gap-[8px] w-full overflow-y-auto">
-          {suggestionChips.chips.map((raw, i) => {
-            /* Sentence case is applied at the point of use, not in the store:
-               core owns the wording, we only own how it is set. The same string
-               is what gets sent, so the user's own message reads back exactly
-               as the chip they tapped. */
-            const q = toSentenceCase(raw);
+          {suggestionChips.chips.map((q, i) => {
             return (
               <button
                 /* Index-prefixed: tenant chip text is upstream-controlled, so two
                    chips can carry identical text and collide on a bare text key. */
-                key={`${i}-${raw}`}
+                key={`${i}-${q}`}
                 data-testid={`button-suggested-${q.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`}
                 onClick={() => sendMessage(q)}
                 className="max-w-full normal-case bg-brain-v1baby-blue-15 px-[10px] py-[4px] rounded-pill transition-colors hover:bg-brain-v1baby-blue-15-hover [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[12px] leading-[16px] text-left"
@@ -1158,7 +1160,7 @@ export function BrainAssistant() {
                           <button
                             type="button"
                             onClick={startNewSession}
-                            className="underline hover:text-brain-v1baby-blue-100 transition-colors cursor-pointer"
+                            className="normal-case underline hover:text-brain-v1baby-blue-100 transition-colors cursor-pointer"
                           >
                             {ACTION}
                           </button>
@@ -1261,7 +1263,7 @@ export function BrainAssistant() {
                       type="button"
                       data-testid="assistant-sources"
                       onClick={() => setOpenEvidenceFor((cur) => (cur === msg.id ? null : msg.id))}
-                      className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[11px] leading-[14px] px-[4px] cursor-pointer hover:underline text-left"
+                      className="normal-case [font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[11px] leading-[14px] px-[4px] cursor-pointer hover:underline text-left"
                     >
                       {msg.answerStatus === "error"
                         ? `${msg.sources.length} record${msg.sources.length === 1 ? "" : "s"} available as context — answer unavailable`
@@ -1324,7 +1326,7 @@ export function BrainAssistant() {
                                 else if (resolvedType === "wiki.question") navigate(`/audit-log?record=${s.entityId}`);
                               }}
                               title={s.entityId}
-                              className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1purple text-[11px] leading-[14px] text-left hover:underline block w-full min-w-0 truncate"
+                              className="normal-case [font-family:'Gilroy',sans-serif] font-medium text-brain-v1purple text-[11px] leading-[14px] text-left hover:underline block w-full min-w-0 truncate"
                             >
                               {text}
                             </button>
