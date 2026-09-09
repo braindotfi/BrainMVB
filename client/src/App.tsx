@@ -22,6 +22,7 @@ import { InboxPage } from "@/pages/InboxPage";
 import { RuleDetail } from "@/pages/RuleDetail";
 import { NavigationMenuSection } from "@/pages/sections/NavigationMenuSection";
 import { BrainAssistant } from "@/pages/sections/BrainAssistant";
+import { AccountsPanel } from "@/pages/sections/AccountsPanel";
 import { NavContext } from "@/lib/navContext";
 import { TransactionProvider } from "@/lib/transactionContext";
 import { IntentsProvider } from "@/lib/intentsStore";
@@ -293,6 +294,8 @@ function MainShell({ onLogout }: { onLogout: () => void }) {
               {/* Canonical IA paths: Overview (/), Decisions, Ledger, Settings */}
               <Route path="/decisions" component={InboxPage} />
               <Route path="/ledger" component={FinancesPage} />
+              {/* The assistant is a middle-frame page now, not the right rail */}
+              <Route path="/assistant" component={BrainAssistant} />
               {/* Legacy deep-link aliases - still routed so existing links keep working */}
               <Route path="/finances" component={FinancesPage} />
               <Route path="/inbox" component={InboxPage} />
@@ -310,7 +313,7 @@ function MainShell({ onLogout }: { onLogout: () => void }) {
           {SEARCH_ROUTES.has(location) && <GlobalSearch />}
         </div>
 
-        <BrainAssistant
+        <AccountsPanel
           collapsed={accountCollapsed}
           onToggle={() => setAccountCollapsed((v) => !v)}
         />
