@@ -134,6 +134,32 @@ describe("BrainMVB agent API key exchange", () => {
     expect(seenAuthorization.join(" ")).not.toContain(KEY);
   });
 
+  it("replaces a mixed-case Authorization header instead of combining duplicates", async () => {
+    const token = jwt(Math.floor(Date.now() / 1000), "header-normalization");
+    const seen: string[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      const headers = new Headers(init?.headers);
+      seen.push(headers.get("authorization") ?? "");
+      return new Response(null, { status: 200 });
+    }));
+
+    const response = await fetchWithAgentAccessTokenRetry(
+      "https://api.brain.fi/v1/ledger/accounts",
+      {
+        headers: {
+          Accept: "application/json",
+          Authorization: "Bearer stale-token",
+        },
+      },
+      token,
+    );
+
+    expect(response.status).toBe(200);
+    expect(seen).toEqual([`Bearer ${token}`]);
+    expect(seen[0]).not.toContain(",");
+    expect(seen[0]).not.toContain("stale-token");
+  });
+
   it("rejects a token with any scope outside the fixed BFF profile", async () => {
     const now = Math.floor(Date.now() / 1000);
     const claims = {
