@@ -318,7 +318,11 @@ export interface BrainInvoice {
   currency: string;
   due_date?: string | null;
   status: string;
-  /** AR is marked explicitly; AP is its complement. Demo seed may mark AP as `"ap"`. */
+  /**
+   * Demo seed marks AR as `{ scenario: "ar" }` and AP as `{ scenario: "ap", po, flags }`.
+   * Real tenants routinely return `metadata: {}`, so an ABSENT marker means unknown -
+   * never "therefore payable". Do not treat non-AR as the AP complement.
+   */
   metadata?: { scenario?: string; po?: string | null; flags?: string[] } | null;
 }
 

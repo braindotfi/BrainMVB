@@ -2,6 +2,8 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   AGENT_API_KEY_MIGRATION_BATCH,
+  LEGACY_ROLLBACK_JWT_REVOCATION_DEADLINE_ISO,
+  LEGACY_ROLLBACK_JWT_REVOCATION_DEADLINE_MS,
   PROTECTED_AGENT_API_KEY_MIGRATION_TENANT_IDS,
 } from "./agentApiKeyMigrationBatch";
 
@@ -11,9 +13,7 @@ const indexSource = readFileSync(new URL("../index.ts", import.meta.url), "utf8"
 
 describe("Phase 3 BFF migration structure", () => {
   it("limits each reviewed production batch to five unique tenant ids", () => {
-    expect(AGENT_API_KEY_MIGRATION_BATCH).toEqual([
-      "tnt_01M1MDWXR5K5NBQYF089D4ZKCN",
-    ]);
+    expect(AGENT_API_KEY_MIGRATION_BATCH).toEqual([]);
     expect(AGENT_API_KEY_MIGRATION_BATCH.length).toBeLessThanOrEqual(5);
     expect(new Set(AGENT_API_KEY_MIGRATION_BATCH).size).toBe(
       AGENT_API_KEY_MIGRATION_BATCH.length,
@@ -35,6 +35,12 @@ describe("Phase 3 BFF migration structure", () => {
       AGENT_API_KEY_MIGRATION_BATCH.filter((tenantId) => protectedTenantIds.has(tenantId)),
     ).toEqual([]);
     expect(migrationSource).toContain("protectedTenantIds.has(tenantId)");
+  });
+
+  it("keeps the withdrawn demo tenant out of the manifest", () => {
+    // Withdrawn in review: access_stage=demo, data_profile=synthetic_brightline_v1,
+    // and its legacy agent JWT expired 2026-09-03 so it had no working rollback.
+    expect(AGENT_API_KEY_MIGRATION_BATCH).not.toContain("tnt_01M1MDWXR5K5NBQYF089D4ZKCN");
   });
 
   it("keeps agent keys exchange-only and fixes the BFF scope profile", () => {
@@ -65,11 +71,61 @@ describe("Phase 3 BFF migration structure", () => {
     expect(preflight).toBeGreaterThan(migrate);
     expect(listen).toBeGreaterThan(preflight);
     expect(migrationSource).toContain("direct.status !== 401");
-    expect(migrationSource).toContain('candidate.metadata?.scenario !== "ar"');
-    expect(migrationSource).not.toContain('candidate.metadata?.scenario === "ap"');
-    expect(migrationSource).toContain("approve.status !== 403");
-    expect(migrationSource).toContain('event.action === "payment_intent.created"');
-    expect(migrationSource).toContain('lifecycle: "completed"');
-    expect(migrationSource).toContain("rollback_marker: false");
+    expect(migrationSource).toContain("denial.status === 403");
+  });
+
+  it("verifies without mutating the tenant's ledger", () => {
+    // The verifier must not create a PaymentIntent, or any other durable record,
+    // to prove scope denial - there is no delete path for the evidence it leaves.
+    for (const mutatingCall of [
+      "proposeInvoicePayment",
+      "listLedgerInvoices",
+      "getPaymentIntent",
+      "listAuditEvents",
+      "payment_intent.created",
+      "scenario",
+    ]) {
+      expect(migrationSource).not.toContain(mutatingCall);
+    }
+    expect(migrationSource).toContain("UNASSIGNED_PAYMENT_INTENT_ID");
+    expect(migrationSource).toContain('"pi_00000000000000000000000000"');
+  });
+
+  it("reports each verification result as an observation, never a constant", () => {
+    for (const field of [
+      "exchange_verified: exchangeVerified",
+      "scope_denial_verified: scopeDenialVerified",
+      "key_lifecycle_verified: keyLifecycleVerified",
+      "runtime_binding_verified: runtimeBindingVerified",
+    ]) {
+      expect(migrationSource).toContain(field);
+    }
+    // The retired receipt hardcoded its own success.
+    expect(migrationSource).not.toContain('lifecycle: "completed"');
+    expect(migrationSource).not.toContain("rollback_marker: false");
+  });
+
+  it("fails closed when brain-core cannot confirm a tenant is not demo-seeded", () => {
+    expect(migrationSource).toContain("await assertTenantIsNotDemoSeeded(tenantId)");
+    expect(migrationSource).toContain("getTenantProvenance");
+    // Unknown must be a refusal, not a pass.
+    expect(migrationSource).toContain('typeof provenance.demo_seed !== "boolean"');
+    expect(migrationSource).toContain("provenance.demo_seed");
+    // The gate runs before any credential is issued.
+    expect(migrationSource.indexOf("await assertTenantIsNotDemoSeeded(tenantId)")).toBeLessThan(
+      migrationSource.indexOf("await issueBffAgentApiKey("),
+    );
+  });
+
+  it("closes the legacy-JWT rollback path at the published deadline", () => {
+    expect(LEGACY_ROLLBACK_JWT_REVOCATION_DEADLINE_ISO).toBe("2026-09-16T23:59:59Z");
+    expect(Number.isFinite(LEGACY_ROLLBACK_JWT_REVOCATION_DEADLINE_MS)).toBe(true);
+    expect(migrationSource).toContain("assertLegacyRollbackWindowOpen(tenantId, legacy, Date.now())");
+    expect(migrationSource).toContain("now >= LEGACY_ROLLBACK_JWT_REVOCATION_DEADLINE_MS");
+    // An already-expired legacy JWT is not a rollback either.
+    expect(migrationSource).toContain("legacy.exp * 1000 <= now");
+    expect(
+      migrationSource.indexOf("assertLegacyRollbackWindowOpen(tenantId, legacy, Date.now())"),
+    ).toBeLessThan(migrationSource.indexOf("await issueBffAgentApiKey("));
   });
 });

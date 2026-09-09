@@ -61,6 +61,35 @@ export interface AgentApiKeyShape {
   api_key?: string;
 }
 
+/**
+ * Provenance brain-core reports for a tenant. Every field is optional because the
+ * read is authoritative only for what it actually returns - callers MUST treat a
+ * missing field as "unknown" and fail closed, never as "not a demo tenant".
+ *
+ * CONTRACT STATUS: unconfirmed. GET /v1/tenants/{id} is not documented in
+ * docs/contracts and has not been exercised against production brain-core from
+ * this repo. Until brain-core owners confirm it (or supply another read-only
+ * provenance endpoint), getTenantProvenance is expected to fail and the
+ * migration gate that calls it is expected to refuse.
+ */
+export interface TenantProvenanceShape {
+  tenant_id?: string;
+  kind?: string;
+  /** True when the tenant was created with demo_seed:true. */
+  demo_seed?: boolean;
+  data_profile?: string | null;
+  access_stage?: string | null;
+}
+
+/**
+ * GET /v1/tenants/{id} - read a tenant's provisioning provenance. Read-only:
+ * creates nothing, mutates nothing. Used to keep demo/synthetic tenants out of
+ * production credential migrations.
+ */
+export function getTenantProvenance(tenantId: string): Promise<TenantProvenanceShape> {
+  return serviceGet(`/tenants/${encodeURIComponent(tenantId)}`);
+}
+
 export class TenancyApiError extends Error {
   constructor(
     public readonly status: number,
