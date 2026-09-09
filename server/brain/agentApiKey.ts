@@ -248,15 +248,16 @@ export async function fetchWithAgentAccessTokenRetry(
   token: string,
 ): Promise<Response> {
   const attempt = (accessToken: string): Promise<Response> => {
-    const headers =
-      init.headers instanceof Headers
-        ? new Headers(init.headers)
-        : {
-            ...Object.fromEntries(new Headers(init.headers).entries()),
-            ...((init.headers ?? {}) as Record<string, string>),
-            Authorization: `Bearer ${accessToken}`,
-          };
-    if (headers instanceof Headers) headers.set("Authorization", `Bearer ${accessToken}`);
+    // Headers are case-insensitive, but plain JavaScript objects are not. Rebuilding
+    // an object from Headers and then spreading the original object can produce both
+    // `authorization` and `Authorization`; fetch combines them into a comma-separated
+    // value and brain-core rejects the result as an invalid compact JWS.
+    const normalized = Object.fromEntries(new Headers(init.headers).entries());
+    delete normalized.authorization;
+    const headers: Record<string, string> = {
+      ...normalized,
+      Authorization: `Bearer ${accessToken}`,
+    };
     return fetch(input, { ...init, headers });
   };
   let response = await attempt(token);
