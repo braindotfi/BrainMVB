@@ -23,7 +23,7 @@ import {
 import { openMemberDetail } from "@/lib/membersStore";
 import { useSuggestedQuestions, resolveSuggestionChips } from "@/lib/brainSuggestedQuestions";
 import { resolveVendor, openVendorDetail } from "@/lib/openVendorDetail";
-import { parseAssistantResponse, trimChatHistory, buildChatPayload, filterPayloadMessages, buildTruncationNote, ASSISTANT_GENERIC_ERROR, CHAT_HISTORY_LIMIT, MESSAGE_CONTENT_LIMIT } from "@/lib/assistantChat";
+import { allocateChatId, parseAssistantResponse, trimChatHistory, buildChatPayload, filterPayloadMessages, buildTruncationNote, ASSISTANT_GENERIC_ERROR, CHAT_HISTORY_LIMIT, MESSAGE_CONTENT_LIMIT } from "@/lib/assistantChat";
 import { isAssistantBulletLine, stripAssistantBullet } from "@/lib/assistantFormatting";
 import timeIcon from "@assets/timestamp_1788994251245.png";
 import activeConvoIcon from "@assets/Active_1781818047007.png";
@@ -372,9 +372,6 @@ function ChatBubble({
   );
 }
 
-let idCounter = 0;
-const nextId = () => `m${++idCounter}`;
-
 /**
  * The Brain Assistant.
  *
@@ -665,7 +662,18 @@ export function BrainAssistant() {
 
     setDraft("");
 
-    const userMsg: ChatMessage = { id: nextId(), role: "user", text: trimmed };
+    /* History survives reloads, so IDs must not come from a counter that resets
+       on module load. Build one occupied set from the live restored state, then
+       reserve every ID generated during this send in it. */
+    const occupiedIds = new Set<string>();
+    for (const session of sessions) {
+      occupiedIds.add(session.id);
+      for (const message of session.messages) occupiedIds.add(message.id);
+    }
+    const nextMessageId = () => allocateChatId("message", occupiedIds);
+    const nextSessionId = () => allocateChatId("session", occupiedIds);
+
+    const userMsg: ChatMessage = { id: nextMessageId(), role: "user", text: trimmed };
     let sessionId = activeSession?.id ?? null;
 
     // History to send to the assistant (messages BEFORE this turn + the new user msg).
@@ -694,7 +702,7 @@ export function BrainAssistant() {
     });
     const noteMsg: ChatMessage | null = noteText
       ? {
-          id: nextId(),
+          id: nextMessageId(),
           role: "assistant",
           text: noteText,
           isContextNote: true,
@@ -722,7 +730,7 @@ export function BrainAssistant() {
       );
     } else {
       const newSession: ChatSession = {
-        id: `session-${nextId()}`,
+        id: nextSessionId(),
         title: trimmed.length > 40 ? `${trimmed.slice(0, 40)}…` : trimmed,
         createdAt: Date.now(),
         messages: [...(noteMsg ? [noteMsg] : []), { ...userMsg, dateTag: "Today" }],
@@ -733,7 +741,7 @@ export function BrainAssistant() {
     }
 
     // Append an empty assistant placeholder (renders a typing indicator).
-    const assistantId = nextId();
+    const assistantId = nextMessageId();
     setSessions((prev) =>
       prev.map((s) =>
         s.id === sessionId

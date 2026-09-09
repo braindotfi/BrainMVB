@@ -3,12 +3,33 @@ import {
   ASSISTANT_GENERIC_ERROR,
   CHAT_HISTORY_LIMIT,
   MESSAGE_CONTENT_LIMIT,
+  allocateChatId,
   buildChatPayload,
   buildTruncationNote,
   filterPayloadMessages,
   parseAssistantResponse,
   trimChatHistory,
 } from "./assistantChat";
+
+describe("allocateChatId", () => {
+  it("skips an ID already restored from localStorage", () => {
+    const occupied = new Set(["session-duplicate"]);
+    const candidates = ["duplicate", "fresh"];
+
+    expect(
+      allocateChatId("session", occupied, () => candidates.shift()!),
+    ).toBe("session-fresh");
+    expect(occupied).toContain("session-fresh");
+  });
+
+  it("keeps session and message namespaces distinct", () => {
+    const occupied = new Set<string>();
+    const randomUUID = () => "same-uuid";
+
+    expect(allocateChatId("session", occupied, randomUUID)).toBe("session-same-uuid");
+    expect(allocateChatId("message", occupied, randomUUID)).toBe("message-same-uuid");
+  });
+});
 
 describe("parseAssistantResponse", () => {
   it("rejects a successful response with no reply instead of using preview copy", async () => {
