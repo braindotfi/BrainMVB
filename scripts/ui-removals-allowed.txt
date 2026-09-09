@@ -28,3 +28,7 @@ button-close-invoice-preview   removed — Invoice Record no longer exposes a th
 invoice-preview-overlay   removed — Invoice Record no longer exposes a thumbnail preview overlay
 invoice-thumbnail   removed — Invoice Record header now matches Bill Details without an invoice thumbnail
 link-settings-billing   superseded: Developers now displays the server-owned rate entitlement instead of a local billing-plan selection
+button-assistant-collapse   superseded — the assistant is a routed centre-frame page, so the right-panel collapse toggle no longer exists
+button-assistant-expand   superseded — the assistant is a routed centre-frame page, so the right-panel expand toggle no longer exists
+button-collapsed-history   superseded — the collapsed assistant rail was removed with the right-panel assistant; history lives in the session dropdown
+button-collapsed-new-session   superseded — the collapsed assistant rail was removed with the right-panel assistant; new-session lives in the session dropdown
