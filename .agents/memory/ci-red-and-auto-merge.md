@@ -1,23 +1,28 @@
 ---
-name: CI is red repo-wide, and auto-merge is armed
-description: Why every PR shows a failing check, why that is not your change, and why turning CI green silently merges the PR without review.
+name: Reading a red check here, and why auto-merge stays gated
+description: The lockfile install failure that used to redden every PR (now fixed), how to tell it from a real failure if it returns, and why turning CI green must never be what decides a merge.
 ---
 
-## Every PR is red before your code is even compiled
+## The repo-wide install failure is fixed — verify before assuming it is back
 
-The `tests` workflow installs with `npm ci`, which aborts when `package-lock.json`
-disagrees with `package.json`. The lock has drifted across a large number of
-packages, so the install step fails and **no test ever runs** — on PR branches and
-on main alike. Recent runs on main are failing for exactly this reason.
+For a long stretch the `tests` workflow died at `npm ci`, which aborts when
+`package-lock.json` disagrees with `package.json`. The install step failed and
+**no test ever ran**, on PR branches and main alike, so every check was red for
+reasons unrelated to the change under review.
 
-**How to read a red check here:** open the *Install dependencies* step before
-assuming your commit broke anything. A genuine test failure and this install
-failure look identical from the PR page. The tell is `npm error code EUSAGE`
-followed by a wall of `Invalid: lock file's X does not satisfy Y`.
+That is no longer true. As of 2026-09-09 the workflow carries explicit
+*Validate lockfile*, *Install dependencies*, and *Verify the install actually
+completed* steps, and `vitest` runs and passes on PRs and on main. A red check
+now means something.
 
-**Why:** `npm ci` is deliberately strict; it will not reconcile the lock the way
-`npm install` does. Regenerating the lock fixes CI but is a dependency change in its
-own right — treat it as its own PR, not as a drive-by inside a feature branch.
+**How to apply:** do not repeat the old advice that a red check is probably just
+the lock file — that reassurance is exactly how a real regression gets waved
+through. Open the run. If the install failure ever does return, its tell is
+`npm error code EUSAGE` followed by a wall of
+`Invalid: lock file's X does not satisfy Y`; `npm ci` is deliberately strict and
+will not reconcile the lock the way `npm install` does. Regenerating the lock is
+a dependency change in its own right — its own PR, never a drive-by inside a
+feature branch.
 
 ## Auto-merge is gated now — keep it that way
 
