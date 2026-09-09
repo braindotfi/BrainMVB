@@ -32,11 +32,7 @@ vi.mock("../storage", () => ({ storage }));
 vi.mock("./tenancy", () => tenancy);
 vi.mock("./agentApiKey", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./agentApiKey")>();
-  return {
-    ...actual,
-    getAgentAccessToken: (...args: unknown[]) => exchangeMock(...args),
-    fetchWithAgentAccessTokenRetry: (...args: unknown[]) => authedFetchMock(...args),
-  };
+  return { ...actual, getAgentAccessToken: (...args: unknown[]) => exchangeMock(...args) };
 });
 
 const { migrateTenant } = await import("./agentApiKeyMigration");
@@ -49,7 +45,10 @@ const RESOURCE = "https://api.brain.fi/";
 const NEW_KEY = "brain_ak_live_phase3testkey";
 
 let exchangeMock: (...args: unknown[]) => unknown;
-let authedFetchMock: (...args: unknown[]) => unknown;
+/** Every HTTP request the verifier makes, so a test can assert it mutated nothing. */
+let requests: Array<{ method: string; url: string }> = [];
+/** Runs before each recorded request; lets a test move the clock mid-migration. */
+let onRequest: (method: string, url: string) => void = () => {};
 
 function jwt(payload: Record<string, unknown>): string {
   const encode = (value: unknown) =>
@@ -140,27 +139,36 @@ function wireHappyPath(wiring: Wiring = {}): void {
     );
     return Promise.resolve({ token, claims });
   };
-  authedFetchMock = (input: unknown) => {
-    const url = String(input);
-    if (url.includes("/payment-intents/")) {
-      return Promise.resolve(
-        new Response(JSON.stringify(wiring.denialBody ?? { reason: "insufficient_scope" }), {
-          status: wiring.denialStatus ?? 403,
-        }),
-      );
-    }
-    return Promise.resolve(
-      new Response("{}", { status: wiring.inScopeReadStatus ?? 200 }),
-    );
-  };
+  // One stub for every request the verifier makes, so the inventory below is
+  // complete: a mutating call added to the verifier cannot avoid being recorded.
   vi.stubGlobal(
     "fetch",
-    vi.fn(async () => new Response("{}", { status: wiring.directStatus ?? 401 })),
+    vi.fn(async (input: unknown, init?: RequestInit) => {
+      const url = String(input);
+      const method = (init?.method ?? "GET").toUpperCase();
+      onRequest(method, url);
+      requests.push({ method, url });
+      const auth = String(
+        (init?.headers as Record<string, string> | undefined)?.Authorization ?? "",
+      );
+      if (auth === `Bearer ${NEW_KEY}`) {
+        // The raw API key is exchange-only, so brain-core rejects it as a bearer.
+        return new Response("{}", { status: wiring.directStatus ?? 401 });
+      }
+      if (url.includes("/payment-intents/")) {
+        return new Response(JSON.stringify(wiring.denialBody ?? { reason: "insufficient_scope" }), {
+          status: wiring.denialStatus ?? 403,
+        });
+      }
+      return new Response("{}", { status: wiring.inScopeReadStatus ?? 200 });
+    }),
   );
 }
 
 beforeEach(() => {
   storage.rows.clear();
+  requests = [];
+  onRequest = () => {};
   vi.clearAllMocks();
   // clearAllMocks keeps implementations, so a test that overrides one would leak
   // into the next. Re-establish the real in-memory storage behaviour every time.
@@ -226,7 +234,21 @@ describe("migrateTenant refuses before issuing a credential", () => {
     wireHappyPath();
     const { data_profile: _omitted, ...withoutProfile } = goodProvenance();
     tenancy.getTenantProvenance.mockResolvedValue(withoutProfile);
-    await expect(migrateTenant(TENANT)).rejects.toThrow(/no data_profile/);
+    await expect(migrateTenant(TENANT)).rejects.toThrow(/no usable data_profile/);
+    expectNoKeyIssued();
+  });
+
+  it("refuses a malformed data_profile, because malformed is as unknown as absent", async () => {
+    wireHappyPath();
+    tenancy.getTenantProvenance.mockResolvedValue(goodProvenance({ data_profile: 7 }));
+    await expect(migrateTenant(TENANT)).rejects.toThrow(/no usable data_profile/);
+    expectNoKeyIssued();
+  });
+
+  it("refuses an empty data_profile", async () => {
+    wireHappyPath();
+    tenancy.getTenantProvenance.mockResolvedValue(goodProvenance({ data_profile: "" }));
+    await expect(migrateTenant(TENANT)).rejects.toThrow(/no usable data_profile/);
     expectNoKeyIssued();
   });
 
@@ -288,7 +310,12 @@ describe("migrateTenant refuses before issuing a credential", () => {
 describe("migrateTenant refuses on unproven verification evidence", () => {
   it("rejects a bare 403 that does not name a scope failure", async () => {
     wireHappyPath({ denialBody: { reason: "policy_denied" } });
-    await expect(migrateTenant(TENANT)).rejects.toThrow(/expected 403 naming a scope failure/);
+    await expect(migrateTenant(TENANT)).rejects.toThrow(/recognised insufficient-scope reason/);
+  });
+
+  it("rejects a tenant restriction that merely contains the word scope", async () => {
+    wireHappyPath({ denialBody: { reason: "tenant_scope_denied" } });
+    await expect(migrateTenant(TENANT)).rejects.toThrow(/recognised insufficient-scope reason/);
   });
 
   it("rejects a 404 on the denial probe rather than falling back to a mutating probe", async () => {
@@ -323,6 +350,28 @@ describe("migrateTenant refuses on unproven verification evidence", () => {
     await expect(migrateTenant(TENANT)).rejects.toThrow(/does not match the required binding/);
   });
 
+  it("rejects a last_used_at that is a string but not a timestamp", async () => {
+    wireHappyPath();
+    const credentialId = "agkey_01M1MDWXR5K5NBQYF089D4ZKAA";
+    tenancy.listAgentApiKeys.mockResolvedValue({
+      keys: [goodKeyRecord(credentialId, { last_used_at: "" })],
+    });
+    await expect(migrateTenant(TENANT)).rejects.toThrow(/does not match the required binding/);
+  });
+
+  it("rejects an already-expired key record", async () => {
+    wireHappyPath();
+    const credentialId = "agkey_01M1MDWXR5K5NBQYF089D4ZKAA";
+    tenancy.listAgentApiKeys.mockResolvedValue({
+      keys: [
+        goodKeyRecord(credentialId, {
+          expires_at: new Date(Date.now() - 1000).toISOString(),
+        }),
+      ],
+    });
+    await expect(migrateTenant(TENANT)).rejects.toThrow(/does not match the required binding/);
+  });
+
   it("rejects a runtime row holding a different API key", async () => {
     wireHappyPath();
     storage.upsertBrainAgentToken.mockImplementation(async (tenantId: string) => {
@@ -349,9 +398,65 @@ describe("migrateTenant cleans up after itself", () => {
 
   it("revokes the issued key when the exchange fails after issuance", async () => {
     wireHappyPath();
+    const legacy = storage.rows.get(TENANT)!.token;
     exchangeMock = () => Promise.reject(new Error("token endpoint unavailable"));
     await expect(migrateTenant(TENANT)).rejects.toThrow(/token endpoint unavailable/);
     expect(tenancy.revokeAgentApiKey).toHaveBeenCalledWith("agkey_01M1MDWXR5K5NBQYF089D4ZKAA");
+    // The row was never repointed, so there is nothing to restore.
+    expect(storage.rows.get(TENANT)?.token).toBe(legacy);
+  });
+
+  it("still revokes an unreferenced key after the rollback window has closed", async () => {
+    // The row was never repointed at the issued key, so the closed window is
+    // irrelevant: leaving the key live would orphan it for nothing.
+    wireHappyPath();
+    exchangeMock = () => {
+      vi.setSystemTime(LEGACY_ROLLBACK_JWT_REVOCATION_DEADLINE_MS + 1000);
+      return Promise.reject(new Error("token endpoint unavailable"));
+    };
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(LEGACY_ROLLBACK_JWT_REVOCATION_DEADLINE_MS - 60 * 60 * 1000);
+    storage.rows.set(TENANT, {
+      tenantId: TENANT,
+      token: legacyJwt(),
+      expiresAt: new Date(Date.now() + 30 * 24 * 3600 * 1000),
+    });
+    await expect(migrateTenant(TENANT)).rejects.toThrow(/token endpoint unavailable/);
+    expect(tenancy.revokeAgentApiKey).toHaveBeenCalledWith("agkey_01M1MDWXR5K5NBQYF089D4ZKAA");
+  });
+
+  it("escalates loudly when revoking the issued key fails", async () => {
+    wireHappyPath();
+    const escalations: string[] = [];
+    vi.spyOn(console, "error").mockImplementation((message: unknown) => {
+      escalations.push(String(message));
+    });
+    exchangeMock = () => Promise.reject(new Error("token endpoint unavailable"));
+    tenancy.revokeAgentApiKey.mockRejectedValue(new Error("brain-core unreachable"));
+    await expect(migrateTenant(TENANT)).rejects.toThrow(/token endpoint unavailable/);
+    expect(escalations.join("\n")).toContain("ORPHANED CREDENTIAL");
+  });
+
+  it("does not revoke a key the runtime row still points at when restoring fails", async () => {
+    wireHappyPath({ denialBody: { reason: "policy_denied" } });
+    const escalations: string[] = [];
+    vi.spyOn(console, "error").mockImplementation((message: unknown) => {
+      escalations.push(String(message));
+    });
+    let writes = 0;
+    storage.upsertBrainAgentToken.mockImplementation(
+      async (tenantId: string, token: string, expiresAt: Date) => {
+        writes += 1;
+        if (writes > 1) throw new Error("database unavailable");
+        const row = { tenantId, token, expiresAt };
+        storage.rows.set(tenantId, row);
+        return row;
+      },
+    );
+    await expect(migrateTenant(TENANT)).rejects.toThrow();
+    expect(tenancy.revokeAgentApiKey).not.toHaveBeenCalled();
+    expect(storage.rows.get(TENANT)?.token).toBe(NEW_KEY);
+    expect(escalations.join("\n")).toContain("MANUAL REPAIR REQUIRED");
   });
 
   it("revokes the issued key when brain-core returns an invalid binding", async () => {
@@ -382,12 +487,10 @@ describe("migrateTenant cleans up after itself", () => {
       token: legacy,
       expiresAt: new Date(Date.now() + 30 * 24 * 3600 * 1000),
     });
-    const denialProbe = authedFetchMock;
-    authedFetchMock = (input: unknown, ...rest: unknown[]) => {
-      if (String(input).includes("/payment-intents/")) {
+    onRequest = (_method, url) => {
+      if (url.includes("/payment-intents/")) {
         vi.setSystemTime(LEGACY_ROLLBACK_JWT_REVOCATION_DEADLINE_MS + 1000);
       }
-      return denialProbe(input, ...rest);
     };
     await expect(migrateTenant(TENANT)).rejects.toThrow();
     expect(tenancy.revokeAgentApiKey).not.toHaveBeenCalled();
@@ -416,7 +519,18 @@ describe("migrateTenant receipt", () => {
     });
     expect(receipt.ttl_seconds).toBe(300);
     expect(storage.rows.get(TENANT)?.token).toBe(NEW_KEY);
-    // Nothing was created upstream: the only POST was the unassigned-intent probe.
     expect(tenancy.revokeAgentApiKey).not.toHaveBeenCalled();
+    // Full request inventory, not a spot check: the ONLY write the verifier is
+    // allowed to make is the approve probe against the unassigned intent id, and
+    // that one is expected to be refused. Any mutating call added later shows up
+    // here as an extra non-GET entry.
+    expect(requests).toEqual([
+      { method: "GET", url: "https://api.brain.fi/v1/ledger/accounts" },
+      { method: "GET", url: "https://api.brain.fi/v1/ledger/accounts" },
+      {
+        method: "POST",
+        url: "https://api.brain.fi/v1/payment-intents/pi_00000000000000000000000000/approve",
+      },
+    ]);
   });
 });

@@ -5,24 +5,30 @@ JWT to an exchange-only agent API key (`brain_ak_live_…`), verified at boot be
 the server accepts traffic.
 
 Code: `server/brain/agentApiKeyMigration.ts`, manifest and constants in
-`server/brain/agentApiKeyMigrationBatch.ts`, structure pins in
+`server/brain/agentApiKeyMigrationBatch.ts`, behavioural tests in
+`server/brain/agent-api-key-migration.test.ts`, structure pins in
 `server/brain/agent-api-key-migration-structure.test.ts`.
 
 ## Current state
 
 **Batch 1 is empty. Nothing migrates on boot.** The manifest ships empty on
-purpose; `migrateConfiguredAgentApiKeyBatch()` returns immediately. Two upstream
+purpose; `migrateConfiguredAgentApiKeyBatch()` returns immediately. Three upstream
 answers (below) are required before any tenant can be added.
 
-## Verification is read-only
+## Verification makes no writes it expects to succeed
 
-The verifier proves four things and mutates nothing:
+The verifier proves four things. It issues exactly three HTTP requests: two GETs
+and one POST that is expected to be *refused* (see the denial-probe caveat below —
+that POST is safe by convention, not by contract). No successful write is part of
+verification, and `agent-api-key-migration.test.ts` asserts the full request
+inventory, so a mutating call added later fails the suite rather than passing
+unnoticed.
 
 | Receipt field | What is actually observed |
 | --- | --- |
 | `exchange_verified` | The raw key returns 401 when used directly as a bearer token; the exchanged access token re-validates against the expected tenant, audience, subject, scope set, credential id, and lifetime; **and** an in-scope `GET /ledger/accounts` with it returns 200. Re-decoding a token only proves what it says about itself, so the read has to succeed too. |
-| `scope_denial_verified` | `POST /payment-intents/pi_0000…/approve` (an all-zero, unassigned ULID) returns 403 **with a reason naming a scope failure**. A bare 403 is not enough — a policy or tenant refusal is also a 403 and proves nothing about scope. |
-| `key_lifecycle_verified` | brain-core's own agent-key record is live, `bff_service_v1`, `live`, bound to the same agent and tenant, carries exactly the BFF scope set, and reports `revoked_at` **present and null** plus a `last_used_at` timestamp. An omitted `revoked_at` is an unknown, and an unknown revocation state is not an unrevoked key. |
+| `scope_denial_verified` | `POST /payment-intents/pi_0000…/approve` (an all-zero, unassigned ULID) returns 403 **and the reason is one of a known allowlist of insufficient-scope codes**. A bare 403 is not enough — a policy or tenant refusal is also a 403 — and a substring match is not enough either, since `tenant_scope_denied` contains "scope" while proving nothing about the credential's scopes. An unrecognised reason fails the check and is printed. |
+| `key_lifecycle_verified` | brain-core's own agent-key record is `bff_service_v1`, `live`, bound to the same agent and tenant, carries exactly the BFF scope set, reports `revoked_at` **present and null**, an `expires_at` in the future, and a `last_used_at` that parses as a timestamp. An omitted `revoked_at` is an unknown, and an unknown revocation state is not an unrevoked key; `""` is not a timestamp. |
 | `runtime_binding_verified` | The stored runtime credential row the app reads holds **this exact key**, not merely a string shaped like one. |
 
 Each boolean is assigned from its check's result, and each check throws when it
@@ -60,9 +66,10 @@ observing it and are gone.
 brain-core's own provenance record, not a local id list — a hardcoded exclusion
 list only knows the demo tenants somebody remembered. It refuses on
 `demo_seed:true`, on a `data_profile` starting `synthetic`, on
-`access_stage=demo`, **and on every unknown answer**: read unavailable, field
-absent, field not a boolean. "We could not tell" and "it is a real tenant" must
-never produce the same outcome.
+`access_stage=demo`, **and on every unknown answer**: read unavailable, response
+naming a different tenant, field absent, field of the wrong type, field empty.
+Malformed is as unknown as absent — a numeric `data_profile` rules out nothing.
+"We could not tell" and "it is a real tenant" must never produce the same outcome.
 
 > **BLOCKED — needs brain-core.** `GET /v1/tenants/{id}` is not documented in
 > `docs/contracts` and has not been exercised against production from this repo.
@@ -85,20 +92,27 @@ Enforcement is split, and neither half substitutes for the other:
 1. **brain-core revokes the legacy agent JWTs at the deadline.** This is the only
    mechanism that actually invalidates them; nothing in this BFF can revoke a
    credential brain-core issued. *Owner: brain-core. Not yet confirmed scheduled.*
-2. **This BFF refuses to start a legacy-path migration whose rollback could expire
-   mid-flight** (`assertLegacyRollbackWindowOpen`). Both the deadline and the
-   stored JWT's own expiry must be at least 15 minutes away, so a slow issuance or
-   a hung verification cannot cross either boundary. A rollback past the deadline
-   would restore a revoked credential — a recovery that looks like it worked and
-   does not.
-3. **Rollback re-checks the window instead of trusting that pre-flight decision.**
-   If it has closed anyway, the legacy JWT is dead: restoring it would replace a
-   possibly-working credential with a certainly-broken one. The issued key is left
-   in place *unrevoked* and the tenant is escalated with a
-   `MANUAL REPAIR REQUIRED` log line rather than silently taken offline.
+2. **This BFF refuses to start a legacy-path migration whose rollback is close to
+   expiring** (`assertLegacyRollbackWindowOpen`). Both the deadline and the stored
+   JWT's own expiry must be at least 15 minutes away. This is a margin, not a
+   timeout: nothing aborts a migration that overruns it, it only keeps an
+   already-doomed one from starting.
+3. **Rollback re-checks the window instead of trusting that pre-flight decision**,
+   and branches on what actually happened:
+   - the runtime row was never repointed (issuance succeeded, exchange failed) —
+     nothing to restore, and the key is unreferenced, so it is revoked;
+   - the row was repointed and the window is still open — restore the legacy JWT
+     first, then revoke;
+   - the row was repointed and the window has closed — the legacy JWT is dead, so
+     restoring it would swap a working credential for a broken one. The issued key
+     stays in place *unrevoked* and the tenant is escalated.
 
-Every failure after issuance — invalid binding, bad expiry, failed exchange, failed
-verification — runs this cleanup, so a key can never be orphaned upstream.
+Every failure after issuance runs this cleanup. It is not a guarantee against
+orphaning: if restoring the legacy credential fails, or the revoke call itself
+fails, a live key can remain. Those states are not silent — grep the logs for
+`MANUAL REPAIR REQUIRED` (row still points at the issued key) and
+`ORPHANED CREDENTIAL` (unreferenced key that could not be revoked). Both need a
+human.
 
 ## Withdrawn from batch 1
 
