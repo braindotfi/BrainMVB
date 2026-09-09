@@ -318,7 +318,11 @@ export interface BrainInvoice {
   currency: string;
   due_date?: string | null;
   status: string;
-  /** Seed marks AP invoices with `{ scenario: "ap", po, flags }`. */
+  /**
+   * Demo seed marks AR as `{ scenario: "ar" }` and AP as `{ scenario: "ap", po, flags }`.
+   * Real tenants routinely return `metadata: {}`, so an ABSENT marker means unknown -
+   * never "therefore payable". Do not treat non-AR as the AP complement.
+   */
   metadata?: { scenario?: string; po?: string | null; flags?: string[] } | null;
 }
 

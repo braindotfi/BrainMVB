@@ -61,6 +61,50 @@ export interface AgentApiKeyShape {
   api_key?: string;
 }
 
+/**
+ * Provenance brain-core reports for a tenant.
+ *
+ * Every field is optional AND nullable, because that is what production actually
+ * returns: `data_profile`, `access_stage` and `provisioning_state` all come back
+ * `null` for tenants provisioned before classification existed. A null is
+ * "unclassified legacy data", NOT "confirmed not a demo tenant", so callers MUST
+ * fail closed on it - see assertTenantIsNotDemoSeeded.
+ *
+ * OBSERVED LIVE 2026-09-09 against production, e.g.
+ *   {"tenant_id":"tnt_…","kind":"production","provisioning_state":null,
+ *    "data_profile":null,"access_stage":null}
+ *   {"tenant_id":"tnt_…","kind":"production","provisioning_state":"ready_demo",
+ *    "data_profile":"synthetic_brightline_v1","access_stage":"demo"}
+ *
+ * `demo_seed` is NOT part of this response. It is retained here because a tenant
+ * record carrying it must still be refused, but it can no longer be required: the
+ * live contract does not publish it.
+ */
+export interface TenantProvenanceShape {
+  tenant_id?: string;
+  /** "production" | "demo" - the tenant's own classification. */
+  kind?: string | null;
+  /** e.g. "ready_demo"; null on tenants provisioned before this field existed. */
+  provisioning_state?: string | null;
+  data_profile?: string | null;
+  access_stage?: string | null;
+  /** Legacy shape only; absent from GET /tenants/{id}/provenance. */
+  demo_seed?: boolean;
+}
+
+/**
+ * GET /v1/tenants/{id}/provenance - read a tenant's provisioning provenance.
+ * Read-only: creates nothing, mutates nothing. Used to keep demo, synthetic and
+ * unclassified tenants out of production credential migrations.
+ *
+ * Confirmed live against production 2026-09-09 under platform-service auth. Note
+ * that the older GET /v1/tenants/{id} answers 401 auth_token_missing to the same
+ * credential - it is a bearer-auth route, and is not the provenance surface.
+ */
+export function getTenantProvenance(tenantId: string): Promise<TenantProvenanceShape> {
+  return serviceGet(`/tenants/${encodeURIComponent(tenantId)}/provenance`);
+}
+
 export class TenancyApiError extends Error {
   constructor(
     public readonly status: number,
