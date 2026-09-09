@@ -21,15 +21,17 @@ import {
   sourceTypeForDocument,
 } from "@/lib/documentUpload";
 import { openMemberDetail } from "@/lib/membersStore";
-import { useSuggestedQuestions, resolveSuggestionChips } from "@/lib/brainSuggestedQuestions";
+import { useSuggestedQuestions, resolveSuggestionChips, toSentenceCase } from "@/lib/brainSuggestedQuestions";
 import { resolveVendor, openVendorDetail } from "@/lib/openVendorDetail";
 import { parseAssistantResponse, trimChatHistory, buildChatPayload, filterPayloadMessages, buildTruncationNote, ASSISTANT_GENERIC_ERROR, CHAT_HISTORY_LIMIT, MESSAGE_CONTENT_LIMIT } from "@/lib/assistantChat";
 import { isAssistantBulletLine, stripAssistantBullet } from "@/lib/assistantFormatting";
-import timeIcon from "@assets/Time_1781821466642.png";
+import timeIcon from "@assets/timestamp_1788994251245.png";
 import activeConvoIcon from "@assets/Active_1781818047007.png";
 import deleteConvoIcon from "@assets/Delete_1781818067389.png";
 import attachBtnIcon from "@assets/attach_1788990164346.png";
-import historyBtnIcon from "@assets/chat_history_1788990164348.png";
+import dropdownOpenIcon from "@assets/Dropdown_Active_1788993119967.png";
+import dropdownClosedIcon from "@assets/Dropdown_Inactive_1788993119968.png";
+import roboAvatarIcon from "@assets/figma_icons/robo_avatar.svg";
 
 type MessageRole = "user" | "assistant";
 
@@ -935,23 +937,42 @@ export function BrainAssistant() {
         </div>
       </div>
 
-      {/* Suggested questions. Chip text is upstream-controlled and unbounded,
-          so a chip wraps inside its own pill rather than running past the
-          column, and the block scrolls once it would eat the transcript. */}
-      <div className="flex max-h-[88px] flex-wrap items-start justify-center gap-[8px] w-full overflow-y-auto">
-        {suggestionChips.chips.map((q, i) => (
-          <button
-            /* Index-prefixed: tenant chip text is upstream-controlled, so two
-               chips can carry identical text and collide on a bare text key. */
-            key={`${i}-${q}`}
-            data-testid={`button-suggested-${q.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`}
-            onClick={() => sendMessage(q)}
-            className="max-w-full bg-brain-v1baby-blue-15 px-[10px] py-[4px] rounded-pill transition-colors hover:bg-brain-v1baby-blue-15-hover [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[12px] leading-[16px] text-left"
-          >
-            {q}
-          </button>
-        ))}
-      </div>
+      {/* Suggested questions — only while the conversation is empty. Figma
+          6523:74728 shows no chips once the assistant has replied: past that
+          point the transcript is the context, and a row of prompts under it
+          competes with the answer the user is reading.
+
+          Chip text is upstream-controlled and unbounded, so a chip wraps inside
+          its own pill rather than running past the column, and the block
+          scrolls once it would eat the transcript.
+
+          `normal-case` is load-bearing: the platform sets
+          `button { text-transform: capitalize }` in @layer base, which was
+          rendering these sentence-case questions as "Show Recent Cash Flow".
+          Title Case is right for a command label and wrong for a question. */}
+      {isEmpty && (
+        <div className="flex max-h-[88px] flex-wrap items-start justify-center gap-[8px] w-full overflow-y-auto">
+          {suggestionChips.chips.map((raw, i) => {
+            /* Sentence case is applied at the point of use, not in the store:
+               core owns the wording, we only own how it is set. The same string
+               is what gets sent, so the user's own message reads back exactly
+               as the chip they tapped. */
+            const q = toSentenceCase(raw);
+            return (
+              <button
+                /* Index-prefixed: tenant chip text is upstream-controlled, so two
+                   chips can carry identical text and collide on a bare text key. */
+                key={`${i}-${raw}`}
+                data-testid={`button-suggested-${q.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`}
+                onClick={() => sendMessage(q)}
+                className="max-w-full normal-case bg-brain-v1baby-blue-15 px-[10px] py-[4px] rounded-pill transition-colors hover:bg-brain-v1baby-blue-15-hover [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[12px] leading-[16px] text-left"
+              >
+                {q}
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 
@@ -967,18 +988,30 @@ export function BrainAssistant() {
           <button
             data-testid="button-session-dropdown"
             onClick={() => setDropdownOpen((v) => !v)}
-            className="w-full h-[40px] pl-[16px] pr-[4px] flex items-center gap-[8px] rounded-pill bg-brain-v1baby-blue-15 border border-solid border-brain-v1baby-blue-30 transition-colors hover:bg-brain-v1baby-blue-15-hover"
+            aria-expanded={dropdownOpen}
+            /* Figma 6523:74812 — the trigger carries a stroke only while the
+               dropdown is open. The closed state keeps a transparent border of
+               the same width so opening it cannot shift the row by a pixel. */
+            className={`w-full h-[40px] pl-[16px] pr-[4px] flex items-center gap-[8px] rounded-pill bg-brain-v1baby-blue-15 border border-solid transition-colors hover:bg-brain-v1baby-blue-15-hover ${
+              dropdownOpen ? "border-brain-v1baby-blue-30" : "border-transparent"
+            }`}
           >
             {!activeSession && (
               <SquarePen className="flex-shrink-0 size-[24px]" color="#a8b9f4" strokeWidth={1.8} />
             )}
-            <span className="flex-1 min-w-0 text-left truncate [font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[24px]">
+            {/* normal-case: a session name is the user's own first question, and
+                the platform's `button { text-transform: capitalize }` was
+                Title Casing it here while the matching row inside the dropdown
+                — not a button — showed the same name as written. */}
+            <span className="flex-1 min-w-0 normal-case text-left truncate [font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[24px]">
               {triggerLabel}
             </span>
+            {/* Two supplied artworks rather than one rotated glyph: the active
+                chevron is not a 180° copy of the inactive one. */}
             <img
-              src={historyBtnIcon}
+              src={dropdownOpen ? dropdownOpenIcon : dropdownClosedIcon}
               alt=""
-              className={`flex-shrink-0 size-[32px] block transition-transform ${dropdownOpen ? "rotate-180" : ""}`}
+              className="flex-shrink-0 size-[32px] block"
             />
           </button>
 
@@ -1086,13 +1119,18 @@ export function BrainAssistant() {
           ref={bodyRef}
           className={isEmpty ? "hidden" : "flex-1 min-w-0 min-h-0 overflow-y-auto"}
         >
-          <div className="mx-auto flex w-full max-w-[560px] flex-col gap-[12px] pb-[12px]">
+          {/* min-h-full + justify-end sits a short conversation on the bottom of
+              the reading column, directly above the composer, the way Figma
+              6523:74728 shows it — rather than stranding two bubbles at the top
+              of a tall empty scroller. Longer transcripts overflow and scroll
+              normally. */}
+          <div className="mx-auto flex min-h-full w-full max-w-[560px] flex-col justify-end gap-[16px] pb-[12px]">
             {messages.map((msg) => (
-              <div key={msg.id} className="flex flex-col gap-[12px]">
+              <div key={msg.id} className="flex flex-col gap-[8px]">
                 {msg.dateTag && (
-                  <div className="flex items-center justify-center gap-[4px] py-[2px]">
-                    <img src={timeIcon} alt="" className="size-[12px] block" />
-                    <span className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-60 text-[12px] leading-[16px]">
+                  <div className="flex items-center justify-center mb-[8px]">
+                    <span className="inline-flex items-center gap-[4px] bg-brain-v1baby-blue-15 border border-solid border-[rgba(108,119,157,0.2)] px-[8px] py-[3px] rounded-pill [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-60 text-[12px] leading-[14px] whitespace-nowrap">
+                      <img src={timeIcon} alt="" className="size-[12px] block" />
                       {msg.dateTag}
                     </span>
                   </div>
@@ -1131,27 +1169,39 @@ export function BrainAssistant() {
                   </div>
                 ) : (
                 <>
-                {/* items-end/start keeps the bubble off full width; max-w-[75%]
-                    caps where the text wraps. ChatBubble then pins the box to
-                    the widest laid-out line so it hugs the text — max-width
-                    alone leaves the box at 75% no matter how short the lines
-                    end up. */}
+                {/* One row per message. A user message is pushed right and
+                    capped at 75% so it stays a short aside; an assistant reply
+                    is preceded by the Robo avatar and may use the rest of the
+                    column (Figma 6523:74728 runs it to the column edge).
+                    ChatBubble then pins the box to the widest laid-out line so
+                    it hugs the text — max-width alone leaves the box at its cap
+                    no matter how short the lines end up. */}
                 <div
-                  className={`flex flex-col w-full ${
-                    msg.role === "user" ? "items-end" : "items-start"
+                  className={`flex w-full items-start gap-[8px] ${
+                    msg.role === "user" ? "justify-end" : ""
                   }`}
                 >
+                  {msg.role === "assistant" && (
+                    /* mt-[10px] centres the 20px avatar on the bubble's first
+                       line: 8px of padding plus half of the 24px line box. */
+                    <img
+                      src={roboAvatarIcon}
+                      alt=""
+                      aria-hidden="true"
+                      className="mt-[10px] size-[20px] shrink-0 block"
+                    />
+                  )}
                   <ChatBubble
                     measureKey={`${symbol}${msg.text}`}
                     measure={msg.text !== ""}
-                    className={`max-w-[75%] break-words px-[12px] py-[8px] rounded-row [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] ${
+                    className={`break-words px-[12px] py-[8px] rounded-row [font-family:'Gilroy',sans-serif] font-medium text-[14px] ${
                       msg.role === "user"
-                        ? "bg-brain-v1purple text-white text-right"
+                        ? "max-w-[75%] leading-[20px] bg-brain-v1purple text-white text-right"
                         : msg.answerStatus === "no_answer"
-                          ? "bg-brain-v1stroke-2 border border-dashed border-brain-v1baby-blue-60 text-brain-v1baby-blue-80 text-left"
+                          ? "max-w-[calc(100%-28px)] leading-[24px] bg-brain-v1stroke-2 border border-dashed border-brain-v1baby-blue-60 text-brain-v1baby-blue-80 text-left"
                           : msg.answerStatus === "error"
-                            ? "bg-brain-v1dark-pink-red border border-dashed border-brain-v1pink-red text-brain-v1error-text text-left"
-                          : "bg-brain-v1baby-blue-15 text-brain-v1baby-blue-60 text-left"
+                            ? "max-w-[calc(100%-28px)] leading-[24px] bg-brain-v1dark-pink-red border border-dashed border-brain-v1pink-red text-brain-v1error-text text-left"
+                          : "max-w-[calc(100%-28px)] leading-[24px] bg-brain-v1baby-blue-15 text-brain-v1baby-blue-100 text-left"
                     }`}
                   >
                     {msg.role === "assistant" && msg.text === "" ? (
@@ -1167,7 +1217,7 @@ export function BrainAssistant() {
                 </div>
                 {msg.role === "assistant" && msg.answerStatus === "no_answer" && (
                   <div
-                    className="flex items-center gap-[4px] px-[4px] w-full"
+                    className="flex items-center gap-[4px] pl-[32px] pr-[4px] w-full"
                     data-testid="assistant-no-answer"
                   >
                     <span className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1light-orange text-[11px] leading-[14px]">
@@ -1182,7 +1232,7 @@ export function BrainAssistant() {
                 )}
                 {msg.role === "assistant" && msg.answerStatus === "error" && (
                   <div
-                    className="flex items-center gap-[4px] px-[4px] w-full"
+                    className="flex items-center gap-[4px] pl-[32px] pr-[4px] w-full"
                     data-testid="assistant-error"
                   >
                     <span className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1light-orange text-[11px] leading-[14px]">
@@ -1194,7 +1244,7 @@ export function BrainAssistant() {
                   </div>
                 )}
                 {msg.role === "assistant" && msg.ungrounded && (
-                  <div className="flex items-center gap-[4px] px-[4px] w-full">
+                  <div className="flex items-center gap-[4px] pl-[32px] pr-[4px] w-full">
                     <span className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1light-orange text-[11px] leading-[14px]">
                       Data unavailable
                     </span>
@@ -1204,7 +1254,7 @@ export function BrainAssistant() {
                   </div>
                 )}
                 {msg.role === "assistant" && msg.sources && msg.sources.length > 0 && (
-                  <div className="flex flex-col items-start gap-[6px] w-full">
+                  <div className="flex flex-col items-start gap-[6px] w-full pl-[28px]">
                     {/* Toggle — NOT a wrapper for the evidence list (nested buttons
                        are invalid and suppress inner click events). */}
                     <button
@@ -1309,7 +1359,7 @@ export function BrainAssistant() {
           </div>
         )}
         <div
-          className={`mx-auto w-full max-w-[560px] shrink-0 ${isEmpty ? "" : "pt-[12px]"}`}
+          className={`mx-auto w-full max-w-[560px] shrink-0 ${isEmpty ? "" : "pt-[16px]"}`}
         >
           {composer}
         </div>
