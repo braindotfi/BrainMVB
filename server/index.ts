@@ -7,6 +7,8 @@ import rateLimit from "express-rate-limit";
 import { assertEncryptionKeyConfigured } from "./tokenCrypto";
 import { storage } from "./storage";
 import { processExpiredDemoTenantDeletions } from "./brain/demoTenantDeletion";
+import { preflightStoredAgentApiKeys } from "./brain/auth";
+import { migrateConfiguredAgentApiKeyBatch } from "./brain/agentApiKeyMigration";
 import {
   createPasswordResetConfirmLimiter,
   createPasswordResetRequestLimiter,
@@ -147,6 +149,10 @@ app.use((req, res, next) => {
 
 (async () => {
   await registerRoutes(httpServer, app);
+  if (process.env.NODE_ENV === "production") {
+    await migrateConfiguredAgentApiKeyBatch();
+    await preflightStoredAgentApiKeys();
+  }
 
   // ── Demo tenant cleanup ──────────────────────────────────────────────────
   // Each "Continue with Demo" tap provisions a real brain-core tenant + an

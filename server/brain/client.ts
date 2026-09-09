@@ -16,6 +16,7 @@ import { brainConfig } from "./config";
 import { currentBrainBaseUrl } from "./baseUrl";
 import { hasMeaningfulScalar } from "../wikiAnswerGuard";
 import { currentBffRequestId } from "./requestId";
+import { fetchWithAgentAccessTokenRetry } from "./agentApiKey";
 
 export class BrainApiError extends Error {
   public constructor(
@@ -74,12 +75,12 @@ export async function brainRequest<T>(path: string, opts: BrainRequestOptions): 
     headers["Idempotency-Key"] = opts.idempotencyKey ?? randomUUID();
   }
 
-  const res = await fetch(url, {
+  const res = await fetchWithAgentAccessTokenRetry(url, {
     method,
     headers,
     body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
     signal: opts.timeoutMs != null ? AbortSignal.timeout(opts.timeoutMs) : undefined,
-  });
+  }, opts.token);
 
   const text = await res.text();
   const parsed: unknown = text ? safeJson(text) : null;
@@ -403,11 +404,16 @@ export interface PaymentIntent {
  * token has no `payment_intent:execute` scope and the BFF exposes no execute
  * path). No money moves.
  */
-export function proposeInvoicePayment(token: string, invoiceId: string): Promise<PaymentIntent> {
+export function proposeInvoicePayment(
+  token: string,
+  invoiceId: string,
+  idempotencyKey?: string,
+): Promise<PaymentIntent> {
   return brainRequest<PaymentIntent>("/payment-intents", {
     token,
     method: "POST",
     body: { type: "pay_invoice", invoice_id: invoiceId },
+    idempotencyKey,
   });
 }
 
@@ -723,17 +729,16 @@ export async function ingestRawDocument(
   const blob = new Blob([input.bytes as unknown as BlobPart], { type: input.mimeType });
   form.set("file", blob, input.filename);
 
-  const res = await fetch(url, {
+  const res = await fetchWithAgentAccessTokenRetry(url, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${token}`,
       "X-Request-Id": currentBffRequestId(),
       "Idempotency-Key": randomUUID(),
       Accept: "application/json",
       // NB: no Content-Type - fetch sets multipart/form-data; boundary=… itself.
     },
     body: form,
-  });
+  }, token);
   const text = await res.text();
   const parsed: unknown = text ? safeJson(text) : null;
   if (!res.ok) {

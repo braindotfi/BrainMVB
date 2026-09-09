@@ -74,6 +74,8 @@ export interface BrainConfig {
   /** PRODUCTION TENANCY: platform service credential for POST /v1/tenants,
    *  POST /v1/sessions and POST /v1/invites/consume. Sent as X-Platform-Service-Auth. */
   platformServiceSecret: string | undefined;
+  /** RFC 8693 endpoint used only for exchange-only brain_ak credentials. */
+  agentTokenUrl: string;
   /** FALLBACK (local dev only): private signing JWK (JSON) to mint tokens in-process. */
   signKeyJson: string | undefined;
   /** FALLBACK (local dev only): HS256 secret - valid only against a non-prod verifier. */
@@ -93,6 +95,7 @@ export const brainConfig: BrainConfig = {
   // Accept BRAIN_PROVISION_SECRET as an alias (legacy env var name from initial setup).
   demoProvisionSecret: env("BRAIN_DEMO_PROVISION_SECRET") ?? env("BRAIN_PROVISION_SECRET"),
   platformServiceSecret: env("BRAIN_PLATFORM_SERVICE_SECRET"),
+  agentTokenUrl: env("BRAIN_AUTH_TOKEN_URL") ?? "https://auth.brain.fi/token",
   signKeyJson: env("BRAIN_AUTH_SIGN_KEY"),
   hs256Secret: env("BRAIN_AUTH_JWT_SECRET"),
   issuer: env("BRAIN_AUTH_ISSUER") ?? "https://auth.brain.fi",

@@ -46,6 +46,21 @@ export interface AgentTokenShape {
   expires_in: number;
 }
 
+export interface AgentApiKeyShape {
+  id: string;
+  agent_id: string;
+  tenant_id: string;
+  profile: "bff_service_v1";
+  environment: "live";
+  scopes: string[];
+  key_prefix: string;
+  key_last4: string;
+  expires_at: string;
+  last_used_at?: string | null;
+  revoked_at?: string | null;
+  api_key?: string;
+}
+
 export class TenancyApiError extends Error {
   constructor(
     public readonly status: number,
@@ -78,6 +93,69 @@ async function serviceCall<T>(path: string, body: unknown): Promise<T> {
     headers: {
       "Content-Type": "application/json",
       "X-Platform-Service-Auth": requireServiceSecret(),
+    },
+    body: JSON.stringify(body),
+  });
+  const text = await res.text();
+  let json: unknown;
+  try {
+    json = text ? JSON.parse(text) : {};
+  } catch {
+    json = { raw: text };
+  }
+  if (!res.ok) throw new TenancyApiError(res.status, json);
+  return json as T;
+}
+
+async function serviceGet<T>(path: string): Promise<T> {
+  const res = await fetch(`${currentBrainBaseUrl(brainConfig.baseUrl)}${path}`, {
+    headers: {
+      Accept: "application/json",
+      "X-Platform-Service-Auth": requireServiceSecret(),
+    },
+  });
+  const text = await res.text();
+  let json: unknown;
+  try {
+    json = text ? JSON.parse(text) : {};
+  } catch {
+    json = { raw: text };
+  }
+  if (!res.ok) throw new TenancyApiError(res.status, json);
+  return json as T;
+}
+
+async function serviceDelete(path: string): Promise<void> {
+  const res = await fetch(`${currentBrainBaseUrl(brainConfig.baseUrl)}${path}`, {
+    method: "DELETE",
+    headers: {
+      Accept: "application/json",
+      "X-Platform-Service-Auth": requireServiceSecret(),
+    },
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    let json: unknown;
+    try {
+      json = text ? JSON.parse(text) : {};
+    } catch {
+      json = { raw: text };
+    }
+    throw new TenancyApiError(res.status, json);
+  }
+}
+
+async function idempotentServiceCall<T>(
+  path: string,
+  body: unknown,
+  idempotencyKey: string,
+): Promise<T> {
+  const res = await fetch(`${currentBrainBaseUrl(brainConfig.baseUrl)}${path}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Platform-Service-Auth": requireServiceSecret(),
+      "Idempotency-Key": idempotencyKey,
     },
     body: JSON.stringify(body),
   });
@@ -150,6 +228,33 @@ export function getPendingInviteStatus(email: string): Promise<{ pending: boolea
  */
 export function mintAgentToken(tenantId: string): Promise<AgentTokenShape> {
   return serviceCall(`/tenants/${encodeURIComponent(tenantId)}/agent-token`, {});
+}
+
+export function issueBffAgentApiKey(
+  tenantId: string,
+  agentId: string,
+  idempotencyKey: string,
+): Promise<AgentApiKeyShape & { api_key: string }> {
+  return idempotentServiceCall(
+    `/tenants/${encodeURIComponent(tenantId)}/agent-keys`,
+    {
+      agent_id: agentId,
+      profile: "bff_service_v1",
+      environment: "live",
+      name: "BrainMVB BFF Phase 3",
+    },
+    idempotencyKey,
+  );
+}
+
+export function listAgentApiKeys(
+  tenantId: string,
+): Promise<{ keys: AgentApiKeyShape[] }> {
+  return serviceGet(`/tenants/${encodeURIComponent(tenantId)}/agent-keys`);
+}
+
+export function revokeAgentApiKey(agentKeyId: string): Promise<void> {
+  return serviceDelete(`/agent-keys/${encodeURIComponent(agentKeyId)}`);
 }
 
 /** Bind an invitee's external_ref to the inviting tenant's membership. */
