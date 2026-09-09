@@ -20,13 +20,15 @@ The verifier proves four things and mutates nothing:
 
 | Receipt field | What is actually observed |
 | --- | --- |
-| `exchange_verified` | The raw key returns 401 when used directly as a bearer token, and the exchanged access token re-validates against the expected tenant, audience, subject, scope set, credential id, and lifetime. |
-| `scope_denial_verified` | `POST /payment-intents/pi_0000…/approve` (an all-zero, unassigned ULID) returns 403. |
-| `key_lifecycle_verified` | brain-core's own agent-key record is live, unrevoked, `bff_service_v1`, `live`, bound to the same agent and tenant, and carries exactly the BFF scope set. |
-| `runtime_binding_verified` | The stored runtime credential row the app reads holds the migrated API key. |
+| `exchange_verified` | The raw key returns 401 when used directly as a bearer token; the exchanged access token re-validates against the expected tenant, audience, subject, scope set, credential id, and lifetime; **and** an in-scope `GET /ledger/accounts` with it returns 200. Re-decoding a token only proves what it says about itself, so the read has to succeed too. |
+| `scope_denial_verified` | `POST /payment-intents/pi_0000…/approve` (an all-zero, unassigned ULID) returns 403 **with a reason naming a scope failure**. A bare 403 is not enough — a policy or tenant refusal is also a 403 and proves nothing about scope. |
+| `key_lifecycle_verified` | brain-core's own agent-key record is live, `bff_service_v1`, `live`, bound to the same agent and tenant, carries exactly the BFF scope set, and reports `revoked_at` **present and null** plus a `last_used_at` timestamp. An omitted `revoked_at` is an unknown, and an unknown revocation state is not an unrevoked key. |
+| `runtime_binding_verified` | The stored runtime credential row the app reads holds **this exact key**, not merely a string shaped like one. |
 
 Each boolean is assigned from its check's result, and each check throws when it
 does not hold — a receipt exists only for a tenant where all four were observed.
+`server/brain/agent-api-key-migration.test.ts` drives each refusal against mocked
+brain-core; every guard there has been checked to fail when its guard is removed.
 
 **Why the denial probe targets a nonexistent intent.** The earlier revision proved
 denial by selecting a real payable invoice and proposing a real payment against it.
@@ -39,6 +41,14 @@ but addresses nothing, so the request cannot mutate state whatever the answer is
 authorizing it, and scope denial is unproven. The verifier fails and says so. Do not
 restore a mutating probe: raise the ordering with brain-core, or add a read-only
 denial surface.
+
+> **UNPROVEN BY CONTRACT — needs brain-core.** The all-zero ULID is safe in
+> practice, not by guarantee: brain-core has not committed to a reserved id space,
+> nor to authorizing before resolving, so a production mutation endpoint is still
+> being called. Ask brain-core for a guaranteed side-effect-free authorization
+> surface (a scope-introspection read, or a documented reserved probe id). Until
+> that exists, treat this probe as unproven rather than safe — which is another
+> reason the manifest stays empty.
 
 The retired receipt also carried `lifecycle: "completed"` and
 `rollback_marker: false` as hardcoded constants. They asserted success rather than
@@ -75,11 +85,20 @@ Enforcement is split, and neither half substitutes for the other:
 1. **brain-core revokes the legacy agent JWTs at the deadline.** This is the only
    mechanism that actually invalidates them; nothing in this BFF can revoke a
    credential brain-core issued. *Owner: brain-core. Not yet confirmed scheduled.*
-2. **This BFF refuses to start a legacy-path migration at or after the deadline**
-   (`assertLegacyRollbackWindowOpen`), because a rollback past that point would
-   restore a revoked credential — a recovery that looks like it worked and does
-   not. The same function refuses when the stored legacy JWT has *already*
-   expired, which is a rollback that does not exist regardless of the deadline.
+2. **This BFF refuses to start a legacy-path migration whose rollback could expire
+   mid-flight** (`assertLegacyRollbackWindowOpen`). Both the deadline and the
+   stored JWT's own expiry must be at least 15 minutes away, so a slow issuance or
+   a hung verification cannot cross either boundary. A rollback past the deadline
+   would restore a revoked credential — a recovery that looks like it worked and
+   does not.
+3. **Rollback re-checks the window instead of trusting that pre-flight decision.**
+   If it has closed anyway, the legacy JWT is dead: restoring it would replace a
+   possibly-working credential with a certainly-broken one. The issued key is left
+   in place *unrevoked* and the tenant is escalated with a
+   `MANUAL REPAIR REQUIRED` log line rather than silently taken offline.
+
+Every failure after issuance — invalid binding, bad expiry, failed exchange, failed
+verification — runs this cleanup, so a key can never be orphaned upstream.
 
 ## Withdrawn from batch 1
 
@@ -94,6 +113,9 @@ Enforcement is split, and neither half substitutes for the other:
 
 ## Before adding any tenant to a batch
 
+0. **Side-effect-free authorization surface — OUTSTANDING.** See the denial-probe
+   note above. Without a guaranteed one, the verifier still calls a production
+   mutation endpoint, safe only by convention. *Owner: brain-core.*
 1. **Production scenario counts — OUTSTANDING.** The retired invoice predicate
    (`scenario !== "ar"` and not settled) was fail-open: absent, null, and unknown
    future markers all read as payable. Real tenants routinely return

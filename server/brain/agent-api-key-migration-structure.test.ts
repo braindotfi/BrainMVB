@@ -121,11 +121,11 @@ describe("Phase 3 BFF migration structure", () => {
     expect(LEGACY_ROLLBACK_JWT_REVOCATION_DEADLINE_ISO).toBe("2026-09-16T23:59:59Z");
     expect(Number.isFinite(LEGACY_ROLLBACK_JWT_REVOCATION_DEADLINE_MS)).toBe(true);
     expect(migrationSource).toContain("assertLegacyRollbackWindowOpen(tenantId, legacy, Date.now())");
-    expect(migrationSource).toContain("now >= LEGACY_ROLLBACK_JWT_REVOCATION_DEADLINE_MS");
-    // An already-expired legacy JWT is not a rollback either.
-    expect(migrationSource).toContain("legacy.exp * 1000 <= now");
     expect(
       migrationSource.indexOf("assertLegacyRollbackWindowOpen(tenantId, legacy, Date.now())"),
     ).toBeLessThan(migrationSource.indexOf("await issueBffAgentApiKey("));
+    // Rollback re-checks the window instead of trusting the pre-flight decision.
+    expect(migrationSource).toContain("legacyRollbackWindowClosure(legacy, Date.now(), 0)");
+    // Refusals and cleanup behaviour are witnessed in agent-api-key-migration.test.ts.
   });
 });

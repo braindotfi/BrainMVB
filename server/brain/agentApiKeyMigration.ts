@@ -39,6 +39,8 @@ interface LegacyAgentClaims {
  * Every field is an OBSERVATION, not a claim: the four `*_verified` booleans are
  * set from the checks' own results, and each check throws when it does not hold,
  * so a receipt only exists for a tenant where all four were actually observed.
+ * Absent evidence is never read as passing evidence - an omitted `revoked_at` or
+ * an unrecognised denial reason fails the check.
  *
  * The whole verification is READ-ONLY. It creates no PaymentIntent, writes no
  * ledger data, and leaves no policy or audit evidence behind, so a failed
@@ -56,8 +58,12 @@ interface VerificationReceipt {
   ttl_seconds: number;
   /** HTTP status of using the raw API key directly as a bearer token (must be 401). */
   direct_key_status: number;
+  /** HTTP status of an in-scope read with the exchanged access token (must be 200). */
+  in_scope_read_status: number;
   /** HTTP status of the out-of-scope approve probe (must be 403). */
   out_of_scope_status: number;
+  /** The denial reason brain-core gave, which must name a scope failure. */
+  out_of_scope_reason: string;
   /** The unassigned PaymentIntent id the denial probe targeted. */
   scope_denial_probe_id: string;
   exchange_verified: boolean;
@@ -68,13 +74,27 @@ interface VerificationReceipt {
 
 /**
  * An all-zero ULID. Syntactically valid, so brain-core routes and authorizes the
- * request normally, but it addresses no PaymentIntent, so approving it can move no
- * money and mutate nothing whatever the answer is.
+ * request normally, but it is not an id brain-core hands out for a real
+ * PaymentIntent.
+ *
+ * This makes the probe safe in practice, NOT by contract: brain-core has not
+ * committed to a reserved id space, nor to authorizing before resolving. The
+ * verifier therefore also requires an explicit scope denial reason (below), and
+ * the runbook tracks "guaranteed side-effect-free authorization surface" as an
+ * open upstream ask. Until it lands, treat the probe as unproven, not as safe.
  */
 const UNASSIGNED_PAYMENT_INTENT_ID = "pi_00000000000000000000000000";
 
 /** data_profile values that mark a tenant's data as fixture-generated. */
 const SYNTHETIC_DATA_PROFILE_PREFIX = "synthetic";
+
+/**
+ * A legacy-JWT migration must have a usable rollback for its whole duration, not
+ * just at the instant it starts. Requiring this much headroom on both the JWT's
+ * own expiry and the revocation deadline keeps a slow issuance or a hung
+ * verification from crossing either boundary mid-flight.
+ */
+const ROLLBACK_WINDOW_MARGIN_MS = 15 * 60 * 1000;
 
 function decodeLegacyAgentClaims(token: string): LegacyAgentClaims {
   const encoded = token.split(".")[1];
@@ -127,14 +147,27 @@ function resourceUrl(): string {
   return `${new URL(brainConfig.baseUrl).origin}/`;
 }
 
+/** Pull brain-core's rejection reason out of either error body shape it uses. */
+function denialReasonOf(body: unknown): string | undefined {
+  if (typeof body !== "object" || body === null) return undefined;
+  const shape = body as { reason?: unknown; error?: unknown };
+  if (typeof shape.reason === "string" && shape.reason.length > 0) return shape.reason;
+  if (typeof shape.error === "string" && shape.error.length > 0) return shape.error;
+  if (typeof shape.error === "object" && shape.error !== null) {
+    const code = (shape.error as { code?: unknown }).code;
+    if (typeof code === "string" && code.length > 0) return code;
+  }
+  return undefined;
+}
+
 /**
  * Refuse to issue a production BFF credential for a demo or fixture-seeded tenant.
  *
  * Authority is brain-core's own provenance record, never a local id allowlist: a
  * hardcoded exclusion list only knows the demo tenants somebody remembered. Every
- * unknown answer - read unavailable, field absent, field not a boolean - is a
- * refusal, because "we could not tell" and "it is a real tenant" must never
- * produce the same outcome.
+ * unknown answer - read unavailable, response about a different tenant, field
+ * absent, field the wrong type - is a refusal, because "we could not tell" and
+ * "it is a real tenant" must never produce the same outcome.
  */
 async function assertTenantIsNotDemoSeeded(tenantId: string): Promise<void> {
   let provenance: TenantProvenanceShape;
@@ -147,6 +180,16 @@ async function assertTenantIsNotDemoSeeded(tenantId: string): Promise<void> {
       { cause: error },
     );
   }
+  if (typeof provenance !== "object" || provenance === null) {
+    throw new Error(`brain-core provenance for ${tenantId} was not an object; refusing to migrate`);
+  }
+  // A record about some other tenant proves nothing about this one.
+  if (provenance.tenant_id !== tenantId) {
+    throw new Error(
+      `brain-core provenance response identifies ${String(provenance.tenant_id)}, not ${tenantId}; ` +
+        `refusing to migrate`,
+    );
+  }
   if (typeof provenance.demo_seed !== "boolean") {
     throw new Error(
       `brain-core provenance for ${tenantId} carries no demo_seed flag, so demo status is unknown. ` +
@@ -156,6 +199,13 @@ async function assertTenantIsNotDemoSeeded(tenantId: string): Promise<void> {
   if (provenance.demo_seed) {
     throw new Error(`tenant ${tenantId} was created with demo_seed:true and must not be migrated`);
   }
+  // Absent is unknown. Only an explicitly reported profile/stage can clear a tenant.
+  if (!("data_profile" in provenance) || provenance.data_profile === undefined) {
+    throw new Error(
+      `brain-core provenance for ${tenantId} reports no data_profile, so synthetic data cannot be ` +
+        `ruled out. Refusing to migrate.`,
+    );
+  }
   if (
     typeof provenance.data_profile === "string" &&
     provenance.data_profile.startsWith(SYNTHETIC_DATA_PROFILE_PREFIX)
@@ -164,32 +214,47 @@ async function assertTenantIsNotDemoSeeded(tenantId: string): Promise<void> {
       `tenant ${tenantId} carries synthetic data profile ${provenance.data_profile} and must not be migrated`,
     );
   }
+  if (typeof provenance.access_stage !== "string" || provenance.access_stage.length === 0) {
+    throw new Error(
+      `brain-core provenance for ${tenantId} reports no access_stage, so demo access cannot be ` +
+        `ruled out. Refusing to migrate.`,
+    );
+  }
   if (provenance.access_stage === "demo") {
     throw new Error(`tenant ${tenantId} is at access_stage=demo and must not be migrated`);
   }
 }
 
 /**
- * A legacy-JWT tenant may only be migrated while its rollback is real: the legacy
- * JWT has to still be valid AND the revocation deadline still ahead. After the
+ * Whether a legacy-JWT tenant still has a rollback worth relying on: the JWT is
+ * valid and the revocation deadline is ahead, both by `marginMs`. After the
  * deadline brain-core revokes these JWTs, so restoring one would hand the tenant a
  * dead credential - a rollback that looks like it worked and does not.
  */
+function legacyRollbackWindowClosure(
+  legacy: LegacyAgentClaims,
+  now: number,
+  marginMs: number,
+): string | undefined {
+  if (now + marginMs >= LEGACY_ROLLBACK_JWT_REVOCATION_DEADLINE_MS) {
+    return `the legacy agent JWT rollback window closes at ${LEGACY_ROLLBACK_JWT_REVOCATION_DEADLINE_ISO}`;
+  }
+  if (legacy.exp * 1000 <= now + marginMs) {
+    return `the stored legacy agent JWT expires at ${new Date(legacy.exp * 1000).toISOString()}`;
+  }
+  return undefined;
+}
+
 function assertLegacyRollbackWindowOpen(
   tenantId: string,
   legacy: LegacyAgentClaims,
   now: number,
 ): void {
-  if (now >= LEGACY_ROLLBACK_JWT_REVOCATION_DEADLINE_MS) {
+  const closure = legacyRollbackWindowClosure(legacy, now, ROLLBACK_WINDOW_MARGIN_MS);
+  if (closure !== undefined) {
     throw new Error(
-      `legacy agent JWT rollback closed at ${LEGACY_ROLLBACK_JWT_REVOCATION_DEADLINE_ISO}; ` +
-        `tenant ${tenantId} cannot be migrated through the legacy path any more`,
-    );
-  }
-  if (legacy.exp * 1000 <= now) {
-    throw new Error(
-      `stored legacy agent JWT for ${tenantId} expired at ${new Date(legacy.exp * 1000).toISOString()}, ` +
-        `so the migration has no working rollback`,
+      `refusing to migrate ${tenantId} through the legacy path: ${closure}, which leaves no ` +
+        `dependable rollback for the duration of the migration`,
     );
   }
 }
@@ -210,23 +275,36 @@ async function verifyLifecycle(
     throw new Error(`direct agent API key use returned HTTP ${direct.status}, expected 401`);
   }
 
-  // 2. The exchanged access token carries exactly the BFF binding we asked for.
-  //    parseAgentAccessTokenClaims re-validates audience, subject, tenant, scope
-  //    set, credential id, and lifetime, and throws on any mismatch.
+  // 2. The exchanged access token carries exactly the BFF binding we asked for AND
+  //    is actually accepted by the resource server. Re-decoding the token only
+  //    proves what it says about itself, so an in-scope read (ledger:read) has to
+  //    succeed too. The read is a GET: it observes, it does not change anything.
   const revalidated = parseAgentAccessTokenClaims(accessToken, { tenantId, resource });
+  const inScopeRead = await fetchWithAgentAccessTokenRetry(
+    `${brainConfig.baseUrl}/ledger/accounts`,
+    { method: "GET", headers: { Accept: "application/json", "X-Request-Id": randomUUID() } },
+    accessToken,
+  );
   const exchangeVerified =
     revalidated.credential_id === claims.credential_id &&
     revalidated.sub === claims.sub &&
     revalidated.tenant_id === tenantId &&
-    revalidated.aud === resource;
+    revalidated.aud === resource &&
+    inScopeRead.status === 200;
   if (!exchangeVerified) {
-    throw new Error("exchanged access token does not match the credential under verification");
+    throw new Error(
+      `exchanged access token is not usable for ${tenantId}: claims match ` +
+        `${String(revalidated.credential_id === claims.credential_id)}, in-scope read returned ` +
+        `HTTP ${inScopeRead.status} (expected 200)`,
+    );
   }
 
   // 3. Scope denial, proved without creating anything: approving an unassigned
-  //    PaymentIntent id must be refused for lack of scope (403). A 404 would mean
-  //    core resolved the intent before authorizing, which leaves scope denial
-  //    unproven - we report that instead of falling back to a real payment.
+  //    PaymentIntent id must be refused FOR LACK OF SCOPE. A bare 403 is not
+  //    enough - a policy or tenant refusal is also a 403 and would prove nothing
+  //    about scope - so the reason has to name the scope failure. A 404 would mean
+  //    core resolved the intent before authorizing, leaving denial unproven; we
+  //    report that instead of falling back to a real payment.
   const denial = await fetchWithAgentAccessTokenRetry(
     `${brainConfig.baseUrl}/payment-intents/${encodeURIComponent(UNASSIGNED_PAYMENT_INTENT_ID)}/approve`,
     {
@@ -236,15 +314,26 @@ async function verifyLifecycle(
     },
     accessToken,
   );
-  const scopeDenialVerified = denial.status === 403;
+  const denialText = await denial.text();
+  let denialBody: unknown;
+  try {
+    denialBody = denialText ? JSON.parse(denialText) : {};
+  } catch {
+    denialBody = { raw: denialText };
+  }
+  const denialReason = denialReasonOf(denialBody) ?? "";
+  const scopeDenialVerified = denial.status === 403 && denialReason.toLowerCase().includes("scope");
   if (!scopeDenialVerified) {
     throw new Error(
-      `out-of-scope approval probe returned HTTP ${denial.status}, expected 403. ` +
+      `out-of-scope approval probe returned HTTP ${denial.status} reason ` +
+        `${denialReason.length > 0 ? denialReason : "(none)"}, expected 403 naming a scope failure. ` +
         `Scope denial is unproven for ${tenantId}; do not substitute a mutating probe.`,
     );
   }
 
   // 4. The issued key record itself is a live, unrevoked, correctly scoped BFF key.
+  //    `revoked_at` and `last_used_at` must be PRESENT: an omitted field is an
+  //    unknown, and an unknown revocation state is not an unrevoked key.
   const keys = await listAgentApiKeys(tenantId);
   const key = keys.keys.find((candidate) => candidate.id === claims.credential_id);
   const keyLifecycleVerified =
@@ -253,17 +342,19 @@ async function verifyLifecycle(
     key.agent_id === claims.sub &&
     key.tenant_id === tenantId &&
     key.environment === "live" &&
-    key.revoked_at == null &&
-    key.last_used_at != null &&
+    "revoked_at" in key &&
+    key.revoked_at === null &&
+    typeof key.last_used_at === "string" &&
     key.scopes.length === BFF_SERVICE_AGENT_SCOPES.length &&
     BFF_SERVICE_AGENT_SCOPES.every((scope) => key.scopes.includes(scope));
   if (!keyLifecycleVerified) {
     throw new Error("effective BFF agent API key profile does not match the required binding");
   }
 
-  // 5. The runtime row the app will actually read holds the migrated key.
+  // 5. The runtime row the app will actually read holds THIS key, not merely some
+  //    string that looks like an API key.
   const stored = await storage.getBrainAgentToken(tenantId);
-  const runtimeBindingVerified = stored !== undefined && isAgentApiKeyCredential(stored.token);
+  const runtimeBindingVerified = stored !== undefined && stored.token === agentApiKey;
   if (!runtimeBindingVerified) {
     throw new Error("runtime credential row does not contain the migrated agent API key");
   }
@@ -277,7 +368,9 @@ async function verifyLifecycle(
     audience: claims.aud,
     ttl_seconds: claims.exp - claims.iat,
     direct_key_status: direct.status,
+    in_scope_read_status: inScopeRead.status,
     out_of_scope_status: denial.status,
+    out_of_scope_reason: denialReason,
     scope_denial_probe_id: UNASSIGNED_PAYMENT_INTENT_ID,
     exchange_verified: exchangeVerified,
     scope_denial_verified: scopeDenialVerified,
@@ -294,7 +387,39 @@ function claimsToken(claims: AgentAccessTokenClaims): string {
   return token;
 }
 
-async function migrateTenant(tenantId: string): Promise<VerificationReceipt> {
+/**
+ * Restore the tenant's legacy JWT and revoke the key we just issued.
+ *
+ * If the rollback window has closed since the migration started, the legacy JWT is
+ * dead: putting it back would replace a possibly-working credential with a
+ * certainly-broken one. In that case the issued key stays in place, unrevoked, and
+ * the tenant is escalated for manual repair rather than silently left offline.
+ */
+async function rollbackTenant(
+  tenantId: string,
+  legacy: LegacyAgentClaims,
+  legacyToken: string,
+  legacyExpiresAt: Date,
+  issuedKeyId: string,
+): Promise<void> {
+  const closure = legacyRollbackWindowClosure(legacy, Date.now(), 0);
+  if (closure !== undefined) {
+    console.error(
+      `[brain-agent-migration] MANUAL REPAIR REQUIRED tenant_id=${tenantId} ` +
+        `credential_id=${issuedKeyId}: verification failed and rollback is impossible because ` +
+        `${closure}. The newly issued key was left in place and NOT revoked.`,
+    );
+    return;
+  }
+  await storage.upsertBrainAgentToken(tenantId, legacyToken, legacyExpiresAt);
+  await revokeAgentApiKey(issuedKeyId).catch(() => undefined);
+  console.error(
+    `[brain-agent-migration] rollback tenant_id=${tenantId} credential_id=${issuedKeyId}`,
+  );
+}
+
+/** Exported for the behavioural tests in agent-api-key-migration.test.ts. */
+export async function migrateTenant(tenantId: string): Promise<VerificationReceipt> {
   const row = await storage.getBrainAgentToken(tenantId);
   if (row === undefined) throw new Error(`tenant ${tenantId} has no stored BFF agent credential`);
 
@@ -312,39 +437,37 @@ async function migrateTenant(tenantId: string): Promise<VerificationReceipt> {
       legacy.sub,
       `phase3-bff-issue-${tenantId}-${BUILD_COMMIT.slice(0, 12)}`,
     );
-    if (
-      !isAgentApiKeyCredential(issued.api_key) ||
-      issued.tenant_id !== tenantId ||
-      issued.agent_id !== legacy.sub ||
-      issued.profile !== "bff_service_v1" ||
-      issued.environment !== "live"
-    ) {
-      throw new Error("agent API key issuance returned an invalid BFF binding");
-    }
-    agentApiKey = issued.api_key;
-    const expiry = new Date(issued.expires_at);
-    if (!Number.isFinite(expiry.getTime())) {
-      throw new Error("agent API key issuance returned an invalid expiry");
-    }
-    const exchanged = await getAgentAccessToken({
-      tenantId,
-      agentApiKey,
-      tokenUrl: brainConfig.agentTokenUrl,
-      resource: resourceUrl(),
-    });
-    if (exchanged.claims.sub !== legacy.sub || exchanged.claims.credential_id !== issued.id) {
-      throw new Error("exchanged access token does not match the issued BFF credential");
-    }
-    await storage.upsertBrainAgentToken(tenantId, agentApiKey, expiry);
-    tokenByCredentialId.set(exchanged.claims.credential_id, exchanged.token);
+    // From here on the key EXISTS upstream, so every failure path must clean it
+    // up - including the binding, expiry and exchange checks below.
     try {
+      if (
+        !isAgentApiKeyCredential(issued.api_key) ||
+        issued.tenant_id !== tenantId ||
+        issued.agent_id !== legacy.sub ||
+        issued.profile !== "bff_service_v1" ||
+        issued.environment !== "live"
+      ) {
+        throw new Error("agent API key issuance returned an invalid BFF binding");
+      }
+      agentApiKey = issued.api_key;
+      const expiry = new Date(issued.expires_at);
+      if (!Number.isFinite(expiry.getTime())) {
+        throw new Error("agent API key issuance returned an invalid expiry");
+      }
+      const exchanged = await getAgentAccessToken({
+        tenantId,
+        agentApiKey,
+        tokenUrl: brainConfig.agentTokenUrl,
+        resource: resourceUrl(),
+      });
+      if (exchanged.claims.sub !== legacy.sub || exchanged.claims.credential_id !== issued.id) {
+        throw new Error("exchanged access token does not match the issued BFF credential");
+      }
+      await storage.upsertBrainAgentToken(tenantId, agentApiKey, expiry);
+      tokenByCredentialId.set(exchanged.claims.credential_id, exchanged.token);
       return await verifyLifecycle(tenantId, agentApiKey, exchanged.claims);
     } catch (error) {
-      await storage.upsertBrainAgentToken(tenantId, row.token, row.expiresAt);
-      await revokeAgentApiKey(issued.id).catch(() => undefined);
-      console.error(
-        `[brain-agent-migration] rollback tenant_id=${tenantId} credential_id=${issued.id}`,
-      );
+      await rollbackTenant(tenantId, legacy, row.token, row.expiresAt, issued.id);
       throw error;
     }
   }
