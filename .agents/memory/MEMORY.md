@@ -117,3 +117,5 @@
 - [Duplicate-looking rows](duplicate-rows-can-be-two-records.md) — agents re-propose the same invoice each sweep; group on a record id, never dedupe; a fresh demo tenant is ~10 min short of the state.
 - [Deployment health and tenant preflight](deployment-health-and-identity-lookup.md) — `/health` exposes the build SHA; the authenticated internal lookup returns only whether a tenant mapping exists.
 - [Password reset session isolation](password-reset-session-isolation.md) — reset URLs are anonymous boundaries; durable per-user session generations revoke every prior target session after a reset.
+- [Credential migration verification](credential-migration-verification.md) — prove a denial without creating a record; a bare 403 names no mechanism, absent fields are not passing evidence, and source scans cannot witness a refusal.
+- [Classification gates](credential-migration-verification.md) — normalise to refuse, compare exactly to accept; upstream `null` is the common case and means unclassified, never safe.
