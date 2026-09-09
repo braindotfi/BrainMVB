@@ -162,3 +162,27 @@ user the complete file plus the direct editor link
 fragment to splice - a partial paste has already gone missing once. Everything
 NOT under `.github/workflows/` still pushes normally with the PAT, so a change
 that mixes workflow and non-workflow files should be split, not abandoned.
+
+## The git-over-HTTPS auth header must be Basic, not Bearer
+
+`git -c http.extraheader="AUTHORIZATION: bearer <PAT>"` fails with
+`remote: invalid credentials` even when that exact token returns 200 from
+`GET https://api.github.com/user`. The git transport authenticates as
+username+password, so it needs Basic:
+
+```
+B64=$(printf 'x-access-token:%s' "$PAT" | base64 -w0)
+git -c http.extraheader="Authorization: Basic $B64" push -u origin <branch>
+```
+
+**Why:** the REST API accepts bearer tokens and the git endpoint does not, so a
+perfectly valid credential looks revoked when it is sent the API's way. That
+sends you hunting for a permissions or expiry problem that does not exist — and
+if a *second* token in the environment happens to be genuinely expired, the two
+failures are indistinguishable from the error message alone.
+
+**How to apply:** before concluding a push credential is dead, probe it:
+`curl -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $T" https://api.github.com/user`.
+401 there means the token really is dead. 200 there, plus "invalid credentials"
+from git, means the header form is wrong. Observed 2026-09-09 with both cases
+live at once: one push token expired, the fine-grained PAT fine under Basic.
