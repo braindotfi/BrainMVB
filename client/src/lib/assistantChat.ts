@@ -23,6 +23,14 @@ export function allocateChatId(
   return id;
 }
 
+/** Remove exactly one persisted conversation without mutating the input list. */
+export function removeChatSession<T extends { id: string }>(
+  sessions: T[],
+  sessionId: string,
+): T[] {
+  return sessions.filter((session) => session.id !== sessionId);
+}
+
 /**
  * Maximum number of messages sent to the server per /api/assistant/chat request.
  * The server's Zod schema caps the array at 50; we trim to 40 to stay comfortably
