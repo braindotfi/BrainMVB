@@ -10,6 +10,7 @@ import {
 const authSource = readFileSync(new URL("./agentApiKey.ts", import.meta.url), "utf8");
 const migrationSource = readFileSync(new URL("./agentApiKeyMigration.ts", import.meta.url), "utf8");
 const indexSource = readFileSync(new URL("../index.ts", import.meta.url), "utf8");
+const tenancySource = readFileSync(new URL("./tenancy.ts", import.meta.url), "utf8");
 
 describe("Phase 3 BFF migration structure", () => {
   it("limits each reviewed production batch to five unique tenant ids", () => {
@@ -84,11 +85,16 @@ describe("Phase 3 BFF migration structure", () => {
       "listAuditEvents",
       "payment_intent.created",
       "scenario",
+      // The all-zero-intent approve probe was still a POST to a mutation route.
+      "UNASSIGNED_PAYMENT_INTENT_ID",
+      "pi_00000000000000000000000000",
+      "/approve",
     ]) {
       expect(migrationSource).not.toContain(mutatingCall);
     }
-    expect(migrationSource).toContain("UNASSIGNED_PAYMENT_INTENT_ID");
-    expect(migrationSource).toContain('"pi_00000000000000000000000000"');
+    expect(migrationSource).toContain('"/authz/probes/payment-intent-approve"');
+    // A 204 from the probe means the credential HOLDS the scope; it is a failure.
+    expect(migrationSource).toContain("denial.status === 204");
   });
 
   it("reports each verification result as an observation, never a constant", () => {
@@ -108,8 +114,13 @@ describe("Phase 3 BFF migration structure", () => {
   it("fails closed when brain-core cannot confirm a tenant is not demo-seeded", () => {
     expect(migrationSource).toContain("await assertTenantIsNotDemoSeeded(tenantId)");
     expect(migrationSource).toContain("getTenantProvenance");
-    // Unknown must be a refusal, not a pass.
-    expect(migrationSource).toContain('typeof provenance.demo_seed !== "boolean"');
+    // Authority is the provenance endpoint, not the bearer-auth tenant read.
+    expect(tenancySource).toContain("/provenance`");
+    // Unknown must be a refusal, not a pass. Null is the live unknown: production
+    // returns null classification for every pre-classification tenant.
+    expect(migrationSource).toContain('provenance.kind !== "production"');
+    expect(migrationSource).toContain('typeof provenance.data_profile !== "string"');
+    expect(migrationSource).toContain("PRODUCTION_ACCESS_STAGES.has(provenance.access_stage)");
     expect(migrationSource).toContain("provenance.demo_seed");
     // The gate runs before any credential is issued.
     expect(migrationSource.indexOf("await assertTenantIsNotDemoSeeded(tenantId)")).toBeLessThan(

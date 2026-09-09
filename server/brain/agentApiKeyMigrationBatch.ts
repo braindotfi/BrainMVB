@@ -7,16 +7,28 @@ export const PROTECTED_AGENT_API_KEY_MIGRATION_TENANT_IDS: readonly string[] = [
 ];
 
 /**
- * Hard deadline for revoking the legacy agent JWTs that back the migration's
- * rollback path (2026-09-16T23:59:59Z).
+ * The instant the legacy agent JWTs backing this migration's rollback path stop
+ * working (2026-09-16T23:59:59Z).
  *
- * Enforcement is split and neither half is optional:
- *  - brain-core revokes the legacy agent JWTs at this instant. That revocation
- *    is the only thing that actually invalidates them; nothing in this BFF can.
- *  - this BFF refuses to START a migration that would depend on a legacy-JWT
- *    rollback at or after the deadline (see assertLegacyRollbackWindowOpen).
- *    Past the deadline a rollback would restore a credential brain-core has
- *    revoked, so the migration has no recovery path and must not run.
+ * This mirrors brain-core's `LEGACY_AGENT_JWT_NOT_AFTER`, which is enforced in
+ * production. It is not a date this repo chose or can move. At and after that
+ * boundary brain-core:
+ *  - rejects any agent JWT that carries no `credential_id` - which is every
+ *    legacy agent JWT, since `credential_id` is what the exchange-only API keys
+ *    introduced; and
+ *  - answers 410 Gone on POST /v1/tenants/{id}/agent-token, so a fresh legacy
+ *    JWT cannot be minted either.
+ *
+ * Both halves matter to rollback. Restoring a legacy JWT past the boundary hands
+ * the tenant a credential brain-core will reject, and re-minting is not a way
+ * out. So this BFF refuses to START a migration whose rollback would fall at or
+ * after the boundary (assertLegacyRollbackWindowOpen), and rollback re-checks it
+ * rather than trusting that pre-flight decision.
+ *
+ * Note for anyone reading this after the boundary: the same enforcement retires
+ * the agent-token mint that server/brain/auth.ts uses as a backfill. That path
+ * will start returning 410 and needs its own follow-up; it is not part of this
+ * migration.
  *
  * See docs/ops/phase3-bff-agent-key-migration.md.
  */

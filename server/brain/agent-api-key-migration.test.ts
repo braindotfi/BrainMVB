@@ -43,6 +43,8 @@ const TENANT = "tnt_01M1MDWXR5K5NBQYF089D4ZKAA";
 const AGENT = "agent_01M1MDWXR5K5NBQYF089D4ZKAA";
 const RESOURCE = "https://api.brain.fi/";
 const NEW_KEY = "brain_ak_live_phase3testkey";
+/** brain-core's side-effect-free authorization probe. */
+const PROBE_PATH = "/authz/probes/payment-intent-approve";
 
 let exchangeMock: (...args: unknown[]) => unknown;
 /** Every HTTP request the verifier makes, so a test can assert it mutated nothing. */
@@ -82,15 +84,34 @@ function accessToken(credentialId: string): string {
   });
 }
 
-/** A brain-core provenance record for an ordinary production tenant. */
+/**
+ * A brain-core provenance record for an ordinary production tenant, in the shape
+ * GET /tenants/{id}/provenance actually returns - which does NOT include
+ * demo_seed.
+ */
 function goodProvenance(overrides: Record<string, unknown> = {}) {
   return {
     tenant_id: TENANT,
     kind: "production",
-    demo_seed: false,
+    provisioning_state: "ready",
     data_profile: "customer",
-    access_stage: "live",
+    access_stage: "production",
     ...overrides,
+  };
+}
+
+/**
+ * The record production returns for Northstar today, copied from a live read on
+ * 2026-09-09. Classification never happened for this tenant, so all three fields
+ * are null.
+ */
+function northstarProvenance() {
+  return {
+    tenant_id: TENANT,
+    kind: "production",
+    provisioning_state: null,
+    data_profile: null,
+    access_stage: null,
   };
 }
 
@@ -155,10 +176,16 @@ function wireHappyPath(wiring: Wiring = {}): void {
         // The raw API key is exchange-only, so brain-core rejects it as a bearer.
         return new Response("{}", { status: wiring.directStatus ?? 401 });
       }
-      if (url.includes("/payment-intents/")) {
-        return new Response(JSON.stringify(wiring.denialBody ?? { reason: "insufficient_scope" }), {
-          status: wiring.denialStatus ?? 403,
-        });
+      if (url.includes(PROBE_PATH)) {
+        const status = wiring.denialStatus ?? 403;
+        return status === 204
+          ? new Response(null, { status })
+          : new Response(
+              JSON.stringify(
+                wiring.denialBody ?? { error: { code: "auth_scope_insufficient" } },
+              ),
+              { status },
+            );
       }
       return new Response("{}", { status: wiring.inScopeReadStatus ?? 200 });
     }),
@@ -208,25 +235,78 @@ describe("migrateTenant refuses before issuing a credential", () => {
     expectNoKeyIssued();
   });
 
-  it("refuses when provenance omits demo_seed", async () => {
-    wireHappyPath();
-    const { demo_seed: _omitted, ...withoutFlag } = goodProvenance();
-    tenancy.getTenantProvenance.mockResolvedValue(withoutFlag);
-    await expect(migrateTenant(TENANT)).rejects.toThrow(/no demo_seed flag/);
-    expectNoKeyIssued();
-  });
-
-  it("refuses when demo_seed is not a boolean", async () => {
-    wireHappyPath();
-    tenancy.getTenantProvenance.mockResolvedValue(goodProvenance({ demo_seed: "false" }));
-    await expect(migrateTenant(TENANT)).rejects.toThrow(/no demo_seed flag/);
-    expectNoKeyIssued();
-  });
-
+  // The live provenance contract does not publish demo_seed, so it cannot be
+  // required - but a record that still carries it must still be honoured, and
+  // anything other than an explicit false is an unknown.
   it("refuses a demo-seeded tenant", async () => {
     wireHappyPath();
     tenancy.getTenantProvenance.mockResolvedValue(goodProvenance({ demo_seed: true }));
     await expect(migrateTenant(TENANT)).rejects.toThrow(/demo_seed:true/);
+    expectNoKeyIssued();
+  });
+
+  it("refuses a non-boolean demo_seed rather than reading it as false", async () => {
+    wireHappyPath();
+    tenancy.getTenantProvenance.mockResolvedValue(goodProvenance({ demo_seed: "false" }));
+    await expect(migrateTenant(TENANT)).rejects.toThrow(/demo_seed/);
+    expectNoKeyIssued();
+  });
+
+  // The case that decides Northstar: production returns all-null classification
+  // for tenants provisioned before it existed. Null is "nobody classified this",
+  // not "confirmed safe", so it must be held.
+  it("refuses an all-null provenance record instead of treating null as passing", async () => {
+    wireHappyPath();
+    tenancy.getTenantProvenance.mockResolvedValue(northstarProvenance());
+    await expect(migrateTenant(TENANT)).rejects.toThrow(
+      /data_profile=null \(unclassified\).*Refusing to migrate/s,
+    );
+    expectNoKeyIssued();
+  });
+
+  it("refuses a null access_stage even when data_profile is classified", async () => {
+    wireHappyPath();
+    tenancy.getTenantProvenance.mockResolvedValue(goodProvenance({ access_stage: null }));
+    await expect(migrateTenant(TENANT)).rejects.toThrow(/access_stage=null \(unclassified\)/);
+    expectNoKeyIssued();
+  });
+
+  it("refuses a tenant brain-core classifies as kind=demo", async () => {
+    wireHappyPath();
+    tenancy.getTenantProvenance.mockResolvedValue(goodProvenance({ kind: "demo" }));
+    await expect(migrateTenant(TENANT)).rejects.toThrow(/kind=demo, not production/);
+    expectNoKeyIssued();
+  });
+
+  it("refuses a tenant with no kind at all", async () => {
+    wireHappyPath();
+    tenancy.getTenantProvenance.mockResolvedValue(goodProvenance({ kind: null }));
+    await expect(migrateTenant(TENANT)).rejects.toThrow(/kind=null \(unclassified\)/);
+    expectNoKeyIssued();
+  });
+
+  it("refuses a tenant provisioned down the demo path", async () => {
+    wireHappyPath();
+    tenancy.getTenantProvenance.mockResolvedValue(
+      goodProvenance({ provisioning_state: "ready_demo" }),
+    );
+    await expect(migrateTenant(TENANT)).rejects.toThrow(/provisioning_state=ready_demo/);
+    expectNoKeyIssued();
+  });
+
+  it("refuses an access_stage nobody has defined as production", async () => {
+    wireHappyPath();
+    tenancy.getTenantProvenance.mockResolvedValue(goodProvenance({ access_stage: "pilot" }));
+    await expect(migrateTenant(TENANT)).rejects.toThrow(
+      /access_stage=pilot, which is not a recognised production stage/,
+    );
+    expectNoKeyIssued();
+  });
+
+  it("refuses access_stage=demo", async () => {
+    wireHappyPath();
+    tenancy.getTenantProvenance.mockResolvedValue(goodProvenance({ access_stage: "demo" }));
+    await expect(migrateTenant(TENANT)).rejects.toThrow(/access_stage=demo/);
     expectNoKeyIssued();
   });
 
@@ -243,21 +323,21 @@ describe("migrateTenant refuses before issuing a credential", () => {
     wireHappyPath();
     const { data_profile: _omitted, ...withoutProfile } = goodProvenance();
     tenancy.getTenantProvenance.mockResolvedValue(withoutProfile);
-    await expect(migrateTenant(TENANT)).rejects.toThrow(/no usable data_profile/);
+    await expect(migrateTenant(TENANT)).rejects.toThrow(/data_profile=absent/);
     expectNoKeyIssued();
   });
 
   it("refuses a malformed data_profile, because malformed is as unknown as absent", async () => {
     wireHappyPath();
     tenancy.getTenantProvenance.mockResolvedValue(goodProvenance({ data_profile: 7 }));
-    await expect(migrateTenant(TENANT)).rejects.toThrow(/no usable data_profile/);
+    await expect(migrateTenant(TENANT)).rejects.toThrow(/data_profile=number \(malformed\)/);
     expectNoKeyIssued();
   });
 
   it("refuses an empty data_profile", async () => {
     wireHappyPath();
     tenancy.getTenantProvenance.mockResolvedValue(goodProvenance({ data_profile: "" }));
-    await expect(migrateTenant(TENANT)).rejects.toThrow(/no usable data_profile/);
+    await expect(migrateTenant(TENANT)).rejects.toThrow(/data_profile="" \(empty\)/);
     expectNoKeyIssued();
   });
 
@@ -274,7 +354,7 @@ describe("migrateTenant refuses before issuing a credential", () => {
     wireHappyPath();
     const { access_stage: _omitted, ...withoutStage } = goodProvenance();
     tenancy.getTenantProvenance.mockResolvedValue(withoutStage);
-    await expect(migrateTenant(TENANT)).rejects.toThrow(/no access_stage/);
+    await expect(migrateTenant(TENANT)).rejects.toThrow(/access_stage=absent/);
     expectNoKeyIssued();
   });
 
@@ -329,7 +409,25 @@ describe("migrateTenant refuses on unproven verification evidence", () => {
 
   it("rejects a 404 on the denial probe rather than falling back to a mutating probe", async () => {
     wireHappyPath({ denialStatus: 404, denialBody: { reason: "not_found" } });
-    await expect(migrateTenant(TENANT)).rejects.toThrow(/Scope denial is unproven/);
+    await expect(migrateTenant(TENANT)).rejects.toThrow(
+      /probe surface is not deployed here.*Scope denial is unproven/s,
+    );
+  });
+
+  // 204 is the probe's "yes, you hold this scope" answer. For a BFF service key
+  // that is the worst possible result, so it must never be read as a pass.
+  it("rejects a 204 from the probe, because it means the key CAN approve payments", async () => {
+    wireHappyPath({ denialStatus: 204 });
+    await expect(migrateTenant(TENANT)).rejects.toThrow(
+      /HOLDS payment-intent approval scope/,
+    );
+  });
+
+  it("accepts the probe's documented insufficient-scope code", async () => {
+    wireHappyPath({ denialBody: { error: { code: "auth_scope_insufficient" } } });
+    const receipt = await migrateTenant(TENANT);
+    expect(receipt.out_of_scope_reason).toBe("auth_scope_insufficient");
+    expect(receipt.scope_denial_verified).toBe(true);
   });
 
   it("rejects an access token the resource server will not accept", async () => {
@@ -533,7 +631,7 @@ describe("migrateTenant cleans up after itself", () => {
       expiresAt: new Date(Date.now() + 30 * 24 * 3600 * 1000),
     });
     onRequest = (_method, url) => {
-      if (url.includes("/payment-intents/")) {
+      if (url.includes(PROBE_PATH)) {
         vi.setSystemTime(LEGACY_ROLLBACK_JWT_REVOCATION_DEADLINE_MS + 1000);
       }
     };
@@ -555,8 +653,8 @@ describe("migrateTenant receipt", () => {
       direct_key_status: 401,
       in_scope_read_status: 200,
       out_of_scope_status: 403,
-      out_of_scope_reason: "insufficient_scope",
-      scope_denial_probe_id: "pi_00000000000000000000000000",
+      out_of_scope_reason: "auth_scope_insufficient",
+      scope_denial_probe: `GET ${PROBE_PATH}`,
       exchange_verified: true,
       scope_denial_verified: true,
       key_lifecycle_verified: true,
@@ -572,18 +670,16 @@ describe("migrateTenant receipt", () => {
     expect(tenancy.listAgentApiKeys).toHaveBeenCalledTimes(1);
     expect(tenancy.getTenantProvenance).toHaveBeenCalledTimes(1);
     expect(storage.upsertBrainAgentToken).toHaveBeenCalledTimes(1);
-    // Full request inventory, not a spot check: the ONLY write the verifier is
-    // allowed to make is the approve probe against the unassigned intent id, and
-    // that one is expected to be refused. Any mutating call added later shows up
-    // here as an extra non-GET entry. (This covers direct fetches only; the
-    // brain-core service helpers above are mocked and counted separately.)
+    // Full request inventory, not a spot check: every request the verifier makes
+    // is a GET, so there is no request in this list that could change anything.
+    // A mutating call added later shows up here as a non-GET entry. (This covers
+    // direct fetches only; the brain-core service helpers above are mocked and
+    // counted separately.)
     expect(requests).toEqual([
       { method: "GET", url: "https://api.brain.fi/v1/ledger/accounts" },
       { method: "GET", url: "https://api.brain.fi/v1/ledger/accounts" },
-      {
-        method: "POST",
-        url: "https://api.brain.fi/v1/payment-intents/pi_00000000000000000000000000/approve",
-      },
+      { method: "GET", url: `https://api.brain.fi/v1${PROBE_PATH}` },
     ]);
+    expect(requests.every((request) => request.method === "GET")).toBe(true);
   });
 });

@@ -41,11 +41,13 @@ interface LegacyAgentClaims {
  * Absent evidence is never read as passing evidence - an omitted `revoked_at` or
  * an unrecognised denial reason fails the check.
  *
- * The whole verification is READ-ONLY. It creates no PaymentIntent, writes no
- * ledger data, and leaves no policy or audit evidence behind, so a failed
- * verification needs no cleanup and a successful one changes nothing but the
- * stored credential. The earlier revision proved scope denial by proposing a real
- * payment against a real invoice; that evidence could not be removed afterwards.
+ * Every request the verification makes is a GET. It creates no PaymentIntent,
+ * writes no ledger data, and leaves no policy or audit evidence behind, so a
+ * failed verification needs no cleanup and a successful one changes nothing but
+ * the stored credential. The first revision proved scope denial by proposing a
+ * real payment against a real invoice; that evidence could not be removed
+ * afterwards. The second approved an all-zero PaymentIntent id, which was a write
+ * that happened to resolve to nothing. Both are gone.
  */
 interface VerificationReceipt {
   tenant_id: string;
@@ -59,12 +61,12 @@ interface VerificationReceipt {
   direct_key_status: number;
   /** HTTP status of an in-scope read with the exchanged access token (must be 200). */
   in_scope_read_status: number;
-  /** HTTP status of the out-of-scope approve probe (must be 403). */
+  /** HTTP status of the out-of-scope authorization probe (must be 403, never 204). */
   out_of_scope_status: number;
   /** The denial reason brain-core gave, which must name a scope failure. */
   out_of_scope_reason: string;
-  /** The unassigned PaymentIntent id the denial probe targeted. */
-  scope_denial_probe_id: string;
+  /** The authorization probe the denial was observed against. */
+  scope_denial_probe: string;
   exchange_verified: boolean;
   scope_denial_verified: boolean;
   key_lifecycle_verified: boolean;
@@ -72,17 +74,21 @@ interface VerificationReceipt {
 }
 
 /**
- * An all-zero ULID. Syntactically valid, so brain-core routes and authorizes the
- * request normally, but it is not an id brain-core hands out for a real
- * PaymentIntent.
+ * brain-core's dedicated authorization probe: it answers whether the calling
+ * credential could approve a PaymentIntent, WITHOUT calling the payment-intent
+ * domain service and without touching a real intent.
  *
- * This makes the probe safe in practice, NOT by contract: brain-core has not
- * committed to a reserved id space, nor to authorizing before resolving. The
- * verifier therefore also requires an explicit scope denial reason (below), and
- * the runbook tracks "guaranteed side-effect-free authorization surface" as an
- * open upstream ask. Until it lands, treat the probe as unproven, not as safe.
+ *   403 + auth_scope_insufficient -> the credential lacks the scope (what a
+ *                                    correctly bound BFF key must return)
+ *   204 No Content                -> the credential HOLDS the scope, which for a
+ *                                    BFF key is a failure, not a pass
+ *
+ * This replaces the previous probe, which approved an all-zero PaymentIntent id:
+ * safe only because that id resolves to nothing, and only for as long as
+ * brain-core authorized before resolving. A GET against a purpose-built probe
+ * needs neither assumption.
  */
-const UNASSIGNED_PAYMENT_INTENT_ID = "pi_00000000000000000000000000";
+const SCOPE_DENIAL_PROBE_PATH = "/authz/probes/payment-intent-approve";
 
 /**
  * Denial reasons that mean "this credential lacks the required SCOPE".
@@ -93,11 +99,13 @@ const UNASSIGNED_PAYMENT_INTENT_ID = "pi_00000000000000000000000000";
  * a reason brain-core adds later surfaces as a verification failure to
  * investigate rather than as silent acceptance.
  *
- * UNCONFIRMED CONTRACT: brain-core has not published its reason codes. This set is
- * observed, not documented; confirming it is part of the same upstream ask as the
- * side-effect-free probe surface.
+ * `auth_scope_insufficient` is the code brain-core documents for the probe surface
+ * and matches its live error-code style (`auth_token_missing`,
+ * `auth_token_invalid`). The rest are retained so a differently-worded denial from
+ * an older deployment is still read as a scope denial rather than as a mystery.
  */
 const SCOPE_DENIAL_REASONS = new Set([
+  "auth_scope_insufficient",
   "insufficient_scope",
   "missing_scope",
   "scope_denied",
@@ -107,6 +115,40 @@ const SCOPE_DENIAL_REASONS = new Set([
 
 /** data_profile values that mark a tenant's data as fixture-generated. */
 const SYNTHETIC_DATA_PROFILE_PREFIX = "synthetic";
+
+/**
+ * Additional data_profile values that are not production data.
+ *
+ * A denylist here, unlike access_stage below, because the production side of this
+ * field is open-ended: brain-core reports things like "synthetic_brightline_v1",
+ * and there is no published set of real-customer profiles to allowlist against. A
+ * profile that is neither empty nor recognised as fixture data therefore passes
+ * this check, so the operator adding a tenant to the manifest must read the
+ * logged provenance record rather than rely on the gate alone.
+ */
+const NON_PRODUCTION_DATA_PROFILES = new Set(["demo", "fixture", "sample", "seed", "test"]);
+
+/** provisioning_state values that mean the tenant came up a demo. */
+const DEMO_PROVISIONING_STATES = new Set(["ready_demo", "provisioning_demo", "demo"]);
+
+/**
+ * access_stage values that mean "a real production tenant".
+ *
+ * UNCONFIRMED CONTRACT: brain-core has not published this vocabulary. The only
+ * value observed live is "demo". Allowlisting one value is deliberately strict -
+ * it holds a tenant back rather than clearing one on a stage nobody has defined -
+ * and the refusal prints what was actually returned so the set can be widened on
+ * evidence.
+ */
+const PRODUCTION_ACCESS_STAGES = new Set(["production"]);
+
+/** Render a provenance value for an operator: null and undefined must not read alike. */
+function describeProvenanceValue(value: unknown): string {
+  if (value === null) return "null (unclassified)";
+  if (value === undefined) return "absent";
+  if (typeof value === "string") return value.length === 0 ? '"" (empty)' : value;
+  return `${typeof value} (malformed)`;
+}
 
 /**
  * A legacy-JWT migration must have a usable rollback for its whole duration, not
@@ -181,13 +223,19 @@ function denialReasonOf(body: unknown): string | undefined {
 }
 
 /**
- * Refuse to issue a production BFF credential for a demo or fixture-seeded tenant.
+ * Refuse to issue a production BFF credential for a demo, fixture-seeded, or
+ * UNCLASSIFIED tenant.
  *
  * Authority is brain-core's own provenance record, never a local id allowlist: a
  * hardcoded exclusion list only knows the demo tenants somebody remembered. Every
  * unknown answer - read unavailable, response about a different tenant, field
- * absent, field the wrong type - is a refusal, because "we could not tell" and
- * "it is a real tenant" must never produce the same outcome.
+ * absent, field null, field the wrong type - is a refusal, because "we could not
+ * tell" and "it is a real tenant" must never produce the same outcome.
+ *
+ * Null is the important case, not a corner case. Production returns
+ * `data_profile: null, access_stage: null` for every tenant provisioned before
+ * classification existed, including real customer tenants. That is unclassified
+ * legacy data: nobody has established what is in it. It is held, not cleared.
  */
 async function assertTenantIsNotDemoSeeded(tenantId: string): Promise<void> {
   let provenance: TenantProvenanceShape;
@@ -210,37 +258,63 @@ async function assertTenantIsNotDemoSeeded(tenantId: string): Promise<void> {
         `refusing to migrate`,
     );
   }
-  if (typeof provenance.demo_seed !== "boolean") {
+  // demo_seed is absent from the live provenance contract, so it cannot be
+  // REQUIRED - requiring it would refuse every tenant for a reason that is no
+  // longer true. A record that still carries it true is still a refusal.
+  if (provenance.demo_seed !== undefined && provenance.demo_seed !== false) {
     throw new Error(
-      `brain-core provenance for ${tenantId} carries no demo_seed flag, so demo status is unknown. ` +
-        `Refusing to migrate.`,
+      provenance.demo_seed === true
+        ? `tenant ${tenantId} was created with demo_seed:true and must not be migrated`
+        : `brain-core provenance for ${tenantId} reports demo_seed=` +
+          `${describeProvenanceValue(provenance.demo_seed)}, which is not an explicit false. ` +
+          `Refusing to migrate.`,
     );
   }
-  if (provenance.demo_seed) {
-    throw new Error(`tenant ${tenantId} was created with demo_seed:true and must not be migrated`);
+  if (provenance.kind !== "production") {
+    throw new Error(
+      `brain-core classifies tenant ${tenantId} as kind=${describeProvenanceValue(provenance.kind)}, ` +
+        `not production. Refusing to migrate.`,
+    );
   }
-  // Absent is unknown. Only an explicitly reported profile/stage can clear a tenant.
-  // Malformed is as unknown as absent: a number, an object or "" tells us nothing
-  // about whether the data is synthetic, so neither may clear the tenant.
+  if (
+    typeof provenance.provisioning_state === "string" &&
+    DEMO_PROVISIONING_STATES.has(provenance.provisioning_state)
+  ) {
+    throw new Error(
+      `tenant ${tenantId} is in provisioning_state=${provenance.provisioning_state}, which is a ` +
+        `demo provisioning path, and must not be migrated`,
+    );
+  }
+  // Null, absent, malformed and "" are one answer: nobody has classified this
+  // tenant's data, so synthetic content cannot be ruled out.
   if (typeof provenance.data_profile !== "string" || provenance.data_profile.length === 0) {
     throw new Error(
-      `brain-core provenance for ${tenantId} reports no usable data_profile, so synthetic data ` +
-        `cannot be ruled out. Refusing to migrate.`,
+      `brain-core provenance for ${tenantId} reports data_profile=` +
+        `${describeProvenanceValue(provenance.data_profile)}, so its data is unclassified and ` +
+        `synthetic content cannot be ruled out. Refusing to migrate.`,
     );
   }
-  if (provenance.data_profile.startsWith(SYNTHETIC_DATA_PROFILE_PREFIX)) {
+  if (
+    provenance.data_profile.startsWith(SYNTHETIC_DATA_PROFILE_PREFIX) ||
+    NON_PRODUCTION_DATA_PROFILES.has(provenance.data_profile)
+  ) {
     throw new Error(
       `tenant ${tenantId} carries synthetic data profile ${provenance.data_profile} and must not be migrated`,
     );
   }
-  if (typeof provenance.access_stage !== "string" || provenance.access_stage.length === 0) {
+  // access_stage is checked against an allowlist rather than a demo denylist: its
+  // values are enumerable, and an unrecognised one is an unknown. Refusing prints
+  // the observed value, so a stage brain-core adds later surfaces as something to
+  // widen deliberately instead of passing unnoticed.
+  if (
+    typeof provenance.access_stage !== "string" ||
+    !PRODUCTION_ACCESS_STAGES.has(provenance.access_stage)
+  ) {
     throw new Error(
-      `brain-core provenance for ${tenantId} reports no access_stage, so demo access cannot be ` +
-        `ruled out. Refusing to migrate.`,
+      `brain-core provenance for ${tenantId} reports access_stage=` +
+        `${describeProvenanceValue(provenance.access_stage)}, which is not a recognised production ` +
+        `stage (${[...PRODUCTION_ACCESS_STAGES].join(", ")}). Refusing to migrate.`,
     );
-  }
-  if (provenance.access_stage === "demo") {
-    throw new Error(`tenant ${tenantId} is at access_stage=demo and must not be migrated`);
   }
 }
 
@@ -329,16 +403,18 @@ async function verifyLifecycle(
     );
   }
 
-  // 3. Scope denial, proved without creating anything: approving an unassigned
-  //    PaymentIntent id must be refused FOR LACK OF SCOPE. A bare 403 is not
-  //    enough - a policy or tenant refusal is also a 403 and would prove nothing
-  //    about scope - so the reason has to name the scope failure. A 404 would mean
-  //    core resolved the intent before authorizing, leaving denial unproven; we
-  //    report that instead of falling back to a real payment.
-  const denial = await authed(
-    `/payment-intents/${encodeURIComponent(UNASSIGNED_PAYMENT_INTENT_ID)}/approve`,
-    { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" },
-  );
+  // 3. Scope denial, against brain-core's own authorization probe. The probe is a
+  //    GET and reaches no domain service, so nothing can be created whatever the
+  //    answer is. A bare 403 is still not enough - a policy or tenant refusal is
+  //    also a 403 and would prove nothing about scope - so the reason has to name
+  //    the scope failure.
+  //
+  //    204 is the probe's "you hold this scope" answer. For a BFF service key that
+  //    is a hard failure, not a pass: the credential can approve payments.
+  const denial = await authed(SCOPE_DENIAL_PROBE_PATH, {
+    method: "GET",
+    headers: { Accept: "application/json" },
+  });
   const denialText = await denial.text();
   let denialBody: unknown;
   try {
@@ -347,14 +423,22 @@ async function verifyLifecycle(
     denialBody = { raw: denialText };
   }
   const denialReason = denialReasonOf(denialBody) ?? "";
+  if (denial.status === 204) {
+    throw new Error(
+      `authorization probe ${SCOPE_DENIAL_PROBE_PATH} returned 204 for ${tenantId}: the migrated ` +
+        `credential HOLDS payment-intent approval scope. Revoke it - a BFF service key must not ` +
+        `be able to approve payments.`,
+    );
+  }
   const scopeDenialVerified =
     denial.status === 403 && SCOPE_DENIAL_REASONS.has(denialReason.trim().toLowerCase());
   if (!scopeDenialVerified) {
     throw new Error(
-      `out-of-scope approval probe returned HTTP ${denial.status} reason ` +
+      `authorization probe ${SCOPE_DENIAL_PROBE_PATH} returned HTTP ${denial.status} reason ` +
         `${denialReason.length > 0 ? denialReason : "(none)"}, expected 403 with a recognised ` +
-        `insufficient-scope reason (${[...SCOPE_DENIAL_REASONS].join(", ")}). Scope denial is ` +
-        `unproven for ${tenantId}; do not substitute a mutating probe.`,
+        `insufficient-scope reason (${[...SCOPE_DENIAL_REASONS].join(", ")})` +
+        `${denial.status === 404 ? " - a 404 means the probe surface is not deployed here" : ""}. ` +
+        `Scope denial is unproven for ${tenantId}; do not substitute a mutating probe.`,
     );
   }
 
@@ -401,7 +485,7 @@ async function verifyLifecycle(
     in_scope_read_status: inScopeRead.status,
     out_of_scope_status: denial.status,
     out_of_scope_reason: denialReason,
-    scope_denial_probe_id: UNASSIGNED_PAYMENT_INTENT_ID,
+    scope_denial_probe: `GET ${SCOPE_DENIAL_PROBE_PATH}`,
     exchange_verified: exchangeVerified,
     scope_denial_verified: scopeDenialVerified,
     key_lifecycle_verified: keyLifecycleVerified,

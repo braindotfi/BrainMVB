@@ -12,15 +12,17 @@ Code: `server/brain/agentApiKeyMigration.ts`, manifest and constants in
 ## Current state
 
 **Batch 1 is empty. Nothing migrates on boot.** The manifest ships empty on
-purpose; `migrateConfiguredAgentApiKeyBatch()` returns immediately. Three upstream
-answers (below) are required before any tenant can be added.
+purpose; `migrateConfiguredAgentApiKeyBatch()` returns immediately. The three
+brain-core prerequisites are now live and wired (provenance endpoint,
+side-effect-free authorization probe, enforced legacy-JWT boundary), but no
+tenant currently clears the gate — see [Batch composition](#batch-composition--read-live-2026-09-09).
 
 ## Verification makes no writes it expects to succeed
 
-The verifier proves four things. Its only non-GET call is a POST it expects to be
-*refused* (see the denial-probe caveat below — that POST is safe by convention, not
-by contract); everything else it does is a read, including the `listAgentApiKeys`
-lookup. No successful write is part of verification.
+The verifier proves four things, and **every request it makes is a GET**. Scope
+denial is proved against brain-core's own authorization probe rather than by
+attempting a write, so there is no request in the sequence that could change
+anything whatever the answer is.
 
 `agent-api-key-migration.test.ts` pins this two ways, because neither alone is
 enough: it asserts the complete inventory of direct HTTP requests, and separately
@@ -31,7 +33,7 @@ changing a single recorded request.
 | Receipt field | What is actually observed |
 | --- | --- |
 | `exchange_verified` | The raw key returns 401 when used directly as a bearer token; the exchanged access token re-validates against the expected tenant, audience, subject, scope set, credential id, and lifetime; **and** an in-scope `GET /ledger/accounts` with it returns 200. Re-decoding a token only proves what it says about itself, so the read has to succeed too. |
-| `scope_denial_verified` | `POST /payment-intents/pi_0000…/approve` (an all-zero, unassigned ULID) returns 403 **and the reason is one of a known allowlist of insufficient-scope codes**. A bare 403 is not enough — a policy or tenant refusal is also a 403 — and a substring match is not enough either, since `tenant_scope_denied` contains "scope" while proving nothing about the credential's scopes. An unrecognised reason fails the check and is printed. |
+| `scope_denial_verified` | `GET /authz/probes/payment-intent-approve` returns 403 **and the reason is one of a known allowlist of insufficient-scope codes**, `auth_scope_insufficient` among them. A `204 No Content` is the probe's "you hold this scope" answer and is a hard failure here, not a pass: it means the migrated BFF key can approve payments. A bare 403 is not enough — a policy or tenant refusal is also a 403 — and a substring match is not enough either, since `tenant_scope_denied` contains "scope" while proving nothing about the credential's scopes. An unrecognised reason fails the check and is printed. |
 | `key_lifecycle_verified` | brain-core's own agent-key record is `bff_service_v1`, `live`, bound to the same agent and tenant, carries exactly the BFF scope set, reports `revoked_at` **present and null**, an `expires_at` in the future, and a `last_used_at` that parses as a timestamp. An omitted `revoked_at` is an unknown, and an unknown revocation state is not an unrevoked key; `""` is not a timestamp. |
 | `runtime_binding_verified` | The stored runtime credential row the app reads holds **this exact key**, not merely a string shaped like one. |
 
@@ -40,25 +42,30 @@ does not hold — a receipt exists only for a tenant where all four were observe
 `server/brain/agent-api-key-migration.test.ts` drives each refusal against mocked
 brain-core; every guard there has been checked to fail when its guard is removed.
 
-**Why the denial probe targets a nonexistent intent.** The earlier revision proved
-denial by selecting a real payable invoice and proposing a real payment against it.
-That works, but it creates a PaymentIntent, a policy decision, and audit evidence in
-a production tenant, and there is no delete path for any of it — reject or cancel
-still leaves the record. An unassigned intent id is routed and authorized normally
-but addresses nothing, so the request cannot mutate state whatever the answer is.
+**How the denial probe got here.** Two earlier revisions are worth knowing about,
+because both looked safe. The first selected a real payable invoice and proposed a
+real payment against it — that creates a PaymentIntent, a policy decision and audit
+evidence in a production tenant, and there is no delete path for any of it. The
+second approved an all-zero, unassigned PaymentIntent id: still a POST to a
+mutation route, safe only for as long as brain-core authorized before it resolved,
+which it never promised to do. `GET /authz/probes/payment-intent-approve` needs
+neither assumption — it reaches no domain service and answers the authorization
+question directly.
 
-**If the probe returns 404 instead of 403**, brain-core resolved the intent before
-authorizing it, and scope denial is unproven. The verifier fails and says so. Do not
-restore a mutating probe: raise the ordering with brain-core, or add a read-only
-denial surface.
+**If the probe returns 404**, the probe surface is not deployed on the target and
+scope denial is unproven. The verifier fails and says so, naming the 404. Do not
+restore a mutating probe.
 
-> **UNPROVEN BY CONTRACT — needs brain-core.** The all-zero ULID is safe in
-> practice, not by guarantee: brain-core has not committed to a reserved id space,
-> nor to authorizing before resolving, so a production mutation endpoint is still
-> being called. Ask brain-core for a guaranteed side-effect-free authorization
-> surface (a scope-introspection read, or a documented reserved probe id). Until
-> that exists, treat this probe as unproven rather than safe — which is another
-> reason the manifest stays empty.
+> **NOT VERIFIED FROM THIS REPO.** The probe's behaviour is taken from brain-core's
+> description, not from an observed call. It cannot be exercised here without
+> minting an agent credential, which this work is not permitted to do — and an
+> unauthenticated probe proves nothing about it, because brain-core's auth
+> middleware runs before routing: `/authz/probes/payment-intent-approve` and
+> `/definitely-not-a-real-route` return the byte-identical 401
+> `auth_token_missing`. The first real migration is therefore also the first test
+> of this endpoint. Both wrong answers fail closed (404 → unproven, 204 →
+> over-scoped credential), so a wrong assumption stops the migration rather than
+> passing it.
 
 The retired receipt also carried `lifecycle: "completed"` and
 `rollback_marker: false` as hardcoded constants. They asserted success rather than
@@ -67,25 +74,57 @@ observing it and are gone.
 ## Gate: no demo or synthetic tenant may be migrated
 
 `assertTenantIsNotDemoSeeded()` runs before any credential is issued and reads
-brain-core's own provenance record, not a local id list — a hardcoded exclusion
-list only knows the demo tenants somebody remembered. It refuses on
-`demo_seed:true`, on a `data_profile` starting `synthetic`, on
-`access_stage=demo`, **and on every unknown answer**: read unavailable, response
-naming a different tenant, field absent, field of the wrong type, field empty.
-Malformed is as unknown as absent — a numeric `data_profile` rules out nothing.
-"We could not tell" and "it is a real tenant" must never produce the same outcome.
+`GET /v1/tenants/{id}/provenance` — brain-core's own record, not a local id list,
+because a hardcoded exclusion list only knows the demo tenants somebody
+remembered. Confirmed live against production under platform-service auth on
+2026-09-09. (The older `GET /v1/tenants/{id}` is a *bearer*-auth route and answers
+401 to the same credential; it is not the provenance surface.)
 
-> **BLOCKED — needs brain-core.** `GET /v1/tenants/{id}` is not documented in
-> `docs/contracts` and has not been exercised against production from this repo.
-> Until brain-core owners confirm it, or supply another read-only provenance
-> endpoint, this gate refuses every tenant. That is the intended failure mode, but
-> it also means no batch can run until the contract is settled.
+The live response is:
+
+```json
+{"tenant_id":"tnt_…","kind":"production","provisioning_state":null,
+ "data_profile":null,"access_stage":null}
+```
+
+It refuses on `kind` other than `production`, on a demo `provisioning_state`, on a
+`data_profile` starting `synthetic`, on an `access_stage` outside the recognised
+production set, on a legacy `demo_seed` that is anything but an explicit `false`,
+**and on every unknown answer**: read unavailable, response naming a different
+tenant, field absent, field of the wrong type, field empty — and, decisively,
+field `null`.
+
+**`null` is the field that decides most tenants today, and it is a refusal.**
+Production returns `null` classification for every tenant provisioned before
+classification existed, including real customer tenants. `null` means *nobody
+established what is in this tenant*, which is not the same as *confirmed not a
+demo*. "We could not tell" and "it is a real tenant" must never produce the same
+outcome.
+
+Two asymmetries are deliberate:
+
+- `access_stage` is checked against an **allowlist** (`production`) because its
+  values are enumerable. An unrecognised stage refuses and prints what came back,
+  so a new stage is widened deliberately on evidence instead of passing unseen.
+  Only `demo` has been observed live, so this set may be too narrow — it errs
+  toward holding tenants back.
+- `data_profile` is checked against a **denylist** (`synthetic*`, plus `demo`,
+  `fixture`, `sample`, `seed`, `test`) because the production side is open-ended
+  and there is no published set of real-customer profiles to allowlist. A profile
+  that is neither empty nor recognised as fixture data therefore passes this
+  check. **Whoever adds a tenant to the manifest must read its logged provenance
+  record rather than rely on the gate alone.**
+
+`demo_seed` is no longer required, because the live contract does not publish it.
+Requiring it would refuse every tenant for a reason that stopped being true. A
+record that still carries it is still honoured, and anything other than an
+explicit `false` is an unknown.
 
 `PROTECTED_AGENT_API_KEY_MIGRATION_TENANT_IDS` (Northstar, golden demo, the shared
 "Continue with Demo" tenant, the RFC 0008 acceptance tenant) remains a second,
 independent refusal enforced in `validateBatch()`.
 
-## Legacy JWT rollback deadline — 2026-09-16T23:59:59Z
+## Legacy JWT rollback deadline — 2026-09-16T23:59:59Z (`LEGACY_AGENT_JWT_NOT_AFTER`)
 
 Rollback for a legacy-JWT tenant means restoring the tenant's previous agent JWT
 and revoking the freshly issued API key. That only works while the legacy JWT is
@@ -93,9 +132,15 @@ still valid, so the window has a fixed end.
 
 Enforcement is split, and neither half substitutes for the other:
 
-1. **brain-core revokes the legacy agent JWTs at the deadline.** This is the only
-   mechanism that actually invalidates them; nothing in this BFF can revoke a
-   credential brain-core issued. *Owner: brain-core. Not yet confirmed scheduled.*
+1. **brain-core enforces `LEGACY_AGENT_JWT_NOT_AFTER=2026-09-16T23:59:59Z` in
+   production.** This is the real mechanism, not a date this repo chose; nothing
+   in this BFF can invalidate a credential brain-core issued. At and after the
+   boundary brain-core rejects any agent JWT carrying no `credential_id` — which
+   is every legacy agent JWT, `credential_id` being what the exchange-only API
+   keys introduced — and answers **410 Gone** on
+   `POST /v1/tenants/{id}/agent-token`, so a replacement cannot be minted either.
+   Both halves matter: rollback restores exactly such a JWT, and re-minting is not
+   an escape hatch.
 2. **This BFF refuses to start a legacy-path migration whose rollback is close to
    expiring** (`assertLegacyRollbackWindowOpen`). Both the deadline and the stored
    JWT's own expiry must be at least 15 minutes away. This is a margin, not a
@@ -135,11 +180,36 @@ the issued key, so it was deliberately left alone) and `ORPHANED CREDENTIAL`
 - Its stored credential expired **2026-09-03T21:03:25Z**, five days before review.
   Migrating it would have had no working rollback from the start.
 
+## Batch composition — read live 2026-09-09
+
+Every tenant this repo knows of, against the live gate. `PROTECTED_…_TENANT_IDS`
+is an independent refusal in `validateBatch()`, so the protected four cannot be
+added even if their provenance later clears.
+
+| Tenant | Live provenance | Gate | Why |
+| --- | --- | --- | --- |
+| `tnt_01M0KHRVY3RT3EXN7WT2SPDFMZ` (Northstar) | `kind=production`, `provisioning_state=null`, `data_profile=null`, `access_stage=null` | **HELD** | Unclassified. All three classification fields are `null`, so synthetic content cannot be ruled out. Also protected. |
+| `tnt_00000000010000000000000000` (golden demo) | `kind=demo`, rest `null` | **HELD** | brain-core classifies it as a demo tenant. Also protected. |
+| `tnt_01KYAT7A1QRKHTYW9H4RAR2SEX` ("Continue with Demo" shared) | `kind=production`, rest `null` | **HELD** | Unclassified — and note it reports `kind=production` despite being a known demo tenant, which is precisely why `null` must not clear a tenant. Also protected. |
+| `tnt_01M1GTBQN8R8PB6X6PN73YB6NP` (RFC 0008 acceptance) | `provisioning_state=ready_demo`, `data_profile=synthetic_brightline_v1`, `access_stage=demo` | **HELD** | Explicit demo on synthetic fixture data. Also protected. |
+| `tnt_01M1MDWXR5K5NBQYF089D4ZKCN` (withdrawn candidate) | `provisioning_state=ready_demo`, `data_profile=synthetic_brightline_v1`, `access_stage=demo` | **HELD** | Same, and its stored legacy JWT expired 2026-09-03. |
+
+**Passing: none. The manifest stays empty.** No tenant known to this repo has a
+classified provenance record, so there is nothing the gate can clear. Adding one
+requires brain-core to classify a real production tenant — populate
+`data_profile` and `access_stage` — after which its record can be read back here
+and reviewed.
+
+`GET /v1/tenants` is not available to platform-service auth (401), so this repo
+cannot enumerate tenants; the list above is every id it holds. If brain-core has
+production tenants not listed here, their provenance must be read before any of
+them is proposed.
+
 ## Before adding any tenant to a batch
 
-0. **Side-effect-free authorization surface — OUTSTANDING.** See the denial-probe
-   note above. Without a guaranteed one, the verifier still calls a production
-   mutation endpoint, safe only by convention. *Owner: brain-core.*
+0. **Authorization probe — UNVERIFIED, see above.** `GET
+   /authz/probes/payment-intent-approve` cannot be exercised from this repo
+   without minting an agent credential. Both wrong answers fail closed.
 1. **Production scenario counts — OUTSTANDING.** The retired invoice predicate
    (`scenario !== "ar"` and not settled) was fail-open: absent, null, and unknown
    future markers all read as payable. Real tenants routinely return
@@ -154,6 +224,9 @@ the issued key, so it was deliberately left alone) and `ORPHANED CREDENTIAL`
    verifier: with invoice selection removed there is no predicate left here to
    replace. An `"ap"`-only allowlist would reinstate the original bug for real
    tenants whose invoices carry no marker.
-3. **Provenance contract — see the gate above.** Blocked on brain-core.
+3. **Provenance classification — OUTSTANDING.** The endpoint is live and the gate
+   works; what is missing is data. Every tenant this repo knows of reports `null`
+   classification or an explicit demo marker. *Owner: brain-core — classify the
+   intended production tenants.*
 4. Confirm the candidate's stored legacy JWT is still valid, and that the whole
    migration window closes before 2026-09-16T23:59:59Z.
