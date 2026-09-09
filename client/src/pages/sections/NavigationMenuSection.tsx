@@ -40,6 +40,8 @@ const LogoutConfirmModal = ({ show, onCancel, onConfirm }: { show: boolean; onCa
 };
 
 import robotMoneyLogo from "@assets/robotmoney_1788696284094.png";
+import assistantActiveIcon from "@assets/AssistantActive_1788989939729.png";
+import assistantInactiveIcon from "@assets/AssistantInactive_1788989939731.png";
 
 const BrainLogo = () => (
   <div className="h-[40px] relative shrink-0 w-[180px] flex items-center pl-[17px]">
@@ -111,6 +113,18 @@ const FinancesIconInactive = () => (
     <div className="absolute left-0 size-[24px] top-0">
       <img alt="" className="absolute block inset-0 max-w-none size-full" src={ICONS.finances_inactive} />
     </div>
+  </div>
+);
+
+const AssistantIconActive = () => (
+  <div className="relative shrink-0 size-[24px]">
+    <img alt="" className="absolute block inset-0 max-w-none size-full object-contain" src={assistantActiveIcon} />
+  </div>
+);
+
+const AssistantIconInactive = () => (
+  <div className="relative shrink-0 size-[24px]">
+    <img alt="" className="absolute block inset-0 max-w-none size-full object-contain" src={assistantInactiveIcon} />
   </div>
 );
 
@@ -220,6 +234,12 @@ const MAIN_NAV: NavItem[] = [
     ActiveIcon: FinancesIconActive,
     InactiveIcon: FinancesIconInactive,
     match: ["/finances", "/vendors", "/rules"],
+  },
+  {
+    path: "/assistant",
+    label: "Assistant",
+    ActiveIcon: AssistantIconActive,
+    InactiveIcon: AssistantIconInactive,
   },
 ];
 

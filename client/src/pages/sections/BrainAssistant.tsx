@@ -1,10 +1,8 @@
-import { useState, useRef, useEffect, useLayoutEffect, useMemo } from "react";
-import { useLocation, useSearch } from "wouter";
+import { useState, useRef, useEffect, useLayoutEffect, useMemo, useCallback } from "react";
+import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
-  Plus,
   ArrowUp,
-  ChevronDown,
   Search,
   SquarePen,
 } from "lucide-react";
@@ -27,21 +25,11 @@ import { useSuggestedQuestions, resolveSuggestionChips } from "@/lib/brainSugges
 import { resolveVendor, openVendorDetail } from "@/lib/openVendorDetail";
 import { parseAssistantResponse, trimChatHistory, buildChatPayload, filterPayloadMessages, buildTruncationNote, ASSISTANT_GENERIC_ERROR, CHAT_HISTORY_LIMIT, MESSAGE_CONTENT_LIMIT } from "@/lib/assistantChat";
 import { isAssistantBulletLine, stripAssistantBullet } from "@/lib/assistantFormatting";
-import brainLogo from "@assets/Brain_1_1783374797129.png";
 import timeIcon from "@assets/Time_1781821466642.png";
-import expandBtnIcon from "@assets/Expand_Button_1781817819809.png";
-import draftActiveIcon from "@assets/Draft_Active_1781886641614.png";
-import draftInactiveIcon from "@assets/Draft_Inactive_1781886641614.png";
-import historyActiveIcon from "@assets/History_Active_1781886641612.png";
-import historyInactiveIcon from "@assets/History_Inactive_1781886641614.png";
-import collapseBtnIcon from "@assets/Collapse_1781818197054.png";
 import activeConvoIcon from "@assets/Active_1781818047007.png";
 import deleteConvoIcon from "@assets/Delete_1781818067389.png";
-
-interface BrainAssistantProps {
-  collapsed: boolean;
-  onToggle: () => void;
-}
+import attachBtnIcon from "@assets/attach_1788990164346.png";
+import historyBtnIcon from "@assets/chat_history_1788990164348.png";
 
 type MessageRole = "user" | "assistant";
 
@@ -105,12 +93,11 @@ const FALLBACK_QUESTIONS = [
   "Show last 10 transactions",
 ] as const;
 
-/** Extra chips shown ONLY while a Developers subpage is active — they submit
- *  real prompts through the same assistant pipe as any typed message. */
-const DEVELOPER_QUESTIONS = [
-  "Run a test call",
-  "Show my usage this month",
-];
+/** Shown in place of a reply that was still in flight when the user navigated
+ *  away from the assistant. The request is gone, so the answer is not coming —
+ *  say that rather than persisting a typing indicator that never resolves. */
+const ASSISTANT_INTERRUPTED =
+  "This answer was interrupted when you left the assistant. Ask again to retry.";
 
 /**
  * Lightweight markdown-to-JSX for assistant replies.
@@ -386,13 +373,17 @@ function ChatBubble({
 let idCounter = 0;
 const nextId = () => `m${++idCounter}`;
 
-export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
-  const [location, navigate] = useLocation();
-  /* Developers is a Settings section now, not its own page — the old
-     pathname check would silently go quiet there. */
-  const devSearch = useSearch();
-  const onDevelopersPage =
-    location.startsWith("/settings") && new URLSearchParams(devSearch).get("section") === "developers";
+/**
+ * The Brain Assistant.
+ *
+ * Lives in the middle frame as its own route (`/assistant`) rather than in the
+ * right-hand rail it used to occupy — the rail is now the accounts panel. It
+ * fills whatever width the shell gives it, so it reflows as either side panel
+ * collapses; the reading column is capped so lines stay legible on a wide
+ * screen without a fixed page width that would clip on a narrow one.
+ */
+export function BrainAssistant() {
+  const [, navigate] = useLocation();
   const { user, isLoading: authLoading, isTransitioning } = useAuth();
 
   /* Suggestion chips come from brain-core (GET /wiki/suggested-questions),
@@ -433,19 +424,52 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
   const chatAbortRef = useRef<AbortController | null>(null);
   const chatGenerationRef = useRef(0);
   const assistantInputRef = useRef<HTMLTextAreaElement | null>(null);
+  /* The assistant is a route now, so leaving it unmounts this component
+     mid-request. These refs let the unmount cleanup finish the optimistic
+     placeholder honestly instead of leaving a typing indicator persisted
+     forever. */
+  const pendingReplyRef = useRef<{ sessionId: string; assistantId: string } | null>(null);
+  const sessionsRef = useRef<ChatSession[]>([]);
+  const storageKeyRef = useRef(storageKey);
+  sessionsRef.current = sessions;
+  storageKeyRef.current = storageKey;
 
   // Grow the composer as its text wraps, while keeping very long drafts from
   // pushing the rest of the assistant panel off-screen.
-  useLayoutEffect(() => {
+  const resizeComposer = useCallback(() => {
     const input = assistantInputRef.current;
     if (!input) return;
 
     input.style.height = "auto";
-    const maxHeight = 120;
+    /* Roomier than the old 390px rail allowed: the composer now sits in the
+       middle frame, so a multi-line draft can grow without squeezing the
+       transcript off screen. Past this it scrolls rather than growing. */
+    const maxHeight = 200;
     const nextHeight = Math.min(input.scrollHeight, maxHeight);
     input.style.height = `${nextHeight}px`;
     input.style.overflowY = input.scrollHeight > maxHeight ? "auto" : "hidden";
-  }, [draft]);
+  }, []);
+
+  useLayoutEffect(() => {
+    resizeComposer();
+  }, [draft, resizeComposer]);
+
+  /* The centre frame changes width when either side panel collapses, which
+     rewraps the draft without the draft itself changing. Width only: reacting
+     to the height would feed this observer its own output. */
+  useEffect(() => {
+    const input = assistantInputRef.current;
+    if (!input || typeof ResizeObserver === "undefined") return;
+    let lastWidth = input.clientWidth;
+    const ro = new ResizeObserver(() => {
+      const width = input.clientWidth;
+      if (width === lastWidth) return;
+      lastWidth = width;
+      resizeComposer();
+    });
+    ro.observe(input);
+    return () => ro.disconnect();
+  }, [resizeComposer]);
 
   // Demo-fresh rotates the session cookie. Stop any request that started under
   // the previous principal, and ignore its result even if the server already
@@ -533,13 +557,28 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
   // Hydrate from localStorage whenever the per-user key changes (e.g. login resolves).
   // Gated on auth settling so this never reads/writes the "anon" key mid-resolve and
   // orphans a session created during the auth window (Opus review finding).
+  //
+  // Which conversation is open and what is half-typed are restored too. They
+  // used to be safe as component state because the assistant was mounted for
+  // the whole session; as a route it unmounts every time a citation sends the
+  // user to the record it cites, and coming back to a blank screen reads as
+  // lost work.
   useEffect(() => {
     if (authLoading) return;
+    let restored: ChatSession[] = [];
     try {
       const raw = localStorage.getItem(storageKey);
-      setSessions(raw ? (JSON.parse(raw) as ChatSession[]) : []);
+      restored = raw ? (JSON.parse(raw) as ChatSession[]) : [];
     } catch {
-      setSessions([]);
+      restored = [];
+    }
+    setSessions(restored);
+    try {
+      const activeId = localStorage.getItem(`${storageKey}.active`);
+      setActiveSessionId(activeId && restored.some((s) => s.id === activeId) ? activeId : null);
+      setDraft(localStorage.getItem(`${storageKey}.draft`) ?? "");
+    } catch {
+      setActiveSessionId(null);
     }
   }, [storageKey, authLoading]);
 
@@ -548,10 +587,50 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
     if (authLoading) return;
     try {
       localStorage.setItem(storageKey, JSON.stringify(sessions));
+      if (activeSessionId) localStorage.setItem(`${storageKey}.active`, activeSessionId);
+      else localStorage.removeItem(`${storageKey}.active`);
+      if (draft) localStorage.setItem(`${storageKey}.draft`, draft);
+      else localStorage.removeItem(`${storageKey}.draft`);
     } catch (err) {
       console.warn("Failed to persist chat sessions", err);
     }
-  }, [storageKey, sessions, authLoading]);
+  }, [storageKey, sessions, activeSessionId, draft, authLoading]);
+
+  /* Leaving the route kills the in-flight request, and a setState after
+     unmount is dropped — so without this the optimistic empty placeholder is
+     what gets persisted, and the conversation reopens with a typing indicator
+     that can never resolve. Say what actually happened instead. */
+  useEffect(() => {
+    return () => {
+      chatAbortRef.current?.abort();
+      chatAbortRef.current = null;
+      const pending = pendingReplyRef.current;
+      pendingReplyRef.current = null;
+      if (!pending) return;
+      const next = sessionsRef.current.map((s) =>
+        s.id === pending.sessionId
+          ? {
+              ...s,
+              messages: s.messages.map((m) =>
+                m.id === pending.assistantId && !m.text
+                  ? {
+                      ...m,
+                      text: ASSISTANT_INTERRUPTED,
+                      answerStatus: "error" as const,
+                      answerError: true,
+                    }
+                  : m,
+              ),
+            }
+          : s,
+      );
+      try {
+        localStorage.setItem(storageKeyRef.current, JSON.stringify(next));
+      } catch (err) {
+        console.warn("Failed to persist interrupted chat reply", err);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (bodyRef.current) {
@@ -576,25 +655,6 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
     setDropdownOpen(false);
     setSearch("");
     setDraft("");
-  };
-
-  // Collapsed rail: start a fresh chat and expand the panel.
-  const startNewSessionExpanded = () => {
-    startNewSession();
-    if (collapsed) onToggle();
-  };
-
-  // Collapsed rail: expand the panel into the most recent (last) conversation,
-  // keeping the current one if one is already active.
-  const expandToLastSession = () => {
-    setActiveSessionId((cur) => cur ?? sessions[0]?.id ?? null);
-    if (collapsed) onToggle();
-  };
-
-  // Collapsed rail: expand the panel and open the session history dropdown.
-  const openHistoryExpanded = () => {
-    if (collapsed) onToggle();
-    setDropdownOpen(true);
   };
 
   const sendMessage = async (text: string) => {
@@ -684,6 +744,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
     const requestGeneration = chatGenerationRef.current;
     const controller = new AbortController();
     chatAbortRef.current = controller;
+    pendingReplyRef.current = { sessionId: sessionId!, assistantId };
     try {
       const res = await fetch("/api/assistant/chat", {
         method: "POST",
@@ -762,6 +823,7 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
     } finally {
       if (requestGeneration === chatGenerationRef.current) {
         chatAbortRef.current = null;
+        pendingReplyRef.current = null;
         setSending(false);
       }
     }
@@ -802,106 +864,122 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
 
   const triggerLabel = activeSession ? activeSession.title : "New Chat Session";
 
-  // ── Collapsed rail ─────────────────────────────────────────────
-  if (collapsed) {
-    return (
-      <div className="relative w-[54px] h-full rounded-panel border border-solid border-brain-v1stroke-2 bg-brain-v1baby-blue-5 overflow-hidden">
-        <div className="flex flex-col gap-[16px] items-start absolute left-[7px] top-[7px] w-[40px]">
-          {/* Expand button */}
+  const isEmpty = messages.length === 0;
+
+  /* Composer + suggestion chips. Built once and rendered from a single slot in
+     the body column below, so the first send does not remount the textarea and
+     steal the caret out of it. */
+  const composer = (
+    <div className="flex w-full flex-col gap-[8px]">
+      <div className="flex min-h-[100px] w-full flex-col rounded-panel bg-brain-v1highlight-dropdown-bg p-[8px]">
+        <textarea
+          ref={assistantInputRef}
+          data-testid="input-assistant-message"
+          rows={1}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              sendMessage(draft);
+            }
+          }}
+          placeholder="Ask me a question..."
+          className="w-full resize-none bg-transparent outline-none px-[8px] pt-[6px] [font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 placeholder:text-brain-v1baby-blue-60 text-[16px] leading-[20px] overflow-x-hidden"
+        />
+        {/* mt-auto pins the controls to the bottom of the 100px minimum, and
+            keeps them there as the textarea grows past it. */}
+        <div className="mt-auto flex items-center justify-between pt-[8px]">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={DOCUMENT_ACCEPT}
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) {
+                if (isSupportedDocumentFile(file)) {
+                  uploadDoc.mutate(file);
+                } else {
+                  toast({
+                    title: "Unsupported file",
+                    description: "ZIP files can't be uploaded. Choose PDF, CSV, XLSX, DOCX, or another supported document.",
+                    variant: "destructive",
+                  });
+                }
+              }
+              e.target.value = "";
+            }}
+          />
           <button
-            data-testid="button-assistant-expand"
-            onClick={expandToLastSession}
-            className="size-[40px]"
-            title="Expand Brain Assistant"
+            data-testid="button-assistant-attach"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploadDoc.isPending}
+            className="size-[32px] rounded-pill transition-opacity hover:opacity-80 disabled:opacity-60 disabled:cursor-not-allowed"
+            title="Attach a document"
           >
-            <img src={expandBtnIcon} alt="Expand" className="size-[40px] block" />
+            <img src={attachBtnIcon} alt="" className="size-[32px] block" />
           </button>
-
-          {/* Divider */}
-          <div className="w-full h-px bg-brain-v1stroke-2" />
-
-          {/* Chat group */}
-          <div className="flex flex-col gap-[4px] items-start w-full">
-            <div className="flex items-center justify-center px-[8px] w-[40px]">
-              <span className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-30 text-[12px] leading-[16px]">
-                Chat
-              </span>
-            </div>
-
-            <div className="flex flex-col gap-[4px] items-start">
-              {/* New chat */}
-              <button
-                data-testid="button-collapsed-new-session"
-                onClick={startNewSessionExpanded}
-                className="group relative size-[40px]"
-                title="New Chat"
-              >
-                <img
-                  src={draftInactiveIcon}
-                  alt=""
-                  className="absolute inset-0 size-[40px] block transition-opacity group-hover:opacity-0"
-                />
-                <img
-                  src={draftActiveIcon}
-                  alt="New Chat"
-                  className="absolute inset-0 size-[40px] block opacity-0 transition-opacity group-hover:opacity-100"
-                />
-              </button>
-
-              {/* History */}
-              <button
-                data-testid="button-collapsed-history"
-                onClick={openHistoryExpanded}
-                className="group relative size-[40px]"
-                title="History"
-              >
-                <img
-                  src={historyInactiveIcon}
-                  alt=""
-                  className="absolute inset-0 size-[40px] block transition-opacity group-hover:opacity-0"
-                />
-                <img
-                  src={historyActiveIcon}
-                  alt="History"
-                  className="absolute inset-0 size-[40px] block opacity-0 transition-opacity group-hover:opacity-100"
-                />
-              </button>
-            </div>
+          <div className="flex items-center gap-[8px]">
+            <Button
+              variant="cta"
+              size="iconCompact"
+              data-testid="button-assistant-send"
+              onClick={() => sendMessage(draft)}
+              disabled={!draft.trim() || sending || authLoading || isTransitioning || !user}
+              title="Send"
+            >
+              <ArrowUp color="#ffffff" strokeWidth={2.4} />
+            </Button>
           </div>
         </div>
       </div>
-    );
-  }
 
-  // ── Expanded panel ─────────────────────────────────────────────
+      {/* Suggested questions. Chip text is upstream-controlled and unbounded,
+          so a chip wraps inside its own pill rather than running past the
+          column, and the block scrolls once it would eat the transcript. */}
+      <div className="flex max-h-[88px] flex-wrap items-start justify-center gap-[8px] w-full overflow-y-auto">
+        {suggestionChips.chips.map((q, i) => (
+          <button
+            /* Index-prefixed: tenant chip text is upstream-controlled, so two
+               chips can carry identical text and collide on a bare text key. */
+            key={`${i}-${q}`}
+            data-testid={`button-suggested-${q.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`}
+            onClick={() => sendMessage(q)}
+            className="max-w-full bg-brain-v1baby-blue-15 px-[10px] py-[4px] rounded-pill transition-colors hover:bg-brain-v1baby-blue-15-hover [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[12px] leading-[16px] text-left"
+          >
+            {q}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  // ── Centre-frame page ──────────────────────────────────────────
   return (
-    <div className="relative w-full max-w-[390px] h-full rounded-panel border border-solid border-brain-v1stroke-2 bg-brain-v1baby-blue-5 overflow-hidden flex flex-col">
-      {/* Header: collapse button + session dropdown */}
-      <div className="flex items-center gap-[8px] p-[7px]">
-        <button
-          data-testid="button-assistant-collapse"
-          onClick={onToggle}
-          className="flex-shrink-0 size-[40px]"
-          title="Collapse Brain Assistant"
-        >
-          <img src={collapseBtnIcon} alt="Collapse" className="size-[40px] block" />
-        </button>
-
-        <div className="relative flex-1 min-w-0" ref={dropdownRef}>
+    <div
+      data-testid="assistant-page"
+      className="relative flex h-full min-h-0 w-full flex-col overflow-hidden"
+    >
+      {/* Session switcher, centred over the reading column */}
+      <div className="flex shrink-0 flex-col items-center gap-[10px] p-[16px]">
+        <div className="relative w-full max-w-[322px]" ref={dropdownRef}>
           <button
             data-testid="button-session-dropdown"
             onClick={() => setDropdownOpen((v) => !v)}
-            className={`w-full h-[40px] pl-[16px] pr-[4px] flex items-center gap-[8px] rounded-[40px] bg-brain-v1baby-blue-15 border border-solid transition-colors ${dropdownOpen ? "border-brain-v1baby-blue-30" : "border-transparent"}`}
+            className="w-full h-[40px] pl-[16px] pr-[4px] flex items-center gap-[8px] rounded-pill bg-brain-v1baby-blue-15 border border-solid border-brain-v1baby-blue-30 transition-colors hover:bg-brain-v1baby-blue-15-hover"
           >
             {!activeSession && (
-              <SquarePen className="flex-shrink-0 size-[20px]" color="#a8b9f4" strokeWidth={1.8} />
+              <SquarePen className="flex-shrink-0 size-[24px]" color="#a8b9f4" strokeWidth={1.8} />
             )}
             <span className="flex-1 min-w-0 text-left truncate [font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[24px]">
               {triggerLabel}
             </span>
-            <span className="flex-shrink-0 size-[32px] rounded-full bg-brain-v1stroke-2 flex items-center justify-center">
-              <ChevronDown className={`size-[18px] transition-transform ${dropdownOpen ? "rotate-180" : ""}`} color="#a8b9f4" strokeWidth={2} />
-            </span>
+            <img
+              src={historyBtnIcon}
+              alt=""
+              className={`flex-shrink-0 size-[32px] block transition-transform ${dropdownOpen ? "rotate-180" : ""}`}
+            />
           </button>
 
           {/* Sessions dropdown */}
@@ -996,25 +1074,19 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
         </div>
       </div>
 
-      {/* Body */}
-      <div
-        ref={bodyRef}
-        className="flex-1 min-h-0 mx-[7px] rounded-row bg-brain-v1highlight-dropdown-bg overflow-y-auto"
-      >
-        {messages.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center gap-[4px] px-[16px]">
-            <img src={brainLogo} alt="Brain" className="size-[72px]" />
-            <div className="flex flex-col items-center text-center">
-              <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[24px] leading-[32px]">
-                Hi, I'm Robo.
-              </p>
-              <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[18px] leading-[24px]">
-                What can I help you with today?
-              </p>
-            </div>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-[12px] p-[12px]">
+      {/* Body column. Empty, the flexible spacers centre the greeting and the
+          composer as one block (Figma 6519:52358); once a conversation starts
+          the transcript takes that space and the composer docks below it.
+          Every child below keeps a fixed position in this list — the disabled
+          ones render `false` rather than collapsing the list — so the composer
+          slot survives the first send instead of remounting. */}
+      <div className="flex flex-1 min-w-0 min-h-0 flex-col px-[16px] pb-[16px]">
+        {isEmpty && <div className="flex-1" />}
+        <div
+          ref={bodyRef}
+          className={isEmpty ? "hidden" : "flex-1 min-w-0 min-h-0 overflow-y-auto"}
+        >
+          <div className="mx-auto flex w-full max-w-[560px] flex-col gap-[12px] pb-[12px]">
             {messages.map((msg) => (
               <div key={msg.id} className="flex flex-col gap-[12px]">
                 {msg.dateTag && (
@@ -1225,91 +1297,25 @@ export function BrainAssistant({ collapsed, onToggle }: BrainAssistantProps) {
               </div>
             ))}
           </div>
-        )}
-      </div>
-
-      {/* Suggested questions */}
-      <div className="flex items-center gap-[8px] px-[7px] pt-[12px] pb-[8px] overflow-x-auto">
-        {(onDevelopersPage
-          ? [...DEVELOPER_QUESTIONS, ...suggestionChips.chips]
-          : suggestionChips.chips
-        ).map((q, i) => (
-          <button
-            /* Index-prefixed: tenant chip text is upstream-controlled, so it can
-               coincide with a DEVELOPER_QUESTIONS string and collide on a bare
-               text key. */
-            key={`${i}-${q}`}
-            data-testid={`button-suggested-${q.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`}
-            onClick={() => sendMessage(q)}
-            className="flex-shrink-0 bg-brain-v1baby-blue-15 px-[12px] py-[8px] rounded-pill transition-colors hover:bg-brain-v1baby-blue-15-hover [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[12px] leading-[16px] whitespace-nowrap"
-          >
-            {q}
-          </button>
-        ))}
-      </div>
-
-      {/* Input field */}
-      <div className="mx-[7px] mb-[7px] rounded-row bg-brain-v1highlight-dropdown-bg p-[8px] flex flex-col gap-[10px]">
-        <textarea
-          ref={assistantInputRef}
-          data-testid="input-assistant-message"
-          rows={1}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              sendMessage(draft);
-            }
-          }}
-          placeholder="Ask me a question..."
-          className="w-full resize-none bg-transparent outline-none px-[8px] pt-[6px] [font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 placeholder:text-brain-v1baby-blue-60 text-[16px] leading-[20px] overflow-x-hidden"
-        />
-        <div className="flex items-center justify-between">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept={DOCUMENT_ACCEPT}
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) {
-                if (isSupportedDocumentFile(file)) {
-                  uploadDoc.mutate(file);
-                } else {
-                  toast({
-                    title: "Unsupported file",
-                    description: "ZIP files can't be uploaded. Choose PDF, CSV, XLSX, DOCX, or another supported document.",
-                    variant: "destructive",
-                  });
-                }
-              }
-              e.target.value = "";
-            }}
-          />
-          <button
-            data-testid="button-assistant-attach"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploadDoc.isPending}
-            className="size-[32px] rounded-full bg-brain-v1baby-blue-15 flex items-center justify-center transition-colors hover:bg-brain-v1baby-blue-15-hover disabled:opacity-60 disabled:cursor-not-allowed"
-            title="Attach a document"
-          >
-            <Plus className="size-[18px]" color="#a8b9f4" strokeWidth={2} />
-          </button>
-          <div className="flex items-center gap-[8px]">
-            <Button
-              variant="cta"
-              size="iconCompact"
-              data-testid="button-assistant-send"
-              onClick={() => sendMessage(draft)}
-              disabled={!draft.trim() || sending || authLoading || isTransitioning || !user}
-              title="Send"
-            >
-              <ArrowUp color="#ffffff" strokeWidth={2.4} />
-            </Button>
-          </div>
         </div>
+        {isEmpty && (
+          <div className="mx-auto w-full max-w-[560px] shrink-0 pb-[40px]">
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold text-white text-[32px] leading-[40px]">
+              Hi. I'm Robo.
+            </p>
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1purple text-[32px] leading-[40px]">
+              What can I help you with today?
+            </p>
+          </div>
+        )}
+        <div
+          className={`mx-auto w-full max-w-[560px] shrink-0 ${isEmpty ? "" : "pt-[12px]"}`}
+        >
+          {composer}
+        </div>
+        {isEmpty && <div className="flex-1" />}
       </div>
+
       <TransactionDetailPopup txId={openTxId} onClose={() => setOpenTxId(null)} hidePager />
       <AccountDetailPopup
         accountId={openAccountId}

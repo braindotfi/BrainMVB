@@ -8,9 +8,9 @@
  * Flow:
  *   1. POST /api/auth/demo-fresh via context.request (bypasses rate-limiter UI
  *      surface; retries once on 429 with a short back-off)
- *   2. Navigate to / — already authenticated via the shared cookie jar
+ *   2. Navigate to /assistant — already authenticated via the shared cookie jar
  *   3. Route /api/assistant/chat to return 401 {"error":"Not authenticated"}
- *   4. Open the assistant if collapsed; send a message
+ *   4. Send a message
  *   5. Assert data-testid="assistant-error" visible
  *   6. Assert "Your session expired. Please sign in again." in page body text
  *   7. Assert old canned text is absent
@@ -91,29 +91,21 @@ try {
     }),
   );
 
-  // ── 3. Navigate to the app — session cookie already set ───────────────────
-  console.log("Navigating to /…");
-  await page.goto(`${BASE}/`, { waitUntil: "domcontentloaded" });
+  // ── 3. Navigate to the assistant — session cookie already set ─────────────
+  // The assistant is its own middle-frame route now; it is no longer a
+  // collapsible right-hand rail, so there is nothing to expand first.
+  console.log("Navigating to /assistant…");
+  await page.goto(`${BASE}/assistant`, { waitUntil: "domcontentloaded" });
 
-  // Wait for the logged-in shell: expand or input must appear.
   console.log("Waiting for assistant UI (up to 30 s)…");
   await page.waitForFunction(
-    () =>
-      document.querySelector('[data-testid="input-assistant-message"]') !== null ||
-      document.querySelector('[data-testid="button-assistant-expand"]') !== null,
+    () => document.querySelector('[data-testid="input-assistant-message"]') !== null,
     { timeout: 30_000 },
   );
   check("logged-in shell rendered", true);
 
-  // ── 4. Ensure the assistant is open ──────────────────────────────────────
-  const inputEl   = page.locator('[data-testid="input-assistant-message"]');
-  const expandBtn = page.locator('[data-testid="button-assistant-expand"]');
-
-  if (await expandBtn.isVisible()) {
-    console.log("  Collapsed — clicking expand…");
-    await expandBtn.click();
-    await inputEl.waitFor({ state: "visible", timeout: 8_000 });
-  }
+  // ── 4. The composer is on screen ─────────────────────────────────────────
+  const inputEl = page.locator('[data-testid="input-assistant-message"]');
   check("assistant input visible", await inputEl.isVisible());
 
   // ── 5. Fill the input, then confirm send is enabled ──────────────────────
