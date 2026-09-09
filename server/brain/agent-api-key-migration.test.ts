@@ -201,7 +201,15 @@ function captureEscalations(): string[] {
   return lines;
 }
 
+// Every test that does not set its own clock runs a week before the legacy-JWT
+// boundary. Without this the suite quietly changes meaning on 2026-09-16: the
+// rollback window closes, and tests that assert a successful migration would
+// start failing for a calendar reason rather than a code one.
+const BASELINE_NOW_MS = LEGACY_ROLLBACK_JWT_REVOCATION_DEADLINE_MS - 7 * 24 * 60 * 60 * 1000;
+
 beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(BASELINE_NOW_MS);
   storage.rows.clear();
   requests = [];
   onRequest = () => {};
@@ -259,7 +267,7 @@ describe("migrateTenant refuses before issuing a credential", () => {
     wireHappyPath();
     tenancy.getTenantProvenance.mockResolvedValue(northstarProvenance());
     await expect(migrateTenant(TENANT)).rejects.toThrow(
-      /data_profile=null \(unclassified\).*Refusing to migrate/s,
+      /provisioning_state=null \(unclassified\).*Refusing to migrate/s,
     );
     expectNoKeyIssued();
   });
@@ -293,6 +301,74 @@ describe("migrateTenant refuses before issuing a credential", () => {
     await expect(migrateTenant(TENANT)).rejects.toThrow(/provisioning_state=ready_demo/);
     expectNoKeyIssued();
   });
+
+  // Each unknown is isolated: with every OTHER field valid, this field alone must
+  // refuse. Without the isolation an earlier guard can pass the test for it —
+  // the all-null record above, for instance, refuses on data_profile.
+  const UNKNOWN_PROVISIONING_STATES: ReadonlyArray<[string, unknown]> = [
+    ["null", null],
+    ["empty", ""],
+    ["whitespace-only", "   "],
+    ["numeric", 3],
+    ["array-valued", ["ready"]],
+    ["object-valued", { state: "ready" }],
+    ["boolean", true],
+  ];
+  for (const [label, value] of UNKNOWN_PROVISIONING_STATES) {
+    it(`refuses a ${label} provisioning_state, with every other field valid`, async () => {
+      wireHappyPath();
+      tenancy.getTenantProvenance.mockResolvedValue(
+        goodProvenance({ provisioning_state: value }),
+      );
+      await expect(migrateTenant(TENANT)).rejects.toThrow(
+        /provisioning_state=.*Refusing to migrate/s,
+      );
+      expectNoKeyIssued();
+    });
+  }
+
+  it("refuses an absent provisioning_state, with every other field valid", async () => {
+    wireHappyPath();
+    const { provisioning_state: _omitted, ...withoutState } = goodProvenance();
+    tenancy.getTenantProvenance.mockResolvedValue(withoutState);
+    await expect(migrateTenant(TENANT)).rejects.toThrow(/provisioning_state=absent/);
+    expectNoKeyIssued();
+  });
+
+  // Padding and casing must not walk a value past a denylist.
+  const EVASIVE_DEMO_MARKERS: ReadonlyArray<[string, string]> = [
+    ["padded", "  synthetic_brightline_v1  "],
+    ["mixed-case", "Synthetic_Brightline_V1"],
+    ["upper-case", "DEMO"],
+    ["marker mid-string", "acme_demo_copy"],
+    ["sandbox", "sandbox_v2"],
+  ];
+  for (const [label, profile] of EVASIVE_DEMO_MARKERS) {
+    it(`refuses a ${label} data_profile`, async () => {
+      wireHappyPath();
+      tenancy.getTenantProvenance.mockResolvedValue(goodProvenance({ data_profile: profile }));
+      await expect(migrateTenant(TENANT)).rejects.toThrow(/must not be migrated/);
+      expectNoKeyIssued();
+    });
+  }
+
+  it("refuses a whitespace-only data_profile as unclassified, not as a profile", async () => {
+    wireHappyPath();
+    tenancy.getTenantProvenance.mockResolvedValue(goodProvenance({ data_profile: "   " }));
+    await expect(migrateTenant(TENANT)).rejects.toThrow(/unclassified/);
+    expectNoKeyIssued();
+  });
+
+  // access_stage is the one allowlist, so acceptance is exact: a padded or
+  // oddly-cased value is malformed, and malformed is unknown.
+  for (const stage of [" production", "Production", "production "]) {
+    it(`refuses access_stage=${JSON.stringify(stage)} rather than normalising it into a pass`, async () => {
+      wireHappyPath();
+      tenancy.getTenantProvenance.mockResolvedValue(goodProvenance({ access_stage: stage }));
+      await expect(migrateTenant(TENANT)).rejects.toThrow(/not a recognised production stage/);
+      expectNoKeyIssued();
+    });
+  }
 
   it("refuses an access_stage nobody has defined as production", async () => {
     wireHappyPath();
@@ -406,6 +482,18 @@ describe("migrateTenant refuses on unproven verification evidence", () => {
     wireHappyPath({ denialBody: { reason: "tenant_scope_denied" } });
     await expect(migrateTenant(TENANT)).rejects.toThrow(/recognised insufficient-scope reason/);
   });
+
+  // Only 403 + an allowlisted reason is evidence. Every other answer, including
+  // the ones that look like success, leaves scope denial unproven.
+  for (const status of [200, 401, 500, 503]) {
+    it(`rejects HTTP ${status} from the probe, even carrying an in-scope-looking reason`, async () => {
+      wireHappyPath({
+        denialStatus: status,
+        denialBody: { error: { code: "auth_scope_insufficient" } },
+      });
+      await expect(migrateTenant(TENANT)).rejects.toThrow(/Scope denial is unproven/);
+    });
+  }
 
   it("rejects a 404 on the denial probe rather than falling back to a mutating probe", async () => {
     wireHappyPath({ denialStatus: 404, denialBody: { reason: "not_found" } });

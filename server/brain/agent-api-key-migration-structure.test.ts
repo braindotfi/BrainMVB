@@ -119,7 +119,12 @@ describe("Phase 3 BFF migration structure", () => {
     // Unknown must be a refusal, not a pass. Null is the live unknown: production
     // returns null classification for every pre-classification tenant.
     expect(migrationSource).toContain('provenance.kind !== "production"');
-    expect(migrationSource).toContain('typeof provenance.data_profile !== "string"');
+    // Absent, null, wrong-type, "" and "   " all collapse to one unknown, and
+    // every classification field goes through it.
+    expect(migrationSource).toContain("normaliseProvenanceString(provenance.data_profile)");
+    expect(migrationSource).toContain("normaliseProvenanceString(provenance.provisioning_state)");
+    expect(migrationSource).toContain("if (dataProfile === undefined)");
+    expect(migrationSource).toContain("if (provisioningState === undefined)");
     expect(migrationSource).toContain("PRODUCTION_ACCESS_STAGES.has(provenance.access_stage)");
     expect(migrationSource).toContain("provenance.demo_seed");
     // The gate runs before any credential is issued.

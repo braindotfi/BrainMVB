@@ -12,10 +12,11 @@ Code: `server/brain/agentApiKeyMigration.ts`, manifest and constants in
 ## Current state
 
 **Batch 1 is empty. Nothing migrates on boot.** The manifest ships empty on
-purpose; `migrateConfiguredAgentApiKeyBatch()` returns immediately. The three
-brain-core prerequisites are now live and wired (provenance endpoint,
-side-effect-free authorization probe, enforced legacy-JWT boundary), but no
-tenant currently clears the gate — see [Batch composition](#batch-composition--read-live-2026-09-09).
+purpose; `migrateConfiguredAgentApiKeyBatch()` returns immediately. All three
+brain-core prerequisites are wired: the provenance endpoint (**verified live from
+this repo**, 2026-09-09) and the authorization probe plus the enforced legacy-JWT
+boundary (**on brain-core's report — neither can be exercised from here without
+minting an agent credential**). No tenant currently clears the gate — see [Batch composition](#batch-composition--read-live-2026-09-09).
 
 ## Verification makes no writes it expects to succeed
 
@@ -88,11 +89,12 @@ The live response is:
 ```
 
 It refuses on `kind` other than `production`, on a demo `provisioning_state`, on a
-`data_profile` starting `synthetic`, on an `access_stage` outside the recognised
-production set, on a legacy `demo_seed` that is anything but an explicit `false`,
-**and on every unknown answer**: read unavailable, response naming a different
-tenant, field absent, field of the wrong type, field empty — and, decisively,
-field `null`.
+`data_profile` carrying a fixture marker, on an `access_stage` outside the
+recognised production set, on a legacy `demo_seed` that is anything but an
+explicit `false`, **and on every unknown answer**: read unavailable, response
+naming a different tenant, field absent, field of the wrong type, field empty,
+field whitespace-only — and, decisively, field `null`. Every classification field
+goes through one normaliser, so no field treats an unknown as an answer.
 
 **`null` is the field that decides most tenants today, and it is a refusal.**
 Production returns `null` classification for every tenant provisioned before
@@ -101,19 +103,32 @@ established what is in this tenant*, which is not the same as *confirmed not a
 demo*. "We could not tell" and "it is a real tenant" must never produce the same
 outcome.
 
-Two asymmetries are deliberate:
+**Not every field is decided the same way, and the difference is the limit of
+this gate:**
 
-- `access_stage` is checked against an **allowlist** (`production`) because its
-  values are enumerable. An unrecognised stage refuses and prints what came back,
-  so a new stage is widened deliberately on evidence instead of passing unseen.
-  Only `demo` has been observed live, so this set may be too narrow — it errs
-  toward holding tenants back.
-- `data_profile` is checked against a **denylist** (`synthetic*`, plus `demo`,
-  `fixture`, `sample`, `seed`, `test`) because the production side is open-ended
-  and there is no published set of real-customer profiles to allowlist. A profile
-  that is neither empty nor recognised as fixture data therefore passes this
-  check. **Whoever adds a tenant to the manifest must read its logged provenance
-  record rather than rely on the gate alone.**
+- `access_stage` is an **allowlist** (`production`) because its values are
+  enumerable. Acceptance is exact — `" production"` and `"Production"` are
+  malformed, and malformed is unknown — so a value can only be widened
+  deliberately, on evidence. Only `demo` has been observed live besides `null`,
+  so the set may be too narrow; that errs toward holding tenants back.
+- `data_profile` and `provisioning_state` are **denylists**, because their
+  production vocabularies are open-ended and nothing published enumerates them.
+  Refusal matching is normalised (trimmed, lower-cased, substring) so padding or
+  casing cannot walk a value past the list: `"  Synthetic_Brightline "` and
+  `"acme_demo_copy"` both refuse. But a value that is present, well-formed and
+  carries no marker **passes even if nobody here has seen it before.**
+
+So clearing the gate proves a tenant is *not obviously* a demo — not that it is a
+confirmed production tenant. On the way out, the record that cleared is logged
+verbatim:
+
+```
+[brain-agent-migration] provenance cleared tenant_id=… kind=… provisioning_state=… data_profile=… access_stage=…
+```
+
+**Whoever adds a tenant to the manifest must paste that line into the change that
+adds it**, so the reviewer sees the classification the gate could not decide.
+Nothing else in this repo retains it.
 
 `demo_seed` is no longer required, because the live contract does not publish it.
 Requiring it would refuse every tenant for a reason that stopped being true. A

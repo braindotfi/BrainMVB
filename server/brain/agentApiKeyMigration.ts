@@ -142,6 +142,33 @@ const DEMO_PROVISIONING_STATES = new Set(["ready_demo", "provisioning_demo", "de
  */
 const PRODUCTION_ACCESS_STAGES = new Set(["production"]);
 
+/**
+ * A provenance string that is actually usable, or `undefined` for every kind of
+ * unknown: absent, null, the wrong type, empty, or whitespace-only. Returned
+ * lowercased and trimmed, because normalising on the REFUSAL side can only cause
+ * more refusals - " Synthetic_Brightline " must not walk past a denylist.
+ *
+ * Acceptance never normalises. An allowlist compares the raw value, so a padded
+ * or oddly-cased "production" is treated as the malformed answer it is.
+ */
+function normaliseProvenanceString(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const normalised = value.trim().toLowerCase();
+  return normalised.length === 0 ? undefined : normalised;
+}
+
+/**
+ * Whether a normalised provenance value carries a demo marker. Substring, not
+ * equality: this is a denylist, so a looser match only ever refuses more.
+ */
+function isDemoMarker(normalised: string, exact: ReadonlySet<string>): boolean {
+  if (exact.has(normalised)) return true;
+  return DEMO_MARKER_SUBSTRINGS.some((marker) => normalised.includes(marker));
+}
+
+/** Substrings that mean "not real customer data" wherever they appear. */
+const DEMO_MARKER_SUBSTRINGS = ["demo", "synthetic", "fixture", "sample", "sandbox"];
+
 /** Render a provenance value for an operator: null and undefined must not read alike. */
 function describeProvenanceValue(value: unknown): string {
   if (value === null) return "null (unclassified)";
@@ -229,13 +256,23 @@ function denialReasonOf(body: unknown): string | undefined {
  * Authority is brain-core's own provenance record, never a local id allowlist: a
  * hardcoded exclusion list only knows the demo tenants somebody remembered. Every
  * unknown answer - read unavailable, response about a different tenant, field
- * absent, field null, field the wrong type - is a refusal, because "we could not
- * tell" and "it is a real tenant" must never produce the same outcome.
+ * absent, field null, field the wrong type, field empty or whitespace-only - is a
+ * refusal, because "we could not tell" and "it is a real tenant" must never
+ * produce the same outcome.
  *
  * Null is the important case, not a corner case. Production returns
  * `data_profile: null, access_stage: null` for every tenant provisioned before
  * classification existed, including real customer tenants. That is unclassified
  * legacy data: nobody has established what is in it. It is held, not cleared.
+ *
+ * What this function CANNOT decide, and no comment should pretend otherwise:
+ * `data_profile` and `provisioning_state` are checked against denylists, because
+ * their production vocabularies are open-ended and nothing published enumerates
+ * them. A value that is present, well-formed, and carries no demo marker passes
+ * even if nobody here has seen it before. `access_stage` is the one allowlist,
+ * because its values are enumerable. So a tenant clearing this gate has been
+ * proved *not obviously* a demo - the operator adding it to the manifest must
+ * still read the provenance record logged on the way out.
  */
 async function assertTenantIsNotDemoSeeded(tenantId: string): Promise<void> {
   let provenance: TenantProvenanceShape;
@@ -276,18 +313,24 @@ async function assertTenantIsNotDemoSeeded(tenantId: string): Promise<void> {
         `not production. Refusing to migrate.`,
     );
   }
-  if (
-    typeof provenance.provisioning_state === "string" &&
-    DEMO_PROVISIONING_STATES.has(provenance.provisioning_state)
-  ) {
+  const provisioningState = normaliseProvenanceString(provenance.provisioning_state);
+  if (provisioningState === undefined) {
+    throw new Error(
+      `brain-core provenance for ${tenantId} reports provisioning_state=` +
+        `${describeProvenanceValue(provenance.provisioning_state)}, so how this tenant was ` +
+        `provisioned is unknown. Refusing to migrate.`,
+    );
+  }
+  if (isDemoMarker(provisioningState, DEMO_PROVISIONING_STATES)) {
     throw new Error(
       `tenant ${tenantId} is in provisioning_state=${provenance.provisioning_state}, which is a ` +
         `demo provisioning path, and must not be migrated`,
     );
   }
-  // Null, absent, malformed and "" are one answer: nobody has classified this
-  // tenant's data, so synthetic content cannot be ruled out.
-  if (typeof provenance.data_profile !== "string" || provenance.data_profile.length === 0) {
+  // Null, absent, malformed, "" and "   " are one answer: nobody has classified
+  // this tenant's data, so synthetic content cannot be ruled out.
+  const dataProfile = normaliseProvenanceString(provenance.data_profile);
+  if (dataProfile === undefined) {
     throw new Error(
       `brain-core provenance for ${tenantId} reports data_profile=` +
         `${describeProvenanceValue(provenance.data_profile)}, so its data is unclassified and ` +
@@ -295,8 +338,8 @@ async function assertTenantIsNotDemoSeeded(tenantId: string): Promise<void> {
     );
   }
   if (
-    provenance.data_profile.startsWith(SYNTHETIC_DATA_PROFILE_PREFIX) ||
-    NON_PRODUCTION_DATA_PROFILES.has(provenance.data_profile)
+    dataProfile.startsWith(SYNTHETIC_DATA_PROFILE_PREFIX) ||
+    isDemoMarker(dataProfile, NON_PRODUCTION_DATA_PROFILES)
   ) {
     throw new Error(
       `tenant ${tenantId} carries synthetic data profile ${provenance.data_profile} and must not be migrated`,
@@ -316,6 +359,15 @@ async function assertTenantIsNotDemoSeeded(tenantId: string): Promise<void> {
         `stage (${[...PRODUCTION_ACCESS_STAGES].join(", ")}). Refusing to migrate.`,
     );
   }
+  // The record that cleared the gate, logged verbatim. data_profile is checked
+  // against a denylist, so an unrecognised profile passes - this line is the
+  // evidence a reviewer needs to confirm by hand what the gate could not decide.
+  console.error(
+    `[brain-agent-migration] provenance cleared tenant_id=${tenantId} kind=${provenance.kind} ` +
+      `provisioning_state=${describeProvenanceValue(provenance.provisioning_state)} ` +
+      `data_profile=${describeProvenanceValue(provenance.data_profile)} ` +
+      `access_stage=${describeProvenanceValue(provenance.access_stage)}`,
+  );
 }
 
 /**
