@@ -130,6 +130,12 @@ verbatim:
 adds it**, so the reviewer sees the classification the gate could not decide.
 Nothing else in this repo retains it.
 
+Get that record with a read — `GET /v1/tenants/{id}/provenance` under
+platform-service auth returns exactly the fields the line reports. Do **not** run
+the migration against a candidate to produce the log: by the time the line is
+printed the run is already past the gate and on its way to issuing a live
+credential.
+
 `demo_seed` is no longer required, because the live contract does not publish it.
 Requiring it would refuse every tenant for a reason that stopped being true. A
 record that still carries it is still honoured, and anything other than an

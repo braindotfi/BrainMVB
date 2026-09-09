@@ -352,6 +352,17 @@ describe("migrateTenant refuses before issuing a credential", () => {
     });
   }
 
+  // Isolated on purpose: the all-null record now refuses at provisioning_state,
+  // so nothing else exercises a null profile with every other field valid.
+  it("refuses a null data_profile with every other field valid", async () => {
+    wireHappyPath();
+    tenancy.getTenantProvenance.mockResolvedValue(goodProvenance({ data_profile: null }));
+    await expect(migrateTenant(TENANT)).rejects.toThrow(
+      /data_profile=null \(unclassified\).*Refusing to migrate/s,
+    );
+    expectNoKeyIssued();
+  });
+
   it("refuses a whitespace-only data_profile as unclassified, not as a profile", async () => {
     wireHappyPath();
     tenancy.getTenantProvenance.mockResolvedValue(goodProvenance({ data_profile: "   " }));
