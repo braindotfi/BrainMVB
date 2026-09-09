@@ -119,3 +119,4 @@
 - [Password reset session isolation](password-reset-session-isolation.md) — reset URLs are anonymous boundaries; durable per-user session generations revoke every prior target session after a reset.
 - [Credential migration verification](credential-migration-verification.md) — prove a denial without creating a record; a bare 403 names no mechanism, absent fields are not passing evidence, and source scans cannot witness a refusal.
 - [Classification gates](credential-migration-verification.md) — normalise to refuse, compare exactly to accept; upstream `null` is the common case and means unclassified, never safe.
+- [Authorization header normalization](authorization-header-normalization.md) — normalize case before replacing Bearer auth; duplicate case variants become one comma-joined invalid JWT.
