@@ -8,6 +8,7 @@ import {
   buildTruncationNote,
   filterPayloadMessages,
   parseAssistantResponse,
+  removeChatSession,
   trimChatHistory,
 } from "./assistantChat";
 
@@ -28,6 +29,20 @@ describe("allocateChatId", () => {
 
     expect(allocateChatId("session", occupied, randomUUID)).toBe("session-same-uuid");
     expect(allocateChatId("message", occupied, randomUUID)).toBe("message-same-uuid");
+  });
+});
+
+describe("removeChatSession", () => {
+  it("removes the selected conversation and leaves the others intact", () => {
+    const sessions = [
+      { id: "session-one", title: "One" },
+      { id: "session-two", title: "Two" },
+    ];
+
+    expect(removeChatSession(sessions, "session-one")).toEqual([
+      { id: "session-two", title: "Two" },
+    ]);
+    expect(sessions).toHaveLength(2);
   });
 });
 

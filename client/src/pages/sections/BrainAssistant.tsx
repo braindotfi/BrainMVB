@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useLayoutEffect, useMemo, useCallback } fr
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
-  ArrowUp,
+  ArrowRight,
   Search,
   SquarePen,
 } from "lucide-react";
@@ -23,7 +23,7 @@ import {
 import { openMemberDetail } from "@/lib/membersStore";
 import { useSuggestedQuestions, resolveSuggestionChips } from "@/lib/brainSuggestedQuestions";
 import { resolveVendor, openVendorDetail } from "@/lib/openVendorDetail";
-import { allocateChatId, parseAssistantResponse, trimChatHistory, buildChatPayload, filterPayloadMessages, buildTruncationNote, ASSISTANT_GENERIC_ERROR, CHAT_HISTORY_LIMIT, MESSAGE_CONTENT_LIMIT } from "@/lib/assistantChat";
+import { allocateChatId, parseAssistantResponse, removeChatSession, trimChatHistory, buildChatPayload, filterPayloadMessages, buildTruncationNote, ASSISTANT_GENERIC_ERROR, CHAT_HISTORY_LIMIT, MESSAGE_CONTENT_LIMIT } from "@/lib/assistantChat";
 import { isAssistantBulletLine, stripAssistantBullet } from "@/lib/assistantFormatting";
 import timeIcon from "@assets/timestamp_1788994251245.png";
 import activeConvoIcon from "@assets/Active_1781818047007.png";
@@ -846,8 +846,19 @@ export function BrainAssistant() {
   };
 
   const deleteSession = (id: string) => {
-    setSessions((prev) => prev.filter((s) => s.id !== id));
-    setActiveSessionId((cur) => (cur === id ? null : cur));
+    /* Deleting from history always returns to a clean new conversation, rather
+       than silently selecting a neighbouring old chat. If the deleted chat has
+       a reply in flight, stop it before it can write back into history. */
+    chatGenerationRef.current += 1;
+    chatAbortRef.current?.abort();
+    chatAbortRef.current = null;
+    pendingReplyRef.current = null;
+    setSending(false);
+    setSessions((prev) => removeChatSession(prev, id));
+    setActiveSessionId(null);
+    setDropdownOpen(false);
+    setSearch("");
+    setDraft("");
   };
 
   const filteredGroups = useMemo(() => {
@@ -939,7 +950,7 @@ export function BrainAssistant() {
               disabled={!draft.trim() || sending || authLoading || isTransitioning || !user}
               title="Send"
             >
-              <ArrowUp color="#ffffff" strokeWidth={2.4} />
+              <ArrowRight color="#ffffff" strokeWidth={2.4} />
             </Button>
           </div>
         </div>
@@ -993,7 +1004,7 @@ export function BrainAssistant() {
       className="relative flex h-full min-h-0 w-full flex-col overflow-hidden"
     >
       {/* Session switcher, centred over the reading column */}
-      <div className="flex shrink-0 flex-col items-center gap-[10px] p-[16px]">
+      <div className="flex shrink-0 flex-col items-center gap-[10px] px-[16px] pt-[8px] pb-[16px]">
         <div className="relative w-full max-w-[322px]" ref={dropdownRef}>
           <button
             data-testid="button-session-dropdown"
