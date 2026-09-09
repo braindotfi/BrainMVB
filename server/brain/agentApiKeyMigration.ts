@@ -8,7 +8,10 @@ import {
   isAgentApiKeyCredential,
   type AgentAccessTokenClaims,
 } from "./agentApiKey";
-import { AGENT_API_KEY_MIGRATION_BATCH } from "./agentApiKeyMigrationBatch";
+import {
+  AGENT_API_KEY_MIGRATION_BATCH,
+  PROTECTED_AGENT_API_KEY_MIGRATION_TENANT_IDS,
+} from "./agentApiKeyMigrationBatch";
 import { BUILD_COMMIT } from "../buildInfo";
 import {
   BrainApiError,
@@ -40,6 +43,16 @@ interface VerificationReceipt {
   lifecycle: "completed";
   rollback_marker: false;
 }
+
+const SETTLED_INVOICE_STATUSES = new Set([
+  "paid",
+  "settled",
+  "cancelled",
+  "canceled",
+  "void",
+  "voided",
+  "written_off",
+]);
 
 function decodeLegacyAgentClaims(token: string): LegacyAgentClaims {
   const encoded = token.split(".")[1];
@@ -73,9 +86,15 @@ function validateBatch(): void {
   if (unique.size !== AGENT_API_KEY_MIGRATION_BATCH.length) {
     throw new Error("agent API key migration batch contains a duplicate tenant id");
   }
+  const protectedTenantIds = new Set(PROTECTED_AGENT_API_KEY_MIGRATION_TENANT_IDS);
   for (const tenantId of unique) {
     if (!/^tnt_[0-9A-HJKMNP-TV-Z]{26}$/.test(tenantId)) {
       throw new Error(`agent API key migration batch contains invalid tenant id ${tenantId}`);
+    }
+    if (protectedTenantIds.has(tenantId)) {
+      throw new Error(
+        `agent API key migration batch contains protected tenant id ${tenantId}`,
+      );
     }
   }
 }
@@ -107,7 +126,9 @@ async function verifyLifecycle(
 
   const invoices = await listLedgerInvoices(claimsToken(claims), { limit: 100 });
   const invoice = invoices.invoices.find(
-    (candidate) => candidate.metadata?.scenario === "ap" && candidate.status !== "paid",
+    (candidate) =>
+      candidate.metadata?.scenario !== "ar" &&
+      !SETTLED_INVOICE_STATUSES.has(candidate.status.trim().toLowerCase()),
   );
   if (invoice === undefined) {
     throw new Error(`tenant ${tenantId} has no payable invoice for the BFF lifecycle probe`);

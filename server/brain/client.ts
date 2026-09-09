@@ -318,7 +318,7 @@ export interface BrainInvoice {
   currency: string;
   due_date?: string | null;
   status: string;
-  /** Seed marks AP invoices with `{ scenario: "ap", po, flags }`. */
+  /** AR is marked explicitly; AP is its complement. Demo seed may mark AP as `"ap"`. */
   metadata?: { scenario?: string; po?: string | null; flags?: string[] } | null;
 }
 
