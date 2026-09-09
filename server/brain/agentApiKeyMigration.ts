@@ -12,6 +12,10 @@ import {
   AGENT_API_KEY_MIGRATION_BATCH,
   LEGACY_ROLLBACK_JWT_REVOCATION_DEADLINE_ISO,
   LEGACY_ROLLBACK_JWT_REVOCATION_DEADLINE_MS,
+  NORTHSTAR_AGENT_API_KEY_MIGRATION_AUTHORIZATION,
+  NORTHSTAR_AGENT_API_KEY_MIGRATION_TENANT_ID,
+  NORTHSTAR_AGENT_API_KEY_MIGRATION_WINDOW_END_ISO,
+  NORTHSTAR_AGENT_API_KEY_MIGRATION_WINDOW_START_ISO,
   PROTECTED_AGENT_API_KEY_MIGRATION_TENANT_IDS,
 } from "./agentApiKeyMigrationBatch";
 import { BUILD_COMMIT } from "../buildInfo";
@@ -21,6 +25,7 @@ import {
   issueBffAgentApiKey,
   listAgentApiKeys,
   revokeAgentApiKey,
+  type AgentApiKeyShape,
   type TenantProvenanceShape,
 } from "./tenancy";
 
@@ -30,6 +35,16 @@ interface LegacyAgentClaims {
   principal_type: string;
   exp: number;
 }
+
+type MigrationMode = "ordinary" | "northstar-no-legacy-rollback";
+
+const NORTHSTAR_MIGRATION_ENV_NAMES = [
+  "NORTHSTAR_AGENT_API_KEY_MIGRATION_TENANT_ID",
+  "NORTHSTAR_AGENT_API_KEY_MIGRATION_APPROVED_SHA",
+  "NORTHSTAR_AGENT_API_KEY_MIGRATION_WINDOW_START",
+  "NORTHSTAR_AGENT_API_KEY_MIGRATION_WINDOW_END",
+  "NORTHSTAR_AGENT_API_KEY_MIGRATION_AUTHORIZATION",
+] as const;
 
 /**
  * Proof that a migrated tenant's BFF agent API key works, is correctly bound, and
@@ -211,12 +226,13 @@ function decodeLegacyAgentClaims(token: string): LegacyAgentClaims {
   return claims as LegacyAgentClaims;
 }
 
-function validateBatch(): void {
-  if (AGENT_API_KEY_MIGRATION_BATCH.length > 5) {
+/** Exported so tests can exercise every protected-id refusal with real inputs. */
+export function validateAgentApiKeyMigrationBatch(batch: readonly string[]): void {
+  if (batch.length > 5) {
     throw new Error("agent API key migration batch exceeds the five-tenant safety limit");
   }
-  const unique = new Set(AGENT_API_KEY_MIGRATION_BATCH);
-  if (unique.size !== AGENT_API_KEY_MIGRATION_BATCH.length) {
+  const unique = new Set(batch);
+  if (unique.size !== batch.length) {
     throw new Error("agent API key migration batch contains a duplicate tenant id");
   }
   const protectedTenantIds = new Set(PROTECTED_AGENT_API_KEY_MIGRATION_TENANT_IDS);
@@ -230,6 +246,68 @@ function validateBatch(): void {
       );
     }
   }
+}
+
+function configuredNorthstarValue(name: (typeof NORTHSTAR_MIGRATION_ENV_NAMES)[number]): string {
+  return process.env[name]?.trim() ?? "";
+}
+
+/**
+ * Return true only for the fully armed, individually approved Northstar run.
+ * An entirely absent configuration is dormant. Any partial or mismatched
+ * configuration is a boot failure so a typo cannot look like authorization.
+ */
+function assertNorthstarMigrationAuthorization(now: number): boolean {
+  const configured = NORTHSTAR_MIGRATION_ENV_NAMES.filter(
+    (name) => configuredNorthstarValue(name).length > 0,
+  );
+  if (configured.length === 0) return false;
+  if (process.env.NODE_ENV !== "production") {
+    throw new Error("the Northstar agent API key migration is production-only");
+  }
+  if (configured.length !== NORTHSTAR_MIGRATION_ENV_NAMES.length) {
+    throw new Error(
+      "Northstar agent API key migration authorization is incomplete; refusing to migrate",
+    );
+  }
+  if (
+    configuredNorthstarValue("NORTHSTAR_AGENT_API_KEY_MIGRATION_TENANT_ID") !==
+    NORTHSTAR_AGENT_API_KEY_MIGRATION_TENANT_ID
+  ) {
+    throw new Error("Northstar migration tenant id does not match the individually approved tenant");
+  }
+  if (
+    configuredNorthstarValue("NORTHSTAR_AGENT_API_KEY_MIGRATION_AUTHORIZATION") !==
+    NORTHSTAR_AGENT_API_KEY_MIGRATION_AUTHORIZATION
+  ) {
+    throw new Error("Northstar migration manual authorization phrase does not match");
+  }
+  if (
+    configuredNorthstarValue("NORTHSTAR_AGENT_API_KEY_MIGRATION_WINDOW_START") !==
+      NORTHSTAR_AGENT_API_KEY_MIGRATION_WINDOW_START_ISO ||
+    configuredNorthstarValue("NORTHSTAR_AGENT_API_KEY_MIGRATION_WINDOW_END") !==
+      NORTHSTAR_AGENT_API_KEY_MIGRATION_WINDOW_END_ISO
+  ) {
+    throw new Error("Northstar migration window does not match the individually approved window");
+  }
+  const approvedSha = configuredNorthstarValue(
+    "NORTHSTAR_AGENT_API_KEY_MIGRATION_APPROVED_SHA",
+  );
+  if (!/^[0-9a-f]{40}$/.test(approvedSha) || BUILD_COMMIT !== approvedSha) {
+    throw new Error(
+      `Northstar migration approved SHA does not exactly match deployed build ${BUILD_COMMIT}`,
+    );
+  }
+  const start = Date.parse(NORTHSTAR_AGENT_API_KEY_MIGRATION_WINDOW_START_ISO);
+  const end = Date.parse(NORTHSTAR_AGENT_API_KEY_MIGRATION_WINDOW_END_ISO);
+  if (now < start || now >= end) {
+    throw new Error(
+      `Northstar migration is outside the approved window ` +
+        `${NORTHSTAR_AGENT_API_KEY_MIGRATION_WINDOW_START_ISO}/` +
+        `${NORTHSTAR_AGENT_API_KEY_MIGRATION_WINDOW_END_ISO}`,
+    );
+  }
+  return true;
 }
 
 function resourceUrl(): string {
@@ -367,6 +445,71 @@ async function assertTenantIsNotDemoSeeded(tenantId: string): Promise<void> {
       `provisioning_state=${describeProvenanceValue(provenance.provisioning_state)} ` +
       `data_profile=${describeProvenanceValue(provenance.data_profile)} ` +
       `access_stage=${describeProvenanceValue(provenance.access_stage)}`,
+  );
+}
+
+/**
+ * The one manually authorized exception to the ordinary provenance gate.
+ * Northstar predates provenance classification, so this admits only its exact
+ * observed legacy shape. It is deliberately not a reusable "allow null" flag.
+ */
+async function assertNorthstarLegacyProvenance(tenantId: string): Promise<void> {
+  if (tenantId !== NORTHSTAR_AGENT_API_KEY_MIGRATION_TENANT_ID) {
+    throw new Error(
+      `Northstar legacy provenance override rejects tenant ${tenantId}; only ` +
+        `${NORTHSTAR_AGENT_API_KEY_MIGRATION_TENANT_ID} is individually authorized`,
+    );
+  }
+  let provenance: TenantProvenanceShape;
+  try {
+    provenance = await getTenantProvenance(tenantId);
+  } catch (error) {
+    throw new Error(
+      `cannot verify the individually approved Northstar provenance for ${tenantId}`,
+      { cause: error },
+    );
+  }
+  if (typeof provenance !== "object" || provenance === null) {
+    throw new Error("Northstar provenance was not an object; refusing the manual override");
+  }
+  if (provenance.tenant_id !== NORTHSTAR_AGENT_API_KEY_MIGRATION_TENANT_ID) {
+    throw new Error(
+      `Northstar provenance response identifies ${String(provenance.tenant_id)}, not the ` +
+        `individually approved tenant`,
+    );
+  }
+  if (provenance.demo_seed !== undefined && provenance.demo_seed !== false) {
+    throw new Error("Northstar provenance carries a demo_seed marker; refusing the manual override");
+  }
+  if (provenance.kind !== "production") {
+    throw new Error(
+      `Northstar provenance kind=${describeProvenanceValue(provenance.kind)}, not production; ` +
+        `refusing the manual override`,
+    );
+  }
+  for (const [field, value] of [
+    ["provisioning_state", provenance.provisioning_state],
+    ["data_profile", provenance.data_profile],
+    ["access_stage", provenance.access_stage],
+  ] as const) {
+    const normalised = normaliseProvenanceString(value);
+    if (normalised !== undefined && isDemoMarker(normalised, new Set<string>())) {
+      throw new Error(
+        `Northstar provenance ${field}=${describeProvenanceValue(value)} carries a demo marker; ` +
+          `refusing the manual override`,
+      );
+    }
+    if (value !== null) {
+      throw new Error(
+        `Northstar provenance ${field}=${describeProvenanceValue(value)} differs from the ` +
+          `individually approved null legacy shape; refusing the manual override`,
+      );
+    }
+  }
+  console.error(
+    `[brain-agent-migration] manually authorized Northstar legacy provenance ` +
+      `tenant_id=${tenantId} kind=${provenance.kind} provisioning_state=null (unclassified) ` +
+      `data_profile=null (unclassified) access_stage=null (unclassified)`,
   );
 }
 
@@ -654,12 +797,100 @@ async function rollbackTenant(
   );
 }
 
-/** Exported for the behavioural tests in agent-api-key-migration.test.ts. */
-export async function migrateTenant(tenantId: string): Promise<VerificationReceipt> {
+async function revokeNewKeysAfterAmbiguousNorthstarIssuance(
+  tenantId: string,
+  agentId: string,
+  existingKeyIds: ReadonlySet<string>,
+): Promise<void> {
+  let keys;
+  try {
+    keys = (await listAgentApiKeys(tenantId)).keys;
+  } catch (error) {
+    console.error(
+      `[brain-agent-migration] MANUAL REPAIR REQUIRED tenant_id=${tenantId}: Northstar key ` +
+        `issuance failed ambiguously and the key inventory could not be read (${String(error)}). ` +
+        `Find and revoke any unreferenced key created by this attempt.`,
+    );
+    return;
+  }
+  const candidates = keys.filter(
+    (key) =>
+      !existingKeyIds.has(key.id) &&
+      key.tenant_id === tenantId &&
+      key.agent_id === agentId &&
+      key.profile === "bff_service_v1" &&
+      key.environment === "live" &&
+      key.revoked_at === null,
+  );
+  for (const candidate of candidates) {
+    try {
+      await revokeAgentApiKey(candidate.id);
+      console.error(
+        `[brain-agent-migration] revoked unused Northstar credential after ambiguous issuance ` +
+          `tenant_id=${tenantId} credential_id=${candidate.id}`,
+      );
+    } catch (error) {
+      console.error(
+        `[brain-agent-migration] ORPHANED CREDENTIAL tenant_id=${tenantId} ` +
+          `credential_id=${candidate.id}: ambiguous issuance created an unreferenced key, but ` +
+          `revoking it failed (${String(error)}). Revoke it by hand.`,
+      );
+    }
+  }
+}
+
+/**
+ * Northstar's legacy JWT is already dead, so this cleanup never writes it back.
+ * Only a key proved unreferenced is revoked. A referenced or unknown key is left
+ * intact and escalated for manual repair.
+ */
+async function haltNorthstarWithoutLegacyRollback(
+  tenantId: string,
+  issuedKeyId: string,
+  issuedKey: string,
+  persistedIssuedKey: RuntimeRowState,
+): Promise<void> {
+  const state =
+    persistedIssuedKey === "unknown"
+      ? await readRuntimeRowState(tenantId, issuedKey)
+      : persistedIssuedKey;
+  if (state !== "legacy") {
+    console.error(
+      `[brain-agent-migration] MANUAL REPAIR REQUIRED tenant_id=${tenantId} ` +
+        `credential_id=${issuedKeyId}: Northstar verification failed in no-legacy-rollback mode; ` +
+        `runtime row state=${state}. The issued key was NOT revoked and the expired legacy JWT ` +
+        `was NOT restored.`,
+    );
+    return;
+  }
+  try {
+    await revokeAgentApiKey(issuedKeyId);
+  } catch (error) {
+    console.error(
+      `[brain-agent-migration] ORPHANED CREDENTIAL tenant_id=${tenantId} ` +
+        `credential_id=${issuedKeyId}: the unused Northstar key could not be revoked ` +
+        `(${String(error)}). Revoke it by hand.`,
+    );
+    return;
+  }
+  console.error(
+    `[brain-agent-migration] revoked unused Northstar credential tenant_id=${tenantId} ` +
+      `credential_id=${issuedKeyId}; expired legacy JWT was left unchanged`,
+  );
+}
+
+async function migrateTenantWithMode(
+  tenantId: string,
+  mode: MigrationMode,
+): Promise<VerificationReceipt> {
   const row = await storage.getBrainAgentToken(tenantId);
   if (row === undefined) throw new Error(`tenant ${tenantId} has no stored BFF agent credential`);
 
-  await assertTenantIsNotDemoSeeded(tenantId);
+  if (mode === "northstar-no-legacy-rollback") {
+    await assertNorthstarLegacyProvenance(tenantId);
+  } else {
+    await assertTenantIsNotDemoSeeded(tenantId);
+  }
 
   let agentApiKey = row.token;
   if (!isAgentApiKeyCredential(agentApiKey)) {
@@ -667,12 +898,30 @@ export async function migrateTenant(tenantId: string): Promise<VerificationRecei
     if (legacy.tenant_id !== tenantId) {
       throw new Error(`stored BFF agent JWT for ${tenantId} is bound to another tenant`);
     }
-    assertLegacyRollbackWindowOpen(tenantId, legacy, Date.now());
-    const issued = await issueBffAgentApiKey(
-      tenantId,
-      legacy.sub,
-      `phase3-bff-issue-${tenantId}-${BUILD_COMMIT.slice(0, 12)}`,
-    );
+    if (mode === "ordinary") {
+      assertLegacyRollbackWindowOpen(tenantId, legacy, Date.now());
+    }
+    const existingKeyIds =
+      mode === "northstar-no-legacy-rollback"
+        ? new Set((await listAgentApiKeys(tenantId)).keys.map((key) => key.id))
+        : undefined;
+    let issued: AgentApiKeyShape & { api_key: string };
+    try {
+      issued = await issueBffAgentApiKey(
+        tenantId,
+        legacy.sub,
+        `phase3-bff-issue-${tenantId}-${BUILD_COMMIT.slice(0, 12)}`,
+      );
+    } catch (error) {
+      if (existingKeyIds !== undefined) {
+        await revokeNewKeysAfterAmbiguousNorthstarIssuance(
+          tenantId,
+          legacy.sub,
+          existingKeyIds,
+        );
+      }
+      throw error;
+    }
     // From here on the key EXISTS upstream, so every failure path must clean it
     // up - including the binding, expiry and exchange checks below. Rollback needs
     // to know whether the runtime row was ever repointed at it, because that
@@ -709,15 +958,24 @@ export async function migrateTenant(tenantId: string): Promise<VerificationRecei
       persistedIssuedKey = "issued";
       return await verifyLifecycle(tenantId, agentApiKey, exchanged);
     } catch (error) {
-      await rollbackTenant(
-        tenantId,
-        legacy,
-        row.token,
-        row.expiresAt,
-        issued.id,
-        agentApiKey,
-        persistedIssuedKey,
-      );
+      if (mode === "northstar-no-legacy-rollback") {
+        await haltNorthstarWithoutLegacyRollback(
+          tenantId,
+          issued.id,
+          agentApiKey,
+          persistedIssuedKey,
+        );
+      } else {
+        await rollbackTenant(
+          tenantId,
+          legacy,
+          row.token,
+          row.expiresAt,
+          issued.id,
+          agentApiKey,
+          persistedIssuedKey,
+        );
+      }
       throw error;
     }
   }
@@ -731,8 +989,45 @@ export async function migrateTenant(tenantId: string): Promise<VerificationRecei
   return verifyLifecycle(tenantId, agentApiKey, exchanged);
 }
 
+/** Exported for the ordinary-batch behavioural tests. */
+export function migrateTenant(tenantId: string): Promise<VerificationReceipt> {
+  return migrateTenantWithMode(tenantId, "ordinary");
+}
+
+/**
+ * Dormant unless every independently approved Northstar control is supplied.
+ * This never adds Northstar to the ordinary batch and never restores its dead JWT.
+ */
+export async function migrateAuthorizedNorthstarAgentApiKey(): Promise<
+  VerificationReceipt | undefined
+> {
+  if (!assertNorthstarMigrationAuthorization(Date.now())) return undefined;
+  console.error(
+    `[brain-agent-migration] Northstar manual authorization accepted tenant_id=` +
+      `${NORTHSTAR_AGENT_API_KEY_MIGRATION_TENANT_ID} build_commit=${BUILD_COMMIT} window=` +
+      `${NORTHSTAR_AGENT_API_KEY_MIGRATION_WINDOW_START_ISO}/` +
+      `${NORTHSTAR_AGENT_API_KEY_MIGRATION_WINDOW_END_ISO} no_legacy_rollback=true`,
+  );
+  try {
+    const receipt = await migrateTenantWithMode(
+      NORTHSTAR_AGENT_API_KEY_MIGRATION_TENANT_ID,
+      "northstar-no-legacy-rollback",
+    );
+    console.log(`[brain-agent-migration] verified ${JSON.stringify(receipt)}`);
+    return receipt;
+  } catch (error) {
+    if (error instanceof BrainApiError) {
+      throw new Error(
+        `Northstar BFF lifecycle verification failed with HTTP ${error.status} on ${error.path}`,
+        { cause: error },
+      );
+    }
+    throw error;
+  }
+}
+
 export async function migrateConfiguredAgentApiKeyBatch(): Promise<VerificationReceipt[]> {
-  validateBatch();
+  validateAgentApiKeyMigrationBatch(AGENT_API_KEY_MIGRATION_BATCH);
   if (AGENT_API_KEY_MIGRATION_BATCH.length === 0) return [];
   if (process.env.NODE_ENV !== "production") {
     throw new Error("agent API key migration manifest is only allowed in production");

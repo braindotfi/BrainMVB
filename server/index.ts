@@ -8,7 +8,10 @@ import { assertEncryptionKeyConfigured } from "./tokenCrypto";
 import { storage } from "./storage";
 import { processExpiredDemoTenantDeletions } from "./brain/demoTenantDeletion";
 import { preflightStoredAgentApiKeys } from "./brain/auth";
-import { migrateConfiguredAgentApiKeyBatch } from "./brain/agentApiKeyMigration";
+import {
+  migrateAuthorizedNorthstarAgentApiKey,
+  migrateConfiguredAgentApiKeyBatch,
+} from "./brain/agentApiKeyMigration";
 import {
   createPasswordResetConfirmLimiter,
   createPasswordResetRequestLimiter,
@@ -151,6 +154,7 @@ app.use((req, res, next) => {
   await registerRoutes(httpServer, app);
   if (process.env.NODE_ENV === "production") {
     await migrateConfiguredAgentApiKeyBatch();
+    await migrateAuthorizedNorthstarAgentApiKey();
     await preflightStoredAgentApiKeys();
   }
 

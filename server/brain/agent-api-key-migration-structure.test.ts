@@ -4,6 +4,10 @@ import {
   AGENT_API_KEY_MIGRATION_BATCH,
   LEGACY_ROLLBACK_JWT_REVOCATION_DEADLINE_ISO,
   LEGACY_ROLLBACK_JWT_REVOCATION_DEADLINE_MS,
+  NORTHSTAR_AGENT_API_KEY_MIGRATION_AUTHORIZATION,
+  NORTHSTAR_AGENT_API_KEY_MIGRATION_TENANT_ID,
+  NORTHSTAR_AGENT_API_KEY_MIGRATION_WINDOW_END_ISO,
+  NORTHSTAR_AGENT_API_KEY_MIGRATION_WINDOW_START_ISO,
   PROTECTED_AGENT_API_KEY_MIGRATION_TENANT_IDS,
 } from "./agentApiKeyMigrationBatch";
 
@@ -36,6 +40,48 @@ describe("Phase 3 BFF migration structure", () => {
       AGENT_API_KEY_MIGRATION_BATCH.filter((tenantId) => protectedTenantIds.has(tenantId)),
     ).toEqual([]);
     expect(migrationSource).toContain("protectedTenantIds.has(tenantId)");
+  });
+
+  it("keeps Northstar behind a separate exact manual authorization fence", () => {
+    expect(NORTHSTAR_AGENT_API_KEY_MIGRATION_TENANT_ID).toBe(
+      "tnt_01M0KHRVY3RT3EXN7WT2SPDFMZ",
+    );
+    expect(PROTECTED_AGENT_API_KEY_MIGRATION_TENANT_IDS).toContain(
+      NORTHSTAR_AGENT_API_KEY_MIGRATION_TENANT_ID,
+    );
+    expect(AGENT_API_KEY_MIGRATION_BATCH).not.toContain(
+      NORTHSTAR_AGENT_API_KEY_MIGRATION_TENANT_ID,
+    );
+    expect(NORTHSTAR_AGENT_API_KEY_MIGRATION_WINDOW_START_ISO).toBe(
+      "2026-09-11T08:30:00Z",
+    );
+    expect(NORTHSTAR_AGENT_API_KEY_MIGRATION_WINDOW_END_ISO).toBe(
+      "2026-09-11T11:00:00Z",
+    );
+    expect(NORTHSTAR_AGENT_API_KEY_MIGRATION_AUTHORIZATION).toBe(
+      "APPROVE_NORTHSTAR_2026_09_11_NO_LEGACY_ROLLBACK",
+    );
+    expect(migrationSource).toContain("assertNorthstarMigrationAuthorization(Date.now())");
+    expect(migrationSource).toContain("BUILD_COMMIT !== approvedSha");
+    expect(migrationSource).toContain("assertNorthstarLegacyProvenance(tenantId)");
+    expect(migrationSource).toContain('mode === "northstar-no-legacy-rollback"');
+    expect(migrationSource).toContain("haltNorthstarWithoutLegacyRollback(");
+    expect(indexSource).toContain("await migrateAuthorizedNorthstarAgentApiKey()");
+  });
+
+  it("never routes the Northstar exception through legacy credential restoration", () => {
+    const noRollbackStart = migrationSource.indexOf(
+      "async function haltNorthstarWithoutLegacyRollback(",
+    );
+    const nextFunction = migrationSource.indexOf(
+      "async function migrateTenantWithMode(",
+      noRollbackStart,
+    );
+    const noRollbackSource = migrationSource.slice(noRollbackStart, nextFunction);
+    expect(noRollbackSource).not.toContain("storage.upsertBrainAgentToken");
+    expect(noRollbackSource).not.toContain("legacyToken");
+    expect(noRollbackSource).toContain("state !== \"legacy\"");
+    expect(noRollbackSource).toContain("revokeAgentApiKey(issuedKeyId)");
   });
 
   it("keeps the withdrawn demo tenant out of the manifest", () => {

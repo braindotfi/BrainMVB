@@ -11,8 +11,10 @@ Code: `server/brain/agentApiKeyMigration.ts`, manifest and constants in
 
 ## Current state
 
-**Batch 1 is empty. Nothing migrates on boot.** The manifest ships empty on
-purpose; `migrateConfiguredAgentApiKeyBatch()` returns immediately. All three
+**Batch 1 is empty. Nothing migrates on boot by default.** The manifest ships empty on
+purpose; `migrateConfiguredAgentApiKeyBatch()` returns immediately. Northstar also
+stays dormant unless every control in the individually authorized path below is
+present and exact. All three
 brain-core prerequisites are wired: the provenance endpoint (**verified live from
 this repo**, 2026-09-09) and the authorization probe plus the enforced legacy-JWT
 boundary (**on brain-core's report — neither can be exercised from here without
@@ -143,7 +145,60 @@ explicit `false` is an unknown.
 
 `PROTECTED_AGENT_API_KEY_MIGRATION_TENANT_IDS` (Northstar, golden demo, the shared
 "Continue with Demo" tenant, the RFC 0008 acceptance tenant) remains a second,
-independent refusal enforced in `validateBatch()`.
+independent refusal enforced in `validateAgentApiKeyMigrationBatch()`.
+
+## Individually authorized Northstar migration
+
+Northstar remains in `PROTECTED_AGENT_API_KEY_MIGRATION_TENANT_IDS` and can never
+enter an ordinary batch. Its legacy BFF JWT expired on 2026-08-29, and its live
+provenance is the exact pre-classification shape below:
+
+```json
+{"tenant_id":"tnt_01M0KHRVY3RT3EXN7WT2SPDFMZ","kind":"production",
+ "provisioning_state":null,"data_profile":null,"access_stage":null}
+```
+
+The separate `migrateAuthorizedNorthstarAgentApiKey()` entrypoint is dormant when
+none of its controls are configured. If any control is present, all must be
+present and exact or production boot fails before issuance:
+
+- `NORTHSTAR_AGENT_API_KEY_MIGRATION_TENANT_ID` must be
+  `tnt_01M0KHRVY3RT3EXN7WT2SPDFMZ`.
+- `NORTHSTAR_AGENT_API_KEY_MIGRATION_APPROVED_SHA` must be a full, lowercase
+  40-character commit SHA and must exactly equal the commit embedded in the
+  production build.
+- `NORTHSTAR_AGENT_API_KEY_MIGRATION_WINDOW_START` must be
+  `2026-09-11T08:30:00Z`.
+- `NORTHSTAR_AGENT_API_KEY_MIGRATION_WINDOW_END` must be
+  `2026-09-11T11:00:00Z`.
+- `NORTHSTAR_AGENT_API_KEY_MIGRATION_AUTHORIZATION` must be
+  `APPROVE_NORTHSTAR_2026_09_11_NO_LEGACY_ROLLBACK`.
+- The process must be production and the current time must be in the half-open
+  interval from the start through, but not including, the end.
+
+This is an exact named exception, not an `allow_null_provenance` option. It reads
+brain-core immediately before issuance and accepts only Northstar's exact tenant
+id, `kind=production`, and three explicit null classification fields. A demo
+marker, `demo_seed` other than absent or false, a response naming another tenant,
+or any provenance drift fails before issuance. It never writes provenance.
+
+The exception is also an explicit no-legacy-rollback mode. It validates that the
+stored JWT is structurally bound to Northstar's tenant and agent, but its expiry
+does not block issuance. On failure:
+
+- If issuance fails ambiguously, the pre-issuance and post-failure key inventories
+  are compared and any newly observed, unreferenced Northstar BFF key is revoked.
+- If exchange or verification fails before the runtime row is changed, the unused
+  issued key is revoked and the already-dead JWT row is left unchanged.
+- If the runtime row holds the new key, or its state cannot be proved, that key is
+  not revoked. The process emits `MANUAL REPAIR REQUIRED` and halts.
+- No Northstar failure path writes the expired JWT back as a fallback.
+
+Deploy the reviewed SHA before the window with this path dormant. Immediately
+before cutover, repeat the calendar conflict check. Arm all five controls only
+after that check clears, then deploy the exact same SHA. After a successful
+receipt and external demo smoke test, remove all five one-time controls so a later
+restart cannot attempt or block on the expired window.
 
 ## Legacy JWT rollback deadline — 2026-09-16T23:59:59Z (`LEGACY_AGENT_JWT_NOT_AFTER`)
 
