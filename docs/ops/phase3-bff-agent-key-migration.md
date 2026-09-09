@@ -17,12 +17,16 @@ answers (below) are required before any tenant can be added.
 
 ## Verification makes no writes it expects to succeed
 
-The verifier proves four things. It issues exactly three HTTP requests: two GETs
-and one POST that is expected to be *refused* (see the denial-probe caveat below —
-that POST is safe by convention, not by contract). No successful write is part of
-verification, and `agent-api-key-migration.test.ts` asserts the full request
-inventory, so a mutating call added later fails the suite rather than passing
-unnoticed.
+The verifier proves four things. Its only non-GET call is a POST it expects to be
+*refused* (see the denial-probe caveat below — that POST is safe by convention, not
+by contract); everything else it does is a read, including the `listAgentApiKeys`
+lookup. No successful write is part of verification.
+
+`agent-api-key-migration.test.ts` pins this two ways, because neither alone is
+enough: it asserts the complete inventory of direct HTTP requests, and separately
+pins the call counts of the mocked brain-core helpers — a second
+`issueBffAgentApiKey` would create an extra live production credential without
+changing a single recorded request.
 
 | Receipt field | What is actually observed |
 | --- | --- |
@@ -98,21 +102,27 @@ Enforcement is split, and neither half substitutes for the other:
    timeout: nothing aborts a migration that overruns it, it only keeps an
    already-doomed one from starting.
 3. **Rollback re-checks the window instead of trusting that pre-flight decision**,
-   and branches on what actually happened:
-   - the runtime row was never repointed (issuance succeeded, exchange failed) —
-     nothing to restore, and the key is unreferenced, so it is revoked;
-   - the row was repointed and the window is still open — restore the legacy JWT
-     first, then revoke;
-   - the row was repointed and the window has closed — the legacy JWT is dead, so
-     restoring it would swap a working credential for a broken one. The issued key
-     stays in place *unrevoked* and the tenant is escalated.
+   and branches on **what the runtime row actually holds**, which is read back
+   rather than inferred. A database write can commit and then fail to
+   acknowledge, so a rejected `upsert` does not mean the row is unchanged, and
+   guessing breaks the tenant either way: revoking a referenced key takes it
+   offline, leaving an unreferenced one orphans a live credential.
+   - row holds the legacy JWT (the repoint never happened, e.g. the exchange
+     failed) — nothing to restore, the key is unreferenced, so it is revoked;
+   - row holds the issued key and the window is still open — restore the legacy
+     JWT first, then revoke. The restore is subject to the same ambiguity, so the
+     row is read back again before anything is revoked;
+   - row holds the issued key and the window has closed — the legacy JWT is dead,
+     so restoring it would swap a working credential for a broken one. The issued
+     key stays in place *unrevoked* and the tenant is escalated;
+   - row state cannot be determined — nothing is revoked, and a human is asked.
 
 Every failure after issuance runs this cleanup. It is not a guarantee against
-orphaning: if restoring the legacy credential fails, or the revoke call itself
-fails, a live key can remain. Those states are not silent — grep the logs for
-`MANUAL REPAIR REQUIRED` (row still points at the issued key) and
-`ORPHANED CREDENTIAL` (unreferenced key that could not be revoked). Both need a
-human.
+orphaning: if restoring the legacy credential fails, if the row cannot be read, or
+if the revoke call itself fails, a live key can remain. Those states are not
+silent — grep the logs for `MANUAL REPAIR REQUIRED` (the row may still point at
+the issued key, so it was deliberately left alone) and `ORPHANED CREDENTIAL`
+(unreferenced key that could not be revoked). Both need a human.
 
 ## Withdrawn from batch 1
 

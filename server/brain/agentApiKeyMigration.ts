@@ -410,23 +410,46 @@ async function verifyLifecycle(
 }
 
 /**
+ * What the runtime credential row actually holds. `"unknown"` is a real answer,
+ * not an error case: a write can commit and then fail to acknowledge, so a
+ * rejected `upsert` does NOT mean the row is unchanged.
+ */
+type RuntimeRowState = "legacy" | "issued" | "unknown";
+
+/** Which credential the row currently points at, by reading it back. */
+async function readRuntimeRowState(
+  tenantId: string,
+  issuedKey: string,
+): Promise<RuntimeRowState> {
+  try {
+    const row = await storage.getBrainAgentToken(tenantId);
+    if (row === undefined) return "unknown";
+    return row.token === issuedKey ? "issued" : "legacy";
+  } catch {
+    return "unknown";
+  }
+}
+
+/**
  * Undo a failed migration.
  *
- * The order matters and depends on what actually happened. The issued key may only
- * be revoked once the runtime row has stopped pointing at it, or the tenant is
- * left holding a revoked credential:
+ * Order matters and depends on what the runtime row actually holds, which is why
+ * an unacknowledged write is resolved by reading the row back rather than assumed:
+ * revoking a key the row still points at takes the tenant offline.
  *
- * - The row was never repointed (`persistedIssuedKey` false, e.g. issuance
- *   succeeded but the exchange failed): nothing to restore, and the key is
- *   unreferenced, so revoke it. This is the only path that prevents an orphan.
- * - The row was repointed and the rollback window is still open: restore the
+ * - Row holds the legacy JWT (the repoint never happened, e.g. issuance succeeded
+ *   but the exchange failed): nothing to restore, and the issued key is
+ *   unreferenced, so revoke it. This is the path that prevents an orphan.
+ * - Row holds the issued key and the rollback window is still open: restore the
  *   legacy JWT first, then revoke.
- * - The row was repointed and the window has closed: the legacy JWT is dead, so
+ * - Row holds the issued key and the window has closed: the legacy JWT is dead, so
  *   restoring it would swap a working credential for a broken one. Leave the
  *   issued key in place *unrevoked* and escalate.
+ * - Row state cannot be determined: revoking might be the thing that breaks the
+ *   tenant, so nothing is revoked and a human is asked to look.
  *
- * Every path that ends with a live unreferenced key logs a loud, greppable
- * escalation, because that is the state a human has to clean up.
+ * Every path that ends with a live key logs a loud, greppable escalation, because
+ * that is the state somebody has to clean up.
  */
 async function rollbackTenant(
   tenantId: string,
@@ -434,9 +457,25 @@ async function rollbackTenant(
   legacyToken: string,
   legacyExpiresAt: Date,
   issuedKeyId: string,
-  persistedIssuedKey: boolean,
+  issuedKey: string,
+  persistedIssuedKey: RuntimeRowState,
 ): Promise<void> {
-  if (persistedIssuedKey) {
+  const state =
+    persistedIssuedKey === "unknown"
+      ? await readRuntimeRowState(tenantId, issuedKey)
+      : persistedIssuedKey;
+
+  if (state === "unknown") {
+    console.error(
+      `[brain-agent-migration] MANUAL REPAIR REQUIRED tenant_id=${tenantId} ` +
+        `credential_id=${issuedKeyId}: cannot determine whether the runtime row points at the ` +
+        `newly issued key, so it was NOT revoked - revoking a referenced key would take the ` +
+        `tenant offline. Check the row and revoke by hand if it is unreferenced.`,
+    );
+    return;
+  }
+
+  if (state === "issued") {
     const closure = legacyRollbackWindowClosure(legacy, Date.now(), 0);
     if (closure !== undefined) {
       console.error(
@@ -450,14 +489,19 @@ async function rollbackTenant(
     try {
       await storage.upsertBrainAgentToken(tenantId, legacyToken, legacyExpiresAt);
     } catch (error) {
-      console.error(
-        `[brain-agent-migration] MANUAL REPAIR REQUIRED tenant_id=${tenantId} ` +
-          `credential_id=${issuedKeyId}: could not restore the legacy credential (${String(error)}). ` +
-          `The runtime row still points at the issued key, which is IN USE and was NOT revoked.`,
-      );
-      return;
+      // The restore may still have committed, so read back before describing it.
+      const after = await readRuntimeRowState(tenantId, issuedKey);
+      if (after !== "legacy") {
+        console.error(
+          `[brain-agent-migration] MANUAL REPAIR REQUIRED tenant_id=${tenantId} ` +
+            `credential_id=${issuedKeyId}: could not restore the legacy credential ` +
+            `(${String(error)}); runtime row reads as ${after}. The issued key was NOT revoked.`,
+        );
+        return;
+      }
     }
   }
+
   try {
     await revokeAgentApiKey(issuedKeyId);
   } catch (error) {
@@ -470,7 +514,7 @@ async function rollbackTenant(
   }
   console.error(
     `[brain-agent-migration] rollback tenant_id=${tenantId} credential_id=${issuedKeyId} ` +
-      `restored_runtime_row=${persistedIssuedKey}`,
+      `restored_runtime_row=${state === "issued"}`,
   );
 }
 
@@ -497,7 +541,7 @@ export async function migrateTenant(tenantId: string): Promise<VerificationRecei
     // up - including the binding, expiry and exchange checks below. Rollback needs
     // to know whether the runtime row was ever repointed at it, because that
     // decides whether revoking is safe.
-    let persistedIssuedKey = false;
+    let persistedIssuedKey: RuntimeRowState = "legacy";
     try {
       if (
         !isAgentApiKeyCredential(issued.api_key) ||
@@ -522,8 +566,11 @@ export async function migrateTenant(tenantId: string): Promise<VerificationRecei
       if (exchanged.claims.sub !== legacy.sub || exchanged.claims.credential_id !== issued.id) {
         throw new Error("exchanged access token does not match the issued BFF credential");
       }
+      // A rejected write can still have committed, so the outcome is unknown
+      // until it resolves; rollback reads the row back rather than guessing.
+      persistedIssuedKey = "unknown";
       await storage.upsertBrainAgentToken(tenantId, agentApiKey, expiry);
-      persistedIssuedKey = true;
+      persistedIssuedKey = "issued";
       return await verifyLifecycle(tenantId, agentApiKey, exchanged);
     } catch (error) {
       await rollbackTenant(
@@ -532,6 +579,7 @@ export async function migrateTenant(tenantId: string): Promise<VerificationRecei
         row.token,
         row.expiresAt,
         issued.id,
+        agentApiKey,
         persistedIssuedKey,
       );
       throw error;

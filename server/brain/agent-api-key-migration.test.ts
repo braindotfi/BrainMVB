@@ -165,6 +165,15 @@ function wireHappyPath(wiring: Wiring = {}): void {
   );
 }
 
+/** Collect the greppable escalation lines a rollback path is required to log. */
+function captureEscalations(): string[] {
+  const lines: string[] = [];
+  vi.spyOn(console, "error").mockImplementation((message: unknown) => {
+    lines.push(String(message));
+  });
+  return lines;
+}
+
 beforeEach(() => {
   storage.rows.clear();
   requests = [];
@@ -427,10 +436,7 @@ describe("migrateTenant cleans up after itself", () => {
 
   it("escalates loudly when revoking the issued key fails", async () => {
     wireHappyPath();
-    const escalations: string[] = [];
-    vi.spyOn(console, "error").mockImplementation((message: unknown) => {
-      escalations.push(String(message));
-    });
+    const escalations = captureEscalations();
     exchangeMock = () => Promise.reject(new Error("token endpoint unavailable"));
     tenancy.revokeAgentApiKey.mockRejectedValue(new Error("brain-core unreachable"));
     await expect(migrateTenant(TENANT)).rejects.toThrow(/token endpoint unavailable/);
@@ -439,10 +445,7 @@ describe("migrateTenant cleans up after itself", () => {
 
   it("does not revoke a key the runtime row still points at when restoring fails", async () => {
     wireHappyPath({ denialBody: { reason: "policy_denied" } });
-    const escalations: string[] = [];
-    vi.spyOn(console, "error").mockImplementation((message: unknown) => {
-      escalations.push(String(message));
-    });
+    const escalations = captureEscalations();
     let writes = 0;
     storage.upsertBrainAgentToken.mockImplementation(
       async (tenantId: string, token: string, expiresAt: Date) => {
@@ -456,6 +459,51 @@ describe("migrateTenant cleans up after itself", () => {
     await expect(migrateTenant(TENANT)).rejects.toThrow();
     expect(tenancy.revokeAgentApiKey).not.toHaveBeenCalled();
     expect(storage.rows.get(TENANT)?.token).toBe(NEW_KEY);
+    expect(escalations.join("\n")).toContain("MANUAL REPAIR REQUIRED");
+  });
+
+  // A database write can commit and THEN fail to acknowledge. A rejected upsert
+  // therefore does not mean the row is unchanged, and guessing either way breaks
+  // a tenant: revoking a referenced key takes it offline, and leaving an
+  // unreferenced one orphans a live credential.
+  it("reads the row back when the repoint commits but its acknowledgement is lost", async () => {
+    wireHappyPath({ denialBody: { reason: "policy_denied" } });
+    const legacy = storage.rows.get(TENANT)!.token;
+    storage.upsertBrainAgentToken.mockImplementation(
+      async (tenantId: string, token: string, expiresAt: Date) => {
+        storage.rows.set(tenantId, { tenantId, token, expiresAt });
+        throw new Error("connection reset after commit");
+      },
+    );
+    await expect(migrateTenant(TENANT)).rejects.toThrow();
+    // The row really does hold the issued key, so it must be restored, not revoked
+    // blindly - and the restore itself is subject to the same ambiguity, so the
+    // row is read back again before anything is revoked.
+    expect(storage.rows.get(TENANT)?.token).toBe(legacy);
+    expect(tenancy.revokeAgentApiKey).toHaveBeenCalledWith("agkey_01M1MDWXR5K5NBQYF089D4ZKAA");
+  });
+
+  it("revokes when a lost acknowledgement turns out to have written nothing", async () => {
+    wireHappyPath({ denialBody: { reason: "policy_denied" } });
+    const legacy = storage.rows.get(TENANT)!.token;
+    storage.upsertBrainAgentToken.mockRejectedValue(new Error("connection reset before commit"));
+    await expect(migrateTenant(TENANT)).rejects.toThrow();
+    expect(storage.rows.get(TENANT)?.token).toBe(legacy);
+    expect(tenancy.revokeAgentApiKey).toHaveBeenCalledWith("agkey_01M1MDWXR5K5NBQYF089D4ZKAA");
+  });
+
+  it("revokes nothing when the row cannot be read back at all", async () => {
+    wireHappyPath({ denialBody: { reason: "policy_denied" } });
+    const escalations = captureEscalations();
+    storage.upsertBrainAgentToken.mockRejectedValue(new Error("connection reset"));
+    let reads = 0;
+    storage.getBrainAgentToken.mockImplementation(async (tenantId: string) => {
+      reads += 1;
+      if (reads > 1) throw new Error("database unavailable");
+      return storage.rows.get(tenantId);
+    });
+    await expect(migrateTenant(TENANT)).rejects.toThrow();
+    expect(tenancy.revokeAgentApiKey).not.toHaveBeenCalled();
     expect(escalations.join("\n")).toContain("MANUAL REPAIR REQUIRED");
   });
 
@@ -473,10 +521,7 @@ describe("migrateTenant cleans up after itself", () => {
   it("does not restore a legacy JWT that died mid-migration, and escalates instead", async () => {
     wireHappyPath({ denialBody: { reason: "policy_denied" } });
     const legacy = storage.rows.get(TENANT)!.token;
-    const escalations: string[] = [];
-    vi.spyOn(console, "error").mockImplementation((message: unknown) => {
-      escalations.push(String(message));
-    });
+    const escalations = captureEscalations();
     // The migration starts inside the window, then the deadline passes before the
     // rollback runs. Restoring the revoked JWT would be a rollback that only
     // looks like it worked.
@@ -520,10 +565,18 @@ describe("migrateTenant receipt", () => {
     expect(receipt.ttl_seconds).toBe(300);
     expect(storage.rows.get(TENANT)?.token).toBe(NEW_KEY);
     expect(tenancy.revokeAgentApiKey).not.toHaveBeenCalled();
+    // Service calls are mocked, so the fetch inventory below cannot see them.
+    // Pin their counts too, or a second issuance would create an extra live
+    // production credential without changing a single recorded request.
+    expect(tenancy.issueBffAgentApiKey).toHaveBeenCalledTimes(1);
+    expect(tenancy.listAgentApiKeys).toHaveBeenCalledTimes(1);
+    expect(tenancy.getTenantProvenance).toHaveBeenCalledTimes(1);
+    expect(storage.upsertBrainAgentToken).toHaveBeenCalledTimes(1);
     // Full request inventory, not a spot check: the ONLY write the verifier is
     // allowed to make is the approve probe against the unassigned intent id, and
     // that one is expected to be refused. Any mutating call added later shows up
-    // here as an extra non-GET entry.
+    // here as an extra non-GET entry. (This covers direct fetches only; the
+    // brain-core service helpers above are mocked and counted separately.)
     expect(requests).toEqual([
       { method: "GET", url: "https://api.brain.fi/v1/ledger/accounts" },
       { method: "GET", url: "https://api.brain.fi/v1/ledger/accounts" },
