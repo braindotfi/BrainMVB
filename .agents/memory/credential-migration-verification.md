@@ -68,3 +68,53 @@ behaviour.
 dependencies mocked, and confirm each test fails when its guard is removed. Keep
 source scans only for structural invariants a behavioural test cannot express
 (ordering of calls, absence of a forbidden import).
+
+## Classification fields: normalise to refuse, compare exactly to accept
+
+A gate that reads an upstream classification record (is this a demo tenant? is this
+data synthetic?) has two kinds of check, and they must not share a comparison
+style:
+
+- **Denylist (refusal)** — trim, lower-case, and match markers as *substrings*.
+  `"  Synthetic_Brightline "` and `"acme_demo_copy"` must not walk past an exact,
+  case-sensitive set. Loosening a refusal check can only ever refuse more, so
+  false positives are acceptable; they hold a candidate back rather than let one
+  through.
+- **Allowlist (acceptance)** — compare the raw value. `" production"` and
+  `"Production"` are malformed, and malformed is unknown. Normalising here
+  manufactures passes.
+
+**Why:** the instinct is to normalise everything for consistency. That is exactly
+backwards — it tightens nothing and loosens the acceptance path.
+
+**How to apply:** also decide per field which kind it is, and say so in the docs.
+A field whose production vocabulary is open-ended (a data-profile label) can only
+be a denylist, which means an unrecognised well-formed value PASSES. Do not
+describe such a gate as "refuses every unknown" — it refuses every *malformed*
+answer and every *recognised* bad one. State the gap, and log the record that
+cleared so a human can decide what the gate could not.
+
+## `null` from an upstream classifier is the common case, not an edge case
+
+When a service adds classification fields, every record created before that ships
+returns them as `null` — including the real production records you were hoping to
+clear. `null` means *nobody established this*, which is not *confirmed safe*.
+
+**Why:** a gate written against the happy-path shape will hold 100% of real
+tenants and look broken, and the pressure to "just let null through" arrives
+immediately. It is the wrong fix: on one live system a known demo tenant
+self-reported `kind: "production"` with all classification fields `null`, so null
+was the only thing standing between it and a production credential.
+
+**How to apply:** treat null as a refusal, and escalate the real blocker upstream —
+the missing work is classifying the data, not softening the gate.
+
+## An unauthenticated probe cannot prove a route exists
+
+If auth middleware runs before routing, a real endpoint and a nonsense path return
+byte-identical 401s. "I called it and got 401, so it's there" is not evidence.
+
+**How to apply:** when you cannot mint the credential needed to reach a route, say
+the contract is unverified rather than implying you checked it — and make sure
+every wrong answer fails closed, so a wrong assumption stops the operation instead
+of passing it.
