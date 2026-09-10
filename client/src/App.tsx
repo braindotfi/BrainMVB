@@ -322,10 +322,10 @@ function MainShell({ onLogout }: { onLogout: () => void }) {
 
       {/* ── Footer ── */}
       <footer className="flex w-full h-14 flex-shrink-0 items-center justify-between px-6 py-3 bg-shared-colorsheaderfooterbg">
-        <SocialLinks />
         <span className="w-fit [font-family:'Gilroy',sans-serif] font-medium text-shared-colorsbaby-blue-60 text-sm whitespace-nowrap">
           Copyright © 2026 RobotMoney Inc. All rights reserved.
         </span>
+        <SocialLinks />
       </footer>
     </div>
     </NavContext.Provider>
