@@ -14,11 +14,12 @@ describe("Figma accounts panel", () => {
     expect(source).toContain('min-h-[754px] flex-col items-center gap-[24px]');
   });
 
-  it("reads every live account page and labels unsupported transactions honestly", () => {
+  it("reads every live account and transaction page", () => {
     expect(source).toContain('usePagedLedgerRead<BrainAccountDTO>("/api/brain/ledger/accounts", "accounts")');
+    expect(source).toContain('usePagedLedgerRead<BrainTransactionDTO>("/api/brain/ledger/transactions", "transactions")');
     expect(source).toContain("Some accounts couldn't be loaded");
-    expect(source).toContain("Transactions aren't available here yet");
-    expect(source).not.toContain("No transactions to show");
+    expect(source).toContain("Some transactions couldn't be loaded");
+    expect(source).not.toContain("Transactions aren't available here yet");
   });
 
   it("uses durable local artwork and exposes real interaction state", () => {
@@ -27,5 +28,7 @@ describe("Figma accounts panel", () => {
     expect(source).toContain('aria-expanded={accountMenuOpen}');
     expect(source).toContain('aria-pressed={filter === item}');
     expect(source).toContain("navigator.clipboard.writeText(selected.external_account_id)");
+    expect(source).toContain('data-testid="account-card-linear-stroke"');
+    expect(source).toContain("linear-gradient(135deg");
   });
 });
