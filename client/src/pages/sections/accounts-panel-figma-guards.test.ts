@@ -55,6 +55,22 @@ describe("Figma accounts panel", () => {
     expect(source).not.toMatch(/function (transactionMeta|shortenIdentifier|signedTransactionLabel)\(/);
   });
 
+  it("renders and wires the four transaction filters from Figma 4062:56277", () => {
+    expect(source).toContain('data-node-id="2663:26526"');
+    expect(source).toContain('{ value: "all", label: "All" }');
+    expect(source).toContain('{ value: "trades", label: "Trades" }');
+    expect(source).toContain('{ value: "deposits", label: "Deposits" }');
+    expect(source).toContain('{ value: "withdrawals", label: "Withdrawals" }');
+    expect(source).toContain('aria-disabled={item.value === "trades" ? "true" : undefined}');
+    expect(source).toContain('aria-describedby={item.value === "trades" ? "accounts-trades-unavailable" : undefined}');
+    expect(source).toContain('role="status"');
+    expect(source).toContain('item.value === "deposits" ? "w-[99px]" : "w-[124px]"');
+    expect(source).toContain("transactionMatchesFilter(transaction.direction, transactionFilter)");
+    expect(source).toContain("filteredTransactions.map");
+    expect(source).toContain("Other transaction types are hidden by this filter.");
+    expect(source).toContain("Matching activity may be missing from this filtered view.");
+  });
+
   it("shortens the card identifier the way Figma 4062:57086 does", () => {
     expect(source).toContain("shortenIdentifier(selected.external_account_id)");
     // Copy still hands over the full value, never the shortened one.

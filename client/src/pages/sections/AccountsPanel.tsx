@@ -28,7 +28,9 @@ import {
   formatTransactionAmount,
   shortenIdentifier,
   transactionFlow,
+  transactionMatchesFilter,
   transactionMeta,
+  type TransactionFilter,
 } from "@/lib/accountsPanelFormat";
 
 interface AccountsPanelProps {
@@ -81,6 +83,13 @@ const TRANSACTION_DIRECTION_LABEL: Record<BrainTransactionDTO["direction"], stri
   adjustment: "Adjustment",
 };
 
+const TRANSACTION_FILTERS: Array<{ value: TransactionFilter; label: string }> = [
+  { value: "all", label: "All" },
+  { value: "trades", label: "Trades" },
+  { value: "deposits", label: "Deposits" },
+  { value: "withdrawals", label: "Withdrawals" },
+];
+
 function compactNumber(value: string): string {
   const number = Number(value);
   if (!Number.isFinite(number)) return value;
@@ -121,6 +130,8 @@ function AccountPanelSkeleton() {
 export function AccountsPanel({ collapsed, onToggle }: AccountsPanelProps) {
   const [tab, setTab] = useState<PanelTab>("assets");
   const [filter, setFilter] = useState<AssetFilter>("all");
+  const [transactionFilter, setTransactionFilter] = useState<TransactionFilter>("all");
+  const [tradeFilterNotice, setTradeFilterNotice] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -142,6 +153,10 @@ export function AccountsPanel({ collapsed, onToggle }: AccountsPanelProps) {
       return true;
     }),
     [accounts, filter],
+  );
+  const filteredTransactions = useMemo(
+    () => transactions.filter((transaction) => transactionMatchesFilter(transaction.direction, transactionFilter)),
+    [transactions, transactionFilter],
   );
 
   const copyAccountIdentifier = async () => {
@@ -304,6 +319,56 @@ export function AccountsPanel({ collapsed, onToggle }: AccountsPanelProps) {
                   ))}
                 </div>
               )}
+              {tab === "transactions" && (
+                <div
+                  data-node-id="2663:26526"
+                  className="flex w-full gap-0.5 overflow-hidden rounded-pill bg-brain-v1headerfooterbg p-0.5"
+                  role="group"
+                  aria-label="Filter transactions"
+                >
+                  <span id="accounts-trades-unavailable" className="sr-only">
+                    Trade classification isn't available from the ledger yet.
+                  </span>
+                  {TRANSACTION_FILTERS.map((item) => (
+                    <button
+                      key={item.value}
+                      type="button"
+                      aria-pressed={transactionFilter === item.value}
+                      aria-disabled={item.value === "trades" ? "true" : undefined}
+                      aria-describedby={item.value === "trades" ? "accounts-trades-unavailable" : undefined}
+                      title={item.value === "trades" ? "Trade classification isn't available from the ledger yet" : undefined}
+                      onClick={() => {
+                        if (item.value === "trades") {
+                          setTradeFilterNotice(true);
+                          return;
+                        }
+                        setTradeFilterNotice(false);
+                        setTransactionFilter(item.value);
+                      }}
+                      className={`min-w-0 rounded-pill px-4 py-2 font-['Gilroy',sans-serif] text-sm font-semibold leading-4 ${
+                        item.value === "all" ? "w-[53px]" :
+                        item.value === "trades" ? "w-[84px]" :
+                        item.value === "deposits" ? "w-[99px]" : "w-[124px]"
+                      } ${
+                        transactionFilter === item.value
+                          ? "bg-brain-v1dark-green text-brain-v1asset-green"
+                          : "bg-brain-v1headerfooterbg"
+                      }`}
+                      style={transactionFilter === item.value ? undefined : { color: "var(--brain-v1baby-blue-30)" }}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {tab === "transactions" && tradeFilterNotice && (
+                <p
+                  role="status"
+                  className="px-1 font-['Gilroy',sans-serif] text-xs leading-4 text-brain-v1baby-blue-60"
+                >
+                  Trades will be available when the ledger provides transaction types.
+                </p>
+              )}
             </div>
 
             {tab === "transactions" ? transactionsLoading ? (
@@ -312,10 +377,25 @@ export function AccountsPanel({ collapsed, onToggle }: AccountsPanelProps) {
               <div data-testid="accounts-panel-transactions-error" className="rounded-row bg-brain-v1highlight-dropdown-bg px-4 py-4 text-sm leading-5 text-brain-v1error-text">
                 Couldn't load live transactions. Try again later.
               </div>
-            ) : transactions.length === 0 ? (
+            ) : filteredTransactions.length === 0 && transactionsIncomplete ? (
+              <div className="rounded-row bg-brain-v1highlight-dropdown-bg px-4 py-5 text-center">
+                <p className="font-['Gilroy',sans-serif] text-sm font-semibold leading-5 text-brain-v1baby-blue-100">
+                  Couldn't load every transaction
+                </p>
+                <p className="mt-1 font-['Gilroy',sans-serif] text-xs leading-4 text-brain-v1baby-blue-60">
+                  Matching activity may be missing from this filtered view.
+                </p>
+              </div>
+            ) : filteredTransactions.length === 0 ? (
               <div data-testid="accounts-panel-transactions-empty" className="rounded-row bg-brain-v1highlight-dropdown-bg px-4 py-5 text-center">
-                <p className="font-['Gilroy',sans-serif] text-sm font-semibold leading-5 text-brain-v1baby-blue-100">No transactions yet</p>
-                <p className="mt-1 font-['Gilroy',sans-serif] text-xs leading-4 text-brain-v1baby-blue-60">Live account activity will appear here.</p>
+                <p className="font-['Gilroy',sans-serif] text-sm font-semibold leading-5 text-brain-v1baby-blue-100">
+                  {transactionFilter === "all" ? "No transactions yet" : `No ${transactionFilter} yet`}
+                </p>
+                <p className="mt-1 font-['Gilroy',sans-serif] text-xs leading-4 text-brain-v1baby-blue-60">
+                  {transactionFilter === "all"
+                    ? "Live account activity will appear here."
+                    : "Other transaction types are hidden by this filter."}
+                </p>
               </div>
             ) : (
               <div className="flex flex-col gap-4">
@@ -324,7 +404,7 @@ export function AccountsPanel({ collapsed, onToggle }: AccountsPanelProps) {
                     Some transactions couldn't be loaded. The list below may be incomplete.
                   </p>
                 )}
-                {transactions.map((transaction, index) => {
+                {filteredTransactions.map((transaction, index) => {
                   const flow = transactionFlow(transaction.direction);
                   const meta = transactionMeta(transaction.transaction_date);
                   // A transfer or an adjustment states no direction, so its row
@@ -389,7 +469,7 @@ export function AccountsPanel({ collapsed, onToggle }: AccountsPanelProps) {
                           </p>
                         </div>
                       </div>
-                      {index < transactions.length - 1 && <div className="h-px w-full bg-brain-v1stroke-2" />}
+                      {index < filteredTransactions.length - 1 && <div className="h-px w-full bg-brain-v1stroke-2" />}
                     </div>
                   );
                 })}

@@ -20,6 +20,7 @@
  */
 
 export type TransactionDirection = "inflow" | "outflow" | "transfer" | "adjustment";
+export type TransactionFilter = "all" | "trades" | "deposits" | "withdrawals";
 
 /** What the row may assert visually: money out, money in, or nothing. */
 export type TransactionFlow = "out" | "in" | "neutral";
@@ -33,6 +34,23 @@ export function transactionFlow(direction: TransactionDirection): TransactionFlo
   // own sign cannot stand in for one: this feed states magnitude in `amount` and
   // polarity in `direction`, so an unsigned transfer is not "incoming".
   return "neutral";
+}
+
+/**
+ * Figma 4062:56277 names the filters in product language while the ledger only
+ * publishes direction. Keep the mapping in one tested place: incoming rows are
+ * deposits, outgoing rows are withdrawals, and direction-neutral ledger
+ * movements cannot be called trades without an authoritative transaction-kind
+ * field. The Trades control therefore remains disabled in the component.
+ */
+export function transactionMatchesFilter(
+  direction: TransactionDirection,
+  filter: TransactionFilter,
+): boolean {
+  if (filter === "all") return true;
+  if (filter === "deposits") return direction === "inflow";
+  if (filter === "withdrawals") return direction === "outflow";
+  return false;
 }
 
 /**
