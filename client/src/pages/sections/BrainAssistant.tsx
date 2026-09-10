@@ -1117,7 +1117,11 @@ export function BrainAssistant() {
                         >
                           <img src={deleteConvoIcon} alt="" className="size-[20px] block" />
                         </button>
-                        <span className="block group-hover:opacity-0 group-focus-within:opacity-0 transition-opacity">
+                        {/* Decorative status must never intercept Delete. It is
+                            painted after the absolutely-positioned button, so
+                            an active chat's checkmark otherwise sits on top of
+                            the button even when opacity makes it invisible. */}
+                        <span className="pointer-events-none block group-hover:opacity-0 group-focus-within:opacity-0 transition-opacity">
                           {session.id === activeSessionId ? (
                             <img src={activeConvoIcon} alt="Active conversation" className="size-[20px] block" />
                           ) : null}
