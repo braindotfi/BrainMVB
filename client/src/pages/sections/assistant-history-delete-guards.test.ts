@@ -16,4 +16,13 @@ describe("assistant history delete controls", () => {
     expect(button).toContain("[@media(hover:none)]:opacity-100");
     expect(button).toContain("[@media(hover:none)]:pointer-events-auto");
   });
+
+  it("does not let the active-session checkmark intercept Delete", () => {
+    const status = source.match(
+      /<span className="([^"]*group-hover:opacity-0[^"]*)">[\s\S]{0,300}?Active conversation/,
+    );
+
+    expect(status).toBeDefined();
+    expect(status![1]).toContain("pointer-events-none");
+  });
 });
