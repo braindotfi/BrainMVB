@@ -35,6 +35,19 @@ the *public* dir are served by Vite's static middleware, which is mounted before
 that catch-all. Because `transformIndexHtml` never touches a public-dir file, the
 preamble that `@vitejs/plugin-react` requires is missing unless added by hand.
 
+**Blank-page trap:** an arbitrary Tailwind class used *only* by the brand-new
+harness file (`h-[816px]`, `w-[390px]`) may not be in the CSS the running dev
+server is already serving, so the wrapper collapses and the panel's `h-full`
+resolves to zero — a black frame with a faint 1px line where the component's own
+`max-w-[…]` still applied. Size the harness wrapper with inline `style`, never a
+new arbitrary class. Drive internal state (tab selection, etc.) from a query
+param plus a `setTimeout` click on the rendered control.
+
+**For pixel comparison, get a PNG:** the screenshot tool saves JPEG, whose ringing
+around 1px lines corrupts any border measurement. Nix chromium can do it
+directly: `chromium --headless=new --no-sandbox --screenshot=/tmp/x.png
+--window-size=390,816 --virtual-time-budget=6000 <url>`.
+
 **Also ruled out:** starting a second standalone `vite --port NNNN` does not work.
 It survives its own ShellExec call but is dead by the next one, so the screenshot
 tool always gets ECONNREFUSED.

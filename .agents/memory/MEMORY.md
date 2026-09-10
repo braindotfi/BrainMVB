@@ -119,3 +119,5 @@
 - [Password reset session isolation](password-reset-session-isolation.md) — reset URLs are anonymous boundaries; durable per-user session generations revoke every prior target session after a reset.
 - [Credential migration verification](credential-migration-verification.md) — prove a denial without creating a record; a bare 403 names no mechanism, absent fields are not passing evidence, and source scans cannot witness a refusal.
 - [Classification gates](credential-migration-verification.md) — normalise to refuse, compare exactly to accept; upstream `null` is the common case and means unclassified, never safe.
+- [Figma gradient stroke](figma-gradient-stroke.md) — MCP flattens gradient borders; measure the export's perimeter, compare against a PNG render (never JPEG), `to bottom right` ≠ 135deg.
+- [Ledger value formatting](ledger-value-formatting.md) — formatters invent figures: date-only shifts a day through UTC, `Number` rounds decimal strings, and an undirected transfer is not incoming.
