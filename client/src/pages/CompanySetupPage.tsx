@@ -269,10 +269,10 @@ export function CompanySetupPage({ inviteOnly = false }: { inviteOnly?: boolean 
       </div>
 
       <footer className="flex items-center justify-between px-6 h-14 flex-shrink-0 z-10 relative">
-        <SocialLinks className="opacity-40" />
         <span className="[font-family:'Gilroy',sans-serif] text-brain-v1baby-blue-60 text-sm">
           Copyright © 2026 Brain Finance. All rights reserved.
         </span>
+        <SocialLinks className="opacity-40" />
       </footer>
     </div>
   );
