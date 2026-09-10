@@ -1109,7 +1109,11 @@ export function BrainAssistant() {
                           }}
                           onKeyDown={(e) => e.stopPropagation()}
                           title="Delete conversation"
-                          className="absolute size-[20px] opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto transition-opacity"
+                          /* Desktop keeps the existing hover/focus reveal. Touch
+                             devices have no reliable hover phase, so Delete must
+                             be visible and tappable before the row can intercept
+                             the tap and close the dropdown. */
+                          className="absolute size-[20px] opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto [@media(hover:none)]:opacity-100 [@media(hover:none)]:pointer-events-auto transition-opacity"
                         >
                           <img src={deleteConvoIcon} alt="" className="size-[20px] block" />
                         </button>
