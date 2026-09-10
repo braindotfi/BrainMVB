@@ -8,7 +8,7 @@ describe("Figma accounts panel", () => {
     expect(source).toContain('data-node-id="6519:54025"');
     expect(source).toContain('left-[7px] top-[7px]');
     expect(source).toContain('left-[55px] top-[7px] z-20 w-[322px]');
-    expect(source).toContain('bottom-[7px] top-[55px]');
+    expect(source).toContain('bottom-[7px] top-[63px]');
     expect(source).toContain('h-[290px] w-full max-w-[370px]');
     expect(source).toContain('h-[200px] overflow-hidden rounded-panel');
     expect(source).toContain('min-h-[754px] flex-col items-center gap-[24px]');
@@ -29,6 +29,35 @@ describe("Figma accounts panel", () => {
     expect(source).toContain('aria-pressed={filter === item}');
     expect(source).toContain("navigator.clipboard.writeText(selected.external_account_id)");
     expect(source).toContain('data-testid="account-card-linear-stroke"');
-    expect(source).toContain("linear-gradient(135deg");
+    // Measured off Figma 6519:54130: corner-to-corner, bright at both ends,
+    // transparent through the middle. A single-direction fade is wrong.
+    expect(source).toContain("linear-gradient(to bottom right, rgba(255, 149, 0, 0.45) 0%");
+    expect(source).toContain("rgba(255, 149, 0, 0.58) 100%)");
+    expect(source).not.toContain("linear-gradient(135deg");
+  });
+
+  it("renders transaction rows to Figma 4062:56400", () => {
+    // 40px tinted circle + 20px arrow, outgoing arrow is the down-right glyph flipped.
+    expect(source).toContain("@assets/tx-arrow-out.svg");
+    expect(source).toContain("@assets/tx-arrow-in.svg");
+    expect(source).toContain("@assets/tx-dot.svg");
+    expect(source).toContain('"bg-brain-v1dark-pink-red"');
+    expect(source).toContain('"bg-brain-v1dark-green"');
+    expect(source).toContain('style={flow === "out" ? { transform: "scaleY(-1)" } : undefined}');
+    // 20px JetBrains Mono amount, red out / green in.
+    expect(source).toContain("text-[20px] font-medium leading-5");
+    expect(source).toContain('"text-brain-v1pink-red"');
+    expect(source).toContain('"text-brain-v1asset-green"');
+    expect(source).toContain("formatTransactionAmount(transaction.amount, transaction.currency, flow)");
+    // Every figure and date goes through the tested formatters, never a local
+    // ad-hoc one. Their behaviour is covered in lib/accountsPanelFormat.test.ts.
+    expect(source).toContain('from "@/lib/accountsPanelFormat"');
+    expect(source).not.toMatch(/function (transactionMeta|shortenIdentifier|signedTransactionLabel)\(/);
+  });
+
+  it("shortens the card identifier the way Figma 4062:57086 does", () => {
+    expect(source).toContain("shortenIdentifier(selected.external_account_id)");
+    // Copy still hands over the full value, never the shortened one.
+    expect(source).toContain("navigator.clipboard.writeText(selected.external_account_id)");
   });
 });

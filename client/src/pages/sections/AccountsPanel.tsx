@@ -19,8 +19,17 @@ import dropdownActiveIcon from "@assets/Dropdown_Active_1789001286488.png";
 import dropdownInactiveIcon from "@assets/Dropdown_Inactive_1789001286488.png";
 import accountCardGlow from "@assets/account-card-glow.svg";
 import accountCardCopyIcon from "@assets/account-card-copy.svg";
+import transactionOutIcon from "@assets/tx-arrow-out.svg";
+import transactionInIcon from "@assets/tx-arrow-in.svg";
+import transactionDotIcon from "@assets/tx-dot.svg";
 import { ACCOUNT_KIND_LABEL, type BrainAccountDTO } from "@/lib/brainAccounts";
 import { usePagedLedgerRead } from "@/lib/ledgerRead";
+import {
+  formatTransactionAmount,
+  shortenIdentifier,
+  transactionFlow,
+  transactionMeta,
+} from "@/lib/accountsPanelFormat";
 
 interface AccountsPanelProps {
   collapsed: boolean;
@@ -91,26 +100,6 @@ function formatUsd(value: string | number, fixedDecimals: boolean): string {
   }).format(number);
 }
 
-function shortDate(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
-function signedTransactionAmount(transaction: BrainTransactionDTO): number | string {
-  const amount = Number(transaction.amount);
-  if (Number.isFinite(amount)) {
-    if (transaction.direction === "outflow") return -Math.abs(amount);
-    if (transaction.direction === "inflow") return Math.abs(amount);
-    return amount;
-  }
-  const unsigned = transaction.amount.replace(/^-/, "");
-  return transaction.direction === "outflow" ? `-${unsigned}` : transaction.amount;
-}
 
 function AccountPanelSkeleton() {
   return (
@@ -146,10 +135,6 @@ export function AccountsPanel({ collapsed, onToggle }: AccountsPanelProps) {
   const transactionsLoading = !transactionsRead.read && !transactionsRead.failed;
   const transactionsIncomplete = transactionsRead.read?.complete === false;
   const selected = accounts.find((account) => account.id === selectedAccountId) ?? accounts[0];
-  const accountById = useMemo(
-    () => new Map(accounts.map((account) => [account.id, account])),
-    [accounts],
-  );
   const filteredAccounts = useMemo(
     () => accounts.filter((account) => {
       if (filter === "cash") return account.account_type !== "onchain";
@@ -197,7 +182,7 @@ export function AccountsPanel({ collapsed, onToggle }: AccountsPanelProps) {
         <img src={collapseBtnIcon} alt="Collapse" className="block size-10" />
       </button>
 
-      <div className="absolute inset-x-[7px] bottom-[7px] top-[55px] overflow-y-auto">
+      <div className="absolute inset-x-[7px] bottom-[7px] top-[63px] overflow-y-auto">
         <div className="relative flex min-h-[754px] flex-col items-center gap-[24px]">
           <div className="relative h-[290px] w-full max-w-[370px] shrink-0">
             <div className="absolute top-[152px] h-[138px] w-full rounded-panel bg-brain-v1headerfooterbg">
@@ -228,7 +213,12 @@ export function AccountsPanel({ collapsed, onToggle }: AccountsPanelProps) {
                 aria-hidden="true"
                 className="pointer-events-none absolute inset-0 z-10 rounded-panel p-[1.4px]"
                 style={{
-                  background: "linear-gradient(135deg, rgba(255, 149, 0, 0.35) 0%, rgba(255, 149, 0, 0.82) 52%, rgba(255, 149, 0, 0.4) 100%)",
+                  // Measured off Figma 6519:54130: the stroke runs corner-to-corner
+                  // (top-left -> bottom-right, i.e. CSS "to bottom right", which puts the
+                  // other two corners at exactly 50%), bright at both ends and effectively
+                  // transparent through the middle.
+                  background:
+                    "linear-gradient(to bottom right, rgba(255, 149, 0, 0.45) 0%, rgba(255, 149, 0, 0.1) 30%, rgba(255, 149, 0, 0.02) 55%, rgba(255, 149, 0, 0.2) 78%, rgba(255, 149, 0, 0.58) 100%)",
                   WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
                   WebkitMaskComposite: "xor",
                   maskComposite: "exclude",
@@ -252,8 +242,12 @@ export function AccountsPanel({ collapsed, onToggle }: AccountsPanelProps) {
                   {selected?.account_type === "onchain" ? "Crypto Wallet Address" : "Account Identifier"}
                 </p>
                 <div className="mt-1 flex min-w-0 items-center gap-2">
-                  <p className="min-w-0 truncate font-['JetBrains_Mono',monospace] text-[20px] font-medium leading-6 text-white">
-                    {selected?.external_account_id ?? "—"}
+                  <p
+                    data-testid="text-account-identifier"
+                    title={selected?.external_account_id ?? undefined}
+                    className="min-w-0 truncate font-['JetBrains_Mono',monospace] text-[20px] font-medium leading-6 text-white"
+                  >
+                    {selected?.external_account_id ? shortenIdentifier(selected.external_account_id) : "—"}
                   </p>
                   {selected?.external_account_id && (
                     <button
@@ -331,30 +325,68 @@ export function AccountsPanel({ collapsed, onToggle }: AccountsPanelProps) {
                   </p>
                 )}
                 {transactions.map((transaction, index) => {
-                  const account = transaction.account_id ? accountById.get(transaction.account_id) : undefined;
-                  const currency = transaction.currency.toUpperCase();
-                  const signedAmount = signedTransactionAmount(transaction);
+                  const flow = transactionFlow(transaction.direction);
+                  const meta = transactionMeta(transaction.transaction_date);
+                  // A transfer or an adjustment states no direction, so its row
+                  // gets neither the red/green tint nor a directional arrow.
+                  const neutralIcon =
+                    transaction.currency.toUpperCase() === "USD" ? dollarIcon : bankCardIcon;
                   return (
                     <div key={transaction.id} className="flex flex-col gap-4">
-                      <div className="flex items-center gap-2">
-                        <img src={account ? iconForAccount(account) : currency === "USD" ? dollarIcon : bankCardIcon} alt="" className="size-10 shrink-0" />
+                      <div className="flex w-full items-center gap-2" data-testid={`row-transaction-${transaction.id}`}>
+                        <div
+                          className={`flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full ${
+                            flow === "out"
+                              ? "bg-brain-v1dark-pink-red"
+                              : flow === "in"
+                                ? "bg-brain-v1dark-green"
+                                : "bg-brain-v1baby-blue-15"
+                          }`}
+                        >
+                          <img
+                            src={
+                              flow === "out"
+                                ? transactionOutIcon
+                                : flow === "in"
+                                  ? transactionInIcon
+                                  : neutralIcon
+                            }
+                            alt=""
+                            className={flow === "neutral" ? "block size-10" : "block size-5"}
+                            style={flow === "out" ? { transform: "scaleY(-1)" } : undefined}
+                          />
+                        </div>
                         <div className="flex min-w-0 flex-1 items-center gap-2">
                           <div className="flex min-w-0 shrink flex-col gap-1">
                             <p className="truncate font-['Gilroy',sans-serif] text-base font-medium leading-5 text-brain-v1baby-blue-100">
                               {transaction.description_normalized ?? transaction.description_raw ?? TRANSACTION_DIRECTION_LABEL[transaction.direction]}
                             </p>
-                            <p className="truncate font-['Gilroy',sans-serif] text-sm font-semibold leading-4" style={{ color: "var(--brain-v1baby-blue-30)" }}>
-                              {TRANSACTION_DIRECTION_LABEL[transaction.direction]}
-                            </p>
+                            <div className="flex items-center gap-1">
+                              {meta.map((part, partIndex) => (
+                                <div key={part} className="flex items-center gap-1">
+                                  {partIndex > 0 && <img src={transactionDotIcon} alt="" className="block size-[3px] shrink-0" />}
+                                  <span
+                                    className="whitespace-nowrap font-['Gilroy',sans-serif] text-sm font-semibold leading-4"
+                                    style={{ color: "var(--brain-v1baby-blue-30)" }}
+                                  >
+                                    {part}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                          <div className="min-w-0 flex-1 text-right font-['JetBrains_Mono',monospace] font-medium">
-                            <p className={`truncate text-base leading-5 ${transaction.direction === "outflow" ? "text-brain-v1error-text" : "text-brain-v1asset-green"}`}>
-                              {currency === "USD" ? formatUsd(signedAmount, false) : `${compactNumber(String(signedAmount))} ${currency}`}
-                            </p>
-                            <p className="truncate text-sm leading-4" style={{ color: "var(--brain-v1baby-blue-30)" }}>
-                              {shortDate(transaction.transaction_date)}
-                            </p>
-                          </div>
+                          <p
+                            className={`min-w-0 flex-1 truncate text-right font-['JetBrains_Mono',monospace] text-[20px] font-medium leading-5 ${
+                              flow === "out"
+                                ? "text-brain-v1pink-red"
+                                : flow === "in"
+                                  ? "text-brain-v1asset-green"
+                                  : "text-brain-v1baby-blue-100"
+                            }`}
+                            title={`${transaction.amount} ${transaction.currency.toUpperCase()}`}
+                          >
+                            {formatTransactionAmount(transaction.amount, transaction.currency, flow)}
+                          </p>
                         </div>
                       </div>
                       {index < transactions.length - 1 && <div className="h-px w-full bg-brain-v1stroke-2" />}
