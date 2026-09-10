@@ -36,6 +36,7 @@ import { SessionTimeoutProvider } from "@/lib/sessionTimeoutContext";
 import { queryClient } from "@/lib/queryClient";
 import { formatRateLimitDescription, RATE_LIMIT_ALERT_TITLE, subscribeRateLimitReports } from "@/lib/rateLimit";
 import { inviteReturnToFromSearch } from "@/lib/inviteReturnTo";
+import { SocialLinks } from "@/components/SocialLinks";
 
 /**
  * Vendors and Rules are Ledger tabs now, not pages.
@@ -321,10 +322,10 @@ function MainShell({ onLogout }: { onLogout: () => void }) {
 
       {/* ── Footer ── */}
       <footer className="flex w-full h-14 flex-shrink-0 items-center justify-between px-6 py-3 bg-shared-colorsheaderfooterbg">
+        <SocialLinks />
         <span className="w-fit [font-family:'Gilroy',sans-serif] font-medium text-shared-colorsbaby-blue-60 text-sm whitespace-nowrap">
           Copyright © 2026 RobotMoney Inc. All rights reserved.
         </span>
-        <img className="flex-[0_0_auto]" alt="Socials" src="/figmaAssets/socials.svg" />
       </footer>
     </div>
     </NavContext.Provider>
