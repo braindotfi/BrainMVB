@@ -20,14 +20,26 @@ interface AddMoneyFlowProps {
 const overlayClass =
   "fixed inset-0 z-[70] bg-black/60 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0";
 
-function accountIsWallet(account: BrainAccountDTO): boolean {
-  const identifier = account.external_account_id?.trim() ?? "";
-  return account.account_type === "onchain" || (isAgentAccount(account) && /^0x/i.test(identifier));
-}
+type FundingKind = "bank" | "wallet" | "unsupported";
 
-function accountLabel(account: BrainAccountDTO): string {
-  if (accountIsWallet(account)) return isAgentAccount(account) ? "Agent Wallet" : "Your Wallet";
-  return "Bank Account";
+/**
+ * Which funding instructions, if any, can honestly be shown for an account.
+ *
+ * Only chequing and savings accounts have an IBAN to publish, and only on-chain
+ * accounts have an address. Cards, loans, credit lines and payment-processor
+ * accounts have neither: their `external_account_id` is a processor or card
+ * reference, and printing it under "IBAN Bank Number" would invite someone to
+ * send money to a number that cannot receive it. Those stay listed but
+ * unselectable rather than being hidden, so the account is still accounted for.
+ */
+function fundingKind(account: BrainAccountDTO): FundingKind {
+  const identifier = account.external_account_id?.trim() ?? "";
+  if (account.account_type === "onchain") return "wallet";
+  if (isAgentAccount(account) && /^0x/i.test(identifier)) return "wallet";
+  if (account.account_type === "bank_checking" || account.account_type === "bank_savings") {
+    return "bank";
+  }
+  return "unsupported";
 }
 
 function ModalHeader() {
@@ -57,7 +69,7 @@ function AccountSelect({
     <div className="relative h-14 w-full rounded-row bg-brain-v1baby-blue-15">
       {selected && (
         <img
-          src={accountIsWallet(selected) ? walletAgentIcon : walletBankIcon}
+          src={fundingKind(selected) === "wallet" ? walletAgentIcon : walletBankIcon}
           alt=""
           className="pointer-events-none absolute left-4 top-3 z-10 size-8"
         />
@@ -72,11 +84,19 @@ function AccountSelect({
         }`}
       >
         <option value="" className="bg-brain-v1highlight-dropdown-bg">Select Account</option>
-        {accounts.map((account) => (
-          <option key={account.id} value={account.id} className="bg-brain-v1highlight-dropdown-bg">
-            {account.name}
-          </option>
-        ))}
+        {accounts.map((account) => {
+          const unsupported = fundingKind(account) === "unsupported";
+          return (
+            <option
+              key={account.id}
+              value={account.id}
+              disabled={unsupported}
+              className="bg-brain-v1highlight-dropdown-bg"
+            >
+              {unsupported ? `${account.name} — no funding details` : account.name}
+            </option>
+          );
+        })}
       </select>
       <img src={dropdownIcon} alt="" className="pointer-events-none absolute right-3 top-3 size-8" />
     </div>
@@ -142,17 +162,22 @@ export function AddMoneyFlow({ accounts }: AddMoneyFlowProps) {
   const [step, setStep] = useState<Step>("select");
   const [accountId, setAccountId] = useState("");
   const [qrOpen, setQrOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "failed">("idle");
   const copyTimer = useRef<number | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const qrTriggerRef = useRef<HTMLButtonElement | null>(null);
   const selected = useMemo(() => accounts.find((account) => account.id === accountId), [accounts, accountId]);
+  const fundable = useMemo(
+    () => accounts.filter((account) => fundingKind(account) !== "unsupported"),
+    [accounts],
+  );
 
   const reset = (nextOpen: boolean) => {
     setOpen(nextOpen);
     if (nextOpen) {
       setStep("select");
       setAccountId("");
-      setCopied(false);
+      setCopyStatus("idle");
     } else {
       setQrOpen(false);
       if (copyTimer.current != null) window.clearTimeout(copyTimer.current);
@@ -163,21 +188,32 @@ export function AddMoneyFlow({ accounts }: AddMoneyFlowProps) {
     }
   };
 
-  const copyAddress = async () => {
-    const address = selected?.external_account_id?.trim();
-    if (!address) return;
+  /**
+   * One guarded path for every copy control. `navigator.clipboard` is absent on
+   * insecure origins and `writeText` rejects when the document is not focused
+   * or permission is denied, so an unguarded call is either a thrown TypeError
+   * or an unhandled rejection — and in both cases the button looks like it
+   * worked. A failure has to be said out loud.
+   */
+  const copyText = async (text: string) => {
+    const value = text.trim();
+    if (!value) return;
+    if (copyTimer.current != null) window.clearTimeout(copyTimer.current);
     try {
-      await navigator.clipboard.writeText(address);
-      setCopied(true);
-      if (copyTimer.current != null) window.clearTimeout(copyTimer.current);
-      copyTimer.current = window.setTimeout(() => setCopied(false), 1600);
+      if (typeof navigator.clipboard?.writeText !== "function") {
+        throw new Error("clipboard unavailable");
+      }
+      await navigator.clipboard.writeText(value);
+      setCopyStatus("copied");
     } catch {
-      setCopied(false);
+      setCopyStatus("failed");
     }
+    copyTimer.current = window.setTimeout(() => setCopyStatus("idle"), 1600);
   };
 
   const identifier = selected?.external_account_id?.trim() ?? "";
-  const wallet = selected ? accountIsWallet(selected) : false;
+  const kind = selected ? fundingKind(selected) : undefined;
+  const wallet = kind === "wallet";
 
   return (
     <DialogPrimitive.Root open={open} onOpenChange={reset}>
@@ -187,7 +223,7 @@ export function AddMoneyFlow({ accounts }: AddMoneyFlowProps) {
           type="button"
           data-testid="button-account-add"
           aria-label="Add money to an account"
-          disabled={accounts.length === 0}
+          disabled={fundable.length === 0}
           className="size-10 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <img src={addIcon} alt="" className="block size-10" />
@@ -217,18 +253,34 @@ export function AddMoneyFlow({ accounts }: AddMoneyFlowProps) {
             <AccountSelect accounts={accounts} value={accountId} onChange={setAccountId} />
 
             {step === "details" && selected && (
-              wallet ? (
+              kind === "wallet" ? (
                 <ReadonlyField
                   label="Wallet Address"
                   value={identifier ? shortenIdentifier(identifier) : "Address unavailable"}
                   mono
-                  onCopy={identifier ? copyAddress : undefined}
+                  onCopy={identifier ? () => void copyText(identifier) : undefined}
                 />
-              ) : (
+              ) : kind === "bank" ? (
                 <div className="flex flex-col gap-6">
-                  <ReadonlyField label="Recipient Name" value={selected.name} onCopy={() => void navigator.clipboard.writeText(selected.name)} />
-                  <ReadonlyField label="IBAN Bank Number" value={identifier || "IBAN unavailable"} mono onCopy={identifier ? () => void navigator.clipboard.writeText(identifier) : undefined} />
+                  <ReadonlyField
+                    label="Recipient Name"
+                    value={selected.name}
+                    onCopy={() => void copyText(selected.name)}
+                  />
+                  <ReadonlyField
+                    label="IBAN Bank Number"
+                    value={identifier || "IBAN unavailable"}
+                    mono
+                    onCopy={identifier ? () => void copyText(identifier) : undefined}
+                  />
                 </div>
+              ) : (
+                <p
+                  data-testid="add-money-unsupported"
+                  className="font-['Gilroy',sans-serif] text-base font-medium leading-6 text-brain-v1baby-blue-60"
+                >
+                  This account type has no funding details to show.
+                </p>
               )
             )}
 
@@ -239,12 +291,18 @@ export function AddMoneyFlow({ accounts }: AddMoneyFlowProps) {
                     Cancel
                   </button>
                 </DialogPrimitive.Close>
-                <PrimaryButton disabled={!selected} onClick={() => setStep("details")}>Next</PrimaryButton>
+                <PrimaryButton
+                  disabled={!selected || kind === "unsupported"}
+                  onClick={() => setStep("details")}
+                >
+                  Next
+                </PrimaryButton>
               </div>
             ) : wallet ? (
               <div className="flex flex-col gap-3">
                 {identifier && (
                   <button
+                    ref={qrTriggerRef}
                     type="button"
                     data-testid="add-money-show-qr"
                     onClick={() => setQrOpen(true)}
@@ -255,11 +313,18 @@ export function AddMoneyFlow({ accounts }: AddMoneyFlowProps) {
                   </button>
                 )}
                 <DialogPrimitive.Close asChild><PrimaryButton>Close</PrimaryButton></DialogPrimitive.Close>
-                <span aria-live="polite" className="sr-only">{copied ? "Wallet address copied" : ""}</span>
               </div>
             ) : (
               <DialogPrimitive.Close asChild><PrimaryButton>Close</PrimaryButton></DialogPrimitive.Close>
             )}
+
+            <span data-testid="add-money-copy-status" aria-live="polite" className="sr-only">
+              {copyStatus === "copied"
+                ? "Copied to clipboard"
+                : copyStatus === "failed"
+                  ? "Couldn't copy. Select the text and copy it manually."
+                  : ""}
+            </span>
           </div>
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
@@ -270,20 +335,48 @@ export function AddMoneyFlow({ accounts }: AddMoneyFlowProps) {
           <DialogPrimitive.Content
             data-testid="add-money-qr-modal"
             data-node-id="2979:42687"
+            onCloseAutoFocus={(event) => {
+              // This nested root has no Radix Trigger to return to, so Escape
+              // and the scrim would otherwise drop focus to the document body
+              // while the outer dialog is still open.
+              event.preventDefault();
+              qrTriggerRef.current?.focus();
+            }}
             className="fixed left-1/2 top-1/2 z-[81] flex w-[322px] max-w-[calc(100vw-16px)] -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-4 rounded-modal border border-solid border-brain-v1stroke-2 bg-brain-v1highlight-dropdown-bg p-6 focus:outline-none"
           >
             <DialogPrimitive.Title className="sr-only">Wallet address QR code</DialogPrimitive.Title>
             <DialogPrimitive.Description className="sr-only">Scan this code to copy the selected wallet address.</DialogPrimitive.Description>
-            {identifier && <QRCodeSVG value={identifier} size={274} bgColor="#ffffff" fgColor="#000000" level="M" className="h-auto w-full rounded-[4px]" />}
+            {identifier && (
+              <QRCodeSVG
+                value={identifier}
+                title={`QR code for wallet address ${identifier}`}
+                size={274}
+                bgColor="#ffffff"
+                fgColor="#000000"
+                level="M"
+                className="h-auto w-full rounded-[4px]"
+              />
+            )}
             <p className="max-w-full truncate font-['JetBrains_Mono',monospace] text-[20px] font-medium leading-6 text-white">{identifier ? shortenIdentifier(identifier) : ""}</p>
             <button
               type="button"
-              onClick={copyAddress}
+              onClick={() => void copyText(identifier)}
               className="flex h-10 w-full items-center justify-center gap-2 rounded-full bg-brain-v1dark-orange px-5 font-['Gilroy',sans-serif] text-base font-semibold leading-5 text-brain-v1light-orange"
             >
               <img src={copyIcon} alt="" className="size-6" />
-              {copied ? "Address Copied" : "Copy Address"}
+              {copyStatus === "copied"
+                ? "Address Copied"
+                : copyStatus === "failed"
+                  ? "Couldn't Copy"
+                  : "Copy Address"}
             </button>
+            <span aria-live="polite" className="sr-only">
+              {copyStatus === "copied"
+                ? "Wallet address copied to clipboard"
+                : copyStatus === "failed"
+                  ? "Couldn't copy. Select the address and copy it manually."
+                  : ""}
+            </span>
           </DialogPrimitive.Content>
         </DialogPrimitive.Portal>
       </DialogPrimitive.Root>
