@@ -168,11 +168,11 @@ present and exact or production boot fails before issuance:
   40-character commit SHA and must exactly equal the commit embedded in the
   production build.
 - `NORTHSTAR_AGENT_API_KEY_MIGRATION_WINDOW_START` must be
-  `2026-09-15T11:00:00Z`.
+  `2026-09-12T08:00:00Z`.
 - `NORTHSTAR_AGENT_API_KEY_MIGRATION_WINDOW_END` must be
-  `2026-09-15T14:00:00Z`.
+  `2026-09-12T11:00:00Z`.
 - `NORTHSTAR_AGENT_API_KEY_MIGRATION_AUTHORIZATION` must be
-  `APPROVE_NORTHSTAR_2026_09_15_NO_LEGACY_ROLLBACK`.
+  `APPROVE_NORTHSTAR_2026_09_12_NO_LEGACY_ROLLBACK`.
 - The process must be production and the current time must be in the half-open
   interval from the start through, but not including, the end.
 
