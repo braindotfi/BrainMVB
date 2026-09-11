@@ -168,7 +168,7 @@ function wireNorthstar(options: { directStatus?: number } = {}): string {
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });
-  vi.setSystemTime(Date.parse("2026-09-11T09:00:00Z"));
+  vi.setSystemTime(Date.parse("2026-09-15T12:00:00Z"));
   storage.rows.clear();
   vi.clearAllMocks();
   exchangeMock = () => Promise.reject(new Error("exchange not wired"));
@@ -250,7 +250,7 @@ describe("Northstar-only migration authorization", () => {
 
   it("requires the exact approved window values", async () => {
     armNorthstar({
-      NORTHSTAR_AGENT_API_KEY_MIGRATION_WINDOW_END: "2026-09-11T11:01:00Z",
+      NORTHSTAR_AGENT_API_KEY_MIGRATION_WINDOW_END: "2026-09-15T14:01:00Z",
     });
     await expect(migrateAuthorizedNorthstarAgentApiKey()).rejects.toThrow(
       /window does not match/,
@@ -265,6 +265,16 @@ describe("Northstar-only migration authorization", () => {
     vi.setSystemTime(Date.parse(NORTHSTAR_AGENT_API_KEY_MIGRATION_WINDOW_END_ISO));
     await expect(migrateAuthorizedNorthstarAgentApiKey()).rejects.toThrow(/outside/);
     expect(tenancy.issueBffAgentApiKey).not.toHaveBeenCalled();
+  });
+
+  it("accepts authorization during the newly approved window", async () => {
+    armNorthstar();
+    wireNorthstar();
+    vi.setSystemTime(Date.parse("2026-09-15T11:00:00Z"));
+    await expect(migrateAuthorizedNorthstarAgentApiKey()).resolves.toMatchObject({
+      tenant_id: NORTHSTAR_AGENT_API_KEY_MIGRATION_TENANT_ID,
+      runtime_binding_verified: true,
+    });
   });
 });
 
