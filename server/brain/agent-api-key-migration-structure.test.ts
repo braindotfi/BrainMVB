@@ -53,13 +53,13 @@ describe("Phase 3 BFF migration structure", () => {
       NORTHSTAR_AGENT_API_KEY_MIGRATION_TENANT_ID,
     );
     expect(NORTHSTAR_AGENT_API_KEY_MIGRATION_WINDOW_START_ISO).toBe(
-      "2026-09-15T11:00:00Z",
+      "2026-09-12T08:00:00Z",
     );
     expect(NORTHSTAR_AGENT_API_KEY_MIGRATION_WINDOW_END_ISO).toBe(
-      "2026-09-15T14:00:00Z",
+      "2026-09-12T11:00:00Z",
     );
     expect(NORTHSTAR_AGENT_API_KEY_MIGRATION_AUTHORIZATION).toBe(
-      "APPROVE_NORTHSTAR_2026_09_15_NO_LEGACY_ROLLBACK",
+      "APPROVE_NORTHSTAR_2026_09_12_NO_LEGACY_ROLLBACK",
     );
     expect(migrationSource).toContain("assertNorthstarMigrationAuthorization(Date.now())");
     expect(migrationSource).toContain("BUILD_COMMIT !== approvedSha");
