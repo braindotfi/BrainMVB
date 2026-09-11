@@ -18,7 +18,7 @@
  * from the rail behind it.
  */
 
-import { useCallback, useLayoutEffect, useState, type ReactNode } from "react";
+import { useCallback, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import closeIcon from "@assets/Close_1783293571882.png";
 import type { BrainAccountDTO } from "@/lib/brainAccounts";
@@ -92,6 +92,9 @@ function useAnchoredPlacement(anchor: HTMLElement | null, open: boolean) {
     // over the rail's padding and hide its border.
     const frame = (anchor.closest(RAIL_FRAME_SELECTOR) ?? anchor).getBoundingClientRect();
     const viewportHeight = window.innerHeight;
+    // Derived from the viewport alone, never from the popup's own height: a
+    // maxHeight that responded to the content it constrains would feed back
+    // into the resize observer below and oscillate.
     const maxHeight = viewportHeight - VIEWPORT_MARGIN * 2;
 
     // Left of the rail is the Figma placement. Flip only when the space there
@@ -111,7 +114,13 @@ function useAnchoredPlacement(anchor: HTMLElement | null, open: boolean) {
     top = Math.min(top, viewportHeight - VIEWPORT_MARGIN - height);
     top = Math.max(VIEWPORT_MARGIN, top);
 
-    setPlacement({ left, top, maxHeight });
+    // Re-placing to the same coordinates must not re-render, or an observer
+    // firing on a clamped popup would loop.
+    setPlacement((current) =>
+      current && current.left === left && current.top === top && current.maxHeight === maxHeight
+        ? current
+        : { left, top, maxHeight },
+    );
   }, [anchor, content]);
 
   useLayoutEffect(() => {
@@ -129,11 +138,25 @@ function useAnchoredPlacement(anchor: HTMLElement | null, open: boolean) {
     // `capture` matters: these surfaces scroll internally, and a non-capturing
     // window listener never sees a scroll inside the rail or the centre column.
     window.addEventListener("scroll", onChange, true);
+
+    // The popup's own height is not fixed: opening the account selector,
+    // switching account, a filter emptying a list, or a webfont swapping all
+    // change it with no scroll and no resize. Without this, a popup that was
+    // clamped to the bottom of the viewport keeps its old `top` and grows off
+    // the bottom of the screen. The rail is observed too, so a layout shift
+    // that moves the trigger without scrolling is picked up as well.
+    const observer =
+      typeof ResizeObserver === "undefined" ? null : new ResizeObserver(() => place());
+    if (observer && content) observer.observe(content);
+    const frame = anchor?.closest(RAIL_FRAME_SELECTOR) ?? anchor;
+    if (observer && frame) observer.observe(frame);
+
     return () => {
       window.removeEventListener("resize", onChange);
       window.removeEventListener("scroll", onChange, true);
+      observer?.disconnect();
     };
-  }, [open, place]);
+  }, [open, place, content, anchor]);
 
   return { setContent, placement };
 }
@@ -166,12 +189,27 @@ function RailPopupShell({
   children: ReactNode;
 }) {
   const { setContent, placement } = useAnchoredPlacement(anchor, open);
+  // The parent drops its `{ kind, anchor }` state to close, so by the time
+  // the close handler runs `anchor` is already null. Hold on to the last real
+  // one so focus still has somewhere to go back to.
+  const lastAnchor = useRef<HTMLElement | null>(null);
+  if (anchor) lastAnchor.current = anchor;
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
         <DialogPrimitive.Content
           ref={setContent}
+          onCloseAutoFocus={(event) => {
+            // No DialogTrigger is registered — the rail buttons open the
+            // popup by setting state — so Radix has nothing to hand focus
+            // back to. Return it to the button that was pressed, or leave
+            // Radix's own fallback alone if that button has gone away.
+            const target = lastAnchor.current;
+            if (!target?.isConnected) return;
+            event.preventDefault();
+            target.focus();
+          }}
           data-testid={testId}
           data-node-id={nodeId}
           data-anchored="rail"

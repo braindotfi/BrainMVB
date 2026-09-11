@@ -254,11 +254,51 @@ function dragCard(dx: number) {
   });
 }
 
+/**
+ * jsdom has neither ResizeObserver nor layout, so the placement maths would
+ * otherwise run against all-zeros and every assertion below would pass with
+ * the anchoring torn out. These two shims give it real numbers to work with.
+ */
+const resizeObservers: Array<{ targets: Set<Element>; fire: () => void; disconnected: boolean }> = [];
+
+class StubResizeObserver {
+  private record = { targets: new Set<Element>(), fire: () => {}, disconnected: false };
+  constructor(callback: () => void) {
+    this.record.fire = callback;
+    resizeObservers.push(this.record);
+  }
+  observe(target: Element) {
+    this.record.targets.add(target);
+  }
+  unobserve(target: Element) {
+    this.record.targets.delete(target);
+  }
+  disconnect() {
+    this.record.disconnected = true;
+    this.record.targets.clear();
+  }
+}
+
+/** Per-element height, read by the offsetHeight shim installed in beforeEach. */
+const stubHeights = new WeakMap<HTMLElement, number>();
+
+function setStubHeight(el: HTMLElement, height: number) {
+  stubHeights.set(el, height);
+}
+
 beforeEach(() => {
   // jsdom has no PointerEvent; the panel only reads clientX/clientY off it.
   if (!(window as unknown as { PointerEvent?: unknown }).PointerEvent) {
     (window as unknown as { PointerEvent: typeof MouseEvent }).PointerEvent = MouseEvent;
   }
+  resizeObservers.length = 0;
+  (globalThis as { ResizeObserver?: unknown }).ResizeObserver = StubResizeObserver;
+  Object.defineProperty(HTMLElement.prototype, "offsetHeight", {
+    configurable: true,
+    get(this: HTMLElement) {
+      return stubHeights.get(this) ?? 0;
+    },
+  });
   accountsReadState = "rows";
   render();
 });
@@ -267,6 +307,8 @@ afterEach(() => {
   act(() => root.unmount());
   container.remove();
   accountsReadState = "rows";
+  delete (globalThis as { ResizeObserver?: unknown }).ResizeObserver;
+  delete (HTMLElement.prototype as unknown as Record<string, unknown>).offsetHeight;
 });
 
 describe("selecting an account", () => {
@@ -658,6 +700,133 @@ describe("the rail popups", () => {
     const popup = qPortal("popup-rail-accounts")!;
     // 20 - 386 would be off-screen, so the popup goes to the rail's right.
     expect(popup.style.left).toBe("74px");
+  });
+
+  /**
+   * Placement has to survive the popup changing size after it opens — the
+   * account selector expanding, a filter emptying a list, a webfont swapping.
+   * These use a real height so the bottom edge is a number that can be wrong.
+   */
+  function openTall(height: number) {
+    collapse();
+    stubRect(railFrame(), 900, 0, 54, 700);
+    stubRect(q("button-collapsed-wallet") as HTMLElement, 907, 600, 40, 40);
+    click("button-collapsed-wallet");
+    const popup = qPortal("popup-rail-accounts")!;
+    setStubHeight(popup, height);
+    act(() => resizeObservers.forEach((o) => o.fire()));
+    return popup;
+  }
+
+  it("caps the popup at the viewport and shows it once it is placed", () => {
+    collapse();
+    stubRect(railFrame(), 900, 0, 54, 700);
+    stubRect(q("button-collapsed-wallet") as HTMLElement, 907, 300, 40, 40);
+    click("button-collapsed-wallet");
+    const popup = qPortal("popup-rail-accounts")!;
+    // A popup taller than the screen scrolls inside its own body rather than
+    // running off the bottom, so the cap is viewport-derived and always set.
+    expect(popup.style.maxHeight).toBe(`${window.innerHeight - 16}px`);
+    // The first pass is hidden while the height is measured; by the time the
+    // popup is placed it has to be visible again, or it is a dimmed screen
+    // with nothing on it.
+    expect(popup.style.visibility).not.toBe("hidden");
+  });
+
+  it("keeps a popup that grows after opening inside the viewport", () => {
+    const popup = openTall(400);
+    const top = Number.parseInt(popup.style.top, 10);
+    // Trigger centre is 620, so the unclamped top would be 592 and the
+    // bottom 992 — well past a 768px viewport.
+    expect(top + 400).toBeLessThanOrEqual(window.innerHeight - 8);
+    expect(top).toBeGreaterThanOrEqual(8);
+  });
+
+  it("lets a popup that shrinks move back down to its trigger", () => {
+    const popup = openTall(400);
+    const clampedTop = Number.parseInt(popup.style.top, 10);
+    setStubHeight(popup, 80);
+    act(() => resizeObservers.forEach((o) => o.fire()));
+    const relaxedTop = Number.parseInt(popup.style.top, 10);
+    // Once it is short enough to fit, it goes back to sitting level with the
+    // button rather than staying pinned where the clamp left it.
+    expect(relaxedTop).toBeGreaterThan(clampedTop);
+    expect(relaxedTop).toBe(620 - 28);
+  });
+
+  it("re-places when the window resizes", () => {
+    collapse();
+    const frame = railFrame();
+    stubRect(frame, 900, 0, 54, 700);
+    stubRect(q("button-collapsed-wallet") as HTMLElement, 907, 300, 40, 40);
+    click("button-collapsed-wallet");
+    const popup = qPortal("popup-rail-accounts")!;
+    expect(popup.style.left).toBe("514px");
+    // The rail moves with the window, so the popup has to follow it.
+    stubRect(frame, 600, 0, 54, 700);
+    act(() => {
+      window.dispatchEvent(new Event("resize"));
+    });
+    expect(popup.style.left).toBe("214px");
+  });
+
+  it("follows a surface that scrolls underneath it", () => {
+    collapse();
+    stubRect(railFrame(), 900, 0, 54, 700);
+    const wallet = q("button-collapsed-wallet") as HTMLElement;
+    stubRect(wallet, 907, 300, 40, 40);
+    click("button-collapsed-wallet");
+    const popup = qPortal("popup-rail-accounts")!;
+    expect(popup.style.top).toBe("292px");
+    // The rail scrolls internally, which a non-capturing window listener
+    // would never see.
+    stubRect(wallet, 907, 200, 40, 40);
+    act(() => {
+      container.dispatchEvent(new Event("scroll", { bubbles: false }));
+    });
+    expect(popup.style.top).toBe("192px");
+  });
+
+  it("stops listening once the popup closes", () => {
+    const removed: string[] = [];
+    // Bind the original first: calling EventTarget.prototype directly throws
+    // "not a valid instance of EventTarget" and takes React's scheduler down
+    // with it.
+    const original = window.removeEventListener.bind(window);
+    const spy = vi
+      .spyOn(window, "removeEventListener")
+      .mockImplementation(((type: string, listener: EventListener, options?: boolean) => {
+        removed.push(type);
+        original(type, listener, options);
+      }) as typeof window.removeEventListener);
+    try {
+      collapse();
+      click("button-collapsed-wallet");
+      expect(qPortal("popup-rail-accounts")).toBeTruthy();
+      clickPortal("popup-rail-accounts-close");
+      expect(qPortal("popup-rail-accounts")).toBeNull();
+      expect(removed).toContain("resize");
+      expect(removed).toContain("scroll");
+      // …and the observers go with them, or a closed popup keeps measuring.
+      expect(resizeObservers.some((o) => o.disconnected)).toBe(true);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("hands focus back to the button that opened it", async () => {
+    collapse();
+    const wallet = q("button-collapsed-wallet") as HTMLButtonElement;
+    click("button-collapsed-wallet");
+    expect(qPortal("popup-rail-accounts")).toBeTruthy();
+    clickPortal("popup-rail-accounts-close");
+    // Radix defers its unmount-autofocus handling by a macrotask.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    // Radix has no DialogTrigger to restore to here, so without the explicit
+    // handoff focus lands on <body> and the keyboard user loses their place.
+    expect(document.activeElement).toBe(wallet);
   });
 
   it("keeps a popup anchored to a low trigger inside the viewport", () => {
