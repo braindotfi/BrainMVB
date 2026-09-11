@@ -19,6 +19,8 @@
  *     coloured green and prefixed `+`.
  */
 
+import type { AccountKind } from "./brainAccounts";
+
 export type TransactionDirection = "inflow" | "outflow" | "transfer" | "adjustment";
 export type TransactionFilter = "all" | "trades" | "deposits" | "withdrawals";
 
@@ -135,4 +137,57 @@ export function transactionMeta(value: string): string[] {
  */
 export function shortenIdentifier(value: string): string {
   return value.length > 16 ? `${value.slice(0, 6)}.....${value.slice(-5)}` : value;
+}
+
+/**
+ * The caption above the identifier on the account card.
+ *
+ * Figma 3759:50250 names three of these ("Crypto Wallet Address", "Bank
+ * Account", "Debit Card"). The ledger's account kinds do not line up one-to-one
+ * with those names, so each mapping below is only as specific as the feed:
+ *
+ *   - `card` becomes "Card Number", not "Debit Card". The ledger has one `card`
+ *     kind covering credit and debit alike, and a caption is a claim about the
+ *     instrument. Telling someone a credit card is a debit card is the kind of
+ *     detail a person acts on.
+ *   - `loan`, `line_of_credit` and `payment_processor` get no Figma caption and
+ *     no obvious one, so they keep the neutral wording rather than borrowing a
+ *     bank or card label they may not deserve.
+ */
+export function accountIdentifierLabel(kind: AccountKind | undefined): string {
+  if (kind === "onchain") return "Crypto Wallet Address";
+  if (kind === "bank_checking" || kind === "bank_savings") return "Bank Account Number";
+  if (kind === "card") return "Card Number";
+  return "Account Identifier";
+}
+
+/**
+ * Whether a transaction belongs to the account currently shown on the card.
+ *
+ * `account_id` is optional on the feed. An absent id is not "belongs to the
+ * selected account" and it is not "belongs to some other account" either — it
+ * is unattributed, and a per-account view cannot honestly claim it. So it is
+ * excluded here, and the panel counts what it excluded so the list can say so
+ * rather than quietly shrinking.
+ */
+export function transactionBelongsToAccount(
+  transactionAccountId: string | null | undefined,
+  accountId: string,
+): boolean {
+  return isTransactionAttributed(transactionAccountId) && transactionAccountId === accountId;
+}
+
+/**
+ * Whether the feed names an account for this transaction at all.
+ *
+ * This is the exact complement of what `transactionBelongsToAccount` can ever
+ * accept, so the two cannot drift: anything this rejects is invisible under
+ * every account, and the panel has to say so. An empty string counts as
+ * unattributed — it names no account, and treating it as a real id would let
+ * a row vanish from every list without ever being counted.
+ */
+export function isTransactionAttributed(
+  transactionAccountId: string | null | undefined,
+): transactionAccountId is string {
+  return typeof transactionAccountId === "string" && transactionAccountId.length > 0;
 }

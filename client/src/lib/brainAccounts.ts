@@ -168,6 +168,29 @@ export function accountsTotalView(input: {
   };
 }
 
+/**
+ * Whether this ledger account is operated by a Brain payment agent.
+ *
+ * Figma 3759:50590 gives agent accounts their own green card, so the panel has
+ * to be able to tell one apart. The ledger currently offers no field that says
+ * so: `/v1/ledger/accounts` publishes `account_type` from a fixed set with no
+ * agent member, and the live tenant returns only bank and on-chain accounts.
+ *
+ * So this reads an `account_type` value outside the published set rather than
+ * guessing from a name, an institution, or a balance. Those would all be
+ * inference dressed up as fact — an account called "Payment Agent" is a string
+ * a person typed, and mis-labelling an account as agent-operated changes what
+ * the card claims about who moves money from it.
+ *
+ * The consequence is that no account is an agent account today, and the green
+ * card stays unreachable until brain-core publishes the kind. That is the
+ * honest state: better an unused branch than a card that turns green on a
+ * hunch.
+ */
+export function isAgentAccount(account: Pick<BrainAccountDTO, "account_type">): boolean {
+  return (account.account_type as string) === "agent";
+}
+
 export const ACCOUNT_KIND_LABEL: Record<AccountKind, string> = {
   bank_checking: "Bank checking",
   bank_savings: "Savings",

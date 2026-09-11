@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  accountIdentifierLabel,
   formatTransactionAmount,
+  isTransactionAttributed,
   shortenIdentifier,
+  transactionBelongsToAccount,
   transactionFlow,
   transactionMeta,
 } from "./accountsPanelFormat";
@@ -103,5 +106,55 @@ describe("shortenIdentifier", () => {
     // 16 chars: the shortened form is also 16, so truncating would only lose data.
     expect(shortenIdentifier("0123456789abcdef")).toBe("0123456789abcdef");
     expect(shortenIdentifier("0123456789abcdefg")).toBe("012345.....cdefg");
+  });
+});
+
+describe("accountIdentifierLabel", () => {
+  it("names the identifier a person is looking at", () => {
+    expect(accountIdentifierLabel("onchain")).toBe("Crypto Wallet Address");
+    expect(accountIdentifierLabel("bank_checking")).toBe("Bank Account Number");
+    expect(accountIdentifierLabel("bank_savings")).toBe("Bank Account Number");
+  });
+
+  it("does not call a card a debit card", () => {
+    // Figma says "Debit Card", but the ledger has one `card` kind covering
+    // credit cards too, and the caption is a claim about the instrument.
+    expect(accountIdentifierLabel("card")).toBe("Card Number");
+  });
+
+  it("stays neutral for a kind with no Figma caption", () => {
+    expect(accountIdentifierLabel("loan")).toBe("Account Identifier");
+    expect(accountIdentifierLabel("line_of_credit")).toBe("Account Identifier");
+    expect(accountIdentifierLabel("payment_processor")).toBe("Account Identifier");
+    expect(accountIdentifierLabel(undefined)).toBe("Account Identifier");
+  });
+});
+
+describe("transactionBelongsToAccount", () => {
+  it("matches only the account it was asked about", () => {
+    expect(transactionBelongsToAccount("acct_1", "acct_1")).toBe(true);
+    expect(transactionBelongsToAccount("acct_2", "acct_1")).toBe(false);
+  });
+
+  it("treats an unattributed transaction as belonging to no account", () => {
+    // An absent account_id is unknown, not "the one on screen". Claiming it
+    // would put someone else's money on this card.
+    expect(transactionBelongsToAccount(null, "acct_1")).toBe(false);
+    expect(transactionBelongsToAccount(undefined, "acct_1")).toBe(false);
+    expect(transactionBelongsToAccount("", "acct_1")).toBe(false);
+  });
+});
+
+describe("isTransactionAttributed", () => {
+  it("is the exact complement of what any account can claim", () => {
+    // Anything this rejects is invisible under every account, so the panel has
+    // to count it. Anything it accepts must be claimable by some account.
+    for (const id of [null, undefined, ""]) {
+      expect(isTransactionAttributed(id)).toBe(false);
+      expect(transactionBelongsToAccount(id, "acct_1")).toBe(false);
+      expect(transactionBelongsToAccount(id, "")).toBe(false);
+    }
+    expect(isTransactionAttributed("acct_1")).toBe(true);
+    expect(transactionBelongsToAccount("acct_1", "acct_1")).toBe(true);
   });
 });
