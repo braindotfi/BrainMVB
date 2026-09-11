@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { QRCodeSVG } from "qrcode.react";
-import headerBackIcon from "@assets/bank_1789155430118.png";
 import addIcon from "@assets/add_1789001100272.png";
 import selectFieldButtonIcon from "@assets/figma_icons/add-money/select_field_btn_32.svg";
 import chevronDownIcon from "@assets/figma_icons/add-money/chevron_down_24.svg";
@@ -86,19 +85,8 @@ function fundingKind(account: BrainAccountDTO): FundingKind {
   return "unsupported";
 }
 
-function ModalHeader({ onBack }: { onBack: () => void }) {
-  return (
-    <div className="relative h-14 w-full shrink-0 border-b border-solid border-brain-v1stroke-2">
-      <button
-        type="button"
-        aria-label="Close Add Money"
-        onClick={onBack}
-        className="absolute left-[11px] top-[11px] size-8 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
-      >
-        <img src={headerBackIcon} alt="" className="block size-8" />
-      </button>
-    </div>
-  );
+function ModalHeader() {
+  return <div className="h-14 w-full shrink-0 border-b border-solid border-brain-v1stroke-2" />;
 }
 
 /** Icon + name + shortened identifier: the row shape the picker and the field share. */
@@ -429,7 +417,7 @@ export function AddMoneyFlow({ accounts }: AddMoneyFlowProps) {
         >
           <DialogPrimitive.Title className="sr-only">Add Money</DialogPrimitive.Title>
           <DialogPrimitive.Description className="sr-only">Choose an account and view the information needed to fund it.</DialogPrimitive.Description>
-          <ModalHeader onBack={() => reset(false)} />
+          <ModalHeader />
 
           <div className="flex flex-col gap-6 px-[39px] pb-[39px] pt-[23px]">
             <div>

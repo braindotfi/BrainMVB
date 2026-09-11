@@ -139,6 +139,7 @@ describe("which accounts can be funded", () => {
   it("offers bank and wallet accounts as selectable", () => {
     render([BANK, WALLET, CARD]);
     click("button-account-add");
+    expect(document.body.querySelector('[aria-label="Close Add Money"]')).toBeNull();
     openPicker();
     expect(optionFor("acct_bank").getAttribute("aria-disabled")).toBeNull();
     expect(optionFor("acct_wallet").getAttribute("aria-disabled")).toBeNull();
