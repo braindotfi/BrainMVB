@@ -19,24 +19,23 @@ interface AddMoneyFlowProps {
   accounts: BrainAccountDTO[];
 }
 
-const TARGET_POPUP_WIDTH = 320;
-
 /**
- * Keep each popup authored at its Figma geometry, then scale the complete
- * painted box to the shared 320px width. Scaling the whole box preserves the
- * frame's aspect ratio, including type, spacing, radii and its 1px stroke.
+ * Step 1 is the 75%-scale Figma variant: its native 402 x 340 box paints at
+ * exactly 301.5 x 255. The account details states stay at their native size.
  */
-function centredAtWidth(nativePaintedWidth: number) {
-  const scale = TARGET_POPUP_WIDTH / nativePaintedWidth;
-  return {
-    transform: `translate(-50%, -50%) scale(${scale})`,
-    // Transforms change what is painted, not layout. Give the unscaled box
-    // proportionally more room so max-width/max-height do not shrink a 320px
-    // popup again on an otherwise wide-enough viewport.
-    maxWidth: `calc((100vw - 16px) / ${scale})`,
-    maxHeight: `calc((100vh - 16px) / ${scale})`,
-  } as const;
-}
+const STEP_ONE_SCALE = 0.75;
+const centred = { transform: "translate(-50%, -50%)" } as const;
+const centredStepOne = {
+  transform: `translate(-50%, -50%) scale(${STEP_ONE_SCALE})`,
+  // Transforms change paint, not layout, so divide the viewport allowance by
+  // the scale or a normal mobile viewport will shrink the popup a second time.
+  maxWidth: `calc((100vw - 16px) / ${STEP_ONE_SCALE})`,
+  maxHeight: `calc((100vh - 16px) / ${STEP_ONE_SCALE})`,
+} as const;
+const viewportClamp = {
+  maxWidth: "calc(100vw - 16px)",
+  maxHeight: "calc(100vh - 16px)",
+} as const;
 
 /**
  * Figma hangs each popup's 1px stroke OUTSIDE the frame (its border rect sits
@@ -47,7 +46,6 @@ function centredAtWidth(nativePaintedWidth: number) {
  * modal 28px taller. Each width below is therefore the frame plus its stroke.
  */
 const FRAME_W = { modal: "402px", picker: "320px", qr: "324px" } as const;
-const PAINTED_W = { modal: 402, picker: 320, qr: 324 } as const;
 
 /**
  * The picker is the one fixed-size popup in the flow: 320 x 424, per the
@@ -189,7 +187,8 @@ function AccountPicker({
             setTimeout(() => returnFocusTo.current?.focus(), 0);
           }}
           style={{
-            ...centredAtWidth(PAINTED_W.picker),
+            ...centred,
+            ...viewportClamp,
             width: FRAME_W.picker,
             height: PICKER_H,
           }}
@@ -421,7 +420,11 @@ export function AddMoneyFlow({ accounts }: AddMoneyFlowProps) {
             event.preventDefault();
             triggerRef.current?.focus();
           }}
-          style={{ ...centredAtWidth(PAINTED_W.modal), width: FRAME_W.modal }}
+          style={{
+            ...(selected ? centred : centredStepOne),
+            ...(selected ? viewportClamp : {}),
+            width: FRAME_W.modal,
+          }}
           className="fixed left-1/2 top-1/2 z-[71] flex flex-col overflow-y-auto rounded-modal border border-solid border-brain-v1stroke-2 bg-brain-v1highlight-dropdown-bg focus:outline-none"
         >
           <DialogPrimitive.Title className="sr-only">Add Money</DialogPrimitive.Title>
@@ -593,7 +596,7 @@ export function AddMoneyFlow({ accounts }: AddMoneyFlowProps) {
               event.preventDefault();
               qrTriggerRef.current?.focus();
             }}
-            style={{ ...centredAtWidth(PAINTED_W.qr), width: FRAME_W.qr }}
+            style={{ ...centred, ...viewportClamp, width: FRAME_W.qr }}
             className="fixed left-1/2 top-1/2 z-[81] flex flex-col items-center justify-center gap-4 overflow-y-auto rounded-modal border border-solid border-brain-v1stroke-2 bg-brain-v1highlight-dropdown-bg p-6 focus:outline-none"
           >
             <DialogPrimitive.Title className="sr-only">Wallet address QR code</DialogPrimitive.Title>
