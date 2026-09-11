@@ -170,18 +170,29 @@ export function AccountCard({ accounts, selectedIndex, onSelectAccount }: Accoun
 
   const selectAccountByOffset = (offset: number) => {
     if (accounts.length < 2) return;
-    const next = accounts[selectedIndex + offset];
-    if (!next) return;
+    // "Cycle" is literal: swiping forward from the last account returns to
+    // the first, and swiping back from the first returns to the last.
+    const nextIndex = (selectedIndex + offset + accounts.length) % accounts.length;
+    const next = accounts[nextIndex];
     onSelectAccount(next.id);
   };
 
   const swipeStart = useRef<{ x: number; y: number; pointerId: number } | null>(null);
   const onCardPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    // Buttons on the card — especially the pagination dots — own their taps.
+    // Capturing their pointer on the card retargets the eventual click away
+    // from the button on touch browsers.
+    if ((event.target as HTMLElement).closest("button")) return;
+    swipeStart.current = { x: event.clientX, y: event.clientY, pointerId: event.pointerId };
     // Capturing means a quick thumb swipe can finish outside the card without
     // losing the gesture. Selection happens during the swipe, not after a
     // tap-hold-drag-release sequence.
-    event.currentTarget.setPointerCapture?.(event.pointerId);
-    swipeStart.current = { x: event.clientX, y: event.clientY, pointerId: event.pointerId };
+    try {
+      event.currentTarget.setPointerCapture?.(event.pointerId);
+    } catch {
+      // Older touch browsers expose the method but reject capture. The card
+      // still receives ordinary in-bounds pointer moves, so keep the gesture.
+    }
   };
   const onCardPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
     const start = swipeStart.current;
@@ -191,6 +202,7 @@ export function AccountCard({ accounts, selectedIndex, onSelectAccount }: Accoun
     // Advance as soon as a deliberate horizontal swipe crosses the threshold.
     // Clearing first guarantees one account change per gesture.
     if (Math.abs(dx) < 40 || Math.abs(dx) <= Math.abs(dy)) return;
+    event.preventDefault();
     swipeStart.current = null;
     selectAccountByOffset(dx < 0 ? 1 : -1);
   };
@@ -326,7 +338,7 @@ export function AccountCard({ accounts, selectedIndex, onSelectAccount }: Accoun
               selectAccountByOffset(-1);
             }
           }}
-          className="absolute left-1/2 top-[180.6px] z-20 flex -translate-x-1/2 items-center gap-1"
+          className="absolute bottom-0 left-1/2 z-20 flex -translate-x-1/2 items-center"
         >
           {accounts.map((account, index) => {
             const current = index === selectedIndex;
@@ -340,10 +352,10 @@ export function AccountCard({ accounts, selectedIndex, onSelectAccount }: Accoun
                 aria-label={account.name}
                 title={account.name}
                 onClick={() => onSelectAccount(account.id)}
-                // The dot is 6px per Figma, which is far too small to hit.
-                // The pseudo-element grows the target to 10x24 without
-                // moving the dots or changing the 4px gap between them.
-                className="relative flex size-[6px] items-center justify-center rounded-full before:absolute before:-inset-x-[2px] before:-top-[9px] before:-bottom-[9px] before:content-['']"
+                // Keep Figma's 6px mark but give every dot a real 32x32 touch
+                // target. A pseudo-element only made the old box 10x24 and
+                // still let the card's pointer capture steal the tap.
+                className="relative flex size-8 items-center justify-center rounded-full"
               >
                 <span
                   aria-hidden="true"

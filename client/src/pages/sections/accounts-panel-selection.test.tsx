@@ -379,14 +379,32 @@ describe("selecting an account", () => {
     expect(text("text-account-name")).toBe("Payment Agent");
   });
 
-  it("stops at the ends instead of wrapping", () => {
-    swipeCard(120); // already first
-    expect(text("text-account-name")).toBe("Payment Agent");
-    act(() => {
-      dots()[2].dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    });
-    swipeCard(-120); // already last
+  it("cycles across both ends", () => {
+    swipeCard(120); // back from first wraps to last
     expect(text("text-account-name")).toBe("Operating");
+    act(() => {
+      dots()[0].dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    swipeCard(120); // and back from first wraps again
+    expect(text("text-account-name")).toBe("Operating");
+    swipeCard(-120); // forward from last wraps to first
+    expect(text("text-account-name")).toBe("Payment Agent");
+  });
+
+  it("does not let card pointer capture steal a pagination tap", () => {
+    const card = q("account-card")!;
+    const dot = dots()[1];
+    const capture = vi.fn();
+    Object.defineProperty(card, "setPointerCapture", { configurable: true, value: capture });
+    const PointerEvent = (window as unknown as { PointerEvent: typeof MouseEvent }).PointerEvent;
+    act(() => {
+      dot.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+      dot.dispatchEvent(new PointerEvent("pointerup", { bubbles: true }));
+      dot.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(capture).not.toHaveBeenCalled();
+    expect(text("text-account-name")).toBe("Brightline Treasury Wallet");
+    expect(dot.className).toContain("size-8");
   });
 
   it("picks the account from the drop-down too", () => {
