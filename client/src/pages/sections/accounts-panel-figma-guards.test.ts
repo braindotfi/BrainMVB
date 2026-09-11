@@ -3,6 +3,20 @@ import { describe, expect, it } from "vitest";
 
 const source = readFileSync(new URL("./AccountsPanel.tsx", import.meta.url), "utf8");
 
+/**
+ * Just the collapsed branch. A bare `source.toContain` would happily match the
+ * open panel — both render a wallet avatar and the same three actions — so an
+ * assertion about the rail has to be scoped to the rail, or it can pass while
+ * the rail itself is empty.
+ */
+function railSource(): string {
+  const start = source.indexOf("  if (collapsed) {");
+  const end = source.indexOf("\n  return (", start);
+  expect(start).toBeGreaterThan(0);
+  expect(end).toBeGreaterThan(start);
+  return source.slice(start, end);
+}
+
 describe("Figma accounts panel", () => {
   it("keeps the Figma rail anchors and geometry", () => {
     expect(source).toContain('data-node-id="6519:54025"');
@@ -151,6 +165,24 @@ describe("Figma accounts panel", () => {
     expect(source).toContain("action[railArtwork]");
   });
 
+  it("keeps the collapsed rail on its 40px column", () => {
+    // 7px gutter each side of a 40px content column. Figma draws 56px, but
+    // the shipped rail is 54px and widening it would shift the whole app
+    // layout by 2px, so the gutter is what matches, not the outer width.
+    const rail = railSource();
+    expect(rail).toContain("w-[54px]");
+    expect(rail).toContain("p-[7px]");
+    expect(rail).toContain('className="flex w-[40px] flex-col items-start gap-4"');
+    // A short viewport scrolls the rail instead of clipping the tab icons.
+    expect(rail).toContain("overflow-y-auto");
+    // 8px between the avatar and the three actions, 4px between the tabs.
+    expect(rail).toContain('className="flex flex-col gap-2"');
+    expect(rail).toContain('className="flex w-full flex-col gap-1"');
+    // Every icon button is a 40px square; the tab glyphs are 24px in 8px pads.
+    expect(rail.match(/size-10/g)?.length).toBeGreaterThanOrEqual(4);
+    expect(rail).toContain('className="block size-6"');
+  });
+
   it("swaps the collapsed rail icons to their active artwork on hover", () => {
     // Both artworks are in the DOM; CSS decides which one shows.
     expect(source).toContain("group-hover:hidden group-focus-visible:hidden");
@@ -164,15 +196,23 @@ describe("Figma accounts panel", () => {
   });
 
   it("keeps the collapsed rail honest about what it can do", () => {
-    // The three actions are as unavailable here as in the open panel.
-    expect(source).toContain('aria-label={action.title}');
-    expect(source).toContain("cursor-not-allowed rounded-full");
-    // The avatar names a real account or says why it cannot.
-    expect(source).toContain("Couldn't load accounts");
-    expect(source).toContain("Accounts are still loading");
-    expect(source).toContain("disabled={!selected}");
+    const rail = railSource();
+    // The three actions are as unavailable here as in the open panel, but
+    // stay focusable so the explanation is not hover-only.
+    expect(rail).toContain("aria-label={action.title}");
+    expect(rail).toContain("title={action.title}");
+    expect(rail).toContain("cursor-not-allowed rounded-full");
+    // …and `aria-disabled` must not be a bare `disabled` anywhere in the rail.
+    expect(rail).not.toMatch(/\n\s+disabled[\s=}]/);
+    // The avatar names a real account or says which of the three reasons it
+    // cannot — a finished read with no rows is not a read still running.
+    expect(rail).toContain("Couldn't load accounts");
+    expect(rail).toContain("Accounts are still loading");
+    expect(rail).toContain("No connected accounts");
+    expect(rail).toContain("aria-disabled={!selected}");
+    expect(rail).toContain("onClick={selected ? onToggle : undefined}");
     // The tab icons do something real: open the panel on that tab.
-    expect(source).toContain("setTab(item.tab);");
+    expect(rail).toContain("setTab(item.tab);");
   });
 
   it("shortens the card identifier the way Figma 4062:57086 does", () => {

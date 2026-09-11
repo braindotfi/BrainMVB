@@ -100,18 +100,27 @@ const TRANSACTIONS = [
   },
 ];
 
+/**
+ * The accounts read is switchable so the rail can be rendered in all four of
+ * the states it distinguishes — a selection, a read still running, a read that
+ * failed, and a read that finished and returned nothing.
+ */
+type AccountsReadState = "rows" | "loading" | "failed" | "empty";
+let accountsReadState: AccountsReadState = "rows";
+
 vi.mock("@/lib/ledgerRead", async (importOriginal) => {
   const real = await importOriginal<typeof import("@/lib/ledgerRead")>();
   return {
     ...real,
-    usePagedLedgerRead: (path: string) => ({
-      read: {
-        rows: path.includes("transactions") ? TRANSACTIONS : ACCOUNTS,
-        complete: true,
-      },
-      failed: false,
-      ingesting: false,
-    }),
+    usePagedLedgerRead: (path: string) => {
+      if (path.includes("transactions")) {
+        return { read: { rows: TRANSACTIONS, complete: true }, failed: false, ingesting: false };
+      }
+      if (accountsReadState === "loading") return { read: null, failed: false, ingesting: false };
+      if (accountsReadState === "failed") return { read: null, failed: true, ingesting: false };
+      const rows = accountsReadState === "empty" ? [] : ACCOUNTS;
+      return { read: { rows, complete: true }, failed: false, ingesting: false };
+    },
   };
 });
 
@@ -122,6 +131,12 @@ let root: Root;
 let toggles: number;
 
 function render() {
+  // A test that switches the read state re-renders from scratch, so drop any
+  // instance already standing rather than leaking it past the test.
+  if (root) {
+    act(() => root.unmount());
+    container.remove();
+  }
   container = document.createElement("div");
   document.body.appendChild(container);
   root = createRoot(container);
@@ -229,12 +244,14 @@ beforeEach(() => {
   if (!(window as unknown as { PointerEvent?: unknown }).PointerEvent) {
     (window as unknown as { PointerEvent: typeof MouseEvent }).PointerEvent = MouseEvent;
   }
+  accountsReadState = "rows";
   render();
 });
 
 afterEach(() => {
   act(() => root.unmount());
   container.remove();
+  accountsReadState = "rows";
 });
 
 describe("selecting an account", () => {
@@ -429,10 +446,38 @@ describe("the collapsed rail", () => {
     collapse();
     for (const action of ["add", "send", "exchange"]) {
       const button = q(`button-collapsed-${action}`) as HTMLButtonElement;
-      expect(button.disabled).toBe(true);
+      expect(button.getAttribute("aria-disabled")).toBe("true");
       expect(button.getAttribute("aria-label")).toContain("not available here yet");
+      // A natively disabled button cannot be focused, which would leave the
+      // explanation reachable only by hovering a mouse over it.
+      expect(button.disabled).toBe(false);
+      expect(button.getAttribute("title")).toContain("not available here yet");
       click(`button-collapsed-${action}`);
     }
+    expect(toggles).toBe(0);
+  });
+
+  it("lights every icon with the same glyph it draws at rest", () => {
+    collapse();
+    for (const id of ["wallet", "add", "send", "exchange"]) {
+      const { normal, active } = railIcons(`button-collapsed-${id}`);
+      const glyphPath = (svg: string) => svg.replace(/<circle[^/]*\/>/, "").replace(/#[0-9A-Fa-f]{6}/g, "");
+      expect(glyphPath(svgOf(active))).toBe(glyphPath(svgOf(normal)));
+    }
+  });
+
+  it.each([
+    ["loading", "Accounts are still loading"],
+    ["failed", "Couldn't load accounts"],
+    ["empty", "No connected accounts"],
+  ] as const)("says %s rather than guessing an account", (state, expected) => {
+    accountsReadState = state;
+    render();
+    collapse();
+    const wallet = q("button-collapsed-wallet") as HTMLButtonElement;
+    expect(wallet.getAttribute("aria-label")).toBe(expected);
+    expect(wallet.getAttribute("aria-disabled")).toBe("true");
+    click("button-collapsed-wallet");
     expect(toggles).toBe(0);
   });
 

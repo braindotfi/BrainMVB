@@ -308,11 +308,15 @@ export function AccountsPanel({ collapsed, onToggle }: AccountsPanelProps) {
     // The rail names the account the open panel would show, so an account the
     // read has not produced yet must not be drawn as though it had.
     const railArtwork = agentSelected ? "agent" : "bank";
+    // A read that finished and returned nothing is not a read still running, so
+    // the four states the open panel distinguishes are all named here too.
     const walletTitle = selected
       ? `${selected.name} — expand accounts`
       : isError
         ? "Couldn't load accounts"
-        : "Accounts are still loading";
+        : isLoading
+          ? "Accounts are still loading"
+          : "No connected accounts";
     return (
       <div
         data-node-id={agentSelected ? "3759:54130" : "3759:50795"}
@@ -334,14 +338,18 @@ export function AccountsPanel({ collapsed, onToggle }: AccountsPanelProps) {
               </span>
             </div>
             <div className="flex flex-col gap-2">
+              {/* aria-disabled rather than disabled, here and on the three
+                  actions: a natively disabled button is unreachable by
+                  keyboard, which would put the only explanation of why the
+                  control does nothing behind a mouse hover. */}
               <button
                 type="button"
                 data-testid="button-collapsed-wallet"
-                onClick={onToggle}
-                disabled={!selected}
+                onClick={selected ? onToggle : undefined}
+                aria-disabled={!selected}
                 title={walletTitle}
                 aria-label={walletTitle}
-                className="group block size-10 rounded-full disabled:cursor-not-allowed"
+                className={`group block size-10 rounded-full ${selected ? "" : "cursor-not-allowed"}`}
               >
                 <RailIcon
                   normal={railArtwork === "agent" ? sidebarWalletAgentIcon : sidebarWalletBankIcon}
@@ -349,17 +357,17 @@ export function AccountsPanel({ collapsed, onToggle }: AccountsPanelProps) {
                 />
               </button>
               {collapsedActionItems.map((action) => (
-                <div key={action.label} className="group size-10" title={action.title}>
-                  <button
-                    type="button"
-                    data-testid={`button-collapsed-${action.label.toLowerCase()}`}
-                    disabled
-                    aria-label={action.title}
-                    className="block size-10 cursor-not-allowed rounded-full"
-                  >
-                    <RailIcon {...action[railArtwork]} />
-                  </button>
-                </div>
+                <button
+                  key={action.label}
+                  type="button"
+                  data-testid={`button-collapsed-${action.label.toLowerCase()}`}
+                  aria-disabled
+                  title={action.title}
+                  aria-label={action.title}
+                  className="group block size-10 cursor-not-allowed rounded-full"
+                >
+                  <RailIcon {...action[railArtwork]} />
+                </button>
               ))}
             </div>
           </div>
