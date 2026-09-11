@@ -200,9 +200,78 @@ describe("which accounts can be funded", () => {
     expect(q("add-money-picker-empty")?.textContent).toContain("No accounts match");
   });
 
-  it("disables Add entirely when nothing on the list can be funded", () => {
+  it("still opens, and explains itself, when nothing on the list can be funded", () => {
+    // A dead Add button says nothing. The reason each account cannot be
+    // funded is written on its picker row, so the flow has to be reachable
+    // for a reader to ever see it.
     render([CARD, PROCESSOR]);
+    expect((q("button-account-add") as HTMLButtonElement).disabled).toBe(false);
+    click("button-account-add");
+    openPicker();
+    expect(optionFor("acct_card").textContent).toContain("No funding details");
+    expect(optionFor("acct_stripe").textContent).toContain("No funding details");
+  });
+
+  it("disables Add only when there are no accounts at all", () => {
+    render([]);
     expect((q("button-account-add") as HTMLButtonElement).disabled).toBe(true);
+  });
+});
+
+describe("focus when the picker closes", () => {
+  /**
+   * The picker is a controlled Radix root with no Dialog.Trigger, so Radix
+   * suppresses its own restoration and focus lands on <body> unless the
+   * component puts it back. Every close path is checked, because they run
+   * through different Radix code and only one of them was ever exercised.
+   */
+  /**
+   * Restoration is deferred with a timer (see the comment on the picker's
+   * onCloseAutoFocus), so flushing microtasks alone reads the frame before it
+   * happens and every one of these would pass for the wrong reason.
+   */
+  async function settle() {
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    });
+  }
+
+  it("returns focus to the field after choosing an account", async () => {
+    render([BANK]);
+    click("button-account-add");
+    const field = q("add-money-account-select") as HTMLButtonElement;
+    openPicker();
+    click("add-money-picker-option-acct_bank");
+    await settle();
+    expect(q("add-money-picker")).toBeNull();
+    expect(document.activeElement).toBe(q("add-money-account-select"));
+    expect(q("add-money-account-select")).toBe(field);
+  });
+
+  it("returns focus to the field on Escape, leaving the modal open", async () => {
+    render([BANK]);
+    click("button-account-add");
+    openPicker();
+    act(() => {
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    });
+    await settle();
+    // Escape closes only the topmost layer.
+    expect(q("add-money-picker")).toBeNull();
+    expect(q("add-money-modal")).not.toBeNull();
+    expect(document.activeElement).toBe(q("add-money-account-select"));
+  });
+
+  it("returns focus to the field from the close glyph", async () => {
+    render([BANK]);
+    click("button-account-add");
+    openPicker();
+    const close = document.body.querySelector<HTMLButtonElement>('[aria-label="Close account picker"]');
+    expect(close).not.toBeNull();
+    act(() => close!.click());
+    await settle();
+    expect(q("add-money-picker")).toBeNull();
+    expect(document.activeElement).toBe(q("add-money-account-select"));
   });
 });
 

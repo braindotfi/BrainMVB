@@ -31,8 +31,17 @@ const POPUP_SCALE = 0.75;
 /** Radix centres with a translate; the scale has to ride on the same transform. */
 const centredScaled = { transform: `translate(-50%, -50%) scale(${POPUP_SCALE})` } as const;
 
-/** Room for the unscaled box, since the transform shrinks what is painted. */
-const scaledMaxHeight = `calc((100vh - 16px) / ${POPUP_SCALE})`;
+/**
+ * Room for the UNSCALED box, since the transform shrinks what is painted but
+ * not what is laid out. Without dividing through by the scale a popup starts
+ * scrolling while a quarter of the viewport is still empty — and without the
+ * width clamp the widest popup (402px → 301px painted) overflows a phone held
+ * in a narrow split view.
+ */
+const scaledViewport = {
+  maxHeight: `calc((100vh - 16px) / ${POPUP_SCALE})`,
+  maxWidth: `calc((100vw - 16px) / ${POPUP_SCALE})`,
+} as const;
 
 /**
  * Figma hangs each popup's 1px stroke OUTSIDE the frame (its border rect sits
@@ -121,12 +130,15 @@ function AccountPicker({
   accounts,
   selectedId,
   onSelect,
+  returnFocusTo,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   accounts: BrainAccountDTO[];
   selectedId: string;
   onSelect: (account: BrainAccountDTO) => void;
+  /** The field this picker was opened from; see onCloseAutoFocus below. */
+  returnFocusTo: React.RefObject<HTMLButtonElement | null>;
 }) {
   const [query, setQuery] = useState("");
 
@@ -150,7 +162,23 @@ function AccountPicker({
         <DialogPrimitive.Content
           data-testid="add-money-picker"
           data-node-id="6543:54913"
-          style={{ ...centredScaled, maxHeight: scaledMaxHeight, width: FRAME_W.picker }}
+          onCloseAutoFocus={(event) => {
+            // This root is controlled and has no Dialog.Trigger, so Radix
+            // suppresses its own prior-focus restoration and then tries to
+            // focus a trigger ref that was never filled. Every close path —
+            // Escape, the close glyph, the scrim, and picking an account —
+            // otherwise drops focus on <body>. Put it back on the field.
+            event.preventDefault();
+            // Deferred past the task, not just the microtask queue: the
+            // enclosing FocusScope watches for the removal of the focused node
+            // with a MutationObserver and, finding focus on <body>, pulls it
+            // onto the dialog container. That callback is itself a microtask,
+            // so a queueMicrotask here races it and loses about as often as it
+            // wins. Escape and the close glyph do not re-render the outer
+            // dialog and would work either way; the selection path does.
+            setTimeout(() => returnFocusTo.current?.focus(), 0);
+          }}
+          style={{ ...centredScaled, ...scaledViewport, width: FRAME_W.picker }}
           className="fixed left-1/2 top-1/2 z-[76] flex flex-col overflow-hidden rounded-panel border border-solid border-brain-v1stroke-2 bg-brain-v1highlight-dropdown-bg drop-shadow-[0px_68px_13.5px_rgba(0,0,0,0.06)] focus:outline-none"
         >
           <DialogPrimitive.Title className="sr-only">Select Account</DialogPrimitive.Title>
@@ -306,12 +334,9 @@ export function AddMoneyFlow({ accounts }: AddMoneyFlowProps) {
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "failed">("idle");
   const copyTimer = useRef<number | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const fieldRef = useRef<HTMLButtonElement | null>(null);
   const qrTriggerRef = useRef<HTMLButtonElement | null>(null);
   const selected = useMemo(() => accounts.find((account) => account.id === accountId), [accounts, accountId]);
-  const fundable = useMemo(
-    () => accounts.filter((account) => fundingKind(account) !== "unsupported"),
-    [accounts],
-  );
 
   const reset = (nextOpen: boolean) => {
     setOpen(nextOpen);
@@ -364,7 +389,10 @@ export function AddMoneyFlow({ accounts }: AddMoneyFlowProps) {
           type="button"
           data-testid="button-account-add"
           aria-label="Add money to an account"
-          disabled={fundable.length === 0}
+          // Only an empty ledger closes this off. If accounts exist but none
+          // can be funded, the flow still has to open: the picker rows are
+          // where the reason is written, and a dead Add button says nothing.
+          disabled={accounts.length === 0}
           className="size-10 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <img src={addIcon} alt="" className="block size-10" />
@@ -379,7 +407,7 @@ export function AddMoneyFlow({ accounts }: AddMoneyFlowProps) {
             event.preventDefault();
             triggerRef.current?.focus();
           }}
-          style={{ ...centredScaled, maxHeight: scaledMaxHeight, width: FRAME_W.modal }}
+          style={{ ...centredScaled, ...scaledViewport, width: FRAME_W.modal }}
           className="fixed left-1/2 top-1/2 z-[71] flex flex-col overflow-y-auto rounded-modal border border-solid border-brain-v1stroke-2 bg-brain-v1highlight-dropdown-bg focus:outline-none"
         >
           <DialogPrimitive.Title className="sr-only">Add Money</DialogPrimitive.Title>
@@ -393,6 +421,7 @@ export function AddMoneyFlow({ accounts }: AddMoneyFlowProps) {
             </div>
 
             <button
+              ref={fieldRef}
               type="button"
               data-testid="add-money-account-select"
               aria-haspopup="dialog"
@@ -528,6 +557,7 @@ export function AddMoneyFlow({ accounts }: AddMoneyFlowProps) {
         onOpenChange={setPickerOpen}
         accounts={accounts}
         selectedId={accountId}
+        returnFocusTo={fieldRef}
         onSelect={(account) => {
           if (fundingKind(account) === "unsupported") return;
           setAccountId(account.id);
@@ -549,8 +579,8 @@ export function AddMoneyFlow({ accounts }: AddMoneyFlowProps) {
               event.preventDefault();
               qrTriggerRef.current?.focus();
             }}
-            style={{ ...centredScaled, maxHeight: scaledMaxHeight, width: FRAME_W.qr }}
-            className="fixed left-1/2 top-1/2 z-[81] flex flex-col items-center justify-center gap-4 rounded-modal border border-solid border-brain-v1stroke-2 bg-brain-v1highlight-dropdown-bg p-6 focus:outline-none"
+            style={{ ...centredScaled, ...scaledViewport, width: FRAME_W.qr }}
+            className="fixed left-1/2 top-1/2 z-[81] flex flex-col items-center justify-center gap-4 overflow-y-auto rounded-modal border border-solid border-brain-v1stroke-2 bg-brain-v1highlight-dropdown-bg p-6 focus:outline-none"
           >
             <DialogPrimitive.Title className="sr-only">Wallet address QR code</DialogPrimitive.Title>
             <DialogPrimitive.Description className="sr-only">Scan this code to copy the selected wallet address.</DialogPrimitive.Description>
