@@ -259,12 +259,18 @@ function dragCard(dx: number) {
  * otherwise run against all-zeros and every assertion below would pass with
  * the anchoring torn out. These two shims give it real numbers to work with.
  */
-const resizeObservers: Array<{ targets: Set<Element>; fire: () => void; disconnected: boolean }> = [];
+interface ObserverRecord {
+  targets: Set<Element>;
+  callback: () => void;
+  disconnected: boolean;
+}
+
+const resizeObservers: ObserverRecord[] = [];
 
 class StubResizeObserver {
-  private record = { targets: new Set<Element>(), fire: () => {}, disconnected: false };
+  private record: ObserverRecord = { targets: new Set(), callback: () => {}, disconnected: false };
   constructor(callback: () => void) {
-    this.record.fire = callback;
+    this.record.callback = callback;
     resizeObservers.push(this.record);
   }
   observe(target: Element) {
@@ -277,6 +283,18 @@ class StubResizeObserver {
     this.record.disconnected = true;
     this.record.targets.clear();
   }
+}
+
+/**
+ * Only notifies observers that are live AND actually watching `target`, so a
+ * test that fires a resize is really asserting the element was registered —
+ * firing every callback blindly would keep passing with the observe() call
+ * deleted.
+ */
+function fireResize(target: Element) {
+  const live = resizeObservers.filter((o) => !o.disconnected && o.targets.has(target));
+  expect(live.length).toBeGreaterThan(0);
+  act(() => live.forEach((o) => o.callback()));
 }
 
 /** Per-element height, read by the offsetHeight shim installed in beforeEach. */
@@ -714,7 +732,7 @@ describe("the rail popups", () => {
     click("button-collapsed-wallet");
     const popup = qPortal("popup-rail-accounts")!;
     setStubHeight(popup, height);
-    act(() => resizeObservers.forEach((o) => o.fire()));
+    fireResize(popup);
     return popup;
   }
 
@@ -746,7 +764,7 @@ describe("the rail popups", () => {
     const popup = openTall(400);
     const clampedTop = Number.parseInt(popup.style.top, 10);
     setStubHeight(popup, 80);
-    act(() => resizeObservers.forEach((o) => o.fire()));
+    fireResize(popup);
     const relaxedTop = Number.parseInt(popup.style.top, 10);
     // Once it is short enough to fit, it goes back to sitting level with the
     // button rather than staying pinned where the clamp left it.
@@ -802,16 +820,43 @@ describe("the rail popups", () => {
     try {
       collapse();
       click("button-collapsed-wallet");
-      expect(qPortal("popup-rail-accounts")).toBeTruthy();
+      const popup = qPortal("popup-rail-accounts")!;
+      expect(popup).toBeTruthy();
+      // Baseline taken *after* opening: the callback ref arriving changes the
+      // effect's deps, so opening already runs one cleanup and re-register.
+      // Measuring from zero would let this pass with no teardown at all.
+      removed.length = 0;
+      const live = resizeObservers.filter((o) => !o.disconnected && o.targets.has(popup));
+      expect(live).toHaveLength(1);
+
       clickPortal("popup-rail-accounts-close");
+
       expect(qPortal("popup-rail-accounts")).toBeNull();
       expect(removed).toContain("resize");
       expect(removed).toContain("scroll");
-      // …and the observers go with them, or a closed popup keeps measuring.
-      expect(resizeObservers.some((o) => o.disconnected)).toBe(true);
+      // …and the observer that was watching this popup goes with them, or a
+      // closed popup keeps measuring.
+      expect(live[0].disconnected).toBe(true);
     } finally {
       spy.mockRestore();
     }
+  });
+
+  it("follows the rail when it moves without changing size", async () => {
+    collapse();
+    const frame = railFrame();
+    stubRect(frame, 900, 0, 54, 700);
+    stubRect(q("button-collapsed-wallet") as HTMLElement, 907, 300, 40, 40);
+    click("button-collapsed-wallet");
+    const popup = qPortal("popup-rail-accounts")!;
+    expect(popup.style.left).toBe("514px");
+    // Collapsing a sibling panel slides the rail sideways at the same width:
+    // no resize, no scroll, and a ResizeObserver reports box sizes only.
+    stubRect(frame, 700, 0, 54, 700);
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 48));
+    });
+    expect(popup.style.left).toBe("314px");
   });
 
   it("hands focus back to the button that opened it", async () => {

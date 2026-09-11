@@ -143,18 +143,39 @@ function useAnchoredPlacement(anchor: HTMLElement | null, open: boolean) {
     // switching account, a filter emptying a list, or a webfont swapping all
     // change it with no scroll and no resize. Without this, a popup that was
     // clamped to the bottom of the viewport keeps its old `top` and grows off
-    // the bottom of the screen. The rail is observed too, so a layout shift
-    // that moves the trigger without scrolling is picked up as well.
+    // the bottom of the screen.
     const observer =
-      typeof ResizeObserver === "undefined" ? null : new ResizeObserver(() => place());
-    if (observer && content) observer.observe(content);
-    const frame = anchor?.closest(RAIL_FRAME_SELECTOR) ?? anchor;
-    if (observer && frame) observer.observe(frame);
+      typeof ResizeObserver === "undefined" || !content
+        ? null
+        : new ResizeObserver(() => place());
+    observer?.observe(content!);
+
+    // The anchor can also *move* without changing size — collapsing a sibling
+    // panel shifts the rail sideways with no resize and no scroll — and a
+    // ResizeObserver reports box sizes, never positions. Nothing in the
+    // platform reports "this element moved", so the rects are compared each
+    // frame while the popup is open, which is what floating-element libraries
+    // do for the same reason. It is two reads per frame, only while open, and
+    // `place` bails without re-rendering when the numbers are unchanged.
+    let frameId = 0;
+    let previous = "";
+    const watch = () => {
+      frameId = requestAnimationFrame(watch);
+      if (!anchor) return;
+      const trigger = anchor.getBoundingClientRect();
+      const frame = (anchor.closest(RAIL_FRAME_SELECTOR) ?? anchor).getBoundingClientRect();
+      const next = `${trigger.top},${trigger.height},${frame.left},${frame.right}`;
+      if (next === previous) return;
+      previous = next;
+      place();
+    };
+    if (typeof requestAnimationFrame !== "undefined") frameId = requestAnimationFrame(watch);
 
     return () => {
       window.removeEventListener("resize", onChange);
       window.removeEventListener("scroll", onChange, true);
       observer?.disconnect();
+      if (frameId) cancelAnimationFrame(frameId);
     };
   }, [open, place, content, anchor]);
 
