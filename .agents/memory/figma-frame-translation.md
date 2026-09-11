@@ -42,6 +42,19 @@ A frame with an explicit height is a specification: the container stays that tal
 records area absorbs the overflow. Do not translate it as a content-sized box that happens
 to match at the row count the designer drew.
 
+## Add Money popups share one painted width
+
+Every popup in the Add Money flow paints at 320px wide. Preserve each native frame's aspect
+ratio when scaling, so its height, type, spacing, radius and stroke all change together.
+
+**Why:** the user explicitly chose a shared 320px width after comparing the mixed native
+frame sizes in Figma; independently changing width and height recreated the mismatches.
+
+**How to apply:** author each state at its native geometry and transform the complete painted
+box by `320 / native painted width`. Divide viewport clamps through by that same scale,
+because transforms affect paint but not layout. Verify final width and proportional height
+with browser bounding boxes.
+
 ## A global `text-transform` reaches data, not just labels
 
 `button { text-transform: capitalize }` (or any global casing rule) applies to every
