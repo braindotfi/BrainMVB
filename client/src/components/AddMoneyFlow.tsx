@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { QRCodeSVG } from "qrcode.react";
-import headerBackIcon from "@assets/Buttons_1789153208488.png";
+import headerBackIcon from "@assets/bank_1789155430118.png";
 import addIcon from "@assets/add_1789001100272.png";
 import selectFieldButtonIcon from "@assets/figma_icons/add-money/select_field_btn_32.svg";
 import chevronDownIcon from "@assets/figma_icons/add-money/chevron_down_24.svg";
@@ -20,28 +20,15 @@ interface AddMoneyFlowProps {
 }
 
 /**
- * Every popup in this flow is authored at its Figma size and then displayed at
- * 75%. Scaling the rendered box beats dividing each value by hand: 322px,
- * 22px type and 39px gutters all have fractional three-quarter values, and
- * rounding each one separately drifts away from the frame. This way the source
- * still reads as the frame does, and the whole popup shrinks uniformly.
+ * Every popup renders at the size its frame is drawn at. There was a 0.75
+ * transform here; it is gone. The frames for the picker, the two details
+ * states and the QR popup are all still at full size, so scaling them down
+ * made every one of them smaller than its own design.
  */
-const POPUP_SCALE = 0.75;
+const centred = { transform: "translate(-50%, -50%)" } as const;
 
-/** Radix centres with a translate; the scale has to ride on the same transform. */
-const centredScaled = { transform: `translate(-50%, -50%) scale(${POPUP_SCALE})` } as const;
-
-/**
- * Room for the UNSCALED box, since the transform shrinks what is painted but
- * not what is laid out. Without dividing through by the scale a popup starts
- * scrolling while a quarter of the viewport is still empty — and without the
- * width clamp the widest popup (402px → 301px painted) overflows a phone held
- * in a narrow split view.
- */
-const scaledViewport = {
-  maxHeight: `calc((100vh - 16px) / ${POPUP_SCALE})`,
-  maxWidth: `calc((100vw - 16px) / ${POPUP_SCALE})`,
-} as const;
+/** Leave a hair of margin so a popup never sits flush against the viewport. */
+const viewportClamp = { maxHeight: "calc(100vh - 16px)", maxWidth: "calc(100vw - 16px)" } as const;
 
 /**
  * Figma hangs each popup's 1px stroke OUTSIDE the frame (its border rect sits
@@ -178,7 +165,7 @@ function AccountPicker({
             // dialog and would work either way; the selection path does.
             setTimeout(() => returnFocusTo.current?.focus(), 0);
           }}
-          style={{ ...centredScaled, ...scaledViewport, width: FRAME_W.picker }}
+          style={{ ...centred, ...viewportClamp, width: FRAME_W.picker }}
           className="fixed left-1/2 top-1/2 z-[76] flex flex-col overflow-hidden rounded-panel border border-solid border-brain-v1stroke-2 bg-brain-v1highlight-dropdown-bg drop-shadow-[0px_68px_13.5px_rgba(0,0,0,0.06)] focus:outline-none"
         >
           <DialogPrimitive.Title className="sr-only">Select Account</DialogPrimitive.Title>
@@ -407,7 +394,7 @@ export function AddMoneyFlow({ accounts }: AddMoneyFlowProps) {
             event.preventDefault();
             triggerRef.current?.focus();
           }}
-          style={{ ...centredScaled, ...scaledViewport, width: FRAME_W.modal }}
+          style={{ ...centred, ...viewportClamp, width: FRAME_W.modal }}
           className="fixed left-1/2 top-1/2 z-[71] flex flex-col overflow-y-auto rounded-modal border border-solid border-brain-v1stroke-2 bg-brain-v1highlight-dropdown-bg focus:outline-none"
         >
           <DialogPrimitive.Title className="sr-only">Add Money</DialogPrimitive.Title>
@@ -579,7 +566,7 @@ export function AddMoneyFlow({ accounts }: AddMoneyFlowProps) {
               event.preventDefault();
               qrTriggerRef.current?.focus();
             }}
-            style={{ ...centredScaled, ...scaledViewport, width: FRAME_W.qr }}
+            style={{ ...centred, ...viewportClamp, width: FRAME_W.qr }}
             className="fixed left-1/2 top-1/2 z-[81] flex flex-col items-center justify-center gap-4 overflow-y-auto rounded-modal border border-solid border-brain-v1stroke-2 bg-brain-v1highlight-dropdown-bg p-6 focus:outline-none"
           >
             <DialogPrimitive.Title className="sr-only">Wallet address QR code</DialogPrimitive.Title>
