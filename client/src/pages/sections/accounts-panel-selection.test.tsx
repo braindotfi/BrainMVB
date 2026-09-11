@@ -880,14 +880,19 @@ describe("the rail popups", () => {
     const cancelled: number[] = [];
     const scheduled: number[] = [];
     const realRaf = window.requestAnimationFrame.bind(window);
+    // The cancel spy must delegate. Recording the id without cancelling would
+    // leave this test's own loop running at 60fps into every test after it,
+    // holding the closed popup's anchor and content.
+    const realCancel = window.cancelAnimationFrame.bind(window);
     const rafSpy = vi.spyOn(window, "requestAnimationFrame").mockImplementation((cb) => {
       const id = realRaf(cb);
       scheduled.push(id);
       return id;
     });
-    const cancelSpy = vi
-      .spyOn(window, "cancelAnimationFrame")
-      .mockImplementation((id) => cancelled.push(id) && undefined);
+    const cancelSpy = vi.spyOn(window, "cancelAnimationFrame").mockImplementation((id) => {
+      cancelled.push(id);
+      realCancel(id);
+    });
     try {
       collapse();
       click("button-collapsed-wallet");
@@ -901,6 +906,9 @@ describe("the rail popups", () => {
       // Without the cancel, the loop keeps measuring a closed popup forever
       // and holds on to the old anchor and content.
       expect(cancelled).toContain(outstanding);
+      const afterClose = scheduled.length;
+      await settleFrames();
+      expect(scheduled.length).toBe(afterClose);
     } finally {
       rafSpy.mockRestore();
       cancelSpy.mockRestore();
