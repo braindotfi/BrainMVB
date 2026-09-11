@@ -4,6 +4,8 @@
 - [Brain URL split (demo vs production)](brain-url-split.md) — demo → staging, real users → prod; per-request AsyncLocalStorage; every new proxy handler must wrap with withBrainBaseUrl(baseUrl, …).
 - [Add Source ingestion wizard](add-source-wizard.md) — source-agnostic connector modal; docs persist metadata only; route-ordering + screen-stack constraints.
 - [Source-to-account resolution](source-account-resolution.md) — source rows open Account Details only after a real upstream ledger-account link is validated.
+- [Accounts rail selection](accounts-rail-selection.md) — no agent signal exists in the ledger; /ledger/balances is empty; tx account_id has 3 states; rail icons assert disc colour, not filename.
+- [Undoing a scratch edit](git-checkout-destroys-uncommitted.md) — `git checkout -- <file>` discards every uncommitted change in it; cp to /tmp first, and commit each round.
 - [Linked references contract](linked-references-contract.md) — rules/vendors/invoices resolve by id via one helper+store; unified dev guard; non-vendor parties (employee/protocol/ledger) are never kind:"vendor".
 - [Rule reference wiring](rule-reference-wiring.md) — every "open rule" link goes through openRuleDetail/resolveRule; unresolved → warn + plain "(rule unavailable)"; shipped mock refs must all resolve (dev guard).
 - [Rules store & receipt report-a-problem](rules-and-receipts.md) — rulesStore is the shared source of truth for auto-clear rules; receipt → report → /rules/:id; color/scope/route conventions.
@@ -71,7 +73,7 @@
 - [Icon from artwork](icon-from-artwork.md) — measure the reference PNG's pixel runs for stroke widths; eyeballing an upscaled bitmap lies, and canvas can't decode file:// images.
 - [Counterparty trust surface](counterparty-trust-surface.md) — trust routes live (brain-core PRs #397/#403, GIT deedc628); handlers in VendorsPanel only; popup receives props, never fetches; bulk-confirm for customers.
 - [Vendor Suggested tier gate](vendor-suggested-tier-gate.md) — no provenance value means "suggested"; Suggested chip stays hidden; trust wiring green-lit and shipped.
-- [Overlay menus in clipped surfaces](overlay-menus-in-clipped-surfaces.md) — in-card dropdowns need a fixed portal (not less overflow); fixed owns its own clamp/flip, and never claim listbox without arrow keys.
+- [Overlay menus in clipped surfaces](overlay-menus-in-clipped-surfaces.md) — fixed portal, not less overflow; it owns its clamp/flip; measure via a callback ref (useRef never fills); anchor to the frame.
 - [Post-merge branch tip audit](post-merge-branch-tip-audit.md) — a merged PR contains only its merge-time snapshot; branch tips can add product work that never reaches main or production.
 - [Assistant suggestion chips](assistant-suggested-questions.md) — chips come from /wiki/suggested-questions; /assistant/questions is an always-empty legacy twin; anon 401 never proves a route exists.
 - [Figma pill specs](figma-pill-specs.md) — `text-[14px]` sets no line-height, so pills need explicit `leading-`; 32px = py-8+leading-16; grep for a sibling impl before overriding a frame colour.
@@ -120,3 +122,4 @@
 - [Credential migration verification](credential-migration-verification.md) — prove a denial without creating a record; a bare 403 names no mechanism, absent fields are not passing evidence, and source scans cannot witness a refusal.
 - [Classification gates](credential-migration-verification.md) — normalise to refuse, compare exactly to accept; upstream `null` is the common case and means unclassified, never safe.
 - [Authorization header normalization](authorization-header-normalization.md) — normalize case before replacing Bearer auth; duplicate case variants become one comma-joined invalid JWT.
+- [Pointer capture and touch swipes](pointer-capture-child-controls.md) — don't capture child controls; preserve measured dot geometry; test native touch events in a real browser.
