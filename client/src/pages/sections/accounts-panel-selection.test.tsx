@@ -404,7 +404,27 @@ describe("selecting an account", () => {
     });
     expect(capture).not.toHaveBeenCalled();
     expect(text("text-account-name")).toBe("Brightline Treasury Wallet");
-    expect(dot.className).toContain("size-8");
+    expect(dot.className).toContain("size-[6px]");
+    expect(dot.parentElement?.className).toContain("top-[180.6px]");
+    expect(dot.parentElement?.className).toContain("gap-1");
+  });
+
+  it("cycles accounts from a real touch swipe without touch-generated pointer events", () => {
+    const card = q("account-card")!;
+    const touchEvent = (type: string, clientX: number) => {
+      const event = new Event(type, { bubbles: true, cancelable: true });
+      Object.defineProperty(event, "touches", {
+        configurable: true,
+        value: type === "touchend" ? [] : [{ clientX, clientY: 100 }],
+      });
+      return event;
+    };
+    act(() => {
+      card.dispatchEvent(touchEvent("touchstart", 200));
+      card.dispatchEvent(touchEvent("touchmove", 80));
+      card.dispatchEvent(touchEvent("touchend", 80));
+    });
+    expect(text("text-account-name")).toBe("Brightline Treasury Wallet");
   });
 
   it("picks the account from the drop-down too", () => {

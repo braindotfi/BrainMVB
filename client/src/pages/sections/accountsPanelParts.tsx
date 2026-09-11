@@ -13,7 +13,14 @@
  * cannot disagree with the rail about what the ledger said.
  */
 
-import { useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import {
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+  type TouchEvent as ReactTouchEvent,
+} from "react";
 import { createPortal } from "react-dom";
 import addIcon from "@assets/add_1789001100272.png";
 import sendIcon from "@assets/send_1789001100274.png";
@@ -179,6 +186,9 @@ export function AccountCard({ accounts, selectedIndex, onSelectAccount }: Accoun
 
   const swipeStart = useRef<{ x: number; y: number; pointerId: number } | null>(null);
   const onCardPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    // Touch has its own path below. Relying on touch-generated PointerEvents
+    // proved inconsistent in the real embedded/mobile surface.
+    if (event.pointerType === "touch") return;
     // Buttons on the card — especially the pagination dots — own their taps.
     // Capturing their pointer on the card retargets the eventual click away
     // from the button on touch browsers.
@@ -214,6 +224,25 @@ export function AccountCard({ accounts, selectedIndex, onSelectAccount }: Accoun
     }
   };
 
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
+  const onCardTouchStart = (event: ReactTouchEvent<HTMLDivElement>) => {
+    if ((event.target as HTMLElement).closest("button")) return;
+    const touch = event.touches[0];
+    if (!touch) return;
+    touchStart.current = { x: touch.clientX, y: touch.clientY };
+  };
+  const onCardTouchMove = (event: ReactTouchEvent<HTMLDivElement>) => {
+    const start = touchStart.current;
+    const touch = event.touches[0];
+    if (!start || !touch) return;
+    const dx = touch.clientX - start.x;
+    const dy = touch.clientY - start.y;
+    if (Math.abs(dx) < 40 || Math.abs(dx) <= Math.abs(dy)) return;
+    event.preventDefault();
+    touchStart.current = null;
+    selectAccountByOffset(dx < 0 ? 1 : -1);
+  };
+
   const copyAccountIdentifier = async () => {
     if (!selected?.external_account_id) return;
     try {
@@ -232,6 +261,14 @@ export function AccountCard({ accounts, selectedIndex, onSelectAccount }: Accoun
       onPointerMove={onCardPointerMove}
       onPointerUp={finishSwipe}
       onPointerCancel={finishSwipe}
+      onTouchStart={onCardTouchStart}
+      onTouchMove={onCardTouchMove}
+      onTouchEnd={() => {
+        touchStart.current = null;
+      }}
+      onTouchCancel={() => {
+        touchStart.current = null;
+      }}
       className={`relative h-[200px] touch-pan-y overflow-hidden rounded-panel shadow-[0px_122px_34px_rgba(0,0,0,0.01),0px_78px_31px_rgba(0,0,0,0.04),0px_44px_26px_rgba(0,0,0,0.15),0px_20px_20px_rgba(0,0,0,0.26),0px_5px_11px_rgba(0,0,0,0.29)] ${
         agentSelected ? "bg-brain-v1dark-green" : "bg-brain-v1dark-orange"
       }`}
@@ -338,7 +375,7 @@ export function AccountCard({ accounts, selectedIndex, onSelectAccount }: Accoun
               selectAccountByOffset(-1);
             }
           }}
-          className="absolute bottom-0 left-1/2 z-20 flex -translate-x-1/2 items-center"
+          className="absolute left-1/2 top-[180.6px] z-20 flex -translate-x-1/2 items-center gap-1"
         >
           {accounts.map((account, index) => {
             const current = index === selectedIndex;
@@ -352,10 +389,10 @@ export function AccountCard({ accounts, selectedIndex, onSelectAccount }: Accoun
                 aria-label={account.name}
                 title={account.name}
                 onClick={() => onSelectAccount(account.id)}
-                // Keep Figma's 6px mark but give every dot a real 32x32 touch
-                // target. A pseudo-element only made the old box 10x24 and
-                // still let the card's pointer capture steal the tap.
-                className="relative flex size-8 items-center justify-center rounded-full"
+                // Preserve Figma's exact 6px marks, 4px spacing and y-position.
+                // The pseudo-element expands the hit area without changing
+                // those measured centres; the card no longer steals the tap.
+                className="relative flex size-[6px] items-center justify-center rounded-full before:absolute before:-inset-x-[2px] before:-top-[9px] before:-bottom-[9px] before:content-['']"
               >
                 <span
                   aria-hidden="true"
