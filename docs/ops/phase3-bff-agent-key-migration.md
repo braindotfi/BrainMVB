@@ -196,9 +196,39 @@ does not block issuance. On failure:
 
 Deploy the reviewed SHA before the window with this path dormant. Immediately
 before cutover, repeat the calendar conflict check. Arm all five controls only
-after that check clears, then deploy the exact same SHA. After a successful
-receipt and external demo smoke test, remove all five one-time controls so a later
-restart cannot attempt or block on the expired window.
+after that check clears, then deploy the exact same SHA.
+
+### Mandatory same-window teardown
+
+The cutover is not complete until every one-time control below has been removed
+from both Replit Secrets and Replit Configuration and the absence has been
+verified without printing any value:
+
+- `NORTHSTAR_AGENT_API_KEY_MIGRATION_TENANT_ID`
+- `NORTHSTAR_AGENT_API_KEY_MIGRATION_APPROVED_SHA`
+- `NORTHSTAR_AGENT_API_KEY_MIGRATION_WINDOW_START`
+- `NORTHSTAR_AGENT_API_KEY_MIGRATION_WINDOW_END`
+- `NORTHSTAR_AGENT_API_KEY_MIGRATION_AUTHORIZATION`
+
+This teardown is part of the September 12 cutover itself. It is not deferred to
+task #315 or another follow-up. Complete it before `2026-09-12T11:00:00Z` on
+both terminal paths:
+
+1. **Success:** after the migration receipt and external demo smoke test both
+   succeed, immediately remove all five controls, republish the same approved
+   SHA, verify `/health` still reports that SHA, and verify all five names are
+   absent from the new runtime environment.
+2. **Failure or abort:** first follow the existing no-legacy-rollback repair-mode
+   decision. Revoke an unused new key when its unreferenced state is proved;
+   preserve a referenced or unknown-state key for manual repair; never restore
+   the expired JWT. Then immediately remove all five controls, republish the same
+   approved SHA, verify `/health`, and verify all five names are absent from the
+   new runtime environment.
+
+Do not arm if the remaining window is too short to complete migration,
+verification, the external smoke test, and this teardown safely. A successful
+migration with controls still present is an incomplete cutover and must be
+escalated before the window closes.
 
 ## Legacy JWT rollback deadline — 2026-09-16T23:59:59Z (`LEGACY_AGENT_JWT_NOT_AFTER`)
 
