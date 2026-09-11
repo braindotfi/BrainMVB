@@ -1,7 +1,17 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-const source = readFileSync(new URL("./AccountsPanel.tsx", import.meta.url), "utf8");
+const panelSource = readFileSync(new URL("./AccountsPanel.tsx", import.meta.url), "utf8");
+const partsSource = readFileSync(new URL("./accountsPanelParts.tsx", import.meta.url), "utf8");
+const popupSource = readFileSync(new URL("../../components/AccountsRailPopups.tsx", import.meta.url), "utf8");
+
+/**
+ * The card, the selector, the filter pills and both lists were lifted into
+ * accountsPanelParts so the rail popups can render the same markup. Assertions
+ * about *what is drawn* therefore have to search both files; assertions about
+ * where it is drawn stay scoped to one.
+ */
+const source = `${panelSource}\n${partsSource}`;
 
 /**
  * Just the collapsed branch. A bare `source.toContain` would happily match the
@@ -10,27 +20,27 @@ const source = readFileSync(new URL("./AccountsPanel.tsx", import.meta.url), "ut
  * the rail itself is empty.
  */
 function railSource(): string {
-  const start = source.indexOf("  if (collapsed) {");
-  const end = source.indexOf("\n  return (", start);
+  const start = panelSource.indexOf("  if (collapsed) {");
+  const end = panelSource.indexOf("\n  return (", start);
   expect(start).toBeGreaterThan(0);
   expect(end).toBeGreaterThan(start);
-  return source.slice(start, end);
+  return panelSource.slice(start, end);
 }
 
 describe("Figma accounts panel", () => {
   it("keeps the Figma rail anchors and geometry", () => {
-    expect(source).toContain('data-node-id="6519:54025"');
-    expect(source).toContain('left-[7px] top-[7px]');
-    expect(source).toContain('left-[55px] top-[7px] z-20 w-[322px]');
-    expect(source).toContain('bottom-[7px] top-[63px]');
-    expect(source).toContain('h-[290px] w-full max-w-[370px]');
-    expect(source).toContain('h-[200px] touch-pan-y overflow-hidden rounded-panel');
-    expect(source).toContain('min-h-[754px] flex-col items-center gap-[24px]');
+    expect(panelSource).toContain('data-node-id="6519:54025"');
+    expect(panelSource).toContain('left-[7px] top-[7px]');
+    expect(panelSource).toContain('left-[55px] top-[7px] z-20 w-[322px]');
+    expect(panelSource).toContain('bottom-[7px] top-[63px]');
+    expect(panelSource).toContain('h-[290px] w-full max-w-[370px]');
+    expect(partsSource).toContain('h-[200px] touch-pan-y overflow-hidden rounded-panel');
+    expect(panelSource).toContain('min-h-[754px] flex-col items-center gap-[24px]');
   });
 
   it("reads every live account and transaction page", () => {
-    expect(source).toContain('usePagedLedgerRead<BrainAccountDTO>("/api/brain/ledger/accounts", "accounts")');
-    expect(source).toContain('usePagedLedgerRead<BrainTransactionDTO>("/api/brain/ledger/transactions", "transactions")');
+    expect(panelSource).toContain('usePagedLedgerRead<BrainAccountDTO>("/api/brain/ledger/accounts", "accounts")');
+    expect(panelSource).toContain('usePagedLedgerRead<BrainTransactionDTO>("/api/brain/ledger/transactions", "transactions")');
     expect(source).toContain("Some accounts couldn't be loaded");
     expect(source).toContain("Some transactions couldn't be loaded");
     expect(source).not.toContain("Transactions aren't available here yet");
@@ -38,109 +48,110 @@ describe("Figma accounts panel", () => {
 
   it("uses durable local artwork and exposes real interaction state", () => {
     expect(source).not.toContain("www.figma.com/api/mcp/asset");
-    expect(source).toContain("@assets/BankCard_1789001100273.png");
-    expect(source).toContain('aria-expanded={accountMenuOpen}');
-    expect(source).toContain('aria-pressed={filter === item}');
-    expect(source).toContain("navigator.clipboard.writeText(selected.external_account_id)");
-    expect(source).toContain('data-testid="account-card-linear-stroke"');
+    expect(popupSource).not.toContain("www.figma.com/api/mcp/asset");
+    expect(partsSource).toContain("@assets/BankCard_1789001100273.png");
+    expect(partsSource).toContain("aria-expanded={open}");
+    expect(partsSource).toContain('aria-pressed={filter === item}');
+    expect(partsSource).toContain("navigator.clipboard.writeText(selected.external_account_id)");
+    expect(partsSource).toContain('data-testid="account-card-linear-stroke"');
     // Measured off Figma 6519:54130: corner-to-corner, bright at both ends,
     // transparent through the middle. A single-direction fade is wrong.
-    expect(source).toContain("linear-gradient(to bottom right, rgba(255, 149, 0, 0.45) 0%");
-    expect(source).toContain("rgba(255, 149, 0, 0.58) 100%)");
+    expect(partsSource).toContain("linear-gradient(to bottom right, rgba(255, 149, 0, 0.45) 0%");
+    expect(partsSource).toContain("rgba(255, 149, 0, 0.58) 100%)");
     expect(source).not.toContain("linear-gradient(135deg");
   });
 
   it("renders transaction rows to Figma 4062:56400", () => {
     // 40px tinted circle + 20px arrow, outgoing arrow is the down-right glyph flipped.
-    expect(source).toContain("@assets/tx-arrow-out.svg");
-    expect(source).toContain("@assets/tx-arrow-in.svg");
-    expect(source).toContain("@assets/tx-dot.svg");
-    expect(source).toContain('"bg-brain-v1dark-pink-red"');
-    expect(source).toContain('"bg-brain-v1dark-green"');
-    expect(source).toContain('style={flow === "out" ? { transform: "scaleY(-1)" } : undefined}');
+    expect(partsSource).toContain("@assets/tx-arrow-out.svg");
+    expect(partsSource).toContain("@assets/tx-arrow-in.svg");
+    expect(partsSource).toContain("@assets/tx-dot.svg");
+    expect(partsSource).toContain('"bg-brain-v1dark-pink-red"');
+    expect(partsSource).toContain('"bg-brain-v1dark-green"');
+    expect(partsSource).toContain('style={flow === "out" ? { transform: "scaleY(-1)" } : undefined}');
     // 20px JetBrains Mono amount, red out / green in.
-    expect(source).toContain("text-[20px] font-medium leading-5");
-    expect(source).toContain('"text-brain-v1pink-red"');
-    expect(source).toContain('"text-brain-v1asset-green"');
-    expect(source).toContain("formatTransactionAmount(transaction.amount, transaction.currency, flow)");
+    expect(partsSource).toContain("text-[20px] font-medium leading-5");
+    expect(partsSource).toContain('"text-brain-v1pink-red"');
+    expect(partsSource).toContain('"text-brain-v1asset-green"');
+    expect(partsSource).toContain("formatTransactionAmount(transaction.amount, transaction.currency, flow)");
     // Every figure and date goes through the tested formatters, never a local
     // ad-hoc one. Their behaviour is covered in lib/accountsPanelFormat.test.ts.
-    expect(source).toContain('from "@/lib/accountsPanelFormat"');
+    expect(partsSource).toContain('from "@/lib/accountsPanelFormat"');
     expect(source).not.toMatch(/function (transactionMeta|shortenIdentifier|signedTransactionLabel)\(/);
   });
 
   it("renders and wires the four transaction filters from Figma 4062:56277", () => {
-    expect(source).toContain('data-node-id="2663:26526"');
-    expect(source).toContain('{ value: "all", label: "All" }');
-    expect(source).toContain('{ value: "trades", label: "Trades" }');
-    expect(source).toContain('{ value: "deposits", label: "Deposits" }');
-    expect(source).toContain('{ value: "withdrawals", label: "Withdrawals" }');
-    expect(source).toContain('aria-disabled={item.value === "trades" ? "true" : undefined}');
-    expect(source).toContain('aria-describedby={item.value === "trades" ? "accounts-trades-unavailable" : undefined}');
-    expect(source).toContain('role="status"');
-    expect(source).toContain('item.value === "deposits" ? "w-[99px]" : "w-[124px]"');
-    expect(source).toContain("transactionMatchesFilter(transaction.direction, transactionFilter)");
-    expect(source).toContain("filteredTransactions.map");
-    expect(source).toContain("Other transaction types are hidden by this filter.");
-    expect(source).toContain("Matching activity may be missing from this filtered view.");
+    expect(partsSource).toContain('data-node-id="2663:26526"');
+    expect(partsSource).toContain('{ value: "all", label: "All" }');
+    expect(partsSource).toContain('{ value: "trades", label: "Trades" }');
+    expect(partsSource).toContain('{ value: "deposits", label: "Deposits" }');
+    expect(partsSource).toContain('{ value: "withdrawals", label: "Withdrawals" }');
+    expect(partsSource).toContain('aria-disabled={item.value === "trades" ? "true" : undefined}');
+    expect(partsSource).toContain('aria-describedby={item.value === "trades" ? tradesDescriptionId : undefined}');
+    expect(partsSource).toContain('role="status"');
+    expect(partsSource).toContain('item.value === "deposits" ? "w-[99px]" : "w-[124px]"');
+    expect(partsSource).toContain("transactionMatchesFilter(transaction.direction, filter)");
+    expect(partsSource).toContain("filteredTransactions.map");
+    expect(partsSource).toContain("Other transaction types are hidden by this filter.");
+    expect(partsSource).toContain("Matching activity may be missing from this filtered view.");
   });
 
   it("restyles the account selector to Figma 3759:50250", () => {
-    expect(source).toContain('data-node-id="3759:50251"');
+    expect(partsSource).toContain('data-node-id="3759:50251"');
     // Closed control: 40px pill on baby-blue-15 with the baby-blue-30 stroke.
-    expect(source).toContain("rounded-[40px] border border-solid border-brain-v1baby-blue-30 bg-brain-v1baby-blue-15");
+    expect(partsSource).toContain("rounded-[40px] border border-solid border-brain-v1baby-blue-30 bg-brain-v1baby-blue-15");
     // Open panel: 12px radius, stroke-2 border, dropdown background, 8px padding.
-    expect(source).toContain("rounded-row border border-solid border-brain-v1stroke-2 bg-brain-v1highlight-dropdown-bg p-2");
+    expect(partsSource).toContain("rounded-row border border-solid border-brain-v1stroke-2 bg-brain-v1highlight-dropdown-bg p-2");
     // Rows carry the identifier chip and the selected row carries the tick.
-    expect(source).toContain("shortenIdentifier(account.external_account_id)");
-    expect(source).toContain('aria-checked={account.id === selected?.id}');
-    expect(source).toContain('alt="Selected"');
+    expect(partsSource).toContain("shortenIdentifier(account.external_account_id)");
+    expect(partsSource).toContain('aria-checked={account.id === selected?.id}');
+    expect(partsSource).toContain('alt="Selected"');
     // The purple row is rendered, but it is honestly inert rather than a
     // placeholder that pretends to create an account.
-    expect(source).toContain('data-testid="button-add-agent-account"');
-    expect(source).toContain('aria-disabled="true"');
-    expect(source).toContain("Agent accounts can't be created from here yet.");
-    expect(source).toContain("@assets/dropdown-add-agent.svg");
-    expect(source).toContain("@assets/wallet-icon-bank-32.svg");
-    expect(source).toContain("@assets/wallet-icon-agent-32.svg");
+    expect(partsSource).toContain('button-add-agent-account');
+    expect(partsSource).toContain('aria-disabled="true"');
+    expect(partsSource).toContain("Agent accounts can't be created from here yet.");
+    expect(partsSource).toContain("@assets/dropdown-add-agent.svg");
+    expect(partsSource).toContain("@assets/wallet-icon-bank-32.svg");
+    expect(partsSource).toContain("@assets/wallet-icon-agent-32.svg");
   });
 
   it("gives an agent account the green card from Figma 3759:50590", () => {
-    expect(source).toContain("isAgentAccount");
-    expect(source).toContain('agentSelected ? "bg-brain-v1dark-green" : "bg-brain-v1dark-orange"');
-    expect(source).toContain("@assets/account-card-glow-green.svg");
-    expect(source).toContain("@assets/wallet-icon-agent-48.svg");
-    expect(source).toContain("linear-gradient(to bottom right, rgba(66, 191, 35, 0.45) 0%");
-    expect(source).toContain("rgba(66, 191, 35, 0.58) 100%)");
+    expect(partsSource).toContain("isAgentAccount");
+    expect(partsSource).toContain('agentSelected ? "bg-brain-v1dark-green" : "bg-brain-v1dark-orange"');
+    expect(partsSource).toContain("@assets/account-card-glow-green.svg");
+    expect(partsSource).toContain("@assets/wallet-icon-agent-48.svg");
+    expect(partsSource).toContain("linear-gradient(to bottom right, rgba(66, 191, 35, 0.45) 0%");
+    expect(partsSource).toContain("rgba(66, 191, 35, 0.58) 100%)");
     // Green captions use the asset-green token, orange keeps light-orange.
-    expect(source).toContain('agentSelected ? "text-brain-v1asset-green" : "text-brain-v1light-orange"');
+    expect(partsSource).toContain('agentSelected ? "text-brain-v1asset-green" : "text-brain-v1light-orange"');
     // The second column only appears when the ledger states a status.
-    expect(source).toContain("agentSelected && selected?.status");
+    expect(partsSource).toContain("agentSelected && selected?.status");
   });
 
   it("makes the card pagination selectable and swipeable", () => {
-    expect(source).toContain('data-testid="account-card-pagination"');
-    expect(source).toContain("onClick={() => setSelectedAccountId(account.id)}");
+    expect(partsSource).toContain('data-testid="account-card-pagination"');
+    expect(partsSource).toContain("onClick={() => onSelectAccount(account.id)}");
     // One dot per account, not a hardcoded three.
-    expect(source).not.toContain('<span className="size-[6px] rounded-full bg-brain-v1light-orange" />');
-    expect(source).toContain("accounts.map((account, index) =>");
+    expect(partsSource).not.toContain('<span className="size-[6px] rounded-full bg-brain-v1light-orange" />');
+    expect(partsSource).toContain("accounts.map((account, index) =>");
     // Keyboard and pointer both move the selection.
-    expect(source).toContain('event.key === "ArrowRight"');
-    expect(source).toContain("onPointerDown={onCardPointerDown}");
-    expect(source).toContain("onPointerUp={onCardPointerUp}");
-    expect(source).toContain("selectAccountByOffset(dx < 0 ? 1 : -1)");
+    expect(partsSource).toContain('event.key === "ArrowRight"');
+    expect(partsSource).toContain("onPointerDown={onCardPointerDown}");
+    expect(partsSource).toContain("onPointerUp={onCardPointerUp}");
+    expect(partsSource).toContain("selectAccountByOffset(dx < 0 ? 1 : -1)");
   });
 
   it("scopes the transaction list to the selected account", () => {
-    expect(source).toContain("transactionBelongsToAccount(transaction.account_id, selectedAccountKey)");
-    expect(source).toContain("accountTransactions.filter((transaction) => transactionMatchesFilter");
+    expect(panelSource).toContain("transactionBelongsToAccount(transaction.account_id, selectedAccountKey)");
+    expect(partsSource).toContain("transactions.filter((transaction) => transactionMatchesFilter");
     // Unattributed rows are named, not silently dropped.
-    expect(source).toContain('data-testid="accounts-panel-unattributed-transactions"');
-    expect(source).toContain("isn't linked to an account, so it isn't shown here.");
+    expect(partsSource).toContain('data-testid="accounts-panel-unattributed-transactions"');
+    expect(partsSource).toContain("isn't linked to an account, so it isn't shown here.");
   });
 
   it("labels the card identifier from the account kind", () => {
-    expect(source).toContain("accountIdentifierLabel(selected?.account_type)");
+    expect(partsSource).toContain("accountIdentifierLabel(selected?.account_type)");
     // The wording lives in the tested helper, never inline in the component.
     expect(source).not.toContain('"Crypto Wallet Address"');
     expect(source).not.toContain('"Bank Account Number"');
@@ -148,21 +159,21 @@ describe("Figma accounts panel", () => {
 
   it("builds the collapsed rail from Figma 3759:50795 and 3759:54130", () => {
     // The frame is anchored to whichever variant the selection calls for.
-    expect(source).toContain('data-node-id={agentSelected ? "3759:54130" : "3759:50795"}');
+    expect(panelSource).toContain('data-node-id={agentSelected ? "3759:54130" : "3759:50795"}');
     // Section label, then the wallet avatar above the three actions, then the
     // two tab icons, each block separated by a stroke-2 rule.
-    expect(source).toContain("Wallet\n              </span>");
-    expect(source).toContain('data-testid="button-collapsed-wallet"');
-    expect(source).toContain('data-testid={`button-collapsed-${action.label.toLowerCase()}`}');
-    expect(source).toContain('data-testid={`button-collapsed-tab-${item.tab}`}');
+    expect(panelSource).toContain("Wallet\n              </span>");
+    expect(panelSource).toContain('data-testid="button-collapsed-wallet"');
+    expect(panelSource).toContain('data-testid={`button-collapsed-${action.label.toLowerCase()}`}');
+    expect(panelSource).toContain('data-testid={`button-collapsed-tab-${item.tab}`}');
     // Every rail icon ships in both colourways so the artwork follows the card.
-    expect(source).toContain("@assets/sidebar-wallet-bank-40.svg");
-    expect(source).toContain("@assets/sidebar-wallet-agent-40.svg");
-    expect(source).toContain("@assets/sidebar-action-add-bank.svg");
-    expect(source).toContain("@assets/sidebar-action-send-agent.svg");
-    expect(source).toContain("@assets/sidebar-action-exchange-agent.svg");
-    expect(source).toContain('const railArtwork = agentSelected ? "agent" : "bank"');
-    expect(source).toContain("action[railArtwork]");
+    expect(panelSource).toContain("@assets/sidebar-wallet-bank-40.svg");
+    expect(panelSource).toContain("@assets/sidebar-wallet-agent-40.svg");
+    expect(panelSource).toContain("@assets/sidebar-action-add-bank.svg");
+    expect(panelSource).toContain("@assets/sidebar-action-send-agent.svg");
+    expect(panelSource).toContain("@assets/sidebar-action-exchange-agent.svg");
+    expect(panelSource).toContain('const railArtwork = agentSelected ? "agent" : "bank"');
+    expect(panelSource).toContain("action[railArtwork]");
   });
 
   it("keeps the collapsed rail on its 40px column", () => {
@@ -180,19 +191,26 @@ describe("Figma accounts panel", () => {
     expect(rail).toContain('className="flex w-full flex-col gap-1"');
     // Every icon button is a 40px square; the tab glyphs are 24px in 8px pads.
     expect(rail.match(/size-10/g)?.length).toBeGreaterThanOrEqual(4);
-    expect(rail).toContain('className="block size-6"');
+    expect(rail).toContain("<RailTabIcon");
   });
 
   it("swaps the collapsed rail icons to their active artwork on hover", () => {
     // Both artworks are in the DOM; CSS decides which one shows.
-    expect(source).toContain("group-hover:hidden group-focus-visible:hidden");
-    expect(source).toContain("group-hover:block group-focus-visible:block");
-    expect(source).toContain("@assets/sidebar-action-add-bank-active.svg");
-    expect(source).toContain("@assets/sidebar-action-send-bank-active.svg");
-    expect(source).toContain("@assets/sidebar-action-exchange-bank-active.svg");
-    expect(source).toContain("@assets/sidebar-action-add-agent-active.svg");
-    expect(source).toContain("@assets/sidebar-wallet-bank-40-active.svg");
-    expect(source).toContain("@assets/sidebar-wallet-agent-40-active.svg");
+    expect(panelSource).toContain("group-hover:hidden group-focus-visible:hidden");
+    expect(panelSource).toContain("group-hover:block group-focus-visible:block");
+    expect(panelSource).toContain("@assets/sidebar-action-add-bank-active.svg");
+    expect(panelSource).toContain("@assets/sidebar-action-send-bank-active.svg");
+    expect(panelSource).toContain("@assets/sidebar-action-exchange-bank-active.svg");
+    expect(panelSource).toContain("@assets/sidebar-action-add-agent-active.svg");
+    expect(panelSource).toContain("@assets/sidebar-wallet-bank-40-active.svg");
+    expect(panelSource).toContain("@assets/sidebar-wallet-agent-40-active.svg");
+    // The two tab glyphs reuse the open panel's own selected-tab artwork
+    // rather than a second, invented highlight.
+    expect(panelSource).toContain("activeIcon: assetsActiveIcon");
+    expect(panelSource).toContain("activeIcon: transactionsActiveIcon");
+    // …and the 24px swap is a real swap, not a background tint.
+    expect(panelSource).toContain('className="block size-6 group-hover:hidden group-focus-visible:hidden"');
+    expect(panelSource).toContain('className="hidden size-6 group-hover:block group-focus-visible:block"');
   });
 
   it("keeps the collapsed rail honest about what it can do", () => {
@@ -210,14 +228,102 @@ describe("Figma accounts panel", () => {
     expect(rail).toContain("Accounts are still loading");
     expect(rail).toContain("No connected accounts");
     expect(rail).toContain("aria-disabled={!selected}");
-    expect(rail).toContain("onClick={selected ? onToggle : undefined}");
-    // The tab icons do something real: open the panel on that tab.
-    expect(rail).toContain("setTab(item.tab);");
+    expect(rail).toContain('onClick={selected ? () => setRailPopup("account") : undefined}');
+    // The tab icons do something real: open that surface's popup.
+    expect(rail).toContain("setRailPopup(item.tab);");
   });
 
   it("shortens the card identifier the way Figma 4062:57086 does", () => {
-    expect(source).toContain("shortenIdentifier(selected.external_account_id)");
+    expect(partsSource).toContain("shortenIdentifier(selected.external_account_id)");
     // Copy still hands over the full value, never the shortened one.
-    expect(source).toContain("navigator.clipboard.writeText(selected.external_account_id)");
+    expect(partsSource).toContain("navigator.clipboard.writeText(selected.external_account_id)");
+  });
+});
+
+describe("rail popups (Figma 6519:52846 / 52446 / 52570)", () => {
+  it("anchors each popup to its Figma node", () => {
+    expect(popupSource).toContain('nodeId="6519:52846"');
+    expect(popupSource).toContain('nodeId="6519:52446"');
+    expect(popupSource).toContain('nodeId="6519:52570"');
+    expect(popupSource).toContain('title="Accounts"');
+    expect(popupSource).toContain('title="Assets"');
+    expect(popupSource).toContain('title="Transactions"');
+  });
+
+  it("uses the project's Radix modal shell, not a bare div", () => {
+    expect(popupSource).toContain('from "@radix-ui/react-dialog"');
+    expect(popupSource).toContain("DialogPrimitive.Overlay");
+    expect(popupSource).toContain("DialogPrimitive.Title");
+    expect(popupSource).toContain("DialogPrimitive.Close");
+    // The shell standard's overlay blur, and one of its sanctioned widths.
+    expect(popupSource).toContain("backdrop-blur-[2px]");
+    expect(popupSource).toContain("w-[400px]");
+    expect(popupSource).not.toContain("backdrop-blur-sm");
+    // Figma's header: 20px Gilroy SemiBold in baby-blue-60 over a stroke-2 rule.
+    expect(popupSource).toContain("text-[20px] font-semibold leading-6 text-brain-v1baby-blue-60");
+    expect(popupSource).toContain("border-b border-solid border-brain-v1stroke-2");
+  });
+
+  it("renders the panel's own components rather than a second copy", () => {
+    // If any of these stops being imported, the popup has grown its own
+    // markup and the two surfaces can drift.
+    for (const part of [
+      "AccountCard",
+      "AccountSelector",
+      "AssetFilterTabs",
+      "AssetsList",
+      "TransactionFilterTabs",
+      "TransactionNotices",
+      "TransactionsList",
+    ]) {
+      expect(popupSource).toContain(part);
+    }
+    expect(popupSource).toContain('from "@/pages/sections/accountsPanelParts"');
+    // No fetching here: the rail hands over the read it already has, so the
+    // popup cannot disagree with the rail behind it.
+    expect(popupSource).not.toContain("useQuery");
+    expect(popupSource).not.toContain("usePagedLedgerRead");
+  });
+
+  it("names the four account read states apart in the account popup", () => {
+    expect(popupSource).toContain("Couldn't load your accounts.");
+    expect(popupSource).toContain("Accounts are still loading.");
+    expect(popupSource).toContain("No connected accounts yet.");
+    // The card only renders for an account that actually came back.
+    expect(popupSource).toContain("{selected ? (");
+    // An incomplete read says so rather than presenting a partial list as whole.
+    expect(popupSource).toContain("Some accounts couldn't be loaded, so this may not be all of them.");
+  });
+
+  it("gives the Assets and Transactions popups the 48px selector variant", () => {
+    // Figma 6519:52451 / 6519:52575: 8px radius, 48px tall, and the account's
+    // kind beside "Your Account".
+    expect(popupSource).toContain('shape="row"');
+    expect(partsSource).toContain("flex h-12 w-full items-center gap-2 rounded-row bg-brain-v1baby-blue-15 p-2");
+    expect(partsSource).toContain("ACCOUNT_KIND_LABEL[selected.account_type]");
+    // Figma writes a literal "Debit" there; the ledger states a kind, so a
+    // kindless account gets no second label rather than a guessed one.
+    expect(partsSource).not.toContain('>Debit<');
+    // The account popup keeps the pill.
+    expect(popupSource).toContain('shape="pill"');
+  });
+
+  it("keeps each popup's ids distinct from the open panel's", () => {
+    // Two elements sharing an id would leave aria-describedby pointing at
+    // whichever happened to be first in the DOM.
+    expect(popupSource).toContain('idPrefix="rail-accounts"');
+    expect(popupSource).toContain('idPrefix="rail-assets"');
+    expect(popupSource).toContain('idPrefix="rail-transactions"');
+    expect(partsSource).toContain("`${idPrefix}-trades-unavailable`");
+    expect(partsSource).toContain("`${idPrefix}-add-agent-unavailable`");
+  });
+
+  it("mounts the popups only where the rail can open them", () => {
+    // The expanded panel already shows all three surfaces inline; a modal
+    // over it would be a second copy of what is already on screen.
+    const rail = railSource();
+    expect(rail).toContain("{railPopups}");
+    const expanded = panelSource.slice(panelSource.indexOf("\n  return (", panelSource.indexOf("  if (collapsed) {")));
+    expect(expanded).not.toContain("{railPopups}");
   });
 });

@@ -209,6 +209,21 @@ function q(testId: string): HTMLElement | null {
   return container.querySelector(`[data-testid="${testId}"]`);
 }
 
+/**
+ * The rail popups render through a Radix portal, so they land on
+ * document.body rather than inside `container`. Anything asserted about a
+ * popup has to be looked up here, or it reads as absent.
+ */
+function qPortal(testId: string): HTMLElement | null {
+  return document.body.querySelector(`[data-testid="${testId}"]`);
+}
+
+function clickPortal(testId: string) {
+  act(() => {
+    qPortal(testId)?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+}
+
 function text(testId: string): string {
   return q(testId)?.textContent?.trim() ?? "";
 }
@@ -432,14 +447,21 @@ describe("the collapsed rail", () => {
     expect(svgOf(glyphs[0])).toContain("M20 12V20M20 20V28");
   });
 
-  it("names the selected account on the avatar and opens the panel", () => {
+  it("names the selected account on the avatar and opens its popup", () => {
     act(() => {
       dots()[2].dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
     collapse();
     expect(q("button-collapsed-wallet")?.getAttribute("aria-label")).toContain("Operating");
+    expect(qPortal("popup-rail-accounts")).toBeNull();
     click("button-collapsed-wallet");
-    expect(toggles).toBe(1);
+    // The rail opens the popup; the dedicated chevron is what expands.
+    expect(toggles).toBe(0);
+    const popup = qPortal("popup-rail-accounts");
+    expect(popup).toBeTruthy();
+    // …showing the account the rail named, not the first one in the read.
+    expect(popup?.textContent).toContain("Operating");
+    expect(popup?.textContent).not.toContain("Payment Agent");
   });
 
   it("leaves the three actions as unavailable as they are in the open panel", () => {
@@ -481,10 +503,15 @@ describe("the collapsed rail", () => {
     expect(toggles).toBe(0);
   });
 
-  it("opens the panel on the tab that was tapped", () => {
+  it("opens the popup for the tab that was tapped, and carries it into the panel", () => {
     collapse();
     click("button-collapsed-tab-transactions");
-    expect(toggles).toBe(1);
+    expect(toggles).toBe(0);
+    expect(qPortal("popup-rail-transactions")).toBeTruthy();
+    expect(qPortal("popup-rail-assets")).toBeNull();
+    // Closing it and expanding lands on the tab that was tapped, so the rail
+    // and the panel never disagree about which surface the user chose.
+    clickPortal("popup-rail-transactions-close");
     act(() => {
       root.render(<AccountsPanel collapsed={false} onToggle={() => { toggles += 1; }} />);
     });
@@ -494,5 +521,99 @@ describe("the collapsed rail", () => {
     const assetsTab = tabs.find((tab) => tab.textContent?.includes("Assets"));
     expect(transactionsTab?.getAttribute("aria-selected")).toBe("true");
     expect(assetsTab?.getAttribute("aria-selected")).toBe("false");
+  });
+
+  it("lights the two tab glyphs with the panel's own active artwork", () => {
+    collapse();
+    for (const tab of ["assets", "transactions"]) {
+      const { normal, active } = railIcons(`button-collapsed-tab-${tab}`);
+      expect(normal).toBeTruthy();
+      expect(active).toBeTruthy();
+      // A real artwork swap, not the same file twice behind a tint.
+      expect(normal).not.toBe(active);
+    }
+    // …and the two tabs do not share one glyph.
+    expect(railIcons("button-collapsed-tab-assets").active).not.toBe(
+      railIcons("button-collapsed-tab-transactions").active,
+    );
+  });
+});
+
+/**
+ * The three popups the rail opens. They are the point of the rail — a
+ * collapsed panel that only expands is the old behaviour — so what they
+ * actually render is pinned here rather than left to the source scan.
+ */
+describe("the rail popups", () => {
+  beforeEach(() => {
+    accountsReadState = "rows";
+    render();
+  });
+
+  function openRail(testId: string) {
+    collapse();
+    click(testId);
+  }
+
+  it("shows the selected account's card in the Accounts popup", () => {
+    openRail("button-collapsed-wallet");
+    const popup = qPortal("popup-rail-accounts")!;
+    expect(popup.querySelector('[data-testid="account-card"]')).toBeTruthy();
+    // Header names the surface, and the close control is reachable.
+    expect(popup.textContent).toContain("Accounts");
+    expect(qPortal("popup-rail-accounts-close")).toBeTruthy();
+  });
+
+  it("shows the asset rows and their filters in the Assets popup", () => {
+    openRail("button-collapsed-tab-assets");
+    const popup = qPortal("popup-rail-assets")!;
+    expect(popup.textContent).toContain("Assets");
+    // The three Figma pills, wired to the same filter the panel uses.
+    const pills = Array.from(popup.querySelectorAll<HTMLButtonElement>("[aria-pressed]"));
+    expect(pills.map((pill) => pill.textContent?.trim())).toEqual(["all", "cash", "crypto"]);
+    // Real rows from the mocked read, not an empty frame.
+    expect(popup.textContent).toContain("Ethereum");
+    expect(popup.textContent).toContain("Dollar");
+    // …and the pills are wired, not decorative.
+    act(() => {
+      pills[2].dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    const filtered = qPortal("popup-rail-assets")!;
+    expect(filtered.textContent).toContain("Ethereum");
+    expect(filtered.textContent).not.toContain("Dollar");
+  });
+
+  it("scopes the Transactions popup to the selected account", () => {
+    act(() => {
+      dots()[2].dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    openRail("button-collapsed-tab-transactions");
+    const popup = qPortal("popup-rail-transactions")!;
+    expect(popup.textContent).toContain("Transactions");
+    // Same rule as the panel: the list under the named account is that
+    // account's activity, and nothing else's.
+    expect(popup.textContent).toContain("Office rent");
+    expect(popup.textContent).not.toContain("BigCo Industries payment");
+    // Rows the feed never attributed are declared rather than dropped.
+    expect(popup.textContent).toContain("aren't linked to an account");
+  });
+
+  it("names an account read that failed instead of showing an empty popup", () => {
+    accountsReadState = "failed";
+    render();
+    collapse();
+    // The wallet button is inert without an account, so the popup is reached
+    // through a tab — which must still explain itself rather than go blank.
+    click("button-collapsed-tab-assets");
+    const popup = qPortal("popup-rail-assets")!;
+    expect(popup.textContent).toContain("Couldn't load");
+  });
+
+  it("opens one popup at a time", () => {
+    openRail("button-collapsed-tab-assets");
+    expect(qPortal("popup-rail-assets")).toBeTruthy();
+    click("button-collapsed-tab-transactions");
+    expect(qPortal("popup-rail-assets")).toBeNull();
+    expect(qPortal("popup-rail-transactions")).toBeTruthy();
   });
 });

@@ -16,6 +16,7 @@ const read = (p: string) => readFileSync(resolve(here, p), "utf8");
 /* Every file that renders a Dialog.Overlay / DialogPrimitive.Overlay. */
 const OVERLAY_FILES = [
   "AccountDetailPopup.tsx",
+  "AccountsRailPopups.tsx",
   "AddAccountModal.tsx",
   "AddGoalModal.tsx",
   "AgentProposalModal.tsx",
@@ -80,6 +81,7 @@ const WIDTH_EXCEPTIONS: Record<string, number[]> = {
    one file that's already compliant. */
 const WIDTH_FILES = [
   "AccountDetailPopup.tsx",
+  "AccountsRailPopups.tsx",
   "AddAccountModal.tsx",
   "AddGoalModal.tsx",
   "AgentProposalModal.tsx",
