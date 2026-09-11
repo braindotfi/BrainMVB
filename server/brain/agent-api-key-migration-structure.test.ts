@@ -15,6 +15,10 @@ const authSource = readFileSync(new URL("./agentApiKey.ts", import.meta.url), "u
 const migrationSource = readFileSync(new URL("./agentApiKeyMigration.ts", import.meta.url), "utf8");
 const indexSource = readFileSync(new URL("../index.ts", import.meta.url), "utf8");
 const tenancySource = readFileSync(new URL("./tenancy.ts", import.meta.url), "utf8");
+const migrationRunbookSource = readFileSync(
+  new URL("../../docs/ops/phase3-bff-agent-key-migration.md", import.meta.url),
+  "utf8",
+);
 
 describe("Phase 3 BFF migration structure", () => {
   it("limits each reviewed production batch to five unique tenant ids", () => {
@@ -82,6 +86,26 @@ describe("Phase 3 BFF migration structure", () => {
     expect(noRollbackSource).not.toContain("legacyToken");
     expect(noRollbackSource).toContain("state !== \"legacy\"");
     expect(noRollbackSource).toContain("revokeAgentApiKey(issuedKeyId)");
+  });
+
+  it("makes same-window Northstar control teardown mandatory on every terminal path", () => {
+    expect(migrationRunbookSource).toContain("### Mandatory same-window teardown");
+    for (const name of [
+      "NORTHSTAR_AGENT_API_KEY_MIGRATION_TENANT_ID",
+      "NORTHSTAR_AGENT_API_KEY_MIGRATION_APPROVED_SHA",
+      "NORTHSTAR_AGENT_API_KEY_MIGRATION_WINDOW_START",
+      "NORTHSTAR_AGENT_API_KEY_MIGRATION_WINDOW_END",
+      "NORTHSTAR_AGENT_API_KEY_MIGRATION_AUTHORIZATION",
+    ]) {
+      expect(migrationRunbookSource).toContain(`- \`${name}\``);
+    }
+    expect(migrationRunbookSource).toContain(
+      "It is not deferred to\ntask #315 or another follow-up.",
+    );
+    expect(migrationRunbookSource).toContain("1. **Success:**");
+    expect(migrationRunbookSource).toContain("2. **Failure or abort:**");
+    expect(migrationRunbookSource).toContain("before `2026-09-12T11:00:00Z`");
+    expect(migrationRunbookSource).toContain("verify all five names are absent");
   });
 
   it("keeps the withdrawn demo tenant out of the manifest", () => {
