@@ -138,7 +138,8 @@ describe("Figma accounts panel", () => {
     // Keyboard and pointer both move the selection.
     expect(partsSource).toContain('event.key === "ArrowRight"');
     expect(partsSource).toContain("onPointerDown={onCardPointerDown}");
-    expect(partsSource).toContain("onPointerUp={onCardPointerUp}");
+    expect(partsSource).toContain("onPointerMove={onCardPointerMove}");
+    expect(partsSource).toContain("onPointerUp={finishSwipe}");
     expect(partsSource).toContain("selectAccountByOffset(dx < 0 ? 1 : -1)");
   });
 

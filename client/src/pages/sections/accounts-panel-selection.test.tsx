@@ -243,13 +243,14 @@ function openTransactions() {
   });
 }
 
-/** Drag the card horizontally by `dx` pixels, the way a thumb would. */
-function dragCard(dx: number) {
+/** Swipe the card horizontally by `dx` pixels, the way a thumb would. */
+function swipeCard(dx: number) {
   const card = q("account-card")!;
   const start = 200;
   const opts = (clientX: number) => ({ bubbles: true, clientX, clientY: 100 });
   act(() => {
     card.dispatchEvent(new (window as unknown as { PointerEvent: typeof MouseEvent }).PointerEvent("pointerdown", opts(start)));
+    card.dispatchEvent(new (window as unknown as { PointerEvent: typeof MouseEvent }).PointerEvent("pointermove", opts(start + dx)));
     card.dispatchEvent(new (window as unknown as { PointerEvent: typeof MouseEvent }).PointerEvent("pointerup", opts(start + dx)));
   });
 }
@@ -357,24 +358,34 @@ describe("selecting an account", () => {
   });
 
   it("moves the card on a swipe, in the direction of the swipe", () => {
-    dragCard(-120); // right-to-left: forward
+    swipeCard(-120); // right-to-left: forward
     expect(text("text-account-name")).toBe("Brightline Treasury Wallet");
-    dragCard(120); // left-to-right: back
+    swipeCard(120); // left-to-right: back
     expect(text("text-account-name")).toBe("Payment Agent");
   });
 
+  it("changes account during the swipe without waiting for pointer-up", () => {
+    const card = q("account-card")!;
+    const PointerEvent = (window as unknown as { PointerEvent: typeof MouseEvent }).PointerEvent;
+    act(() => {
+      card.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, clientX: 200, clientY: 100 }));
+      card.dispatchEvent(new PointerEvent("pointermove", { bubbles: true, clientX: 80, clientY: 100 }));
+    });
+    expect(text("text-account-name")).toBe("Brightline Treasury Wallet");
+  });
+
   it("does not treat a short drag as a swipe", () => {
-    dragCard(-15);
+    swipeCard(-15);
     expect(text("text-account-name")).toBe("Payment Agent");
   });
 
   it("stops at the ends instead of wrapping", () => {
-    dragCard(120); // already first
+    swipeCard(120); // already first
     expect(text("text-account-name")).toBe("Payment Agent");
     act(() => {
       dots()[2].dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
-    dragCard(-120); // already last
+    swipeCard(-120); // already last
     expect(text("text-account-name")).toBe("Operating");
   });
 
@@ -382,7 +393,7 @@ describe("selecting an account", () => {
     act(() => {
       q("button-account-selector")?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
-    const row = Array.from(container.querySelectorAll<HTMLButtonElement>('[role="menuitemradio"]')).find(
+    const row = Array.from(document.body.querySelectorAll<HTMLButtonElement>('[role="menuitemradio"]')).find(
       (r) => r.textContent?.includes("Brightline"),
     );
     expect(row).toBeTruthy();
@@ -390,6 +401,20 @@ describe("selecting an account", () => {
       row!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
     expect(text("text-account-name")).toBe("Brightline Treasury Wallet");
+  });
+
+  it("layers the drop-down over a dimmed UI instead of adding it to panel layout", () => {
+    act(() => {
+      q("button-account-selector")?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    const menu = document.body.querySelector<HTMLElement>('[role="menu"][aria-label="Choose account"]');
+    const dimmer = qPortal("accounts-account-selector-dimmer");
+    expect(menu).toBeTruthy();
+    expect(dimmer).toBeTruthy();
+    expect(menu?.parentElement).toBe(document.body);
+    expect(menu?.className).toContain("fixed");
+    expect(dimmer?.className).toContain("bg-black/60");
+    expect(dimmer?.className).toContain("backdrop-blur-[2px]");
   });
 });
 
@@ -594,6 +619,29 @@ describe("the rail popups", () => {
     // Header names the surface, and the close control is reachable.
     expect(popup.textContent).toContain("Accounts");
     expect(qPortal("popup-rail-accounts-close")).toBeTruthy();
+  });
+
+  it("overlays and dims the Accounts popup while its selector is open", () => {
+    openRail("button-collapsed-wallet");
+    clickPortal("button-rail-accounts-account-selector");
+    const popup = qPortal("popup-rail-accounts")!;
+    const menu = document.body.querySelector<HTMLElement>('[role="menu"][aria-label="Choose account"]')!;
+    const dimmer = qPortal("rail-accounts-account-selector-dimmer");
+    expect(menu).toBeTruthy();
+    expect(dimmer).toBeTruthy();
+    // The menu is a body-level fixed layer, so it overlaps rather than adding
+    // height to the popup's scrollable content.
+    expect(menu.parentElement).toBe(document.body);
+    expect(menu.className).toContain("z-[70]");
+    expect(dimmer?.className).toContain("z-[60]");
+    expect(popup.className).toContain("z-50");
+
+    const row = Array.from(menu.querySelectorAll<HTMLButtonElement>('[role="menuitemradio"]')).find(
+      (item) => item.textContent?.includes("Brightline"),
+    )!;
+    act(() => row.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    expect(qPortal("popup-rail-accounts")).toBeTruthy();
+    expect(qPortal("rail-accounts-account-selector-dimmer")).toBeNull();
   });
 
   it("shows the asset rows and their filters in the Assets popup", () => {

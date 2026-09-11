@@ -13,7 +13,8 @@
  * cannot disagree with the rail about what the ledger said.
  */
 
-import { useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { createPortal } from "react-dom";
 import addIcon from "@assets/add_1789001100272.png";
 import sendIcon from "@assets/send_1789001100274.png";
 import exchangeIcon from "@assets/exchange_1789001100274.png";
@@ -156,8 +157,8 @@ interface AccountCardProps {
  * The 370x200 account card from Figma 6519:54130, and its green agent
  * colourway from 3759:50590.
  *
- * Swiping the card and tapping a pagination dot are the two ways Figma offers
- * to move between accounts, so both are owned here rather than by each caller.
+ * Swiping the card moves between accounts in both places this card is drawn.
+ * The dots remain direct and keyboard-accessible account selectors.
  */
 export function AccountCard({ accounts, selectedIndex, onSelectAccount }: AccountCardProps) {
   const [copied, setCopied] = useState(false);
@@ -174,20 +175,31 @@ export function AccountCard({ accounts, selectedIndex, onSelectAccount }: Accoun
     onSelectAccount(next.id);
   };
 
-  const swipeStart = useRef<{ x: number; y: number } | null>(null);
+  const swipeStart = useRef<{ x: number; y: number; pointerId: number } | null>(null);
   const onCardPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
-    swipeStart.current = { x: event.clientX, y: event.clientY };
+    // Capturing means a quick thumb swipe can finish outside the card without
+    // losing the gesture. Selection happens during the swipe, not after a
+    // tap-hold-drag-release sequence.
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    swipeStart.current = { x: event.clientX, y: event.clientY, pointerId: event.pointerId };
   };
-  const onCardPointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
+  const onCardPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
     const start = swipeStart.current;
-    swipeStart.current = null;
     if (!start) return;
     const dx = event.clientX - start.x;
     const dy = event.clientY - start.y;
-    // A drag only counts as a swipe when it is clearly sideways and clearly
-    // longer than the slop of a tap on the copy button.
+    // Advance as soon as a deliberate horizontal swipe crosses the threshold.
+    // Clearing first guarantees one account change per gesture.
     if (Math.abs(dx) < 40 || Math.abs(dx) <= Math.abs(dy)) return;
+    swipeStart.current = null;
     selectAccountByOffset(dx < 0 ? 1 : -1);
+  };
+  const finishSwipe = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const pointerId = swipeStart.current?.pointerId ?? event.pointerId;
+    swipeStart.current = null;
+    if (event.currentTarget.hasPointerCapture?.(pointerId)) {
+      event.currentTarget.releasePointerCapture(pointerId);
+    }
   };
 
   const copyAccountIdentifier = async () => {
@@ -205,10 +217,9 @@ export function AccountCard({ accounts, selectedIndex, onSelectAccount }: Accoun
     <div
       data-testid="account-card"
       onPointerDown={onCardPointerDown}
-      onPointerUp={onCardPointerUp}
-      onPointerCancel={() => {
-        swipeStart.current = null;
-      }}
+      onPointerMove={onCardPointerMove}
+      onPointerUp={finishSwipe}
+      onPointerCancel={finishSwipe}
       className={`relative h-[200px] touch-pan-y overflow-hidden rounded-panel shadow-[0px_122px_34px_rgba(0,0,0,0.01),0px_78px_31px_rgba(0,0,0,0.04),0px_44px_26px_rgba(0,0,0,0.15),0px_20px_20px_rgba(0,0,0,0.26),0px_5px_11px_rgba(0,0,0,0.29)] ${
         agentSelected ? "bg-brain-v1dark-green" : "bg-brain-v1dark-orange"
       }`}
@@ -431,11 +442,42 @@ export function AccountSelector({
 }: AccountSelectorProps) {
   const [open, setOpen] = useState(false);
   const [addAgentNotice, setAddAgentNotice] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const [menuPlacement, setMenuPlacement] = useState<{ left: number; top: number; width: number; maxHeight: number } | null>(null);
   const addAgentDescriptionId = `${idPrefix}-add-agent-unavailable`;
   // Figma writes "Debit" here. The ledger states an account kind rather than a
   // card product, so the kind is what gets shown — an account that states none
   // gets no second label instead of a guessed one.
   const kindLabel = selected ? ACCOUNT_KIND_LABEL[selected.account_type] : undefined;
+
+  useLayoutEffect(() => {
+    if (!open) {
+      setMenuPlacement(null);
+      return;
+    }
+    const place = () => {
+      const trigger = triggerRef.current;
+      if (!trigger) return;
+      const rect = trigger.getBoundingClientRect();
+      const margin = 8;
+      const width = Math.min(rect.width, window.innerWidth - margin * 2);
+      const left = Math.max(margin, Math.min(rect.left, window.innerWidth - margin - width));
+      const top = rect.bottom + 4;
+      setMenuPlacement({
+        left,
+        top,
+        width,
+        maxHeight: Math.max(80, Math.min(280, window.innerHeight - top - margin)),
+      });
+    };
+    place();
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => {
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+    };
+  }, [open]);
 
   return (
     <div
@@ -448,6 +490,7 @@ export function AccountSelector({
       }}
     >
       <button
+        ref={triggerRef}
         type="button"
         data-testid={idPrefix === "accounts" ? "button-account-selector" : `button-${idPrefix}-account-selector`}
         aria-expanded={open}
@@ -477,13 +520,28 @@ export function AccountSelector({
           className={shape === "pill" ? "size-8 shrink-0" : "size-6 shrink-0"}
         />
       </button>
-      {open && (
-        <div
+      {open && menuPlacement && createPortal(
+        <>
+          <button
+            type="button"
+            aria-label="Close account selector"
+            data-testid={`${idPrefix}-account-selector-dimmer`}
+            onClick={() => setOpen(false)}
+            className="fixed inset-0 z-[60] cursor-default bg-black/60 backdrop-blur-[2px]"
+          />
+          <div
           role="menu"
           aria-label="Choose account"
           data-node-id="3759:50251"
-          className="mt-1 max-h-[280px] overflow-y-auto rounded-row border border-solid border-brain-v1stroke-2 bg-brain-v1highlight-dropdown-bg p-2"
+          onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              setOpen(false);
+              triggerRef.current?.focus();
+            }
+          }}
+          className="fixed z-[70] overflow-y-auto rounded-row border border-solid border-brain-v1stroke-2 bg-brain-v1highlight-dropdown-bg p-2"
           style={{
+            ...menuPlacement,
             // Figma 3759:50251 stacks four shadows under the panel.
             boxShadow:
               "0px 68px 27px rgba(0,0,0,0.06), 0px 38px 23px rgba(0,0,0,0.2), 0px 17px 17px rgba(0,0,0,0.34), 0px 4px 9px rgba(0,0,0,0.39)",
@@ -543,7 +601,9 @@ export function AccountSelector({
               )}
             </button>
           ))}
-        </div>
+          </div>
+        </>,
+        document.body,
       )}
     </div>
   );
