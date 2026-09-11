@@ -19,16 +19,24 @@ interface AddMoneyFlowProps {
   accounts: BrainAccountDTO[];
 }
 
-/**
- * Every popup renders at the size its frame is drawn at. There was a 0.75
- * transform here; it is gone. The frames for the picker, the two details
- * states and the QR popup are all still at full size, so scaling them down
- * made every one of them smaller than its own design.
- */
-const centred = { transform: "translate(-50%, -50%)" } as const;
+const TARGET_POPUP_WIDTH = 320;
 
-/** Leave a hair of margin so a popup never sits flush against the viewport. */
-const viewportClamp = { maxHeight: "calc(100vh - 16px)", maxWidth: "calc(100vw - 16px)" } as const;
+/**
+ * Keep each popup authored at its Figma geometry, then scale the complete
+ * painted box to the shared 320px width. Scaling the whole box preserves the
+ * frame's aspect ratio, including type, spacing, radii and its 1px stroke.
+ */
+function centredAtWidth(nativePaintedWidth: number) {
+  const scale = TARGET_POPUP_WIDTH / nativePaintedWidth;
+  return {
+    transform: `translate(-50%, -50%) scale(${scale})`,
+    // Transforms change what is painted, not layout. Give the unscaled box
+    // proportionally more room so max-width/max-height do not shrink a 320px
+    // popup again on an otherwise wide-enough viewport.
+    maxWidth: `calc((100vw - 16px) / ${scale})`,
+    maxHeight: `calc((100vh - 16px) / ${scale})`,
+  } as const;
+}
 
 /**
  * Figma hangs each popup's 1px stroke OUTSIDE the frame (its border rect sits
@@ -39,6 +47,7 @@ const viewportClamp = { maxHeight: "calc(100vh - 16px)", maxWidth: "calc(100vw -
  * modal 28px taller. Each width below is therefore the frame plus its stroke.
  */
 const FRAME_W = { modal: "402px", picker: "320px", qr: "324px" } as const;
+const PAINTED_W = { modal: 402, picker: 320, qr: 324 } as const;
 
 /**
  * The picker is the one fixed-size popup in the flow: 320 x 424, per the
@@ -179,7 +188,11 @@ function AccountPicker({
             // dialog and would work either way; the selection path does.
             setTimeout(() => returnFocusTo.current?.focus(), 0);
           }}
-          style={{ ...centred, ...viewportClamp, width: FRAME_W.picker, height: PICKER_H }}
+          style={{
+            ...centredAtWidth(PAINTED_W.picker),
+            width: FRAME_W.picker,
+            height: PICKER_H,
+          }}
           className="fixed left-1/2 top-1/2 z-[76] flex flex-col overflow-hidden rounded-panel border border-solid border-brain-v1stroke-2 bg-brain-v1highlight-dropdown-bg drop-shadow-[0px_68px_13.5px_rgba(0,0,0,0.06)] focus:outline-none"
         >
           <DialogPrimitive.Title className="sr-only">Select Account</DialogPrimitive.Title>
@@ -408,7 +421,7 @@ export function AddMoneyFlow({ accounts }: AddMoneyFlowProps) {
             event.preventDefault();
             triggerRef.current?.focus();
           }}
-          style={{ ...centred, ...viewportClamp, width: FRAME_W.modal }}
+          style={{ ...centredAtWidth(PAINTED_W.modal), width: FRAME_W.modal }}
           className="fixed left-1/2 top-1/2 z-[71] flex flex-col overflow-y-auto rounded-modal border border-solid border-brain-v1stroke-2 bg-brain-v1highlight-dropdown-bg focus:outline-none"
         >
           <DialogPrimitive.Title className="sr-only">Add Money</DialogPrimitive.Title>
@@ -580,7 +593,7 @@ export function AddMoneyFlow({ accounts }: AddMoneyFlowProps) {
               event.preventDefault();
               qrTriggerRef.current?.focus();
             }}
-            style={{ ...centred, ...viewportClamp, width: FRAME_W.qr }}
+            style={{ ...centredAtWidth(PAINTED_W.qr), width: FRAME_W.qr }}
             className="fixed left-1/2 top-1/2 z-[81] flex flex-col items-center justify-center gap-4 overflow-y-auto rounded-modal border border-solid border-brain-v1stroke-2 bg-brain-v1highlight-dropdown-bg p-6 focus:outline-none"
           >
             <DialogPrimitive.Title className="sr-only">Wallet address QR code</DialogPrimitive.Title>

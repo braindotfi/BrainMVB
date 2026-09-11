@@ -235,6 +235,20 @@ describe("which accounts can be funded", () => {
     expect(rows.className).toContain("overflow-y-auto");
     expect(rows.className).toContain("flex-1");
   });
+
+  it("scales every popup to a 320px painted width without changing its frame ratio", () => {
+    render([BANK, WALLET]);
+    click("button-account-add");
+
+    const modal = q("add-money-modal") as HTMLElement;
+    const modalScale = Number(modal.style.transform.match(/scale\(([^)]+)\)/)?.[1]);
+    expect(Number.parseFloat(modal.style.width) * modalScale).toBeCloseTo(320, 8);
+
+    openPicker();
+    const picker = q("add-money-picker") as HTMLElement;
+    const pickerScale = Number(picker.style.transform.match(/scale\(([^)]+)\)/)?.[1]);
+    expect(Number.parseFloat(picker.style.width) * pickerScale).toBeCloseTo(320, 8);
+  });
 });
 
 describe("focus when the picker closes", () => {
@@ -360,6 +374,9 @@ describe("the QR overlay", () => {
     const qr = q("add-money-qr-modal");
     expect(qr).not.toBeNull();
     expect(qr?.querySelector("svg title")?.textContent).toContain(WALLET.external_account_id!);
+    const qrElement = qr as HTMLElement;
+    const qrScale = Number(qrElement.style.transform.match(/scale\(([^)]+)\)/)?.[1]);
+    expect(Number.parseFloat(qrElement.style.width) * qrScale).toBeCloseTo(320, 8);
 
     act(() => {
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
