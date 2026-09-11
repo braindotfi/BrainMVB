@@ -740,20 +740,38 @@ export function TransactionNotices({
 
 /* ───────────────────────────── Asset rows ───────────────────────────── */
 
+/**
+ * The holdings of ONE account: the account the selector above the list names.
+ *
+ * The list used to render every account in the read, under a selector that
+ * named a single one of them. On the demo tenant that put the wallet's ETH and
+ * the payment agent's USD under a heading reading "Bank checking", and showed
+ * "Dollar" twice because two accounts each hold USD — two different records
+ * that render as the same row. The card and the transaction list under it are
+ * both the selected account's, so this one is too.
+ *
+ * The ledger states one currency per account, so an account's holdings are
+ * that account alone; the asset filter still applies, and an account the
+ * filter hides says so rather than reading as an unconnected account.
+ */
 export function AssetsList({
-  accounts,
+  selectedAccount,
   filter,
   isLoading,
   isError,
   isIncomplete,
 }: {
-  accounts: BrainAccountDTO[];
+  /** The account named by the selector / card above the list. */
+  selectedAccount?: BrainAccountDTO;
   filter: AssetFilter;
   isLoading: boolean;
   isError: boolean;
   isIncomplete: boolean;
 }) {
-  const filteredAccounts = useMemo(() => filterAccounts(accounts, filter), [accounts, filter]);
+  const holdings = useMemo(
+    () => filterAccounts(selectedAccount ? [selectedAccount] : [], filter),
+    [selectedAccount, filter],
+  );
 
   if (isLoading) return <AccountPanelSkeleton />;
   if (isError) {
@@ -761,7 +779,7 @@ export function AssetsList({
       <div data-testid="accounts-panel-error" className="rounded-row bg-brain-v1highlight-dropdown-bg px-4 py-4 text-sm leading-5 text-brain-v1error-text">Couldn't load live account activity. Try again later.</div>
     );
   }
-  if (filteredAccounts.length === 0) {
+  if (!selectedAccount) {
     return (
       <div data-testid="accounts-panel-empty" className="rounded-row bg-brain-v1highlight-dropdown-bg px-4 py-5 text-center">
         <p className="font-['Gilroy',sans-serif] text-sm font-semibold leading-5 text-brain-v1baby-blue-100">No assets connected yet</p>
@@ -769,15 +787,27 @@ export function AssetsList({
       </div>
     );
   }
+  if (holdings.length === 0) {
+    return (
+      <div data-testid="accounts-panel-assets-filtered-empty" className="rounded-row bg-brain-v1highlight-dropdown-bg px-4 py-5 text-center">
+        <p className="font-['Gilroy',sans-serif] text-sm font-semibold leading-5 text-brain-v1baby-blue-100">
+          No {filter} assets
+        </p>
+        <p className="mt-1 font-['Gilroy',sans-serif] text-xs leading-4 text-brain-v1baby-blue-60">
+          {`${selectedAccount.name} holds no ${filter} assets, so this filter hides it.`}
+        </p>
+      </div>
+    );
+  }
   return (
     <div className="flex flex-col gap-4">
       {isIncomplete && (
         <p className="rounded-row bg-brain-v1highlight-dropdown-bg px-4 py-3 font-['Gilroy',sans-serif] text-xs leading-4 text-brain-v1baby-blue-60">
-          Some accounts couldn't be loaded. The list below may be incomplete.
+          Some accounts couldn't be loaded, so you may not be able to select all of them.
         </p>
       )}
-      {filteredAccounts.map((account, index) => (
-        <div key={account.id} className="flex flex-col gap-4">
+      {holdings.map((account, index) => (
+        <div key={account.id} data-testid={`row-asset-${account.id}`} className="flex flex-col gap-4">
           <div className="flex items-center gap-2">
             <img src={iconForAccount(account)} alt="" className="size-10 shrink-0" />
             <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -805,7 +835,7 @@ export function AssetsList({
               </div>
             </div>
           </div>
-          {index < filteredAccounts.length - 1 && <div className="h-px w-full bg-brain-v1stroke-2" />}
+          {index < holdings.length - 1 && <div className="h-px w-full bg-brain-v1stroke-2" />}
         </div>
       ))}
     </div>

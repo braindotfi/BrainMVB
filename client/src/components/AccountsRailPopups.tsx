@@ -385,7 +385,7 @@ export function AssetsRailPopup({
       onOpenChange={onOpenChange}
       anchor={anchor}
       title="Assets"
-      description="The assets held across your connected accounts."
+      description="The assets held in the account you have selected."
       nodeId="6519:52446"
       testId="popup-rail-assets"
     >
@@ -399,7 +399,7 @@ export function AssetsRailPopup({
       <div className="flex w-full flex-col gap-4">
         <AssetFilterTabs filter={filter} onChange={onFilterChange} />
         <AssetsList
-          accounts={accounts}
+          selectedAccount={selected}
           filter={filter}
           isLoading={isLoading}
           isError={isError}

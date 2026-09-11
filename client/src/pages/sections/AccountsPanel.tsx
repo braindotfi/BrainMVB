@@ -341,7 +341,7 @@ export function AccountsPanel({ collapsed, onToggle }: AccountsPanelProps) {
               />
             ) : (
               <AssetsList
-                accounts={accounts}
+                selectedAccount={selected}
                 filter={filter}
                 isLoading={isLoading}
                 isError={isError}

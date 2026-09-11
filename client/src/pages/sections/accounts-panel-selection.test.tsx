@@ -443,6 +443,66 @@ describe("the card follows the selected account", () => {
   });
 });
 
+/**
+ * The open panel's Assets tab and the rail's Assets popup are the same
+ * component, so the rule the card states — this is the account you picked —
+ * has to hold on both. Two of the three fixture accounts hold USD, which is
+ * the case that produced two identical-looking "Dollar" rows.
+ */
+describe("assets under the card", () => {
+  function assetRows(): HTMLElement[] {
+    return Array.from(container.querySelectorAll<HTMLElement>('[data-testid^="row-asset-"]'));
+  }
+
+  it("shows only the selected account's holdings", () => {
+    // The panel opens on the Assets tab, with the agent account selected.
+    expect(assetRows().map((row) => row.getAttribute("data-testid"))).toEqual(["row-asset-acct_agent"]);
+    expect(q("row-asset-acct_wallet")).toBeNull();
+    expect(q("row-asset-acct_operating")).toBeNull();
+    act(() => {
+      dots()[1].dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(assetRows().map((row) => row.getAttribute("data-testid"))).toEqual(["row-asset-acct_wallet"]);
+    expect(text("row-asset-acct_wallet")).toContain("Ethereum");
+  });
+
+  it("draws one Dollar row, not one per account holding USD", () => {
+    expect(assetRows().filter((row) => row.textContent?.includes("Dollar"))).toHaveLength(1);
+    expect(text("row-asset-acct_agent")).toContain("$2,040.3");
+    expect(container.textContent).not.toContain("$1,687,200");
+    act(() => {
+      dots()[2].dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(assetRows().filter((row) => row.textContent?.includes("Dollar"))).toHaveLength(1);
+    expect(text("row-asset-acct_operating")).toContain("$1,687,200");
+  });
+
+  it("says the filter hid the account rather than showing it as unconnected", () => {
+    const cryptoPill = Array.from(container.querySelectorAll<HTMLButtonElement>("[aria-pressed]")).find(
+      (pill) => pill.textContent?.trim() === "crypto",
+    );
+    act(() => {
+      cryptoPill?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(assetRows()).toHaveLength(0);
+    expect(q("accounts-panel-empty")).toBeNull();
+    expect(text("accounts-panel-assets-filtered-empty")).toContain("Payment Agent holds no crypto assets");
+    // The wallet is crypto, so the same filter shows its row.
+    act(() => {
+      dots()[1].dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(q("accounts-panel-assets-filtered-empty")).toBeNull();
+    expect(assetRows().map((row) => row.getAttribute("data-testid"))).toEqual(["row-asset-acct_wallet"]);
+  });
+
+  it("says no assets are connected when the read came back with none", () => {
+    accountsReadState = "empty";
+    render();
+    expect(assetRows()).toHaveLength(0);
+    expect(text("accounts-panel-empty")).toContain("No assets connected yet");
+  });
+});
+
 describe("transactions under the card", () => {
   it("shows only the selected account's activity", () => {
     openTransactions();
@@ -651,16 +711,62 @@ describe("the rail popups", () => {
     // The three Figma pills, wired to the same filter the panel uses.
     const pills = Array.from(popup.querySelectorAll<HTMLButtonElement>("[aria-pressed]"));
     expect(pills.map((pill) => pill.textContent?.trim())).toEqual(["all", "cash", "crypto"]);
-    // Real rows from the mocked read, not an empty frame.
-    expect(popup.textContent).toContain("Ethereum");
+    // A real row from the mocked read, not an empty frame: the selected
+    // account is the USD payment agent.
     expect(popup.textContent).toContain("Dollar");
-    // …and the pills are wired, not decorative.
+    // …and the pills are wired, not decorative. The agent account holds no
+    // crypto, so the crypto filter says that rather than showing nothing.
     act(() => {
       pills[2].dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
     const filtered = qPortal("popup-rail-assets")!;
-    expect(filtered.textContent).toContain("Ethereum");
     expect(filtered.textContent).not.toContain("Dollar");
+    expect(filtered.querySelector('[data-testid="accounts-panel-assets-filtered-empty"]')?.textContent).toContain(
+      "Payment Agent holds no crypto assets",
+    );
+  });
+
+  /**
+   * The selector at the top of the popup names one account. Listing every
+   * account's holdings under it put the wallet's ETH under a heading that
+   * said "Bank checking", and drew "Dollar" twice — two different accounts
+   * that happen to hold the same currency, indistinguishable as rows.
+   */
+  it("scopes the Assets popup to the selected account", () => {
+    openRail("button-collapsed-tab-assets");
+    const popup = qPortal("popup-rail-assets")!;
+    expect(popup.querySelector('[data-testid="row-asset-acct_agent"]')).toBeTruthy();
+    expect(popup.querySelector('[data-testid="row-asset-acct_wallet"]')).toBeNull();
+    expect(popup.querySelector('[data-testid="row-asset-acct_operating"]')).toBeNull();
+    expect(popup.textContent).not.toContain("Ethereum");
+    // The agent's own balance, not the other USD account's.
+    expect(popup.textContent).toContain("$2,040.3");
+    expect(popup.textContent).not.toContain("$1,687,200");
+  });
+
+  it("never draws the same currency twice when two accounts hold it", () => {
+    // acct_agent and acct_operating are both USD, so a tenant-wide list shows
+    // two rows that read identically.
+    openRail("button-collapsed-tab-assets");
+    const rows = () =>
+      Array.from(qPortal("popup-rail-assets")!.querySelectorAll('[data-testid^="row-asset-"]'));
+    expect(rows()).toHaveLength(1);
+    const dollarRows = () =>
+      rows().filter((row) => row.textContent?.includes("Dollar"));
+    expect(dollarRows()).toHaveLength(1);
+    // …and picking the other USD account swaps the row rather than adding one.
+    clickPortal("popup-rail-assets-close");
+    act(() => {
+      root.render(<AccountsPanel collapsed={false} onToggle={() => { toggles += 1; }} />);
+    });
+    act(() => {
+      dots()[2].dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    openRail("button-collapsed-tab-assets");
+    expect(rows()).toHaveLength(1);
+    expect(dollarRows()).toHaveLength(1);
+    expect(qPortal("popup-rail-assets")!.textContent).toContain("$1,687,200");
+    expect(qPortal("popup-rail-assets")!.textContent).not.toContain("$2,040.3");
   });
 
   it("scopes the Transactions popup to the selected account", () => {
