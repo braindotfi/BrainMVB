@@ -73,7 +73,7 @@
 - [Icon from artwork](icon-from-artwork.md) — measure the reference PNG's pixel runs for stroke widths; eyeballing an upscaled bitmap lies, and canvas can't decode file:// images.
 - [Counterparty trust surface](counterparty-trust-surface.md) — trust routes live (brain-core PRs #397/#403, GIT deedc628); handlers in VendorsPanel only; popup receives props, never fetches; bulk-confirm for customers.
 - [Vendor Suggested tier gate](vendor-suggested-tier-gate.md) — no provenance value means "suggested"; Suggested chip stays hidden; trust wiring green-lit and shipped.
-- [Overlay menus in clipped surfaces](overlay-menus-in-clipped-surfaces.md) — in-card dropdowns need a fixed portal (not less overflow); fixed owns its own clamp/flip, and never claim listbox without arrow keys.
+- [Overlay menus in clipped surfaces](overlay-menus-in-clipped-surfaces.md) — fixed portal, not less overflow; it owns its clamp/flip; measure via a callback ref (useRef never fills); anchor to the frame.
 - [Post-merge branch tip audit](post-merge-branch-tip-audit.md) — a merged PR contains only its merge-time snapshot; branch tips can add product work that never reaches main or production.
 - [Assistant suggestion chips](assistant-suggested-questions.md) — chips come from /wiki/suggested-questions; /assistant/questions is an always-empty legacy twin; anon 401 never proves a route exists.
 - [Figma pill specs](figma-pill-specs.md) — `text-[14px]` sets no line-height, so pills need explicit `leading-`; 32px = py-8+leading-16; grep for a sibling impl before overriding a frame colour.
