@@ -14,6 +14,9 @@
  */
 
 import { useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import addIcon from "@assets/add_1789001100272.png";
+import sendIcon from "@assets/send_1789001100274.png";
+import exchangeIcon from "@assets/exchange_1789001100274.png";
 import bankCardIcon from "@assets/BankCard_1789001100273.png";
 import binanceIcon from "@assets/binance_1789001191831.png";
 import polygonIcon from "@assets/polygon_1789001191833.png";
@@ -347,6 +350,57 @@ export function AccountCard({ accounts, selectedIndex, onSelectAccount }: Accoun
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+/* ─────────────────────── Account card + actions ─────────────────────── */
+
+/**
+ * Figma draws Add / Send / Exchange on a 138px tray that the card overlaps,
+ * so the two are one composite rather than two things a caller has to stack
+ * in the right order.
+ *
+ * None of the three does anything yet, in the panel or in the popup, so each
+ * stays disabled and says why. Inventing a destination for them would be a
+ * worse answer than an honest dead control.
+ */
+const actionItems = [
+  { label: "Add", image: addIcon, title: "Adding accounts is not available here yet" },
+  { label: "Send", image: sendIcon, title: "Sending is not available here yet" },
+  { label: "Exchange", image: exchangeIcon, title: "Exchange is not available here yet" },
+];
+
+/**
+ * The card sitting on its action tray, as Figma 6540:64571 draws it: a 138px
+ * panel at y=152 with the three actions at y=64 inside it, and the 200px card
+ * laid over the top. 290px total.
+ *
+ * Both the open panel and the rail's Accounts popup render this, so the
+ * actions cannot end up in one and not the other.
+ */
+export function AccountCardWithActions({ accounts, selectedIndex, onSelectAccount }: AccountCardProps) {
+  return (
+    <div data-node-id="6540:64571" className="relative h-[290px] w-full max-w-[370px] shrink-0">
+      <div className="absolute top-[152px] h-[138px] w-full rounded-panel bg-brain-v1headerfooterbg">
+        <div className="absolute left-4 right-4 top-16 flex items-center gap-2">
+          {actionItems.map((action) => (
+            <div
+              key={action.label}
+              className="flex min-w-0 flex-1 flex-col items-center justify-center gap-1"
+              title={action.title}
+            >
+              <button disabled aria-label={action.title} className="size-10 cursor-not-allowed">
+                <img src={action.image} alt="" className="block size-10" />
+              </button>
+              <span className="font-['Gilroy',sans-serif] text-xs font-semibold leading-[14px] text-brain-v1baby-blue-60">
+                {action.label}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+      <AccountCard accounts={accounts} selectedIndex={selectedIndex} onSelectAccount={onSelectAccount} />
     </div>
   );
 }

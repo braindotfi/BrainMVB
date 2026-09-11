@@ -407,24 +407,24 @@ describe("transactions under the card", () => {
 });
 
 describe("the collapsed rail", () => {
-  it("carries the wallet avatar, the three actions and the two tabs", () => {
+  it("carries the wallet avatar and the two tabs, and no longer the actions", () => {
     collapse();
     expect(q("button-accounts-expand")).toBeTruthy();
     expect(q("button-collapsed-wallet")).toBeTruthy();
-    for (const action of ["add", "send", "exchange"]) {
-      expect(q(`button-collapsed-${action}`)).toBeTruthy();
-    }
     expect(q("button-collapsed-tab-assets")).toBeTruthy();
     expect(q("button-collapsed-tab-transactions")).toBeTruthy();
+    // Add / Send / Exchange moved onto the card inside the Accounts popup
+    // (Figma 6540:64571). Leaving a second copy on the rail would give the
+    // reader two dead controls for the same unavailable action.
+    for (const action of ["add", "send", "exchange"]) {
+      expect(q(`button-collapsed-${action}`)).toBeNull();
+    }
   });
 
   it("uses the agent artwork while an agent account is selected", () => {
     collapse();
     expectColourway("button-collapsed-wallet", "agent");
     expect(svgOf(railIcons("button-collapsed-wallet").normal)).toContain("IconRobot");
-    for (const action of ["add", "send", "exchange"]) {
-      expectColourway(`button-collapsed-${action}`, "agent");
-    }
   });
 
   it("falls back to the bank artwork for every other account", () => {
@@ -434,17 +434,6 @@ describe("the collapsed rail", () => {
     collapse();
     expectColourway("button-collapsed-wallet", "bank");
     expect(svgOf(railIcons("button-collapsed-wallet").normal)).toContain("id='bank'");
-    for (const action of ["add", "send", "exchange"]) {
-      expectColourway(`button-collapsed-${action}`, "bank");
-    }
-  });
-
-  it("gives each action its own glyph", () => {
-    collapse();
-    const glyphs = ["add", "send", "exchange"].map((action) => railIcons(`button-collapsed-${action}`).normal);
-    expect(new Set(glyphs).size).toBe(3);
-    // The plus, straight from Figma's Add button.
-    expect(svgOf(glyphs[0])).toContain("M20 12V20M20 20V28");
   });
 
   it("names the selected account on the avatar and opens its popup", () => {
@@ -464,28 +453,11 @@ describe("the collapsed rail", () => {
     expect(popup?.textContent).not.toContain("Payment Agent");
   });
 
-  it("leaves the three actions as unavailable as they are in the open panel", () => {
+  it("lights the wallet avatar with the same glyph it draws at rest", () => {
     collapse();
-    for (const action of ["add", "send", "exchange"]) {
-      const button = q(`button-collapsed-${action}`) as HTMLButtonElement;
-      expect(button.getAttribute("aria-disabled")).toBe("true");
-      expect(button.getAttribute("aria-label")).toContain("not available here yet");
-      // A natively disabled button cannot be focused, which would leave the
-      // explanation reachable only by hovering a mouse over it.
-      expect(button.disabled).toBe(false);
-      expect(button.getAttribute("title")).toContain("not available here yet");
-      click(`button-collapsed-${action}`);
-    }
-    expect(toggles).toBe(0);
-  });
-
-  it("lights every icon with the same glyph it draws at rest", () => {
-    collapse();
-    for (const id of ["wallet", "add", "send", "exchange"]) {
-      const { normal, active } = railIcons(`button-collapsed-${id}`);
-      const glyphPath = (svg: string) => svg.replace(/<circle[^/]*\/>/, "").replace(/#[0-9A-Fa-f]{6}/g, "");
-      expect(glyphPath(svgOf(active))).toBe(glyphPath(svgOf(normal)));
-    }
+    const { normal, active } = railIcons("button-collapsed-wallet");
+    const glyphPath = (svg: string) => svg.replace(/<circle[^/]*\/>/, "").replace(/#[0-9A-Fa-f]{6}/g, "");
+    expect(glyphPath(svgOf(active))).toBe(glyphPath(svgOf(normal)));
   });
 
   it.each([
@@ -615,5 +587,88 @@ describe("the rail popups", () => {
     click("button-collapsed-tab-transactions");
     expect(qPortal("popup-rail-assets")).toBeNull();
     expect(qPortal("popup-rail-transactions")).toBeTruthy();
+  });
+
+  it("puts Add, Send and Exchange on the card, honestly disabled", () => {
+    openRail("button-collapsed-wallet");
+    const popup = qPortal("popup-rail-accounts")!;
+    const actions = Array.from(popup.querySelectorAll<HTMLButtonElement>("button[aria-label]")).filter((b) =>
+      /Adding accounts|Sending|Exchange/.test(b.getAttribute("aria-label") ?? ""),
+    );
+    expect(actions).toHaveLength(3);
+    // Figma 6540:64571 labels them under the glyphs; the labels are what the
+    // reader actually reads, so assert those and not just the icons.
+    for (const label of ["Add", "Send", "Exchange"]) {
+      expect(popup.textContent).toContain(label);
+    }
+    // None of the three does anything yet. A dead control that says so beats
+    // one that looks live, so each is disabled and carries the reason.
+    for (const action of actions) {
+      expect(action.disabled).toBe(true);
+      expect(action.getAttribute("aria-label")).toContain("not available here yet");
+    }
+  });
+
+  /**
+   * jsdom gives every element a zero rect, so the boxes the placement maths
+   * reads have to be supplied by hand — otherwise it runs against all-zeros
+   * and these tests would pass with the anchoring torn out.
+   */
+  function stubRect(el: HTMLElement, left: number, top: number, width: number, height: number) {
+    el.getBoundingClientRect = () =>
+      ({
+        left,
+        right: left + width,
+        top,
+        bottom: top + height,
+        width,
+        height,
+        x: left,
+        y: top,
+        toJSON: () => ({}),
+      }) as DOMRect;
+  }
+
+  function railFrame(): HTMLElement {
+    return container.querySelector<HTMLElement>("[data-rail-frame]")!;
+  }
+
+  it("places the popup against the rail, level with the button that opened it", () => {
+    collapse();
+    stubRect(railFrame(), 900, 0, 54, 700);
+    stubRect(q("button-collapsed-wallet") as HTMLElement, 907, 300, 40, 40);
+    click("button-collapsed-wallet");
+    const popup = qPortal("popup-rail-accounts")!;
+    // Figma 6540:64629: the popup's right edge sits on the rail's OUTER edge,
+    // not on the button inside it — 907 would cover the rail's own border.
+    expect(popup.style.left).toBe(`${900 - 386}px`);
+    // …and its header is centred on the button, so it reads as that button's
+    // own surface rather than a panel that happens to be nearby.
+    expect(popup.style.top).toBe(`${320 - 28}px`);
+    // It is emphatically not the old viewport-centred modal.
+    expect(popup.className).not.toContain("left-[50%]");
+    expect(popup.className).not.toContain("top-[50%]");
+  });
+
+  it("flips to the other side of a rail with no room on its left", () => {
+    collapse();
+    stubRect(railFrame(), 20, 0, 54, 700);
+    stubRect(q("button-collapsed-wallet") as HTMLElement, 27, 300, 40, 40);
+    click("button-collapsed-wallet");
+    const popup = qPortal("popup-rail-accounts")!;
+    // 20 - 386 would be off-screen, so the popup goes to the rail's right.
+    expect(popup.style.left).toBe("74px");
+  });
+
+  it("keeps a popup anchored to a low trigger inside the viewport", () => {
+    collapse();
+    stubRect(railFrame(), 900, 0, 54, 700);
+    stubRect(q("button-collapsed-tab-transactions") as HTMLElement, 907, 4000, 40, 40);
+    click("button-collapsed-tab-transactions");
+    const popup = qPortal("popup-rail-transactions")!;
+    // Aligning the header with a trigger 4000px down would put the whole
+    // popup below the fold; the clamp is what keeps it reachable.
+    expect(Number.parseInt(popup.style.top, 10)).toBeLessThanOrEqual(window.innerHeight);
+    expect(Number.parseInt(popup.style.top, 10)).toBeGreaterThanOrEqual(8);
   });
 });

@@ -33,7 +33,7 @@ describe("Figma accounts panel", () => {
     expect(panelSource).toContain('left-[7px] top-[7px]');
     expect(panelSource).toContain('left-[55px] top-[7px] z-20 w-[322px]');
     expect(panelSource).toContain('bottom-[7px] top-[63px]');
-    expect(panelSource).toContain('h-[290px] w-full max-w-[370px]');
+    expect(partsSource).toContain('h-[290px] w-full max-w-[370px]');
     expect(partsSource).toContain('h-[200px] touch-pan-y overflow-hidden rounded-panel');
     expect(panelSource).toContain('min-h-[754px] flex-col items-center gap-[24px]');
   });
@@ -164,16 +164,38 @@ describe("Figma accounts panel", () => {
     // two tab icons, each block separated by a stroke-2 rule.
     expect(panelSource).toContain("Wallet\n              </span>");
     expect(panelSource).toContain('data-testid="button-collapsed-wallet"');
-    expect(panelSource).toContain('data-testid={`button-collapsed-${action.label.toLowerCase()}`}');
     expect(panelSource).toContain('data-testid={`button-collapsed-tab-${item.tab}`}');
-    // Every rail icon ships in both colourways so the artwork follows the card.
+    // Both wallet colourways ship so the avatar follows the selected card.
     expect(panelSource).toContain("@assets/sidebar-wallet-bank-40.svg");
     expect(panelSource).toContain("@assets/sidebar-wallet-agent-40.svg");
-    expect(panelSource).toContain("@assets/sidebar-action-add-bank.svg");
-    expect(panelSource).toContain("@assets/sidebar-action-send-agent.svg");
-    expect(panelSource).toContain("@assets/sidebar-action-exchange-agent.svg");
     expect(panelSource).toContain('const railArtwork = agentSelected ? "agent" : "bank"');
-    expect(panelSource).toContain("action[railArtwork]");
+  });
+
+  it("no longer draws Add, Send or Exchange on the rail", () => {
+    // They live on the card inside the Accounts popup now (Figma 6540:64571).
+    // Two copies of the same unavailable action is one too many, and the
+    // twelve rail artworks that drew them are no longer imported anywhere.
+    expect(panelSource).not.toContain("sidebar-action-");
+    expect(partsSource).not.toContain("sidebar-action-");
+    expect(panelSource).not.toContain("collapsedActionItems");
+    expect(railSource()).not.toContain("button-collapsed-${action");
+  });
+
+  it("draws the card on its action tray from Figma 6540:64571", () => {
+    // One composite, rendered by the open panel and by the popup, so the
+    // actions cannot end up on one surface and not the other.
+    expect(partsSource).toContain('data-node-id="6540:64571"');
+    expect(partsSource).toContain("export function AccountCardWithActions");
+    expect(partsSource).toContain("absolute top-[152px] h-[138px] w-full rounded-panel bg-brain-v1headerfooterbg");
+    expect(partsSource).toContain("absolute left-4 right-4 top-16 flex items-center gap-2");
+    expect(panelSource).toContain("<AccountCardWithActions");
+    expect(popupSource).toContain("<AccountCardWithActions");
+    // The panel must not keep a second, hand-rolled copy of the tray.
+    expect(panelSource).not.toContain("bg-brain-v1headerfooterbg");
+    // Still honest: none of the three works yet, on either surface.
+    expect(partsSource).toContain('title: "Adding accounts is not available here yet"');
+    expect(partsSource).toContain('title: "Sending is not available here yet"');
+    expect(partsSource).toContain('title: "Exchange is not available here yet"');
   });
 
   it("keeps the collapsed rail on its 40px column", () => {
@@ -190,7 +212,7 @@ describe("Figma accounts panel", () => {
     expect(rail).toContain('className="flex flex-col gap-2"');
     expect(rail).toContain('className="flex w-full flex-col gap-1"');
     // Every icon button is a 40px square; the tab glyphs are 24px in 8px pads.
-    expect(rail.match(/size-10/g)?.length).toBeGreaterThanOrEqual(4);
+    expect(rail.match(/size-10/g)?.length).toBeGreaterThanOrEqual(3);
     expect(rail).toContain("<RailTabIcon");
   });
 
@@ -198,10 +220,6 @@ describe("Figma accounts panel", () => {
     // Both artworks are in the DOM; CSS decides which one shows.
     expect(panelSource).toContain("group-hover:hidden group-focus-visible:hidden");
     expect(panelSource).toContain("group-hover:block group-focus-visible:block");
-    expect(panelSource).toContain("@assets/sidebar-action-add-bank-active.svg");
-    expect(panelSource).toContain("@assets/sidebar-action-send-bank-active.svg");
-    expect(panelSource).toContain("@assets/sidebar-action-exchange-bank-active.svg");
-    expect(panelSource).toContain("@assets/sidebar-action-add-agent-active.svg");
     expect(panelSource).toContain("@assets/sidebar-wallet-bank-40-active.svg");
     expect(panelSource).toContain("@assets/sidebar-wallet-agent-40-active.svg");
     // The two tab glyphs reuse the open panel's own selected-tab artwork
@@ -215,12 +233,8 @@ describe("Figma accounts panel", () => {
 
   it("keeps the collapsed rail honest about what it can do", () => {
     const rail = railSource();
-    // The three actions are as unavailable here as in the open panel, but
-    // stay focusable so the explanation is not hover-only.
-    expect(rail).toContain("aria-label={action.title}");
-    expect(rail).toContain("title={action.title}");
-    expect(rail).toContain("cursor-not-allowed rounded-full");
-    // …and `aria-disabled` must not be a bare `disabled` anywhere in the rail.
+    // `aria-disabled` must not be a bare `disabled` anywhere in the rail, or
+    // the explanation becomes reachable only by hovering a mouse.
     expect(rail).not.toMatch(/\n\s+disabled[\s=}]/);
     // The avatar names a real account or says which of the three reasons it
     // cannot — a finished read with no rows is not a read still running.
@@ -228,9 +242,10 @@ describe("Figma accounts panel", () => {
     expect(rail).toContain("Accounts are still loading");
     expect(rail).toContain("No connected accounts");
     expect(rail).toContain("aria-disabled={!selected}");
-    expect(rail).toContain('onClick={selected ? () => setRailPopup("account") : undefined}');
-    // The tab icons do something real: open that surface's popup.
-    expect(rail).toContain("setRailPopup(item.tab);");
+    // Every rail button hands the popup the element it was pressed on, so
+    // the popup is placed against that control and not the viewport centre.
+    expect(rail).toContain('setRailPopup({ kind: "account", anchor: event.currentTarget })');
+    expect(rail).toContain("setRailPopup({ kind: item.tab, anchor: event.currentTarget });");
   });
 
   it("shortens the card identifier the way Figma 4062:57086 does", () => {
@@ -255,15 +270,48 @@ describe("rail popups (Figma 6519:52846 / 52446 / 52570)", () => {
     expect(popupSource).toContain("DialogPrimitive.Overlay");
     expect(popupSource).toContain("DialogPrimitive.Title");
     expect(popupSource).toContain("DialogPrimitive.Close");
-    // The shell standard's overlay blur, and one of its sanctioned widths.
+    // The shell standard's overlay blur. The width is Figma's 386, not one
+    // of the centred-modal widths: an anchored flyout is not a form modal,
+    // which is why this file is outside modalShell's WIDTH_FILES.
     expect(popupSource).toContain("backdrop-blur-[2px]");
-    expect(popupSource).toContain("w-[400px]");
+    expect(popupSource).toContain("w-[386px]");
     expect(popupSource).not.toContain("backdrop-blur-sm");
     // Figma's header: 20px Gilroy SemiBold in baby-blue-60 over a stroke-2 rule.
     expect(popupSource).toContain("text-[20px] font-semibold leading-6 text-brain-v1baby-blue-60");
     expect(popupSource).toContain("border-b border-solid border-brain-v1stroke-2");
   });
 
+  it("anchors the popup to its trigger instead of the viewport centre (Figma 6540:64629)", () => {
+    expect(popupSource).toContain("const POPUP_WIDTH = 386");
+    expect(popupSource).toContain('data-anchored="rail"');
+    expect(popupSource).toContain("anchor.getBoundingClientRect()");
+    // Right edge flush against the rail's OUTER border — anchoring to the
+    // button instead would slide the popup over the rail's 7px padding.
+    expect(popupSource).toContain('const RAIL_FRAME_SELECTOR = "[data-rail-frame]"');
+    expect(popupSource).toContain("anchor.closest(RAIL_FRAME_SELECTOR)");
+    expect(popupSource).toContain("frame.left - POPUP_WIDTH");
+    // …and the rail has to publish that edge, or the fallback silently
+    // reverts to the button and nobody notices.
+    expect(railSource()).toContain('data-rail-frame=""');
+    expect(popupSource).toContain("trigger.top + trigger.height / 2 - HEADER_CENTRE");
+    // `fixed` escapes the rail's clip but keeps nothing on screen, so the
+    // shell owns its own clamp, its flip, and a height it can actually fit.
+    expect(popupSource).toContain("window.innerWidth - VIEWPORT_MARGIN - POPUP_WIDTH");
+    expect(popupSource).toContain("viewportHeight - VIEWPORT_MARGIN - height");
+    expect(popupSource).toContain('window.addEventListener("resize"');
+    expect(popupSource).toContain('window.addEventListener("scroll", onChange, true)');
+    // The old centred placement must be gone, not merely overridden.
+    expect(popupSource).not.toContain("left-[50%]");
+    expect(popupSource).not.toContain("translate-x-[-50%]");
+  });
+
+  it("keeps each popup pointed at the control that opened it", () => {
+    // A single shared anchor would place all three against whichever button
+    // was pressed last, which is the failure this guards.
+    expect(popupSource.match(/anchor: HTMLElement \| null;/g)?.length).toBe(4);
+    expect(popupSource.match(/anchor=\{anchor\}/g)?.length).toBe(3);
+    expect(panelSource.match(/anchor=\{railPopup\?\.anchor \?\? null\}/g)?.length).toBe(3);
+  });
   it("renders the panel's own components rather than a second copy", () => {
     // If any of these stops being imported, the popup has grown its own
     // markup and the two surfaces can drift.

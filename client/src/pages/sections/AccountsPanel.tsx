@@ -1,14 +1,10 @@
 import { useMemo, useState } from "react";
 import collapseBtnIcon from "@assets/Collapse_1781818197054.png";
 import expandBtnIcon from "@assets/Expand_Button_1781817819809.png";
-import addIcon from "@assets/add_1789001100272.png";
-import bankCardIcon from "@assets/BankCard_1789001100273.png";
-import exchangeIcon from "@assets/exchange_1789001100274.png";
 import assetsActiveIcon from "@assets/Icon=Assets,_State=Active_1789001100274.png";
 import assetsNormalIcon from "@assets/Icon=Assets,_State=Normal_1789001100274.png";
 import transactionsActiveIcon from "@assets/Icon=Transactions,_State=Active_1789001100274.png";
 import transactionsNormalIcon from "@assets/Icon=Transactions,_State=Normal_1789001100274.png";
-import sendIcon from "@assets/send_1789001100274.png";
 import binanceIcon from "@assets/binance_1789001191831.png";
 import polygonIcon from "@assets/polygon_1789001191833.png";
 import dollarIcon from "@assets/dollar_1789001191833.png";
@@ -31,18 +27,6 @@ import sidebarWalletBankIcon from "@assets/sidebar-wallet-bank-40.svg";
 import sidebarWalletBankActiveIcon from "@assets/sidebar-wallet-bank-40-active.svg";
 import sidebarWalletAgentIcon from "@assets/sidebar-wallet-agent-40.svg";
 import sidebarWalletAgentActiveIcon from "@assets/sidebar-wallet-agent-40-active.svg";
-import sidebarAddBankIcon from "@assets/sidebar-action-add-bank.svg";
-import sidebarAddBankActiveIcon from "@assets/sidebar-action-add-bank-active.svg";
-import sidebarSendBankIcon from "@assets/sidebar-action-send-bank.svg";
-import sidebarSendBankActiveIcon from "@assets/sidebar-action-send-bank-active.svg";
-import sidebarExchangeBankIcon from "@assets/sidebar-action-exchange-bank.svg";
-import sidebarExchangeBankActiveIcon from "@assets/sidebar-action-exchange-bank-active.svg";
-import sidebarAddAgentIcon from "@assets/sidebar-action-add-agent.svg";
-import sidebarAddAgentActiveIcon from "@assets/sidebar-action-add-agent-active.svg";
-import sidebarSendAgentIcon from "@assets/sidebar-action-send-agent.svg";
-import sidebarSendAgentActiveIcon from "@assets/sidebar-action-send-agent-active.svg";
-import sidebarExchangeAgentIcon from "@assets/sidebar-action-exchange-agent.svg";
-import sidebarExchangeAgentActiveIcon from "@assets/sidebar-action-exchange-agent-active.svg";
 import sidebarTabAssetsIcon from "@assets/sidebar-tab-assets.svg";
 import sidebarTabTransactionsIcon from "@assets/sidebar-tab-transactions.svg";
 import { isAgentAccount, type BrainAccountDTO } from "@/lib/brainAccounts";
@@ -53,7 +37,7 @@ import {
   type TransactionFilter,
 } from "@/lib/accountsPanelFormat";
 import {
-  AccountCard,
+  AccountCardWithActions,
   AccountSelector,
   AssetFilterTabs,
   AssetsList,
@@ -76,42 +60,7 @@ interface AccountsPanelProps {
 }
 
 type PanelTab = "assets" | "transactions";
-
-const actionItems = [
-  { label: "Add", image: addIcon, title: "Adding accounts is not available here yet" },
-  { label: "Send", image: sendIcon, title: "Sending is not available here yet" },
-  { label: "Exchange", image: exchangeIcon, title: "Exchange is not available here yet" },
-];
-
-/**
- * Figma 3759:50795 (bank) and 3759:54130 (agent) draw the collapsed rail with
- * the same three actions as the open panel, in the colourway of the selected
- * card, and light them on hover. The two artworks differ only in colour, so
- * the pair is chosen from the selection rather than duplicated in the markup.
- *
- * The actions themselves are still unavailable here, exactly as in the open
- * panel, so each one stays disabled and says so.
- */
-const collapsedActionItems = [
-  {
-    label: "Add",
-    title: "Adding accounts is not available here yet",
-    bank: { normal: sidebarAddBankIcon, active: sidebarAddBankActiveIcon },
-    agent: { normal: sidebarAddAgentIcon, active: sidebarAddAgentActiveIcon },
-  },
-  {
-    label: "Send",
-    title: "Sending is not available here yet",
-    bank: { normal: sidebarSendBankIcon, active: sidebarSendBankActiveIcon },
-    agent: { normal: sidebarSendAgentIcon, active: sidebarSendAgentActiveIcon },
-  },
-  {
-    label: "Exchange",
-    title: "Exchange is not available here yet",
-    bank: { normal: sidebarExchangeBankIcon, active: sidebarExchangeBankActiveIcon },
-    agent: { normal: sidebarExchangeAgentIcon, active: sidebarExchangeAgentActiveIcon },
-  },
-];
+type RailPopupKind = "account" | "assets" | "transactions";
 
 /**
  * The rail's two tab icons. Their lit artwork is the same pair the open panel
@@ -153,9 +102,11 @@ export function AccountsPanel({ collapsed, onToggle }: AccountsPanelProps) {
   const [transactionFilter, setTransactionFilter] = useState<TransactionFilter>("all");
   const [tradeFilterNotice, setTradeFilterNotice] = useState(false);
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
-  // Which rail popup is open, if any. Only one can be, so this is a single
-  // value rather than three booleans that could disagree.
-  const [railPopup, setRailPopup] = useState<null | "account" | "assets" | "transactions">(null);
+  // Which rail popup is open, if any, and the button that opened it. Only
+  // one can be open, so this is a single value rather than three booleans
+  // that could disagree — and the anchor travels with it, so the popup is
+  // always placed against the control the reader actually pressed.
+  const [railPopup, setRailPopup] = useState<{ kind: RailPopupKind; anchor: HTMLElement } | null>(null);
   const accountsRead = usePagedLedgerRead<BrainAccountDTO>("/api/brain/ledger/accounts", "accounts");
   const transactionsRead = usePagedLedgerRead<BrainTransactionDTO>("/api/brain/ledger/transactions", "transactions");
 
@@ -208,20 +159,23 @@ export function AccountsPanel({ collapsed, onToggle }: AccountsPanelProps) {
   const railPopups = (
     <>
       <AccountRailPopup
-        open={railPopup === "account"}
-        onOpenChange={(next) => setRailPopup(next ? "account" : null)}
+        open={railPopup?.kind === "account"}
+        onOpenChange={(next) => (next ? undefined : setRailPopup(null))}
+        anchor={railPopup?.anchor ?? null}
         accountsRead={railPopupAccounts}
       />
       <AssetsRailPopup
-        open={railPopup === "assets"}
-        onOpenChange={(next) => setRailPopup(next ? "assets" : null)}
+        open={railPopup?.kind === "assets"}
+        onOpenChange={(next) => (next ? undefined : setRailPopup(null))}
+        anchor={railPopup?.anchor ?? null}
         accountsRead={railPopupAccounts}
         filter={filter}
         onFilterChange={setFilter}
       />
       <TransactionsRailPopup
-        open={railPopup === "transactions"}
-        onOpenChange={(next) => setRailPopup(next ? "transactions" : null)}
+        open={railPopup?.kind === "transactions"}
+        onOpenChange={(next) => (next ? undefined : setRailPopup(null))}
+        anchor={railPopup?.anchor ?? null}
         accountsRead={railPopupAccounts}
         transactions={accountTransactions}
         transactionsLoading={transactionsLoading}
@@ -255,6 +209,7 @@ export function AccountsPanel({ collapsed, onToggle }: AccountsPanelProps) {
     return (
       <div
         data-node-id={agentSelected ? "3759:54130" : "3759:50795"}
+        data-rail-frame=""
         className="relative h-full w-[54px] flex-shrink-0 overflow-y-auto overflow-x-hidden rounded-panel border border-solid border-brain-v1stroke-2 bg-brain-v1baby-blue-5 p-[7px]"
       >
         <div className="flex w-[40px] flex-col items-start gap-4">
@@ -273,14 +228,18 @@ export function AccountsPanel({ collapsed, onToggle }: AccountsPanelProps) {
               </span>
             </div>
             <div className="flex flex-col gap-2">
-              {/* aria-disabled rather than disabled, here and on the three
-                  actions: a natively disabled button is unreachable by
-                  keyboard, which would put the only explanation of why the
-                  control does nothing behind a mouse hover. */}
+              {/* aria-disabled rather than disabled: a natively disabled
+                  button is unreachable by keyboard, which would put the only
+                  explanation of why the avatar does nothing — no account came
+                  back — behind a mouse hover. */}
               <button
                 type="button"
                 data-testid="button-collapsed-wallet"
-                onClick={selected ? () => setRailPopup("account") : undefined}
+                onClick={
+                  selected
+                    ? (event) => setRailPopup({ kind: "account", anchor: event.currentTarget })
+                    : undefined
+                }
                 aria-disabled={!selected}
                 title={walletTitle}
                 aria-label={walletTitle}
@@ -291,19 +250,6 @@ export function AccountsPanel({ collapsed, onToggle }: AccountsPanelProps) {
                   active={railArtwork === "agent" ? sidebarWalletAgentActiveIcon : sidebarWalletBankActiveIcon}
                 />
               </button>
-              {collapsedActionItems.map((action) => (
-                <button
-                  key={action.label}
-                  type="button"
-                  data-testid={`button-collapsed-${action.label.toLowerCase()}`}
-                  aria-disabled
-                  title={action.title}
-                  aria-label={action.title}
-                  className="group block size-10 cursor-not-allowed rounded-full"
-                >
-                  <RailIcon {...action[railArtwork]} />
-                </button>
-              ))}
             </div>
           </div>
 
@@ -315,9 +261,9 @@ export function AccountsPanel({ collapsed, onToggle }: AccountsPanelProps) {
                 key={item.tab}
                 type="button"
                 data-testid={`button-collapsed-tab-${item.tab}`}
-                onClick={() => {
+                onClick={(event) => {
                   setTab(item.tab);
-                  setRailPopup(item.tab);
+                  setRailPopup({ kind: item.tab, anchor: event.currentTarget });
                 }}
                 title={`Open ${item.label}`}
                 className="group flex items-center rounded-row bg-brain-v1baby-blue-5 p-2 hover:bg-brain-v1baby-blue-15"
@@ -349,26 +295,11 @@ export function AccountsPanel({ collapsed, onToggle }: AccountsPanelProps) {
 
       <div className="absolute inset-x-[7px] bottom-[7px] top-[63px] overflow-y-auto">
         <div className="relative flex min-h-[754px] flex-col items-center gap-[24px]">
-          <div className="relative h-[290px] w-full max-w-[370px] shrink-0">
-            <div className="absolute top-[152px] h-[138px] w-full rounded-panel bg-brain-v1headerfooterbg">
-              <div className="absolute left-4 right-4 top-16 flex items-center gap-2">
-                {actionItems.map((action) => (
-                  <div key={action.label} className="flex min-w-0 flex-1 flex-col items-center justify-center gap-1" title={action.title}>
-                    <button disabled aria-label={action.title} className="size-10 cursor-not-allowed">
-                      <img src={action.image} alt="" className="block size-10" />
-                    </button>
-                    <span className="font-['Gilroy',sans-serif] text-xs font-semibold leading-[14px] text-brain-v1baby-blue-60">{action.label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <AccountCard
-              accounts={accounts}
-              selectedIndex={selectedIndex}
-              onSelectAccount={setSelectedAccountId}
-            />
-          </div>
+          <AccountCardWithActions
+            accounts={accounts}
+            selectedIndex={selectedIndex}
+            onSelectAccount={setSelectedAccountId}
+          />
 
           <div className="flex w-full max-w-[370px] flex-col gap-4">
             <div className="flex flex-col gap-2">

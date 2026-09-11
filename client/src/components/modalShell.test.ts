@@ -81,7 +81,14 @@ const WIDTH_EXCEPTIONS: Record<string, number[]> = {
    one file that's already compliant. */
 const WIDTH_FILES = [
   "AccountDetailPopup.tsx",
-  "AccountsRailPopups.tsx",
+  // AccountsRailPopups.tsx is deliberately absent. Figma 6540:64629 anchors
+  // the three rail popups to the button that opened them, so they are
+  // flyouts rather than centred form modals and the 480/400/375 rule does
+  // not apply to their 386px frame. Their width, their placement and their
+  // clamping are pinned in pages/sections/accounts-panel-figma-guards.test.ts
+  // and exercised in accounts-panel-selection.test.tsx. They stay in
+  // OVERLAY_FILES below: an anchored popup still dims and blurs what is
+  // behind it the same way every other overlay does.
   "AddAccountModal.tsx",
   "AddGoalModal.tsx",
   "AgentProposalModal.tsx",
