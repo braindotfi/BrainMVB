@@ -694,6 +694,75 @@ describe("the collapsed rail", () => {
   });
 });
 
+describe("adding money", () => {
+  function chooseAccount(accountId: string) {
+    const select = qPortal("add-money-account-select") as HTMLSelectElement;
+    act(() => {
+      select.value = accountId;
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+  }
+
+  function portalButton(label: string): HTMLButtonElement {
+    const button = Array.from(document.body.querySelectorAll<HTMLButtonElement>("button")).find(
+      (candidate) => candidate.textContent?.trim() === label,
+    );
+    expect(button).toBeDefined();
+    return button!;
+  }
+
+  function openAdd() {
+    click("button-account-add");
+    expect(qPortal("add-money-modal")?.getAttribute("data-node-id")).toBe("3608:34362");
+  }
+
+  it("keeps Next disabled until an account is chosen", () => {
+    openAdd();
+    expect(portalButton("Next").disabled).toBe(true);
+    chooseAccount("acct_operating");
+    expect(portalButton("Next").disabled).toBe(false);
+  });
+
+  it("shows the selected bank account's real funding details", () => {
+    openAdd();
+    chooseAccount("acct_operating");
+    act(() => portalButton("Next").click());
+
+    const modal = qPortal("add-money-modal");
+    expect(modal?.getAttribute("data-node-id")).toBe("6543:55103");
+    expect(modal?.textContent).toContain("Operating");
+    expect(modal?.textContent).toContain("AE070331234567890123456");
+    expect(qPortal("add-money-show-qr")).toBeNull();
+  });
+
+  it("shows the wallet address and opens a generated QR overlay", () => {
+    openAdd();
+    chooseAccount("acct_wallet");
+    act(() => portalButton("Next").click());
+
+    const modal = qPortal("add-money-modal");
+    expect(modal?.getAttribute("data-node-id")).toBe("2979:41718");
+    expect(modal?.textContent).toContain("0x3619");
+    clickPortal("add-money-show-qr");
+
+    const qr = qPortal("add-money-qr-modal");
+    expect(qr?.getAttribute("data-node-id")).toBe("2979:42687");
+    expect(qr?.querySelector("svg")).not.toBeNull();
+    expect(qPortal("add-money-modal")).not.toBeNull();
+  });
+
+  it("dismisses on Escape and restores focus to Add", async () => {
+    const trigger = q("button-account-add") as HTMLButtonElement;
+    openAdd();
+    act(() => document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(qPortal("add-money-modal")).toBeNull();
+    expect(document.activeElement).toBe(trigger);
+  });
+});
+
 /**
  * The three popups the rail opens. They are the point of the rail — a
  * collapsed panel that only expands is the old behaviour — so what they
@@ -841,11 +910,11 @@ describe("the rail popups", () => {
     expect(qPortal("popup-rail-transactions")).toBeTruthy();
   });
 
-  it("puts Add, Send and Exchange on the card, honestly disabled", () => {
+  it("puts live Add and unavailable Send and Exchange actions on the card", () => {
     openRail("button-collapsed-wallet");
     const popup = qPortal("popup-rail-accounts")!;
     const actions = Array.from(popup.querySelectorAll<HTMLButtonElement>("button[aria-label]")).filter((b) =>
-      /Adding accounts|Sending|Exchange/.test(b.getAttribute("aria-label") ?? ""),
+      /Add money|Sending|Exchange/.test(b.getAttribute("aria-label") ?? ""),
     );
     expect(actions).toHaveLength(3);
     // Figma 6540:64571 labels them under the glyphs; the labels are what the
@@ -853,9 +922,10 @@ describe("the rail popups", () => {
     for (const label of ["Add", "Send", "Exchange"]) {
       expect(popup.textContent).toContain(label);
     }
-    // None of the three does anything yet. A dead control that says so beats
-    // one that looks live, so each is disabled and carries the reason.
-    for (const action of actions) {
+    const add = actions.find((action) => action.getAttribute("aria-label")?.startsWith("Add money"));
+    expect(add?.disabled).toBe(false);
+    // Send and Exchange remain honest dead controls until those flows exist.
+    for (const action of actions.filter((candidate) => candidate !== add)) {
       expect(action.disabled).toBe(true);
       expect(action.getAttribute("aria-label")).toContain("not available here yet");
     }

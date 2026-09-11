@@ -43,6 +43,7 @@ import completeIcon from "@assets/Icons_1789001270032.png";
 import dropdownActiveIcon from "@assets/Dropdown_Active_1789001286488.png";
 import dropdownInactiveIcon from "@assets/Dropdown_Inactive_1789001286488.png";
 import addAgentIcon from "@assets/dropdown-add-agent.svg";
+import { AddMoneyFlow } from "@/components/AddMoneyFlow";
 import { ACCOUNT_KIND_LABEL, isAgentAccount, type BrainAccountDTO } from "@/lib/brainAccounts";
 import {
   accountIdentifierLabel,
@@ -421,12 +422,11 @@ export function AccountCard({ accounts, selectedIndex, onSelectAccount }: Accoun
  * so the two are one composite rather than two things a caller has to stack
  * in the right order.
  *
- * None of the three does anything yet, in the panel or in the popup, so each
- * stays disabled and says why. Inventing a destination for them would be a
- * worse answer than an honest dead control.
+ * Add opens the account-funding flow. Send and Exchange remain honest disabled
+ * controls until their destinations exist.
  */
 const actionItems = [
-  { label: "Add", image: addIcon, title: "Adding accounts is not available here yet" },
+  { label: "Add", image: addIcon, title: "Add money to an account" },
   { label: "Send", image: sendIcon, title: "Sending is not available here yet" },
   { label: "Exchange", image: exchangeIcon, title: "Exchange is not available here yet" },
 ];
@@ -450,9 +450,13 @@ export function AccountCardWithActions({ accounts, selectedIndex, onSelectAccoun
               className="flex min-w-0 flex-1 flex-col items-center justify-center gap-1"
               title={action.title}
             >
-              <button disabled aria-label={action.title} className="size-10 cursor-not-allowed">
-                <img src={action.image} alt="" className="block size-10" />
-              </button>
+              {action.label === "Add" ? (
+                <AddMoneyFlow accounts={accounts} />
+              ) : (
+                <button disabled aria-label={action.title} className="size-10 cursor-not-allowed">
+                  <img src={action.image} alt="" className="block size-10" />
+                </button>
+              )}
               <span className="font-['Gilroy',sans-serif] text-xs font-semibold leading-[14px] text-brain-v1baby-blue-60">
                 {action.label}
               </span>

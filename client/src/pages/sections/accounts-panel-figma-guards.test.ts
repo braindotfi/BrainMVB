@@ -193,8 +193,10 @@ describe("Figma accounts panel", () => {
     expect(popupSource).toContain("<AccountCardWithActions");
     // The panel must not keep a second, hand-rolled copy of the tray.
     expect(panelSource).not.toContain("bg-brain-v1headerfooterbg");
-    // Still honest: none of the three works yet, on either surface.
-    expect(partsSource).toContain('title: "Adding accounts is not available here yet"');
+    // Add now opens the Figma funding flow; the other two remain honest until
+    // their destinations exist.
+    expect(partsSource).toContain('title: "Add money to an account"');
+    expect(partsSource).toContain("<AddMoneyFlow");
     expect(partsSource).toContain('title: "Sending is not available here yet"');
     expect(partsSource).toContain('title: "Exchange is not available here yet"');
   });
