@@ -91,19 +91,36 @@ function portalButton(label: string): HTMLButtonElement {
   return button!;
 }
 
-function choose(accountId: string) {
-  const select = q("add-money-account-select") as HTMLSelectElement;
+/**
+ * React installs a value tracker on the input node, so assigning `.value`
+ * directly and firing `input` is swallowed as a no-op change. Go through the
+ * prototype setter the tracker wraps.
+ */
+function type(testId: string, value: string) {
+  const input = q(testId) as HTMLInputElement;
+  expect(input, `missing [data-testid="${testId}"]`).not.toBeNull();
+  const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
   act(() => {
-    select.value = accountId;
-    select.dispatchEvent(new Event("change", { bubbles: true }));
+    setter!.call(input, value);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
   });
 }
 
-function optionFor(accountId: string): HTMLOptionElement {
-  const select = q("add-money-account-select") as HTMLSelectElement;
-  const option = Array.from(select.options).find((candidate) => candidate.value === accountId);
-  expect(option, `missing option for ${accountId}`).toBeDefined();
+/** Opening the field opens the picker popup; the picker is where a choice is made. */
+function openPicker() {
+  click("add-money-account-select");
+}
+
+function optionFor(accountId: string): HTMLButtonElement {
+  const option = q(`add-money-picker-option-${accountId}`) as HTMLButtonElement | null;
+  expect(option, `missing picker row for ${accountId}`).not.toBeNull();
   return option!;
+}
+
+/** Choosing in the picker is what advances the flow — there is no Next to press. */
+function choose(accountId: string) {
+  openPicker();
+  click(`add-money-picker-option-${accountId}`);
 }
 
 beforeEach(() => {
@@ -122,51 +139,65 @@ describe("which accounts can be funded", () => {
   it("offers bank and wallet accounts as selectable", () => {
     render([BANK, WALLET, CARD]);
     click("button-account-add");
-    expect(optionFor("acct_bank").disabled).toBe(false);
-    expect(optionFor("acct_wallet").disabled).toBe(false);
+    openPicker();
+    expect(optionFor("acct_bank").getAttribute("aria-disabled")).toBeNull();
+    expect(optionFor("acct_wallet").getAttribute("aria-disabled")).toBeNull();
   });
 
   it("lists a card account but will not let it be chosen, and says why", () => {
     render([BANK, CARD]);
     click("button-account-add");
+    openPicker();
     const option = optionFor("acct_card");
     // Listed, not hidden — the account still exists and a reader looking for
     // it should find it rather than wonder where it went.
-    expect(option.disabled).toBe(true);
-    expect(option.textContent).toContain("no funding details");
+    expect(option.getAttribute("aria-disabled")).toBe("true");
+    expect(option.textContent).toContain("No funding details");
   });
 
   it("never captions a card's reference as an IBAN", () => {
     render([BANK, CARD]);
     click("button-account-add");
-    // Drive the select past the disabled option the way a scripted change
-    // event can, to prove the gate does not rely on the option's disabled
-    // attribute alone.
+    // The row is aria-disabled rather than `disabled`, so the click really is
+    // delivered — this proves the handler refuses, not just the attribute.
     choose("acct_card");
-    expect(portalButton("Next").disabled).toBe(true);
 
     const modal = q("add-money-modal");
     expect(modal?.textContent).not.toContain("IBAN");
     expect(modal?.textContent).not.toContain("4111111111111111");
+    // Nothing was selected, so the flow is still on its first step.
+    expect(modal?.getAttribute("data-node-id")).toBe("3608:34362");
   });
 
   it("treats a payment-processor balance the same way", () => {
     render([BANK, PROCESSOR]);
     click("button-account-add");
-    expect(optionFor("acct_stripe").disabled).toBe(true);
+    openPicker();
+    expect(optionFor("acct_stripe").getAttribute("aria-disabled")).toBe("true");
     choose("acct_stripe");
-    expect(portalButton("Next").disabled).toBe(true);
+    expect(q("add-money-modal")?.getAttribute("data-node-id")).toBe("3608:34362");
   });
 
   it("still reaches the details step for a real bank account", () => {
     render([BANK, CARD]);
     click("button-account-add");
     choose("acct_bank");
-    expect(portalButton("Next").disabled).toBe(false);
-    act(() => portalButton("Next").click());
     const modal = q("add-money-modal");
+    expect(modal?.getAttribute("data-node-id")).toBe("6543:55103");
     expect(modal?.textContent).toContain("IBAN Bank Number");
     expect(modal?.textContent).toContain("AE070331234567890123456");
+  });
+
+  it("filters the picker by name and by identifier", () => {
+    render([BANK, WALLET]);
+    click("button-account-add");
+    openPicker();
+    type("add-money-picker-search", "0x361978");
+    expect(q("add-money-picker-option-acct_wallet")).not.toBeNull();
+    expect(q("add-money-picker-option-acct_bank")).toBeNull();
+
+    type("add-money-picker-search", "nothing here");
+    expect(q("add-money-picker-empty")?.textContent).toContain("No accounts match");
   });
 
   it("disables Add entirely when nothing on the list can be funded", () => {
@@ -194,7 +225,6 @@ describe("copying funding details", () => {
     render([BANK]);
     click("button-account-add");
     choose("acct_bank");
-    act(() => portalButton("Next").click());
 
     const copy = document.body.querySelector<HTMLButtonElement>('[aria-label="Copy IBAN Bank Number"]');
     expect(copy).not.toBeNull();
@@ -208,7 +238,6 @@ describe("copying funding details", () => {
     render([BANK]);
     click("button-account-add");
     choose("acct_bank");
-    act(() => portalButton("Next").click());
 
     const copy = document.body.querySelector<HTMLButtonElement>('[aria-label="Copy IBAN Bank Number"]');
     act(() => copy!.click());
@@ -223,7 +252,6 @@ describe("copying funding details", () => {
     render([BANK]);
     click("button-account-add");
     choose("acct_bank");
-    act(() => portalButton("Next").click());
 
     const copy = document.body.querySelector<HTMLButtonElement>('[aria-label="Copy IBAN Bank Number"]');
     expect(() => act(() => copy!.click())).not.toThrow();
@@ -237,7 +265,6 @@ describe("the QR overlay", () => {
     render([WALLET]);
     click("button-account-add");
     choose("acct_wallet");
-    act(() => portalButton("Next").click());
 
     const qrTrigger = q("add-money-show-qr") as HTMLButtonElement;
     act(() => qrTrigger.click());

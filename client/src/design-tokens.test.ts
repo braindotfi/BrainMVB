@@ -308,6 +308,8 @@ const RAW_INVENTORY: Record<string, number> = {
   "components/ReceivablesTab.tsx": 1,
   // Legitimate non-text uses: strokes, ring colour, dot fills, comments.
   "components/AddGoalModal.tsx": 1,
+  // QR module fill, taken from Figma 2979:42687 — a generated graphic, not copy.
+  "components/AddMoneyFlow.tsx": 1,
   "components/DeleteConfirmDialog.tsx": 1,
   "components/ProposalDetail.tsx": 1,
   "components/ReviewItems.tsx": 1,
