@@ -891,7 +891,7 @@ export function BrainAssistant() {
      the body column below, so the first send does not remount the textarea and
      steal the caret out of it. */
   const composer = (
-    <div className="flex w-full flex-col gap-[8px]">
+    <div className="flex w-full flex-col gap-[16px]">
       <div className="flex min-h-[100px] w-full flex-col rounded-panel bg-brain-v1highlight-dropdown-bg p-[8px]">
         <textarea
           ref={assistantInputRef}
@@ -986,7 +986,7 @@ export function BrainAssistant() {
                 key={`${i}-${q}`}
                 data-testid={`button-suggested-${q.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`}
                 onClick={() => sendMessage(q)}
-                className="max-w-full normal-case bg-brain-v1baby-blue-15 px-[10px] py-[4px] rounded-pill transition-colors hover:bg-brain-v1baby-blue-15-hover [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[12px] leading-[16px] text-left"
+                className="max-w-full normal-case bg-brain-v1baby-blue-15 px-[10px] py-[4px] rounded-pill transition-colors hover:bg-brain-v1baby-blue-15-hover [font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-100 text-[14px] leading-[16px] text-left"
               >
                 {q}
               </button>
