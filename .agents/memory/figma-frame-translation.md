@@ -5,16 +5,42 @@ description: The two systematic errors that make a "pixel perfect" frame transla
 
 Two mistakes are systematic rather than occasional, and neither is visible by eye.
 
-## Figma's stroke is outside the frame; Tailwind's border is inside
+## Figma's stroke can fall outside the frame; Tailwind's border never does
 
-A Figma frame's border rect is emitted at `left/right/top: -1px`, so the frame number is the
-**content** width. Tailwind is border-box, so a literal `w-[<frame>]` spends two of those
-pixels on the stroke. The gutters then come out 2px short, and the failure surfaces far from
-its cause: a line of copy that fits in the frame wraps, and the popup grows by a whole line
-height.
+Tailwind is border-box, so a literal `w-[<frame>]` may spend two of its pixels on the
+stroke. Where that matters, the gutters come out 2px short and the failure surfaces far
+from its cause: a line of copy that fits in the frame wraps, and the popup grows by a
+whole line height.
 
-**How to apply:** when translating a frame that has a stroke, declare the width as
-frame + stroke, and verify by measuring the inner content box, not the outer one.
+It is **not** a blanket +2. Declare frame + stroke only when a child has a width that the
+squeeze would actually change — a fixed-width column, or a text run sized to fit. When
+every child is `w-full`, the frame number is also the right painted width, and using it
+keeps the rendered box equal to the number the designer reads off the inspector, which is
+the number they will quote back.
+
+**How to apply:** decide per frame, then measure the inner content box, not the outer one.
+
+## A component's library default is not this frame's geometry
+
+Codegen inlines the *component definition*, defaults and all, then overrides them at the
+instance. A search field declared `w-[288px]` in its definition and instantiated `w-full`
+says nothing whatever about the frame around it — inferring the popup width from that 288
+produced a popup 14px narrower than the design, and it survived review because the
+arithmetic looked sound.
+
+**Why:** the design-context dump mixes two different things (library defaults and this
+frame's real layout) in one blob of JSX, and they are not distinguishable by reading.
+
+**How to apply:** for any load-bearing dimension, call the Figma metadata tool for the
+node. It returns real x/y/width/height per layer, so the frame's own size and its
+children's true offsets are facts rather than inferences. Reach for it whenever a size
+is being pinned, and always after a size is disputed.
+
+## A fixed-size frame means the list scrolls, not the popup
+
+A frame with an explicit height is a specification: the container stays that tall and its
+records area absorbs the overflow. Do not translate it as a content-sized box that happens
+to match at the row count the designer drew.
 
 ## A global `text-transform` reaches data, not just labels
 
