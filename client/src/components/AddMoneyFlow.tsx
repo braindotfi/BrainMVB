@@ -38,7 +38,21 @@ const viewportClamp = { maxHeight: "calc(100vh - 16px)", maxWidth: "calc(100vw -
  * to wrap "What account should we fund?" onto a second line and push the whole
  * modal 28px taller. Each width below is therefore the frame plus its stroke.
  */
-const FRAME_W = { modal: "402px", picker: "306px", qr: "324px" } as const;
+const FRAME_W = { modal: "402px", picker: "320px", qr: "324px" } as const;
+
+/**
+ * The picker is the one fixed-size popup in the flow: 320 x 424, per the
+ * frame. Its list holds whatever the tenant has, so the rows scroll inside
+ * that box rather than growing it.
+ *
+ * Its width is the exception to the note above — the frame is 320 and the
+ * painted box is 320, not 322. Nothing inside is squeezed by spending two of
+ * them on the stroke: every child is `w-full`, so the search field lands on
+ * 302 instead of Figma's 304 and no text reflows. The modal cannot do the
+ * same because its 322px content column is what "What account should we
+ * fund?" needs to stay on one line.
+ */
+const PICKER_H = "424px";
 
 const overlayClass =
   "fixed inset-0 z-[70] bg-black/60 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0";
@@ -165,7 +179,7 @@ function AccountPicker({
             // dialog and would work either way; the selection path does.
             setTimeout(() => returnFocusTo.current?.focus(), 0);
           }}
-          style={{ ...centred, ...viewportClamp, width: FRAME_W.picker }}
+          style={{ ...centred, ...viewportClamp, width: FRAME_W.picker, height: PICKER_H }}
           className="fixed left-1/2 top-1/2 z-[76] flex flex-col overflow-hidden rounded-panel border border-solid border-brain-v1stroke-2 bg-brain-v1highlight-dropdown-bg drop-shadow-[0px_68px_13.5px_rgba(0,0,0,0.06)] focus:outline-none"
         >
           <DialogPrimitive.Title className="sr-only">Select Account</DialogPrimitive.Title>
@@ -185,7 +199,7 @@ function AccountPicker({
             </DialogPrimitive.Close>
           </div>
 
-          <div className="flex w-full min-h-0 flex-col gap-2 overflow-y-auto p-2">
+          <div className="flex min-h-0 w-full flex-1 flex-col gap-2 overflow-y-auto p-2">
             <div className="flex w-full items-center gap-2 rounded-[8px] bg-brain-v1baby-blue-15 p-2">
               <img src={searchIcon} alt="" className="block size-6 shrink-0" />
               <input

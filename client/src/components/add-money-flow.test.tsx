@@ -216,6 +216,25 @@ describe("which accounts can be funded", () => {
     render([]);
     expect((q("button-account-add") as HTMLButtonElement).disabled).toBe(true);
   });
+
+  // Twice now the picker has shipped at a size nobody asked for, because
+  // nothing failed when it drifted. The frame is a fixed 320 x 424 and the
+  // rows scroll inside it, so pin both numbers and the scroll together. This
+  // reads the inline style rather than a layout, which jsdom does not do.
+  it("keeps the picker at its fixed frame size, with the list scrolling inside", () => {
+    render([BANK, WALLET, CARD, PROCESSOR]);
+    click("button-account-add");
+    openPicker();
+
+    const picker = q("add-money-picker") as HTMLElement;
+    expect(picker.style.width).toBe("320px");
+    expect(picker.style.height).toBe("424px");
+
+    // The rows list, not the popup, is what absorbs a long account list.
+    const rows = optionFor("acct_bank").parentElement as HTMLElement;
+    expect(rows.className).toContain("overflow-y-auto");
+    expect(rows.className).toContain("flex-1");
+  });
 });
 
 describe("focus when the picker closes", () => {
