@@ -122,4 +122,4 @@
 - [Credential migration verification](credential-migration-verification.md) — prove a denial without creating a record; a bare 403 names no mechanism, absent fields are not passing evidence, and source scans cannot witness a refusal.
 - [Classification gates](credential-migration-verification.md) — normalise to refuse, compare exactly to accept; upstream `null` is the common case and means unclassified, never safe.
 - [Authorization header normalization](authorization-header-normalization.md) — normalize case before replacing Bearer auth; duplicate case variants become one comma-joined invalid JWT.
-- [Pointer capture and child controls](pointer-capture-child-controls.md) — a swipe surface must not capture pointers that start on buttons; use real touch targets, not tiny pseudo-element hitboxes.
+- [Pointer capture and touch swipes](pointer-capture-child-controls.md) — don't capture child controls; preserve measured dot geometry; test native touch events in a real browser.
