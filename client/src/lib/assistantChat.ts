@@ -2,6 +2,36 @@ export const ASSISTANT_GENERIC_ERROR =
   "Something went wrong reaching the assistant. Please try again.";
 
 /**
+ * Allocate an ID that cannot collide with a restored chat session or message.
+ *
+ * Chat history survives page reloads in localStorage, so a module-level counter
+ * is not an ID source: it resets while the records it named remain. UUIDs also
+ * avoid collisions between two tabs opened on the same account. The occupied
+ * set is still checked explicitly so the uniqueness contract is testable rather
+ * than resting only on UUID probability.
+ */
+export function allocateChatId(
+  prefix: "session" | "message",
+  occupied: Set<string>,
+  randomUUID: () => string = () => crypto.randomUUID(),
+): string {
+  let id: string;
+  do {
+    id = `${prefix}-${randomUUID()}`;
+  } while (occupied.has(id));
+  occupied.add(id);
+  return id;
+}
+
+/** Remove exactly one persisted conversation without mutating the input list. */
+export function removeChatSession<T extends { id: string }>(
+  sessions: T[],
+  sessionId: string,
+): T[] {
+  return sessions.filter((session) => session.id !== sessionId);
+}
+
+/**
  * Maximum number of messages sent to the server per /api/assistant/chat request.
  * The server's Zod schema caps the array at 50; we trim to 40 to stay comfortably
  * under that limit. Older context is dropped — the wiki/question primary path uses

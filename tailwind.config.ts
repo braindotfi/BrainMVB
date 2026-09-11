@@ -22,6 +22,7 @@ module.exports = {
         "brain-v1dark-purple": "var(--brain-v1dark-purple)",
         "brain-v1dark-purple-hover": "var(--brain-v1dark-purple-hover)",
         "brain-v1green": "var(--brain-v1green)",
+        "brain-v1asset-green": "var(--brain-v1asset-green)",
         "brain-v1headerfooterbg": "var(--brain-v1headerfooterbg)",
         "brain-v1highlight-dropdown-bg": "var(--brain-v1highlight-dropdown-bg)",
         "brain-v1light-orange": "var(--brain-v1light-orange)",

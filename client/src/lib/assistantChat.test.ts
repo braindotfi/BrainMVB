@@ -3,12 +3,48 @@ import {
   ASSISTANT_GENERIC_ERROR,
   CHAT_HISTORY_LIMIT,
   MESSAGE_CONTENT_LIMIT,
+  allocateChatId,
   buildChatPayload,
   buildTruncationNote,
   filterPayloadMessages,
   parseAssistantResponse,
+  removeChatSession,
   trimChatHistory,
 } from "./assistantChat";
+
+describe("allocateChatId", () => {
+  it("skips an ID already restored from localStorage", () => {
+    const occupied = new Set(["session-duplicate"]);
+    const candidates = ["duplicate", "fresh"];
+
+    expect(
+      allocateChatId("session", occupied, () => candidates.shift()!),
+    ).toBe("session-fresh");
+    expect(occupied).toContain("session-fresh");
+  });
+
+  it("keeps session and message namespaces distinct", () => {
+    const occupied = new Set<string>();
+    const randomUUID = () => "same-uuid";
+
+    expect(allocateChatId("session", occupied, randomUUID)).toBe("session-same-uuid");
+    expect(allocateChatId("message", occupied, randomUUID)).toBe("message-same-uuid");
+  });
+});
+
+describe("removeChatSession", () => {
+  it("removes the selected conversation and leaves the others intact", () => {
+    const sessions = [
+      { id: "session-one", title: "One" },
+      { id: "session-two", title: "Two" },
+    ];
+
+    expect(removeChatSession(sessions, "session-one")).toEqual([
+      { id: "session-two", title: "Two" },
+    ]);
+    expect(sessions).toHaveLength(2);
+  });
+});
 
 describe("parseAssistantResponse", () => {
   it("rejects a successful response with no reply instead of using preview copy", async () => {

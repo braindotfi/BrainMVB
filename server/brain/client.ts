@@ -155,6 +155,14 @@ export interface BrainTransaction {
   currency: string;
   direction: "inflow" | "outflow" | "transfer" | "adjustment";
   transaction_date: string;
+  /**
+   * The ledger account this movement sits on. Declared here because the
+   * accounts rail scopes its list to one account and has to be able to tell
+   * "belongs to another account" apart from "the feed named no account" —
+   * the second case is withheld from every account and must be reported, not
+   * quietly dropped. Optional because brain-core does return rows without it.
+   */
+  account_id?: string | null;
   counterparty_id?: string | null;
   description_normalized?: string | null;
   description_raw?: string | null;

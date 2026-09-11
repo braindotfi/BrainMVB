@@ -3,6 +3,7 @@ import { useAuth } from "@/lib/authContext";
 import { useLocation, useRoute } from "wouter";
 import googleLogo from "@assets/pngtree-google-internet-icon-vector-png-image_9183287_1784767118256.png";
 import robotMoneyLogo from "@assets/robotmoney_1788696284094.png";
+import { SocialLinks } from "@/components/SocialLinks";
 import { Button } from "@/components/ui/button";
 import { validInviteReturnTo } from "@/lib/inviteReturnTo";
 
@@ -437,7 +438,7 @@ export function SignupPage() {
         <span className="[font-family:'Gilroy',sans-serif] text-brain-v1baby-blue-30 text-sm">
           Copyright © 2026 RobotMoney Inc. All rights reserved.
         </span>
-        <img alt="Socials" src="/figmaAssets/socials.svg" className="opacity-40" />
+        <SocialLinks className="opacity-40" />
       </footer>
     </div>
   );

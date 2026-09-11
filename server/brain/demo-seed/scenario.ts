@@ -249,6 +249,8 @@ const WALLET_ACTIVITY: Array<{
   { offset: 17, type: "Receive", asset: "USDC", qty: 9250.0, counterparty: "Helios Data Co", memo: () => "INV-1050 settled in USDC", hash: "0xc4e83a5719b06d2fa87c1e40db95f37206ae8b13" },
   { offset: 21, type: "Staking reward", asset: "ETH", qty: 0.3125, counterparty: "Lido stETH", memo: (d) => `Validator rewards - ${titleCase(monthName(d))}`, hash: "0x91d27fb4630ae85c07f2ab63d418e5920cc7d6fa" },
   { offset: 25, type: "Send", asset: "USDC", qty: -6400.0, counterparty: "Halcyon Security", memo: (d) => `${nextQuarterLabel(d)} audit retainer`, hash: "0x5b30ce8241f79ad06e3b1c95f7d240a86ef31b70" },
+  { offset: 26, type: "Receive", asset: "USDC", qty: 1000.0, counterparty: "Treasury Wallet", memo: () => "Deposited 1,000 USDC", hash: "0x186f27e57cd4b268023a24571ea524892ed75db1" },
+  { offset: 27, type: "Send", asset: "USDC", qty: -240.0, counterparty: "Operations Wallet", memo: () => "Sent 240 USDC", hash: "0x4b274f309859852ba3cad01db0f014f813839c0e" },
   { offset: 28, type: "Network fee", asset: "ETH", qty: -0.0098, counterparty: "", memo: () => "Gas - USDC transfer", hash: "0xe07f92a315c48b6017da39e2fc84b5106d3a92c8" },
 ];
 

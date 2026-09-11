@@ -281,7 +281,7 @@ const NAMED_TEXT_BASELINE: Record<string, number> = {
   "pages/HomePage.tsx": 3,
   "pages/InboxPage.tsx": 1,
   "pages/SignupPage.tsx": 9,
-  "pages/sections/BrainAssistant.tsx": 5,
+  "pages/sections/BrainAssistant.tsx": 4,
   "pages/sections/NavigationMenuSection.tsx": 3,
 };
 

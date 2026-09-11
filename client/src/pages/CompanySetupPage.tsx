@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation, useRoute } from "wouter";
 import { useAuth } from "@/lib/authContext";
+import { SocialLinks } from "@/components/SocialLinks";
 import { queryClient } from "@/lib/queryClient";
 import brainLogo from "@assets/BrainLogo_1781769246241.png";
 import { Button } from "@/components/ui/button";
@@ -271,7 +272,7 @@ export function CompanySetupPage({ inviteOnly = false }: { inviteOnly?: boolean 
         <span className="[font-family:'Gilroy',sans-serif] text-brain-v1baby-blue-60 text-sm">
           Copyright © 2026 Brain Finance. All rights reserved.
         </span>
-        <img alt="Socials" src="/figmaAssets/socials.svg" className="opacity-40" />
+        <SocialLinks className="opacity-40" />
       </footer>
     </div>
   );
