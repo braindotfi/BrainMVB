@@ -842,6 +842,13 @@ describe("the rail popups", () => {
     }
   });
 
+  /** Lets a few animation frames run inside act(). */
+  async function settleFrames() {
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 48));
+    });
+  }
+
   it("follows the rail when it moves without changing size", async () => {
     collapse();
     const frame = railFrame();
@@ -850,13 +857,54 @@ describe("the rail popups", () => {
     click("button-collapsed-wallet");
     const popup = qPortal("popup-rail-accounts")!;
     expect(popup.style.left).toBe("514px");
+
+    // Let the watcher run first, so this cannot pass on a single deferred
+    // placement: the move has to be picked up by a *later* frame, which only
+    // happens if the loop reschedules itself.
+    await settleFrames();
+    expect(popup.style.left).toBe("514px");
+
     // Collapsing a sibling panel slides the rail sideways at the same width:
     // no resize, no scroll, and a ResizeObserver reports box sizes only.
     stubRect(frame, 700, 0, 54, 700);
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 48));
-    });
+    await settleFrames();
     expect(popup.style.left).toBe("314px");
+
+    // And it keeps following, rather than tracking one move and stopping.
+    stubRect(frame, 500, 0, 54, 700);
+    await settleFrames();
+    expect(popup.style.left).toBe("114px");
+  });
+
+  it("stops reading the anchor every frame once the popup closes", async () => {
+    const cancelled: number[] = [];
+    const scheduled: number[] = [];
+    const realRaf = window.requestAnimationFrame.bind(window);
+    const rafSpy = vi.spyOn(window, "requestAnimationFrame").mockImplementation((cb) => {
+      const id = realRaf(cb);
+      scheduled.push(id);
+      return id;
+    });
+    const cancelSpy = vi
+      .spyOn(window, "cancelAnimationFrame")
+      .mockImplementation((id) => cancelled.push(id) && undefined);
+    try {
+      collapse();
+      click("button-collapsed-wallet");
+      expect(qPortal("popup-rail-accounts")).toBeTruthy();
+      await settleFrames();
+      const outstanding = scheduled[scheduled.length - 1];
+      expect(scheduled.length).toBeGreaterThan(1);
+
+      clickPortal("popup-rail-accounts-close");
+
+      // Without the cancel, the loop keeps measuring a closed popup forever
+      // and holds on to the old anchor and content.
+      expect(cancelled).toContain(outstanding);
+    } finally {
+      rafSpy.mockRestore();
+      cancelSpy.mockRestore();
+    }
   });
 
   it("hands focus back to the button that opened it", async () => {
