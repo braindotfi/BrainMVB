@@ -35,35 +35,8 @@ Nothing keeps a `fixed` element on screen. A portal menu needs, at minimum:
 
 Placement needs the menu's own height, which does not exist on the first call.
 Use a two-pass: place unmeasured, render the menu `visibility: hidden` for one
-frame, then re-place once the element exists.
-
-### Get the element through a callback ref, not a `useRef`
-
-The obvious two-pass — a `useRef` plus a `measured` flag the layout effect sets
-once `ref.current` is populated — is broken whenever the overlay's content is
-mounted by a library in a *later* commit than the hook's own. Radix's
-`Dialog.Content` does exactly this. On every run of the effect `ref.current` is
-still null, the flag never flips, the effect's deps never change so it never
-runs again, and the element stays `visibility: hidden` forever. The symptom is
-an overlay that dims the screen with nothing on it, and no console error.
-
-Put the node in **state** via a callback ref (`ref={setContent}`) and make the
-placement callback depend on it. The element arriving is then a render, which is
-what makes the second pass happen at all. It still terminates: pass one has no
-element, pass two has one, and nothing after that changes the dependency.
-
-**Why:** a whole screenshot round was lost to a blank overlay caused by exactly
-this ref-timing assumption.
-
-### Anchor to the frame, not to the button
-
-When the trigger sits inside a padded chrome element (a rail, a toolbar), design
-almost always butts the overlay against that chrome's *outer* border while
-aligning it vertically with the button. Reading both edges off the button slides
-the overlay over the chrome's padding and hides its border — a few pixels, but
-it reads as the overlay sitting on top of the rail rather than beside it. Have
-the chrome publish itself (`data-…-frame`) and take the horizontal edge from
-`anchor.closest(...)`, keeping the trigger rect for the vertical alignment.
+frame, then re-place from a layout effect once the ref is populated. Gate the
+second pass on a `measured` flag or the effect loops.
 
 ## Do not claim a role the markup does not implement
 
