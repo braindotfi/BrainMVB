@@ -168,11 +168,11 @@ present and exact or production boot fails before issuance:
   40-character commit SHA and must exactly equal the commit embedded in the
   production build.
 - `NORTHSTAR_AGENT_API_KEY_MIGRATION_WINDOW_START` must be
-  `2026-09-12T14:00:00Z`.
+  `2026-09-12T18:00:00Z`.
 - `NORTHSTAR_AGENT_API_KEY_MIGRATION_WINDOW_END` must be
-  `2026-09-12T17:00:00Z`.
+  `2026-09-12T21:00:00Z`.
 - `NORTHSTAR_AGENT_API_KEY_MIGRATION_AUTHORIZATION` must be
-  `APPROVE_NORTHSTAR_2026_09_12_EVENING_NO_LEGACY_ROLLBACK`.
+  `APPROVE_NORTHSTAR_2026_09_12_LATE_NO_LEGACY_ROLLBACK`.
 - The process must be production and the current time must be in the half-open
   interval from the start through, but not including, the end.
 
@@ -211,7 +211,7 @@ verified without printing any value:
 - `NORTHSTAR_AGENT_API_KEY_MIGRATION_AUTHORIZATION`
 
 This teardown is part of the September 12 cutover itself. It is not deferred to
-task #315 or another follow-up. Complete it before `2026-09-12T17:00:00Z` on
+task #315 or another follow-up. Complete it before `2026-09-12T21:00:00Z` on
 both terminal paths:
 
 1. **Success:** after the migration receipt and external demo smoke test both
