@@ -17,8 +17,13 @@ import {
   createPasswordResetRequestLimiter,
   createPasswordResetVerifyLimiter,
 } from "./passwordResetRateLimit";
+import {
+  ENV_PROPAGATION_CANARY_NAME,
+  envPropagationCanaryWitness,
+} from "./envPropagationCanary";
 
 if (process.env.NODE_ENV === "production") {
+  console.log(envPropagationCanaryWitness(process.env[ENV_PROPAGATION_CANARY_NAME]));
   assertEncryptionKeyConfigured();
 }
 
