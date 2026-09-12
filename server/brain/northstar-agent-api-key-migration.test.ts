@@ -168,7 +168,7 @@ function wireNorthstar(options: { directStatus?: number } = {}): string {
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });
-  vi.setSystemTime(Date.parse("2026-09-12T09:00:00Z"));
+  vi.setSystemTime(Date.parse("2026-09-12T15:00:00Z"));
   storage.rows.clear();
   vi.clearAllMocks();
   exchangeMock = () => Promise.reject(new Error("exchange not wired"));
