@@ -9,16 +9,16 @@ export const PROTECTED_AGENT_API_KEY_MIGRATION_TENANT_IDS: readonly string[] = [
 /**
  * Individually approved Northstar migration. This tenant stays protected from
  * every ordinary batch; the values below only fence the separate manual path.
- * Dubai is UTC+04:00 on this date, so 12:00-15:00 is 08:00-11:00 UTC.
+ * Dubai is UTC+04:00 on this date, so 18:00-21:00 is 14:00-17:00 UTC.
  */
 export const NORTHSTAR_AGENT_API_KEY_MIGRATION_TENANT_ID =
   "tnt_01M0KHRVY3RT3EXN7WT2SPDFMZ";
 export const NORTHSTAR_AGENT_API_KEY_MIGRATION_WINDOW_START_ISO =
-  "2026-09-12T08:00:00Z";
+  "2026-09-12T14:00:00Z";
 export const NORTHSTAR_AGENT_API_KEY_MIGRATION_WINDOW_END_ISO =
-  "2026-09-12T11:00:00Z";
+  "2026-09-12T17:00:00Z";
 export const NORTHSTAR_AGENT_API_KEY_MIGRATION_AUTHORIZATION =
-  "APPROVE_NORTHSTAR_2026_09_12_NO_LEGACY_ROLLBACK";
+  "APPROVE_NORTHSTAR_2026_09_12_EVENING_NO_LEGACY_ROLLBACK";
 
 /**
  * The instant the legacy agent JWTs backing this migration's rollback path stop
