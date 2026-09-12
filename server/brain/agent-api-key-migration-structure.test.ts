@@ -57,13 +57,13 @@ describe("Phase 3 BFF migration structure", () => {
       NORTHSTAR_AGENT_API_KEY_MIGRATION_TENANT_ID,
     );
     expect(NORTHSTAR_AGENT_API_KEY_MIGRATION_WINDOW_START_ISO).toBe(
-      "2026-09-12T08:00:00Z",
+      "2026-09-12T14:00:00Z",
     );
     expect(NORTHSTAR_AGENT_API_KEY_MIGRATION_WINDOW_END_ISO).toBe(
-      "2026-09-12T11:00:00Z",
+      "2026-09-12T17:00:00Z",
     );
     expect(NORTHSTAR_AGENT_API_KEY_MIGRATION_AUTHORIZATION).toBe(
-      "APPROVE_NORTHSTAR_2026_09_12_NO_LEGACY_ROLLBACK",
+      "APPROVE_NORTHSTAR_2026_09_12_EVENING_NO_LEGACY_ROLLBACK",
     );
     expect(migrationSource).toContain("assertNorthstarMigrationAuthorization(Date.now())");
     expect(migrationSource).toContain("BUILD_COMMIT !== approvedSha");
@@ -104,7 +104,7 @@ describe("Phase 3 BFF migration structure", () => {
     );
     expect(migrationRunbookSource).toContain("1. **Success:**");
     expect(migrationRunbookSource).toContain("2. **Failure or abort:**");
-    expect(migrationRunbookSource).toContain("before `2026-09-12T11:00:00Z`");
+    expect(migrationRunbookSource).toContain("before `2026-09-12T17:00:00Z`");
     expect(migrationRunbookSource).toContain("verify all five names are absent");
   });
 
