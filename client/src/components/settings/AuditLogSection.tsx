@@ -264,7 +264,21 @@ function AuditFilterMenu<T extends string>({
 }
 
 export function AuditLogSection() {
-  const { records: brainRecords, isLoading, isError } = useBrainAuditRecords();
+  const {
+    records: brainRecords,
+    isLoading,
+    isError,
+    isTimeout,
+    hasMore,
+    loadMore,
+    retry,
+    isLoadingMore,
+    loadMoreError,
+    isLoadMoreTimeout,
+    paginationStalled,
+    anchorUnavailable,
+    refreshError,
+  } = useBrainAuditRecords();
   const acknowledgedRecords = useAcknowledgedRecords();
   const { formatText } = useCurrency();
   const search = useSearch();
@@ -330,6 +344,12 @@ export function AuditLogSection() {
      rows, whatever else is on screen. */
   const feedUnavailable = isError;
 
+  /* Older history exists beyond what has been read. Either it can still be
+     fetched (`hasMore`) or upstream stopped advancing its cursor
+     (`paginationStalled`) — both mean the rows on screen are a recent slice,
+     not the trail, and every count and completeness claim has to say so. */
+  const moreToLoad = hasMore || paginationStalled;
+
   /* Pager over exactly what is on screen, so Next never jumps to a row the
      current filter is hiding. */
   const stepRecord = (delta: number) => {
@@ -347,13 +367,25 @@ export function AuditLogSection() {
 
   const emptyMessage = (): { title: string; detail?: string } => {
     if (isError) {
-      return {
-        title: "Brain couldn't read your audit history.",
-        detail: "This list is unavailable, not empty.",
-      };
+      return isTimeout
+        ? {
+            title: "Brain took too long to read your audit history.",
+            detail: "This list is unavailable, not empty. Try again.",
+          }
+        : {
+            title: "Brain couldn't read your audit history.",
+            detail: "This list is unavailable, not empty.",
+          };
     }
     if (isLoading) return { title: "Reading your audit history…" };
-    if (records.length === 0) return { title: "No audit records yet." };
+    if (records.length === 0) {
+      return refreshError != null
+        ? {
+            title: "No audit records in what could be read.",
+            detail: "The last refresh failed, so anything recorded since then is missing.",
+          }
+        : { title: "No audit records yet." };
+    }
     if (query.trim() && searched.length === 0) return { title: "No records match your search." };
     if (withheldByFilter > 0) {
       const activeFilters = [
@@ -375,12 +407,15 @@ export function AuditLogSection() {
           <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-brain-v1baby-blue-60 text-[16px]">
             Audit Log
           </p>
-          {/* The feed is a complete cursor walk, so this is the actual record count. */}
+          {/* Counts what has been LOADED, which is not necessarily the whole
+              history — older pages are fetched on demand. `moreToLoad` below
+              turns the bare number into "N so far" so the pill never implies a
+              total it has not read. */}
           {!isLoading && !feedUnavailable && records.length > 0 && (
             <CountPill testId="badge-audit-count">
               {visible.length === records.length
-                ? `${records.length}`
-                : `${visible.length} of ${records.length}`}
+                ? moreToLoad ? `${records.length} so far` : `${records.length}`
+                : `${visible.length} of ${records.length}${moreToLoad ? " so far" : ""}`}
             </CountPill>
           )}
         </div>
@@ -391,6 +426,36 @@ export function AuditLogSection() {
             data-testid="text-audit-scope"
           >
             Brain's audit feed could not be read, so this page cannot say what your history contains.
+          </p>
+        )}
+
+        {/* The rows below are real but of unknown age: a refresh of the feed
+            failed, so anything recorded since the last successful read is
+            missing from a list that otherwise looks current. */}
+        {/* Not gated on there being rows: an empty list that failed to refresh
+            is the most misleading case of all, since "No audit records yet"
+            reads as a confirmed all-clear. */}
+        {!feedUnavailable && refreshError != null && (
+          <p
+            className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-brain-v1baby-blue-60 text-[13px] pb-[8px]"
+            data-testid="text-audit-stale"
+          >
+            Couldn't refresh your audit history just now, so newer records may be missing from this
+            list.
+          </p>
+        )}
+
+        {/* Anchoring status comes from its own read. When that read fails the
+            records themselves are fine, but every Pending pill on this page is
+            then an unknown rather than a fact, so say which part is missing
+            instead of letting the pills speak for it. */}
+        {!feedUnavailable && anchorUnavailable && records.length > 0 && (
+          <p
+            className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-brain-v1baby-blue-60 text-[13px] pb-[8px]"
+            data-testid="text-audit-anchor-unavailable"
+          >
+            Anchoring status couldn't be read, so the status shown on each record may be out of
+            date. The records themselves are unaffected.
           </p>
         )}
 
@@ -527,6 +592,50 @@ export function AuditLogSection() {
               </div>
             );
           })
+        )}
+
+        {/* Pagination footer. Only ever rendered under rows that loaded, so a
+            later-page failure is reported here as a recoverable gap rather
+            than replacing the history the user can already read. */}
+        {!feedUnavailable && records.length > 0 && (hasMore || loadMoreError != null || paginationStalled) && (
+          <div className="border-t border-brain-v1stroke-2 px-4 py-[12px] flex flex-col gap-[8px]">
+            {loadMoreError != null && (
+              <p
+                data-testid="text-audit-load-more-error"
+                className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[13px] leading-[18px]"
+              >
+                {isLoadMoreTimeout
+                  ? "Older records took too long to load. The records above are still accurate."
+                  : "Couldn't load older records. The records above are still accurate."}
+              </p>
+            )}
+
+            {paginationStalled && loadMoreError == null && (
+              <p
+                data-testid="text-audit-pagination-stalled"
+                className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[13px] leading-[18px]"
+              >
+                Brain stopped paging through your history, so older records than these can't be
+                reached right now.
+              </p>
+            )}
+
+            {hasMore && (
+              <button
+                type="button"
+                data-testid="button-audit-load-more"
+                onClick={loadMore}
+                disabled={isLoadingMore}
+                className="self-start [font-family:'Gilroy',sans-serif] font-semibold text-[14px] leading-[20px] text-brain-v1baby-blue-100 disabled:opacity-50 hover:underline"
+              >
+                {isLoadingMore
+                  ? "Loading older records…"
+                  : loadMoreError != null
+                    ? "Try again"
+                    : "Load older records"}
+              </button>
+            )}
+          </div>
         )}
       </div>
 

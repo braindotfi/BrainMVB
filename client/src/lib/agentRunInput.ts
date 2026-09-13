@@ -31,8 +31,7 @@
  * ruling out up front.
  */
 
-import { useQuery } from "@tanstack/react-query";
-import { AUDIT_EVENTS_LIMIT, fetchAllBrainAuditEvents, type BrainAuditEvent } from "./brainAudit";
+import { useBrainAuditEventPages, type BrainAuditEvent } from "./brainAudit";
 
 /** brain-core's action string for the terminal outcome this section renders. */
 export const MISSING_EVIDENCE_ACTION = "agent.run.missing_evidence";
@@ -209,23 +208,30 @@ export function missingEvidenceItems(events: readonly BrainAuditEvent[] | null |
 /**
  * The "Needs Your Input" feed.
  *
- * Deliberately shares `useBrainAuditRecords`' exact query key so react-query
- * serves both from one cache entry: this is a second reading of the same audit
- * feed, not a second fetch, and a divergent key would double the request AND let
- * the two surfaces show different snapshots of the same events.
+ * Deliberately reads `useBrainAuditRecords`' exact shared audit query so
+ * react-query serves both from one cache entry: this is a second reading of the
+ * same audit feed, not a second fetch, and a divergent key would double the
+ * request AND let the two surfaces show different snapshots of the same events.
  *
+ * Reads the audit pages loaded so far rather than a completed walk of the whole
+ * history. This feed surfaces runs that stalled waiting on evidence, which are
+ * recent by nature, and showing the recent ones straight away beats showing
+ * none until every historical page has been read.
  */
 export function useMissingEvidenceItems() {
-  const query = useQuery<{ events: BrainAuditEvent[]; next_cursor: string | null }>({
-    queryKey: [`/api/brain/audit/events?limit=${AUDIT_EVENTS_LIMIT}`],
-    queryFn: ({ signal }) => fetchAllBrainAuditEvents(signal),
-    retry: false,
-  });
-  const events = query.data?.events;
+  const pages = useBrainAuditEventPages();
   return {
-    items: missingEvidenceItems(events),
-    isError: query.isError,
-    isLoading: query.isLoading,
+    items: missingEvidenceItems(pages.events),
+    isError: Boolean(pages.initialError),
+    isLoading: pages.isInitialLoading,
+    /* The audit feed is read newest-first, a page at a time, so "no items"
+       means none in what has been read. An older unread page can still hold a
+       request for input, and a count derived from this must hedge rather than
+       report an all-clear it cannot support. A stalled cursor is the same
+       situation even though `hasMore` has gone false. */
+    isPartial: pages.hasMore || pages.paginationStalled,
+    /* A refresh failed, so these items are of unknown age. */
+    isStale: Boolean(pages.refreshError),
   };
 }
 

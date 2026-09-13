@@ -116,8 +116,9 @@ describe("a read that hasn't answered yet", () => {
 });
 
 describe("Overview wires the summary to every feed it depends on", () => {
-  /* The page must pass `incomplete: true` when a read fails. Successful list
-     reads are complete cursor walks and no longer contribute truncation flags. */
+  /* The page must pass `incomplete: true` when a read fails — and also when an
+     audit-derived read succeeded but has only loaded part of the history, since
+     a count taken from a partial read is not the all-clear it looks like. */
   const src = readFileSync("client/src/pages/HomePage.tsx", "utf8");
   const flag = src.slice(src.indexOf("const incompleteRead ="), src.indexOf("const pendingSummary"));
 

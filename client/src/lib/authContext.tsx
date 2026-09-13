@@ -6,6 +6,7 @@ import { resetAcknowledgedStore } from "./acknowledgedStore";
 import { setBackupApproverScope } from "./backupApprover";
 import { markOnboardingComplete } from "./onboarding";
 import { setUserContactScope } from "./userContact";
+import { setDecisionReceiptScope } from "./decisionReceipts";
 import { reportRateLimit } from "./rateLimit";
 
 export interface AuthUser {
@@ -70,6 +71,11 @@ export function applyUserScopedResets(u: AuthUser | null): void {
      confirmed live (2026-08-13), fixed by scoping the key to userId instead
      of trying to clear it at the right moments. */
   setUserContactScope(u?.id ?? null);
+  /* Decision receipts assert "you decided this, just now". Re-pointed by user id
+     for the same reason as the two stores above: a page-load bootstrap runs
+     through this funnel too, and clearing there would drop a receipt whose audit
+     event has not landed yet — the exact gap the receipt exists to cover. */
+  setDecisionReceiptScope(u?.id ?? null);
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {

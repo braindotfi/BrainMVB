@@ -718,6 +718,14 @@ export function createBrainProxyRouter(): Router {
     { method: "post", mount: "/policy/lint", upstream: (_p, t) => `/policy/${esc(t)}/lint`, principal: "member", scope: "policy:read" },
     { method: "post", mount: "/policy/diff", upstream: (_p, t) => `/policy/${esc(t)}/diff`, principal: "member", scope: "policy:read" },
     { method: "post", mount: "/policy/simulate-historical", upstream: (_p, t) => `/policy/${esc(t)}/simulate-historical`, principal: "member", scope: "policy:read" },
+    // proposals — authoritative decision state for a bounded batch of ids.
+    // A POST that READS: it takes a body (up to 100 proposal ids) and mutates
+    // nothing, which is why it carries execution:read and the member token
+    // rather than an approve scope. Core enforces tenant scoping, so an id from
+    // another tenant comes back found=false rather than leaking a row.
+    // Mounted before nothing else it can collide with: /proposals/:id/decide is
+    // also three segments, but its last is "decide", never "query".
+    { method: "post", mount: "/proposals/decision-states/query", upstream: () => "/proposals/decision-states/query", principal: "member", scope: "execution:read" },
     // agents_execution_payments_members
     { method: "post", mount: "/agents/route", upstream: () => "/agents/route", principal: "member", scope: "execution:read" },
     { method: "post", mount: "/agents/run", upstream: () => "/agents/run", principal: "agent", scope: "payment_intent:propose" },
@@ -797,7 +805,15 @@ export function createBrainProxyRouter(): Router {
       for (const [k, v] of Object.entries(req.query)) {
         if (typeof v === "string") query[k] = v;
       }
-      const data = await withBrainBaseUrl(baseUrl, () => brainRequest<unknown>(req.path, { token, query }));
+      /* Audit reads get a hard upstream deadline. Without one a hung brain-core
+         response holds the BFF socket open indefinitely and the client has no
+         way to tell "still working" from "never coming" — which is how the
+         audit page could sit on its loading state forever. Kept below the
+         client's own 20 s backstop so the structured 504 below is what the user
+         normally sees. Scoped to audit paths: other reads keep their existing
+         behaviour rather than inheriting a deadline nobody has measured. */
+      const timeoutMs = req.path.startsWith("/audit/") ? AUDIT_UPSTREAM_TIMEOUT_MS : undefined;
+      const data = await withBrainBaseUrl(baseUrl, () => brainRequest<unknown>(req.path, { token, query, timeoutMs }));
       return res.json(data);
     } catch (err) {
       return relayError(res, err);
@@ -815,6 +831,18 @@ export function createBrainProxyRouter(): Router {
   return router;
 }
 
+/** Upstream deadline for proxied `/audit/*` reads. Must stay BELOW the client's
+ *  own timeout (AUDIT_CLIENT_TIMEOUT_MS in client/src/lib/brainAudit.ts) so the
+ *  structured 504 arrives before the browser gives up on its own. */
+const AUDIT_UPSTREAM_TIMEOUT_MS = 15_000;
+
+/** `AbortSignal.timeout` rejects with a TimeoutError DOMException; some paths
+ *  surface the plain AbortError name instead. Both mean the same thing here. */
+function isAbortError(err: unknown): boolean {
+  const name = (err as { name?: string } | null)?.name;
+  return name === "TimeoutError" || name === "AbortError";
+}
+
 function unconfigured(res: Response): Response {
   return res.status(503).json({
     error: "brain_unconfigured",
@@ -823,6 +851,16 @@ function unconfigured(res: Response): Response {
 }
 
 function relayError(res: Response, err: unknown): Response {
+  /* An aborted upstream fetch is our own deadline firing, not a refusal. It has
+     to reach the client as a distinct status: a generic 500 would be reported
+     as "Brain couldn't read your audit history", which claims the read failed
+     when what actually happened is that it never finished. */
+  if (isAbortError(err)) {
+    return res.status(504).json({
+      error: "upstream_timeout",
+      message: "brain-core did not respond in time.",
+    });
+  }
   if (err instanceof PendingInviteError) {
     return res.status(409).json({
       error: "pending_invite",
