@@ -124,4 +124,5 @@
 - [Authorization header normalization](authorization-header-normalization.md) — normalize case before replacing Bearer auth; duplicate case variants become one comma-joined invalid JWT.
 - [Pointer capture and touch swipes](pointer-capture-child-controls.md) — don't capture child controls; preserve measured dot geometry; test native touch events in a real browser.
 - [Audit pagination & decision receipts](audit-feed-pagination-and-receipts.md) — effective state comes from a state read, never a replayed feed; infinite-query invalidation refetches every page; fail-open hiding owes a disclosure.
+- [Deployment source attestation](deployment-source-attestation.md) — publishing requires a clean workspace synced to origin/main; a feature or memory branch fails before package build.
 - [Kind-keyed detail branches](kind-keyed-detail-branches.md) — a boolean over a 7-member kind enum captioned card refs as IBANs; branch three ways and render unsupported honestly.
