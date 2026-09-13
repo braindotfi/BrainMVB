@@ -695,20 +695,15 @@ describe("the collapsed rail", () => {
 });
 
 describe("adding money", () => {
+  /**
+   * Choosing an account now happens in its own picker popup (Figma
+   * 6543:54913) rather than in a native select, and the choice is what
+   * advances the flow — there is no Next to press afterwards.
+   */
   function chooseAccount(accountId: string) {
-    const select = qPortal("add-money-account-select") as HTMLSelectElement;
-    act(() => {
-      select.value = accountId;
-      select.dispatchEvent(new Event("change", { bubbles: true }));
-    });
-  }
-
-  function portalButton(label: string): HTMLButtonElement {
-    const button = Array.from(document.body.querySelectorAll<HTMLButtonElement>("button")).find(
-      (candidate) => candidate.textContent?.trim() === label,
-    );
-    expect(button).toBeDefined();
-    return button!;
+    clickPortal("add-money-account-select");
+    expect(qPortal("add-money-picker")).not.toBeNull();
+    clickPortal(`add-money-picker-option-${accountId}`);
   }
 
   function openAdd() {
@@ -716,17 +711,23 @@ describe("adding money", () => {
     expect(qPortal("add-money-modal")?.getAttribute("data-node-id")).toBe("3608:34362");
   }
 
-  it("keeps Next disabled until an account is chosen", () => {
+  it("opens the picker from the field and advances on the choice", () => {
     openAdd();
-    expect(portalButton("Next").disabled).toBe(true);
+    // Before a choice there is nothing to go on to, so Next is shown disabled.
+    const next = Array.from(document.body.querySelectorAll<HTMLButtonElement>("button")).find(
+      (candidate) => candidate.textContent?.trim() === "Next",
+    );
+    expect(next?.disabled).toBe(true);
+
     chooseAccount("acct_operating");
-    expect(portalButton("Next").disabled).toBe(false);
+    // The picker closes behind the choice and the modal is on its details step.
+    expect(qPortal("add-money-picker")).toBeNull();
+    expect(qPortal("add-money-modal")?.getAttribute("data-node-id")).toBe("6543:55103");
   });
 
   it("shows the selected bank account's real funding details", () => {
     openAdd();
     chooseAccount("acct_operating");
-    act(() => portalButton("Next").click());
 
     const modal = qPortal("add-money-modal");
     expect(modal?.getAttribute("data-node-id")).toBe("6543:55103");
@@ -738,16 +739,20 @@ describe("adding money", () => {
   it("shows the wallet address and opens a generated QR overlay", () => {
     openAdd();
     chooseAccount("acct_wallet");
-    act(() => portalButton("Next").click());
 
     const modal = qPortal("add-money-modal");
-    expect(modal?.getAttribute("data-node-id")).toBe("2979:41718");
+    expect(modal?.getAttribute("data-node-id")).toBe("6543:55164");
     expect(modal?.textContent).toContain("0x3619");
     clickPortal("add-money-show-qr");
 
     const qr = qPortal("add-money-qr-modal");
     expect(qr?.getAttribute("data-node-id")).toBe("2979:42687");
-    expect(qr?.querySelector("svg")).not.toBeNull();
+    const code = qr?.querySelector("svg");
+    expect(code).not.toBeNull();
+    // Funding-address QR codes intentionally use a conventional high-contrast
+    // tile rather than Figma's low-contrast inverted treatment.
+    expect(code?.querySelector('path[fill="#ffffff"]')).not.toBeNull();
+    expect(code?.querySelector('path[fill="#000000"]')).not.toBeNull();
     expect(qPortal("add-money-modal")).not.toBeNull();
   });
 
