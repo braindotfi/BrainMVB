@@ -91,19 +91,36 @@ function portalButton(label: string): HTMLButtonElement {
   return button!;
 }
 
-function choose(accountId: string) {
-  const select = q("add-money-account-select") as HTMLSelectElement;
+/**
+ * React installs a value tracker on the input node, so assigning `.value`
+ * directly and firing `input` is swallowed as a no-op change. Go through the
+ * prototype setter the tracker wraps.
+ */
+function type(testId: string, value: string) {
+  const input = q(testId) as HTMLInputElement;
+  expect(input, `missing [data-testid="${testId}"]`).not.toBeNull();
+  const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
   act(() => {
-    select.value = accountId;
-    select.dispatchEvent(new Event("change", { bubbles: true }));
+    setter!.call(input, value);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
   });
 }
 
-function optionFor(accountId: string): HTMLOptionElement {
-  const select = q("add-money-account-select") as HTMLSelectElement;
-  const option = Array.from(select.options).find((candidate) => candidate.value === accountId);
-  expect(option, `missing option for ${accountId}`).toBeDefined();
+/** Opening the field opens the picker popup; the picker is where a choice is made. */
+function openPicker() {
+  click("add-money-account-select");
+}
+
+function optionFor(accountId: string): HTMLButtonElement {
+  const option = q(`add-money-picker-option-${accountId}`) as HTMLButtonElement | null;
+  expect(option, `missing picker row for ${accountId}`).not.toBeNull();
   return option!;
+}
+
+/** Choosing in the picker is what advances the flow — there is no Next to press. */
+function choose(accountId: string) {
+  openPicker();
+  click(`add-money-picker-option-${accountId}`);
 }
 
 beforeEach(() => {
@@ -122,56 +139,199 @@ describe("which accounts can be funded", () => {
   it("offers bank and wallet accounts as selectable", () => {
     render([BANK, WALLET, CARD]);
     click("button-account-add");
-    expect(optionFor("acct_bank").disabled).toBe(false);
-    expect(optionFor("acct_wallet").disabled).toBe(false);
+    expect(document.body.querySelector('[aria-label="Close Add Money"]')).toBeNull();
+    openPicker();
+    expect(optionFor("acct_bank").getAttribute("aria-disabled")).toBeNull();
+    expect(optionFor("acct_wallet").getAttribute("aria-disabled")).toBeNull();
+  });
+
+  it("uses wallet artwork for an on-chain account", () => {
+    render([BANK, WALLET]);
+    click("button-account-add");
+    openPicker();
+
+    expect(optionFor("acct_bank").querySelector("img")?.getAttribute("data-account-artwork")).toBe("bank");
+    expect(optionFor("acct_wallet").querySelector("img")?.getAttribute("data-account-artwork")).toBe("wallet");
+
+    click("add-money-picker-option-acct_wallet");
+    expect(q("add-money-account-select")?.querySelector("img")?.getAttribute("data-account-artwork")).toBe("wallet");
   });
 
   it("lists a card account but will not let it be chosen, and says why", () => {
     render([BANK, CARD]);
     click("button-account-add");
+    openPicker();
     const option = optionFor("acct_card");
     // Listed, not hidden — the account still exists and a reader looking for
     // it should find it rather than wonder where it went.
-    expect(option.disabled).toBe(true);
-    expect(option.textContent).toContain("no funding details");
+    expect(option.getAttribute("aria-disabled")).toBe("true");
+    expect(option.textContent).toContain("No funding details");
   });
 
   it("never captions a card's reference as an IBAN", () => {
     render([BANK, CARD]);
     click("button-account-add");
-    // Drive the select past the disabled option the way a scripted change
-    // event can, to prove the gate does not rely on the option's disabled
-    // attribute alone.
+    // The row is aria-disabled rather than `disabled`, so the click really is
+    // delivered — this proves the handler refuses, not just the attribute.
     choose("acct_card");
-    expect(portalButton("Next").disabled).toBe(true);
 
     const modal = q("add-money-modal");
     expect(modal?.textContent).not.toContain("IBAN");
     expect(modal?.textContent).not.toContain("4111111111111111");
+    // Nothing was selected, so the flow is still on its first step.
+    expect(modal?.getAttribute("data-node-id")).toBe("3608:34362");
   });
 
   it("treats a payment-processor balance the same way", () => {
     render([BANK, PROCESSOR]);
     click("button-account-add");
-    expect(optionFor("acct_stripe").disabled).toBe(true);
+    openPicker();
+    expect(optionFor("acct_stripe").getAttribute("aria-disabled")).toBe("true");
     choose("acct_stripe");
-    expect(portalButton("Next").disabled).toBe(true);
+    expect(q("add-money-modal")?.getAttribute("data-node-id")).toBe("3608:34362");
   });
 
   it("still reaches the details step for a real bank account", () => {
     render([BANK, CARD]);
     click("button-account-add");
     choose("acct_bank");
-    expect(portalButton("Next").disabled).toBe(false);
-    act(() => portalButton("Next").click());
     const modal = q("add-money-modal");
+    expect(modal?.getAttribute("data-node-id")).toBe("6543:55103");
     expect(modal?.textContent).toContain("IBAN Bank Number");
     expect(modal?.textContent).toContain("AE070331234567890123456");
   });
 
-  it("disables Add entirely when nothing on the list can be funded", () => {
+  it("filters the picker by name and by identifier", () => {
+    render([BANK, WALLET]);
+    click("button-account-add");
+    openPicker();
+    type("add-money-picker-search", "0x361978");
+    expect(q("add-money-picker-option-acct_wallet")).not.toBeNull();
+    expect(q("add-money-picker-option-acct_bank")).toBeNull();
+
+    type("add-money-picker-search", "nothing here");
+    expect(q("add-money-picker-empty")?.textContent).toContain("No accounts match");
+  });
+
+  it("still opens, and explains itself, when nothing on the list can be funded", () => {
+    // A dead Add button says nothing. The reason each account cannot be
+    // funded is written on its picker row, so the flow has to be reachable
+    // for a reader to ever see it.
     render([CARD, PROCESSOR]);
+    expect((q("button-account-add") as HTMLButtonElement).disabled).toBe(false);
+    click("button-account-add");
+    openPicker();
+    expect(optionFor("acct_card").textContent).toContain("No funding details");
+    expect(optionFor("acct_stripe").textContent).toContain("No funding details");
+  });
+
+  it("disables Add only when there are no accounts at all", () => {
+    render([]);
     expect((q("button-account-add") as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  // Twice now the picker has shipped at a size nobody asked for, because
+  // nothing failed when it drifted. The frame is a fixed 320 x 424 and the
+  // rows scroll inside it, so pin both numbers and the scroll together. This
+  // reads the inline style rather than a layout, which jsdom does not do.
+  it("keeps the picker at its fixed frame size, with the list scrolling inside", () => {
+    render([BANK, WALLET, CARD, PROCESSOR]);
+    click("button-account-add");
+    openPicker();
+
+    const picker = q("add-money-picker") as HTMLElement;
+    expect(picker.style.width).toBe("320px");
+    expect(picker.style.height).toBe("424px");
+
+    // The rows list, not the popup, is what absorbs a long account list.
+    const rows = optionFor("acct_bank").parentElement as HTMLElement;
+    expect(rows.className).toContain("overflow-y-auto");
+    expect(rows.className).toContain("flex-1");
+  });
+
+  it("scales only step 1 to its 301.5px painted width", () => {
+    render([BANK, WALLET]);
+    click("button-account-add");
+
+    const modal = q("add-money-modal") as HTMLElement;
+    const modalScale = Number(modal.style.transform.match(/scale\(([^)]+)\)/)?.[1]);
+    expect(Number.parseFloat(modal.style.width) * modalScale).toBeCloseTo(301.5, 8);
+
+    choose("acct_bank");
+    expect((q("add-money-modal") as HTMLElement).style.transform).toBe("translate(-50%, -50%)");
+  });
+});
+
+describe("focus when the picker closes", () => {
+  /**
+   * The picker is a controlled Radix root with no Dialog.Trigger, so Radix
+   * suppresses its own restoration and focus lands on <body> unless the
+   * component puts it back. Every close path is checked, because they run
+   * through different Radix code and only one of them was ever exercised.
+   */
+  /**
+   * Restoration is deferred with a timer (see the comment on the picker's
+   * onCloseAutoFocus), so flushing microtasks alone reads the frame before it
+   * happens and every one of these would pass for the wrong reason.
+   */
+  async function settle() {
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    });
+  }
+
+  it("returns focus to the field after choosing an account", async () => {
+    render([BANK]);
+    click("button-account-add");
+    const field = q("add-money-account-select") as HTMLButtonElement;
+    openPicker();
+    click("add-money-picker-option-acct_bank");
+    await settle();
+    expect(q("add-money-picker")).toBeNull();
+    expect(document.activeElement).toBe(q("add-money-account-select"));
+    expect(q("add-money-account-select")).toBe(field);
+  });
+
+  it("returns focus to the field on Escape, leaving the modal open", async () => {
+    render([BANK]);
+    click("button-account-add");
+    openPicker();
+    act(() => {
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    });
+    await settle();
+    // Escape closes only the topmost layer.
+    expect(q("add-money-picker")).toBeNull();
+    expect(q("add-money-modal")).not.toBeNull();
+    expect(document.activeElement).toBe(q("add-money-account-select"));
+  });
+
+  it("returns focus to the field from the close glyph", async () => {
+    render([BANK]);
+    click("button-account-add");
+    openPicker();
+    const close = document.body.querySelector<HTMLButtonElement>('[aria-label="Close account picker"]');
+    expect(close).not.toBeNull();
+    act(() => close!.click());
+    await settle();
+    expect(q("add-money-picker")).toBeNull();
+    expect(document.activeElement).toBe(q("add-money-account-select"));
+  });
+
+  it("returns focus to the field after dismissing the picker scrim", async () => {
+    render([BANK]);
+    click("button-account-add");
+    openPicker();
+    await settle();
+    const overlay = q("add-money-picker-overlay");
+    act(() => {
+      overlay?.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true, button: 0 }));
+      overlay?.dispatchEvent(new MouseEvent("pointerup", { bubbles: true, button: 0 }));
+      overlay?.dispatchEvent(new MouseEvent("click", { bubbles: true, button: 0 }));
+    });
+    await settle();
+    expect(q("add-money-picker")).toBeNull();
+    expect(document.activeElement).toBe(q("add-money-account-select"));
   });
 });
 
@@ -194,7 +354,6 @@ describe("copying funding details", () => {
     render([BANK]);
     click("button-account-add");
     choose("acct_bank");
-    act(() => portalButton("Next").click());
 
     const copy = document.body.querySelector<HTMLButtonElement>('[aria-label="Copy IBAN Bank Number"]');
     expect(copy).not.toBeNull();
@@ -208,7 +367,6 @@ describe("copying funding details", () => {
     render([BANK]);
     click("button-account-add");
     choose("acct_bank");
-    act(() => portalButton("Next").click());
 
     const copy = document.body.querySelector<HTMLButtonElement>('[aria-label="Copy IBAN Bank Number"]');
     act(() => copy!.click());
@@ -223,7 +381,6 @@ describe("copying funding details", () => {
     render([BANK]);
     click("button-account-add");
     choose("acct_bank");
-    act(() => portalButton("Next").click());
 
     const copy = document.body.querySelector<HTMLButtonElement>('[aria-label="Copy IBAN Bank Number"]');
     expect(() => act(() => copy!.click())).not.toThrow();
@@ -237,7 +394,6 @@ describe("the QR overlay", () => {
     render([WALLET]);
     click("button-account-add");
     choose("acct_wallet");
-    act(() => portalButton("Next").click());
 
     const qrTrigger = q("add-money-show-qr") as HTMLButtonElement;
     act(() => qrTrigger.click());
@@ -245,6 +401,8 @@ describe("the QR overlay", () => {
     const qr = q("add-money-qr-modal");
     expect(qr).not.toBeNull();
     expect(qr?.querySelector("svg title")?.textContent).toContain(WALLET.external_account_id!);
+    expect(qr?.querySelector('svg path[fill="#ffffff"]')).not.toBeNull();
+    expect(qr?.querySelector('svg path[fill="#000000"]')).not.toBeNull();
 
     act(() => {
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));

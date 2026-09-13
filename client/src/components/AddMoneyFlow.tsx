@@ -1,21 +1,64 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { QRCodeSVG } from "qrcode.react";
-import closeIcon from "@assets/Close_1783293571882.png";
 import addIcon from "@assets/add_1789001100272.png";
-import qrIcon from "@assets/qr_1789144401960.png";
-import copyIcon from "@assets/copy_1789144401961.png";
-import dropdownIcon from "@assets/dropdown_1789144401961.png";
+import selectFieldButtonIcon from "@assets/figma_icons/add-money/select_field_btn_32.svg";
+import chevronDownIcon from "@assets/figma_icons/add-money/chevron_down_24.svg";
+import searchIcon from "@assets/figma_icons/add-money/search_24.svg";
+import pickerCloseIcon from "@assets/figma_icons/add-money/popup_close_24.svg";
+import qrButtonIcon from "@assets/figma_icons/add-money/btn_qr_32.svg";
+import copyButtonIcon from "@assets/figma_icons/add-money/btn_copy_32.svg";
+import copyGlyphIcon from "@assets/figma_icons/add-money/copy_glyph_24.svg";
 import walletBankIcon from "@assets/wallet-icon-bank-32.svg";
 import walletAgentIcon from "@assets/wallet-icon-agent-32.svg";
 import { isAgentAccount, type BrainAccountDTO } from "@/lib/brainAccounts";
 import { shortenIdentifier } from "@/lib/accountsPanelFormat";
 
-type Step = "select" | "details";
-
 interface AddMoneyFlowProps {
   accounts: BrainAccountDTO[];
 }
+
+/**
+ * Step 1 is the 75%-scale Figma variant: its native 402 x 340 box paints at
+ * exactly 301.5 x 255. The account details states stay at their native size.
+ */
+const STEP_ONE_SCALE = 0.75;
+const centred = { transform: "translate(-50%, -50%)" } as const;
+const centredStepOne = {
+  transform: `translate(-50%, -50%) scale(${STEP_ONE_SCALE})`,
+  // Transforms change paint, not layout, so divide the viewport allowance by
+  // the scale or a normal mobile viewport will shrink the popup a second time.
+  maxWidth: `calc((100vw - 16px) / ${STEP_ONE_SCALE})`,
+  maxHeight: `calc((100vh - 16px) / ${STEP_ONE_SCALE})`,
+} as const;
+const viewportClamp = {
+  maxWidth: "calc(100vw - 16px)",
+  maxHeight: "calc(100vh - 16px)",
+} as const;
+
+/**
+ * Figma hangs each popup's 1px stroke OUTSIDE the frame (its border rect sits
+ * at left/right/top -1px), so the frame number is the CONTENT width. Tailwind
+ * is border-box, so a literal `w-[400px]` would spend two of those pixels on
+ * the stroke and leave 320px between the 39px gutters instead of 322 — enough
+ * to wrap "What account should we fund?" onto a second line and push the whole
+ * modal 28px taller. Each width below is therefore the frame plus its stroke.
+ */
+const FRAME_W = { modal: "402px", picker: "320px", qr: "324px" } as const;
+
+/**
+ * The picker is the one fixed-size popup in the flow: 320 x 424, per the
+ * frame. Its list holds whatever the tenant has, so the rows scroll inside
+ * that box rather than growing it.
+ *
+ * Its width is the exception to the note above — the frame is 320 and the
+ * painted box is 320, not 322. Nothing inside is squeezed by spending two of
+ * them on the stroke: every child is `w-full`, so the search field lands on
+ * 302 instead of Figma's 304 and no text reflows. The modal cannot do the
+ * same because its 322px content column is what "What account should we
+ * fund?" needs to stay on one line.
+ */
+const PICKER_H = "424px";
 
 const overlayClass =
   "fixed inset-0 z-[70] bg-black/60 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0";
@@ -43,72 +86,200 @@ function fundingKind(account: BrainAccountDTO): FundingKind {
 }
 
 function ModalHeader() {
-  return (
-    <div className="relative h-14 w-full shrink-0 border-b border-solid border-brain-v1stroke-2">
-      <DialogPrimitive.Close
-        aria-label="Close Add Money"
-        className="absolute left-[11px] top-[11px] size-8 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
-      >
-        <img src={closeIcon} alt="" className="block size-8" />
-      </DialogPrimitive.Close>
-    </div>
-  );
+  return <div className="h-14 w-full shrink-0 border-b border-solid border-brain-v1stroke-2" />;
 }
 
-function AccountSelect({
-  accounts,
-  value,
-  onChange,
-}: {
-  accounts: BrainAccountDTO[];
-  value: string;
-  onChange: (id: string) => void;
-}) {
-  const selected = accounts.find((account) => account.id === value);
+/** Icon + name + shortened identifier: the row shape the picker and the field share. */
+function AccountIdentity({ account }: { account: BrainAccountDTO }) {
+  const identifier = account.external_account_id?.trim() ?? "";
+  const usesWalletArtwork = fundingKind(account) === "wallet" || isAgentAccount(account);
   return (
-    <div className="relative h-14 w-full rounded-row bg-brain-v1baby-blue-15">
-      {selected && (
-        <img
-          src={fundingKind(selected) === "wallet" ? walletAgentIcon : walletBankIcon}
-          alt=""
-          className="pointer-events-none absolute left-4 top-3 z-10 size-8"
-        />
+    <div className="flex min-w-0 items-center gap-2">
+      <img
+        src={usesWalletArtwork ? walletAgentIcon : walletBankIcon}
+        data-account-artwork={usesWalletArtwork ? "wallet" : "bank"}
+        alt=""
+        className="block size-8 shrink-0"
+      />
+      {/* `button { text-transform: capitalize }` in index.css applies to every
+          descendant, and both call sites here sit inside a button. An account
+          name is the tenant's own text, not a UI label — "Operating cash" must
+          not be redrawn as "Operating Cash". Same for the identifier pill. */}
+      <p className="truncate font-['Gilroy',sans-serif] text-base font-medium normal-case leading-5 text-brain-v1baby-blue-100">
+        {account.name}
+      </p>
+      {identifier && (
+        <span className="shrink-0 rounded-[22px] border border-solid border-[rgba(108,119,157,0.2)] bg-brain-v1baby-blue-15 px-2 py-[3px] text-center font-['Gilroy',sans-serif] text-[12px] font-semibold normal-case leading-[14px] text-brain-v1baby-blue-60">
+          {shortenIdentifier(identifier)}
+        </span>
       )}
-      <select
-        data-testid="add-money-account-select"
-        aria-label="Account to fund"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className={`h-full w-full cursor-pointer appearance-none rounded-row bg-transparent pr-12 font-['Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brain-v1purple ${
-          selected ? "pl-14 text-base leading-5" : "pl-4 text-[20px] leading-6"
-        }`}
-      >
-        <option value="" className="bg-brain-v1highlight-dropdown-bg">Select Account</option>
-        {accounts.map((account) => {
-          const unsupported = fundingKind(account) === "unsupported";
-          return (
-            <option
-              key={account.id}
-              value={account.id}
-              disabled={unsupported}
-              className="bg-brain-v1highlight-dropdown-bg"
-            >
-              {unsupported ? `${account.name} — no funding details` : account.name}
-            </option>
-          );
-        })}
-      </select>
-      <img src={dropdownIcon} alt="" className="pointer-events-none absolute right-3 top-3 size-8" />
     </div>
   );
 }
 
-function PrimaryButton({
+/**
+ * The account picker (Figma 6543:54913). A nested dialog rather than a menu
+ * anchored to the field: it is its own popup in the design, and a portalled
+ * dialog cannot be clipped by the modal it opens over.
+ */
+function AccountPicker({
+  open,
+  onOpenChange,
+  accounts,
+  selectedId,
+  onSelect,
+  returnFocusTo,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  accounts: BrainAccountDTO[];
+  selectedId: string;
+  onSelect: (account: BrainAccountDTO) => void;
+  /** The field this picker was opened from; see onCloseAutoFocus below. */
+  returnFocusTo: React.RefObject<HTMLButtonElement | null>;
+}) {
+  const [query, setQuery] = useState("");
+
+  useEffect(() => {
+    if (!open) setQuery("");
+  }, [open]);
+
+  const matches = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return accounts;
+    return accounts.filter((account) => {
+      const identifier = account.external_account_id?.trim().toLowerCase() ?? "";
+      return account.name.toLowerCase().includes(needle) || identifier.includes(needle);
+    });
+  }, [accounts, query]);
+
+  return (
+    <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Overlay data-testid="add-money-picker-overlay" className="fixed inset-0 z-[75] bg-black/40" />
+        <DialogPrimitive.Content
+          id="add-money-account-picker"
+          data-testid="add-money-picker"
+          data-node-id="6543:54913"
+          onCloseAutoFocus={(event) => {
+            // This root is controlled and has no Dialog.Trigger, so Radix
+            // suppresses its own prior-focus restoration and then tries to
+            // focus a trigger ref that was never filled. Every close path —
+            // Escape, the close glyph, the scrim, and picking an account —
+            // otherwise drops focus on <body>. Put it back on the field.
+            event.preventDefault();
+            // Deferred past the task, not just the microtask queue: the
+            // enclosing FocusScope watches for the removal of the focused node
+            // with a MutationObserver and, finding focus on <body>, pulls it
+            // onto the dialog container. That callback is itself a microtask,
+            // so a queueMicrotask here races it and loses about as often as it
+            // wins. Escape and the close glyph do not re-render the outer
+            // dialog and would work either way; the selection path does.
+            setTimeout(() => returnFocusTo.current?.focus(), 0);
+          }}
+          style={{
+            ...centred,
+            ...viewportClamp,
+            width: FRAME_W.picker,
+            height: PICKER_H,
+          }}
+          className="fixed left-1/2 top-1/2 z-[76] flex flex-col overflow-hidden rounded-panel border border-solid border-brain-v1stroke-2 bg-brain-v1highlight-dropdown-bg drop-shadow-[0px_68px_13.5px_rgba(0,0,0,0.06)] focus:outline-none"
+        >
+          <DialogPrimitive.Title className="sr-only">Select Account</DialogPrimitive.Title>
+          <DialogPrimitive.Description className="sr-only">
+            Choose which of your accounts you want to fund.
+          </DialogPrimitive.Description>
+
+          <div className="flex w-full shrink-0 items-center justify-between border-b border-solid border-brain-v1stroke-2 p-4 backdrop-blur-[10px]">
+            <p className="font-['Gilroy',sans-serif] text-[20px] font-semibold leading-6 text-brain-v1baby-blue-60">
+              Select Account
+            </p>
+            <DialogPrimitive.Close
+              aria-label="Close account picker"
+              className="size-6 shrink-0 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
+            >
+              <img src={pickerCloseIcon} alt="" className="block size-6" />
+            </DialogPrimitive.Close>
+          </div>
+
+          <div className="flex min-h-0 w-full flex-1 flex-col gap-2 overflow-y-auto p-2">
+            <div className="flex w-full items-center gap-2 rounded-[8px] bg-brain-v1baby-blue-15 p-2">
+              <img src={searchIcon} alt="" className="block size-6 shrink-0" />
+              <input
+                type="search"
+                data-testid="add-money-picker-search"
+                aria-label="Search accounts"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search"
+                className="min-w-0 flex-1 bg-transparent font-['Gilroy',sans-serif] text-base font-medium leading-5 text-brain-v1baby-blue-100 outline-none placeholder:text-brain-v1baby-blue-60"
+              />
+            </div>
+
+            <div className="flex w-full items-center px-2">
+              <p className="min-w-0 flex-1 font-['Mont',sans-serif] text-[15px] font-semibold leading-6 tracking-[-0.6px] text-brain-v1baby-blue-60">
+                All Assets
+              </p>
+            </div>
+
+            {matches.map((account) => {
+              const unsupported = fundingKind(account) === "unsupported";
+              const isSelected = account.id === selectedId;
+              return (
+                <button
+                  key={account.id}
+                  type="button"
+                  data-testid={`add-money-picker-option-${account.id}`}
+                  // aria-disabled rather than `disabled`: the row still has to
+                  // be reachable and announced — its whole point is to explain
+                  // why this account cannot be funded — and the refusal has to
+                  // live in the handler, where it still holds if the attribute
+                  // is ever dropped in a restyle.
+                  aria-disabled={unsupported || undefined}
+                  aria-current={isSelected || undefined}
+                  onClick={() => {
+                    if (unsupported) return;
+                    onSelect(account);
+                  }}
+                  className={`flex w-full items-center rounded-[8px] p-2 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brain-v1purple ${
+                    isSelected ? "bg-brain-v1baby-blue-5" : "hover:bg-brain-v1baby-blue-5"
+                  } ${unsupported ? "cursor-not-allowed opacity-50 hover:bg-transparent" : ""}`}
+                >
+                  <span className="flex min-w-0 flex-col gap-1">
+                    <AccountIdentity account={account} />
+                    {unsupported && (
+                      <span className="pl-10 font-['Gilroy',sans-serif] text-[12px] font-medium normal-case leading-[14px] text-brain-v1baby-blue-60">
+                        No funding details to show
+                      </span>
+                    )}
+                  </span>
+                </button>
+              );
+            })}
+
+            {matches.length === 0 && (
+              <p
+                data-testid="add-money-picker-empty"
+                className="px-2 py-2 font-['Gilroy',sans-serif] text-base font-medium leading-5 text-brain-v1baby-blue-60"
+              >
+                {accounts.length === 0 ? "No accounts yet" : "No accounts match that search"}
+              </p>
+            )}
+          </div>
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
+  );
+}
+
+function PillButton({
   children,
+  variant,
   disabled,
   onClick,
 }: {
   children: React.ReactNode;
+  variant: "primary" | "secondary";
   disabled?: boolean;
   onClick?: () => void;
 }) {
@@ -117,7 +288,11 @@ function PrimaryButton({
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className="h-12 min-w-0 flex-1 rounded-full bg-brain-v1dark-orange px-4 font-['Mont',sans-serif] text-lg font-semibold leading-6 tracking-[-0.72px] text-brain-v1light-orange disabled:cursor-not-allowed disabled:opacity-50"
+      className={`h-12 min-w-0 flex-1 rounded-pill px-4 font-['Mont',sans-serif] text-lg font-semibold leading-6 tracking-[-0.72px] disabled:cursor-not-allowed disabled:opacity-50 ${
+        variant === "primary"
+          ? "bg-brain-v1dark-orange text-brain-v1light-orange"
+          : "bg-brain-v1baby-blue-15 text-brain-v1baby-blue-60"
+      }`}
     >
       {children}
     </button>
@@ -128,30 +303,28 @@ function ReadonlyField({
   label,
   value,
   mono,
-  onCopy,
+  actions,
 }: {
   label: string;
   value: string;
   mono?: boolean;
-  onCopy?: () => void;
+  actions?: React.ReactNode;
 }) {
   return (
     <div className="flex w-full flex-col gap-1">
+      {/* Figma paints this label in Baby Blue 30; that hex is a 2.2:1 text
+          contrast failure and the repo's token guard rejects it, so the
+          sanctioned Baby Blue 60 stands in. */}
       <p className="font-['Gilroy',sans-serif] text-base font-semibold leading-6 text-brain-v1baby-blue-60">{label}</p>
-      <div className="flex h-14 items-center gap-2 rounded-row bg-brain-v1baby-blue-15 px-4">
-        <p className={`min-w-0 flex-1 truncate text-[20px] leading-6 text-white ${mono ? "font-['JetBrains_Mono',monospace]" : "font-['Gilroy',sans-serif] font-medium"}`}>
+      <div className="flex h-14 items-center gap-2 rounded-panel bg-brain-v1baby-blue-15 px-4 py-[10px]">
+        <p
+          className={`min-w-0 flex-1 truncate text-[20px] leading-6 text-white ${
+            mono ? "font-['JetBrains_Mono',monospace] font-semibold" : "font-['Gilroy',sans-serif] font-medium"
+          }`}
+        >
           {value}
         </p>
-        {onCopy && (
-          <button
-            type="button"
-            aria-label={`Copy ${label}`}
-            onClick={onCopy}
-            className="size-8 shrink-0 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
-          >
-            <img src={copyIcon} alt="" className="block size-8" />
-          </button>
-        )}
+        {actions && <span className="flex shrink-0 items-center gap-2">{actions}</span>}
       </div>
     </div>
   );
@@ -159,26 +332,23 @@ function ReadonlyField({
 
 export function AddMoneyFlow({ accounts }: AddMoneyFlowProps) {
   const [open, setOpen] = useState(false);
-  const [step, setStep] = useState<Step>("select");
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [accountId, setAccountId] = useState("");
   const [qrOpen, setQrOpen] = useState(false);
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "failed">("idle");
   const copyTimer = useRef<number | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const fieldRef = useRef<HTMLButtonElement | null>(null);
   const qrTriggerRef = useRef<HTMLButtonElement | null>(null);
   const selected = useMemo(() => accounts.find((account) => account.id === accountId), [accounts, accountId]);
-  const fundable = useMemo(
-    () => accounts.filter((account) => fundingKind(account) !== "unsupported"),
-    [accounts],
-  );
 
   const reset = (nextOpen: boolean) => {
     setOpen(nextOpen);
     if (nextOpen) {
-      setStep("select");
       setAccountId("");
       setCopyStatus("idle");
     } else {
+      setPickerOpen(false);
       setQrOpen(false);
       if (copyTimer.current != null) window.clearTimeout(copyTimer.current);
       // The trigger is hand-rendered rather than a separate Radix component in
@@ -223,7 +393,10 @@ export function AddMoneyFlow({ accounts }: AddMoneyFlowProps) {
           type="button"
           data-testid="button-account-add"
           aria-label="Add money to an account"
-          disabled={fundable.length === 0}
+          // Only an empty ledger closes this off. If accounts exist but none
+          // can be funded, the flow still has to open: the picker rows are
+          // where the reason is written, and a dead Add button says nothing.
+          disabled={accounts.length === 0}
           className="size-10 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <img src={addIcon} alt="" className="block size-10" />
@@ -233,45 +406,119 @@ export function AddMoneyFlow({ accounts }: AddMoneyFlowProps) {
         <DialogPrimitive.Overlay data-testid="add-money-overlay" className={overlayClass} />
         <DialogPrimitive.Content
           data-testid="add-money-modal"
-          data-node-id={step === "select" ? "3608:34362" : wallet ? "2979:41718" : "6543:55103"}
+          data-node-id={!selected ? "3608:34362" : wallet ? "6543:55164" : "6543:55103"}
           onCloseAutoFocus={(event) => {
             event.preventDefault();
             triggerRef.current?.focus();
           }}
-          className="fixed left-1/2 top-1/2 z-[71] flex max-h-[calc(100vh-16px)] w-[400px] max-w-[calc(100vw-16px)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-y-auto rounded-modal border border-solid border-brain-v1stroke-2 bg-brain-v1highlight-dropdown-bg focus:outline-none"
+          style={{
+            ...(selected ? centred : centredStepOne),
+            ...(selected ? viewportClamp : {}),
+            width: FRAME_W.modal,
+          }}
+          className="fixed left-1/2 top-1/2 z-[71] flex flex-col overflow-y-auto rounded-modal border border-solid border-brain-v1stroke-2 bg-brain-v1highlight-dropdown-bg focus:outline-none"
         >
           <DialogPrimitive.Title className="sr-only">Add Money</DialogPrimitive.Title>
           <DialogPrimitive.Description className="sr-only">Choose an account and view the information needed to fund it.</DialogPrimitive.Description>
           <ModalHeader />
 
-          <div className="flex flex-col gap-6 px-[39px] pb-7 pt-[23px]">
+          <div className="flex flex-col gap-6 px-[39px] pb-[39px] pt-[23px]">
             <div>
               <p className="font-['Gilroy',sans-serif] text-[32px] font-semibold leading-10 text-brain-v1baby-blue-100">Add Money</p>
               <p className="font-['Gilroy',sans-serif] text-[22px] font-medium leading-7 text-brain-v1baby-blue-60">What account should we fund?</p>
             </div>
 
-            <AccountSelect accounts={accounts} value={accountId} onChange={setAccountId} />
+            <button
+              ref={fieldRef}
+              type="button"
+              data-testid="add-money-account-select"
+              aria-haspopup="dialog"
+              aria-expanded={pickerOpen}
+              aria-controls="add-money-account-picker"
+              aria-label="Account to fund"
+              onClick={() => setPickerOpen(true)}
+              className="flex h-14 w-full items-center gap-2 rounded-panel bg-brain-v1baby-blue-15 px-4 py-[10px] text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brain-v1purple"
+            >
+              {selected ? (
+                <>
+                  <span className="min-w-0 flex-1">
+                    <AccountIdentity account={selected} />
+                  </span>
+                  <img src={chevronDownIcon} alt="" className="block size-6 shrink-0" />
+                </>
+              ) : (
+                <>
+                  <span className="min-w-0 flex-1 font-['Gilroy',sans-serif] text-[20px] font-medium normal-case leading-6 text-brain-v1baby-blue-100">
+                    Select Account
+                  </span>
+                  <img src={selectFieldButtonIcon} alt="" className="block size-8 shrink-0" />
+                </>
+              )}
+            </button>
 
-            {step === "details" && selected && (
+            {selected && (
               kind === "wallet" ? (
                 <ReadonlyField
                   label="Wallet Address"
                   value={identifier ? shortenIdentifier(identifier) : "Address unavailable"}
                   mono
-                  onCopy={identifier ? () => void copyText(identifier) : undefined}
+                  actions={
+                    identifier ? (
+                      <>
+                        <button
+                          ref={qrTriggerRef}
+                          type="button"
+                          data-testid="add-money-show-qr"
+                          aria-label="Show QR code for wallet address"
+                          onClick={() => setQrOpen(true)}
+                          className="size-8 shrink-0 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
+                        >
+                          <img src={qrButtonIcon} alt="" className="block size-8" />
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="Copy Wallet Address"
+                          onClick={() => void copyText(identifier)}
+                          className="size-8 shrink-0 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
+                        >
+                          <img src={copyButtonIcon} alt="" className="block size-8" />
+                        </button>
+                      </>
+                    ) : undefined
+                  }
                 />
               ) : kind === "bank" ? (
                 <div className="flex flex-col gap-6">
                   <ReadonlyField
                     label="Recipient Name"
                     value={selected.name}
-                    onCopy={() => void copyText(selected.name)}
+                    actions={
+                      <button
+                        type="button"
+                        aria-label="Copy Recipient Name"
+                        onClick={() => void copyText(selected.name)}
+                        className="size-8 shrink-0 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
+                      >
+                        <img src={copyButtonIcon} alt="" className="block size-8" />
+                      </button>
+                    }
                   />
                   <ReadonlyField
                     label="IBAN Bank Number"
                     value={identifier || "IBAN unavailable"}
                     mono
-                    onCopy={identifier ? () => void copyText(identifier) : undefined}
+                    actions={
+                      identifier ? (
+                        <button
+                          type="button"
+                          aria-label="Copy IBAN Bank Number"
+                          onClick={() => void copyText(identifier)}
+                          className="size-8 shrink-0 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-brain-v1purple"
+                        >
+                          <img src={copyButtonIcon} alt="" className="block size-8" />
+                        </button>
+                      ) : undefined
+                    }
                   />
                 </div>
               ) : (
@@ -284,38 +531,24 @@ export function AddMoneyFlow({ accounts }: AddMoneyFlowProps) {
               )
             )}
 
-            {step === "select" ? (
-              <div className="flex gap-4">
+            {selected ? (
+              <div className="flex items-center">
                 <DialogPrimitive.Close asChild>
-                  <button type="button" className="h-12 min-w-0 flex-1 rounded-full bg-brain-v1baby-blue-15 px-4 font-['Mont',sans-serif] text-lg font-semibold leading-6 tracking-[-0.72px] text-brain-v1baby-blue-60">
-                    Cancel
-                  </button>
+                  <PillButton variant="primary">Close</PillButton>
                 </DialogPrimitive.Close>
-                <PrimaryButton
-                  disabled={!selected || kind === "unsupported"}
-                  onClick={() => setStep("details")}
-                >
-                  Next
-                </PrimaryButton>
-              </div>
-            ) : wallet ? (
-              <div className="flex flex-col gap-3">
-                {identifier && (
-                  <button
-                    ref={qrTriggerRef}
-                    type="button"
-                    data-testid="add-money-show-qr"
-                    onClick={() => setQrOpen(true)}
-                    className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-brain-v1dark-purple px-5 font-['Gilroy',sans-serif] text-base font-semibold leading-5 text-brain-v1purple"
-                  >
-                    <img src={qrIcon} alt="" className="size-6" />
-                    Show QR Code
-                  </button>
-                )}
-                <DialogPrimitive.Close asChild><PrimaryButton>Close</PrimaryButton></DialogPrimitive.Close>
               </div>
             ) : (
-              <DialogPrimitive.Close asChild><PrimaryButton>Close</PrimaryButton></DialogPrimitive.Close>
+              <div className="flex items-center gap-4">
+                <DialogPrimitive.Close asChild>
+                  <PillButton variant="secondary">Cancel</PillButton>
+                </DialogPrimitive.Close>
+                {/* Choosing in the picker is what advances the flow, so Next has
+                    nothing left to do once an account is set — it only ever
+                    shows here, disabled, exactly as Figma 3611:34423 draws it. */}
+                <PillButton variant="primary" disabled>
+                  Next
+                </PillButton>
+              </div>
             )}
 
             <span data-testid="add-money-copy-status" aria-live="polite" className="sr-only">
@@ -328,6 +561,20 @@ export function AddMoneyFlow({ accounts }: AddMoneyFlowProps) {
           </div>
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
+
+      <AccountPicker
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        accounts={accounts}
+        selectedId={accountId}
+        returnFocusTo={fieldRef}
+        onSelect={(account) => {
+          if (fundingKind(account) === "unsupported") return;
+          setAccountId(account.id);
+          setPickerOpen(false);
+          setCopyStatus("idle");
+        }}
+      />
 
       <DialogPrimitive.Root open={qrOpen} onOpenChange={setQrOpen}>
         <DialogPrimitive.Portal>
@@ -342,7 +589,8 @@ export function AddMoneyFlow({ accounts }: AddMoneyFlowProps) {
               event.preventDefault();
               qrTriggerRef.current?.focus();
             }}
-            className="fixed left-1/2 top-1/2 z-[81] flex w-[322px] max-w-[calc(100vw-16px)] -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-4 rounded-modal border border-solid border-brain-v1stroke-2 bg-brain-v1highlight-dropdown-bg p-6 focus:outline-none"
+            style={{ ...centred, ...viewportClamp, width: FRAME_W.qr }}
+            className="fixed left-1/2 top-1/2 z-[81] flex flex-col items-center justify-center gap-4 overflow-y-auto rounded-modal border border-solid border-brain-v1stroke-2 bg-brain-v1highlight-dropdown-bg p-6 focus:outline-none"
           >
             <DialogPrimitive.Title className="sr-only">Wallet address QR code</DialogPrimitive.Title>
             <DialogPrimitive.Description className="sr-only">Scan this code to copy the selected wallet address.</DialogPrimitive.Description>
@@ -351,19 +599,22 @@ export function AddMoneyFlow({ accounts }: AddMoneyFlowProps) {
                 value={identifier}
                 title={`QR code for wallet address ${identifier}`}
                 size={274}
+                // Funding addresses must remain scanner-safe even though Figma
+                // draws a lower-contrast inverted code directly on the popup.
                 bgColor="#ffffff"
                 fgColor="#000000"
                 level="M"
-                className="h-auto w-full rounded-[4px]"
+                marginSize={4}
+                className="block h-[274px] w-[274px] shrink-0 rounded-[4px]"
               />
             )}
             <p className="max-w-full truncate font-['JetBrains_Mono',monospace] text-[20px] font-medium leading-6 text-white">{identifier ? shortenIdentifier(identifier) : ""}</p>
             <button
               type="button"
               onClick={() => void copyText(identifier)}
-              className="flex h-10 w-full items-center justify-center gap-2 rounded-full bg-brain-v1dark-orange px-5 font-['Gilroy',sans-serif] text-base font-semibold leading-5 text-brain-v1light-orange"
+              className="flex w-full items-center justify-center gap-2 rounded-pill bg-brain-v1dark-orange px-5 py-2 font-['Gilroy',sans-serif] text-base font-semibold leading-5 text-brain-v1light-orange"
             >
-              <img src={copyIcon} alt="" className="size-6" />
+              <img src={copyGlyphIcon} alt="" className="block size-6" />
               {copyStatus === "copied"
                 ? "Address Copied"
                 : copyStatus === "failed"
