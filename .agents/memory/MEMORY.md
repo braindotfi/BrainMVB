@@ -124,3 +124,5 @@
 - [Authorization header normalization](authorization-header-normalization.md) — normalize case before replacing Bearer auth; duplicate case variants become one comma-joined invalid JWT.
 - [Pointer capture and touch swipes](pointer-capture-child-controls.md) — don't capture child controls; preserve measured dot geometry; test native touch events in a real browser.
 - [Kind-keyed detail branches](kind-keyed-detail-branches.md) — a boolean over a 7-member kind enum captioned card refs as IBANs; branch three ways and render unsupported honestly.
+- [Controlled Radix dialog focus](nested-radix-focus-restore.md) — no Trigger means no restore; fix in onCloseAutoFocus, deferred past a MutationObserver microtask; cover every close path.
+- [Figma frame translation](figma-frame-translation.md) — stroke is outside the frame (Tailwind is border-box, so gutters come up 2px short); global button capitalize retitles tenant data.
