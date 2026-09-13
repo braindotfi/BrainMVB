@@ -1,5 +1,5 @@
-import { useMemo, useRef } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useCallback, useMemo, useRef } from "react";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import type { AuditRecord, AuditEventType, AnchorProof, AnchorStatus, LifecycleStep } from "./auditTypes";
 import { isAssistantActivity, humanReadableActor } from "./auditTypes";
 import { matchCannedPrompt } from "@shared/cannedPrompts";
@@ -72,51 +72,115 @@ interface AuditEventsResponse {
   next_cursor: string | null;
 }
 
-const MAX_AUDIT_PAGES = 50;
+/* ── Audit reads: one page at a time, with a per-request timeout ─────────────
+   There is deliberately NO "walk the whole feed before rendering" function here
+   any more, and no client-side page ceiling. Both were self-imposed: brain-core
+   paginates `/audit/events` correctly and quickly, so the old blocking walk
+   turned a large tenant's history into an unbounded pre-render cost, and the
+   50-page cap turned a tenant past ~5,000 events into a permanent hard error.
+   Pages are fetched on demand (see useBrainAuditEventPages) and the first one
+   renders immediately. */
 
-/** Read the complete audit feed. `next_cursor` is passed back as `cursor`, the
- * upstream brain-core pagination contract for `/audit/events`. */
-export async function fetchAllBrainAuditEvents(signal?: AbortSignal): Promise<AuditEventsResponse> {
-  const events: BrainAuditEvent[] = [];
-  const followedCursors = new Set<string>();
-  const receivedEventIds = new Set<string>();
-  let cursor: string | null = null;
+/** Per-request client timeout for every audit read. Deliberately LONGER than
+ *  the BFF's own 15 s upstream timeout (server/brain/proxy.ts) so the BFF's
+ *  structured 504 normally wins the race and the user gets the specific
+ *  "took too long" copy rather than a generic aborted-fetch error. This is the
+ *  backstop for the case the BFF itself never answers. */
+export const AUDIT_CLIENT_TIMEOUT_MS = 20_000;
 
-  for (let page = 0; page < MAX_AUDIT_PAGES; page++) {
-    const params = new URLSearchParams({ limit: String(AUDIT_EVENTS_LIMIT) });
-    if (cursor) params.set("cursor", cursor);
-    const response = await fetch(`/api/brain/audit/events?${params.toString()}`, {
+/** A read that ran out of time, as opposed to one that was refused or broke.
+ *  Carried as its own class because the three surfaces word it differently and
+ *  a timeout is retryable in a way a 403 is not. */
+export class AuditTimeoutError extends Error {
+  constructor(message = "The audit read timed out.") {
+    super(message);
+    this.name = "AuditTimeoutError";
+  }
+}
+
+export function isAuditTimeoutError(err: unknown): boolean {
+  return err instanceof AuditTimeoutError;
+}
+
+/** Combine the caller's cancellation signal with our own timeout. `AbortSignal.any`
+ *  is recent enough that a manual fallback is kept for older browsers — without
+ *  it the whole audit surface would throw on load there. */
+function withAuditTimeout(signal?: AbortSignal): AbortSignal {
+  const timeout = AbortSignal.timeout(AUDIT_CLIENT_TIMEOUT_MS);
+  if (!signal) return timeout;
+  if (typeof AbortSignal.any === "function") return AbortSignal.any([signal, timeout]);
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  signal.addEventListener("abort", abort, { once: true });
+  timeout.addEventListener("abort", abort, { once: true });
+  return controller.signal;
+}
+
+/** Classify a thrown fetch rejection. A caller-initiated cancel (react-query
+ *  replacing the observer) must stay a cancel — turning it into a timeout would
+ *  show an error for something the user never saw fail. */
+function asAuditRequestError(err: unknown, callerSignal?: AbortSignal): unknown {
+  if (callerSignal?.aborted) return err;
+  const name = (err as { name?: string } | null)?.name;
+  if (name === "TimeoutError") return new AuditTimeoutError();
+  /* Some engines surface an AbortSignal.timeout abort as a plain AbortError. If
+     the caller did not cancel, the only other abort source here is our timeout. */
+  if (name === "AbortError") return new AuditTimeoutError();
+  return err;
+}
+
+/** One page of the audit feed. `next_cursor` is passed back as `cursor`, which
+ *  is brain-core's pagination contract for `/audit/events`. */
+export async function fetchBrainAuditEventsPage(
+  cursor: string | null,
+  signal?: AbortSignal,
+): Promise<AuditEventsResponse> {
+  const params = new URLSearchParams({ limit: String(AUDIT_EVENTS_LIMIT) });
+  if (cursor) params.set("cursor", cursor);
+
+  let response: Response;
+  try {
+    response = await fetch(`/api/brain/audit/events?${params.toString()}`, {
       credentials: "include",
-      signal,
+      signal: withAuditTimeout(signal),
     });
-    if (!response.ok) {
-      const detail = (await response.text().catch(() => "")) || response.statusText;
-      throw new Error(`${response.status}: ${detail}`);
-    }
-    const body = (await response.json()) as Partial<AuditEventsResponse>;
-    if (!Array.isArray(body.events)) {
-      throw new Error("Brain audit response did not contain an events array.");
-    }
-    for (const event of body.events) {
-      if (receivedEventIds.has(event.id)) {
-        throw new Error("Brain audit pagination returned a repeated event and did not advance.");
-      }
-      receivedEventIds.add(event.id);
-    }
-    events.push(...body.events);
-
-    const next = typeof body.next_cursor === "string" && body.next_cursor.length > 0
-      ? body.next_cursor
-      : null;
-    if (!next) return { events, next_cursor: null };
-    if (next === cursor || followedCursors.has(next)) {
-      throw new Error("Brain audit pagination did not advance.");
-    }
-    followedCursors.add(next);
-    cursor = next;
+  } catch (err) {
+    throw asAuditRequestError(err, signal);
   }
 
-  throw new Error("Brain audit feed exceeded the maximum page count.");
+  if (!response.ok) {
+    const detail = (await response.text().catch(() => "")) || response.statusText;
+    /* The BFF converts a hung upstream into 504 upstream_timeout. Same user-facing
+       meaning as our own client timeout, so it takes the same class. */
+    if (response.status === 504) throw new AuditTimeoutError();
+    throw new Error(`${response.status}: ${detail}`);
+  }
+
+  const body = (await response.json()) as Partial<AuditEventsResponse>;
+  if (!Array.isArray(body.events)) {
+    throw new Error("Brain audit response did not contain an events array.");
+  }
+  const next =
+    typeof body.next_cursor === "string" && body.next_cursor.length > 0 ? body.next_cursor : null;
+  return { events: body.events, next_cursor: next };
+}
+
+/** Read one of the two small companion endpoints under the same timeout rule.
+ *  These are separate queries on purpose: neither may block audit records from
+ *  rendering, and neither may be reported as "the audit feed failed". */
+export async function fetchAuditCompanion<T>(url: string, signal?: AbortSignal): Promise<T> {
+  let response: Response;
+  try {
+    response = await fetch(url, { credentials: "include", signal: withAuditTimeout(signal) });
+  } catch (err) {
+    throw asAuditRequestError(err, signal);
+  }
+  if (!response.ok) {
+    const detail = (await response.text().catch(() => "")) || response.statusText;
+    if (response.status === 504) throw new AuditTimeoutError();
+    throw new Error(`${response.status}: ${detail}`);
+  }
+  return (await response.json()) as T;
 }
 
 export interface BrainAnchor {
@@ -969,68 +1033,130 @@ export interface ProposalForTracking {
   type: string;
 }
 
-/** Proposal ids the audit feed already shows as decided.
- *
- *  brain-core never drops a decided proposal from GET /v1/proposals — it only
- *  writes an audit event — so any surface that counts pending proposals has to
- *  subtract these or it reports work that is already done. The Inbox suppresses
- *  the live copy on exactly this rule; extracted here so a counting surface can
- *  apply the same one without building the full record list.
- */
-export function decidedProposalIdsFromEvents(
-  events: readonly BrainAuditEvent[] | null | undefined,
-): Set<string> {
-  /* This is EFFECTIVE state, not a tally of decision events, because `undo` is
-     one of the four decisions a proposal can receive (ProposalDecision) and it
-     puts the record back in front of the tenant. Treating every
-     `proposal.decided` as terminal would let the original approve/reject go on
-     suppressing a proposal that an undo had reopened — the record would be
-     live, awaiting a decision, and invisible on both the Inbox and the Overview
-     count that subtracts this set.
+/** The one cache entry every audit-feed consumer reads. Kept as a single shared
+ *  key so the Inbox, the Audit Log and the needs-input feed are three readings
+ *  of one paginated fetch rather than three independent walks of the history. */
+export const AUDIT_EVENTS_QUERY_KEY = ["/api/brain/audit/events", AUDIT_EVENTS_LIMIT] as const;
 
-     So the feed is replayed oldest-first and each decision overwrites the last:
-     a terminal decision hides the live copy, an undo puts it back, and a
-     re-decision after that hides it again. brain-core returns newest-first, so
-     the sort is what makes "last decision wins" mean the latest one. */
-  const decisions = (events ?? [])
-    .filter((e) => e.action === "proposal.decided" && typeof e.inputs?.proposal_id === "string" && e.inputs.proposal_id)
-    .slice()
-    .sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at));
+export const AUDIT_EVENTS_STALE_MS = 30_000;
 
-  const out = new Set<string>();
-  for (const e of decisions) {
-    const id = e.inputs.proposal_id as string;
-    if (e.inputs?.decision === "undo") out.delete(id);
-    else out.add(id);
-  }
-  return out;
+export interface BrainAuditEventPages {
+  /** Every event loaded so far, newest first, deduplicated by id. */
+  events: BrainAuditEvent[];
+  /** How many pages have actually been read. */
+  loadedPageCount: number;
+  /** Another page exists and can be requested. */
+  hasMore: boolean;
+  /** Request the next page. No-op while one is already in flight. */
+  loadMore: () => void;
+  /** Re-read from the first page. */
+  retry: () => void;
+  /** No page has been read yet and the first one is in flight. */
+  isInitialLoading: boolean;
+  /** A later page is in flight; records already on screen stay on screen. */
+  isLoadingMore: boolean;
+  /** The FIRST page failed — nothing can be rendered from the feed. */
+  initialError: unknown;
+  /** A LATER page failed — what is loaded is still valid, just incomplete. */
+  loadMoreError: unknown;
+  /** A REFRESH of already-loaded pages failed. The rows stand, but they are no
+   *  longer known to be current. */
+  refreshError: unknown;
+  /** Upstream offered a cursor it had already given us, so the walk cannot be
+   *  advanced. Not an error for the pages already read, but the feed must not
+   *  then be presented as complete. */
+  paginationStalled: boolean;
 }
 
 /**
- * The decided-proposal set from the complete audit feed.
+ * The audit feed as an on-demand cursor walk.
  *
- * Shares its query key with `useBrainAuditRecords` and `useMissingEvidenceItems`,
- * so mounting it costs no extra request.
+ * The first page resolves the query, so every consumer can render immediately;
+ * later pages are fetched only when asked for. There is no page ceiling —
+ * pagination ends when brain-core stops returning a cursor.
+ *
+ * `refetchOnWindowFocus` is deliberately OFF. Refetching an infinite query
+ * re-issues EVERY loaded page, so leaving it on reproduced exactly the
+ * production symptom this replaced: a tenant with a long history generating a
+ * continuous stream of `/audit/events` requests, with the surface never leaving
+ * its loading state because each replacement walk restarted from page one.
  */
-export function useDecidedProposalIds() {
-  const query = useQuery<AuditEventsResponse>({
-    queryKey: [`/api/brain/audit/events?limit=${AUDIT_EVENTS_LIMIT}`],
-    queryFn: ({ signal }) => fetchAllBrainAuditEvents(signal),
+export function useBrainAuditEventPages(): BrainAuditEventPages {
+  const query = useInfiniteQuery<AuditEventsResponse, Error, { pages: AuditEventsResponse[] }, readonly unknown[], string | null>({
+    queryKey: AUDIT_EVENTS_QUERY_KEY,
+    initialPageParam: null,
+    queryFn: ({ pageParam, signal }) => fetchBrainAuditEventsPage(pageParam, signal),
+    getNextPageParam: (lastPage, _allPages, _lastPageParam, allPageParams) => {
+      const next = lastPage.next_cursor;
+      if (!next) return undefined;
+      /* A cursor we have already followed would re-read the same page forever.
+         Stop, and let `paginationStalled` below say the trail is not complete. */
+      if (allPageParams.includes(next)) return undefined;
+      return next;
+    },
     retry: false,
-    /* Mirrors the proposals query: 30 s stale window + focus refetch so the
-       decided-set stays in sync with what the proposals feed returns.  Without
-       this, a teammate's decision (which added a proposal.decided event) remains
-       invisible here until an explicit mutation invalidates the cache. */
-    staleTime: 30_000,
-    refetchOnWindowFocus: true,
+    staleTime: AUDIT_EVENTS_STALE_MS,
+    refetchOnWindowFocus: false,
   });
-  const events = query.data?.events;
+
+  const pages = query.data?.pages;
+
+  const events = useMemo(() => {
+    const out: BrainAuditEvent[] = [];
+    const seen = new Set<string>();
+    for (const page of pages ?? []) {
+      for (const event of page.events) {
+        if (seen.has(event.id)) continue;
+        seen.add(event.id);
+        out.push(event);
+      }
+    }
+    return out;
+  }, [pages]);
+
+  const lastPage = pages?.[pages.length - 1];
+  /* Upstream still has more, but we refuse to follow the cursor it gave us. */
+  const paginationStalled = Boolean(lastPage?.next_cursor) && !query.hasNextPage;
+
+  const fetchNextPage = query.fetchNextPage;
+  const refetch = query.refetch;
+  const loadMore = useCallback(() => { void fetchNextPage(); }, [fetchNextPage]);
+  const retry = useCallback(() => { void refetch(); }, [refetch]);
+
+  /* Which failure this was, asked of react-query rather than inferred from
+     whether anything is on screen. "Pages are loaded, therefore the failure was
+     a later page" is wrong for a REFRESH of the first page, which fails with
+     pages still cached — reporting that as "couldn't load older records" would
+     tell the user the opposite of what happened and leave the stale rows above
+     it looking freshly confirmed. */
+  const loadMoreFailed = query.isFetchNextPageError;
+  const refreshFailed = query.isRefetchError;
+  const firstLoadFailed = query.isError && !loadMoreFailed && !refreshFailed;
+
   return {
-    ids: decidedProposalIdsFromEvents(events),
-    isError: query.isError,
-    isLoading: query.isLoading,
+    events,
+    loadedPageCount: pages?.length ?? 0,
+    hasMore: Boolean(query.hasNextPage),
+    loadMore,
+    retry,
+    isInitialLoading: query.isPending,
+    isLoadingMore: query.isFetchingNextPage,
+    initialError: firstLoadFailed ? query.error : null,
+    loadMoreError: loadMoreFailed ? query.error : null,
+    /* A refresh failed and what is on screen is now of unknown age. The rows
+       are still real, so they stay — but nothing may present them as current. */
+    refreshError: refreshFailed ? query.error : null,
+    paginationStalled,
   };
 }
+
+/* The decided-proposal hide switch used to live here, derived by replaying
+   `proposal.decided` events from the audit pages loaded so far. It is gone:
+   whether a proposal is decided is now read from the authoritative proposal row
+   via POST /v1/proposals/decision-states/query. See
+   client/src/lib/proposalDecisionStates.ts. Do not reintroduce an
+   audit-history-derived version — the answer it gives depends on how much
+   history happens to be loaded. */
 
 export function useBrainAuditRecords(proposals?: ProposalForTracking[]) {
   /* Accumulate proposalId → ProposalType mappings using a ref so entries
@@ -1052,19 +1178,20 @@ export function useBrainAuditRecords(proposals?: ProposalForTracking[]) {
     }
   }
 
-  const events = useQuery<AuditEventsResponse>({
-    queryKey: [`/api/brain/audit/events?limit=${AUDIT_EVENTS_LIMIT}`],
-    queryFn: ({ signal }) => fetchAllBrainAuditEvents(signal),
-    retry: false,
-    staleTime: 30_000,
-    refetchOnWindowFocus: true,
-  });
+  const events = useBrainAuditEventPages();
+  /* The anchor and the locally-recorded assistant questions are SEPARATE reads
+     with separate outcomes. Neither may hold the audit records hostage: the old
+     code OR-ed all three loading flags into one spinner, so either of these
+     still being in flight kept the page saying "Reading your audit history…"
+     while the history itself had already arrived. */
   const anchor = useQuery<BrainAnchor>({
     queryKey: ["/api/brain/audit/anchor/latest"],
+    queryFn: ({ signal }) => fetchAuditCompanion<BrainAnchor>("/api/brain/audit/anchor/latest", signal),
     retry: false,
   });
   const localQuestions = useQuery<LocalQuestionsResponse>({
     queryKey: ["/api/assistant/questions"],
+    queryFn: ({ signal }) => fetchAuditCompanion<LocalQuestionsResponse>("/api/assistant/questions", signal),
     retry: false,
   });
 
@@ -1080,7 +1207,7 @@ export function useBrainAuditRecords(proposals?: ProposalForTracking[]) {
      Deduped + sorted so the query key is stable and each path is fetched once. */
   const lookups = useMemo(() => {
     const set = new Set<string>();
-    for (const e of events.data?.events ?? []) {
+    for (const e of events.events) {
       const ref = e.actor_ref;
       if (ref?.lookup && !inlineActorDisplay(ref)) set.add(ref.lookup);
       // proposing_agent resolution for proposal.decided events
@@ -1096,7 +1223,7 @@ export function useBrainAuditRecords(proposals?: ProposalForTracking[]) {
       }
     }
     return Array.from(set).sort();
-  }, [events.data]);
+  }, [events.events]);
 
   const actorLookups = useQuery<Record<string, string | null>>({
     queryKey: ["brain-actor-lookups", lookups],
@@ -1119,7 +1246,7 @@ export function useBrainAuditRecords(proposals?: ProposalForTracking[]) {
      timestamp matching prevents false positives from unrelated wiki events.
      The local id prefix `local-question-` ensures no collision with brain-core ids. */
   const records = useMemo(() => {
-    const brainEvents = events.data?.events ?? [];
+    const brainEvents = events.events;
     const brainRecords = mergeRelatedAuditRecords(
       brainEvents,
       brainEvents.map((e) => mapAuditEventToRecord(e, anchor.data, actorLookups.data, proposalTypeMapRef.current)),
@@ -1153,14 +1280,36 @@ export function useBrainAuditRecords(proposals?: ProposalForTracking[]) {
       });
     return [...brainRecords, ...localRecords]
       .sort((a, b) => b.occurredAtMs - a.occurredAtMs);
-  }, [events.data, anchor.data, actorLookups.data, localQuestions.data]);
+  }, [events.events, anchor.data, actorLookups.data, localQuestions.data]);
 
   return {
-    isLoading: events.isLoading || anchor.isLoading || localQuestions.isLoading,
-    isError: events.isError,
+    /* The audit feed's own state. Scoped to the feed ONLY — a companion read
+       failing or still running never reports as the history failing or the
+       history loading. */
+    isLoading: events.isInitialLoading,
+    isError: Boolean(events.initialError),
+    error: events.initialError,
+    isTimeout: isAuditTimeoutError(events.initialError),
     records,
-    /* Raw count from the complete brain-core feed, BEFORE local assistant-question
-       rows are merged in. */
-    eventCount: events.data?.events.length ?? 0,
+    /* Count of the brain-core events LOADED SO FAR, BEFORE local
+       assistant-question rows are merged in. This is no longer a count of the
+       tenant's whole history — `hasMore` says whether more exists. */
+    eventCount: events.events.length,
+    /* Pagination controls for the surface that renders the feed. */
+    hasMore: events.hasMore,
+    loadMore: events.loadMore,
+    retry: events.retry,
+    isLoadingMore: events.isLoadingMore,
+    loadMoreError: events.loadMoreError,
+    isLoadMoreTimeout: isAuditTimeoutError(events.loadMoreError),
+    /* A failed REFRESH is not a failed read: the rows stay, but they are of
+       unknown age and no surface may present them as current. */
+    refreshError: events.refreshError,
+    paginationStalled: events.paginationStalled,
+    loadedPageCount: events.loadedPageCount,
+    /* Companion reads, reported separately so a surface can degrade one
+       detail instead of the whole page. */
+    anchorUnavailable: anchor.isError,
+    assistantQuestionsUnavailable: localQuestions.isError,
   };
 }

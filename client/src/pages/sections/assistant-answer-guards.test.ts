@@ -15,14 +15,16 @@
  *
  * #172 — Prove that undoing a decision really puts the record back in front of you.
  *
- * The decided-proposal hide switch in brainAudit.ts correctly handles `undo`:
- * an undo decision removes the proposal ID from the set so the record reappears
- * in the pending queue. This test pins that the undo path is present in:
- *   a. The pure helper (decidedProposalIdsFromEvents in brainAudit.ts).
+ * An undo must put the record back in front of the user. The hide switch now
+ * reads the authoritative proposal row rather than replaying audit events, so
+ * this test pins:
+ *   a. That this client never reads an undone record as decided, and that the
+ *      old audit-derived set has not been reinstated.
  *   b. The Inbox action builder (InboxPage.tsx toRow / undoItem).
  */
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
+import { isDecidedState } from "@/lib/proposalDecisionStates";
 
 const ROUTES = "server/routes.ts";
 const ASSISTANT = "client/src/pages/sections/BrainAssistant.tsx";
@@ -101,12 +103,35 @@ describe("Brain Assistant answer pipeline (#2)", () => {
 // ─── #172: Undo decision wiring ───────────────────────────────────────────────
 
 describe("Undo decision puts the record back in front of you (#172)", () => {
-  it("decidedProposalIdsFromEvents removes the proposal ID when decision === 'undo'", () => {
+  /* The hide switch is no longer derived from audit events — it is read from
+     the authoritative proposal row (POST /proposals/decision-states/query),
+     which reflects an undo itself. Two things still have to hold: this client
+     never treats an undone record as decided, and nobody quietly reinstates an
+     audit-replay version alongside it. */
+  it("an undone proposal is not treated as decided", () => {
+    expect(
+      isDecidedState({
+        proposalId: "prop_a",
+        found: true,
+        decisionState: "decided",
+        status: "pending",
+        decision: "undo",
+        auditId: null,
+        decidedAt: null,
+      }),
+    ).toBe(false);
+  });
+
+  it("the audit library no longer derives a decided-proposal set of its own", () => {
     const src = readFileSync(AUDIT_LIB, "utf8");
-    // The helper must handle undo explicitly (not just ignore it).
-    expect(src, "decidedProposalIdsFromEvents must handle undo").toMatch(
-      /undo.*delete|delete.*undo/s,
+    expect(src, "the hide switch must come from the authoritative read, not the audit feed").not.toMatch(
+      /export function decidedProposalIdsFromEvents|export function useDecidedProposalIds/,
     );
+  });
+
+  it("the Inbox reads the hide switch from the authoritative endpoint", () => {
+    const src = readFileSync(INBOX, "utf8");
+    expect(src, "InboxPage must use useProposalDecisionStates").toMatch(/useProposalDecisionStates\(/);
   });
 
   it("InboxPage has an undoItem handler wired to the 'undo' decision", () => {

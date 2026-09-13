@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { parseCoreError } from "./approvalRejections";
+import { clearDecisionReceipt, recordDecisionReceipt } from "./decisionReceipts";
+import { isDecisionStateBatchFor } from "./proposalDecisionStates";
 import type { AgentKey } from "./agentProposals";
 import {
   fetchBrainRead,
@@ -363,6 +365,10 @@ export function useBrainProposals(): {
 export interface DecideProposalInput {
   id: string;
   decision: ProposalDecision;
+  /** Row context captured at decision time, so the receipt can render the
+   *  decided row after core stops returning the proposal. Optional: a caller
+   *  that cannot supply it still gets a receipt, just a plainer one. */
+  receipt?: { title?: string; rowSubtitle?: string };
 }
 
 export interface ProposalDecisionResult {
@@ -371,6 +377,120 @@ export interface ProposalDecisionResult {
   status: string;
   audit_id: string | null;
   payment_intent_id: string | null;
+}
+
+/** Statuses that mean core recorded the decision but the item is not finished:
+ *  another approver still has to act. Treated as a distinct outcome from a
+ *  completed decision wherever the result is worded. */
+export const AWAITING_STATUSES = new Set(["pending", "pending_approval", "awaiting_second_approval"]);
+
+/** Statuses are compared lowercased and trimmed. A status that differed only in
+ *  case would otherwise slip past every gate below and be treated as unknown —
+ *  silently turning a known awaiting state into a finished one. */
+function normalizeStatus(status: string): string {
+  return status.trim().toLowerCase();
+}
+
+/**
+ * How finished is the decision core just confirmed?
+ *
+ *   final    — a terminal status for the verb submitted. Safe to receipt and to
+ *              report in the past tense.
+ *   awaiting — recorded, but the item is explicitly not finished.
+ *   unknown  — a status this client does not recognise. Recorded (core returned
+ *              2xx for our proposal and did not contradict the verb), but
+ *              nothing here knows whether it is finished, so it must not be
+ *              receipted into Resolved or announced as done.
+ */
+export function decisionFinality(submitted: ProposalDecision, status: string): "final" | "awaiting" | "unknown" {
+  const s = normalizeStatus(status);
+  if (AWAITING_STATUSES.has(s)) return "awaiting";
+  return TERMINAL_STATUS_VERB[s] === submitted ? "final" : "unknown";
+}
+
+/** Terminal statuses, grouped by the decision verb each one belongs to. A
+ *  status from a verb OTHER than the one submitted is a contradiction: the
+ *  outcome core is describing is not the outcome the operator asked for.
+ *  Unknown statuses are not listed and are not treated as contradictions —
+ *  core's vocabulary grows, and refusing an unrecognised status would break a
+ *  decision that actually landed. */
+const TERMINAL_STATUS_VERB: Record<string, ProposalDecision> = {
+  approved: "approve",
+  executed: "approve",
+  paid: "approve",
+  rejected: "reject",
+  declined: "reject",
+  denied: "reject",
+  acknowledged: "acknowledge",
+  dismissed: "acknowledge",
+};
+
+/** Copy for a decision core recorded but explicitly has NOT finished. Present
+ *  tense, one per verb: the operator has acted, the item has not moved. */
+const DECISION_AWAITING_TITLE: Record<string, string> = {
+  approve: "Approval recorded. One more needed",
+  reject: "Decline recorded. Not final yet",
+  acknowledge: "Acknowledgement recorded. Not final yet",
+};
+
+/** Past-tense confirmation copy, one per decision verb. Only shown once core
+ *  has confirmed the decision with a response we could read. */
+const DECISION_CONFIRMED_TITLE: Record<string, string> = {
+  approve: "Approved",
+  reject: "Declined",
+  acknowledge: "Acknowledged",
+  undo: "Decision undone",
+};
+
+const DECISION_CONFIRMED_DETAIL: Record<string, string> = {
+  approve: "Brain recorded your approval. It's in Resolved.",
+  reject: "Brain recorded your decision. It's in Resolved.",
+  acknowledge: "Brain recorded this. It's in Resolved.",
+  undo: "This is back in your unresolved list.",
+};
+
+/**
+ * Read a decision response, or refuse it.
+ *
+ * brain-core answers a decision with the proposal id, the decision it recorded
+ * and the resulting status. Anything that does not carry at least those is not
+ * a confirmation we can show the operator — most importantly a body that echoes
+ * a DIFFERENT decision than the one submitted, which would mean the thing that
+ * got recorded is not the thing the user clicked.
+ */
+export function parseDecisionResult(
+  body: unknown,
+  submitted: ProposalDecision,
+  proposalId: string,
+): ProposalDecisionResult | null {
+  if (body === null || typeof body !== "object") return null;
+  const b = body as Record<string, unknown>;
+  const id = typeof b.id === "string" && b.id.length > 0 ? b.id : null;
+  const status = typeof b.status === "string" && b.status.length > 0 ? b.status : null;
+  if (!id || !status) return null;
+  /* The response must be about the proposal we decided. A body describing a
+     DIFFERENT id would otherwise write a receipt and a confirmation against the
+     row the operator clicked, on the strength of someone else's outcome. */
+  if (id !== proposalId) return null;
+  /* An absent decision echo is tolerated (core has not always sent one); a
+     CONTRADICTING one is not. */
+  const echoed = typeof b.decision === "string" ? b.decision : null;
+  if (echoed !== null && echoed !== submitted) return null;
+  /* The status has to agree too. `{decision:"approve", status:"rejected"}` is
+     not a confirmed approval however well-formed it looks, and taking the verb
+     on trust would show "Approved" for a rejection. */
+  const terminalVerb = TERMINAL_STATUS_VERB[normalizeStatus(status)];
+  if (terminalVerb !== undefined && terminalVerb !== submitted) return null;
+  return {
+    id,
+    decision: submitted,
+    status,
+    audit_id: typeof b.audit_id === "string" && b.audit_id.length > 0 ? b.audit_id : null,
+    payment_intent_id:
+      typeof b.payment_intent_id === "string" && b.payment_intent_id.length > 0
+        ? b.payment_intent_id
+        : null,
+  };
 }
 
 class ProposalConflictError extends Error {
@@ -389,12 +509,31 @@ export function useDecideProposal() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const invalidate = () => {
+  const invalidate = (decidedId: string) => {
     void queryClient.invalidateQueries({
       predicate: (q) => typeof q.queryKey[0] === "string" && q.queryKey[0].startsWith("/api/brain/proposals"),
     });
-    void queryClient.invalidateQueries({
+    /* The audit feed is a paginated (infinite) query, and INVALIDATING one
+       re-issues every page loaded so far — on a long history a single decision
+       becomes a burst of `/audit/events` requests, which is what the incident
+       looked like from the server. Resetting discards the loaded pages and
+       re-reads page ONE: bounded at a single request, and it genuinely
+       refreshes, which marking-stale-without-refetching does not. That matters
+       most for undo, where a cached page still carrying the old decision would
+       go on suppressing the proposal that was just reopened. */
+    void queryClient.resetQueries({
       predicate: (q) => typeof q.queryKey[0] === "string" && q.queryKey[0].startsWith("/api/brain/audit/"),
+    });
+    /* The authoritative decided-state read is what actually removes the row
+       from the unresolved queue, so it has to be re-asked after every decision
+       — including undo, where the expected answer is that the proposal is
+       pending again.
+       Only the batch CONTAINING this proposal is invalidated. Matching on the
+       key prefix alone would re-POST every batch on screen, which on a large
+       inbox is fifty requests per decision — the amplification this whole
+       change set exists to remove, reintroduced one layer down. */
+    void queryClient.invalidateQueries({
+      predicate: (q) => isDecisionStateBatchFor(q.queryKey, decidedId),
     });
   };
 
@@ -424,17 +563,86 @@ export function useDecideProposal() {
         }
         throw new Error(parseCoreError(body)?.error?.message ?? `Couldn't record the decision (${res.status}).`);
       }
-      return body as ProposalDecisionResult;
+      /* A 2xx with a body we can't read is NOT a success we may act on. Casting
+         it through (which is what this used to do) would let an empty or
+         error-shaped body become a receipt and a "decision recorded" toast,
+         telling the operator their approval landed on the strength of a status
+         code alone. Validate, and treat an unreadable body as a failure. */
+      const result = parseDecisionResult(body, decision, id);
+      if (!result) {
+        throw new Error(
+          "Brain accepted the decision but returned an unreadable response, so it can't be confirmed. Reload before deciding again.",
+        );
+      }
+      return result;
     },
-    onSuccess: () => invalidate(),
-    onError: (err) => {
+    onSuccess: (result, { id, decision, receipt }) => {
+      /* Order matters. The receipt and the toast are written from the confirmed
+         response BEFORE invalidation, so the decided row reaches Resolved in the
+         same tick the decision is confirmed. The audit feed can then take as
+         long as it needs to catch up without the row being invisible in the
+         meantime — the gap that made a successful approval look like it had
+         silently failed. */
+      const finality = decision === "undo" ? "final" : decisionFinality(decision, result.status);
+      if (decision === "undo" || finality !== "final") {
+        /* Undo puts the proposal back in front of the operator, so the receipt
+           claiming it was decided has to go with it.
+
+           Anything short of a terminal status for THIS verb is the same
+           situation for a different reason. An awaiting status says outright
+           that another approver still has to act; an unrecognised status says
+           nothing this client can read about whether the decision is finished.
+           Either way a receipt would move the row into Resolved and hide it
+           from the queue it may genuinely still be in. The toast below is the
+           only thing that should report these outcomes. */
+        clearDecisionReceipt(id);
+      } else {
+        recordDecisionReceipt({
+          proposalId: id,
+          decision,
+          status: result.status,
+          auditId: result.audit_id,
+          paymentIntentId: result.payment_intent_id,
+          decidedAtMs: Date.now(),
+          title: receipt?.title?.trim() || "Recommendation",
+          rowSubtitle: receipt?.rowSubtitle,
+        });
+      }
+      /* Only a terminal status earns the past tense. The other two outcomes are
+         worded for what they actually are, for EVERY verb — a decline that came
+         back still pending is no more finished than an approval that did, and
+         "Declined. It's in Resolved." would be false about both the outcome and
+         where to find it. */
+      toast(
+        finality === "final"
+          ? {
+              title: DECISION_CONFIRMED_TITLE[decision] ?? "Decision recorded",
+              description: DECISION_CONFIRMED_DETAIL[decision] ?? "Brain recorded your decision.",
+            }
+          : finality === "awaiting"
+            ? {
+                title: DECISION_AWAITING_TITLE[decision] ?? "Decision recorded. Not final yet",
+                description: "Brain has your decision, but this isn't finished — it still needs another approver.",
+              }
+            : {
+                /* No claim about where the row goes. An unrecognised status may
+                   turn out to be terminal, in which case core stops returning
+                   the proposal and it leaves the unresolved list — promising it
+                   would stay there would be a guess this client cannot back. */
+                title: "Decision recorded",
+                description: `Brain reported it as "${result.status}", which this app doesn't recognise, so it can't say whether the item is finished. The audit log in Settings has the outcome.`,
+              },
+      );
+      invalidate(id);
+    },
+    onError: (err, { id }) => {
       if (err instanceof ProposalConflictError) {
         toast({
           title: "Already decided elsewhere",
           description: "Someone (or something) else decided this proposal first - refreshed.",
           variant: "destructive",
         });
-        invalidate();
+        invalidate(id);
       } else if (!isBrainRateLimitError(err)) {
         toast({ title: "Couldn't record decision", description: err.message, variant: "destructive" });
       }

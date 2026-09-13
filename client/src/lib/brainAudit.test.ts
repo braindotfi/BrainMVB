@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { mapAuditEventToRecord, mergeRelatedAuditRecords, anchorFromInclusionProof, resolveDetailAnchor, localQuestionToRecord, applyTenantDbOnly, extractActorName, bffPathForActorLookup, truncateForCard, decidedProposalIdsFromEvents, CARD_TITLE_MAX, humanizeAuditAction, lifecycleStepsForDisplay, fetchAllBrainAuditEvents, type BrainAuditEvent, type BrainAnchor, type BrainInclusionProof } from "./brainAudit";
+import { mapAuditEventToRecord, mergeRelatedAuditRecords, anchorFromInclusionProof, resolveDetailAnchor, localQuestionToRecord, applyTenantDbOnly, extractActorName, bffPathForActorLookup, truncateForCard, CARD_TITLE_MAX, humanizeAuditAction, lifecycleStepsForDisplay, fetchBrainAuditEventsPage, fetchAuditCompanion, AuditTimeoutError, isAuditTimeoutError, type BrainAuditEvent, type BrainAnchor, type BrainInclusionProof } from "./brainAudit";
 import type { AnchorProof } from "./auditTypes";
 
 /**
@@ -45,43 +45,142 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("fetchAllBrainAuditEvents", () => {
-  it("follows brain-core's cursor through multiple pages and returns older anchored events exactly once", async () => {
+describe("fetchBrainAuditEventsPage", () => {
+  /* The audit feed is read ONE page at a time. The old whole-history walk is
+     gone: it returned nothing at all until every page had been read, which on a
+     long history left the page stuck on its loading state, and its 50-page
+     ceiling turned a large tenant into a permanent hard error. These pin the
+     replacement's contract — including that a single page is a complete,
+     usable answer on its own. */
+
+  it("requests the first page with no cursor and reports where the next one starts", async () => {
     const newest = ev({ id: "evt_newest", created_at: "2026-07-02T12:00:00.000Z" });
-    const anchoredOlder = ev({ id: "evt_anchored_older", created_at: "2026-06-15T12:00:00.000Z" });
     const requests: URL[] = [];
     vi.stubGlobal("fetch", vi.fn(async (input: string) => {
-      const url = new URL(input, "http://brainmvb.test");
-      requests.push(url);
-      const page = url.searchParams.get("cursor")
-        ? { events: [anchoredOlder], next_cursor: null }
-        : { events: [newest], next_cursor: "older-page" };
-      return new Response(JSON.stringify(page), {
+      requests.push(new URL(input, "http://brainmvb.test"));
+      return new Response(JSON.stringify({ events: [newest], next_cursor: "older-page" }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
       });
     }));
 
-    const result = await fetchAllBrainAuditEvents();
+    const page = await fetchBrainAuditEventsPage(null);
 
-    expect(requests).toHaveLength(2);
+    expect(requests).toHaveLength(1);
     expect(requests[0].searchParams.get("cursor")).toBeNull();
-    expect(requests[1].searchParams.get("cursor")).toBe("older-page");
-    expect(requests.every((request) => !request.searchParams.has("after"))).toBe(true);
-    expect(result.events.map((event) => event.id)).toEqual(["evt_newest", "evt_anchored_older"]);
-    expect(new Set(result.events.map((event) => event.id)).size).toBe(result.events.length);
+    /* brain-core paginates on `cursor`; `after` is a different (unsupported)
+       contract and sending it would silently return page one forever. */
+    expect(requests[0].searchParams.has("after")).toBe(false);
+    expect(page.events.map((e) => e.id)).toEqual(["evt_newest"]);
+    expect(page.next_cursor).toBe("older-page");
   });
 
-  it("fails explicitly instead of returning an incomplete history when a page repeats", async () => {
-    const newest = ev({ id: "evt_newest" });
+  it("passes the cursor back verbatim to read an older page", async () => {
+    const older = ev({ id: "evt_older", created_at: "2026-06-15T12:00:00.000Z" });
+    const requests: URL[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (input: string) => {
+      requests.push(new URL(input, "http://brainmvb.test"));
+      return new Response(JSON.stringify({ events: [older], next_cursor: null }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }));
+
+    const page = await fetchBrainAuditEventsPage("older-page");
+
+    expect(requests[0].searchParams.get("cursor")).toBe("older-page");
+    expect(page.events.map((e) => e.id)).toEqual(["evt_older"]);
+    /* Null means "this is the end of the trail", which is what lets the UI stop
+       offering to load more. An empty string must read the same way. */
+    expect(page.next_cursor).toBeNull();
+  });
+
+  it("treats an empty-string cursor as the end of the trail, not a page to fetch", async () => {
     vi.stubGlobal("fetch", vi.fn(async () =>
-      new Response(JSON.stringify({ events: [newest], next_cursor: "stuck" }), {
+      new Response(JSON.stringify({ events: [], next_cursor: "" }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
       }),
     ));
 
-    await expect(fetchAllBrainAuditEvents()).rejects.toThrow(/pagination (returned a repeated event|did not advance)/i);
+    expect((await fetchBrainAuditEventsPage(null)).next_cursor).toBeNull();
+  });
+
+  it("rejects a 2xx body that carries no events array rather than rendering an empty history", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () =>
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    ));
+
+    await expect(fetchBrainAuditEventsPage(null)).rejects.toThrow(/events array/i);
+  });
+
+  it("reports the BFF's upstream-timeout 504 as a timeout, not a generic failure", async () => {
+    /* The two are worded differently on screen and only one of them is worth
+       retrying, so collapsing them would tell the user the read failed when it
+       simply never finished. */
+    vi.stubGlobal("fetch", vi.fn(async () =>
+      new Response(JSON.stringify({ error: "upstream_timeout" }), { status: 504 }),
+    ));
+
+    const err = await fetchBrainAuditEventsPage(null).catch((e: unknown) => e);
+    expect(isAuditTimeoutError(err)).toBe(true);
+  });
+
+  it("reports its own client-side timeout as a timeout", async () => {
+    const timeout = Object.assign(new Error("The operation timed out."), { name: "TimeoutError" });
+    vi.stubGlobal("fetch", vi.fn(async () => { throw timeout; }));
+
+    const err = await fetchBrainAuditEventsPage(null).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(AuditTimeoutError);
+  });
+
+  it("keeps a caller-initiated cancellation a cancellation", async () => {
+    /* react-query aborts in-flight reads routinely (remount, key change). If
+       those surfaced as timeouts the page would show an error for a request the
+       user never saw fail. */
+    const controller = new AbortController();
+    controller.abort();
+    const aborted = Object.assign(new Error("aborted"), { name: "AbortError" });
+    vi.stubGlobal("fetch", vi.fn(async () => { throw aborted; }));
+
+    const err = await fetchBrainAuditEventsPage(null, controller.signal).catch((e: unknown) => e);
+    expect(isAuditTimeoutError(err)).toBe(false);
+    expect(err).toBe(aborted);
+  });
+
+  it("surfaces an upstream refusal with its status so it is not read as an empty history", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("forbidden", { status: 403 })));
+
+    await expect(fetchBrainAuditEventsPage(null)).rejects.toThrow(/403/);
+  });
+});
+
+describe("fetchAuditCompanion", () => {
+  /* The anchor and assistant-question reads are separate from the feed, and
+     their failures must stay separate too — they used to be OR-ed into the
+     audit page's single loading flag, so either one still in flight kept the
+     page claiming it was reading the history it had already read. */
+
+  it("returns the parsed body on success", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () =>
+      new Response(JSON.stringify({ anchoring_mode: "onchain" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    ));
+
+    expect(await fetchAuditCompanion<{ anchoring_mode: string }>("/api/brain/audit/anchor/latest"))
+      .toEqual({ anchoring_mode: "onchain" });
+  });
+
+  it("classifies a 504 from the companion read as a timeout too", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("", { status: 504 })));
+
+    const err = await fetchAuditCompanion("/api/brain/audit/anchor/latest").catch((e: unknown) => e);
+    expect(isAuditTimeoutError(err)).toBe(true);
   });
 });
 
@@ -747,66 +846,5 @@ describe("applyTenantDbOnly", () => {
   it("is a no-op when the tenant is not db_only", () => {
     const r = applyTenantDbOnly(localQuestionToRecord(wikiQ), false);
     expect(r.anchor.status).toBe("pending_next_batch");
-  });
-});
-
-/**
- * This set is a HIDE SWITCH. Both the Inbox and the Overview count subtract it
- * from the live proposals feed, so an id that lands in it wrongly does not
- * produce a visible error — it produces a record the tenant is never shown and
- * cannot know to look for. These pin the two ways that could happen.
- */
-describe("decidedProposalIdsFromEvents", () => {
-  const decision = (id: string, d: string, at: string) =>
-    ev({ action: "proposal.decided", inputs: { proposal_id: id, decision: d }, created_at: at });
-
-  it("collects proposals that were actually decided", () => {
-    const ids = decidedProposalIdsFromEvents([
-      decision("prop_a", "approve", "2026-07-01T10:00:00.000Z"),
-      decision("prop_b", "reject", "2026-07-01T11:00:00.000Z"),
-      decision("prop_c", "acknowledge", "2026-07-01T12:00:00.000Z"),
-    ]);
-    expect([...ids].sort()).toEqual(["prop_a", "prop_b", "prop_c"]);
-  });
-
-  /* An agent filing a proposal quotes the same proposal_id in the same field as
-     a decision does. Only the action tells them apart, and if that check ever
-     goes away every record disappears while its own birth event is in the feed. */
-  it("ignores an agent.action.proposed event quoting the same id", () => {
-    const ids = decidedProposalIdsFromEvents([
-      ev({
-        action: "agent.action.proposed",
-        inputs: { action_kind: "agent_action", proposal_id: "prop_live" },
-        created_at: "2026-07-01T10:00:00.000Z",
-      }),
-    ]);
-    expect(ids.has("prop_live")).toBe(false);
-  });
-
-  /* `undo` is a decision that REOPENS the record. Counting it as terminal would
-     hide a proposal that is live and waiting on the tenant. */
-  it("drops a proposal that was undone after being decided", () => {
-    const ids = decidedProposalIdsFromEvents([
-      decision("prop_a", "undo", "2026-07-01T12:00:00.000Z"),
-      decision("prop_a", "approve", "2026-07-01T10:00:00.000Z"),
-    ]);
-    expect(ids.has("prop_a")).toBe(false);
-  });
-
-  /* ...and the reverse must still hide it, which is what makes this an ordered
-     replay rather than "an undo anywhere wins". */
-  it("hides a proposal decided again after an undo", () => {
-    const ids = decidedProposalIdsFromEvents([
-      decision("prop_a", "reject", "2026-07-01T14:00:00.000Z"),
-      decision("prop_a", "undo", "2026-07-01T12:00:00.000Z"),
-      decision("prop_a", "approve", "2026-07-01T10:00:00.000Z"),
-    ]);
-    expect(ids.has("prop_a")).toBe(true);
-  });
-
-  it("survives an empty or unread feed without inventing ids", () => {
-    expect(decidedProposalIdsFromEvents([]).size).toBe(0);
-    expect(decidedProposalIdsFromEvents(undefined).size).toBe(0);
-    expect(decidedProposalIdsFromEvents(null).size).toBe(0);
   });
 });

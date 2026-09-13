@@ -12,7 +12,7 @@ import { type CurrencyCode } from "@/lib/currencyContext";
 import { useToast } from "@/hooks/use-toast";
 import { useBrainReviewQueue } from "@/lib/brainQueue";
 import { pendingAttentionSummary } from "@/lib/pendingAttention";
-import { useDecidedProposalIds } from "@/lib/brainAudit";
+import { useProposalDecisionStates } from "@/lib/proposalDecisionStates";
 import { useMissingEvidenceItems } from "@/lib/agentRunInput";
 import { useIntents } from "@/lib/intentsStore";
 import {
@@ -551,15 +551,19 @@ export function HomePage() {
        • agent proposals carrying a writable approve/reject. Acknowledge-only
          records tier as `insight` and belong under For Your Awareness, so they
          are deliberately NOT counted as something to decide,
-       • minus proposals the audit feed already shows as decided: brain-core
-         keeps decided rows in /v1/proposals and the Inbox suppresses them,
+       • minus proposals core already considers decided: brain-core keeps
+         decided rows in /v1/proposals and the Inbox suppresses them, on the
+         same authoritative read this count subtracts,
        • plus stalled agent runs — Needs Your Input — which are unresolved work
          asking something of the tenant.
 
      Honesty rule: a failed contributing feed is never treated as an empty queue. */
-  const decided = useDecidedProposalIds();
+  /* Asked of core for exactly the proposals this count is built from, so the
+     Overview and the Inbox cannot disagree about what is still open. */
+  const decisionStateIds = useMemo(() => liveProposals.map((p) => p.id), [liveProposals]);
+  const decided = useProposalDecisionStates(decisionStateIds);
   const missingEvidence = useMissingEvidenceItems();
-  const decidedIds = decided.ids;
+  const decidedIds = decided.decidedIds;
   const missingEvidenceCount = missingEvidence.items.length;
    /* Failed reads are the only incomplete state now: every successful list read
       follows its cursor to the end before contributing to this count. */
@@ -568,6 +572,18 @@ export function HomePage() {
     liveProposalsError ||
     missingEvidence.isError ||
     decided.isError ||
+    /* Read but not read in FULL. The requests-for-input feed is the audit
+       history, read a page at a time, so an unread older page can hold a
+       request this count is not counting. Not wrong enough to hide, not
+       complete enough to present flat. */
+    missingEvidence.isPartial ||
+    /* Read, but not re-read. A failed refresh leaves numbers that look current
+       and are not. */
+    missingEvidence.isStale ||
+    /* Proposals core could not answer for are counted as still open. That
+       direction never hides work, but it can overstate it, so the number is
+       presented as provisional rather than exact. */
+    decided.unansweredIds.length > 0 ||
     reconciliationError ||
     subscriptionError ||
     disputeError ||

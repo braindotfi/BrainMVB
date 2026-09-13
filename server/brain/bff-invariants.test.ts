@@ -129,6 +129,9 @@ function routeBrainCore(fullUrl: string, method: string): Response {
   if (url.endsWith("/ledger/counterparties") && method === "POST") {
     return json({ counterparty: { id: "cp_new", name: "Acme Supplies" }, created: true, merged: false }, 201);
   }
+  if (url.endsWith("/proposals/decision-states/query") && method === "POST") {
+    return json({ states: [] });
+  }
   if (url.includes("/proposals/") && url.endsWith("/decide") && method === "POST") {
     return json(decideResponse, decideStatus);
   }
@@ -553,6 +556,31 @@ describe("Invariant 6 - artifact write allowlist (api-surface.brainmvb)", () => 
     expect(lint).toHaveLength(1);
     expect(lint[0].url).toContain(`/policy/${TENANT_ID}/lint`);
     expect(lint[0].auth).toBe(`Bearer ${MEMBER_TOKEN}`);
+  });
+
+  /* A POST that READS. It is on the write allowlist only because of its method;
+     it carries execution:read and the member token, and it must not be reached
+     with the agent token or rewritten into the /proposals/:id/decide mount that
+     sits at the same path depth. */
+  it("POST /proposals/decision-states/query uses the MEMBER token and hits the query path, not /decide", async () => {
+    const { status } = await post("/api/brain/proposals/decision-states/query", {
+      proposal_ids: ["prop_01J9ZK4T7M8Q2W5R3X6Y8B4C7D"],
+    });
+    expect(status).toBe(200);
+    const query = callsEndingWith("/proposals/decision-states/query");
+    expect(query).toHaveLength(1);
+    expect(query[0].method).toBe("POST");
+    expect(query[0].auth).toBe(`Bearer ${MEMBER_TOKEN}`);
+    expect(calls.some((c) => c.url.includes("/decide"))).toBe(false);
+  });
+
+  it("POST /proposals/decision-states/query forwards the id batch to brain-core", async () => {
+    const ids = ["prop_01J9ZK4T7M8Q2W5R3X6Y8B4C7D", "pi_01J9ZK4T7M8Q2W5R3X6Y8B4C7E"];
+    const { status } = await post("/api/brain/proposals/decision-states/query", { proposal_ids: ids });
+    expect(status).toBe(200);
+    const query = callsEndingWith("/proposals/decision-states/query");
+    expect(query).toHaveLength(1);
+    expect(query[0].body).toEqual({ proposal_ids: ids });
   });
 
   it("/agents/mcp uses the MEMBER token (core-level per-tool scope enforcement)", async () => {

@@ -41,7 +41,8 @@ import { LiveProposalModal } from "@/components/AgentProposalModal";
 import type { AgentKey } from "@/lib/agentProposals";
 import { agentBadgeLabel, agentDisplayName } from "@/lib/agentProposals";
 import { capitalCase } from "@/lib/displayLabels";
-import { useBrainAuditRecords, registerProposalAgentKey, useDecidedProposalIds } from "@/lib/brainAudit";
+import { useBrainAuditRecords, registerProposalAgentKey } from "@/lib/brainAudit";
+import { useProposalDecisionStates } from "@/lib/proposalDecisionStates";
 import { inboxTapTarget } from "@/lib/inboxTap";
 import { pagerState, stepPager, type PagerEntry } from "@/lib/unifiedPager";
 import { AuditRecordPopup } from "@/components/AuditRecordPopup";
@@ -70,6 +71,7 @@ import {
 } from "@/lib/rulesStore";
 import { useReviewStatuses, setReviewStatus } from "@/lib/reviewStatusStore";
 import { acknowledgeInsight, useAcknowledgedRecords } from "@/lib/acknowledgedStore";
+import { clearDecisionReceipt, receiptSupersededByAudit, useDecisionReceipts } from "@/lib/decisionReceipts";
 import { TierRow, RowSection, type TierRowModel, type TierRowAction, type TierRowStatusPill } from "@/components/TierRowList";
 import { orderRowsForDisplay } from "@/lib/tierRowOrder";
 import { inboxBucket } from "@/lib/inboxBuckets";
@@ -281,6 +283,27 @@ const TAG_AGENT = "bg-brain-v1dark-orange text-brain-v1light-orange border-[rgba
 
 /** Background applied to the row container for settled records. */
 const ROW_BG_DECIDED = "#12032d"; // purple tint — user was involved in this outcome
+
+/** Past-tense wording for a locally-receipted decision. */
+function receiptDecisionLabel(decision: string): string {
+  if (decision === "approve") return "Approved by you";
+  if (decision === "reject") return "Declined by you";
+  if (decision === "acknowledge") return "Acknowledged by you";
+  return "Decided by you";
+}
+
+/** Same timestamp format the audit feed renders, so a receipt row and the audit
+ *  row that eventually replaces it do not read as two different events. */
+function receiptTimeLabel(ms: number): string {
+  return new Date(ms).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+    timeZoneName: "short",
+  });
+}
 const ROW_BG_BASE    = "#0a0c10"; // no tint — automated / in-flight
 
 /** Row container background for settled audit-event records. */
@@ -625,16 +648,87 @@ export function InboxPage() {
      source of the functional agent type after the audit event is written.
      Passing only needsReviewProposals made a reload lose "collections" and
      fall back to the generic execution-agent name ("Demo Payment Agent"). */
-  const { records: auditRecords, isError: auditError } = useBrainAuditRecords(liveProposals);
-  /* The set of proposals the audit trail shows as settled, and how far it can be
-     trusted. Deliberately NOT re-derived from `auditRecords` here: this set is a
-     hide switch, so it has to model effective state — `undo` is a decision that
-     REOPENS a record, and a set built by scanning mapped records for a proposal
-     reference would keep suppressing a proposal an undo had put back in front of
-     the tenant. useDecidedProposalIds replays the decisions in order and is the
-     same rule the Overview count subtracts, so the two screens cannot disagree.
-     It shares a query key with the read above, so this costs no extra request. */
-  const { ids: decidedIds } = useDecidedProposalIds();
+  const {
+    records: auditRecords,
+    isError: auditError,
+    /* Resolved is projected from the audit feed, which is read newest-first a
+       page at a time. When older pages exist, this list is a recent slice and
+       every count and "nothing here" claim below has to say so. */
+    hasMore: auditHasMore,
+    paginationStalled: auditPaginationStalled,
+    refreshError: auditRefreshError,
+  } = useBrainAuditRecords(liveProposals);
+  /* Either way the rows on screen are a recent slice: more pages exist, or
+     upstream stopped advancing its cursor so the rest cannot be reached.
+     `hasMore` goes false in the second case, which is exactly when a bare count
+     would look most authoritative. */
+  const auditPartial = auditHasMore || auditPaginationStalled;
+  const auditStale = auditRefreshError != null;
+  /* Which of these proposals core already considers settled — asked of core
+     directly, for the ids actually on screen.
+
+     This replaced a set derived by replaying `proposal.decided` events out of
+     the audit feed. That version answered from the pages that happened to be
+     loaded, so a decision recorded further back in the history simply was not
+     in it and the settled proposal stayed in the unresolved queue. The
+     endpoint reads the proposal row itself and handles `undo` upstream, so the
+     ordered replay this file used to depend on is gone with it.
+
+     Every live proposal is asked about, not only the unresolved subset:
+     brain-core keeps decided rows in GET /proposals, and the suppression rule
+     has to apply to all of them. */
+  const decisionStateIds = useMemo(() => liveProposals.map((p) => p.id), [liveProposals]);
+  const {
+    decidedIds,
+    isError: decisionStatesError,
+    unansweredIds: decisionStateGapIds,
+  } = useProposalDecisionStates(decisionStateIds);
+  /* Fail-open is right for the hide switch, but it is not right to stay silent
+     about it: an already-decided proposal core could not confirm renders here
+     as a live row with working buttons, and pressing them is how someone finds
+     out. Say the coverage is incomplete rather than let the list imply it is
+     complete. */
+  const decisionStatesIncomplete = decisionStatesError || decisionStateGapIds.length > 0;
+
+  /* Decisions this browser made and brain-core confirmed, which the audit feed
+     has not published yet. Without these the successful-decision window has no
+     representation anywhere on this page: core drops the row from the pending
+     set, the audit event is not readable yet, and the operator watches their
+     approval disappear. See client/src/lib/decisionReceipts.ts. */
+  const receipts = useDecisionReceipts();
+  const receiptProposalIds = useMemo(
+    () => new Set(receipts.map((r) => r.proposalId)),
+    [receipts],
+  );
+  /* Audit coverage of the loaded pages, used both to hide a receipt behind its
+     authoritative audit record and to retire it for good below. */
+  const auditCoverage = useMemo(() => {
+    const auditIdentity = new Set<string>();
+    const decidedProposalRefs = new Set<string>();
+    for (const r of auditRecords) {
+      auditIdentity.add(r.id);
+      if (r.anchor.auditId) auditIdentity.add(r.anchor.auditId);
+      /* `decision` is only set on proposal.decided records, which keeps this to
+         decisions — a proposal's own creation event cites the same id and must
+         not be read as the decision having landed. */
+      if (!r.decision) continue;
+      for (const link of r.linked) {
+        if (link.kind === "proposal" && link.refId) decidedProposalRefs.add(link.refId);
+      }
+    }
+    return { auditIdentity, decidedProposalRefs };
+  }, [auditRecords]);
+
+  /* Once the audit trail carries the decision, the receipt has done its job and
+     is deleted rather than left to sit until it expires. A receipt that merely
+     stops rendering is still a second, unreconciled record of a decision, and
+     it would come back the moment the audit page it was matched against was no
+     longer loaded. */
+  useEffect(() => {
+    for (const receipt of receipts) {
+      if (receiptSupersededByAudit(receipt, auditCoverage)) clearDecisionReceipt(receipt.proposalId);
+    }
+  }, [receipts, auditCoverage]);
 
   /* ── Live approve / reject (durable brain-core queue rows) ─────────────── */
   const queryClient = useQueryClient();
@@ -799,7 +893,7 @@ export function InboxPage() {
        brain-core decision, not the local insight store. */
     if (item.liveAgentProposal) {
       if (!item.liveDecisions?.some((d) => d.id === "acknowledge" && d.writable)) return;
-      decideProposal.mutate({ id: item.liveAgentProposal.id, decision: "acknowledge" });
+      decideProposal.mutate({ id: item.liveAgentProposal.id, decision: "acknowledge", receipt: { title: item.title, rowSubtitle: item.desc } });
       return;
     }
     if (item.kind !== "detection" || !item.insight) return;
@@ -936,8 +1030,21 @@ export function InboxPage() {
           hide every record while its own creation event was still in the page.
         2. Fail open. If the audit read fails, this set remains empty and the
            live proposal stays visible rather than being hidden accidentally.
-           Successful audit reads are complete cursor walks. */
-    const decidedProposalIds = decidedIds;
+           An audit read covers the pages loaded so far, newest first, so a
+           decision too old to be loaded simply is not suppressed here — the
+           same safe direction.
+
+       Confirmed local receipts are unioned in for the window between "core
+       accepted the decision" and "the audit feed publishes it". They keep both
+       properties: a receipt is only ever written from a confirmed decision
+       response (never from a request that merely left the browser), and an undo
+       deletes it, so it reopens the row exactly like a `proposal.decided` undo
+       does. Without this the receipt row in Resolved and the still-pending live
+       row in Unresolved would both render the same proposal. */
+    const decidedProposalIds =
+      receiptProposalIds.size === 0
+        ? decidedIds
+        : new Set([...decidedIds, ...receiptProposalIds]);
 
     /* Needs you: session-scoped §6-gated intents (decidable). */
     for (const item of liveReviews) {
@@ -1218,6 +1325,47 @@ export function InboxPage() {
       });
     }
 
+    /* Confirmed decisions the audit feed has not published yet.
+       Reconciliation is deliberately two-keyed and audit-first: an audit record
+       is the authoritative version of the same decision, so a receipt yields to
+       one whenever they can be shown to be the same record.
+         1. audit id — exact identity, when core returned one with the decision.
+         2. proposal id on a DECIDED audit record — the fallback for the (common)
+            case where core returned no audit id.
+       Anything not matched renders from the receipt, which is why the receipt
+       captured its own title at decision time: the proposal behind it may
+       already be gone from every feed on this page. */
+    for (const receipt of receipts) {
+      if (receiptSupersededByAudit(receipt, auditCoverage)) continue;
+      const receiptPill =
+        receipt.decision === "approve" ? PILL_APPROVED :
+        receipt.decision === "reject" ? PILL_REJECTED :
+        PILL_ACKED;
+      push({
+        id: `receipt-${receipt.proposalId}`,
+        kind: "proposal",
+        tier: "decided",
+        status:
+          receipt.decision === "reject" ? "declined" :
+          receipt.decision === "acknowledge" ? "informational" :
+          "approved",
+        type: "payment",
+        search: buildSearchText(receipt.title, receipt.rowSubtitle ?? "", receiptDecisionLabel(receipt.decision)),
+        title: receipt.title,
+        tag: "",
+        tagClass: "",
+        desc: receipt.rowSubtitle ?? receiptDecisionLabel(receipt.decision),
+        time: receiptTimeLabel(receipt.decidedAtMs),
+        why: "",
+        /* No detail record exists yet — the audit event that would back one has
+           not been published. The row states the outcome and nothing more
+           rather than opening a popup with invented history. */
+        actionable: false,
+        statusPill: receiptPill,
+        rowBg: ROW_BG_DECIDED,
+      });
+    }
+
     /* Local insight acknowledgements are settled history even though their
        source insight is removed from `visibleLiveInsights`. Keep the canonical
        acknowledgement record in Inbox so the action removes the item from the
@@ -1246,7 +1394,7 @@ export function InboxPage() {
     }
 
     return out;
-  }, [liveReviews, queue, needsReviewProposals, visibleLiveInsights, liveAutoApproved, statuses, auditRecords, acknowledgedRecords, format, formatText, thresholds]);
+  }, [liveReviews, queue, needsReviewProposals, visibleLiveInsights, liveAutoApproved, statuses, auditRecords, acknowledgedRecords, receipts, receiptProposalIds, auditCoverage, decidedIds, format, formatText, thresholds]);
 
   /* EVERY feed that contributes a row, not just the obvious ones. If any of them
      failed, this timeline is incomplete and must not be presented as an
@@ -1536,7 +1684,9 @@ export function InboxPage() {
     if (item.liveAgentProposal) {
       // Never send a decision core did not offer for this proposal.
       if (!item.liveDecisions?.some((d) => d.id === "approve" && d.writable)) return;
-      decideProposal.mutate({ id: item.liveAgentProposal.id, decision: "approve" });
+      /* Row wording travels with the decision so the confirmed row can still be
+         rendered after core stops returning the proposal. */
+      decideProposal.mutate({ id: item.liveAgentProposal.id, decision: "approve", receipt: { title: item.title, rowSubtitle: item.desc } });
       return;
     }
     if (item.intent?.intentId) {
@@ -1558,7 +1708,7 @@ export function InboxPage() {
   const rejectItem = (item: InboxItem) => {
     if (item.liveAgentProposal) {
       if (!item.liveDecisions?.some((d) => d.id === "reject" && d.writable)) return;
-      decideProposal.mutate({ id: item.liveAgentProposal.id, decision: "reject" });
+      decideProposal.mutate({ id: item.liveAgentProposal.id, decision: "reject", receipt: { title: item.title, rowSubtitle: item.desc } });
       return;
     }
     if (item.intent?.intentId) {
@@ -1795,8 +1945,18 @@ export function InboxPage() {
     : liveQueueLoading
       ? "Checking for anything that needs your attention\u2026"
       : activeTab === "Unresolved"
-        ? "Nothing needs your attention right now. Brain is keeping things moving."
-        : "No resolved decisions yet.";
+        /* The requests-for-input in this tab are derived from the audit feed,
+           which is read newest-first a page at a time. With older pages unread,
+           "nothing needs your attention" is a claim about the recent slice, and
+           a flat all-clear would be the one wrong thing to say. */
+        ? auditStale
+          ? "Nothing needs your attention in what could be read. The audit history didn't refresh, so newer requests for your input may be missing."
+          : auditPartial
+            ? "Nothing in your recent history needs your attention. Older records haven't been read yet."
+            : "Nothing needs your attention right now. Brain is keeping things moving."
+        : auditPartial
+          ? "No resolved decisions in your recent history. Older decisions haven't been read yet."
+          : "No resolved decisions yet.";
 
   return (
     <div className="bg-brain-v1baby-blue-5 overflow-hidden absolute inset-0 grid grid-rows-[auto_minmax(0,1fr)]">
@@ -2024,8 +2184,60 @@ export function InboxPage() {
             <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[12px] uppercase tracking-[0.4px] whitespace-nowrap">
               Resolved Decisions
             </p>
-            <CountPill testId="count-resolved-decisions">{visibleItems.length}</CountPill>
+            <CountPill testId="count-resolved-decisions">
+              {auditPartial ? `${visibleItems.length} so far` : visibleItems.length}
+            </CountPill>
           </div>
+        )}
+
+        {/* The Unresolved count sums a complete source (the live proposal feed)
+            with a partial one (requests for input, derived from the audit
+            history). A sum with a partial term is partial, and the chip cannot
+            say so without misdescribing the larger, complete half — so the
+            qualification goes here instead. */}
+        {activeTab === "Unresolved" && (auditPartial || auditStale) && !decisionsUnreachable && hasUnresolvedRecords && (
+          <p
+            className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-brain-v1baby-blue-60 text-[13px] w-full"
+            data-testid="text-unresolved-partial"
+          >
+            {auditStale
+              ? "Couldn't refresh your audit history just now, so requests for your input may be missing from this list."
+              : "Requests for your input come from your audit history, and only the most recent part has been read."}
+          </p>
+        )}
+
+        {/* Resolved reads the audit history newest-first. Saying how far it has
+            read is the difference between "you have decided this much" and "this
+            is what has been loaded" — and only the second is true. */}
+        {activeTab === "Resolved" && auditPartial && !decisionsUnreachable && (
+          <p
+            className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-brain-v1baby-blue-60 text-[13px] w-full"
+            data-testid="text-resolved-partial"
+          >
+            Showing your most recent decisions. Older ones are in the full audit log in Settings.
+          </p>
+        )}
+
+        {/* The rows are real but of unknown age: a refresh of the audit feed
+            failed, so a decision made since then would not be here. */}
+        {activeTab === "Resolved" && auditStale && (
+          <p
+            className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-brain-v1baby-blue-60 text-[13px] w-full"
+            data-testid="text-resolved-stale"
+          >
+            Couldn't refresh your decisions just now, so this list may be out of date.
+          </p>
+        )}
+
+        {/* Some of these rows may already be settled: core could not confirm
+            their state, so they are shown rather than hidden. */}
+        {activeTab === "Unresolved" && decisionStatesIncomplete && !unresolvedEmpty && (
+          <p
+            className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-brain-v1baby-blue-60 text-[13px] w-full"
+            data-testid="text-unresolved-unconfirmed"
+          >
+            Couldn't confirm the status of every record just now, so some of these may already be decided.
+          </p>
         )}
 
         {(activeTab === "Unresolved" ? unresolvedEmpty : visibleItems.length === 0) ? (
