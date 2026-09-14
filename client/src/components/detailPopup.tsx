@@ -171,7 +171,10 @@ export function LinkedEvidenceRow({
 }: {
   kind: string;
   label: string;
-  onClick?: () => void;
+  /* The event is passed through so a caller opening a nested dialog can capture the
+     row as the element to restore focus to on close. A controlled Radix dialog has no
+     Trigger of its own, so nothing else knows where the user came from. */
+  onClick?: (e: React.MouseEvent<HTMLElement>) => void;
   testId?: string;
 }) {
   const inner = (
@@ -181,7 +184,12 @@ export function LinkedEvidenceRow({
           {kind}
         </p>
       </div>
-      <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-100 text-[16px] flex-1 min-w-px">
+      {/* normal-case: this row renders as a <button> when tappable, and the base-layer
+          `button { text-transform: capitalize }` rule rewrote the tenant's own filename
+          — "form_1120_2025.pdf" was showing as "Form_1120_2025.Pdf", which is not a file
+          they have. The label is always upstream data (a filename, a record id), never
+          app chrome, so it opts out unconditionally rather than per caller. */}
+      <p className="normal-case [font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-100 text-[16px] flex-1 min-w-px">
         {label}
       </p>
       <ChevronRight size={16} className="text-brain-v1baby-blue-60 shrink-0" />

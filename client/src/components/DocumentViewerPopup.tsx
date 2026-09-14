@@ -655,10 +655,22 @@ export function DocumentViewerPopup({
   document: doc,
   open,
   onOpenChange,
+  restoreFocusTo,
 }: {
   document: DocumentRecord | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /**
+   * Where keyboard focus goes when this closes.
+   *
+   * Radix restores focus to the dialog's Trigger, and a controlled dialog has none —
+   * so every close path (Esc, the X, the overlay) leaves focus on <body>. That is
+   * survivable for a viewer opened from a page, but this one is opened from a row
+   * inside ANOTHER dialog: focus lands outside the parent modal, and the next Tab
+   * walks the page behind it. Callers that open it from a specific element pass a ref
+   * to that element and get focus put back on it.
+   */
+  restoreFocusTo?: React.RefObject<HTMLElement | null>;
 }) {
   const [comparing, setComparing] = useState(false);
 
@@ -679,6 +691,17 @@ export function DocumentViewerPopup({
         <DialogPrimitive.Overlay className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
         <DialogPrimitive.Content
           aria-describedby={undefined}
+          /* onCloseAutoFocus, not an effect on `open`: this fires on EVERY close path
+             at the point Radix is about to move focus, so one handler covers Esc, the
+             X and the overlay. The restore is deferred a microtask because the parent
+             dialog re-runs its own focus guard as this one unmounts, and a synchronous
+             focus() here is immediately taken back. */
+          onCloseAutoFocus={(e) => {
+            const target = restoreFocusTo?.current;
+            if (!target) return;
+            e.preventDefault();
+            queueMicrotask(() => target.focus());
+          }}
           className="fixed left-[50%] top-[50%] z-[60] translate-x-[-50%] translate-y-[-50%] bg-brain-v1baby-blue-5 border border-brain-v1stroke-2 border-solid flex flex-col items-start overflow-hidden rounded-modal w-[480px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.7)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out"
           data-testid="document-viewer-popup"
         >

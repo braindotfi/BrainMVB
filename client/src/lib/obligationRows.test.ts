@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { subLabel, dueLabel, amountLabel, statusColors, statusChip } from "./obligationRows";
+import { subLabel, dueLabel, amountLabel, sourceAmountLabel, statusColors, statusChip } from "./obligationRows";
 
 const fmt = (n: string | number) =>
   `$${Number(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -53,6 +53,62 @@ describe("amountLabel", () => {
   it("says so rather than rendering $NaN when the amount is unparseable", () => {
     expect(amountLabel("not-a-number", fmt)).toBe("Amount unavailable");
     expect(amountLabel("", fmt)).toBe("Amount unavailable");
+  });
+});
+
+/**
+ * The source-currency formatter, used wherever a figure is quoted as the record
+ * states it rather than in whatever currency the user is browsing in.
+ */
+describe("sourceAmountLabel", () => {
+  it("names the currency the record is actually denominated in", () => {
+    // The defect: useCurrency().format assumes its input is USD and converts. Passing
+    // a EUR obligation through it and appending the record's code rendered
+    // "$8,894.63 EUR" — a converted number labelled with the currency it came FROM.
+    expect(sourceAmountLabel("8894.63000000", "EUR")).toBe("€8,894.63 EUR");
+    expect(sourceAmountLabel("8894.63000000", "USD")).toBe("$8,894.63 USD");
+  });
+
+  it("still names a currency it has no symbol for", () => {
+    // "1,200.00" on its own names no currency at all.
+    expect(sourceAmountLabel("1200", "SEK")).toBe("1,200.00 SEK");
+    expect(sourceAmountLabel("1200", "sek")).toBe("1,200.00 SEK");
+  });
+
+  it("does not convert, whatever the display currency is set to", () => {
+    // There is no rate table for arbitrary currencies, and this figure is what a
+    // third party is owed. The only honest render is the number on the record.
+    expect(sourceAmountLabel("100.00", "EUR")).toContain("100.00");
+  });
+
+  it("keeps precision the value actually carries instead of rounding it away", () => {
+    expect(sourceAmountLabel("4800.00000000", "USD")).toBe("$4,800.00 USD");
+    expect(sourceAmountLabel("1234.5", "USD")).toBe("$1,234.50 USD");
+    // Four real decimal places survive; truncating to two would restate the debt.
+    expect(sourceAmountLabel("1234.5678", "USD")).toBe("$1,234.5678 USD");
+  });
+
+  it("groups thousands without routing the value through Number()", () => {
+    // A value past 2^53 would lose its last digits as a float.
+    expect(sourceAmountLabel("9007199254740993.01", "USD")).toBe("$9,007,199,254,740,993.01 USD");
+  });
+
+  it("handles a negative amount without losing the sign", () => {
+    expect(sourceAmountLabel("-250.00", "USD")).toBe("-$250.00 USD");
+  });
+
+  it("refuses rather than rendering a zero or a NaN it was never given", () => {
+    for (const bad of ["", "   ", "not-a-number", "1.2.3", "$100", null]) {
+      expect(sourceAmountLabel(bad, "USD")).toBe("Amount unavailable");
+    }
+    // A real zero is still a real figure.
+    expect(sourceAmountLabel("0", "USD")).toBe("$0.00 USD");
+  });
+
+  it("renders the number when the record carries no currency at all", () => {
+    // Inventing "$" for a currency-less record would assert dollars.
+    expect(sourceAmountLabel("100", null)).toBe("100.00");
+    expect(sourceAmountLabel("100", "  ")).toBe("100.00");
   });
 });
 

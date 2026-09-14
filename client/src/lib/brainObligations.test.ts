@@ -101,7 +101,49 @@ describe("normalizeObligation - every other field", () => {
       status: "upcoming",
       provenance: null,
       confidence: 0.4,
+      /* The Payable popup's fields. `base` carries none of them, and the point of
+         asserting them here is that their ABSENCE normalizes to null / [] — the
+         popup omits a row when the value is null, so a stray "" or [undefined]
+         would put an empty row or a phantom evidence tile on screen. */
+      minimum_due: null,
+      recurrence: null,
+      source_ids: [],
+      linked_transaction_ids: [],
+      created_at: null,
     });
+  });
+
+  it("carries the popup's fields through when brain-core sends them", () => {
+    const o = normalizeObligation({
+      ...base,
+      minimum_due: "25.00",
+      recurrence: "monthly",
+      source_ids: ["raw_1", "raw_2"],
+      linked_transaction_ids: ["tx_1"],
+      created_at: "2026-08-01T10:00:00Z",
+    });
+    expect(o.minimum_due).toBe("25.00");
+    expect(o.recurrence).toBe("monthly");
+    expect(o.source_ids).toEqual(["raw_1", "raw_2"]);
+    expect(o.linked_transaction_ids).toEqual(["tx_1"]);
+    expect(o.created_at).toBe("2026-08-01T10:00:00Z");
+  });
+
+  /* A numeric minimum_due must survive: it is the same decimal field amount_due is,
+     and brain-core has been seen to send both forms. Dropping it would hide a
+     smaller acceptable payment behind an omitted row. */
+  it("keeps a numeric minimum_due instead of discarding it as a non-string", () => {
+    expect(normalizeObligation({ ...base, minimum_due: 25 }).minimum_due).toBe("25");
+  });
+
+  it("never lets a malformed id list become a phantom evidence row", () => {
+    for (const bad of [null, undefined, "raw_1", 7, {}]) {
+      expect(normalizeObligation({ ...base, source_ids: bad }).source_ids).toEqual([]);
+    }
+    // A list with junk in it keeps the usable ids and drops the rest.
+    expect(
+      normalizeObligation({ ...base, source_ids: ["raw_1", null, "", "  ", 3] }).source_ids,
+    ).toEqual(["raw_1"]);
   });
 
   // ConfidencePill guards with `confidence !== null`, so an *undefined* confidence sailed

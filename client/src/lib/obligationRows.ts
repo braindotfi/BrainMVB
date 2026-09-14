@@ -81,6 +81,49 @@ export function amountLabel(raw: string, format: Format): string {
   return Number.isFinite(n) ? format(n) : "Amount unavailable";
 }
 
+const CURRENCY_SYMBOL: Record<string, string> = {
+  USD: "$",
+  EUR: "€",
+  GBP: "£",
+  JPY: "¥",
+};
+
+/**
+ * An amount in the currency the RECORD is denominated in — never the display currency.
+ *
+ * `useCurrency().format` exists to re-express the app's figures in whichever currency
+ * the user picked, and it does that by assuming its input is USD and applying a rate.
+ * That assumption is fine for a running total the app owns and false for a figure
+ * lifted off a supplier's document. Passing a EUR obligation through it and then
+ * appending the record's own code rendered "$8,894.63 EUR": a converted number
+ * labelled with the currency it was converted FROM. There is no FX table for arbitrary
+ * currencies here anyway, so the honest move is not to convert at all — this is what
+ * the counterparty is owed, in the units they are owed it.
+ *
+ * Formatting is done on the STRING. brain-core sends eight trailing decimal places
+ * ("4800.00000000") and routing a money value through Number() to tidy that up is how
+ * a large amount quietly loses precision.
+ */
+export function sourceAmountLabel(raw: string | null, currency: string | null): string {
+  if (typeof raw !== "string" || !raw.trim()) return "Amount unavailable";
+  const m = raw.trim().replace(/,/g, "").match(/^(-?)(\d+)(?:\.(\d*))?$/);
+  if (!m) return "Amount unavailable";
+  const [, sign, intPart, decRaw = ""] = m;
+
+  // Two places, but never fewer digits than the value actually carries: "1234.5678"
+  // is a real figure and truncating it to "1,234.57" would restate the debt.
+  const dec = decRaw.replace(/0+$/, "");
+  const shown = dec.length > 2 ? dec : dec.padEnd(2, "0");
+  const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+
+  const code = currency?.trim().toUpperCase() || null;
+  const symbol = code ? (CURRENCY_SYMBOL[code] ?? "") : "";
+  const number = `${sign}${symbol}${grouped}.${shown}`;
+  // The code is always shown when there is no symbol for it, because "1,200.00" alone
+  // names no currency at all.
+  return code ? `${number} ${code}` : number;
+}
+
 /**
  * The trailing detail on a row: the obligation's kind (Bill / Payroll / Tax).
  *

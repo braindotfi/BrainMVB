@@ -129,3 +129,5 @@
 - [Controlled Radix dialog focus](nested-radix-focus-restore.md) — no Trigger means no restore; fix in onCloseAutoFocus, deferred past a MutationObserver microtask; cover every close path.
 - [Figma frame translation](figma-frame-translation.md) — stroke is outside the frame (Tailwind is border-box, so gutters come up 2px short); global button capitalize retitles tenant data.
 - [Global button capitalize](global-button-capitalize.md) — a base-layer rule Title Cases every button's text; opt out with normal-case, never re-case upstream text from capitals alone.
+- [Display vs source currency](display-vs-source-currency.md) — useCurrency().format converts as if its input were USD; a record's own currency must render unconverted, off the decimal string.
+- [Reading one obligation](obligation-detail-reads.md) — no by-id route (list IS the lookup, so store the id); /resolved has 4 outcomes and only "landed" licenses a silent all-clear.

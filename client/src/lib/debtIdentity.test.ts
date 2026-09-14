@@ -164,9 +164,30 @@ describe("payable and bill detail popups share one shell", () => {
     /* Omitted, not blanked: rendering "Invoice  -" claims an invoice exists and its
        number is missing. These are the fields the user asked to be left out. */
     const src = read(PAYABLE);
-    for (const banned of ["invoice_number", "View invoice document", "DocumentViewerPopup", '"PO"']) {
+    for (const banned of ["invoice_number", "View invoice document", '"PO"']) {
       expect(src, `PayableDetailPopup must not render ${banned}`).not.toContain(banned);
     }
+  });
+
+  /**
+   * DocumentViewerPopup used to be banned here outright, as a proxy for "this
+   * popup must not offer to open an invoice it does not have". The popup now
+   * lists the obligation's OWN `source_ids` — the raw uploads Brain extracted
+   * the figures from — and those are openable. That is not an invoice claim, so
+   * the ban is narrowed to what it was actually protecting: the viewer may only
+   * be opened from the record's source evidence, never from an invoice lookup.
+   */
+  it("opens documents from the obligation's own sources, not from an invoice", () => {
+    const src = read(PAYABLE);
+    expect(src, "the viewer must be fed by the record's source evidence").toContain("source_ids");
+    // No invoice-derived document may reach it.
+    expect(src).not.toMatch(/setViewingDocument\(\s*\w*[Ii]nvoice/);
+    // And the evidence section must be conditional: a record with no sources
+    // shows no empty "Linked Evidence" heading.
+    expect(src).toMatch(/hasEvidence\s*=\s*sourceIds\.length\s*>\s*0/);
+    expect(src, "the heading must be gated on that flag, not rendered always").toMatch(
+      /\{hasEvidence\s*&&/,
+    );
   });
 
   it("the no-invoice popup distinguishes 'no invoice' from 'could not check'", () => {

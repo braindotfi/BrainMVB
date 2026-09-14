@@ -9,6 +9,9 @@ import { Button } from "@/components/ui/button";
 import { TransactionDetailPopup } from "@/components/TransactionDetailPopup";
 import { AccountDetailPopup } from "@/components/AccountDetailPopup";
 import { BillDetailPopup, type BrainInvoiceDTO } from "@/components/BillDetailPopup";
+import { PayableDetailPopup } from "@/components/PayableDetailPopup";
+import { fetchObligations, type Obligation } from "@/lib/brainObligations";
+import { brainCounterpartiesQueryOptions, type BrainCounterparty } from "@/lib/brainVendors";
 import { LiveEvidenceRecordPopup } from "@/components/LiveEvidenceRecordPopup";
 import type { EvidenceTile } from "@/lib/proposalCards";
 import { useToast } from "@/hooks/use-toast";
@@ -433,6 +436,12 @@ export function BrainAssistant() {
   const [openTxId, setOpenTxId] = useState<string | null>(null);
   const [openAccountId, setOpenAccountId] = useState<string | null>(null);
   const [openBillId, setOpenBillId] = useState<string | null>(null);
+  /* The citation's obligation ID, not the record itself. Holding the object froze one
+     refetch's snapshot: the popup kept showing an amount the ledger had already
+     corrected, and an account switch left the previous tenant's record on screen. The
+     id is re-resolved against the live map on every render, so a record that is gone
+     closes the popup instead of preserving a stale copy of it. */
+  const [openPayableId, setOpenPayableId] = useState<string | null>(null);
   const [fallbackEvidence, setFallbackEvidence] = useState<EvidenceTile | null>(null);
   const chatAbortRef = useRef<AbortController | null>(null);
   const chatGenerationRef = useRef(0);
@@ -534,6 +543,34 @@ export function BrainAssistant() {
   const invIds = useMemo(
     () => new Set((invData?.invoices ?? []).map((i) => i.id)),
     [invData],
+  );
+  /* Obligations (payables/receivables). The assistant grounds answers about payroll,
+     tax and bills in these, and before this they were the biggest class of citation
+     with no popup of its own — they fell through to the generic evidence card, which
+     could only repeat the id the user had just clicked. There is no by-id route for
+     an obligation (brain-core 404s it), so the list read IS the lookup. */
+  const { data: oblData } = useQuery<Obligation[]>({
+    queryKey: ["/api/brain/ledger/obligations"],
+    queryFn: () => fetchObligations(),
+    retry: false,
+  });
+  const oblById = useMemo(
+    () => new Map((oblData ?? []).map((o) => [o.id, o])),
+    [oblData],
+  );
+  /* Re-resolved every render rather than captured at click time — see openPayableId. */
+  const openPayable = openPayableId ? (oblById.get(openPayableId) ?? null) : null;
+  /* Counterparty names, so the payable popup opens on "Acme Payroll" rather than
+     `cp_01…`. A miss resolves to null and the popup says so itself. */
+  const { data: cpData } = useQuery<{ counterparties: BrainCounterparty[] }>(
+    brainCounterpartiesQueryOptions(),
+  );
+  const cpNameById = useMemo(
+    () =>
+      new Map(
+        (cpData?.counterparties ?? []).map((c) => [c.id, (c.name ?? "").trim() || null]),
+      ),
+    [cpData],
   );
 
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -1344,6 +1381,7 @@ export function BrainAssistant() {
                             acctIds.has(s.entityId) ? "account"
                             : txIds.has(s.entityId) ? "transaction"
                             : invIds.has(s.entityId) ? "invoice"
+                            : oblById.has(s.entityId) ? "obligation"
                             : resolveVendor(s.entityId) ? "counterparty"
                             : null
                           );
@@ -1359,6 +1397,13 @@ export function BrainAssistant() {
                                   setOpenTxId(s.entityId);
                                 } else if (resolvedType === "invoice" && invIds.has(s.entityId)) {
                                   setOpenBillId(s.entityId);
+                                } else if (oblById.has(s.entityId)) {
+                                  /* Checked against the map rather than `resolvedType`:
+                                     brain-core labels these citations inconsistently
+                                     (obligation / payable / liability, sometimes
+                                     nothing), and the only reliable signal that a
+                                     payable popup can open is that we hold the record. */
+                                  setOpenPayableId(s.entityId);
                                 } else {
                                   /* The middle-screen assistant can cite raw artifacts,
                                      obligations, audit events, proposals, and newer record
@@ -1422,6 +1467,22 @@ export function BrainAssistant() {
         vendorName="Unknown vendor"
         onClose={() => setOpenBillId(null)}
         hidePager
+      />
+      {/* No `payables` list is passed, so Previous/Next stay hidden: the sibling set
+          here is the citation list of one answer, not the Payables tab, and paging
+          through the ledger from inside a conversation would walk the user off the
+          evidence they were reading. */}
+      <PayableDetailPopup
+        payable={openPayable ?? null}
+        counterpartyName={
+          openPayable ? (cpNameById.get(openPayable.counterparty_id ?? "") ?? null) : null
+        }
+        onOpenTransaction={(id) => {
+          setOpenPayableId(null);
+          setOpenTxId(id);
+        }}
+        hidePager
+        onClose={() => setOpenPayableId(null)}
       />
       <LiveEvidenceRecordPopup
         evidence={fallbackEvidence}

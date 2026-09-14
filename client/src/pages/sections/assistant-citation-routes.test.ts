@@ -109,11 +109,53 @@ describe("Brain Assistant citation links", () => {
     }
   });
 
-  it("routes obligation citations to the itemized list of what is owed", () => {
+  it("opens an obligation citation in the Payable popup, never a navigation", () => {
     const src = readFileSync(ASSISTANT, "utf8");
     expect(src).not.toContain('resolvedType === "obligation") navigate(');
     expect(src).toContain("setFallbackEvidence({");
     expect(src).toContain("<LiveEvidenceRecordPopup");
+    // The citation must reach the same Payable surface the Payables tab uses,
+    // so an assistant answer and a ledger row explain the debt identically.
+    expect(src).toContain("<PayableDetailPopup");
+    expect(src).toContain("setOpenPayableId(s.entityId)");
+  });
+
+  /**
+   * brain-core labels these citations inconsistently — obligation, payable,
+   * liability, and sometimes no entityType at all. Branching on the LABEL sent a
+   * real, held obligation to the generic evidence card whenever the wording
+   * drifted. The only sound signal is whether we are actually holding the
+   * record, so the branch must test the map.
+   */
+  it("decides the Payable branch by holding the record, not by the upstream label", () => {
+    const src = readFileSync(ASSISTANT, "utf8");
+    const mapStart = src.indexOf("msg.sources.map");
+    const block = src.slice(mapStart, mapStart + 4000);
+
+    expect(block).toContain("oblById.has(s.entityId)");
+    expect(
+      block,
+      "the Payable branch must not be gated on resolvedType — the upstream label drifts",
+    ).not.toContain('resolvedType === "obligation" &&');
+
+    // …and it must be reached BEFORE the generic evidence-card fall-through,
+    // or a held obligation still renders as an untyped "Grounded record".
+    const oblBranch = block.indexOf("setOpenPayableId(s.entityId)");
+    const fallback = block.indexOf("setFallbackEvidence({");
+    expect(oblBranch, "obligation branch not found in the citation handler").toBeGreaterThan(-1);
+    expect(fallback, "fallback evidence branch not found in the citation handler").toBeGreaterThan(-1);
+    expect(oblBranch).toBeLessThan(fallback);
+  });
+
+  /**
+   * The assistant renders one citation at a time, so the popup's Prev/Next would
+   * page through a list the conversation never showed.
+   */
+  it("hides the record pager on the assistant's Payable popup", () => {
+    const src = readFileSync(ASSISTANT, "utf8");
+    const idx = src.indexOf("<PayableDetailPopup");
+    expect(idx, "PayableDetailPopup not rendered in BrainAssistant").toBeGreaterThan(-1);
+    expect(src.slice(idx, idx + 800)).toContain("hidePager");
   });
 
   it("keeps every returned grounding record tappable", () => {
