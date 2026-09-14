@@ -93,7 +93,7 @@ function MemberRow({ member, inviteActions }: { member: BrainMember; inviteActio
           : `${member.displayName}'s invite link no longer works.`,
       );
     } catch {
-      alert.error("Couldn't reach Brain core", "Nothing was changed.");
+      alert.error("Couldn't reach RobotMoney", "Nothing was changed.");
     } finally {
       setBusy(null);
     }

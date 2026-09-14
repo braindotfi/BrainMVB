@@ -73,7 +73,7 @@ export function mapApprovalRejection(body: CoreErrorBody | undefined): ApprovalR
           reason: "self_approval_blocked:payee_unresolved",
           title: "Payee couldn't be verified",
           detail:
-            "Brain core can't match this payee to a team member, so it can't rule out a self-approval. Resolve the payee first, then approve.",
+            "RobotMoney can't match this payee to a team member, so it can't rule out a self-approval. Resolve the payee first, then approve.",
         };
       }
       return {
@@ -105,7 +105,7 @@ export function mapApprovalRejection(body: CoreErrorBody | undefined): ApprovalR
       return {
         reason: "actor_unresolved",
         title: "You're not a recognized approver",
-        detail: "Brain core doesn't recognize your account as an approver on this tenant.",
+        detail: "RobotMoney doesn't recognize your account as an approver on this tenant.",
       };
     case "auth_scope_insufficient":
       return {
@@ -118,7 +118,7 @@ export function mapApprovalRejection(body: CoreErrorBody | undefined): ApprovalR
         reason: "approval_signer_revoked",
         title: "Approval can't be completed",
         detail:
-          "Brain core no longer recognizes an active approval signer for this tenant, so the payment can't be signed off. (Demo environments hit this. The authority is real, the signer isn't provisioned.)",
+          "RobotMoney no longer recognizes an active approval signer for this tenant, so the payment can't be signed off. (Demo environments hit this. The authority is real, the signer isn't provisioned.)",
       };
     case "last_admin_protected":
       return {
@@ -132,7 +132,7 @@ export function mapApprovalRejection(body: CoreErrorBody | undefined): ApprovalR
         title: "Approval failed",
         detail:
           body?.error?.message ||
-          "Brain core refused this approval. No changes were made.",
+          "RobotMoney refused this approval. No changes were made.",
       };
   }
 }

@@ -830,17 +830,17 @@ export function InboxPage() {
       const status: string = body?.intent?.status ?? "";
       if (status === "awaiting_second_approval" || status === "pending_approval") {
         setApprovalState(intentId, "awaiting_second");
-        alert.approved("Approval recorded. One more needed", "Your approval is in. Brain core still needs a second approver before this can settle.", 2_000);
+        alert.approved("Approval recorded. One more needed", "Your approval is in. RobotMoney still needs a second approver before this can settle.", 2_000);
       } else {
         setApprovalState(intentId, "approved");
-        alert.approved("Payment approved", "Brain core accepted the approval. It will settle shortly.", 2_000);
+        alert.approved("Payment approved", "RobotMoney accepted the approval. It will settle shortly.", 2_000);
       }
       setActiveLive(null);
     } catch (err) {
       if (isBrainRateLimitError(err)) return;
       const rej: ApprovalRejection = {
         reason: "network_error",
-        title: "Couldn't reach Brain core",
+        title: "Couldn't reach RobotMoney",
         detail: "The approval didn't go through. Check your connection and try again. Nothing was changed.",
       };
       if (surfaceRejection) setLiveRejection(rej);
@@ -1683,7 +1683,7 @@ export function InboxPage() {
       return;
     }
     if (item.intent?.intentId) {
-      alert.approved("Approving…", "Sending your approval to Brain core.", 1_500);
+      alert.approved("Approving…", "Sending your approval to RobotMoney.", 1_500);
       void approveIntent(item.intent.intentId, false);
       return;
     }

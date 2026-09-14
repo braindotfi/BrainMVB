@@ -330,7 +330,7 @@ export function LiveProposalModal({
         const message =
           (body?.body?.error?.message as string | undefined) ??
           (body?.message as string | undefined) ??
-          "Brain core rejected this action.";
+          "RobotMoney rejected this action.";
         const ref = typeof body?.bff_request_id === "string" ? body.bff_request_id : null;
         alert.error("Action failed", ref ? `${message}\n\nRef: ${ref}` : message);
         return;
@@ -339,7 +339,7 @@ export function LiveProposalModal({
       closeEvidenceRecord();
       alert.success(successTitle, successText);
     } catch {
-      alert.error("Action failed", "Couldn't reach Brain core. Nothing was changed.");
+      alert.error("Action failed", "Couldn't reach RobotMoney. Nothing was changed.");
     } finally {
       setTrustBusy(false);
     }
@@ -397,14 +397,14 @@ export function LiveProposalModal({
         credentials: "include",
       });
       if (!res.ok && res.status !== 404) {
-        alert.error("Action failed", "Brain rejected the request. The counterparty was not removed.");
+        alert.error("Action failed", "RobotMoney rejected the request. The counterparty was not removed.");
         return;
       }
       await queryClient.invalidateQueries({ queryKey: ["/api/brain/ledger/counterparties"] });
       closeEvidenceRecord();
       alert.success("Counterparty Successfully Deleted", `${vendorName} has been successfully deleted and removed.`);
     } catch {
-      alert.error("Action failed", "Couldn't reach Brain core. Nothing was changed.");
+      alert.error("Action failed", "Couldn't reach RobotMoney. Nothing was changed.");
     } finally {
       setTrustBusy(false);
     }

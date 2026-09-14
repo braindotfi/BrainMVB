@@ -29,7 +29,7 @@ function UploadInProgressWithAlert() {
   const alert = useAppAlert();
   useEffect(() => {
     ingest.notifyUploadStart("invoice.pdf");
-    alert.success("Document uploaded", "Brain will read it and extract what it can.", 0);
+    alert.success("Document uploaded", "RobotMoney will read it and extract what it can.", 0);
   }, [ingest, alert]);
   return null;
 }

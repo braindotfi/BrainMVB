@@ -620,7 +620,7 @@ export function BrainAssistant() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/integrations/documents"] });
-      alert.success("Document uploaded", "Brain will read it and extract what it can.");
+      alert.success("Document uploaded", "RobotMoney will read it and extract what it can.");
     },
     onError: (err: Error) => {
       alert.error("Upload failed", err.message);

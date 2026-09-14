@@ -642,7 +642,7 @@ export function useDecideProposal() {
         /* Held, not settled: another approver still has to act. */
         alert.postponed(
           DECISION_AWAITING_TITLE[decision] ?? "Decision recorded. Not final yet",
-          "Brain has your decision, but this isn't finished — it still needs another approver.",
+          "RobotMoney has your decision, but this isn't finished — it still needs another approver.",
         );
       } else {
         /* No claim about where the row goes. An unrecognised status may
@@ -651,7 +651,7 @@ export function useDecideProposal() {
            would stay there would be a guess this client cannot back. */
         alert.info(
           "Decision recorded",
-          `Brain reported it as "${result.status}", which this app doesn't recognise, so it can't say whether the item is finished. The audit log in Settings has the outcome.`,
+          `RobotMoney reported it as "${result.status}", which this app doesn't recognise, so it can't say whether the item is finished. The audit log in Settings has the outcome.`,
         );
       }
       invalidate(id);

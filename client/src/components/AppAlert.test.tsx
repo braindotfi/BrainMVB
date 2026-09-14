@@ -2,6 +2,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import ts from "typescript";
 import { useEffect, type ReactNode } from "react";
 import { act } from "react-dom/test-utils";
 import { createRoot, type Root } from "react-dom/client";
@@ -118,6 +119,57 @@ describe("AppAlert is the only notifier", () => {
     expect(
       offenders.map((f) => f.slice(root.length)),
       "these modules import a second notifier; route them through useAppAlert instead",
+    ).toEqual([]);
+  });
+
+  it('uses "RobotMoney", never "Brain", in user-facing alert copy', () => {
+    const root = join(process.cwd(), "client", "src");
+    const offenders: string[] = [];
+    const alertMethods = new Set([
+      "info",
+      "error",
+      "success",
+      "approved",
+      "postponed",
+      "rejected",
+      "showAlert",
+    ]);
+
+    for (const file of sourceFiles(root)) {
+      const sourceText = readFileSync(file, "utf8");
+      const source = ts.createSourceFile(
+        file,
+        sourceText,
+        ts.ScriptTarget.Latest,
+        true,
+        file.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+      );
+
+      const visit = (node: ts.Node) => {
+        if (
+          ts.isCallExpression(node) &&
+          ts.isPropertyAccessExpression(node.expression) &&
+          alertMethods.has(node.expression.name.text)
+        ) {
+          /* Convenience helpers expose title + description first. Later
+             arguments are timing and internal dedupe keys such as
+             "brain-rate-limit", which are deliberately not user-facing. */
+          const staleBrand = node.arguments.slice(0, 2).find((argument) =>
+            /\bBrain(?: core)?\b/i.test(argument.getText(source)),
+          );
+          if (staleBrand) {
+            const line = source.getLineAndCharacterOfPosition(staleBrand.getStart(source)).line + 1;
+            offenders.push(`${file.slice(root.length)}:${line} ${staleBrand.getText(source)}`);
+          }
+        }
+        ts.forEachChild(node, visit);
+      };
+      visit(source);
+    }
+
+    expect(
+      offenders,
+      'toast copy still uses the old "Brain" brand; replace it with "RobotMoney"',
     ).toEqual([]);
   });
 });

@@ -270,7 +270,7 @@ export function SourceIngestToastProvider({ children }: { children: ReactNode })
       dismiss();
       alert.error(
         "Couldn't add source",
-        "The file couldn't be read by brain-core. Try uploading again.",
+        "The file couldn't be read by RobotMoney. Try uploading again.",
       );
       return;
     }

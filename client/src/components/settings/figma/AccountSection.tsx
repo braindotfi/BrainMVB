@@ -159,7 +159,7 @@ export default function AccountSection() {
       setModal(null);
       appAlert.success(
         "Account closed",
-        "Your Brain account and all associated records have been permanently deleted.",
+        "Your RobotMoney account and all associated records have been permanently deleted.",
       );
       // #251: surface orphaned-key warnings so operators can act on them.
       // brainCoreUnreachable means the key count is unknown (not confirmed zero).
@@ -167,7 +167,7 @@ export default function AccountSection() {
       if (result?.brainCoreUnreachable) {
         appAlert.error(
           "API key status unknown",
-          "Your account was deleted, but Brain couldn't be reached to revoke your API keys. Contact support if you need to confirm all keys are inactive.",
+          "Your account was deleted, but RobotMoney couldn't be reached to revoke your API keys. Contact support if you need to confirm all keys are inactive.",
         );
       } else if (result?.brainKeyRevocationsFailed && result.brainKeyRevocationsFailed > 0) {
         appAlert.error(
@@ -190,7 +190,7 @@ export default function AccountSection() {
       setModal(null);
       appAlert.success(
         "Data deleted",
-        "All your Brain data has been permanently deleted. Your account remains active.",
+        "All your RobotMoney data has been permanently deleted. Your account remains active.",
       );
     } catch (err: any) {
       appAlert.error("Couldn't delete data", err?.message || "Something went wrong. Please try again.");
