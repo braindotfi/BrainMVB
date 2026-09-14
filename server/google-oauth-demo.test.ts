@@ -38,6 +38,11 @@ const envSnapshot = {
   GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
 };
 
+/** The redirect_uri the app sends Google, captured from the real authorization redirect. */
+let authorizationRedirectUri: string | null = null;
+/** The body of the token-exchange POST, captured by the mock below. */
+let tokenExchangeBody: URLSearchParams | null = null;
+
 /** Stand in for Google's token + userinfo endpoints; everything else hits the real server. */
 function mockGoogle(profile: {
   sub: string;
@@ -48,6 +53,11 @@ function mockGoogle(profile: {
   vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
     if (url.startsWith("https://oauth2.googleapis.com/token")) {
+      // Capture what we actually send Google. Google requires the exchange's
+      // redirect_uri to equal the one in the authorization request byte for byte, and
+      // asserting only on the authorization URL would let a regression hardcode a
+      // different value here and still pass.
+      tokenExchangeBody = new URLSearchParams(String(init?.body ?? ""));
       return new Response(JSON.stringify({ access_token: "test-access-token" }), {
         status: 200,
         headers: { "content-type": "application/json" },
@@ -86,8 +96,9 @@ async function runCallback(returnTo?: string): Promise<{ location: string; cooki
   const begin = await realFetch(beginUrl, { redirect: "manual" });
   const cookie = (begin.headers.get("set-cookie") ?? "").split(";")[0];
   const authorizationUrl = new URL(begin.headers.get("location") ?? "");
-  expect(authorizationUrl.searchParams.get("redirect_uri")).toBe(
-    "https://app.brain.fi/api/auth/google/callback",
+  authorizationRedirectUri = authorizationUrl.searchParams.get("redirect_uri");
+  expect(authorizationRedirectUri).toBe(
+    "https://app.robotmoney.com/api/auth/google/callback",
   );
   const state = authorizationUrl.searchParams.get("state");
   expect(state).toBeTruthy();
@@ -188,6 +199,24 @@ describe("Google OAuth cannot resolve to a demo account", () => {
     expect(body.user.isDemo).toBe(false);
   });
 
+  it("exchanges the code with the same redirect_uri it asked Google to use", async () => {
+    // Google compares the two byte for byte and rejects the exchange if they differ.
+    // The original bug was a single hardcoded host, so the two could not drift; now
+    // that both read a helper, a regression could change one call site and not the
+    // other, and the authorization URL alone would still look correct.
+    mockGoogle({ sub: "google-sub-pair", email: "pair@example.com", email_verified: true });
+    await runCallback();
+
+    expect(tokenExchangeBody).not.toBeNull();
+    expect(tokenExchangeBody!.get("redirect_uri")).toBe(authorizationRedirectUri);
+    expect(tokenExchangeBody!.get("redirect_uri")).toBe(
+      "https://app.robotmoney.com/api/auth/google/callback",
+    );
+    // grant_type and the code must still be intact — this is a real exchange body.
+    expect(tokenExchangeBody!.get("grant_type")).toBe("authorization_code");
+    expect(tokenExchangeBody!.get("code")).toBe("test-code");
+  });
+
   it("returns a Google-authenticated invitee to the original invite URL", async () => {
     const email = "invited.google@example.com";
     const invitePath = "/invite/invite-token_123";
@@ -218,7 +247,7 @@ describe("Google OAuth token-exchange diagnostics", () => {
       expect.objectContaining({
         status: 401,
         client_id: "test-google-client-id",
-        redirect_uri: "https://app.brain.fi/api/auth/google/callback",
+        redirect_uri: "https://app.robotmoney.com/api/auth/google/callback",
         reason: "client_id_not_found",
         google_error: "invalid_client",
         google_error_description: "The OAuth client was not found.",

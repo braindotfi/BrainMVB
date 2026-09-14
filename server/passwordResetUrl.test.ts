@@ -34,13 +34,17 @@ describe("passwordResetUrl", () => {
     expect(url).not.toContain("app.brain.fi");
   });
 
-  it("falls back to app.brain.fi when REPLIT_DEV_DOMAIN is absent", () => {
+  it("falls back to the live production host when REPLIT_DEV_DOMAIN is absent", () => {
     delete process.env.APP_BASE_URL;
     delete process.env.REPLIT_DEV_DOMAIN;
 
     const url = passwordResetUrl("tok456");
 
-    expect(url).toMatch(/^https:\/\/app\.brain\.fi\//);
+    // The regression: this fell back to app.brain.fi, which stopped serving after the
+    // move to app.robotmoney.com and now answers 404. Production reset emails were
+    // sending users to a dead domain. A reset link must land on a host that serves.
+    expect(url).toMatch(/^https:\/\/app\.robotmoney\.com\//);
+    expect(url).not.toContain("app.brain.fi");
     expect(url).toContain("/reset-password/");
     expect(url).toContain("tok456");
   });
