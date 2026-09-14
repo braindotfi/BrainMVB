@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect, useLayoutEffect, useMemo, useCallback } from "react";
-import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   ArrowRight,
@@ -10,7 +9,19 @@ import { Button } from "@/components/ui/button";
 import { TransactionDetailPopup } from "@/components/TransactionDetailPopup";
 import { AccountDetailPopup } from "@/components/AccountDetailPopup";
 import { BillDetailPopup, type BrainInvoiceDTO } from "@/components/BillDetailPopup";
-import { useToast } from "@/hooks/use-toast";
+import { PayableDetailPopup } from "@/components/PayableDetailPopup";
+import { normalizeObligation, type RawObligation } from "@/lib/brainObligations";
+import { usePagedLedgerRead } from "@/lib/ledgerRead";
+import {
+  mayBePayable,
+  payableLookup,
+  unresolvedCitationNote,
+  UNRESOLVED_CITATION_LABEL,
+} from "@/lib/assistantCitations";
+import { brainCounterpartiesQueryOptions, type BrainCounterparty } from "@/lib/brainVendors";
+import { LiveEvidenceRecordPopup } from "@/components/LiveEvidenceRecordPopup";
+import type { EvidenceTile } from "@/lib/proposalCards";
+import { useAppAlert } from "@/components/AppAlert";
 import { reportRateLimit } from "@/lib/rateLimit";
 import { useCurrency } from "@/lib/useCurrency";
 import { useAuth } from "@/lib/authContext";
@@ -20,11 +31,11 @@ import {
   isSupportedDocumentFile,
   sourceTypeForDocument,
 } from "@/lib/documentUpload";
-import { openMemberDetail } from "@/lib/membersStore";
 import { useSuggestedQuestions, resolveSuggestionChips } from "@/lib/brainSuggestedQuestions";
-import { resolveVendor, openVendorDetail } from "@/lib/openVendorDetail";
+import { resolveVendor } from "@/lib/openVendorDetail";
 import { allocateChatId, parseAssistantResponse, removeChatSession, trimChatHistory, buildChatPayload, filterPayloadMessages, buildTruncationNote, ASSISTANT_GENERIC_ERROR, CHAT_HISTORY_LIMIT, MESSAGE_CONTENT_LIMIT } from "@/lib/assistantChat";
 import { isAssistantBulletLine, stripAssistantBullet } from "@/lib/assistantFormatting";
+import { collectRuntimeProtectedValues, normalizeRuntimeBranding } from "@/lib/runtimeBranding";
 import timeIcon from "@assets/timestamp_1788994251245.png";
 import activeConvoIcon from "@assets/Active_1781818047007.png";
 import deleteConvoIcon from "@assets/Delete_1781818067389.png";
@@ -326,9 +337,10 @@ function ChatBubble({
 
     let lastParentWidth = -1;
     let disposed = false;
+    let frame: number | null = null;
 
     const apply = () => {
-      if (disposed) return;
+      if (disposed || !el.isConnected || !parent.isConnected) return;
       // Release the pin so wrapping is recomputed against max-width.
       el.style.width = "";
       const widest = widestLineWidth(el);
@@ -341,32 +353,45 @@ function ChatBubble({
       lastParentWidth = parent.getBoundingClientRect().width;
     };
 
+    const scheduleApply = () => {
+      if (disposed || frame !== null) return;
+      frame = requestAnimationFrame(() => {
+        frame = null;
+        apply();
+      });
+    };
+
     apply();
 
     // Re-measure when the panel is resized. The observer also fires on height
     // changes — which re-wrapping itself causes — so ignore anything that
     // didn't actually change the available width, otherwise each measurement
-    // schedules another one.
+    // schedules another one. The write runs in the next animation frame rather
+    // than inside ResizeObserver delivery; changing the bubble's width inside
+    // the callback can otherwise trigger the browser's ResizeObserver-loop
+    // exception when a side panel collapses.
     const ro = new ResizeObserver(() => {
+      if (disposed || !parent.isConnected) return;
       if (parent.getBoundingClientRect().width === lastParentWidth) return;
-      apply();
+      scheduleApply();
     });
     ro.observe(parent);
 
     // Gilroy is a webfont: text measured with the fallback face has different
     // metrics, so anything measured before it swaps in is stale.
     if (typeof document !== "undefined" && document.fonts?.status !== "loaded") {
-      document.fonts?.ready.then(apply).catch(() => {});
+      document.fonts?.ready.then(scheduleApply).catch(() => {});
     }
 
     return () => {
       disposed = true;
+      if (frame !== null) cancelAnimationFrame(frame);
       ro.disconnect();
     };
   }, [measureKey, measure]);
 
   return (
-    <div ref={ref} className={className}>
+    <div ref={ref} className={className} data-testid="assistant-chat-bubble">
       {children}
     </div>
   );
@@ -382,7 +407,6 @@ function ChatBubble({
  * screen without a fixed page width that would clip on a narrow one.
  */
 export function BrainAssistant() {
-  const [, navigate] = useLocation();
   const { user, isLoading: authLoading, isTransitioning } = useAuth();
 
   /* Suggestion chips come from brain-core (GET /wiki/suggested-questions),
@@ -420,6 +444,13 @@ export function BrainAssistant() {
   const [openTxId, setOpenTxId] = useState<string | null>(null);
   const [openAccountId, setOpenAccountId] = useState<string | null>(null);
   const [openBillId, setOpenBillId] = useState<string | null>(null);
+  /* The citation's obligation ID, not the record itself. Holding the object froze one
+     refetch's snapshot: the popup kept showing an amount the ledger had already
+     corrected, and an account switch left the previous tenant's record on screen. The
+     id is re-resolved against the live map on every render, so a record that is gone
+     closes the popup instead of preserving a stale copy of it. */
+  const [openPayableId, setOpenPayableId] = useState<string | null>(null);
+  const [fallbackEvidence, setFallbackEvidence] = useState<EvidenceTile | null>(null);
   const chatAbortRef = useRef<AbortController | null>(null);
   const chatGenerationRef = useRef(0);
   const assistantInputRef = useRef<HTMLTextAreaElement | null>(null);
@@ -460,14 +491,25 @@ export function BrainAssistant() {
     const input = assistantInputRef.current;
     if (!input || typeof ResizeObserver === "undefined") return;
     let lastWidth = input.clientWidth;
+    let frame: number | null = null;
+    const scheduleComposerResize = () => {
+      if (frame !== null) return;
+      frame = requestAnimationFrame(() => {
+        frame = null;
+        if (input.isConnected) resizeComposer();
+      });
+    };
     const ro = new ResizeObserver(() => {
       const width = input.clientWidth;
       if (width === lastWidth) return;
       lastWidth = width;
-      resizeComposer();
+      scheduleComposerResize();
     });
     ro.observe(input);
-    return () => ro.disconnect();
+    return () => {
+      if (frame !== null) cancelAnimationFrame(frame);
+      ro.disconnect();
+    };
   }, [resizeComposer]);
 
   // Demo-fresh rotates the session cookie. Stop any request that started under
@@ -486,7 +528,7 @@ export function BrainAssistant() {
   }, [isTransitioning, user?.id]);
 
   // Recent ledger data caches (shared with Finances/Bills) for resolving ids.
-  const { data: txData } = useQuery<{ transactions: { id: string }[] }>({
+  const { data: txData } = useQuery<{ transactions: Array<{ id: string; [key: string]: unknown }> }>({
     queryKey: ["/api/brain/ledger/transactions"],
     retry: false,
   });
@@ -510,11 +552,61 @@ export function BrainAssistant() {
     () => new Set((invData?.invoices ?? []).map((i) => i.id)),
     [invData],
   );
+  /* Obligations (payables/receivables). The assistant grounds answers about payroll,
+     tax and bills in these, and before this they were the biggest class of citation
+     with no popup of its own — they fell through to the generic evidence card, which
+     could only repeat the id the user had just clicked. There is no by-id route for
+     an obligation (brain-core 404s it), so the list read IS the lookup.
+
+     Which is why this reads every page. brain-core's list endpoints cap silently at
+     around 20 rows, so a one-page read resolves a citation on a small tenant and, with
+     no error anywhere, fails to resolve the identical citation on a large one — the
+     Payable popup the answer was pointing at simply never opens. `usePagedLedgerRead`
+     walks the cursor to the end, reports whether it got there, and shares its cache
+     with the three other payables surfaces. */
+  const oblRead = usePagedLedgerRead<RawObligation>("/api/brain/ledger/obligations", "obligations");
+  const oblById = useMemo(
+    () =>
+      new Map(
+        (oblRead.read?.rows ?? [])
+          /* The generic GET passthrough hands the raw payload straight to the browser,
+             and a null row in it would throw inside `normalizeObligation` — taking the
+             whole conversation down with it. */
+          .filter((o): o is RawObligation => !!o)
+          .map(normalizeObligation)
+          .map((o) => [o.id, o] as const),
+      ),
+    [oblRead.read],
+  );
+  /* Re-resolved every render rather than captured at click time — see openPayableId. */
+  const openPayable = openPayableId ? (oblById.get(openPayableId) ?? null) : null;
+  /* Counterparty names, so the payable popup opens on "Acme Payroll" rather than
+     `cp_01…`. A miss resolves to null and the popup says so itself. */
+  const { data: cpData } = useQuery<{ counterparties: BrainCounterparty[] }>(
+    brainCounterpartiesQueryOptions(),
+  );
+  const cpNameById = useMemo(
+    () =>
+      new Map(
+        (cpData?.counterparties ?? []).map((c) => [c.id, (c.name ?? "").trim() || null]),
+      ),
+    [cpData],
+  );
+  const brandingProtectedValues = useMemo(
+    () => collectRuntimeProtectedValues([
+      acctData?.accounts,
+      cpData?.counterparties,
+      invData?.invoices,
+      txData?.transactions,
+      oblRead.read?.rows,
+    ]),
+    [acctData, cpData, invData, txData, oblRead.read],
+  );
 
   const dropdownRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { toast } = useToast();
+  const alert = useAppAlert();
   const { symbol, formatText } = useCurrency();
 
   const uploadDoc = useMutation({
@@ -533,20 +625,19 @@ export function BrainAssistant() {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(json?.message || json?.error || `Upload failed (${res.status})`);
+        throw new Error(normalizeRuntimeBranding(
+          json?.message || json?.error || `Upload failed (${res.status})`,
+          brandingProtectedValues,
+        ));
       }
       return json;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/integrations/documents"] });
-      toast({ title: "Document uploaded", description: "Brain will read it and extract what it can." });
+      alert.success("Document uploaded", "RobotMoney will read it and extract what it can.");
     },
     onError: (err: Error) => {
-      toast({
-        title: "Upload failed",
-        description: err.message,
-        variant: "destructive",
-      });
+      alert.error("Upload failed", err.message);
     },
   });
 
@@ -763,7 +854,10 @@ export function BrainAssistant() {
         signal: controller.signal,
         body: JSON.stringify({ messages: history }),
       });
-      const parsed = await parseAssistantResponse(res);
+      const parsed = await parseAssistantResponse(res, [
+        ...brandingProtectedValues,
+        ...history.map((message) => message.content),
+      ]);
       if (res.status === 429) {
         reportRateLimit({ "retry-after": res.headers.get("retry-after"), body: parsed });
       }
@@ -922,11 +1016,10 @@ export function BrainAssistant() {
                 if (isSupportedDocumentFile(file)) {
                   uploadDoc.mutate(file);
                 } else {
-                  toast({
-                    title: "Unsupported file",
-                    description: "ZIP files can't be uploaded. Choose PDF, CSV, XLSX, DOCX, or another supported document.",
-                    variant: "destructive",
-                  });
+                  alert.error(
+                    "Unsupported file",
+                    "ZIP files can't be uploaded. Choose PDF, CSV, XLSX, DOCX, or another supported document.",
+                  );
                 }
               }
               e.target.value = "";
@@ -1234,7 +1327,7 @@ export function BrainAssistant() {
                     }`}
                   >
                     {msg.role === "assistant" && msg.text === "" ? (
-                      <span className="inline-flex gap-[3px] py-[2px]" aria-label="Brain is typing">
+                      <span className="inline-flex gap-[3px] py-[2px]" aria-label="RobotMoney is typing">
                         <span className="size-[6px] rounded-full bg-brain-v1baby-blue-60 animate-bounce [animation-delay:-0.3s]" />
                         <span className="size-[6px] rounded-full bg-brain-v1baby-blue-60 animate-bounce [animation-delay:-0.15s]" />
                         <span className="size-[6px] rounded-full bg-brain-v1baby-blue-60 animate-bounce" />
@@ -1319,52 +1412,78 @@ export function BrainAssistant() {
                             acctIds.has(s.entityId) ? "account"
                             : txIds.has(s.entityId) ? "transaction"
                             : invIds.has(s.entityId) ? "invoice"
+                            : oblById.has(s.entityId) ? "obligation"
                             : resolveVendor(s.entityId) ? "counterparty"
                             : null
                           );
-                          const isClickable =
-                            (resolvedType === "account" && acctIds.has(s.entityId)) ||
-                            (resolvedType === "transaction" && txIds.has(s.entityId)) ||
-                            (resolvedType === "invoice" && invIds.has(s.entityId)) ||
-                            resolvedType === "member" ||
-                            (resolvedType === "counterparty" && !!resolveVendor(s.entityId)) ||
-                            resolvedType === "audit_event" ||
-                            resolvedType === "obligation" ||
-                            resolvedType === "payment_intent" ||
-                            resolvedType === "wiki.question";
-                          return isClickable ? (
+                          /* Four answers, not two. A miss against the obligations map
+                             only means "not a payable" once the cursor walk finished;
+                             before that it means nobody could look, which must not
+                             render as the same confident card. Gated on the kind so a
+                             citation already resolved to something else — a
+                             counterparty, a member — is not captioned with a payables
+                             read it never depended on. */
+                          const payableState = mayBePayable(resolvedType)
+                            ? payableLookup({
+                                held: oblById.has(s.entityId),
+                                read: oblRead.read,
+                                failed: oblRead.failed,
+                              })
+                            : "absent";
+                          const unresolvedNote = unresolvedCitationNote(payableState);
+                          return (
                             <button
                               key={`${s.entityId}-${i}`}
                               type="button"
                               data-testid={`evidence-link-${i}`}
                               onClick={() => {
-                                if (resolvedType === "account") setOpenAccountId(s.entityId);
-                                else if (resolvedType === "transaction") setOpenTxId(s.entityId);
-                                else if (resolvedType === "invoice") setOpenBillId(s.entityId);
-                                else if (resolvedType === "member") openMemberDetail(s.entityId);
-                                else if (resolvedType === "counterparty") openVendorDetail(s.entityId, navigate);
-                                else if (resolvedType === "audit_event") navigate(`/audit-log?record=${s.entityId}`);
-                                /* Payables is the itemized "what we owe" list, so a citation
-                                   about one obligation lands beside the rest of them. It went to
-                                   Cash Flow only because that list did not exist yet — there is
-                                   still no /bills route (navigating there hit NotFound). */
-                                else if (resolvedType === "obligation") navigate("/ledger?tab=payables");
-                                else if (resolvedType === "payment_intent") navigate("/review");
-                                else if (resolvedType === "wiki.question") navigate(`/audit-log?record=${s.entityId}`);
+                                if (resolvedType === "account" && acctIds.has(s.entityId)) {
+                                  setOpenAccountId(s.entityId);
+                                } else if (resolvedType === "transaction" && txIds.has(s.entityId)) {
+                                  setOpenTxId(s.entityId);
+                                } else if (resolvedType === "invoice" && invIds.has(s.entityId)) {
+                                  setOpenBillId(s.entityId);
+                                } else if (oblById.has(s.entityId)) {
+                                  /* Checked against the map rather than `resolvedType`:
+                                     brain-core labels these citations inconsistently
+                                     (obligation / payable / liability, sometimes
+                                     nothing), and the only reliable signal that a
+                                     payable popup can open is that we hold the record. */
+                                  setOpenPayableId(s.entityId);
+                                } else if (unresolvedNote) {
+                                  /* The payables read did not finish, so this citation was
+                                     never looked up. Same card, but it says so: without the
+                                     note an unread page reads as "there is nothing more to
+                                     see here", which is the one thing we do not know. */
+                                  setFallbackEvidence({
+                                    label: UNRESOLVED_CITATION_LABEL,
+                                    display: text,
+                                    kind: resolvedType ?? s.entityType ?? "record",
+                                    ref: s.entityId,
+                                    note: unresolvedNote,
+                                    facts: [{ label: "Record ID", value: s.entityId }],
+                                  });
+                                } else {
+                                  /* The middle-screen assistant can cite raw artifacts,
+                                     obligations, audit events, proposals, and newer record
+                                     kinds that have no dedicated by-id popup. Keep every
+                                     grounding record tappable and show the context Brain
+                                     actually returned instead of silently rendering it inert
+                                     or navigating away from the conversation. */
+                                  setFallbackEvidence({
+                                    label: resolvedType ?? s.entityType ?? "Grounded record",
+                                    display: text,
+                                    kind: resolvedType ?? s.entityType ?? "record",
+                                    ref: s.entityId,
+                                    facts: [{ label: "Record ID", value: s.entityId }],
+                                  });
+                                }
                               }}
                               title={s.entityId}
                               className="normal-case [font-family:'Gilroy',sans-serif] font-medium text-brain-v1purple text-[11px] leading-[14px] text-left hover:underline block w-full min-w-0 truncate"
                             >
                               {text}
                             </button>
-                          ) : (
-                            <span
-                              key={`${s.entityId}-${i}`}
-                              title={s.entityId}
-                              className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[11px] leading-[14px] block w-full min-w-0 truncate"
-                            >
-                              {text}
-                            </span>
                           );
                         })}
                       </div>
@@ -1403,10 +1522,36 @@ export function BrainAssistant() {
         hidePager
       />
       <BillDetailPopup
+        /* Opened from a citation link, which quotes no amount of its own — there is
+           nothing here for the record's own currency to contradict. */
+        amountBasis="source"
         bill={invData?.invoices.find((i) => i.id === openBillId) ?? null}
         vendorName="Unknown vendor"
         onClose={() => setOpenBillId(null)}
         hidePager
+      />
+      {/* No `payables` list is passed, so Previous/Next stay hidden: the sibling set
+          here is the citation list of one answer, not the Payables tab, and paging
+          through the ledger from inside a conversation would walk the user off the
+          evidence they were reading. */}
+      <PayableDetailPopup
+        payable={openPayable ?? null}
+        counterpartyName={
+          openPayable ? (cpNameById.get(openPayable.counterparty_id ?? "") ?? null) : null
+        }
+        onOpenTransaction={(id) => {
+          setOpenPayableId(null);
+          setOpenTxId(id);
+        }}
+        hidePager
+        onClose={() => setOpenPayableId(null)}
+      />
+      <LiveEvidenceRecordPopup
+        evidence={fallbackEvidence}
+        open={fallbackEvidence !== null}
+        onOpenChange={(open) => {
+          if (!open) setFallbackEvidence(null);
+        }}
       />
     </div>
   );

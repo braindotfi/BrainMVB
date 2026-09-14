@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useCurrency } from "./useCurrency";
+import { normalizeRuntimeBranding } from "./runtimeBranding";
 
 /* ── Live read-only informational records from brain-core's Ledger ───────────
    The "Your Review" / "Brain Detected" surfaces used to render 11 fabricated
@@ -105,6 +106,7 @@ const RECON_STATUS_LABEL: Record<string, string> = {
 const RECON_ATTENTION_STATUSES = new Set(["unmatched", "duplicate_possible", "disputed"]);
 
 export function useBrainReconciliationInsights() {
+  const nameOf = useCounterpartyNames();
   const q = useQuery<ReconciliationMatchesResponse>({
     queryKey: ["/api/brain/ledger/reconciliation-matches"],
     retry: false,
@@ -119,7 +121,12 @@ export function useBrainReconciliationInsights() {
       title: MATCH_TYPE_LABEL[m.match_type] ?? m.match_type,
       subtitle: RECON_STATUS_LABEL[m.status] ?? m.status,
       confidence: typeof m.confidence_score === "number" ? m.confidence_score : undefined,
-      explanation: m.explanation ?? undefined,
+      explanation: m.explanation
+        ? normalizeRuntimeBranding(m.explanation, [
+            nameOf(m.left_entity_id) ?? "",
+            nameOf(m.right_entity_id) ?? "",
+          ])
+        : undefined,
       evidenceIds: m.evidence_ids && m.evidence_ids.length > 0 ? m.evidence_ids : undefined,
       fields: [
         { label: "Left record", value: `${m.left_entity_type} ${m.left_entity_id}` },
@@ -190,8 +197,8 @@ function dueDateLabel(due_date: string): string {
  *
  *  Backend gap: replace the derived fallback below with `o.flag_reason` once
  *  brain-core populates it on the subscriptions feed. */
-function deriveTriggerBadge(o: BrainObligation): string {
-  if (o.flag_reason) return o.flag_reason;
+function deriveTriggerBadge(o: BrainObligation, vendor: string): string {
+  if (o.flag_reason) return normalizeRuntimeBranding(o.flag_reason, [vendor]);
   // A recurrence pattern hasn't been established → likely first occurrence.
   if (!o.recurrence) return "New subscription";
   // Low extraction confidence → worth a human look.
@@ -222,21 +229,21 @@ function recurrenceDisplay(o: BrainObligation): string {
  *  replace the derivation below. */
 function deriveWhyFlagged(o: BrainObligation, vendor: string, amt: string): string {
   if (o.flag_reason) {
-    return `Brain flagged this subscription because: ${o.flag_reason}.`;
+    return `RobotMoney flagged this subscription because: ${normalizeRuntimeBranding(o.flag_reason, [vendor])}.`;
   }
   if (!o.recurrence) {
     return (
-      `Brain detected what appears to be a new subscription charge from ${vendor} ` +
+      `RobotMoney detected what appears to be a new subscription charge from ${vendor} ` +
       `(${amt}). No prior recurrence pattern has been established for this vendor, ` +
       `so it is surfaced for your awareness.`
     );
   }
   const conf =
     typeof o.confidence === "number"
-      ? ` Brain's extraction confidence for this record is ${Math.round(o.confidence * 100)}%.`
+      ? ` RobotMoney's extraction confidence for this record is ${Math.round(o.confidence * 100)}%.`
       : "";
   return (
-    `Brain detected a recurring subscription charge from ${vendor} (${amt}, ` +
+    `RobotMoney detected a recurring subscription charge from ${vendor} (${amt}, ` +
     `${o.recurrence} recurrence). Review the amount and due date to confirm no ` +
     `unexpected changes since the prior cycle.${conf}`
   );
@@ -259,7 +266,7 @@ export function useBrainSubscriptionInsights() {
         kind: "subscription",
         itemKind: "detection",
         badge: "Subscription",
-        triggerBadge: deriveTriggerBadge(o),
+        triggerBadge: deriveTriggerBadge(o, vendor),
         title: `Subscription: ${vendor}`,
         subtitle: `${amt} · due ${dueDateLabel(o.due_date)}`,
         whyFlagged: deriveWhyFlagged(o, vendor, amt),
@@ -409,7 +416,7 @@ export function useBrainCashFlowInsight() {
     const dayWord = windowCount === 1 ? "day" : "days";
     const haveWord = windowCount === 1 ? "has" : "have";
     explanation =
-      `Brain reports your trailing cash position whenever the ledger has activity. ` +
+      `RobotMoney reports your trailing cash position whenever the ledger has activity. ` +
       `Only ${windowCount} ${dayWord} of movement ${haveWord} been recorded so far — ` +
       `trend comparisons require at least 3 days of data, ` +
       `and forward-looking cash forecasting will require at least 30 days of history ` +

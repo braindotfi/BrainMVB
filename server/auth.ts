@@ -138,11 +138,72 @@ const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 export const googleEnabled = !!(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET);
 
-// OAuth callbacks must use the app's canonical public domain, not the
-// Replit proxy hostname exposed through REPLIT_DOMAINS or the incoming Host
-// header. The same value is used for both the authorization request and the
-// code exchange below.
-const GOOGLE_CALLBACK_URL = "https://app.brain.fi/api/auth/google/callback";
+/**
+ * The app's canonical public origin — the one users actually browse to.
+ *
+ * This was hardcoded as `https://app.brain.fi` in two places. When the app moved to
+ * app.robotmoney.com the old host stopped serving (it answers 404), which broke Google
+ * sign-in outright and quietly pointed every production password-reset email at a dead
+ * domain. Both now read this single value, and it is overridable by env so the next
+ * domain change is configuration rather than a code hunt.
+ *
+ * Read through a function, not a module-level const: this module is imported at load
+ * time by the route registrar, so a captured constant freezes whatever the environment
+ * looked like before a test (or a deploy-time config) set it.
+ */
+const DEFAULT_APP_ORIGIN = "https://app.robotmoney.com";
+
+export function canonicalAppOrigin(): string {
+  const configured = process.env.APP_BASE_URL?.trim();
+  if (!configured) return DEFAULT_APP_ORIGIN;
+
+  /* An operator-supplied origin is normalised and validated rather than trusted
+     verbatim. The failure it guards is quiet: a trailing slash turns the callback into
+     `https://host//api/auth/google/callback`, which is not the string registered with
+     Google, so sign-in breaks with the same redirect_uri_mismatch this whole change
+     exists to fix — except next time the code looks right. A path, query or fragment
+     would corrupt it the same way.
+
+     This is configuration, never request data: the incoming Host header is deliberately
+     not consulted, so a bad value here is an operator mistake, not an attack. It falls
+     back to the known-good default and says so, because refusing to boot over a
+     malformed optional override would be worse than serving the right domain. */
+  try {
+    const url = new URL(configured);
+    const clean =
+      url.protocol === "https:"
+      && url.username === ""
+      && url.password === ""
+      && (url.pathname === "/" || url.pathname === "")
+      && url.search === ""
+      && url.hash === "";
+    if (clean) return url.origin;
+    console.error(
+      "[config] APP_BASE_URL must be an https origin with no path, query, credentials or fragment — ignoring it",
+      { received: configured, using: DEFAULT_APP_ORIGIN },
+    );
+  } catch {
+    console.error("[config] APP_BASE_URL is not a valid URL — ignoring it", {
+      received: configured,
+      using: DEFAULT_APP_ORIGIN,
+    });
+  }
+  return DEFAULT_APP_ORIGIN;
+}
+
+/**
+ * OAuth callbacks must use the canonical public domain, not the Replit proxy hostname
+ * from REPLIT_DOMAINS or the incoming Host header: the preview hostname rotates and
+ * could never be pre-registered with Google. The authorization request and the code
+ * exchange below must send byte-identical values, or Google rejects the exchange.
+ *
+ * Whatever this returns must ALSO be registered as an Authorized redirect URI on the
+ * OAuth client in Google Cloud Console. Google matches it exactly — scheme, host and
+ * path, no trailing slash — so changing it here alone is only half of a domain move.
+ */
+export function googleCallbackUrl(): string {
+  return `${canonicalAppOrigin()}/api/auth/google/callback`;
+}
 
 type GoogleTokenErrorPayload = {
   error?: string;
@@ -195,7 +256,7 @@ async function logGoogleTokenExchangeFailure(
     correlation_id: correlationId,
     status: response.status,
     client_id: GOOGLE_CLIENT_ID,
-    redirect_uri: GOOGLE_CALLBACK_URL,
+    redirect_uri: googleCallbackUrl(),
     reason: googleTokenFailureReason(payload),
     google_error: payload.error ?? null,
     google_error_description: payload.error_description ?? null,
@@ -266,15 +327,15 @@ export function passwordResetTokenDigest(token: string): string {
 
 export function passwordResetUrl(token: string, returnTo?: string): string {
   // Development and production use separate databases. A token stored in the
-  // dev DB must link back to the dev app; sending a link to app.brain.fi lets
-  // the production DB reject it as invalid. REPLIT_DEV_DOMAIN being present is
+  // dev DB must link back to the dev app; sending a link to the production host
+  // lets the production DB reject it as invalid. REPLIT_DEV_DOMAIN being present is
   // the reliable signal that we are running inside a Replit preview — NODE_ENV
   // is intentionally left unset in this environment.
   const baseUrl =
     process.env.APP_BASE_URL
     || (process.env.REPLIT_DEV_DOMAIN
       ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-      : "https://app.brain.fi");
+      : canonicalAppOrigin());
   const url = new URL(`/reset-password/${encodeURIComponent(token)}`, baseUrl);
   if (returnTo) url.searchParams.set("return_to", returnTo);
   return url.toString();
@@ -637,7 +698,7 @@ export function setupAuth(app: Express) {
     req.session.googleReturnTo = validInviteReturnTo(req.query.return_to);
     const params = new URLSearchParams({
       client_id: GOOGLE_CLIENT_ID!,
-      redirect_uri: GOOGLE_CALLBACK_URL,
+      redirect_uri: googleCallbackUrl(),
       response_type: "code",
       scope: "openid email profile",
       access_type: "offline",
@@ -667,7 +728,7 @@ export function setupAuth(app: Express) {
           code,
           client_id: GOOGLE_CLIENT_ID!,
           client_secret: GOOGLE_CLIENT_SECRET!,
-          redirect_uri: GOOGLE_CALLBACK_URL,
+          redirect_uri: googleCallbackUrl(),
           grant_type: "authorization_code",
         }),
       });
@@ -681,7 +742,7 @@ export function setupAuth(app: Express) {
           correlation_id: req.authAuditId ?? "missing",
           status: tokenResp.status,
           client_id: GOOGLE_CLIENT_ID,
-          redirect_uri: GOOGLE_CALLBACK_URL,
+          redirect_uri: googleCallbackUrl(),
           response_fields: Object.keys(tokens).sort(),
         });
         return res.redirect(googleRedirect(returnTo, "google_token"));

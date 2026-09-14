@@ -1,0 +1,200 @@
+name: ops-delete-orphan-demo-tenants
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Type DELETE_1519_COMMERCIAL_DEMO_TENANTS to run the approved commercial demo retirement."
+        required: true
+        type: string
+      sha:
+        description: "Exact promoted commit SHA containing the per-tenant retirement implementation."
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  delete:
+    name: retire the fixed commercial demo tenant set
+    runs-on: ubuntu-latest
+    timeout-minutes: 210
+    environment: production
+    concurrency:
+      group: production-tenant-deletion
+      cancel-in-progress: false
+    env:
+      VM_HOST: ${{ secrets.VM_HOST }}
+      VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
+      CONFIRMATION: ${{ inputs.confirmation }}
+      EXPECTED_SHA: ${{ inputs.sha }}
+    steps:
+      - name: Check out the fixed cleanup script
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.sha }}
+
+      - name: Validate explicit confirmation
+        shell: bash
+        run: |
+          if [[ "$CONFIRMATION" != "DELETE_1519_COMMERCIAL_DEMO_TENANTS" ]]; then
+            echo "confirmation must equal DELETE_1519_COMMERCIAL_DEMO_TENANTS"
+            exit 1
+          fi
+          if [[ ! "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "sha must be an exact 40-character lowercase commit SHA"
+            exit 1
+          fi
+          if [[ "$(git rev-parse HEAD)" != "$EXPECTED_SHA" ]]; then
+            echo "checked-out commit does not match sha"
+            exit 1
+          fi
+
+      - name: Configure SSH
+        shell: bash
+        run: |
+          mkdir -p ~/.ssh
+          echo "$VM_SSH_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -H "$VM_HOST" >> ~/.ssh/known_hosts
+
+      - name: Verify the exact promoted runtime
+        shell: bash
+        run: |
+          api_commit="$(curl -fsS https://api.brain.fi/health | jq -r '.commit')"
+          if [[ "$api_commit" != "$EXPECTED_SHA" ]]; then
+            echo "production API commit does not match sha"
+            exit 1
+          fi
+          ssh -i ~/.ssh/id_deploy -o ServerAliveInterval=30 "azureuser@$VM_HOST" \
+            "EXPECTED_SHA='$EXPECTED_SHA' bash -s" <<'REMOTE'
+          set -euo pipefail
+          for container in \
+            brain-prod-api \
+            brain-prod-worker \
+            brain-prod-auth \
+            brain-prod-surface-gateway; do
+            actual="$(docker exec "$container" printenv GIT_SHA)"
+            if [[ "$actual" != "$EXPECTED_SHA" ]]; then
+              echo "$container commit does not match sha"
+              exit 1
+            fi
+          done
+          REMOTE
+
+      - name: Grant and verify narrow preserved-evidence read
+        shell: bash
+        run: |
+          ssh -i ~/.ssh/id_deploy -o ServerAliveInterval=30 "azureuser@$VM_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          docker exec -i brain-prod-postgres psql -U brain -d brain -At -v ON_ERROR_STOP=1 <<'SQL'
+          BEGIN;
+          GRANT SELECT ON audit_integrity_findings TO brain_tenant_deletion;
+          DO $$
+          BEGIN
+            IF NOT has_table_privilege(
+              'brain_tenant_deletion',
+              'audit_integrity_findings',
+              'SELECT'
+            ) THEN
+              RAISE EXCEPTION 'tenant-deletion integrity finding SELECT grant is absent';
+            END IF;
+            IF has_any_column_privilege(
+              'brain_tenant_deletion',
+              'audit_integrity_findings',
+              'INSERT'
+            ) OR has_any_column_privilege(
+              'brain_tenant_deletion',
+              'audit_integrity_findings',
+              'UPDATE'
+            ) OR has_table_privilege(
+              'brain_tenant_deletion',
+              'audit_integrity_findings',
+              'DELETE'
+            ) OR has_table_privilege(
+              'brain_tenant_deletion',
+              'audit_integrity_findings',
+              'TRUNCATE'
+            ) THEN
+              RAISE EXCEPTION 'tenant-deletion integrity finding grant is broader than SELECT';
+            END IF;
+            IF has_any_column_privilege(
+              'brain_tenant_deletion',
+              'audit_verifier_checkpoint',
+              'SELECT'
+            ) OR has_any_column_privilege(
+              'brain_tenant_deletion',
+              'audit_verifier_checkpoint',
+              'INSERT'
+            ) OR has_any_column_privilege(
+              'brain_tenant_deletion',
+              'audit_verifier_checkpoint',
+              'UPDATE'
+            ) OR has_table_privilege(
+              'brain_tenant_deletion',
+              'audit_verifier_checkpoint',
+              'DELETE'
+            ) OR has_table_privilege(
+              'brain_tenant_deletion',
+              'audit_verifier_checkpoint',
+              'TRUNCATE'
+            ) THEN
+              RAISE EXCEPTION 'tenant-deletion unexpectedly has verifier checkpoint access';
+            END IF;
+          END
+          $$;
+          SELECT json_build_object(
+            'event', 'tenant_deletion_integrity_read_grant_verified',
+            'role', 'brain_tenant_deletion',
+            'table', 'audit_integrity_findings',
+            'select', true,
+            'insert', false,
+            'update', false,
+            'delete', false,
+            'truncate', false,
+            'checkpoint_access', false
+          )::text;
+          COMMIT;
+          SQL
+          REMOTE
+
+      - name: Fence, preflight, retire, purge, and reconcile
+        shell: bash
+        run: scripts/ops/run-commercial-demo-retirement.sh
+
+      - name: Verify post-run service health and worker restart count
+        shell: bash
+        run: |
+          ssh -i ~/.ssh/id_deploy -o ServerAliveInterval=30 "azureuser@$VM_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          for container in \
+            brain-prod-api \
+            brain-prod-worker \
+            brain-prod-agents \
+            brain-prod-auth \
+            brain-prod-surface-gateway; do
+            state="$(docker inspect --format='{{.State.Status}}' "$container")"
+            health="$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$container")"
+            restarts="$(docker inspect --format='{{.RestartCount}}' "$container")"
+            printf '{"container":"%s","state":"%s","health":"%s","restart_count":%s}\n' \
+              "$container" "$state" "$health" "$restarts"
+            if [[ "$state" != "running" || "$health" != "healthy" ]]; then
+              echo "$container is not healthy"
+              exit 1
+            fi
+            if [[ "$container" == "brain-prod-worker" && "$restarts" != "0" ]]; then
+              echo "brain-prod-worker restart count is not zero"
+              exit 1
+            fi
+          done
+          REMOTE
+
+      - name: Upload retirement evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: commercial-demo-retirement-execution
+          path: commercial-demo-retirement-execution/
+          if-no-files-found: warn
+          retention-days: 30

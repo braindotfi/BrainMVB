@@ -31,7 +31,7 @@ const CHANNELS: { id: string; title: string; detail: string }[] = [
   {
     id: "email-digest",
     title: "Email digest",
-    detail: "A daily summary of everything Brain did overnight.",
+    detail: "A daily summary of everything RobotMoney did overnight.",
   },
   {
     id: "sms-urgent",
@@ -60,7 +60,7 @@ export default function NotificationsSection() {
               title="Notification delivery is not connected yet."
               testId="text-notifications-unavailable"
             >
-              These channels are shown so you can see what Brain will support. None of
+              These channels are shown so you can see what RobotMoney will support. None of
               them can be switched on today, and nothing here is being sent.
             </MutedCallout>
           </div>
@@ -90,7 +90,7 @@ export default function NotificationsSection() {
         className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[14px]"
         data-testid="text-notifications-contact"
       >
-        When channels are wired up, Brain will reach you at {email} (email) and {phone} (SMS).
+        When channels are wired up, RobotMoney will reach you at {email} (email) and {phone} (SMS).
       </p>
     </div>
   );

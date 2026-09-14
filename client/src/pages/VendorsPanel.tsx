@@ -428,7 +428,7 @@ export function VendorsPanel() {
         const message =
           (body?.body?.error?.message as string | undefined) ??
           (body?.message as string | undefined) ??
-          `Brain core rejected this ${segment === "vendor" ? "vendor" : "customer"}.`;
+          `RobotMoney rejected this ${segment === "vendor" ? "vendor" : "customer"}.`;
         setError(message);
         return;
       }
@@ -456,7 +456,7 @@ export function VendorsPanel() {
       );
       resetAddVendor();
     } catch {
-      setError("Couldn't reach Brain core. Nothing was changed.");
+      setError("Couldn't reach RobotMoney core. Nothing was changed.");
     } finally {
       setBusy(false);
     }
@@ -472,7 +472,7 @@ export function VendorsPanel() {
         credentials: "include",
       });
       if (!res.ok && res.status !== 404) {
-        alert.error("Protocol Error", "Brain rejected the request. The vendor was not removed.");
+        alert.error("Protocol Error", "RobotMoney rejected the request. The vendor was not removed.");
         return;
       }
       await queryClient.invalidateQueries({ queryKey: ["/api/brain/ledger/counterparties"] });
@@ -486,7 +486,7 @@ export function VendorsPanel() {
       params.set("tab", "counterparties");
       navigate(`/ledger?${params.toString()}`, { replace: true });
     } catch {
-      alert.error("Protocol Error", "Couldn't reach Brain core. Nothing was changed.");
+      alert.error("Protocol Error", "Couldn't reach RobotMoney. Nothing was changed.");
     }
   };
 
@@ -809,7 +809,7 @@ export function VendorsPanel() {
         const msg =
           (body?.body?.error?.message as string | undefined) ??
           (body?.message as string | undefined) ??
-          "Brain core rejected this action.";
+          "RobotMoney rejected this action.";
         const ref = typeof body?.bff_request_id === "string" ? body.bff_request_id : null;
         alert.error("Action failed", ref ? `${msg}\n\nRef: ${ref}` : msg);
         return;
@@ -822,7 +822,7 @@ export function VendorsPanel() {
       navigate(`/ledger?${params.toString()}`, { replace: true });
       alert.success(successTitle, successText);
     } catch {
-      alert.error("Action failed", "Couldn't reach Brain core. Nothing was changed.");
+      alert.error("Action failed", "Couldn't reach RobotMoney. Nothing was changed.");
     } finally {
       setTrustBusy(false);
     }
@@ -1008,12 +1008,12 @@ export function VendorsPanel() {
         {isLoading ? (
           <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative rounded-[8px] shrink-0 w-full bg-brain-v1highlight-dropdown-bg">
             <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-brain-v1baby-blue-60 text-[16px]">
-              Loading counterparties from Brain...
+              Loading counterparties from RobotMoney...
             </p>
           </div>
         ) : isError ? (
           <UnavailableDataBox testId="text-counterparties-unavailable">
-            Couldn't reach Brain to load counterparties. Try again shortly.
+            Couldn't reach RobotMoney to load counterparties. Try again shortly.
           </UnavailableDataBox>
         ) : (
           listBlock

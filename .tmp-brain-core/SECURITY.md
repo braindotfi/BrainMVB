@@ -1,0 +1,118 @@
+# Security
+
+How Brain keeps money movement safe, and how a third party can verify it
+independently. This is the 90-minute diligence summary; the full detail lives in
+`Brain_Engineering_Standards.md` and `Brain_MVP_Architecture.md`.
+
+## Safety model summary
+
+No agent and no LLM can move money on its own. Every financial action passes
+through the **§6 deterministic pre-execution gate** (`shared/src/gate/gate.ts`).
+13 numbered checks plus 10 hardening additions (`1.5`, `3.5`, `5.5`, `6.5`,
+`6.6`, `6.7`, `7.5`, `8.5`, `9.5`, `11.5`): identity, behavior-hash pinning,
+scope, policy match, on-chain settlement permitted, source account,
+counterparty and sanctions, agent-counterparty attestation, counterparty
+verification, x402 payment context, escrow-state binding, obligation direction,
+amount limit, ledger-state binding, balance, micropayment cap within window,
+evidence present and semantically supporting the action, approval quorum,
+duplicate-payment guard, policy-decision creation, and a mandatory
+audit-before/after pair. Each check is deterministic. No LLM judgment
+substitutes for any precondition. A failure is a hard stop; the gate never
+catches-and-continues. Execution is Brain-internal and only reachable through
+`PaymentIntentService`.
+
+## Layer boundaries (CI-enforced)
+
+The architecture's safety rests on boundaries that CI fails the build on:
+
+| Invariant                                                   | Enforced by                              |
+| ----------------------------------------------------------- | ---------------------------------------- |
+| No money moves outside the §6 gate / `PaymentIntentService` | `scripts/check-gate-bypass.mjs`          |
+| Policy never reads Wiki text (reads Ledger only)            | `scripts/check-policy-no-wiki-read.mjs`  |
+| Wiki never writes Ledger                                    | `scripts/check-wiki-no-ledger-write.mjs` |
+| Scopes stay within the sanctioned vocabulary                | `scripts/check-scope-vocab.mjs`          |
+| Shadow→live agent promotion is gated                        | `scripts/check-promotion-readiness.mjs`  |
+
+Tenant isolation is enforced at the **storage layer** (Postgres RLS on every
+tenant table + `FORCE ROW LEVEL SECURITY` under the `brain_app` non-owner role;
+see `infra/db-roles.sql`), never shared-query-with-filter.
+
+## Audit anchor and independent verification
+
+Every material state change emits an append-only, Merkle-chained audit event.
+Batches are anchored on-chain (`BrainAuditAnchor`). The Merkle scheme is
+byte-identical between the off-chain builder (`services/audit/src/merkle.ts`,
+`verifyInclusion`) and the contract, so a proof verifies both ways.
+
+A third party verifies **without trusting Brain**:
+
+- `POST /v1/audit/verify`. Public, unauthenticated, pure function: given a
+  Merkle root, a leaf, and a proof path, returns whether the leaf is included.
+- Re-check the anchor transaction on the Base block explorer (link in any
+  rendered proof view, `GET /v1/proof/{action_id}/view`).
+
+## Deployed contract addresses
+
+Brain protocol contracts on Base Sepolia (chain 84532). Mainnet deployment is
+blocked on the external smart-contract audit.
+
+| Contract                  | Base Sepolia (staging)                       | Base mainnet           |
+| ------------------------- | -------------------------------------------- | ---------------------- |
+| `BrainAuditAnchor`        | `0xb900add824064098342c869ff83efdeb05eb95ce` | pending external audit |
+| `BrainPolicyRegistry`     | `0x92d1CC5c46eAE229C8A9dD95a334cec0cE33CAD9` | pending external audit |
+| `BrainSmartAccount`       | `0x8cC094d03676d29c8cE0267480f58188E7F1E23D` | pending external audit |
+| `BrainMCPAgentRegistry`   | `0xcE7Ce9dd95c17E1F4E27D49249b6fdb015f3A7e0` | pending external audit |
+| `BrainEscrow`             | `0x5924BD26Bc827FB3cAd6f3a0DBDC793562555Cc0` | pending external audit |
+| `BrainReputationRegistry` | `0xcEf6C25aE3DF9c5cfC0B3E11D031eAAa2c26026C` | pending external audit |
+
+> **`BrainPolicyRegistry` address note.** This is the registry the running
+> deployment uses (`POLICY_REGISTRY_ADDRESS`), verified live on Base Sepolia:
+> `latestVersion` returns 8 (actively registered policies). A second instance
+> exists at `0x683893ccd84d9a3487095d09fed324b6b8ea2501` (per
+> `docs/deployment-2026-05-11.txt`) but is **unused** on-chain (`latestVersion`
+> = 0). Operators should confirm which instance is canonical before mainnet;
+> the value above matches what is actually in use today.
+
+`BrainEscrow` and `BrainReputationRegistry` were deployed 2026-05-28 via
+`contracts/script/DeployEscrow.s.sol` and `DeployReputationRegistry.s.sol`. The
+arbiter / attestor on both is the `BRAIN_SESSION_KEY` EOA in staging; production
+must rotate to a Safe multi-sig before mainnet.
+
+### External (third-party) contracts referenced by Brain rails
+
+| Surface              | Address / endpoint                               | Network      |
+| -------------------- | ------------------------------------------------ | ------------ |
+| x402 facilitator     | `https://x402.org/facilitate` (Coinbase testnet) | base-sepolia |
+| USDC (x402 + escrow) | `0x036CbD53842c5426634e7929541eC2318f3dCF7e`     | base-sepolia |
+
+## Audit status
+
+**RFP drafted; engagement pending founder approval.** See
+`contracts/AUDIT-SCOPE.md` and `contracts/AUDIT-RFP-DRAFT.md`. Update this line as
+the engagement progresses (drafted → scheduled → draft findings → final).
+
+## Threat model summary
+
+From Engineering Standards §12.2 (full detail in `docs/threat-model.md`):
+
+- **Cross-tenant data leak** via app bug → mitigated by storage-layer RLS.
+- **Agent credential compromise** → short-lived (15-min) JWTs; on-chain
+  revocation for external agents; behavior-hash pinning (gate check 1.5).
+- **Malicious policy injection** → EIP-712 signature + content-hash verification.
+- **Smart-contract exploit** → external audit + bug bounty pre-mainnet.
+- **LLM prompt injection** → structured input validation, Ledger-grounded
+  retrieval, and never executing unverified LLM output.
+- **Wiki-as-truth attack** → Policy never reads Wiki; the deterministic gate
+  decides on Ledger state only.
+- **Duplicate / replayed payment** → gate check 11.5 hard-rejects even with a
+  valid approval.
+
+## Bug bounty
+
+Pre-launch. No public bounty yet. Vulnerability reports are handled privately
+via the contact below; a public program will launch alongside mainnet.
+
+## Contact
+
+security@brain.fi <!-- TODO(brain-hardening): confirm the canonical address -->
+Please do not open public issues for security reports.

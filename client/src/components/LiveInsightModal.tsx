@@ -173,7 +173,7 @@ export function LiveInsightModal({
                   answers the same question, so it should not read as a different
                   one just because the record is read-only. */}
               {insight.explanation && (
-                <CardSection title="Why Brain Suggested This" testId="section-live-insight-why">
+                <CardSection title="Why RobotMoney Suggested This" testId="section-live-insight-why">
                   <div id="live-insight-description" className="w-full">
                     <CardText testId="live-insight-description-text">{formatText(insight.explanation)}</CardText>
                   </div>
@@ -306,14 +306,14 @@ export function LiveInsightModal({
               <CardSection title="Recommended Action" testId="section-live-insight-recommendation">
                 <CardText testId="live-insight-recommendation-text">
                   {onAcknowledge
-                    ? "No approval is required — Brain is reporting what it found, not proposing anything. Review the figures above, then acknowledge to clear this from your queue."
-                    : "No approval is required — Brain is reporting what it found, not proposing anything. Review the figures above."}
+                    ? "No approval is required — RobotMoney is reporting what it found, not proposing anything. Review the figures above, then acknowledge to clear this from your queue."
+                    : "No approval is required — RobotMoney is reporting what it found, not proposing anything. Review the figures above."}
                 </CardText>
               </CardSection>
 
               <CardSection title="What Happens Next" testId="section-live-insight-next">
                 <CardText>
-                  This is a flag for your awareness. Brain doesn't take action on it
+                  This is a flag for your awareness. RobotMoney doesn't take action on it
                   automatically.
                 </CardText>
               </CardSection>

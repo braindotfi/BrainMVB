@@ -108,7 +108,7 @@ export function OnboardingFlow({ open, onClose, onComplete }: OnboardingFlowProp
               <img src={closeIcon} alt="" className="size-[32px] rounded-full" />
             </DialogPrimitive.Close>
 
-            <DialogPrimitive.Title className="sr-only">How Brain's rules work</DialogPrimitive.Title>
+            <DialogPrimitive.Title className="sr-only">How RobotMoney's rules work</DialogPrimitive.Title>
             <DialogPrimitive.Description id="onboarding-description" className="sr-only">
               Step {step + 1} of {WALKTHROUGH_STEPS}
             </DialogPrimitive.Description>
@@ -134,7 +134,7 @@ export function OnboardingFlow({ open, onClose, onComplete }: OnboardingFlowProp
                   onClick={goNext}
                   data-testid="button-onboarding-continue"
                 >
-                  {isLast ? "Got it. Take me to Brain" : "Next"}
+                  {isLast ? "Got it. Take me to RobotMoney" : "Next"}
                 </Button>
               </div>
             </div>

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
+import { useAppAlert } from "@/components/AppAlert";
 import { parseCoreError } from "./approvalRejections";
 import { clearDecisionReceipt, recordDecisionReceipt } from "./decisionReceipts";
 import { isDecisionStateBatchFor } from "./proposalDecisionStates";
@@ -11,6 +11,7 @@ import {
   throwBrainRateLimitIfNeeded,
   useBrainReadCooldown,
 } from "./rateLimit";
+import { normalizeProductIdentity, normalizeRuntimeBranding } from "./runtimeBranding";
 
 /* ── Live brain-core agent proposals (GET/POST /v1/proposals*) ────────────────
    Non-financial agent outputs (vendor risk, collections, treasury, etc.) that a
@@ -94,6 +95,15 @@ export interface ProposalEvidenceItem {
   /** Decision-supporting rows derived from real ledger fields (due date, days
    *  overdue, status, PO, …) — never fabricated. */
   facts?: { label: string; value: string }[];
+  /** The record's raw ledger due date (`2026-07-17`), when it has one.
+   *
+   *  The BFF's "Overdue by" fact above is counted against the SERVER's clock and
+   *  says so ("45 days (UTC)"), because an HTTP request carries no reader
+   *  timezone. This raw date is what lets the browser recount the same fact
+   *  against the reader's local calendar day — the rule in lib/dueDates.ts that
+   *  the record's own detail popup follows — so the card and the popup cannot
+   *  disagree by a day. See localizeDueFacts in lib/proposalCards.ts. */
+  due_date?: string | null;
   /** True for broad background citations (brain-core `wiki:` refs) rather than
    *  the record the proposal is about. These belong in the technical section
    *  only — a collections proposal cites the whole counterparty book. */
@@ -237,6 +247,117 @@ export interface ListProposalsResponse {
   next_cursor: string | null;
 }
 
+/**
+ * Normalize only product-authored proposal display copy. Entity names, evidence
+ * values, document-derived facts, raw identifiers, and protocol fields remain
+ * byte-for-byte as returned by the service.
+ */
+export function normalizeBrainProposalBranding(proposal: BrainProposal): BrainProposal {
+  const protectedValues = [
+    proposal.subject?.display,
+    ...proposal.evidence.flatMap((item) => [
+      item.display,
+      item.code,
+      ...(item.facts ?? []).map((fact) => fact.value),
+    ]),
+    ...(proposal.key_facts ?? []).map((fact) => fact.value),
+    ...Object.values(proposal.resolved_refs ?? {}),
+  ].filter((value): value is string => typeof value === "string" && value.length > 0);
+  const branded = (value: string | null | undefined): string | null | undefined =>
+    typeof value === "string"
+      ? normalizeRuntimeBranding(value, protectedValues)
+      : value;
+  const normalizePolicy = (policy: ProposalPolicy | null | undefined) =>
+    policy
+      ? {
+          ...policy,
+          explanation: branded(policy.explanation),
+          trace: policy.trace?.map((entry) => ({
+            ...entry,
+            checks: entry.checks?.map((check) => ({
+              ...check,
+              detail: branded(check.detail) ?? check.detail,
+            })),
+          })),
+        }
+      : policy;
+  const normalizeRankedSignals = (value: unknown): unknown => {
+    if (!Array.isArray(value)) return value;
+    return value.map((signal) => {
+      if (typeof signal === "string") return branded(signal);
+      if (!signal || typeof signal !== "object") return signal;
+      const record = signal as Record<string, unknown>;
+      return {
+        ...record,
+        ...Object.fromEntries(
+          ["detail", "description", "reason", "explanation", "label", "name", "signal"]
+            .filter((key) => typeof record[key] === "string")
+            .map((key) => [key, branded(record[key] as string)]),
+        ),
+      };
+    });
+  };
+
+  const details = proposal.details
+    ? {
+        ...proposal.details,
+        ...Object.fromEntries(
+          ["recommended_action", "recommendedAction", "recommendation"]
+            .filter((key) => typeof proposal.details?.[key] === "string")
+            .map((key) => [
+              key,
+              normalizeRuntimeBranding(proposal.details?.[key] as string, protectedValues),
+            ]),
+        ),
+        ranked_signals: normalizeRankedSignals(proposal.details.ranked_signals),
+      }
+    : proposal.details;
+
+  return {
+    ...proposal,
+    narrative: branded(proposal.narrative) ?? null,
+    details,
+    agent: proposal.agent
+      ? { ...proposal.agent, display_name: normalizeProductIdentity(proposal.agent.display_name) }
+      : null,
+    policy: normalizePolicy(proposal.policy),
+    presentation: proposal.presentation
+      ? {
+          ...proposal.presentation,
+          headline: branded(proposal.presentation.headline),
+          recommendation: branded(proposal.presentation.recommendation),
+          policy: normalizePolicy(proposal.presentation.policy),
+          key_facts: proposal.presentation.key_facts?.map((fact) => ({
+            ...fact,
+            label: normalizeRuntimeBranding(fact.label),
+          })),
+          consequences: proposal.presentation.consequences
+            ? Object.fromEntries(
+                Object.entries(proposal.presentation.consequences).map(([key, value]) => [
+                  key,
+                  branded(value),
+                ]),
+              )
+            : proposal.presentation.consequences,
+          actions: proposal.presentation.actions?.map((action) => ({
+            ...action,
+            label: normalizeRuntimeBranding(action.label),
+            meaning: branded(action.meaning),
+          })),
+        }
+      : proposal.presentation,
+    available_decisions: proposal.available_decisions?.map((decision) => ({
+      ...decision,
+      label: normalizeRuntimeBranding(decision.label),
+      meaning: branded(decision.meaning),
+    })),
+    key_facts: proposal.key_facts?.map((fact) => ({
+      ...fact,
+      label: normalizeRuntimeBranding(fact.label),
+    })),
+  };
+}
+
 const PROPOSALS_PAGE_SIZE = 100;
 const MAX_PROPOSAL_PAGES = 50;
 export const BRAIN_PROPOSALS_QUERY_KEY = ["/api/brain/proposals?limit=100"] as const;
@@ -265,22 +386,22 @@ export async function fetchAllBrainProposals(signal?: AbortSignal, status?: stri
     });
     const body = (await response.json()) as Partial<ListProposalsResponse>;
     if (!Array.isArray(body.proposals)) {
-      throw new Error("Brain proposals response did not contain a proposals array.");
+      throw new Error("RobotMoney proposals response did not contain a proposals array.");
     }
-    proposals.push(...body.proposals);
+    proposals.push(...body.proposals.map(normalizeBrainProposalBranding));
 
     const next = typeof body.next_cursor === "string" && body.next_cursor.length > 0
       ? body.next_cursor
       : null;
     if (!next) return { proposals, next_cursor: null };
     if (followed.has(next)) {
-      throw new Error("Brain proposals pagination did not advance.");
+      throw new Error("RobotMoney proposals pagination did not advance.");
     }
     followed.add(next);
     cursor = next;
   }
 
-  throw new Error("Brain proposals feed exceeded the maximum page count.");
+  throw new Error("RobotMoney proposals feed exceeded the maximum page count.");
 }
 
 /** `type` -> the client agent key is an identity mapping. The return stays open
@@ -379,6 +500,17 @@ export interface ProposalDecisionResult {
   payment_intent_id: string | null;
 }
 
+export function proposalDecisionErrorMessage(
+  body: unknown,
+  status: number,
+  protectedValues: readonly string[] = [],
+): string {
+  const message =
+    parseCoreError(body)?.error?.message ??
+    `Couldn't record the decision (${status}).`;
+  return normalizeRuntimeBranding(message, protectedValues);
+}
+
 /** Statuses that mean core recorded the decision but the item is not finished:
  *  another approver still has to act. Treated as a distinct outcome from a
  *  completed decision wherever the result is worded. */
@@ -443,9 +575,9 @@ const DECISION_CONFIRMED_TITLE: Record<string, string> = {
 };
 
 const DECISION_CONFIRMED_DETAIL: Record<string, string> = {
-  approve: "Brain recorded your approval. It's in Resolved.",
-  reject: "Brain recorded your decision. It's in Resolved.",
-  acknowledge: "Brain recorded this. It's in Resolved.",
+  approve: "RobotMoney recorded your approval. It's in Resolved.",
+  reject: "RobotMoney recorded your decision. It's in Resolved.",
+  acknowledge: "RobotMoney recorded this. It's in Resolved.",
   undo: "This is back in your unresolved list.",
 };
 
@@ -507,7 +639,7 @@ class ProposalConflictError extends Error {
  *  still invalidates so the UI reflects the real state. */
 export function useDecideProposal() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
+  const alert = useAppAlert();
 
   const invalidate = (decidedId: string) => {
     void queryClient.invalidateQueries({
@@ -538,7 +670,7 @@ export function useDecideProposal() {
   };
 
   return useMutation<ProposalDecisionResult, Error, DecideProposalInput>({
-    mutationFn: async ({ id, decision }) => {
+    mutationFn: async ({ id, decision, receipt }) => {
       reportBrainReadCooldownIfActive("proposals");
       const res = await fetch(`/api/brain/proposals/${encodeURIComponent(id)}/decide`, {
         method: "POST",
@@ -561,7 +693,10 @@ export function useDecideProposal() {
         if (res.status === 409 && (code === "execution_proposal_invalid_state" || code === "agent_proposal_invalid_state")) {
           throw new ProposalConflictError();
         }
-        throw new Error(parseCoreError(body)?.error?.message ?? `Couldn't record the decision (${res.status}).`);
+        throw new Error(proposalDecisionErrorMessage(body, res.status, [
+          receipt?.title ?? "",
+          receipt?.rowSubtitle ?? "",
+        ]));
       }
       /* A 2xx with a body we can't read is NOT a success we may act on. Casting
          it through (which is what this used to do) would let an empty or
@@ -571,7 +706,7 @@ export function useDecideProposal() {
       const result = parseDecisionResult(body, decision, id);
       if (!result) {
         throw new Error(
-          "Brain accepted the decision but returned an unreadable response, so it can't be confirmed. Reload before deciding again.",
+          "RobotMoney accepted the decision but returned an unreadable response, so it can't be confirmed. Reload before deciding again.",
         );
       }
       return result;
@@ -613,38 +748,49 @@ export function useDecideProposal() {
          back still pending is no more finished than an approval that did, and
          "Declined. It's in Resolved." would be false about both the outcome and
          where to find it. */
-      toast(
-        finality === "final"
-          ? {
-              title: DECISION_CONFIRMED_TITLE[decision] ?? "Decision recorded",
-              description: DECISION_CONFIRMED_DETAIL[decision] ?? "Brain recorded your decision.",
-            }
-          : finality === "awaiting"
-            ? {
-                title: DECISION_AWAITING_TITLE[decision] ?? "Decision recorded. Not final yet",
-                description: "Brain has your decision, but this isn't finished — it still needs another approver.",
-              }
-            : {
-                /* No claim about where the row goes. An unrecognised status may
-                   turn out to be terminal, in which case core stops returning
-                   the proposal and it leaves the unresolved list — promising it
-                   would stay there would be a guess this client cannot back. */
-                title: "Decision recorded",
-                description: `Brain reported it as "${result.status}", which this app doesn't recognise, so it can't say whether the item is finished. The audit log in Settings has the outcome.`,
-              },
-      );
+      if (finality === "final") {
+        /* The disc has to agree with the verb. A decline that genuinely landed
+           is not a success, and an undo reopens the item rather than settling
+           it, so neither of those earns the green check. */
+        const confirm =
+          decision === "approve"
+            ? alert.approved
+            : decision === "reject"
+              ? alert.rejected
+              : decision === "undo"
+                ? alert.info
+                : alert.success;
+        confirm(
+          DECISION_CONFIRMED_TITLE[decision] ?? "Decision recorded",
+          DECISION_CONFIRMED_DETAIL[decision] ?? "RobotMoney recorded your decision.",
+        );
+      } else if (finality === "awaiting") {
+        /* Held, not settled: another approver still has to act. */
+        alert.postponed(
+          DECISION_AWAITING_TITLE[decision] ?? "Decision recorded. Not final yet",
+          "RobotMoney has your decision, but this isn't finished — it still needs another approver.",
+        );
+      } else {
+        /* No claim about where the row goes. An unrecognised status may
+           turn out to be terminal, in which case core stops returning
+           the proposal and it leaves the unresolved list — promising it
+           would stay there would be a guess this client cannot back. */
+        alert.info(
+          "Decision recorded",
+          `RobotMoney reported it as "${result.status}", which this app doesn't recognise, so it can't say whether the item is finished. The audit log in Settings has the outcome.`,
+        );
+      }
       invalidate(id);
     },
     onError: (err, { id }) => {
       if (err instanceof ProposalConflictError) {
-        toast({
-          title: "Already decided elsewhere",
-          description: "Someone (or something) else decided this proposal first - refreshed.",
-          variant: "destructive",
-        });
+        alert.error(
+          "Already decided elsewhere",
+          "Someone (or something) else decided this proposal first - refreshed.",
+        );
         invalidate(id);
       } else if (!isBrainRateLimitError(err)) {
-        toast({ title: "Couldn't record decision", description: err.message, variant: "destructive" });
+        alert.error("Couldn't record decision", err.message);
       }
     },
   });

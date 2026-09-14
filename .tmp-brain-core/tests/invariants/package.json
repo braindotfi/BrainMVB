@@ -1,0 +1,29 @@
+{
+  "name": "@brain/invariants",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The 15 invariants the v0.3 architecture is required to enforce (§8.4).",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:integration": "vitest run --config vitest.integration.config.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "@types/pg": "^8.11.10",
+    "pg": "^8.22.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.8"
+  },
+  "dependencies": {
+    "@brain/shared": "workspace:*",
+    "@brain/audit": "workspace:*",
+    "@brain/api": "workspace:*",
+    "@brain/canonical": "workspace:*",
+    "@brain/ledger": "workspace:*",
+    "@brain/execution": "workspace:*",
+    "@brain/internal-agents": "workspace:*",
+    "@brain/agent-router": "workspace:*"
+  }
+}

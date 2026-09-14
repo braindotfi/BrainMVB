@@ -6,6 +6,8 @@ import {
   unpaidApInvoices,
   payableObligations,
   liabilitiesTotal,
+  payablesCurrencyTotal,
+  excludedCurrencyNote,
   payablesView,
   type ApInvoiceLike,
 } from "./liabilities";
@@ -198,7 +200,8 @@ describe("payablesView — the branch order that stops a false all-clear", () =>
   it("zero rows on an UNFINISHED read is unreadable, not empty", () => {
     const v = payablesView({ failed: false, read: { rows: [], complete: false }, ingesting: false });
     expect(v.kind).toBe("unreadable");
-    expect(v.total).toBeNull();
+    expect(v.subtotal).toBeNull();
+    expect(v.crossCurrencyTotal).toBeNull();
   });
 
   it("zero rows while documents are still being read is \"arriving\", not empty", () => {
@@ -215,12 +218,12 @@ describe("payablesView — the branch order that stops a false all-clear", () =>
 
   it("only a complete, settled, empty read may claim nothing is owed", () => {
     const v = payablesView({ failed: false, read: { rows: [], complete: true }, ingesting: false });
-    expect(v).toMatchObject({ kind: "empty", total: 0, truncated: false, mayGrow: false });
+    expect(v).toMatchObject({ kind: "empty", subtotal: 0, crossCurrencyTotal: 0, truncated: false, mayGrow: false });
   });
 
   it("lists rows from a truncated read but withholds the total", () => {
     const v = payablesView({ failed: false, read: { rows, complete: false }, ingesting: false });
-    expect(v).toMatchObject({ kind: "rows", truncated: true, total: null });
+    expect(v).toMatchObject({ kind: "rows", truncated: true, subtotal: null, crossCurrencyTotal: null });
     expect(v.rows).toHaveLength(1);
   });
 
@@ -229,14 +232,178 @@ describe("payablesView — the branch order that stops a false all-clear", () =>
        document is being read would be its own kind of lying. `mayGrow` is what the
        caption hangs off. */
     const v = payablesView({ failed: false, read: { rows, complete: true }, ingesting: true });
-    expect(v).toMatchObject({ kind: "rows", total: 100, mayGrow: true });
+    expect(v).toMatchObject({ kind: "rows", subtotal: 100, mayGrow: true });
   });
 
   it("excludes receivables from the rows it hands the tab", () => {
     const mixed = [ob({ amount_due: "100" }), ob({ type: "receivable", amount_due: "999999" })];
     const v = payablesView({ failed: false, read: { rows: mixed, complete: true }, ingesting: false });
     expect(v.rows).toHaveLength(1);
-    expect(v.total).toBe(100);
+    expect(v.subtotal).toBe(100);
+  });
+});
+
+/* ── one figure, one currency ─────────────────────────────────────────────────
+   There is no FX table in this app for arbitrary currency codes, so a total spanning
+   currencies is not slightly wrong — it is units of different things added together
+   and presented as one amount. The list under it quotes each row in the row's own
+   currency, so the total has to narrow and say what it left out. */
+
+describe("payablesCurrencyTotal — a total never spans currencies", () => {
+  it("totals a single-currency ledger exactly as the old sum did", () => {
+    // Every tenant today. This is what keeps the figure stable for them.
+    const rows = [
+      ob({ amount_due: "4800.00", currency: "USD" }),
+      ob({ amount_due: "200.00", currency: "USD" }),
+    ];
+    expect(payablesCurrencyTotal(rows, DONE)).toEqual({
+      total: 5000,
+      currency: "USD",
+      excluded: [],
+    });
+    expect(payablesCurrencyTotal(rows, DONE).total).toBe(liabilitiesTotal(rows, DONE));
+  });
+
+  it("leaves a foreign-currency bill OUT rather than adding euros to dollars", () => {
+    const rows = [
+      ob({ amount_due: "4800.00", currency: "USD" }),
+      ob({ amount_due: "200.00", currency: "USD" }),
+      ob({ amount_due: "8894.63", currency: "EUR" }),
+    ];
+    const t = payablesCurrencyTotal(rows, DONE);
+    expect(t.total).toBe(5000);
+    expect(t.currency).toBe("USD");
+    expect(t.excluded).toEqual([{ currency: "EUR", count: 1 }]);
+    // The bug being fixed: 13894.63, a figure nobody owes, in whichever symbol the
+    // user happened to be browsing in.
+    expect(t.total).not.toBe(13894.63);
+  });
+
+  it("states the subtotal in whichever currency most of the rows are in", () => {
+    /* Not "always USD": a tenant billed mostly in euros is owed mostly euros, and a
+       USD-only subtotal there would be the small, unrepresentative half. */
+    const rows = [
+      ob({ amount_due: "100", currency: "EUR" }),
+      ob({ amount_due: "200", currency: "EUR" }),
+      ob({ amount_due: "999", currency: "USD" }),
+    ];
+    const t = payablesCurrencyTotal(rows, DONE);
+    expect(t).toMatchObject({ total: 300, currency: "EUR" });
+    expect(t.excluded).toEqual([{ currency: "USD", count: 1 }]);
+  });
+
+  it("picks the same currency whatever order the ledger paged the rows in", () => {
+    /* A tie broken by row order would make the figure depend on the order brain-core
+       happened to return, so the same tenant could see two different totals on two
+       loads. Alphabetical is arbitrary but stable. */
+    const a = ob({ amount_due: "100", currency: "USD" });
+    const b = ob({ amount_due: "900", currency: "EUR" });
+    expect(payablesCurrencyTotal([a, b], DONE).currency).toBe("EUR");
+    expect(payablesCurrencyTotal([b, a], DONE).currency).toBe("EUR");
+  });
+
+  it("lists every excluded currency, with how many rows each one covers", () => {
+    const rows = [
+      ob({ amount_due: "100", currency: "USD" }),
+      ob({ amount_due: "100", currency: "USD" }),
+      ob({ amount_due: "100", currency: "USD" }),
+      ob({ amount_due: "1", currency: "EUR" }),
+      ob({ amount_due: "2", currency: "EUR" }),
+      ob({ amount_due: "3", currency: "JPY" }),
+    ];
+    expect(payablesCurrencyTotal(rows, DONE).excluded).toEqual([
+      { currency: "EUR", count: 2 },
+      { currency: "JPY", count: 1 },
+    ]);
+  });
+
+  it("treats a case-varied or absent code as the one currency it is", () => {
+    // "usd", "USD" and an unstamped row must not split into three currencies, which
+    // would exclude real dollars from a dollar total.
+    const rows = [
+      ob({ amount_due: "100", currency: "usd" }),
+      ob({ amount_due: "100", currency: " USD " }),
+      ob({ amount_due: "100", currency: undefined }),
+    ];
+    expect(payablesCurrencyTotal(rows, DONE)).toEqual({ total: 300, currency: "USD", excluded: [] });
+  });
+
+  it("keeps the refusals a total already owed: unread, and half-read", () => {
+    expect(payablesCurrencyTotal(null, DONE)).toMatchObject({ total: null, currency: null });
+    expect(payablesCurrencyTotal([ob({ amount_due: "100" })], { complete: false })).toMatchObject({
+      total: null,
+      currency: null,
+    });
+  });
+
+  it("denominates nothing when there is nothing owed", () => {
+    // A zero is a real answer; it is just not an answer in any particular currency.
+    expect(payablesCurrencyTotal([], DONE)).toEqual({ total: 0, currency: null, excluded: [] });
+  });
+});
+
+describe("excludedCurrencyNote — what was left out has to be said", () => {
+  it("says nothing when nothing was left out", () => {
+    expect(excludedCurrencyNote([])).toBe("");
+  });
+
+  it("names the count and the currencies, in the singular and the plural", () => {
+    expect(excludedCurrencyNote([{ currency: "EUR", count: 1 }])).toBe(
+      "Excludes 1 payable in EUR — there's no exchange rate here to add it to this figure.",
+    );
+    expect(
+      excludedCurrencyNote([
+        { currency: "EUR", count: 2 },
+        { currency: "JPY", count: 1 },
+      ]),
+    ).toBe("Excludes 3 payables in EUR and JPY — there's no exchange rate here to add them to this figure.");
+  });
+
+  it("never quotes the excluded amount", () => {
+    /* An amount would invite the reader to add it to the figure above — the one
+       operation that has no defined answer here. A count and a code do not. */
+    const note = excludedCurrencyNote([{ currency: "EUR", count: 1 }]);
+    expect(note).not.toMatch(/[€$£¥]/);
+    expect(note.match(/\d+/g)).toEqual(["1"]);
+  });
+});
+
+describe("payablesView carries the currency and the exclusions to the surface", () => {
+  it("hands the tab a subtotal, its currency, and what it left out", () => {
+    const v = payablesView({
+      failed: false,
+      read: {
+        rows: [
+          ob({ amount_due: "100", currency: "USD" }),
+          ob({ amount_due: "50", currency: "USD" }),
+          ob({ amount_due: "900", currency: "EUR" }),
+        ],
+        complete: true,
+      },
+      ingesting: false,
+    });
+    expect(v).toMatchObject({ kind: "rows", subtotal: 150, subtotalCurrency: "USD" });
+    expect(v.excludedCurrencies).toEqual([{ currency: "EUR", count: 1 }]);
+    // Three rows are still LISTED — only the total narrows. A payable dropped from the
+    // list would be a debt the tenant cannot see at all.
+    expect(v.rows).toHaveLength(3);
+  });
+
+  it("states no currency when it states no figure", () => {
+    for (const v of [
+      payablesView({ failed: true, read: null, ingesting: false }),
+      payablesView({ failed: false, read: null, ingesting: false }),
+      payablesView({
+        failed: false,
+        read: { rows: [ob({ amount_due: "100" })], complete: false },
+        ingesting: false,
+      }),
+    ]) {
+      expect(v.subtotal).toBeNull();
+      expect(v.subtotalCurrency).toBeNull();
+      expect(v.crossCurrencyTotal).toBeNull();
+      expect(v.excludedCurrencies).toEqual([]);
+    }
   });
 });
 
@@ -287,6 +454,62 @@ describe("the three liabilities surfaces agree by construction", () => {
         new RegExp(`\\b${slug}:\\s*"Payables"`),
       );
     }
+  });
+
+  it("a surface that cannot disclose an exclusion states the figure covering every row", () => {
+    /* Narrowing the Payables total to one currency narrowed a SHARED field, so the
+       Overview card — which has one caption line, already spent on the state of the
+       read — silently started quoting a subtotal, and handing a possibly-non-USD
+       number to a converter that assumes dollars. The two figures are named apart
+       now; this pins which surface may quote which.
+
+       Read as a pair: the card must not drop a foreign-currency bill from "everything
+       you still owe" without saying so, and the list must not add one to the dollars
+       above it. Neither is satisfiable by the same field. */
+    const overview = read("../pages/HomePage.tsx");
+    expect(overview, "the Overview card must quote the figure covering every row").toContain(
+      "payables.crossCurrencyTotal",
+    );
+    expect(
+      overview.match(/payables\.(subtotal|subtotalCurrency|excludedCurrencies)\b/),
+      "the Overview card has no line to disclose an exclusion on, so it must not quote a subtotal",
+    ).toBeNull();
+
+    const tab = read("../components/PayablesTab.tsx");
+    expect(
+      tab.match(/\bcrossCurrencyTotal\b/),
+      "the Payables tab quotes each row in its own currency, so its total must not span currencies",
+    ).toBeNull();
+    expect(tab, "the tab must disclose what its subtotal left out").toContain("excludedCurrencyNote(");
+  });
+
+  it("the figure the Overview card reads still covers every row", () => {
+    /* The point of keeping a second figure at all. On a mixed ledger this one is a
+       cross-currency sum — not quotable in any currency, which is why the list does
+       not use it and why the card owes itself a currency treatment — but it omits
+       nothing, so the card cannot silently understate what is owed. */
+    const v = payablesView({
+      failed: false,
+      read: {
+        rows: [
+          ob({ amount_due: "60", currency: "USD" }),
+          ob({ amount_due: "40", currency: "USD" }),
+          ob({ amount_due: "900", currency: "EUR" }),
+        ],
+        complete: true,
+      },
+      ingesting: false,
+    });
+    expect(v.crossCurrencyTotal).toBe(1000);
+    expect(v.subtotal).toBe(100);
+    // And the refusals still travel together: neither figure outlives a bad read.
+    const half = payablesView({
+      failed: false,
+      read: { rows: [ob({ amount_due: "100" })], complete: false },
+      ingesting: false,
+    });
+    expect(half.crossCurrencyTotal).toBeNull();
+    expect(half.subtotal).toBeNull();
   });
 
   it("no surface coerces an unreachable liabilities figure into a zero", () => {

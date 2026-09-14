@@ -232,7 +232,7 @@ export function mapIntentToProposal(intent: BrainPaymentIntent, vendorName?: str
     dueLabel: "Needs approval",
     severity: "info",
     reasonChips: [],
-    rationale: "Brain core's §6 policy gate flagged this payment for human approval before it can settle.",
+    rationale: "RobotMoney core's §6 policy gate flagged this payment for human approval before it can settle.",
     evidence: [],
     // Real confidence when brain-core attaches one (RFC 0004 evidence
     // confidence); no fabricated score otherwise - a neutral mid value with
@@ -242,7 +242,7 @@ export function mapIntentToProposal(intent: BrainPaymentIntent, vendorName?: str
         ? { score: intent.confidence, band: intent.confidence >= 0.8 ? "high" : intent.confidence >= 0.5 ? "medium" : "low", caveat: "From brain-core's evidence confidence." }
         : { score: 0.5, band: "medium", caveat: "brain-core did not report a confidence score for this intent." },
     whatHappensNext: "Once approved, this executes through its payment rail.",
-    risk: "Brain's policy gate flagged this for approval.",
+    risk: "RobotMoney's policy gate flagged this for approval.",
     policy: { id: intent.status, explanation: "brain-core's policy gate requires approval", autoClearedOtherwise: false },
     actions: {
       approve: { label: "Approve" },
@@ -270,14 +270,14 @@ export function mapIntentToAutoApprovedProposal(intent: BrainPaymentIntent, vend
     title: `Payment to ${vendor}`,
     rowSubtitle: `${vendor} · cleared automatically by policy${intent.agent?.display_name ? ` · proposed by ${intent.agent.display_name}` : ""}`,
     dueLabel: "Approved automatically",
-    rationale: "Brain core's §6 policy gate cleared this payment automatically; no human approval was required.",
+    rationale: "RobotMoney core's §6 policy gate cleared this payment automatically; no human approval was required.",
     whatHappensNext: "This clears through its payment rail without further review.",
-    risk: "Brain's policy gate cleared this automatically.",
+    risk: "RobotMoney's policy gate cleared this automatically.",
     policy: { ...base.policy, explanation: "brain-core's policy gate did not require approval", autoClearedOtherwise: true },
     status: "auto_handled",
     // ponytail: brain-core's PaymentIntent status here is "proposed"/"approved"
     // (not "executed"), so say "cleared to pay", never "paid"/"settled" — and
     // skip settledMeta, there's no real settle timestamp yet to show.
-    pastTenseStatement: `Brain cleared paying ${vendor} ${intent.currency} ${intent.amount} automatically`,
+    pastTenseStatement: `RobotMoney cleared paying ${vendor} ${intent.currency} ${intent.amount} automatically`,
   };
 }

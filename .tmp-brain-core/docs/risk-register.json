@@ -1,0 +1,351 @@
+{
+  "$schema": "https://docs.brain.fi/schemas/risk-register-v1.json",
+  "schema_version": "v1",
+  "comment": "Machine-readable mirror of docs/risk-register.md. Read by scripts/production-readiness.mjs. Open + P0 \u2192 red row in the aggregator; open + P1 \u2192 yellow; mitigating + P0 \u2192 yellow; closed \u2192 not surfaced. When this file changes, update the .md mirror in the same PR.",
+  "risks": [
+    {
+      "id": "R-01",
+      "title": "External smart-contract audit not yet complete (BrainEscrow)",
+      "priority": "P0",
+      "status": "open",
+      "mitigation_summary": "Mainnet deploy is boot-fenced: composition/escrow-audit-gate.ts refuses to start the api when BRAIN_ESCROW_ADDRESS is set on any non-testnet chain unless the committed audit record is approved for that chain and the operator sets BRAIN_ESCROW_AUDIT_RECEIPT or BRAIN_ESCROW_AUDIT_APPROVED=\"true\". API boot checks explicit BASE_RPC_URL with eth_chainId and refuses to start when it differs from BRAIN_BASE_CHAIN_ID. CI guard check-escrow-audit-marker catches the same misconfig at PR-review time before the boot fence has to fire. The deployed on-chain bytecode is verified at mainnet boot against the audited immutable-masked runtime hash via eth_getCode (assertDeployedEscrowBytecode), and audit-build evidence is recomputed from the working tree in CI (verify-audited-build.mjs), so a contract or toolchain change cannot ride an older approval.",
+      "exit_criteria": [
+        "external audit completes with no critical or high findings",
+        "audited commit SHA + tag pinned in contracts/AUDIT-SCOPE.md",
+        "deployed mainnet bytecode verified to match audited bytecode (control shipped: eth_getCode boot fence; pending live mainnet confirmation)",
+        "BRAIN_ESCROW_AUDIT_RECEIPT set to the audit report URL/hash (or legacy BRAIN_ESCROW_AUDIT_APPROVED=\"true\") in production env"
+      ],
+      "owner": "engineering+external-auditor",
+      "evidence": [
+        "contracts/AUDIT-SCOPE.md",
+        "services/api/src/composition/escrow-audit-gate.ts",
+        "scripts/check-escrow-audit-marker.mjs",
+        "shared/src/bytecode.ts",
+        "scripts/verify-audited-build.mjs",
+        "contracts/audit-status.json"
+      ]
+    },
+    {
+      "id": "R-02",
+      "title": "Tenant blob purge not implemented (GDPR Article 17 gap)",
+      "priority": "P0",
+      "status": "mitigating",
+      "mitigation_summary": "RFC 0003 phase B shipped: tenant deletion enqueues a durable tenant_blob_purge_jobs row in the deletion transaction; a privileged worker (blob-purge-worker.ts) drains it via BlobAdapter.purgeTenant with bounded backoff, a dead-letter state, and version-aware permanent erasure (S3 all object versions + delete markers; Azure versions + snapshots), restricted to the worker by a CI call-site guard (check-blob-purge-callsite). 2026-06-07 review hardening shipped: (i) crash-safe lease recovery (stale 'purging' jobs reclaimed past a lease timeout; every status write fenced on a unique lock token, so a crashed worker cannot strand a job); (ii) structured failure classification (transient / authorization / unknown errors are retried, only a confirmed WORM / object-lock is the terminal blocked_legal_hold, so a 503 no longer masquerades as a legal hold); (iii) a transactional audit outbox (each state transition writes its audit intent in the same transaction and a publisher delivers it idempotently, removing the emit-before-write orphan and the 'audit-emit-failed' sentinel). An end-to-end erasure test now drives runBlobPurgeCycle against a real MemoryBlobAdapter (not a mocked purgeTenant), asserting the deleted tenant's bytes are erased and a co-resident tenant's survive. Remaining: a production-shaped integration test against live S3/Azure (localstack-in-CI) proving permanent erasure on the deployed adapters.",
+      "exit_criteria": [
+        "tenant_blob_purge_jobs migration",
+        "BlobAdapter.purge() on memory/s3/azure",
+        "tenant-blob-purge-worker.ts",
+        "check-blob-purge-callsites.mjs lint guard",
+        "integration test proving end-to-end erasure"
+      ],
+      "owner": "engineering",
+      "evidence": [
+        "docs/rfcs/0003-blob-purge-article-17.md",
+        "services/api/src/tenant-deletion/blob-purge-worker.ts",
+        "services/api/src/tenant-deletion/blob-purge-repo.ts",
+        "services/api/src/tenant-deletion/blob-purge-audit-outbox.ts",
+        "shared/src/blob/purge-classify.ts",
+        "services/api/src/tenant-deletion/service.test.ts",
+        "services/api/src/tenant-deletion/blob-purge-worker.test.ts"
+      ]
+    },
+    {
+      "id": "R-03",
+      "title": "Staging VM deploy chain not yet exercised",
+      "priority": "P1",
+      "status": "open",
+      "mitigation_summary": "All safety controls (boot fences, gate, RLS) are deploy-substrate-independent. Disclosure explicit in architecture/enterprise-readiness.md. docs/r03-staging-deploy-runbook.md gives the ordered VM path: build one image, deploy staging on green main, smoke the staging commit, then require GitHub production environment approval before production promote. Closing staging VM provisioning, GitHub secrets, host env files, and the production environment reviewer gate is the remaining operator work.",
+      "exit_criteria": [
+        "staging VM secrets provisioned",
+        "build deploy staging-validation chain runs cleanly end-to-end",
+        "production deploy logs show all 5 boot fences armed via brain.runtime.capabilities",
+        "rollback procedure exercised against staging"
+      ],
+      "owner": "operations",
+      "evidence": [
+        ".github/workflows/main.yml",
+        "architecture/enterprise-readiness.md",
+        "docs/rollback.md",
+        "docs/r03-staging-deploy-runbook.md"
+      ]
+    },
+    {
+      "id": "R-04",
+      "title": "Full money-movement E2E not yet enforced in CI",
+      "priority": "P1",
+      "status": "mitigating",
+      "mitigation_summary": "A money_movement_e2e job now runs on EVERY PR (.github/workflows/pr.yml) against a real pg+redis stack + booted demo API: the full chain provision->ingest->normalize->propose->policy->execute, plus assertions that the \u00a76 gate ran checks 8/9.5/11.5 (none not_applicable, read from the proof's gate_checks) and that three negatives are actively rejected (duplicate payment, excessive-amount policy reject, missing-approval). audit-before->after linkage is now asserted in strict mode (the executed PI's proof must contain payment_intent.execute.before preceding payment_intent.execute.after, with the after event chained via prev_event_hash). Remaining: localstack-in-CI for the blob path (EC1) and full strict-proof (on-chain merkle anchor) mode, which needs a CI-available Base RPC; receivable-direction / low-confidence negatives are layerable follow-ups.",
+      "exit_criteria": [
+        "deterministic local-stack-in-CI (pg+redis+localstack+boot binary in GH Actions)",
+        "golden-path demo runs in strict mode on every PR",
+        "any \u00a76 check 8 / 9.5 / 11.5 going not_applicable fails the build",
+        "audit-before \u2192 audit-after linkage asserted"
+      ],
+      "owner": "engineering+infra",
+      "evidence": [
+        "tests/e2e/signed-agent-gated-payment.e2e.test.ts",
+        "scripts/demo/golden-path.sh",
+        ".github/workflows/pr.yml"
+      ]
+    },
+    {
+      "id": "R-05",
+      "title": "Rail catalog vs docs drift",
+      "priority": "P2",
+      "status": "closed",
+      "closed_at": "2026-05-30",
+      "closed_by": "batch 6 P1",
+      "mitigation_summary": "check-rails-catalog-drift CI guard wired into pnpm run lint compares both files; drift is now structurally impossible at PR merge time.",
+      "evidence": [
+        "scripts/check-rails-catalog-drift.mjs",
+        "scripts/__tests__/check-rails-catalog-drift.test.mjs"
+      ]
+    },
+    {
+      "id": "R-06",
+      "title": "BrainSmartAccount session-key caps are unit-blind to ERC20 decimals",
+      "priority": "P1",
+      "status": "closed",
+      "closed_at": "2026-05-30",
+      "closed_by": "batch 8 P2 (commit 6190ffe)",
+      "mitigation_summary": "Closed in code: SessionKey now carries an explicit capToken field. In ERC20 mode (capToken != 0), caps are denominated in capToken's raw units; grantSessionKey enforces allowedTargets == [capToken] and selector subset constraints; executeViaSessionKey verifies target == capToken AND value == 0. Caps are always meterable in the token's native units. Foundry tests test_R06_usdc6dp_capEnforcesInTokenUnits + test_R06_dai18dp_capEnforcesInTokenUnits + test_R06_execute_rejectsValueInErc20Mode + test_R06_execute_rejectsWrongTargetInErc20Mode prove enforcement. Mainnet enablement still gated on R-01 (external audit).",
+      "evidence": [
+        "contracts/src/BrainSmartAccount.sol:13-50 (SessionKey + selector constants)",
+        "contracts/src/BrainSmartAccount.sol:140-179 (grantSessionKey ERC20-mode validation)",
+        "contracts/src/BrainSmartAccount.sol:266-302 (executeViaSessionKey dual mode)",
+        "contracts/test/BrainSmartAccount.t.sol (R-06 / R-07 tests, 7 new cases)",
+        "contracts/AUDIT-SCOPE.md:131-145 (R-06 / R-07 closure noted)"
+      ]
+    },
+    {
+      "id": "R-07",
+      "title": "BrainSmartAccount selector decode covers only three ERC20 selectors; non-decodable selectors bypass caps",
+      "priority": "P1",
+      "status": "closed",
+      "closed_at": "2026-05-30",
+      "closed_by": "batch 8 P2 (commit 6190ffe)",
+      "mitigation_summary": "Closed in code: grantSessionKey now rejects any selector outside {transfer, approve, transferFrom} when capToken is set (new error NonDecodableSelectorInErc20Mode). The contract refuses to grant a session key whose caps would silently be bypassed. Foundry test test_R07_grant_rejectsNonDecodableSelectorInErc20Mode proves the rejection; test_R07_grant_rejectsTargetMismatchInErc20Mode catches the related allowlist footgun. Mainnet enablement still gated on R-01.",
+      "evidence": [
+        "contracts/src/BrainSmartAccount.sol:148-179 (grant-time selector lockdown)",
+        "contracts/test/BrainSmartAccount.t.sol (test_R07_* cases)",
+        "contracts/AUDIT-SCOPE.md:131-145"
+      ]
+    },
+    {
+      "id": "R-08",
+      "title": "Money-touching rail-adapter test coverage gap",
+      "priority": "P2",
+      "status": "mitigating",
+      "mitigation_summary": "Batch 8 P5: error-path coverage added to onchainExecutor (read/write error propagation, receipt-hash sourcing), plaidClient (Plaid API error verbatim), and x402Client (full lifecycle: decimals read, transfer revert, receipt timeout, facilitator 5xx + network error, idempotency-key forwarding, chain selection). PostgresSourceRepository was already at 16-test coverage (reviewer's claim of near-zero was stale). 23 rail-adapter unit tests now pass (was 6). Per-file >=80% line/function/statement coverage gates are now wired into services/api/vitest.config.ts for each money-touching rail adapter (onchainExecutor, plaidClient, x402Client), so a single adapter regressing below 80% fails CI even while the aggregate stays high (verified: forcing onchainExecutor's gate above its real coverage fails the run). The first exit criterion (line-coverage parity wired into test:coverage) is met; the second now has gated scaffolding (R-14): tests/e2e/onchain-executor.testnet.e2e.test.ts drives the real rail against a deployed BrainSmartAccount via the opt-in testnet_onchain_executor_e2e CI job, runnable once testnet fixtures are provisioned (R-03-adjacent).",
+      "exit_criteria": [
+        "Coverage parity with the \u00a76 gate measured at >=80% line coverage on the adapter files (next step: wire coverage gates into test:coverage)",
+        "Integration tests on testnet for at least the onchain executor end-to-end (scaffolding shipped in R-14; runs once testnet fixtures/secrets are provisioned)"
+      ],
+      "owner": "engineering",
+      "evidence": [
+        "services/api/src/rails/onchainExecutor.test.ts (9 tests)",
+        "services/api/src/rails/plaidClient.test.ts (6 tests)",
+        "services/api/src/rails/x402Client.test.ts (8 tests, new)",
+        "services/raw/src/sources/PostgresSourceRepository.test.ts (16 tests, pre-existing)",
+        "services/api/vitest.config.ts"
+      ]
+    },
+    {
+      "id": "R-09",
+      "title": "On-chain tumbling vs off-chain rolling spend windows can diverge",
+      "priority": "P2",
+      "status": "closed",
+      "mitigation_summary": "Batch 8 P3: off-chain agent-window-spend loader switched from a trailing rolling window to a tumbling window using the same floor((ts/period)*period) formula as BrainSmartAccount._windowSpent. Off-chain (agent-budget, check 8.5) and on-chain (session-key budget) now agree at boundaries. The misleading 'mirror' comment in shared/src/gate/gate.ts was corrected. Approve-as-spend concern is structurally NA off-chain (only executed intents are summed; approve never reaches executed). CLOSED: fast-check property tests (services/policy/src/agent-window-spend.windows.test.ts) prove the canonical tumblingWindowStartSeconds equals an independent derivation of the on-chain Solidity integer-division window (ts - ts%p) at T-1/T/T+1, that the off-chain double-precision epoch intermediate does not diverge across the realistic epoch range, and the containment/monotonicity invariants. The remaining criterion (rationalize on-chain approve-as-spend) was explicitly optional and stays deferred (current behavior is conservative).",
+      "exit_criteria": [
+        "Property tests proving off-chain SQL window matches on-chain Solidity window at boundary T = floor(now/period)*period and T-1, T+1",
+        "Optional: rationalize approve-as-spend on-chain (defer; current is conservative)"
+      ],
+      "owner": "engineering",
+      "evidence": [
+        "services/policy/src/agent-window-spend.ts (tumbling SQL)",
+        "shared/src/gate/gate.ts:696-702 (comment corrected)",
+        "contracts/src/BrainSmartAccount.sol:265-270 (on-chain reference)",
+        "services/policy/src/agent-window-spend.windows.test.ts",
+        "services/policy/src/agent-window-spend.ts"
+      ],
+      "closed_at": "2026-06-19",
+      "closed_by": "R-09 window-agreement property tests"
+    },
+    {
+      "id": "R-10",
+      "title": "BrainSmartAccount NatSpec framing claims 'ERC-4337-style' but no EntryPoint exists",
+      "priority": "P2",
+      "status": "closed",
+      "closed_at": "2026-05-30",
+      "closed_by": "batch 8 P2",
+      "mitigation_summary": "BrainSmartAccount.sol contract NatSpec rewritten: now describes the actual design ('Smart account with directly-called session keys. Not ERC-4337: there is no EntryPoint, no UserOperation, no paymaster'). AUDIT-SCOPE.md mirror updated. Surfaced by Opus 4.8 (F-11).",
+      "evidence": ["contracts/src/BrainSmartAccount.sol:4-30", "contracts/AUDIT-SCOPE.md:131-145"]
+    },
+    {
+      "id": "R-11",
+      "title": "Canonical cutover moved the obligation money-path from synchronous to two async workers",
+      "priority": "P1",
+      "status": "closed",
+      "closed_at": "2026-06-19",
+      "closed_by": "projection observability close-out",
+      "mitigation_summary": "Phase 5 (RFC 0005) made ledger_obligations/counterparties a projection of canonical: a Merge or document obligation no longer reaches the Ledger synchronously in normalizeFromRaw, but via two scheduled workers in sequence (startCanonicalProjectionWorker raw_parsed->canonical, then startLedgerAparProjectionWorker canonical->Ledger). Closed: (i) an end-to-end integration test drives BOTH worker cycles and asserts an obligation reaches ledger_obligations (the wired path the wedge's synchronous calls did not cover); (ii) both workers emit a records-projected counter AND a lag gauge (brain.canonical.projector.lag_seconds / brain.ledger.apar_projection.lag_seconds = age of the oldest un-projected record); (iii) infra/grafana/projection.json defines two alerts -- ProjectionPipelineStalled (lag>600s with zero throughput) and ProjectionLagHigh (lag>300s) -- so a stalled money-path worker pages instead of silently dropping obligations; (iv) projections are idempotent and replayable, so a recovered worker catches up without data loss; (v) poison-message handling (canonical/0003): a single malformed source record is retried up to maxAttempts (default 5) then quarantined (canonical_projection_log.attempts/quarantined) so it cannot wedge or silently drop a tenant's lane -- it is surfaced via brain.canonical.projector.quarantine.count/.quarantine.depth (and excluded from the lag gauge), and replayQuarantined() drains it after the underlying bug is fixed. The optional in-process liveness probe is unnecessary given the lag-with-zero-throughput alert already detects a wedged worker.",
+      "evidence": [
+        "tests/invariants/integration/canonical-pipeline.integration.test.ts",
+        "services/canonical/src/projectors/worker.ts (records counter + lag gauge + quarantine + replay)",
+        "services/canonical/migrations/0003_canonical_projection_quarantine.sql (attempts + quarantined)",
+        "services/canonical/src/__integration__/projector.integration.test.ts (poison quarantine + replay)",
+        "services/ledger/src/projection/obligations.ts (records counter + lag gauge)",
+        "infra/grafana/projection.json (stall + lag alerts)"
+      ]
+    },
+    {
+      "id": "R-12",
+      "title": "Single broad brain_privileged BYPASSRLS role for all cross-tenant API work",
+      "priority": "P1",
+      "status": "closed",
+      "closed_at": "2026-06-19",
+      "closed_by": "least-privilege DB role split",
+      "mitigation_summary": "Three reviews flagged that the API runtime used ONE broad brain_privileged BYPASSRLS role for every cross-tenant background job and resolver, so a confused-deputy bug or compromise in any one privileged path had the cross-tenant power of all of them (raw, canonical, ledger, audit, execution, tenant-deletion). Closed by replacing it with eight least-privilege BYPASSRLS roles (infra/db-roles.sql \u00a74), each granted only its layer's tables: brain_raw_worker (raw_*), brain_canonical_projector (canonical_* + read raw_parsed), brain_ledger_projector (read canonical_*, write only the three ledger projection targets, NOT the money-path ledger_* tables), brain_execution_worker (execution_outbox claim/mark only; the settle re-enters tenant scope on brain_app), brain_audit_verifier (audit_events read + verifier cursor/findings, findings un-erasable), brain_audit_publisher (audit_events read only), brain_resolver (cross-tenant SELECT only), brain_tenant_deletion (GDPR erasure broad DELETE, route-gated; audit_events/anchors preserved). Each connects via its own BRAIN_*_DB_URL (all eight required in production, fenced by db-isolation.ts; dev falls back to DATABASE_URL with a warning). The boot-time assertDbRoles check proves each pool connects as its expected role with a forbidden-privilege list (e.g. the ledger projector cannot INSERT ledger_payment_intents; tenant_deletion cannot DELETE audit_events). brain_privileged no longer runs in the API runtime; it survives only for the deploy-time seed one-shot. The audit append-only and forensic-table REVOKEs were extended to every new role. The runtime-as-role integration test (tests/invariants/integration/db-role-grants.integration.test.ts) applies the real db-roles.sql to a live DB and uses SET ROLE to prove each role both HOLDS its worker's privileges (not too tight) and LACKS the forbidden ones (not too loose); it runs in CI under a superuser DATABASE_URL and skips otherwise.",
+      "evidence": [
+        "infra/db-roles.sql (\u00a74 roles + per-role grant matrix + REVOKEs)",
+        "services/api/src/composition/db-isolation.ts (eight-URL production fence)",
+        "services/api/src/main.ts (per-role pools + per-pool boot role assertions)",
+        "services/api/src/composition/db-roles-sql.test.ts (grant-matrix drift guard)",
+        "services/api/src/db-isolation-fences.test.ts (fence unit tests)",
+        "tests/invariants/integration/db-role-grants.integration.test.ts (runtime-as-role grant matrix)",
+        "docker-compose.prod.yml (db-roles passwords + api role URLs)"
+      ]
+    },
+    {
+      "id": "R-13",
+      "title": "All background workers run inside the public API process",
+      "priority": "P1",
+      "status": "closed",
+      "closed_at": "2026-06-19",
+      "closed_by": "worker/process separation",
+      "mitigation_summary": "Review 2 flagged that the monolithic main() ran ten background workers (ingestion sync/interpret, canonical + ledger projection, execution-outbox drain, webhook dispatch, blob purge, audit verifier + anchor scheduler/reconciler, agent-route) plus the anchor scheduler inside the same process that serves the public HTTP API, so an api deploy/restart bounced ingestion + execution, horizontal api scaling multiplied workers, and the public api runtime held every worker's privileged DB credential. Closed by one-image, role-via-env separation: BRAIN_HTTP_ENABLED gates the /v1 surface (health always on) and BRAIN_WORKERS (all|none|CSV of nine groups) selects which workers a process runs; composition/process-roles.ts (resolveComposition) is the pure source of truth mapping env -> {/v1, workers, least-privilege role pools}. The db-isolation fence and boot role-assertion only require/check the pools a process actually uses, and an unset role URL aliases brain_app, so an api process (BRAIN_WORKERS=none) holds no worker DB credentials. Defaults (HTTP + all workers) reproduce the historical all-in-one process; docker-compose.prod.yml runs an api service (workers=none) and a worker service (http disabled, workers=all) off the same image. Per-worker advisory leases (shared/src/workers/advisory-lease.ts: leasedCycle wraps each cycle in a per-worker pg_try_advisory_lock) now make the canonical/ledger/normalize/webhook workers multi-replica safe: one replica is active at a time and a crash auto-releases the lock so a standby takes over within one interval. Remaining (deferred to R-03 Azure substrate): per-group autoscaling with genuine per-item parallelism (beyond single-active failover).",
+      "evidence": [
+        "services/api/src/composition/process-roles.ts (env -> composition) + .test.ts",
+        "services/api/src/main.ts (gated /v1 block, workers, pools; dynamic shutdown set)",
+        "services/api/src/composition/db-isolation.ts (requireWiki + requiredEnv scoping)",
+        "services/api/src/db-isolation-fences.test.ts (composition-scoping fence tests)",
+        "shared/src/workers/advisory-lease.ts (leasedCycle) + advisory-lease.test.ts",
+        "tests/invariants/integration/worker-lease.integration.test.ts (single-flight proof)",
+        "docker-compose.prod.yml (api service + worker service off one image)"
+      ]
+    },
+    {
+      "id": "R-14",
+      "title": "On-chain executor had only unit/mocked coverage (no testnet E2E)",
+      "priority": "P2",
+      "status": "mitigating",
+      "mitigation_summary": "Review 3 (P0 8.1) flagged that the on-chain executor (buildOnchainExecutor + OnchainBaseRail) was only unit/mocked, so 'the on-chain rail works against the deployed contract' was asserted, not proven, and release readiness had no signal. Mitigated by a testnet-gated E2E (tests/e2e/onchain-executor.testnet.e2e.test.ts) that drives the REAL OnchainBaseRail against a deployed BrainSmartAccount on Base Sepolia: read path (nonce, no key/gas), revert path (a real on-chain revert surfaces as execution_rail_declined, gas only), and a double-gated success case (granted-key fixture) that executes once then asserts the on-chain replay guard DIRECTLY: a re-send at the CONSUMED nonce reverts (BadNonce). Review-053af35 P1 corrected this: the prior assertion re-called rail.dispatch, which reads a fresh nonce and would simply do a second transfer, so it did not prove exactly-once; outbox idempotency (same idempotency_key -> one economic effect) is proved separately in the execution outbox suite. An opt-in CI job (.github/workflows/main.yml: testnet_onchain_executor_e2e, gated on vars.TESTNET_ONCHAIN_E2E_ENABLED) runs it; the test self-skips and the job is var-gated so a green check always means a real testnet run. production-readiness reports an 'On-chain executor testnet E2E' row (yellow until the job is wired). Status mitigating not closed: the scaffolding is shipped and ready, but actual execution needs provisioned testnet fixtures (RPC + a deployed smart account + a gas-funded throwaway key; the success case needs a granted session key), which overlaps the deferred R-03 deploy substrate.",
+      "evidence": [
+        "tests/e2e/onchain-executor.testnet.e2e.test.ts (real rail vs deployed contract)",
+        ".github/workflows/main.yml (testnet_onchain_executor_e2e gated job)",
+        "scripts/production-readiness.mjs (On-chain executor testnet E2E row)",
+        "tests/e2e/README.md (suite + env + granted-key fixture)"
+      ]
+    },
+    {
+      "id": "R-15",
+      "title": "x402 and escrow releases intentionally skip off-chain reservations",
+      "priority": "P2",
+      "status": "closed",
+      "closed_at": "2026-07-15",
+      "closed_by": "Tier 0 Group B decision",
+      "mitigation_summary": "Confirmed by owner decision: x402_settle and escrow_release intentionally skip the off-chain ledger_reservations ceiling. Their spend ceilings are on-chain caps: BrainSmartAccount session-key maxPerTx and maxPerPeriod for x402, and BrainEscrow remaining for escrow_release. Gate check 6.6 binds escrow remaining before release. Gate check 11 now adds the hard human-approval floor above those caps: onchain_transfer and escrow_release always need a recorded human approval, while x402 autonomy requires signed onchain_settlement_permitted plus x402_autonomous_max_amount at or above the action amount. Missing or malformed policy cap data fails closed to human approval.",
+      "evidence": [
+        "shared/src/gate/gate.ts (hard approval floor and x402 autonomous cap)",
+        "services/execution/src/payment-intents/PaymentIntentService.ts (reservation skip and create routing)",
+        "docs/audit/findings/tier-0-contracts-payment.md",
+        "docs/rails-matrix.md"
+      ]
+    },
+    {
+      "id": "R-16",
+      "title": "Raw interpretation strands artifacts permanently on transient failure",
+      "priority": "P0",
+      "status": "mitigating",
+      "mitigation_summary": "interpretWorker.ts polled raw_artifacts for rows with NO raw_interpretation_log row, and the failure path wrote that log row via ON CONFLICT DO NOTHING. A transient failure (a blob read blip, a DB hiccup) therefore permanently stranded the artifact: the log row written to record the error satisfied the exclusion itself, so no later cycle would ever retry it, and a later success could not overwrite the failure row. Fixed in this PR: migration 0016 adds attempt_count and next_attempt_at to raw_interpretation_log; the poll query now selects a row with no log yet OR a retryable failed row (error IS NOT NULL, attempt_count below the ceiling, backoff elapsed); recordInterpretation is now ON CONFLICT DO UPDATE. Retry policy mirrors the existing document-extraction worker exactly (services/api/src/raw-extract/worker.ts): 3 attempts, 30s base, exponential, capped at 15 minutes. A row with error IS NULL (including the interpreter-yielded-nothing case) stays terminal-success and is never re-polled, preserving existing behavior. Metrics brain.raw.interpretation.retry.count and .stranded.count are emitted on retry-scheduled and terminal-ceiling respectively.",
+      "exit_criteria": [
+        "terminal-success (error IS NULL) is never re-polled",
+        "a retryable failure is re-polled only after its backoff elapses",
+        "a failing artifact becomes terminal-failed after the attempt ceiling, not before",
+        "unit tests cover backoff scheduling, the ceiling, and success clearing a prior error"
+      ],
+      "owner": "engineering",
+      "evidence": [
+        "services/raw/migrations/0016_raw_interpretation_log_retry.sql",
+        "services/raw/src/workers/interpretWorker.ts",
+        "services/raw/src/workers/interpretWorker.test.ts",
+        "services/api/src/raw-extract/worker.ts"
+      ]
+    },
+    {
+      "id": "R-17",
+      "title": "Blob store has no backup, snapshot, or replication",
+      "priority": "P0",
+      "status": "open",
+      "mitigation_summary": "Production raw blob storage is a single MinIO container on one VM, backed by one named Docker volume, with no backup, snapshot, or replication anywhere else. raw_artifacts stores only a blob_uri pointer and a sha256 hash, never the bytes, so loss of that disk permanently destroys every raw artifact (bank statements, invoice uploads, connector payloads) while Postgres still shows the rows and hashes for bytes that no longer exist. This PR does not implement backups. It (1) pins the minio and minio/mc images in docker-compose.prod.yml to specific release tags instead of :latest, closing the separate supply-chain risk of an unreviewed upstream push landing on the VM on the next pull, and (2) documents the operator backup and restore procedure end to end (docs/blob-backup-restore.md), including an explicit warning that the procedure is not yet scheduled to run automatically.",
+      "exit_criteria": [
+        "a scheduled off-VM mc mirror (or equivalent) backup job runs unattended with failure alerting",
+        "the restore procedure in docs/blob-backup-restore.md has been exercised at least once against a real recovery target",
+        "replicated object storage, or an equivalent always-on DR substrate, replaces the single-VM MinIO container"
+      ],
+      "owner": "operations",
+      "evidence": ["docker-compose.prod.yml", "docs/blob-backup-restore.md"]
+    },
+    {
+      "id": "R-18",
+      "title": "RLS was unverified by CI because integration tests connected as the table owner",
+      "priority": "P0",
+      "status": "mitigating",
+      "mitigation_summary": "Every CI job set POSTGRES_USER=brain and DATABASE_URL=postgres://brain:brain@..., and the official Postgres image bootstrap user is a superuser. Postgres never subjects a superuser or table owner to row security regardless of FORCE ROW LEVEL SECURITY, and infra/db-roles.sql (which creates the least-privilege, non-owner, NOBYPASSRLS brain_app role) was never executed in .github/workflows/pr.yml. No automated test could therefore catch an RLS regression: an app-level tenant filter could be deleted from a route and every owner-connected integration test would stay green. Fixed in this PR: the pr.yml integration job now applies infra/db-roles.sql against the CI Postgres after migrations and before the test suites, and exposes a second connection string, DATABASE_URL_APP, for the brain_app role. A new adversarial test, services/raw/src/__integration__/rls.integration.test.ts, seeds two tenants via the owner connection, then proves a brain_app connection scoped to tenant A via withTenantScope returns zero rows belonging to tenant B, for raw_artifacts and raw_interpretation_log, and that an unscoped brain_app query returns nothing at all. Verified locally: the same assertions fail (cross-tenant rows leak through) when RLS is disabled on the test schema, and pass again once it is restored.",
+      "exit_criteria": [
+        "pr.yml integration job applies infra/db-roles.sql before any test suite runs",
+        "a DATABASE_URL_APP connection string for the brain_app role is available to tests",
+        "an adversarial integration test connects as brain_app (NOBYPASSRLS, non-owner) and proves cross-tenant row isolation",
+        "the test is proven to fail when the underlying RLS policy is removed"
+      ],
+      "owner": "engineering",
+      "evidence": [
+        ".github/workflows/pr.yml",
+        "services/raw/src/__integration__/rls.integration.test.ts",
+        "infra/db-roles.sql"
+      ]
+    },
+    {
+      "id": "R-19",
+      "title": "Audit anchor windows are doubly inclusive, so a boundary event can land in two anchors",
+      "priority": "P2",
+      "status": "open",
+      "mitigation_summary": "listEventsForAnchor filters created_at >= periodStart AND created_at <= periodEnd (inclusive on both ends), while publisher.ts's own docstring describes the anchor flow as covering events in [periodStart, periodEnd), a half-open window. A boundary event whose created_at exactly equals one anchor's period_end therefore lands in BOTH that window and the next anchored window, inflating event_count and appearing as a leaf in two separate Merkle trees. This PR's scheduled-publisher fix (services/api/src/main.ts runAnchor) derives each new window's periodStart as the previous confirmed anchor's period_end + 1ms specifically so the boundary event is not re-anchored going forward, which makes the SCHEDULED publisher path harmless in practice. It does not change the inclusive SQL predicate itself, and the manual on-demand route (POST /audit/anchor/publish, services/audit/src/routes.ts) still always computes periodStart as now() - 24h with no offset relative to any prior anchor, so it can still overlap an already-anchored window.",
+      "exit_criteria": [
+        "listEventsForAnchor's window predicate and publisher.ts's docstring agree on inclusive vs half-open semantics",
+        "POST /audit/anchor/publish cannot produce a window that re-anchors an event already covered by a prior confirmed anchor for that tenant",
+        "a regression test proves a boundary-timestamp event is anchored in exactly one confirmed window"
+      ],
+      "owner": "engineering",
+      "evidence": [
+        "services/audit/src/repository.ts",
+        "services/audit/src/publisher.ts",
+        "services/api/src/main.ts",
+        "services/audit/src/routes.ts"
+      ]
+    },
+    {
+      "id": "R-20",
+      "title": "Audit chain created_at derives from the application clock, not the database clock, so cross-process clock skew can fork the hash chain",
+      "priority": "P3",
+      "status": "open",
+      "mitigation_summary": "shared/src/audit/emitter.ts stamps each audit event's created_at from new Date().toISOString() (the emitting process's wall clock), not the database's now(). The per-tenant advisory lock (pg_advisory_xact_lock) serializes the read-then-insert sequence for concurrent emits against one tenant so they cannot race, but it does not impose a total order on created_at values across MULTIPLE emitting processes: with more than one process emitting for the same tenant (two API replicas, or the API and a worker), clock skew between hosts can give a chronologically later event an earlier created_at than the current chain head. If the next emit selects its predecessor by that ordering, two events can chain off the same predecessor, which is the FORK condition checkAuditConsistency exists to detect. No change was made in this PR; the existing per-tenant advisory lock and the existing structural fork check are the only mitigations, and both predate this change set.",
+      "exit_criteria": [
+        "the emitter derives created_at (or the value used to select the chain predecessor) from a single authoritative clock, such as the database's now(), or a per-tenant monotonic sequence, rather than each process's wall clock",
+        "a test proves that two emitting processes with simulated clock skew cannot produce a fork"
+      ],
+      "owner": "engineering",
+      "evidence": ["shared/src/audit/emitter.ts", "services/audit/src/audit-consistency.ts"]
+    }
+  ]
+}

@@ -1,0 +1,120 @@
+/**
+ * GET /ledger/cash_flows — cash-flow aggregation route.
+ *
+ * Thin glue: fetch transactions in the window via LedgerService, run
+ * the pure `aggregateCashFlow` over them, return the summary.
+ *
+ * Source: https://docs.brain.fi/api-reference/ledger-api ("cash flows").
+ *
+ * @packageDocumentation
+ */
+
+import type { FastifyInstance, FastifyRequest } from "fastify";
+import { brainError, requireScope, type Scope, type ServiceCallContext } from "@brain/shared";
+import type { LedgerService } from "../service/LedgerService.js";
+import { aggregateCashFlow, type CashFlowTransaction } from "./aggregate.js";
+
+const SCOPE_READ: Scope = "ledger:read";
+
+function principalCtx(request: FastifyRequest): ServiceCallContext {
+  if (request.principal === undefined) {
+    throw brainError("auth_token_missing", "principal required");
+  }
+  return {
+    tenantId: request.principal.tenantId,
+    actor: request.principal.id,
+    requestId: request.id,
+  };
+}
+
+interface Query {
+  tenantId?: string;
+  days?: string;
+  currency?: string;
+}
+
+const DEFAULT_DAYS = 30;
+const MAX_DAYS = 365;
+
+// Safety ceiling on the number of transactions one cash-flow request will
+// page through (20 pages of 1000). A normal tenant's 30-365 day window never
+// approaches this; it exists so a pathological-volume tenant gets an
+// explicit truncation signal (see the truncated response header below)
+// instead of an unbounded request.
+const MAX_TRANSACTIONS = 20_000;
+
+export async function registerCashFlowRoutes(
+  app: FastifyInstance,
+  service: LedgerService,
+): Promise<void> {
+  app.get("/ledger/cash_flows", async (request: FastifyRequest<{ Querystring: Query }>, reply) => {
+    const ctx = principalCtx(request);
+    requireScope(request.principal!.scopes, SCOPE_READ);
+
+    const days = Math.min(
+      Math.max(
+        request.query.days !== undefined
+          ? Number.parseInt(request.query.days, 10) || DEFAULT_DAYS
+          : DEFAULT_DAYS,
+        1,
+      ),
+      MAX_DAYS,
+    );
+    if (request.query.currency !== undefined && !/^[A-Z]{3}$/.test(request.query.currency)) {
+      throw brainError("request_params_invalid", "currency must match ^[A-Z]{3}$");
+    }
+
+    const until = new Date();
+    const since = new Date(until.getTime() - days * 24 * 3600 * 1000);
+
+    // Page through the full window via the cursor instead of a single
+    // 1000-row fetch: a single page silently under-reported totals for any
+    // tenant with more than 1000 transactions in the window (F6). The
+    // currency filter is pushed into the query (not applied post-fetch)
+    // so a currency-scoped read doesn't have to over-fetch the whole window
+    // only to discard most of it in memory.
+    const flat: CashFlowTransaction[] = [];
+    let cursor: string | undefined;
+    let truncated = false;
+    do {
+      const page = await service.listTransactions(ctx, {
+        since: since.toISOString(),
+        until: until.toISOString(),
+        ...(request.query.currency !== undefined ? { currency: request.query.currency } : {}),
+        limit: 1000,
+        ...(cursor !== undefined ? { cursor } : {}),
+      });
+      for (const t of page.items) {
+        flat.push({
+          transaction_date:
+            typeof t.transaction_date === "string"
+              ? t.transaction_date
+              : new Date(t.transaction_date as unknown as number).toISOString(),
+          amount: t.amount,
+          currency: t.currency,
+          direction: t.direction as CashFlowTransaction["direction"],
+        });
+      }
+      cursor = page.next_cursor ?? undefined;
+      if (cursor !== undefined && flat.length >= MAX_TRANSACTIONS) {
+        truncated = true;
+        break;
+      }
+    } while (cursor !== undefined);
+
+    if (truncated) {
+      reply.header("x-cash-flow-truncated", "true");
+    }
+
+    const summary = aggregateCashFlow({
+      tenantId: ctx.tenantId,
+      since: since.toISOString(),
+      until: until.toISOString(),
+      ...(request.query.currency !== undefined ? { currencyFilter: request.query.currency } : {}),
+      transactions: flat,
+    });
+
+    reply.status(200);
+    return summary;
+  });
+}

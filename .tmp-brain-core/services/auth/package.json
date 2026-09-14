@@ -1,0 +1,41 @@
+{
+  "name": "@brain/auth",
+  "version": "0.0.1",
+  "private": true,
+  "description": "OAuth 2.0 authorization server at AUTH_ISSUER. Phase 1: RFC 8414 metadata + JWKS discovery only.",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "rm -rf dist *.tsbuildinfo",
+    "dev": "tsx watch src/main.ts",
+    "lint": "eslint src test --max-warnings 0",
+    "lint:fix": "eslint src test --fix",
+    "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:integration": "vitest run --config vitest.integration.config.ts"
+  },
+  "dependencies": {
+    "@brain/internal-agents": "workspace:*",
+    "@brain/mcp": "workspace:*",
+    "@brain/shared": "workspace:*",
+    "@brain/surfaces": "workspace:*",
+    "@fastify/helmet": "^13.1.0",
+    "@fastify/rate-limit": "^10.3.0",
+    "fastify": "^5.11.0",
+    "pg": "^8.22.0",
+    "viem": "^2.55.11",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "@types/pg": "^8.11.10",
+    "@vitest/coverage-v8": "^4.1.8",
+    "eslint": "^9.12.0",
+    "tsx": "^4.23.1",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.8"
+  }
+}

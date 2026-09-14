@@ -1,0 +1,514 @@
+/**
+ * Tests for the MCP Fastify route: principal_type enforcement and
+ * per-tenant rate limiting.
+ *
+ * Uses Fastify's inject() so no network port is opened.
+ */
+
+import { describe, expect, it, vi } from "vitest";
+import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
+import {
+  InMemorySlidingWindowRateLimiter,
+  errorHandlerPlugin,
+  type Principal,
+} from "@brain/shared";
+import type { BrainMcpServer } from "../server.js";
+import type { McpShadowBinding, McpShadowMetering } from "../metering.js";
+import { registerMcpRoute } from "./http.js";
+
+const TENANT_A = "tnt_01TESTAAAAAAAAAAAAAAAAAA";
+const TENANT_B = "tnt_01TESTBBBBBBBBBBBBBBBBBB";
+const AGENT_ID = "agent_01TEST00000000000000000";
+
+function principal(tenantId: string, type: Principal["type"] = "agent"): Principal {
+  return {
+    id: type === "user" ? "user_01TEST0000000000000000" : AGENT_ID,
+    type,
+    tenantId,
+    scopes: ["payment_intent:propose"] as unknown as Principal["scopes"],
+    tokenId: "tok_01TEST00000000000000000",
+    expiresAt: Math.floor(Date.now() / 1000) + 3600,
+  };
+}
+
+function mockServer(): BrainMcpServer {
+  return {
+    handle: vi.fn(async () => ({
+      jsonrpc: "2.0",
+      id: 1,
+      result: { tools: [] },
+    })),
+  } as unknown as BrainMcpServer;
+}
+
+/** A server stub that always resolves the way BrainMcpServer.handle does for a notification. */
+function mockNotificationServer(): BrainMcpServer {
+  return { handle: vi.fn(async () => null) } as unknown as BrainMcpServer;
+}
+
+/** Fake auth plugin that stamps `request.principal` from an `x-test-tenant` header. */
+async function withFakeAuth(app: FastifyInstance): Promise<void> {
+  app.addHook("preHandler", async (request: FastifyRequest) => {
+    const headerTenant = request.headers["x-test-tenant"];
+    const headerType = request.headers["x-test-principal-type"];
+    const type =
+      headerType === "user" || headerType === "api_partner" || headerType === "agent"
+        ? headerType
+        : "agent";
+    if (typeof headerTenant === "string") {
+      request.principal = principal(headerTenant, type);
+    } else if (request.headers["x-test-skip-principal"] === "1") {
+      // leave undefined to exercise the auth_token_missing branch
+    } else {
+      request.principal = principal(TENANT_A, type);
+    }
+  });
+}
+
+async function buildApp(opts: {
+  tenantRateLimiter?: InMemorySlidingWindowRateLimiter;
+  resourceMetadataUrl?: string;
+  server?: BrainMcpServer;
+  shadowMetering?: McpShadowMetering;
+}): Promise<FastifyInstance> {
+  const app = Fastify({ logger: false });
+  await app.register(errorHandlerPlugin);
+  await withFakeAuth(app);
+  await registerMcpRoute(app, opts.server ?? mockServer(), {
+    ...(opts.tenantRateLimiter !== undefined ? { tenantRateLimiter: opts.tenantRateLimiter } : {}),
+    ...(opts.resourceMetadataUrl !== undefined
+      ? { resourceMetadataUrl: opts.resourceMetadataUrl }
+      : {}),
+    ...(opts.shadowMetering !== undefined ? { shadowMetering: opts.shadowMetering } : {}),
+  });
+  return app;
+}
+
+describe("registerMcpRoute commercial shadow metering", () => {
+  it("writes transport evidence before a fulfilled tool meter row", async () => {
+    const order: string[] = [];
+    const server = mockServer();
+    vi.mocked(server.handle).mockImplementation(async () => {
+      order.push("handler");
+      return { jsonrpc: "2.0", id: 1, result: { content: [] } };
+    });
+    const metering = fakeShadowMetering(order);
+    const app = await buildApp({ server, shadowMetering: metering });
+    try {
+      const response = await app.inject({
+        method: "POST",
+        url: "/agents/mcp",
+        payload: {
+          jsonrpc: "2.0",
+          id: 1,
+          method: "tools/call",
+          params: { name: "ledger.accounts.list", arguments: {} },
+        },
+      });
+      expect(response.statusCode).toBe(200);
+      expect(order).toEqual(["transport", "handler", "meter"]);
+      expect(metering.recordTool).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 200,
+          outcome: "success",
+          rejectionReason: null,
+        }),
+      );
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("records a denied limiter decision and a zero-unit rate-limited meter fact", async () => {
+    const limiter = new InMemorySlidingWindowRateLimiter({ windowSeconds: 60, limit: 1 });
+    const metering = fakeShadowMetering([]);
+    const app = await buildApp({ tenantRateLimiter: limiter, shadowMetering: metering });
+    const payload = {
+      jsonrpc: "2.0",
+      id: 1,
+      method: "tools/call",
+      params: { name: "ledger.accounts.list", arguments: {} },
+    };
+    try {
+      expect((await app.inject({ method: "POST", url: "/agents/mcp", payload })).statusCode).toBe(
+        200,
+      );
+      expect((await app.inject({ method: "POST", url: "/agents/mcp", payload })).statusCode).toBe(
+        429,
+      );
+      expect(metering.observeTransport).toHaveBeenLastCalledWith(
+        expect.objectContaining({ limiterDecision: false }),
+      );
+      expect(metering.recordTool).toHaveBeenLastCalledWith(
+        expect.objectContaining({ outcome: "rate_limited", statusCode: 429 }),
+      );
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("preserves the tool response and records durable failure evidence if meter append fails", async () => {
+    const metering = fakeShadowMetering([]);
+    vi.mocked(metering.recordTool).mockRejectedValueOnce(new Error("meter unavailable"));
+    const app = await buildApp({ shadowMetering: metering });
+    try {
+      const response = await app.inject({
+        method: "POST",
+        url: "/agents/mcp",
+        payload: {
+          jsonrpc: "2.0",
+          id: 1,
+          method: "tools/call",
+          params: { name: "ledger.accounts.list", arguments: {} },
+        },
+      });
+      expect(response.statusCode).toBe(200);
+      expect(metering.recordMeterFailure).toHaveBeenCalledTimes(1);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("does not observe MCP methods that are not tool calls", async () => {
+    const metering = fakeShadowMetering([]);
+    const app = await buildApp({ shadowMetering: metering });
+    try {
+      const response = await app.inject({
+        method: "POST",
+        url: "/agents/mcp",
+        payload: { jsonrpc: "2.0", id: 1, method: "tools/list" },
+      });
+      expect(response.statusCode).toBe(200);
+      expect(metering.observeTransport).not.toHaveBeenCalled();
+      expect(metering.recordTool).not.toHaveBeenCalled();
+    } finally {
+      await app.close();
+    }
+  });
+});
+
+function fakeShadowMetering(order: string[]): McpShadowMetering & {
+  observeTransport: ReturnType<typeof vi.fn>;
+  recordTool: ReturnType<typeof vi.fn>;
+  recordMeterFailure: ReturnType<typeof vi.fn>;
+} {
+  const binding: McpShadowBinding = {
+    tenantId: TENANT_A,
+    shadowPeriodId: "csp_october",
+    environment: "live",
+    requestId: "req_test",
+    principalType: "agent",
+    principalId: AGENT_ID,
+    toolName: "ledger.accounts.list",
+    occurredAt: new Date("2026-10-01T00:00:00Z"),
+  };
+  return {
+    observeTransport: vi.fn(async (event) => {
+      order.push("transport");
+      return { ...binding, requestId: event.requestId, occurredAt: event.occurredAt };
+    }),
+    recordTool: vi.fn(async () => {
+      order.push("meter");
+    }),
+    recordMeterFailure: vi.fn(async () => undefined),
+  };
+}
+
+describe("registerMcpRoute — per-tenant rate limit", () => {
+  it("permits requests below the per-tenant limit", async () => {
+    const limiter = new InMemorySlidingWindowRateLimiter({ windowSeconds: 60, limit: 3 });
+    const app = await buildApp({ tenantRateLimiter: limiter });
+    try {
+      for (let i = 0; i < 3; i++) {
+        const r = await app.inject({
+          method: "POST",
+          url: "/agents/mcp",
+          headers: { "x-test-tenant": TENANT_A, "content-type": "application/json" },
+          payload: { jsonrpc: "2.0", id: 1, method: "tools/list" },
+        });
+        expect(r.statusCode).toBe(200);
+      }
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("rejects with rate_limited (HTTP 429) when the per-tenant cap is exceeded", async () => {
+    const limiter = new InMemorySlidingWindowRateLimiter({ windowSeconds: 60, limit: 2 });
+    const app = await buildApp({ tenantRateLimiter: limiter });
+    try {
+      // Two allowed, the third is over the cap.
+      await app.inject({
+        method: "POST",
+        url: "/agents/mcp",
+        headers: { "x-test-tenant": TENANT_A, "content-type": "application/json" },
+        payload: { jsonrpc: "2.0", id: 1, method: "tools/list" },
+      });
+      await app.inject({
+        method: "POST",
+        url: "/agents/mcp",
+        headers: { "x-test-tenant": TENANT_A, "content-type": "application/json" },
+        payload: { jsonrpc: "2.0", id: 1, method: "tools/list" },
+      });
+      const third = await app.inject({
+        method: "POST",
+        url: "/agents/mcp",
+        headers: { "x-test-tenant": TENANT_A, "content-type": "application/json" },
+        payload: { jsonrpc: "2.0", id: 1, method: "tools/list" },
+      });
+      expect(third.statusCode).toBe(429);
+      const body = third.json() as { error: { code: string; details: Record<string, unknown> } };
+      expect(body.error.code).toBe("rate_limited");
+      expect(body.error.details.tenant_id).toBe(TENANT_A);
+      expect(body.error.details.limit).toBe(2);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("keys the bucket per tenant — one tenant's flood does not affect another", async () => {
+    // Limit=1 per window so any TENANT_A second call would 429.
+    const limiter = new InMemorySlidingWindowRateLimiter({ windowSeconds: 60, limit: 1 });
+    const app = await buildApp({ tenantRateLimiter: limiter });
+    try {
+      // TENANT_A uses up its quota.
+      await app.inject({
+        method: "POST",
+        url: "/agents/mcp",
+        headers: { "x-test-tenant": TENANT_A, "content-type": "application/json" },
+        payload: { jsonrpc: "2.0", id: 1, method: "tools/list" },
+      });
+      const aSecond = await app.inject({
+        method: "POST",
+        url: "/agents/mcp",
+        headers: { "x-test-tenant": TENANT_A, "content-type": "application/json" },
+        payload: { jsonrpc: "2.0", id: 1, method: "tools/list" },
+      });
+      expect(aSecond.statusCode).toBe(429);
+
+      // TENANT_B still has full quota.
+      const bFirst = await app.inject({
+        method: "POST",
+        url: "/agents/mcp",
+        headers: { "x-test-tenant": TENANT_B, "content-type": "application/json" },
+        payload: { jsonrpc: "2.0", id: 1, method: "tools/list" },
+      });
+      expect(bFirst.statusCode).toBe(200);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("does not apply the limiter when none is configured (backward-compat)", async () => {
+    const app = await buildApp({});
+    try {
+      for (let i = 0; i < 5; i++) {
+        const r = await app.inject({
+          method: "POST",
+          url: "/agents/mcp",
+          headers: { "x-test-tenant": TENANT_A, "content-type": "application/json" },
+          payload: { jsonrpc: "2.0", id: 1, method: "tools/list" },
+        });
+        expect(r.statusCode).toBe(200);
+      }
+    } finally {
+      await app.close();
+    }
+  });
+});
+
+describe("registerMcpRoute — principal_type and missing-principal guards", () => {
+  it("returns 401 when no principal is present", async () => {
+    const app = await buildApp({});
+    try {
+      const r = await app.inject({
+        method: "POST",
+        url: "/agents/mcp",
+        headers: { "x-test-skip-principal": "1", "content-type": "application/json" },
+        payload: { jsonrpc: "2.0", id: 1, method: "tools/list" },
+      });
+      expect(r.statusCode).toBe(401);
+      const body = r.json() as { error: { code: string } };
+      expect(body.error.code).toBe("auth_token_missing");
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("accepts user principals so human decision tools can use the MCP surface", async () => {
+    const app = await buildApp({});
+    try {
+      const r = await app.inject({
+        method: "POST",
+        url: "/agents/mcp",
+        headers: { "x-test-principal-type": "user", "content-type": "application/json" },
+        payload: { jsonrpc: "2.0", id: 1, method: "tools/list" },
+      });
+      expect(r.statusCode).toBe(200);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("rejects api_partner principals at the MCP boundary", async () => {
+    const app = await buildApp({});
+    try {
+      const r = await app.inject({
+        method: "POST",
+        url: "/agents/mcp",
+        headers: { "x-test-principal-type": "api_partner", "content-type": "application/json" },
+        payload: { jsonrpc: "2.0", id: 1, method: "tools/list" },
+      });
+      expect(r.statusCode).toBe(403);
+      const body = r.json() as { error: { code: string } };
+      expect(body.error.code).toBe("auth_scope_insufficient");
+    } finally {
+      await app.close();
+    }
+  });
+});
+
+describe("registerMcpRoute — RFC 9728 WWW-Authenticate discovery", () => {
+  const META_URL = "https://mcp.brain.fi/.well-known/oauth-protected-resource";
+
+  it("attaches the resource_metadata challenge to a 401", async () => {
+    const app = await buildApp({ resourceMetadataUrl: META_URL });
+    try {
+      const r = await app.inject({
+        method: "POST",
+        url: "/agents/mcp",
+        headers: { "x-test-skip-principal": "1", "content-type": "application/json" },
+        payload: { jsonrpc: "2.0", id: 1, method: "tools/list" },
+      });
+      expect(r.statusCode).toBe(401);
+      expect(r.headers["www-authenticate"]).toBe(`Bearer resource_metadata="${META_URL}"`);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("does not attach the challenge on a 200", async () => {
+    const app = await buildApp({ resourceMetadataUrl: META_URL });
+    try {
+      const r = await app.inject({
+        method: "POST",
+        url: "/agents/mcp",
+        headers: { "x-test-tenant": TENANT_A, "content-type": "application/json" },
+        payload: { jsonrpc: "2.0", id: 1, method: "tools/list" },
+      });
+      expect(r.statusCode).toBe(200);
+      expect(r.headers["www-authenticate"]).toBeUndefined();
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("omits the header entirely when no metadata URL is configured", async () => {
+    const app = await buildApp({});
+    try {
+      const r = await app.inject({
+        method: "POST",
+        url: "/agents/mcp",
+        headers: { "x-test-skip-principal": "1", "content-type": "application/json" },
+        payload: { jsonrpc: "2.0", id: 1, method: "tools/list" },
+      });
+      expect(r.statusCode).toBe(401);
+      expect(r.headers["www-authenticate"]).toBeUndefined();
+    } finally {
+      await app.close();
+    }
+  });
+});
+
+describe("registerMcpRoute — JSON-RPC notifications (BRAIN-101)", () => {
+  it("returns 202 with an empty body for a notification (no id)", async () => {
+    const app = await buildApp({ server: mockNotificationServer() });
+    try {
+      const r = await app.inject({
+        method: "POST",
+        url: "/agents/mcp",
+        headers: { "x-test-tenant": TENANT_A, "content-type": "application/json" },
+        payload: { jsonrpc: "2.0", method: "notifications/initialized" },
+      });
+      expect(r.statusCode).toBe(202);
+      expect(r.body).toBe("");
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("leaves an ordinary id-bearing request on the normal 200 JSON-RPC path", async () => {
+    const app = await buildApp({});
+    try {
+      const r = await app.inject({
+        method: "POST",
+        url: "/agents/mcp",
+        headers: { "x-test-tenant": TENANT_A, "content-type": "application/json" },
+        payload: { jsonrpc: "2.0", id: 1, method: "tools/list" },
+      });
+      expect(r.statusCode).toBe(200);
+      const body = r.json() as { jsonrpc: string; id: number; result: unknown };
+      expect(body.id).toBe(1);
+      expect(body.result).toBeDefined();
+    } finally {
+      await app.close();
+    }
+  });
+});
+
+describe("registerMcpRoute — MCP-Protocol-Version header (BRAIN-100)", () => {
+  it("rejects an unsupported MCP-Protocol-Version with 400", async () => {
+    const app = await buildApp({});
+    try {
+      const r = await app.inject({
+        method: "POST",
+        url: "/agents/mcp",
+        headers: {
+          "x-test-tenant": TENANT_A,
+          "content-type": "application/json",
+          "mcp-protocol-version": "1999-01-01",
+        },
+        payload: { jsonrpc: "2.0", id: 1, method: "tools/list" },
+      });
+      expect(r.statusCode).toBe(400);
+      const body = r.json() as { error: { code: string } };
+      expect(body.error.code).toBe("request_params_invalid");
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("accepts a supported MCP-Protocol-Version header", async () => {
+    const app = await buildApp({});
+    try {
+      const r = await app.inject({
+        method: "POST",
+        url: "/agents/mcp",
+        headers: {
+          "x-test-tenant": TENANT_A,
+          "content-type": "application/json",
+          "mcp-protocol-version": "2025-06-18",
+        },
+        payload: { jsonrpc: "2.0", id: 1, method: "tools/list" },
+      });
+      expect(r.statusCode).toBe(200);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("does not require the header at all (no session to check it against)", async () => {
+    const app = await buildApp({});
+    try {
+      const r = await app.inject({
+        method: "POST",
+        url: "/agents/mcp",
+        headers: { "x-test-tenant": TENANT_A, "content-type": "application/json" },
+        payload: { jsonrpc: "2.0", id: 1, method: "tools/list" },
+      });
+      expect(r.statusCode).toBe(200);
+    } finally {
+      await app.close();
+    }
+  });
+});

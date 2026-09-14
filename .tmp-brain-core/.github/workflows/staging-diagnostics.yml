@@ -1,0 +1,1002 @@
+name: staging-diagnostics
+
+on:
+  workflow_dispatch:
+    inputs:
+      diagnostic:
+        description: "Fixed staging diagnostic to run."
+        required: true
+        type: choice
+        options:
+          - counterparty-trust-gate-impact
+          - upload-pipeline-state
+          - upload-pipeline-worker-logs
+          - document-extractor-connectivity
+          - document-extractor-failure-logs
+          - contextless-payroll-obligation-audit
+          - tenant-identity-lookup
+          - wiki-question-trace
+          - anchor-reconciliation-correlation
+          - anchor-cycle-runtime-trace
+          - trust-gate-smoke-audit-reconciliation
+          - trust-gate-prior-smoke-execution
+          - trust-gate-24h-observation
+      tenant_ids:
+        description: "Optional comma-separated canonical tenant ids. Empty reports all staging tenants."
+        required: false
+        type: string
+        default: ""
+      identity_lookup:
+        description: "Exact platform user UUID or email for tenant-identity-lookup only."
+        required: false
+        type: string
+        default: ""
+      wiki_question_event_id:
+        description: "Optional evt_... id for one wiki.question audit row."
+        required: false
+        type: string
+        default: ""
+      wiki_question_since:
+        description: "Optional ISO UTC lower bound for wiki.question audit rows."
+        required: false
+        type: string
+        default: ""
+      wiki_question_until:
+        description: "Optional ISO UTC upper bound for wiki.question audit rows."
+        required: false
+        type: string
+        default: ""
+      wiki_question_search:
+        description: "Optional case-insensitive substring for the stored question."
+        required: false
+        type: string
+        default: ""
+      anchor_cycle_since:
+        description: "ISO UTC lower bound for anchor-cycle-runtime-trace only."
+        required: false
+        type: string
+        default: ""
+      anchor_cycle_until:
+        description: "ISO UTC upper bound for anchor-cycle-runtime-trace only."
+        required: false
+        type: string
+        default: ""
+      trust_gate_observation_since:
+        description: "Exact ISO UTC start bound for trust-gate-24h-observation."
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    name: run fixed staging diagnostics
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Match the staging deploy group so diagnostics never overlap a deploy.
+    concurrency:
+      group: deploy-staging-refs/heads/main
+      cancel-in-progress: false
+    env:
+      VM_HOST: ${{ secrets.VM_HOST_STAGING }}
+      VM_SSH_KEY: ${{ secrets.VM_SSH_KEY_STAGING }}
+      DIAGNOSTIC: ${{ inputs.diagnostic }}
+      TENANT_IDS: ${{ inputs.tenant_ids }}
+      IDENTITY_LOOKUP: ${{ inputs.identity_lookup }}
+      WIKI_QUESTION_EVENT_ID: ${{ inputs.wiki_question_event_id }}
+      WIKI_QUESTION_SINCE: ${{ inputs.wiki_question_since }}
+      WIKI_QUESTION_UNTIL: ${{ inputs.wiki_question_until }}
+      WIKI_QUESTION_SEARCH: ${{ inputs.wiki_question_search }}
+      ANCHOR_CYCLE_SINCE: ${{ inputs.anchor_cycle_since }}
+      ANCHOR_CYCLE_UNTIL: ${{ inputs.anchor_cycle_until }}
+      TRUST_GATE_OBSERVATION_SINCE: ${{ inputs.trust_gate_observation_since }}
+    steps:
+      - name: Validate fixed diagnostic inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$DIAGNOSTIC" != "counterparty-trust-gate-impact" && "$DIAGNOSTIC" != "upload-pipeline-state" && "$DIAGNOSTIC" != "upload-pipeline-worker-logs" && "$DIAGNOSTIC" != "document-extractor-connectivity" && "$DIAGNOSTIC" != "document-extractor-failure-logs" && "$DIAGNOSTIC" != "contextless-payroll-obligation-audit" && "$DIAGNOSTIC" != "tenant-identity-lookup" && "$DIAGNOSTIC" != "wiki-question-trace" && "$DIAGNOSTIC" != "anchor-reconciliation-correlation" && "$DIAGNOSTIC" != "anchor-cycle-runtime-trace" && "$DIAGNOSTIC" != "trust-gate-smoke-audit-reconciliation" && "$DIAGNOSTIC" != "trust-gate-prior-smoke-execution" && "$DIAGNOSTIC" != "trust-gate-24h-observation" ]]; then
+            echo "diagnostic must be one of the fixed staging diagnostic choices"
+            exit 1
+          fi
+
+          if [[ "$DIAGNOSTIC" == "tenant-identity-lookup" ]]; then
+            if [[ "$IDENTITY_LOOKUP" =~ ^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$ || "$IDENTITY_LOOKUP" =~ ^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,63}$ ]]; then
+              :
+            else
+              echo "tenant-identity-lookup requires an exact UUID or email"
+              exit 1
+            fi
+          fi
+
+          if [[ ${#TENANT_IDS} -gt 540 ]]; then
+            echo "tenant_ids must be 540 characters or less"
+            exit 1
+          fi
+          if [[ -n "$TENANT_IDS" ]]; then
+            IFS=',' read -r -a tenant_ids <<< "$TENANT_IDS"
+            if [[ ${#tenant_ids[@]} -gt 20 ]]; then
+              echo "tenant_ids accepts at most 20 ids"
+              exit 1
+            fi
+            for tenant_id in "${tenant_ids[@]}"; do
+              if [[ ! "$tenant_id" =~ ^tnt_[0-9A-HJKMNP-TV-Z]{26}$ ]]; then
+                echo "every tenant_ids entry must match ^tnt_[0-9A-HJKMNP-TV-Z]{26}$"
+                exit 1
+              fi
+            done
+          fi
+
+          if [[ "$DIAGNOSTIC" == "wiki-question-trace" ]]; then
+            if [[ ! "$TENANT_IDS" =~ ^tnt_[0-9A-HJKMNP-TV-Z]{26}$ ]]; then
+              echo "wiki-question-trace requires exactly one canonical tenant id"
+              exit 1
+            fi
+            if [[ -n "$WIKI_QUESTION_EVENT_ID" && ! "$WIKI_QUESTION_EVENT_ID" =~ ^evt_[0-9A-HJKMNP-TV-Z]{26}$ ]]; then
+              echo "wiki_question_event_id must match ^evt_[0-9A-HJKMNP-TV-Z]{26}$ when provided"
+              exit 1
+            fi
+            for value in "$WIKI_QUESTION_SINCE" "$WIKI_QUESTION_UNTIL"; do
+              if [[ -n "$value" && ! "$value" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]+)?Z$ ]]; then
+                echo "wiki_question_since/wiki_question_until must be ISO UTC timestamps when provided"
+                exit 1
+              fi
+            done
+            if [[ ${#WIKI_QUESTION_SEARCH} -gt 160 ]]; then
+              echo "wiki_question_search must be 160 characters or less"
+              exit 1
+            fi
+            if [[ -z "$WIKI_QUESTION_EVENT_ID" && -z "$WIKI_QUESTION_SINCE" && -z "$WIKI_QUESTION_UNTIL" && -z "$WIKI_QUESTION_SEARCH" ]]; then
+              echo "wiki-question-trace requires an event id, timestamp bound, or question search"
+              exit 1
+            fi
+          fi
+
+          if [[ "$DIAGNOSTIC" == "anchor-cycle-runtime-trace" ]]; then
+            for value in "$ANCHOR_CYCLE_SINCE" "$ANCHOR_CYCLE_UNTIL"; do
+              if [[ ! "$value" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$ ]]; then
+                echo "anchor-cycle-runtime-trace requires exact ISO UTC bounds"
+                exit 1
+              fi
+            done
+            python3 - "$ANCHOR_CYCLE_SINCE" "$ANCHOR_CYCLE_UNTIL" <<'PY'
+          from datetime import datetime
+          import sys
+
+          start = datetime.strptime(sys.argv[1], "%Y-%m-%dT%H:%M:%SZ")
+          end = datetime.strptime(sys.argv[2], "%Y-%m-%dT%H:%M:%SZ")
+          seconds = (end - start).total_seconds()
+          if seconds <= 0 or seconds > 1_200:
+              raise SystemExit("anchor-cycle-runtime-trace window must be greater than zero and no more than 20 minutes")
+          PY
+          fi
+
+          if [[ "$DIAGNOSTIC" == "trust-gate-24h-observation" ]]; then
+            if [[ ! "$TRUST_GATE_OBSERVATION_SINCE" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$ ]]; then
+              echo "trust-gate-24h-observation requires an exact ISO UTC start bound"
+              exit 1
+            fi
+          fi
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4.1.7
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v4.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install lockfile dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Configure SSH
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          echo "$VM_SSH_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -H "$VM_HOST" >> ~/.ssh/known_hosts
+
+      - name: Print staging worker SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          worker_sha="$(ssh -i ~/.ssh/id_deploy -o ServerAliveInterval=30 "azureuser@$VM_HOST" \
+            "docker exec brain-prod-worker printenv GIT_SHA")"
+          echo "staging_git_sha=$worker_sha"
+
+      - name: Run fixed staging diagnostic
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          identity_lookup_b64="$(printf '%s' "$IDENTITY_LOOKUP" | base64 | tr -d '\n')"
+          wiki_question_event_id_b64="$(printf '%s' "$WIKI_QUESTION_EVENT_ID" | base64 | tr -d '\n')"
+          wiki_question_since_b64="$(printf '%s' "$WIKI_QUESTION_SINCE" | base64 | tr -d '\n')"
+          wiki_question_until_b64="$(printf '%s' "$WIKI_QUESTION_UNTIL" | base64 | tr -d '\n')"
+          wiki_question_search_b64="$(printf '%s' "$WIKI_QUESTION_SEARCH" | base64 | tr -d '\n')"
+          anchor_cycle_since_b64="$(printf '%s' "$ANCHOR_CYCLE_SINCE" | base64 | tr -d '\n')"
+          anchor_cycle_until_b64="$(printf '%s' "$ANCHOR_CYCLE_UNTIL" | base64 | tr -d '\n')"
+          trust_gate_observation_since_b64="$(printf '%s' "$TRUST_GATE_OBSERVATION_SINCE" | base64 | tr -d '\n')"
+
+          run_tenant_identity_lookup() {
+            ssh -i ~/.ssh/id_deploy -o ServerAliveInterval=30 "azureuser@$VM_HOST" \
+              "IDENTITY_LOOKUP_B64='$identity_lookup_b64' bash -s" <<'REMOTE'
+            set -euo pipefail
+            identity_lookup="$(printf '%s' "$IDENTITY_LOOKUP_B64" | base64 -d)"
+            if [[ ! "$identity_lookup" =~ ^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$ && ! "$identity_lookup" =~ ^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,63}$ ]]; then
+              echo "tenant-identity-lookup remote validation failed"
+              exit 1
+            fi
+
+            docker exec -i brain-prod-postgres psql -U brain -d brain \
+              -v ON_ERROR_STOP=1 \
+              -v identity_lookup="$identity_lookup" <<'SQL'
+            \pset pager off
+            \pset null '(null)'
+            BEGIN TRANSACTION READ ONLY;
+
+            \echo 'matching platform identity links'
+            WITH matches AS (
+              SELECT l.tenant_id,
+                     l.member_id,
+                     l.external_ref,
+                     l.linked_at,
+                     m.email,
+                     m.display_name,
+                     m.status AS member_status,
+                     m.active AS member_active,
+                     t.kind,
+                     t.sandbox,
+                     t.created_via,
+                     t.created_at AS tenant_created_at
+                FROM member_identity_links l
+                JOIN members m
+                  ON m.tenant_id = l.tenant_id
+                 AND m.id = l.member_id
+                JOIN tenants t ON t.id = l.tenant_id
+               WHERE l.surface = 'platform'
+                 AND (l.external_ref = :'identity_lookup'
+                      OR lower(m.email) = lower(:'identity_lookup'))
+            )
+            SELECT tenant_id,
+                   member_id,
+                   external_ref,
+                   email,
+                   display_name,
+                   member_status,
+                   member_active,
+                   kind,
+                   sandbox,
+                   created_via,
+                   tenant_created_at,
+                   linked_at
+              FROM matches
+             ORDER BY tenant_created_at DESC, tenant_id DESC;
+
+            \echo 'tenant creation audit events for matching identities'
+            WITH matching_tenants AS (
+              SELECT DISTINCT l.tenant_id
+                FROM member_identity_links l
+                JOIN members m
+                  ON m.tenant_id = l.tenant_id
+                 AND m.id = l.member_id
+               WHERE l.surface = 'platform'
+                 AND (l.external_ref = :'identity_lookup'
+                      OR lower(m.email) = lower(:'identity_lookup'))
+            )
+            SELECT ae.tenant_id,
+                   ae.id AS audit_event_id,
+                   ae.created_at,
+                   ae.action,
+                   ae.actor,
+                   ae.inputs,
+                   ae.outputs
+              FROM audit_events ae
+              JOIN matching_tenants mt ON mt.tenant_id = ae.tenant_id
+             WHERE ae.action IN ('tenant.created', 'tenant.demo_seeded')
+             ORDER BY ae.created_at ASC, ae.id ASC;
+
+            COMMIT;
+          SQL
+          REMOTE
+          }
+
+          if [[ "$DIAGNOSTIC" == "tenant-identity-lookup" ]]; then
+            run_tenant_identity_lookup
+            exit 0
+          fi
+
+          run_trust_gate_smoke_audit_reconciliation() {
+            ssh -i ~/.ssh/id_deploy -o ServerAliveInterval=30 "azureuser@$VM_HOST" \
+              "API_BASE='https://staging-api.brain.fi' bash -s" <<'REMOTE'
+            set -euo pipefail
+            readonly smoke_tenant_id='tnt_01KZW834C21D22K32NEE79FWQE'
+
+            echo 'API database target, redacted'
+            docker exec brain-prod-api node -e '
+              const url = new URL(process.env.DATABASE_URL);
+              console.log(JSON.stringify({
+                database: url.pathname.slice(1),
+                host: url.hostname,
+                port: url.port || "5432",
+                user: decodeURIComponent(url.username),
+              }));
+            '
+
+            echo 'direct PostgreSQL target'
+            docker exec -i brain-prod-postgres psql -U brain -d brain -P pager=off -v ON_ERROR_STOP=1 <<'SQL'
+            \pset pager off
+            \pset null '(null)'
+            BEGIN TRANSACTION READ ONLY;
+            SET LOCAL statement_timeout = '5s';
+            SET LOCAL lock_timeout = '1s';
+
+            \echo 'connection role and RLS posture'
+            SELECT current_user,
+                   session_user,
+                   current_setting('app.tenant_id', true) AS tenant_context,
+                   r.rolsuper,
+                   r.rolbypassrls
+             FROM pg_roles r
+             WHERE r.rolname = current_user;
+
+            SELECT current_database() AS database,
+                   inet_server_addr() AS server_address,
+                   inet_server_port() AS server_port;
+
+            \echo 'original controlled trust-gate smoke tenant'
+            SELECT tenant_id,
+                   id AS tenant_created_event_id,
+                   created_at AS tenant_created_at
+              FROM audit_events
+             WHERE tenant_id = 'tnt_01KZW834C21D22K32NEE79FWQE'
+               AND action = 'tenant.created'
+             ORDER BY created_at ASC, id ASC;
+
+            \echo 'durable payment intents for the original smoke tenant'
+            SELECT id,
+                   status,
+                   destination_counterparty_id,
+                   created_at,
+                   updated_at
+              FROM ledger_payment_intents
+             WHERE owner_id = 'tnt_01KZW834C21D22K32NEE79FWQE'
+             ORDER BY created_at ASC, id ASC;
+
+            \echo 'all durable payment-intent audit actions for the original smoke tenant'
+            SELECT id,
+                   action,
+                   created_at,
+                   inputs->>'payment_intent_id' AS payment_intent_id,
+                   outputs
+              FROM audit_events
+             WHERE tenant_id = 'tnt_01KZW834C21D22K32NEE79FWQE'
+               AND action LIKE 'payment_intent.%'
+             ORDER BY created_at ASC, id ASC;
+
+            \echo 'durable payment_intent.execute.after events for the original smoke tenant without runner clock bounds'
+            SELECT ae.tenant_id,
+                   ae.id,
+                   ae.created_at,
+                   ae.inputs->>'payment_intent_id' AS payment_intent_id,
+                   ae.outputs->'failed_check' AS failed_check
+              FROM audit_events ae
+             WHERE ae.tenant_id = 'tnt_01KZW834C21D22K32NEE79FWQE'
+               AND ae.action = 'payment_intent.execute.after'
+             ORDER BY ae.created_at ASC, ae.id ASC;
+
+            COMMIT;
+          SQL
+
+            agent_id="$(docker exec brain-prod-postgres psql -U brain -d brain -At -v ON_ERROR_STOP=1 -c "SELECT id FROM agents WHERE tenant_id = '${smoke_tenant_id}' AND state = 'active' ORDER BY created_at ASC, id ASC LIMIT 1;")"
+            if [[ ! "$agent_id" =~ ^agent_[0-9A-HJKMNP-TV-Z]{26}$ ]]; then
+              echo "no active agent found for the original smoke tenant" >&2
+              exit 1
+            fi
+
+            # Mint this read-only token in the API container. The token is never printed.
+            agent_token="$(docker exec -w /app/services/api -e SMOKE_TENANT_ID="$smoke_tenant_id" -e SMOKE_AGENT_ID="$agent_id" brain-prod-api node --input-type=module -e '
+              import { JwtSigner, newTokenId } from "@brain/shared";
+              const key = JSON.parse(process.env.AUTH_SIGN_KEY);
+              const signer = new JwtSigner({ issuer: process.env.AUTH_ISSUER, audience: process.env.AUTH_AUDIENCE, key, algorithm: key.alg ?? "HS256" });
+              process.stdout.write(await signer.sign({ id: process.env.SMOKE_AGENT_ID, type: "agent", tenantId: process.env.SMOKE_TENANT_ID, tokenId: newTokenId(), expiresAt: Math.floor(Date.now() / 1000) + 300, scopes: ["audit:read"] }));
+            ')"
+
+            echo 'tenant-scoped API audit response for the original smoke tenant'
+            curl -fsS --connect-timeout 10 --max-time 30 "$API_BASE/v1/audit/events?limit=100" \
+              -H "Authorization: Bearer ${agent_token}" | \
+              docker exec -i brain-prod-api node -e '
+                let body = "";
+                process.stdin.on("data", (chunk) => { body += chunk; });
+                process.stdin.on("end", () => {
+                  const value = JSON.parse(body);
+                  const events = (value.events ?? []).filter((event) => event.action?.startsWith("payment_intent."));
+                  console.log(JSON.stringify({ count: events.length, events }));
+                });
+              '
+          REMOTE
+          }
+
+          if [[ "$DIAGNOSTIC" == "trust-gate-smoke-audit-reconciliation" ]]; then
+            run_trust_gate_smoke_audit_reconciliation
+            exit 0
+          fi
+
+          run_trust_gate_prior_smoke_execution() {
+            ssh -i ~/.ssh/id_deploy -o ServerAliveInterval=30 "azureuser@$VM_HOST" 'bash -s' <<'REMOTE'
+            set -euo pipefail
+            readonly smoke_tenant_id='tnt_01KZX2QQZVES2W2Y05AJHKCGQ0'
+            docker exec -i brain-prod-postgres psql -U brain -d brain -P pager=off -v ON_ERROR_STOP=1 <<'SQL'
+            \pset pager off
+            \pset null '(null)'
+            BEGIN TRANSACTION READ ONLY;
+            SET LOCAL statement_timeout = '5s';
+            SET LOCAL lock_timeout = '1s';
+
+            \echo 'prior controlled-smoke tenant payment intents'
+            SELECT pi.id,
+                   pi.status,
+                   pi.source_account_id,
+                   pi.destination_counterparty_id,
+                   pi.approval_ids,
+                   pi.execution_receipt_ids,
+                   pi.created_at,
+                   pi.updated_at
+              FROM ledger_payment_intents pi
+             WHERE pi.owner_id = 'tnt_01KZX2QQZVES2W2Y05AJHKCGQ0'
+             ORDER BY pi.created_at ASC, pi.id ASC;
+
+            \echo 'prior controlled-smoke tenant outbox rows and terminal state'
+            SELECT eo.id,
+                   eo.payment_intent_id,
+                   eo.execution_id,
+                   eo.rail,
+                   eo.status,
+                   eo.attempt_count,
+                   eo.last_error,
+                   eo.rail_receipt,
+                   eo.created_at,
+                   eo.dispatched_at,
+                   eo.completed_at
+              FROM execution_outbox eo
+             WHERE eo.tenant_id = 'tnt_01KZX2QQZVES2W2Y05AJHKCGQ0'
+             ORDER BY eo.created_at ASC, eo.id ASC;
+
+            \echo 'prior controlled-smoke tenant execution receipts'
+            SELECT e.id,
+                   e.rail,
+                   e.status,
+                   e.rail_receipt,
+                   e.started_at,
+                   e.completed_at
+              FROM executions e
+             WHERE e.tenant_id = 'tnt_01KZX2QQZVES2W2Y05AJHKCGQ0'
+             ORDER BY e.started_at ASC, e.id ASC;
+
+            \echo 'prior controlled-smoke tenant execution audit events'
+            SELECT ae.id,
+                   ae.action,
+                   ae.created_at,
+                   ae.inputs->>'payment_intent_id' AS payment_intent_id,
+                   ae.outputs
+              FROM audit_events ae
+             WHERE ae.tenant_id = 'tnt_01KZX2QQZVES2W2Y05AJHKCGQ0'
+               AND ae.action IN ('payment_intent.execute.before', 'payment_intent.execute.after', 'payment_intent.executed')
+             ORDER BY ae.created_at ASC, ae.id ASC;
+
+            COMMIT;
+          SQL
+          REMOTE
+          }
+
+          if [[ "$DIAGNOSTIC" == "trust-gate-prior-smoke-execution" ]]; then
+            run_trust_gate_prior_smoke_execution
+            exit 0
+          fi
+
+          run_trust_gate_24h_observation() {
+            ssh -i ~/.ssh/id_deploy -o ServerAliveInterval=30 "azureuser@$VM_HOST" \
+              "TRUST_GATE_OBSERVATION_SINCE_B64='$trust_gate_observation_since_b64' bash -s" <<'REMOTE'
+            set -euo pipefail
+            observation_since="$(printf '%s' "$TRUST_GATE_OBSERVATION_SINCE_B64" | base64 -d)"
+            if [[ ! "$observation_since" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$ ]]; then
+              echo "trust-gate-24h-observation timestamp failed remote validation"
+              exit 1
+            fi
+
+            echo "trust_gate_observation_since=$observation_since"
+            echo "trust_gate_observation_until=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            for service in brain-prod-api brain-prod-worker brain-prod-agents; do
+              status="$(docker inspect --format='{{.State.Status}}' "$service")"
+              health="$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$service")"
+              echo "${service}_state=$status"
+              echo "${service}_health=$health"
+            done
+            echo "api_trust_gate_enabled=$(docker exec brain-prod-api printenv BRAIN_TRUST_GATE_ENABLED)"
+            echo "worker_trust_gate_enabled=$(docker exec brain-prod-worker printenv BRAIN_TRUST_GATE_ENABLED)"
+            echo "worker_git_sha=$(docker exec brain-prod-worker printenv GIT_SHA)"
+            curl -fsS --connect-timeout 10 --max-time 30 https://staging-api.brain.fi/health
+
+            docker exec -i brain-prod-postgres psql -U brain -d brain \
+              -v ON_ERROR_STOP=1 \
+              -v observation_since="$observation_since" <<'SQL'
+            \pset pager off
+            \pset null '(null)'
+            BEGIN TRANSACTION READ ONLY;
+            SET LOCAL statement_timeout = '5s';
+            SET LOCAL lock_timeout = '1s';
+
+            \echo 'trust-gate denial summary'
+            SELECT COUNT(*) FILTER (
+                     WHERE outputs->'failed_check'->>'name' = 'counterparty_trust_allowed'
+                       AND outputs->'failed_check'->'detail'->>'reason' = 'counterparty_trust_unknown'
+                   ) AS counterparty_trust_unknown_count,
+                   COUNT(*) FILTER (
+                     WHERE outputs->'failed_check'->>'name' = 'counterparty_trust_allowed'
+                       AND outputs->'failed_check'->'detail'->>'reason' = 'counterparty_trust_paused'
+                   ) AS counterparty_trust_paused_count,
+                   COUNT(*) FILTER (WHERE outputs->>'ok' = 'true') AS successful_execute_after_count,
+                   COUNT(*) FILTER (
+                     WHERE outputs->>'ok' = 'false'
+                       AND COALESCE(outputs->'failed_check'->'detail'->>'reason', '') NOT IN (
+                         'counterparty_trust_unknown', 'counterparty_trust_paused'
+                       )
+                   ) AS non_trust_execute_failure_count
+              FROM audit_events
+             WHERE action = 'payment_intent.execute.after'
+               AND created_at >= :'observation_since'::timestamptz;
+
+            \echo 'counterparty_trust_unknown events'
+            SELECT id,
+                   tenant_id,
+                   created_at,
+                   inputs->>'payment_intent_id' AS payment_intent_id,
+                   outputs->'failed_check' AS failed_check
+              FROM audit_events
+             WHERE action = 'payment_intent.execute.after'
+               AND created_at >= :'observation_since'::timestamptz
+               AND outputs->'failed_check'->>'name' = 'counterparty_trust_allowed'
+               AND outputs->'failed_check'->'detail'->>'reason' = 'counterparty_trust_unknown'
+             ORDER BY created_at, id
+             LIMIT 100;
+
+            \echo 'counterparty_trust_paused events with pause attribution'
+            SELECT ae.id,
+                   ae.tenant_id,
+                   ae.created_at,
+                   ae.inputs->>'payment_intent_id' AS payment_intent_id,
+                   pi.destination_counterparty_id,
+                   cp.name AS counterparty_name,
+                   cp.trust_status AS current_trust_status,
+                   pause_event.id AS pause_event_id,
+                   pause_event.created_at AS pause_event_at,
+                   pause_event.actor AS paused_by,
+                   ae.outputs->'failed_check' AS failed_check
+              FROM audit_events ae
+              LEFT JOIN ledger_payment_intents pi
+                ON pi.owner_id = ae.tenant_id
+               AND pi.id = ae.inputs->>'payment_intent_id'
+              LEFT JOIN ledger_counterparties cp
+                ON cp.owner_id = pi.owner_id
+               AND cp.id = pi.destination_counterparty_id
+              LEFT JOIN LATERAL (
+                SELECT trust_event.id,
+                       trust_event.created_at,
+                       trust_event.actor
+                  FROM audit_events trust_event
+                 WHERE trust_event.tenant_id = ae.tenant_id
+                   AND trust_event.action = 'counterparty.trust.paused'
+                   AND trust_event.inputs->>'counterparty_id' = pi.destination_counterparty_id
+                   AND trust_event.created_at <= ae.created_at
+                 ORDER BY trust_event.created_at DESC, trust_event.id DESC
+                 LIMIT 1
+              ) pause_event ON TRUE
+             WHERE ae.action = 'payment_intent.execute.after'
+               AND ae.created_at >= :'observation_since'::timestamptz
+               AND ae.outputs->'failed_check'->>'name' = 'counterparty_trust_allowed'
+               AND ae.outputs->'failed_check'->'detail'->>'reason' = 'counterparty_trust_paused'
+             ORDER BY ae.created_at, ae.id
+             LIMIT 100;
+
+            \echo 'normal payment execution outcomes'
+            SELECT ae.id,
+                   ae.tenant_id,
+                   ae.created_at,
+                   ae.inputs->>'payment_intent_id' AS payment_intent_id,
+                   ae.outputs->>'ok' AS gate_or_execution_ok,
+                   ae.outputs->'failed_check' AS failed_check,
+                   eo.status AS outbox_status,
+                   eo.attempt_count,
+                   eo.last_error,
+                   eo.completed_at AS outbox_completed_at,
+                   e.status AS execution_status,
+                   e.completed_at AS execution_completed_at
+              FROM audit_events ae
+              LEFT JOIN execution_outbox eo
+                ON eo.tenant_id = ae.tenant_id
+               AND eo.payment_intent_id = ae.inputs->>'payment_intent_id'
+              LEFT JOIN executions e
+                ON e.tenant_id = ae.tenant_id
+               AND e.id = eo.execution_id
+             WHERE ae.action = 'payment_intent.execute.after'
+               AND ae.created_at >= :'observation_since'::timestamptz
+             ORDER BY ae.created_at, ae.id
+             LIMIT 200;
+
+            COMMIT;
+          SQL
+          REMOTE
+          }
+
+          if [[ "$DIAGNOSTIC" == "trust-gate-24h-observation" ]]; then
+            run_trust_gate_24h_observation
+            exit 0
+          fi
+
+          run_wiki_question_trace() {
+            ssh -i ~/.ssh/id_deploy -o ServerAliveInterval=30 "azureuser@$VM_HOST" \
+              "TENANT_ID='$TENANT_IDS' WIKI_QUESTION_EVENT_ID_B64='$wiki_question_event_id_b64' WIKI_QUESTION_SINCE_B64='$wiki_question_since_b64' WIKI_QUESTION_UNTIL_B64='$wiki_question_until_b64' WIKI_QUESTION_SEARCH_B64='$wiki_question_search_b64' bash -s" <<'REMOTE'
+            set -euo pipefail
+            wiki_question_event_id="$(printf '%s' "$WIKI_QUESTION_EVENT_ID_B64" | base64 -d)"
+            wiki_question_since="$(printf '%s' "$WIKI_QUESTION_SINCE_B64" | base64 -d)"
+            wiki_question_until="$(printf '%s' "$WIKI_QUESTION_UNTIL_B64" | base64 -d)"
+            wiki_question_search="$(printf '%s' "$WIKI_QUESTION_SEARCH_B64" | base64 -d)"
+
+            if [[ ! "$TENANT_ID" =~ ^tnt_[0-9A-HJKMNP-TV-Z]{26}$ ]]; then
+              echo "wiki-question-trace tenant id failed remote validation"
+              exit 1
+            fi
+            if [[ -n "$wiki_question_event_id" && ! "$wiki_question_event_id" =~ ^evt_[0-9A-HJKMNP-TV-Z]{26}$ ]]; then
+              echo "wiki-question-trace event id failed remote validation"
+              exit 1
+            fi
+            for value in "$wiki_question_since" "$wiki_question_until"; do
+              if [[ -n "$value" && ! "$value" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]+)?Z$ ]]; then
+                echo "wiki-question-trace timestamp failed remote validation"
+                exit 1
+              fi
+            done
+            if [[ ${#wiki_question_search} -gt 160 ]]; then
+              echo "wiki-question-trace search failed remote validation"
+              exit 1
+            fi
+            if [[ -z "$wiki_question_event_id" && -z "$wiki_question_since" && -z "$wiki_question_until" && -z "$wiki_question_search" ]]; then
+              echo "wiki-question-trace requires a selector"
+              exit 1
+            fi
+
+            docker exec -i brain-prod-postgres psql -U brain -d brain \
+              -v ON_ERROR_STOP=1 \
+              -v tenant_id="$TENANT_ID" \
+              -v wiki_question_event_id="$wiki_question_event_id" \
+              -v wiki_question_since="$wiki_question_since" \
+              -v wiki_question_until="$wiki_question_until" \
+              -v wiki_question_search="$wiki_question_search" <<'SQL'
+            \pset pager off
+            \pset null '(null)'
+            BEGIN TRANSACTION READ ONLY;
+
+            \echo 'wiki.question audit payloads'
+            SELECT id,
+                   created_at,
+                   actor,
+                   event_type,
+                   severity,
+                   inputs,
+                   outputs,
+                   policy_decision_id
+              FROM audit_events
+             WHERE tenant_id = :'tenant_id'
+               AND action = 'wiki.question'
+               AND (:'wiki_question_event_id' = '' OR id = :'wiki_question_event_id')
+               AND (
+                 NULLIF(:'wiki_question_since', '') IS NULL
+                 OR created_at >= NULLIF(:'wiki_question_since', '')::timestamptz
+               )
+               AND (
+                 NULLIF(:'wiki_question_until', '') IS NULL
+                 OR created_at <= NULLIF(:'wiki_question_until', '')::timestamptz
+               )
+               AND (:'wiki_question_search' = ''
+                    OR inputs->>'question' ILIKE '%' || :'wiki_question_search' || '%')
+             ORDER BY created_at DESC, id DESC
+             LIMIT 20;
+
+            COMMIT;
+          SQL
+          REMOTE
+          }
+
+          if [[ "$DIAGNOSTIC" == "wiki-question-trace" ]]; then
+            run_wiki_question_trace
+            exit 0
+          fi
+
+          run_anchor_reconciliation_correlation() {
+            ssh -i ~/.ssh/id_deploy -o ServerAliveInterval=30 "azureuser@$VM_HOST" \
+              "docker exec -i brain-prod-postgres psql -U brain -d brain -v ON_ERROR_STOP=1" <<'SQL'
+            \pset pager off
+            \pset null '(null)'
+            BEGIN TRANSACTION READ ONLY;
+
+            \echo 'fixed production-unlinked anchorBatch transaction correlation'
+            WITH expected(tx_hash, emitted_pair_count) AS (
+              VALUES
+                ('5855c68d4c9fb5a5ab63a22bb1df23923980e60990b2a4b653f6d6ae87344a54', 5),
+                ('d9dd5f7c383601bddb2df0dea94c2091d0b4385920e0b1e1282ea888c1493f27', 5),
+                ('308231e39ec033a1c1b5bb7c276e69dfb037a76e571b82eda85661e6b91c76ef', 5),
+                ('d0b060133c81b7a76b06092cc0883782e34208bdd4efe452028f0ef45740ec0d', 3),
+                ('7fc6d48bca78b2e88416a4c1756832c66fb3e210e28d14e8ed6ee39fe3318c3b', 5),
+                ('dc591e08bf8ffb0dcc55b2f05396eddcdc407c298cb3a363ce7b731ba069c20e', 3),
+                ('7e1f3525abd503bcdcab255e7e74bf1e3c7639b9fafc6b17b4e8742a05fc00b0', 3),
+                ('7c5cabd1b6fe2c266e5394f4af064ea66d47dc4bfcd5b0a0b4a6c903431a8c5c', 4)
+            ), matched AS (
+              SELECT e.tx_hash,
+                     e.emitted_pair_count,
+                     a.id,
+                     a.tenant_id,
+                     a.merkle_root,
+                     a.onchain_status,
+                     a.period_start,
+                     a.period_end,
+                     a.created_at
+                FROM expected e
+                LEFT JOIN audit_anchors a
+                  ON a.onchain_tx_hash = decode(e.tx_hash, 'hex')
+            )
+            SELECT tx_hash,
+                   emitted_pair_count,
+                   COUNT(id) AS staging_anchor_rows,
+                   COUNT(DISTINCT tenant_id) AS staging_tenant_count,
+                   MIN(created_at) AS oldest_staging_anchor_row,
+                   MAX(created_at) AS newest_staging_anchor_row
+              FROM matched
+             GROUP BY tx_hash, emitted_pair_count
+             ORDER BY tx_hash;
+
+            \echo 'matched staging anchor rows'
+            WITH expected(tx_hash) AS (
+              VALUES
+                ('5855c68d4c9fb5a5ab63a22bb1df23923980e60990b2a4b653f6d6ae87344a54'),
+                ('d9dd5f7c383601bddb2df0dea94c2091d0b4385920e0b1e1282ea888c1493f27'),
+                ('308231e39ec033a1c1b5bb7c276e69dfb037a76e571b82eda85661e6b91c76ef'),
+                ('d0b060133c81b7a76b06092cc0883782e34208bdd4efe452028f0ef45740ec0d'),
+                ('7fc6d48bca78b2e88416a4c1756832c66fb3e210e28d14e8ed6ee39fe3318c3b'),
+                ('dc591e08bf8ffb0dcc55b2f05396eddcdc407c298cb3a363ce7b731ba069c20e'),
+                ('7e1f3525abd503bcdcab255e7e74bf1e3c7639b9fafc6b17b4e8742a05fc00b0'),
+                ('7c5cabd1b6fe2c266e5394f4af064ea66d47dc4bfcd5b0a0b4a6c903431a8c5c')
+            )
+            SELECT e.tx_hash,
+                   a.id AS anchor_id,
+                   a.tenant_id,
+                   encode(a.merkle_root, 'hex') AS merkle_root,
+                   a.onchain_status,
+                   a.period_start,
+                   a.period_end,
+                   a.created_at
+              FROM expected e
+              JOIN audit_anchors a
+                ON a.onchain_tx_hash = decode(e.tx_hash, 'hex')
+             ORDER BY e.tx_hash, a.tenant_id, a.id;
+
+            COMMIT;
+          SQL
+          }
+
+          if [[ "$DIAGNOSTIC" == "anchor-reconciliation-correlation" ]]; then
+            run_anchor_reconciliation_correlation
+            exit 0
+          fi
+
+          run_anchor_cycle_runtime_trace() {
+            ssh -i ~/.ssh/id_deploy -o ServerAliveInterval=30 "azureuser@$VM_HOST" \
+              "ANCHOR_CYCLE_SINCE_B64='$anchor_cycle_since_b64' ANCHOR_CYCLE_UNTIL_B64='$anchor_cycle_until_b64' bash -s" <<'REMOTE'
+            set -euo pipefail
+            anchor_cycle_since="$(printf '%s' "$ANCHOR_CYCLE_SINCE_B64" | base64 -d)"
+            anchor_cycle_until="$(printf '%s' "$ANCHOR_CYCLE_UNTIL_B64" | base64 -d)"
+            for value in "$anchor_cycle_since" "$anchor_cycle_until"; do
+              if [[ ! "$value" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$ ]]; then
+                echo "anchor-cycle-runtime-trace timestamp failed remote validation"
+                exit 1
+              fi
+            done
+
+            echo "anchor_cycle_window=${anchor_cycle_since}/${anchor_cycle_until}"
+            echo "anchor_cycle_worker_log_lines"
+            docker logs --since "$anchor_cycle_since" --until "$anchor_cycle_until" brain-prod-worker 2>&1 | \
+              grep -E 'anchor cycle closing|anchor publish batch completed|pending anchor retry batch completed|anchor cycle completed' || true
+
+            docker exec -i brain-prod-postgres psql -U brain -d brain \
+              -v ON_ERROR_STOP=1 \
+              -v anchor_cycle_since="$anchor_cycle_since" \
+              -v anchor_cycle_until="$anchor_cycle_until" <<'SQL'
+            \pset pager off
+            \pset null '(null)'
+            BEGIN TRANSACTION READ ONLY;
+
+            \echo 'anchor rows grouped by onchain transaction'
+            SELECT encode(onchain_tx_hash, 'hex') AS onchain_tx_hash,
+                   COUNT(*) AS anchor_rows,
+                   COUNT(DISTINCT tenant_id) AS tenant_roots,
+                   MIN(created_at) AS first_anchor_row_at,
+                   MAX(created_at) AS last_anchor_row_at,
+                   MIN(period_start) AS earliest_period_start,
+                   MAX(period_end) AS latest_period_end
+              FROM audit_anchors
+             WHERE created_at >= :'anchor_cycle_since'::timestamptz
+               AND created_at <= :'anchor_cycle_until'::timestamptz
+             GROUP BY onchain_tx_hash
+             ORDER BY first_anchor_row_at, onchain_tx_hash;
+
+            \echo 'unpublished anchor rows remaining in window'
+            SELECT COUNT(*) AS pending_rows
+              FROM audit_anchors
+             WHERE created_at >= :'anchor_cycle_since'::timestamptz
+               AND created_at <= :'anchor_cycle_until'::timestamptz
+               AND onchain_tx_hash IS NULL
+               AND onchain_status = 'pending';
+
+            COMMIT;
+          SQL
+          REMOTE
+          }
+
+          if [[ "$DIAGNOSTIC" == "anchor-cycle-runtime-trace" ]]; then
+            run_anchor_cycle_runtime_trace
+            exit 0
+          fi
+
+          run_upload_pipeline_report() {
+            local tenant_id="$1"
+            cat scripts/ops/report-upload-pipeline-state.sql | \
+              ssh -i ~/.ssh/id_deploy -o ServerAliveInterval=30 "azureuser@$VM_HOST" \
+                "docker exec -i brain-prod-postgres psql -U brain -d brain -v ON_ERROR_STOP=1 -v tenant_id='$tenant_id'"
+          }
+
+          if [[ "$DIAGNOSTIC" == "upload-pipeline-state" ]]; then
+            if [[ -z "$TENANT_IDS" ]]; then
+              echo "upload-pipeline-state requires tenant_ids"
+              exit 1
+            fi
+            IFS=',' read -r -a tenant_ids <<< "$TENANT_IDS"
+            for tenant_id in "${tenant_ids[@]}"; do
+              echo "tenant_id=$tenant_id"
+              run_upload_pipeline_report "$tenant_id"
+            done
+            exit 0
+          fi
+
+          if [[ "$DIAGNOSTIC" == "contextless-payroll-obligation-audit" ]]; then
+            cat scripts/ops/report-contextless-payroll-obligations.sql | \
+              ssh -i ~/.ssh/id_deploy -o ServerAliveInterval=30 "azureuser@$VM_HOST" \
+                "docker exec -i brain-prod-postgres psql -U brain -d brain -v ON_ERROR_STOP=1"
+            exit 0
+          fi
+
+          if [[ "$DIAGNOSTIC" == "document-extractor-connectivity" ]]; then
+            ssh -i ~/.ssh/id_deploy -o ServerAliveInterval=30 "azureuser@$VM_HOST" '
+              set -euo pipefail
+              echo "agents_container_state=$(docker inspect --format={{.State.Status}} brain-prod-agents 2>/dev/null || echo absent)"
+              echo "agents_container_health=$(docker inspect --format={{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}} brain-prod-agents 2>/dev/null || echo absent)"
+              echo "agents_boot_diagnostics:"
+              docker logs --tail=100 brain-prod-agents 2>&1 | \
+                grep -E "RuntimeError|Traceback|missing|required|OPENAI|BRAIN_API_TOKEN|BRAIN_AGENTS_INBOUND_SECRET" || true
+              docker exec brain-prod-worker node -e '\''
+                const base = process.env.DOCUMENT_EXTRACT_AGENT_URL;
+                console.log(`document_extract_agent_url_set=${base ? "true" : "false"}`);
+                if (!base) process.exit(0);
+                fetch(`${base}/health`, { signal: AbortSignal.timeout(5_000) })
+                  .then(async (response) => {
+                    console.log(`document_extract_agent_health_status=${response.status}`);
+                    console.log(`document_extract_agent_health_ok=${response.ok}`);
+                  })
+                  .catch((error) => {
+                    console.log(`document_extract_agent_health_error=${error.name}`);
+                    process.exitCode = 1;
+                  });
+              '\''
+            '
+            exit 0
+          fi
+
+          if [[ "$DIAGNOSTIC" == "document-extractor-failure-logs" ]]; then
+            ssh -i ~/.ssh/id_deploy -o ServerAliveInterval=30 "azureuser@$VM_HOST" '
+              set -euo pipefail
+              docker logs --since 30m brain-prod-agents 2>&1 | \
+                sed -E \
+                  -e "s/brain_(ak|sk)_(test|live)_[A-Za-z0-9_-]+/[redacted_credential]/g" \
+                  -e "s/(Bearer )[A-Za-z0-9._-]+/\1[redacted]/g" \
+                  -e "s/sk-[A-Za-z0-9_-]+/[redacted_openai_key]/g" \
+                  -e "s/(BRAIN_API_TOKEN|BRAIN_AGENT_API_KEY|OPENAI_API_KEY|BRAIN_AGENTS_INBOUND_SECRET)=([^[:space:]]+)/\1=[redacted]/g" | \
+                grep -Ei "document_extract|error|exception|traceback|openai|httpx|status[_ ]code|timed out" | \
+                tail -240 || true
+            '
+            exit 0
+          fi
+
+          if [[ "$DIAGNOSTIC" == "upload-pipeline-worker-logs" ]]; then
+            if [[ -z "$TENANT_IDS" ]]; then
+              echo "upload-pipeline-worker-logs requires tenant_ids"
+              exit 1
+            fi
+            IFS=',' read -r -a tenant_ids <<< "$TENANT_IDS"
+            for tenant_id in "${tenant_ids[@]}"; do
+              echo "tenant_id=$tenant_id"
+              ssh -i ~/.ssh/id_deploy -o ServerAliveInterval=30 "azureuser@$VM_HOST" \
+                "docker logs --tail=3000 brain-prod-worker 2>&1 | grep -F '$tenant_id' | tail -200 || true"
+            done
+            exit 0
+          fi
+
+          run_counterparty_trust_impact() {
+            local tenant_id="$1"
+            ssh -i ~/.ssh/id_deploy -o ServerAliveInterval=30 "azureuser@$VM_HOST" \
+              "TENANT_ID='$tenant_id' bash -s" <<'REMOTE'
+            set -euo pipefail
+            docker exec -i brain-prod-postgres psql -U brain -d brain \
+              -v ON_ERROR_STOP=1 \
+              -v tenant_id="$TENANT_ID" <<'SQL'
+            \pset pager off
+            \pset format unaligned
+            \pset tuples_only on
+            BEGIN TRANSACTION READ ONLY;
+            SET LOCAL statement_timeout = '5s';
+            SET LOCAL lock_timeout = '1s';
+            WITH impact AS (
+              SELECT cp.owner_id AS tenant_id,
+                     t.kind AS tenant_kind,
+                     t.sandbox,
+                     t.created_via,
+                     (t.kind = 'production' AND t.sandbox = FALSE) AS review_required,
+                     cp.id AS counterparty_id,
+                     cp.name AS counterparty_name,
+                     cp.trust_status,
+                     COUNT(pi.id) AS payment_intent_count,
+                     array_agg(pi.id ORDER BY pi.created_at) AS payment_intent_ids,
+                     array_agg(DISTINCT pi.status ORDER BY pi.status) AS statuses
+                FROM ledger_counterparties cp
+                JOIN tenants t ON t.id = cp.owner_id
+                JOIN ledger_payment_intents pi
+                  ON pi.owner_id = cp.owner_id
+                 AND pi.destination_counterparty_id = cp.id
+               WHERE cp.trust_status = 'paused'
+                 AND pi.status IN (
+                   'proposed', 'pending_approval', 'awaiting_second_approval',
+                   'approved', 'paused', 'dispatching'
+                 )
+                 AND (NULLIF(:'tenant_id', '') IS NULL OR cp.owner_id = :'tenant_id')
+               GROUP BY cp.owner_id, t.kind, t.sandbox, t.created_via, cp.id, cp.name, cp.trust_status
+            )
+            SELECT jsonb_build_object(
+              'paused_counterparty_groups', COUNT(*),
+              'affected_payment_intents', COALESCE(SUM(payment_intent_count), 0),
+              'non_demo_review_groups', COUNT(*) FILTER (WHERE review_required),
+              'non_demo_review_payment_intents', COALESCE(SUM(payment_intent_count) FILTER (WHERE review_required), 0),
+              'demo_or_sandbox_groups', COUNT(*) FILTER (WHERE NOT review_required),
+              'demo_or_sandbox_payment_intents', COALESCE(SUM(payment_intent_count) FILTER (WHERE NOT review_required), 0),
+              'rows', COALESCE(jsonb_agg(to_jsonb(impact) ORDER BY tenant_id, counterparty_name, counterparty_id), '[]'::jsonb)
+            )
+              FROM impact;
+            COMMIT;
+          SQL
+          REMOTE
+          }
+
+          if [[ "$DIAGNOSTIC" != "counterparty-trust-gate-impact" ]]; then
+            echo "diagnostic dispatch did not reach its fixed handler: $DIAGNOSTIC"
+            exit 1
+          fi
+
+          if [[ -z "$TENANT_IDS" ]]; then
+            run_counterparty_trust_impact ""
+            exit 0
+          fi
+
+          IFS=',' read -r -a tenant_ids <<< "$TENANT_IDS"
+          for tenant_id in "${tenant_ids[@]}"; do
+            echo "tenant_id=$tenant_id"
+            run_counterparty_trust_impact "$tenant_id"
+          done

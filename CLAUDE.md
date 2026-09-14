@@ -1477,13 +1477,14 @@ they diverge, and 100px is what the app already shipped.
 
 ### Hover tokens are not in Figma yet
 
-Ten hover tokens were canonicalised in-app; the Figma source file has no hover states for these
+Eleven hover tokens were canonicalised in-app; the Figma source file has no hover states for these
 surfaces. They are named here so the "no raw hex" rule holds without an exception list — if Figma
 later publishes its own hover values, these are the names to reconcile.
 
 | Token | Hex | Partners |
 | --- | --- | --- |
 | `brain-v1baby-blue-15-hover` | `#2c3247` | `baby-blue-15` fills |
+| `brain-v1baby-blue-100-hover` | `#c5d2ff` | `baby-blue-100` **link text** |
 | `brain-v1purple-hover` | `#8442f5` | `purple` CTAs |
 | `brain-v1dark-purple-hover` | `#2e0a6e` | `dark-purple` secondary fills |
 | `brain-v1dark-orange-hover` | `#5a2d00` | `dark-orange` amber fills |
@@ -1493,6 +1494,11 @@ later publishes its own hover values, these are the names to reconcile.
 | `brain-v1stroke-2-hover` | `#252a3d` | `stroke-2` **borders** |
 | `brain-v1row-hover` | `#0d1018` | rows in a divided stack |
 | `brain-v1item-hover` | `#151926` | borderless items gaining an outline |
+
+`baby-blue-100-hover` is the one that hovers *lighter*. The ramp stops at `100`, so a link already
+at the top has no step to move to, and a token pass will collapse its hover onto its base and make
+it a no-op. Reach for this token rather than the nearest ramp step, which is darker and inverts the
+gesture.
 
 The last two both sit on `brain-v1highlight-dropdown-bg` and are **not** interchangeable:
 `item-hover` is a ~4× stronger lift than `row-hover`. Use `row-hover` for a row inside a divided

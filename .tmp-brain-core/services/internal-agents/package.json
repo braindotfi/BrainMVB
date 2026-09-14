@@ -1,0 +1,33 @@
+{
+  "name": "@brain/internal-agents",
+  "version": "0.0.5",
+  "private": true,
+  "description": "Brain-shipped (internal) agent catalog: definitions, handlers, policy templates, and on-chain registration payloads. Consumed by @brain/agent-router; never executes.",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "rm -rf dist *.tsbuildinfo",
+    "eval:gate": "tsx eval/run.ts > /tmp/brain-internal-agents-eval-report.json",
+    "eval:update-baseline": "tsx eval/run.ts --update-baseline > /tmp/brain-internal-agents-eval-report.json",
+    "lint": "eslint src eval --max-warnings 0",
+    "lint:fix": "eslint src eval --fix",
+    "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
+    "test": "vitest run && pnpm run eval:gate",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.8",
+    "@vitest/coverage-v8": "^4.1.8",
+    "eslint": "^9.12.0",
+    "@brain/policy": "workspace:*"
+  },
+  "dependencies": {
+    "@brain/shared": "workspace:*",
+    "@brain/schemas": "workspace:*"
+  }
+}

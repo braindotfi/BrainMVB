@@ -1,0 +1,230 @@
+/**
+ * Brain scope vocabulary.
+ *
+ * §3.2: scopes are `{layer}:{verb}` where verb is `read | write | admin`.
+ * `admin` is held only by the tenant root user — required for signing
+ * policies and registering agents.
+ *
+ * External agents (principal_type=agent, registered in BrainMCPAgentRegistry)
+ * may hold the six public MCP scopes:
+ *   ledger:read, wiki:read, raw:read, raw:write, payment_intent:propose,
+ *   execution:propose
+ * Tenant grants a subset at registration via EIP-712 signature. §3.2 names the
+ * non-financial-proposal scope `agent:propose`; the codebase implements it under
+ * the legacy name `execution:propose` (the MCP agent.action.propose tool and the
+ * SIWX grant both use execution:propose). Renaming it would change the on-chain
+ * scope_hash, so the rename is tracked separately, not done here.
+ */
+
+import type { BrainErrorCode } from "../errors.js";
+import { brainError } from "../errors.js";
+
+export const LAYERS = [
+  "raw",
+  "canonical",
+  "ledger",
+  "wiki",
+  "policy",
+  "execution",
+  "payment_intent",
+  "audit",
+  "surfaces",
+  "governance",
+  "tenant",
+  "session",
+  "invite",
+] as const;
+export type Layer = (typeof LAYERS)[number];
+
+export const VERBS = [
+  "read",
+  "write",
+  "admin",
+  "propose",
+  "approve",
+  "execute",
+  "sign",
+  "create",
+  "exchange",
+  "consume",
+  "agent-mint",
+  "delete",
+] as const;
+export type Verb = (typeof VERBS)[number];
+
+/** `{layer}:{verb}` tuple. Narrower types could enumerate valid pairs,
+ *  but the verb set is small enough to validate at runtime at boundaries. */
+export type Scope = `${Layer}:${Verb}`;
+
+/** The finite set of scopes recognized at MVP. */
+export const VALID_SCOPES: ReadonlySet<Scope> = new Set<Scope>([
+  "raw:read",
+  "raw:write",
+  "raw:admin",
+  "canonical:read",
+  "canonical:write",
+  "canonical:admin",
+  "ledger:read",
+  "ledger:write",
+  "ledger:admin",
+  "wiki:read",
+  "wiki:write",
+  "wiki:admin",
+  "policy:read",
+  "policy:write",
+  "policy:admin",
+  "policy:sign",
+  "execution:read",
+  "execution:write",
+  "execution:admin",
+  "execution:propose",
+  "payment_intent:propose",
+  "payment_intent:approve",
+  "payment_intent:execute",
+  "audit:read",
+  "audit:write",
+  "audit:admin",
+  "governance:read",
+  "surfaces:admin",
+  "tenant:create",
+  "tenant:agent-mint",
+  "tenant:delete",
+  "session:exchange",
+  "invite:consume",
+]);
+
+export function isValidScope(s: string): s is Scope {
+  return VALID_SCOPES.has(s as Scope);
+}
+
+/**
+ * The reference allowlist of scopes an external agent may hold (§3.2). This is
+ * the canonical set the SIWX grant and per-tool MCP scope checks draw from; it
+ * intentionally excludes admin/sign verbs. `ledger:read` is required by the five
+ * MCP ledger-read tools and `payment_intent:propose` by the payment-intent
+ * propose tool — both were previously missing.
+ */
+export const AGENT_PERMITTED_SCOPES: ReadonlySet<Scope> = new Set<Scope>([
+  "ledger:read",
+  "wiki:read",
+  "raw:read",
+  "raw:write",
+  "payment_intent:propose",
+  "execution:propose",
+]);
+
+/**
+ * The set of scopes a per-customer API key may hold. Current shipped values are
+ * limited to read-only ledger, audit, and governance access.
+ */
+export const API_KEY_PERMITTED_SCOPES: ReadonlySet<Scope> = new Set<Scope>([
+  "ledger:read",
+  "audit:read",
+  "governance:read",
+]);
+
+/**
+ * Issuance vocabulary for a sandbox key on a verified synthetic demo tenant.
+ * Runtime callers must still prove the tenant is synthetic_brightline_v1,
+ * access_stage=demo, and provisioning_state=ready_demo. This separate set
+ * preserves API_KEY_PERMITTED_SCOPES as the universal API-key ceiling.
+ */
+export const API_KEY_SYNTHETIC_DEMO_PERMITTED_SCOPES: ReadonlySet<Scope> = new Set<Scope>([
+  ...API_KEY_PERMITTED_SCOPES,
+  "raw:read",
+  "raw:write",
+]);
+
+/**
+ * Propose-only scope set for the agent API-key BFF profile. API route tests
+ * assert this stays byte-for-byte equal to the legacy SERVICE_TOKEN_SCOPES
+ * literal required by the repository invariant guard.
+ */
+export const BFF_SERVICE_AGENT_SCOPES: readonly Scope[] = [
+  "ledger:read",
+  "wiki:read",
+  "raw:read",
+  "raw:write",
+  "policy:read",
+  "execution:read",
+  "execution:propose",
+  "payment_intent:propose",
+  "audit:read",
+];
+
+/**
+ * Canonical scope set for the demo `payment` agent role (a subset of
+ * AGENT_PERMITTED_SCOPES — no `raw:write`). Single source of truth shared by
+ * SIWX token issuance (scopesForRole), the BrainSaaS demo seed
+ * (services/api/src/demo/brainsaas-seed.ts), and the on-chain registration
+ * tooling (scripts/ops/register-prod-agent.ts), so the JWT scopes, the
+ * `agents.scope_hash` column, and the on-chain BrainMCPAgentRegistry scopeHash
+ * can never diverge. Order is irrelevant — `computeAgentScopeHash` sorts before
+ * hashing — but kept stable here for readability.
+ */
+export const PAYMENT_AGENT_SCOPES: readonly Scope[] = [
+  "ledger:read",
+  "wiki:read",
+  "payment_intent:propose",
+  "execution:propose",
+];
+
+/**
+ * Session scopes by `members.role`. Single source of truth for what a
+ * production member session token (POST /v1/sessions, /v1/invites/consume,
+ * /v1/sessions/refresh) is minted with -- callers must derive scopes from
+ * the member's role rather than handing every member the same flat set.
+ * `viewer` deliberately excludes `ledger:write`, `execution:admin`, and
+ * `payment_intent:approve`: those verbs let a member manage other members,
+ * mint/revoke tenant API keys, halt or restore agents, and approve payment
+ * intents, none of which a read-only role should ever hold, however briefly.
+ */
+export const MEMBER_ROLE_SCOPES = {
+  admin: [
+    "ledger:read",
+    "ledger:write",
+    "wiki:read",
+    "raw:read",
+    "policy:read",
+    "execution:read",
+    "execution:admin",
+    "payment_intent:approve",
+    "audit:read",
+  ],
+  approver: [
+    "ledger:read",
+    "ledger:write",
+    "wiki:read",
+    "raw:read",
+    "policy:read",
+    "execution:read",
+    "payment_intent:approve",
+    "audit:read",
+  ],
+  viewer: ["ledger:read", "wiki:read", "raw:read", "policy:read", "execution:read", "audit:read"],
+} as const satisfies Record<"admin" | "approver" | "viewer", readonly Scope[]>;
+
+export type MemberSessionRole = keyof typeof MEMBER_ROLE_SCOPES;
+
+export function scopesForMemberRole(role: MemberSessionRole): readonly Scope[] {
+  return MEMBER_ROLE_SCOPES[role];
+}
+
+export function hasScope(held: ReadonlyArray<string>, required: Scope): boolean {
+  return held.includes(required) || held.includes(impliedAdmin(required));
+}
+
+/** Admin for the layer implies every verb in that layer. */
+function impliedAdmin(scope: Scope): Scope {
+  const [layer] = scope.split(":") as [Layer, Verb];
+  return `${layer}:admin` as Scope;
+}
+
+export function requireScope(held: ReadonlyArray<string>, required: Scope): void {
+  if (!hasScope(held, required)) {
+    const code: BrainErrorCode = "auth_scope_insufficient";
+    throw brainError(code, `missing required scope: ${required}`, {
+      details: { required, held },
+    });
+  }
+}

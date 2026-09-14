@@ -704,7 +704,7 @@ function autoHandled(p: {
 
 function settledTimeline(proposedAt: string, approvedAt: string, settledAt: string): Proposal["handoffTimeline"] {
   return [
-    { label: "Brain proposed the payment", timestamp: proposedAt, done: true },
+    { label: "RobotMoney proposed the payment", timestamp: proposedAt, done: true },
     {
       label: "Approved automatically by your rule",
       timestamp: approvedAt,
@@ -714,7 +714,7 @@ function settledTimeline(proposedAt: string, approvedAt: string, settledAt: stri
     {
       label: "Execution service settled it",
       timestamp: settledAt,
-      note: "Brain never held the funds",
+      note: "RobotMoney never held the funds",
       done: true,
     },
   ];
@@ -898,7 +898,7 @@ export const PAYROLL_SETTLED: Proposal = settledApproved({
     { label: "Invoice Agent proposed payroll run", timestamp: "Jul 2, 9:00 AM ET", done: true },
     { label: "Escalated to human, above threshold", timestamp: "Jul 2, 9:01 AM ET", done: true },
     { label: "You approved", timestamp: "Jul 2, 9:55 AM ET", done: true },
-    { label: "ACH sent to employee account", timestamp: "Jul 2, 10:02 AM ET", note: "Brain never held the funds", done: true },
+    { label: "ACH sent to employee account", timestamp: "Jul 2, 10:02 AM ET", note: "RobotMoney never held the funds", done: true },
   ],
 });
 
@@ -924,7 +924,7 @@ export const USDC_SWEEP_SETTLED: Proposal = settledApproved({
     { label: "Cash Agent detected idle operating balance", timestamp: "Jul 4, 6:25 PM ET", done: true },
     { label: "Escalated to human, above sweep threshold", timestamp: "Jul 4, 6:25 PM ET", done: true },
     { label: "You approved yield move", timestamp: "Jul 4, 6:27 PM ET", done: true },
-    { label: "Funds deposited to AAVE v3", timestamp: "Jul 4, 6:28 PM ET", note: "Brain never held the funds", done: true },
+    { label: "Funds deposited to AAVE v3", timestamp: "Jul 4, 6:28 PM ET", note: "RobotMoney never held the funds", done: true },
   ],
 });
 
@@ -958,7 +958,7 @@ export const AWS_SETTLED: Proposal = {
       { label: "Invoice Agent proposed payment", timestamp: "Jul 6, 3:14 PM ET", done: true },
       { label: "Escalated to human, above auto-pay limit", timestamp: "Jul 6, 3:14 PM ET", done: true },
       { label: "You approved", timestamp: "Jul 7, 8:55 AM ET", done: true },
-      { label: "Execution service settled the ACH", timestamp: "Jul 7, 9:02 AM ET", note: "Brain never held the funds", done: true },
+      { label: "Execution service settled the ACH", timestamp: "Jul 7, 9:02 AM ET", note: "RobotMoney never held the funds", done: true },
     ],
   }),
   invoiceId: "AWS-2026-07",
@@ -1110,7 +1110,7 @@ export const VENDOR_RISK_FLAGGED: Proposal = {
     { label: "First seen 2 days ago", severity: "danger" },
   ],
   rationale:
-    "Bright Futures Studio submitted an invoice with a new bank account number Brain has never seen before. The timing and email domain shift match a pattern common in vendor impersonation fraud.",
+    "Bright Futures Studio submitted an invoice with a new bank account number RobotMoney has never seen before. The timing and email domain shift match a pattern common in vendor impersonation fraud.",
   bullets: [
     "New account number first seen 2 days ago",
     "Vendor has no prior record of changing banking details",
@@ -1136,7 +1136,7 @@ export const VENDOR_RISK_FLAGGED: Proposal = {
       "Strong signal. Both the new account and domain shift appeared within 48 hours of the invoice submission.",
   },
   whatHappensNext:
-    "If you approve, payment routes to the new account. If you hold, Brain keeps the invoice in the queue and sends a verification request to your primary contact at Bright Futures Studio.",
+    "If you approve, payment routes to the new account. If you hold, RobotMoney keeps the invoice in the queue and sends a verification request to your primary contact at Bright Futures Studio.",
   risk: "If this is fraud, approving sends $3,200 to an attacker. Recovery from misdirected wire transfers is rare.",
   policy: {
     id: "ap.vendor_risk.bank_change.v1",
@@ -1179,7 +1179,7 @@ export const VENDOR_RISK_AUTO: Proposal = autoHandled({
     { label: "Vendor risk agent flagged bank detail change", timestamp: "Jul 11, 8:00 PM ET", done: true },
     { label: "Verification request sent to vendor", timestamp: "Jul 11, 8:05 PM ET", done: true },
     { label: "Vendor confirmed via registered phone", timestamp: "Jul 11, 8:38 PM ET", done: true },
-    { label: "Payment released to new account", timestamp: "Jul 11, 8:40 PM ET", note: "Brain never held the funds", done: true },
+    { label: "Payment released to new account", timestamp: "Jul 11, 8:40 PM ET", note: "RobotMoney never held the funds", done: true },
   ],
 });
 
@@ -1274,7 +1274,7 @@ export const PAYMENT_BATCH_AUTO: Proposal = autoHandled({
   timeline: [
     { label: "Payment agent matched all invoices to POs", timestamp: "Jul 9, 5:00 PM ET", done: true },
     { label: "Approved automatically by routine batch rule", timestamp: "Jul 9, 5:01 PM ET", note: "no human step", done: true },
-    { label: "ACH batch settled", timestamp: "Jul 10, 9:15 AM ET", note: "Brain never held the funds", done: true },
+    { label: "ACH batch settled", timestamp: "Jul 10, 9:15 AM ET", note: "RobotMoney never held the funds", done: true },
   ],
 });
 
@@ -1455,7 +1455,7 @@ export const CASH_FORECAST_NR: Proposal = {
       "BigCo inflow is expected but unconfirmed. If it arrives on schedule the shortfall clears automatically.",
   },
   whatHappensNext:
-    "This is a forecast alert, not a payment proposal. No funds move until you take action. Brain will resurface this if the BigCo inflow does not clear by July 25.",
+    "This is a forecast alert, not a payment proposal. No funds move until you take action. RobotMoney will resurface this if the BigCo inflow does not clear by July 25.",
   risk: "If payroll cannot clear on July 30, employees receive a delayed payment. This carries legal and reputational risk.",
   policy: {
     id: "forecast.runway.below_2mo.v1",
@@ -1517,7 +1517,7 @@ export const DISPUTE_NR: Proposal = {
       "No usage event or tier change found. The overage is not explainable from available data.",
   },
   whatHappensNext:
-    "Approving files a formal billing dispute with AWS via their API and holds the invoice. Brain tracks the dispute and resurfaces when AWS responds. If the dispute resolves in your favor, the corrected invoice clears automatically.",
+    "Approving files a formal billing dispute with AWS via their API and holds the invoice. RobotMoney tracks the dispute and resurfaces when AWS responds. If the dispute resolves in your favor, the corrected invoice clears automatically.",
   risk: "Paying without disputing waives your right to recover the $620 overage.",
   policy: {
     id: "dispute.overbilling.v1",
@@ -1560,7 +1560,7 @@ export const COMPLIANCE_NR: Proposal = {
     "IRS requires W-9 before issuing 1099-NEC at year end",
   ],
   recommendedAction:
-    "Request a W-9 from Apex Consulting before releasing payment. Brain can send the request automatically on approval.",
+    "Request a W-9 from Apex Consulting before releasing payment. RobotMoney can send the request automatically on approval.",
   facts: [
     { label: "vendor", value: "Apex Consulting" },
     { label: "invoice", value: "#AC-2026-07 · $8,500" },
@@ -1777,7 +1777,7 @@ export const SUBSCRIPTION_AUTO: Proposal = autoHandled({
   timeline: [
     { label: "Subscription agent detected Slack renewal", timestamp: "Jul 7, 7:58 AM ET", done: true },
     { label: "Approved automatically by unchanged-subscription rule", timestamp: "Jul 7, 7:59 AM ET", note: "no human step", done: true },
-    { label: "Execution service charged card ••4821", timestamp: "Jul 7, 8:00 AM ET", note: "Brain never held the funds", done: true },
+    { label: "Execution service charged card ••4821", timestamp: "Jul 7, 8:00 AM ET", note: "RobotMoney never held the funds", done: true },
   ],
 });
 
@@ -1800,7 +1800,7 @@ export const FRAUD_ANOMALY_NR: Proposal = {
     { label: "Both added 10 days apart", severity: "danger" },
   ],
   rationale:
-    "Brain detected that Apex Supplies and BlueSky Freight, two vendors added in the same 10-day window, share an identical phone number on their invoices. This is a known pattern in shell-company fraud.",
+    "RobotMoney detected that Apex Supplies and BlueSky Freight, two vendors added in the same 10-day window, share an identical phone number on their invoices. This is a known pattern in shell-company fraud.",
   bullets: [
     "Same phone number listed on both vendor records",
     "Both vendors added within the same 10-day window",

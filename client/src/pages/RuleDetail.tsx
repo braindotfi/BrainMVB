@@ -876,7 +876,7 @@ function PolicyDetailBody({
 
       {/* Info banner — moved below the table; matches Inbox purple style */}
       <PolicyCallout testId="text-policy-info">
-        This rule is part of {policyLabel}. Brain enforces it for every matching action, and it cannot be edited or paused from this app. Changes must be made through Brain core’s admin layer.
+        This rule is part of {policyLabel}. RobotMoney enforces it for every matching action, and it cannot be edited or paused from this app. Changes must be made through RobotMoney core’s admin layer.
       </PolicyCallout>
     </div>
   );

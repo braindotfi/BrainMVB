@@ -478,7 +478,7 @@ export function AuditRecordPopup({
               </Button>
               {isDbOnlyAnchor ? (
                 <p data-testid="text-verify-db-only-caption" className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-brain-v1baby-blue-60">
-                  Demo records are retained in Brain's database hash chain and are not published on-chain.
+                  Demo records are retained in RobotMoney's database hash chain and are not published on-chain.
                 </p>
               ) : !isAnchored && !isNotRecorded && (
                 <p data-testid="text-verify-pending-caption" className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-brain-v1baby-blue-60">

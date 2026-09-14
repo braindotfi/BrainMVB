@@ -1,0 +1,22 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "tsBuildInfoFile": "dist/.tsbuildinfo"
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist", "src/**/*.test.ts"],
+  "references": [
+    { "path": "../../shared" },
+    { "path": "../agent-router" },
+    { "path": "../internal-agents" },
+    { "path": "../raw" },
+    { "path": "../ledger" },
+    { "path": "../wiki" },
+    { "path": "../policy" },
+    { "path": "../execution" },
+    { "path": "../audit" },
+    { "path": "../mcp" }
+  ]
+}

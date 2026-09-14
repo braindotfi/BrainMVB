@@ -1,0 +1,19 @@
+.git
+.github
+node_modules
+**/node_modules
+**/dist
+**/*.tsbuildinfo
+services/agents
+# Exclude the Solidity sources/build, but KEEP the committed audit-status record:
+# the mainnet escrow boot fence (escrow-audit-gate.ts -> readAuditStatusApproved)
+# reads contracts/audit-status.json at runtime, so it must ship in the image.
+contracts/*
+!contracts/audit-status.json
+infra
+docs
+coverage
+.turbo
+.env
+.env.local
+.env.*.local

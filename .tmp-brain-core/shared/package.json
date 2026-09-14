@@ -1,0 +1,60 @@
+{
+  "name": "@brain/shared",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Brain shared primitives — auth, errors, ids, db, blob, queue, audit, gate, contracts. Consumed by every Brain service.",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./*": {
+      "types": "./dist/*.d.ts",
+      "import": "./dist/*.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "rm -rf dist *.tsbuildinfo",
+    "lint": "eslint src --max-warnings 0",
+    "lint:fix": "eslint src --fix",
+    "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
+    "test": "vitest run",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.116.0",
+    "@aws-sdk/client-s3": "^3.1101.0",
+    "@aws-sdk/s3-request-presigner": "^3.1101.0",
+    "@azure/identity": "^4.13.1",
+    "@azure/keyvault-secrets": "^4.11.2",
+    "@azure/storage-blob": "^12.25.0",
+    "@noble/hashes": "^1.5.0",
+    "@opentelemetry/api": "^1.9.0",
+    "bullmq": "^6.0.5",
+    "fastify": "^5.11.0",
+    "fastify-plugin": "^6.0.0",
+    "hot-shots": "^10.2.1",
+    "ioredis": "^6.0.0",
+    "jose": "^6.2.8",
+    "openai": "^4.68.0",
+    "pg": "^8.22.0",
+    "pino": "^10.3.1",
+    "ulid": "^3.0.2",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "@types/pg": "^8.11.10",
+    "@vitest/coverage-v8": "^4.1.8",
+    "eslint": "^9.12.0",
+    "fast-check": "^4.9.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.8"
+  }
+}

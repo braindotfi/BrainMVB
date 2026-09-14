@@ -1,0 +1,94 @@
+import { brainError, type ServiceCallContext } from "@brain/shared";
+import { signAgentRequest } from "./sign-agent-request.js";
+
+// Bounds the whole agent round trip: up to 30s deterministic/OCR text
+// extraction, up to 30s LLM field extraction, plus network overhead. Without
+// this, a slow or hung agent-side call had no timeout anywhere in the chain
+// and could leave the caller waiting indefinitely with no error.
+const DOCUMENT_EXTRACT_TIMEOUT_MS = 90_000;
+
+export interface DocumentExtractClientOptions {
+  /** Shared HMAC secret for the X-Brain-Auth header. */
+  signingSecret?: string;
+}
+
+export interface DocumentExtractInput {
+  rawId: string;
+  mimeType: string;
+  documentB64: string;
+  agentId: string;
+}
+
+export interface DocumentExtractResult {
+  parsed_id: string;
+  parser: string;
+  confidence: number;
+}
+
+export class DocumentExtractClient {
+  public constructor(
+    private readonly baseUrl: string,
+    private readonly opts: DocumentExtractClientOptions = {},
+  ) {}
+
+  public async extract(
+    ctx: ServiceCallContext,
+    input: DocumentExtractInput,
+  ): Promise<DocumentExtractResult> {
+    const body = JSON.stringify({
+      agent_id: input.agentId,
+      tenant_id: ctx.tenantId,
+      raw_id: input.rawId,
+      document_b64: input.documentB64,
+      mime_type: input.mimeType,
+    });
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (this.opts.signingSecret !== undefined) {
+      headers["X-Brain-Auth"] = signAgentRequest(this.opts.signingSecret, body);
+    }
+
+    let resp: Response;
+    try {
+      resp = await fetch(`${this.baseUrl}/run/document_extract`, {
+        method: "POST",
+        headers,
+        body,
+        signal: AbortSignal.timeout(DOCUMENT_EXTRACT_TIMEOUT_MS),
+      });
+    } catch (cause) {
+      if (cause instanceof Error && cause.name === "TimeoutError") {
+        throw brainError("dependency_unavailable", "document extraction agent timed out", {
+          cause,
+        });
+      }
+      throw brainError("internal_server_error", "document extraction agent unreachable", { cause });
+    }
+
+    if (!resp.ok) {
+      const text = await resp.text();
+      if (resp.status === 422) {
+        throw brainError("raw_source_unsupported", "document extraction agent rejected artifact", {
+          statusOverride: 422,
+          details: { upstream_status: resp.status },
+          cause: new Error(text),
+        });
+      }
+      if (resp.status === 424) {
+        // The agent extracted fine but could not write the result back, because
+        // the Brain API rejected its credential. Retrying repeats the paid
+        // extraction and fails the same way, so this must not be classified
+        // transient (isTransientExtractionError keys off statusCode >= 500).
+        throw brainError("dependency_unavailable", `document extraction agent: ${text}`, {
+          statusOverride: 424,
+          details: { upstream_status: resp.status },
+        });
+      }
+      throw brainError(
+        "internal_server_error",
+        `document extraction agent returned ${String(resp.status)}: ${text}`,
+      );
+    }
+
+    return (await resp.json()) as DocumentExtractResult;
+  }
+}

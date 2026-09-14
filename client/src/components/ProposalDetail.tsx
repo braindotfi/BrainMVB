@@ -281,7 +281,7 @@ export function ProposalDetail({
 
             {/* ── Why Brain Suggested This: rationale + optional bullets ─────── */}
             <div className="flex flex-col gap-[16px] items-start w-full">
-              <SectionLabel>Why Brain Suggested This</SectionLabel>
+              <SectionLabel>Why RobotMoney Suggested This</SectionLabel>
               <p
                 id="proposal-detail-rationale"
                 className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[16px] w-full"
@@ -323,7 +323,7 @@ export function ProposalDetail({
             {/* ── What Brain Found: facts table ────────────────────────────── */}
             {proposal.facts && proposal.facts.length > 0 && (
               <div className="flex flex-col gap-[16px] items-start w-full">
-                <SectionLabel>What Brain Found</SectionLabel>
+                <SectionLabel>What RobotMoney Found</SectionLabel>
                 <div className="bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 border-solid rounded-row w-full flex flex-col">
                   {proposal.facts.map((fact, i) => {
                     const isLast = i === proposal.facts!.length - 1;
@@ -730,7 +730,7 @@ function AutoHandledReceipt({
       {/* ── What Brain Cleared ────────────────────────────────────────────── */}
       {proposal.clearedBecause && proposal.clearedBecause.length > 0 && (
         <div className="flex flex-col gap-[16px] items-start w-full">
-          <SectionLabel>What Brain Cleared</SectionLabel>
+          <SectionLabel>What RobotMoney Cleared</SectionLabel>
           <div className="bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 border-solid rounded-row w-full flex flex-col">
             {proposal.clearedBecause.map((fact, i) => {
               const isLast = i === proposal.clearedBecause!.length - 1;
@@ -810,7 +810,7 @@ function AutoHandledReceipt({
       {/* ── Info note: this is a record, not a request ───────────────────── */}
       <div className="bg-brain-v1dark-purple border border-[rgba(118,49,238,0.2)] rounded-[8px] w-full p-[12px]">
         <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-brain-v1purple text-[13px]">
-          This is a record, not a request. It is already settled. You can change how Brain handles these going forward.
+          This is a record, not a request. It is already settled. You can change how RobotMoney handles these going forward.
         </p>
       </div>
 
@@ -821,7 +821,7 @@ function AutoHandledReceipt({
             data-testid="text-rule-paused-confirm"
             className="w-full rounded-[8px] bg-brain-v1dark-green border border-[rgba(66,191,35,0.25)] px-[12px] py-[8px] [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-brain-v1green"
           >
-            {rule ? `"${titleCase(rule.name)}" is paused. Brain won't auto-clear payments like this until you turn it back on.` : "Rule paused."}
+            {rule ? `"${titleCase(rule.name)}" is paused. RobotMoney won't auto-clear payments like this until you turn it back on.` : "Rule paused."}
           </div>
         )}
         <div className="flex gap-[10px] items-stretch w-full">

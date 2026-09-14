@@ -131,8 +131,8 @@ const TAB_COPY: Record<LedgerTab, { heading: string; sub: string | null }> = {
     sub: "Review new and flagged counterparties, and see payment history across vendors and customers.",
   },
   Rules: {
-    heading: "Your boundaries that Brain follows.",
-    sub: "Manage the rules that guide Brain's reviews, recommendations, and actions.",
+    heading: "Your boundaries that RobotMoney follows.",
+    sub: "Manage the rules that guide RobotMoney's reviews, recommendations, and actions.",
   },
 };
 
@@ -394,7 +394,9 @@ export function FinancesPage() {
 
         {activeTab === "Cash Flow" && <CashFlowTab format={format} onOpenTx={setOpenTxId} />}
 
-        {activeTab === "Payables" && <PayablesTab format={format} />}
+        {/* No `format`: Payables quotes every figure in the currency its record is
+            denominated in, so there is nothing for the display converter to convert. */}
+        {activeTab === "Payables" && <PayablesTab />}
 
         {activeTab === "Receivables" && <ReceivablesTab format={format} />}
 

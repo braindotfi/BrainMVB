@@ -1,0 +1,243 @@
+import type { TenantScopedClient } from "@brain/shared";
+
+export interface PaymentIntentRow {
+  id: string;
+  owner_id: string;
+  created_by_agent_id: string | null;
+  action_type: string;
+  source_account_id: string;
+  destination_counterparty_id: string;
+  amount: string;
+  currency: string;
+  obligation_id: string | null;
+  invoice_id: string | null;
+  status: string;
+  policy_decision_id: string | null;
+  approval_ids: string[];
+  execution_receipt_ids: string[];
+  source_ids: string[];
+  evidence_ids: string[];
+  provenance: string;
+  confidence: number;
+  evidence_score: number | null;
+  risk_level: "low" | "medium" | "high" | "critical" | null;
+  proposal_dedup_key: string | null;
+  decision: "approve" | "reject" | "acknowledge" | "undo" | null;
+  decision_audit_id: string | null;
+  decided_at: Date | null;
+  /** x402 settlement recipient (RFC 0001 §6.1); null unless action_type=x402_settle. */
+  settlement_pay_to: string | null;
+  /** On-chain BrainEscrow id (RFC 0001 §7.6); null unless action_type=escrow_release. */
+  escrow_id: string | null;
+  /** keccak256 job-terms commitment (RFC 0001 §7.6); null unless action_type=escrow_release. */
+  job_terms_hash: string | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export async function findPaymentIntentById(
+  client: TenantScopedClient,
+  id: string,
+): Promise<PaymentIntentRow | null> {
+  const { rows } = await client.query<PaymentIntentRow>(
+    `SELECT * FROM ledger_payment_intents WHERE id = $1 LIMIT 1`,
+    [id],
+  );
+  return rows[0] ?? null;
+}
+
+export async function listPaymentIntents(
+  client: TenantScopedClient,
+  filters: { status?: string; created_by_agent_id?: string; limit: number },
+): Promise<PaymentIntentRow[]> {
+  const where: string[] = [];
+  const values: unknown[] = [];
+  if (filters.status !== undefined) {
+    values.push(filters.status);
+    where.push(`status = $${values.length}`);
+  }
+  if (filters.created_by_agent_id !== undefined) {
+    values.push(filters.created_by_agent_id);
+    where.push(`created_by_agent_id = $${values.length}`);
+  }
+  values.push(filters.limit);
+  const limitIdx = values.length;
+  const whereSql = where.length === 0 ? "" : `WHERE ${where.join(" AND ")}`;
+  const { rows } = await client.query<PaymentIntentRow>(
+    `SELECT * FROM ledger_payment_intents ${whereSql}
+     ORDER BY created_at DESC
+     LIMIT $${limitIdx}`,
+    values,
+  );
+  return rows;
+}
+
+export async function pauseApprovedPaymentIntentsByAgent(
+  client: TenantScopedClient,
+  agentId: string,
+): Promise<string[]> {
+  const { rows } = await client.query<{ id: string }>(
+    `UPDATE ledger_payment_intents
+        SET status = 'paused', updated_at = now()
+      WHERE created_by_agent_id = $1 AND status = 'approved'
+      RETURNING id`,
+    [agentId],
+  );
+  return rows.map((row) => row.id);
+}
+
+// ---------------------------------------------------------------------------
+// Phase-4 write helpers. Called by services/execution/src/payment-intents.
+// services/ledger keeps the SQL surface for the table — every PaymentIntent
+// mutation goes through one of these helpers so we have a single audit
+// surface to instrument and so the service-extraction option is preserved.
+// ---------------------------------------------------------------------------
+
+export interface InsertPaymentIntentInput {
+  id: string;
+  ownerId: string;
+  createdByAgentId: string | null;
+  actionType: string;
+  sourceAccountId: string;
+  destinationCounterpartyId: string;
+  amount: string;
+  currency: string;
+  obligationId?: string;
+  invoiceId?: string;
+  status: string;
+  policyDecisionId: string | null;
+  evidenceIds: string[];
+  /**
+   * Confidence of the backing evidence (RFC 0004 §5.2). Defaults to 1.0 when
+   * omitted, preserving prior behavior; the policy VM reads this via
+   * `agent.confidence.gte`. Not subject to the §3.2 agent-contributed ceiling:
+   * that caps Ledger entity rows (obligations etc.), not the intent's own
+   * confidence, which simply reflects the evidence it rests on.
+   */
+  confidence?: number;
+  evidenceScore?: number | null;
+  riskLevel?: "low" | "medium" | "high" | "critical" | null;
+  /** Proposal-layer idempotency key (1a.5); null means no dedup is enforced. */
+  proposalDedupKey?: string | null;
+  /** x402 settlement recipient (RFC 0001 §6.1); set only for action_type=x402_settle. */
+  settlementPayTo?: string | null;
+  /** On-chain BrainEscrow id (RFC 0001 §7.6); set only for action_type=escrow_release. */
+  escrowId?: string | null;
+  /** keccak256 job-terms commitment (RFC 0001 §7.6); set only for escrow_release. */
+  jobTermsHash?: string | null;
+}
+
+export async function insertPaymentIntent(
+  client: TenantScopedClient,
+  input: InsertPaymentIntentInput,
+): Promise<PaymentIntentRow> {
+  const { rows } = await client.query<PaymentIntentRow>(
+    `INSERT INTO ledger_payment_intents (
+       id, owner_id, created_by_agent_id, action_type,
+       source_account_id, destination_counterparty_id,
+       amount, currency, obligation_id, invoice_id,
+       status, policy_decision_id, evidence_ids,
+       provenance, confidence, evidence_score, risk_level, proposal_dedup_key,
+       settlement_pay_to, escrow_id, job_terms_hash
+     )
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'inferred',$14,$15,$16,$17,$18,$19,$20)
+     RETURNING *`,
+    [
+      input.id,
+      input.ownerId,
+      input.createdByAgentId,
+      input.actionType,
+      input.sourceAccountId,
+      input.destinationCounterpartyId,
+      input.amount,
+      input.currency,
+      input.obligationId ?? null,
+      input.invoiceId ?? null,
+      input.status,
+      input.policyDecisionId,
+      input.evidenceIds,
+      input.confidence ?? 1.0,
+      input.evidenceScore ?? null,
+      input.riskLevel ?? null,
+      input.proposalDedupKey ?? null,
+      input.settlementPayTo ?? null,
+      input.escrowId ?? null,
+      input.jobTermsHash ?? null,
+    ],
+  );
+  const row = rows[0];
+  if (row === undefined) throw new Error("payment_intents insert returned no row");
+  return row;
+}
+
+/** Look up an existing payment intent by its proposal-layer dedup key (1a.5). */
+export async function findPaymentIntentByDedupKey(
+  client: TenantScopedClient,
+  dedupKey: string,
+): Promise<PaymentIntentRow | null> {
+  const { rows } = await client.query<PaymentIntentRow>(
+    `SELECT * FROM ledger_payment_intents WHERE proposal_dedup_key = $1 LIMIT 1`,
+    [dedupKey],
+  );
+  return rows[0] ?? null;
+}
+
+/**
+ * Transition the row's status. Returns the updated row only when the
+ * `from` state matched; otherwise null. State-machine validity is the
+ * caller's responsibility; this function enforces atomicity.
+ */
+export async function transitionPaymentIntent(
+  client: TenantScopedClient,
+  id: string,
+  from: string,
+  to: string,
+  decision?: {
+    value: "approve" | "reject" | "acknowledge" | "undo";
+    auditId: string;
+    decidedAt: string;
+  },
+): Promise<PaymentIntentRow | null> {
+  const { rows } = await client.query<PaymentIntentRow>(
+    `UPDATE ledger_payment_intents
+        SET status = $1,
+            updated_at = now(),
+            decision = COALESCE($4, decision),
+            decision_audit_id = COALESCE($5, decision_audit_id),
+            decided_at = COALESCE($6::timestamptz, decided_at)
+      WHERE id = $2 AND status = $3
+      RETURNING *`,
+    [to, id, from, decision?.value ?? null, decision?.auditId ?? null, decision?.decidedAt ?? null],
+  );
+  return rows[0] ?? null;
+}
+
+export async function appendApprovalId(
+  client: TenantScopedClient,
+  id: string,
+  approvalId: string,
+): Promise<PaymentIntentRow | null> {
+  const { rows } = await client.query<PaymentIntentRow>(
+    `UPDATE ledger_payment_intents
+        SET approval_ids = array_append(approval_ids, $1),
+            updated_at = now()
+      WHERE id = $2 AND NOT ($1 = ANY (approval_ids))
+      RETURNING *`,
+    [approvalId, id],
+  );
+  return rows[0] ?? null;
+}
+
+export async function appendExecutionReceiptId(
+  client: TenantScopedClient,
+  id: string,
+  executionId: string,
+): Promise<void> {
+  await client.query(
+    `UPDATE ledger_payment_intents
+        SET execution_receipt_ids = array_append(execution_receipt_ids, $1),
+            updated_at = now()
+      WHERE id = $2`,
+    [executionId, id],
+  );
+}

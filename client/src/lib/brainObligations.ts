@@ -25,6 +25,28 @@ export type Obligation = {
   status: string;
   provenance: string | null;
   confidence: number | null;    // ≤0.5, advisory
+  /**
+   * Fields below back the Payable detail popup (Figma 6625:28266). Every one of them
+   * is present on the live `/ledger/obligations` payload — verified against a real
+   * tenant, not inferred from brain-core's source — but several are `null` on every
+   * row that tenant has today (`minimum_due`, `recurrence`). They are carried rather
+   * than dropped precisely because the popup omits a row when the value is absent:
+   * a field that is null here renders as nothing, never as "-" or "0".
+   *
+   * There is deliberately NO `external_key` / external-reference field. The frame
+   * asked for one; the wire does not carry it on this entity, so the row was removed
+   * from the design rather than filled with the record id or an invented value.
+   */
+  /** Smallest acceptable payment, when the source document stated one. */
+  minimum_due: string | null;
+  /** "monthly", "quarterly", … as brain-core recorded it. Never derived from dates. */
+  recurrence: string | null;
+  /** Raw artifact ids (`raw_*`) this obligation was read out of. */
+  source_ids: string[];
+  /** Ledger transaction ids (`tx_*`) already matched against this obligation. */
+  linked_transaction_ids: string[];
+  /** When brain-core first recorded the obligation — the popup's "Ingested" fact. */
+  created_at: string | null;
 };
 
 /**
@@ -36,6 +58,11 @@ export type Obligation = {
  * path, so nothing normalized it for the UI.
  */
 export type RawObligation = { [K in keyof Obligation]?: unknown } & { type?: unknown };
+
+/** Array-of-string coercion. Anything else on the wire becomes an empty list, never
+ *  a one-element list holding `undefined` — a phantom evidence row is worse than none. */
+const strList = (v: unknown): string[] =>
+  Array.isArray(v) ? v.filter((x): x is string => typeof x === "string" && !!x.trim()) : [];
 
 export type ObligationsResponse = { obligations: RawObligation[]; next_cursor: string | null };
 
@@ -87,6 +114,13 @@ export function normalizeObligation(o: RawObligation): Obligation {
     provenance: str(o.provenance),
     confidence:
       typeof o.confidence === "number" && Number.isFinite(o.confidence) ? o.confidence : null,
+    /* `amountStr` and not `str`: `minimum_due` is the same decimal-string-or-number
+       field `amount_due` is, and a numeric one must not be discarded. */
+    minimum_due: amountStr(o.minimum_due),
+    recurrence: str(o.recurrence),
+    source_ids: strList(o.source_ids),
+    linked_transaction_ids: strList(o.linked_transaction_ids),
+    created_at: str(o.created_at),
   };
 }
 
@@ -94,7 +128,15 @@ export function isReceivable(o: Obligation): boolean {
   return o.direction.toLowerCase().startsWith("receiv");
 }
 
-/** Tolerant fetch: 404 / empty → [] (extraction not available yet), never an infinite spinner. */
+/**
+ * Tolerant fetch: 404 / empty → [] (extraction not available yet), never an infinite spinner.
+ *
+ * **Reads one page.** brain-core caps a list read at around 20 rows without saying so,
+ * so this returns SOME obligations on any real tenant. Nothing that has to find a
+ * particular record — or add the rows up — may use it: those go through
+ * `usePagedLedgerRead("/api/brain/ledger/obligations", "obligations")`, which walks the
+ * cursor to the end and reports whether it got there.
+ */
 export async function fetchObligations(): Promise<Obligation[]> {
   const res = await fetch("/api/brain/ledger/obligations", { credentials: "include" });
   if (res.status === 404) return [];

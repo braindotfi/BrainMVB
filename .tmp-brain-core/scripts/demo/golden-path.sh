@@ -1,0 +1,652 @@
+#!/usr/bin/env bash
+# Brain golden path — drives the ENTIRE protocol end-to-end against a running
+# local stack (api boot binary + pg + redis), proving the full pipeline:
+#
+#   seed → ingest → normalize → wiki → reconcile → invoice-shortcut propose →
+#   policy → approve → execute (rail) → anchor → fetch + verify proof.
+#
+# It prints a summary table (step, status, duration, output id) and the URL of
+# the human-readable proof view to end on.
+#
+# Usage:
+#   pnpm run dev:up                 # pg + redis + localstack
+#   BRAIN_DEMO_MODE=true pnpm -C services/api start   # boot binary on :3000
+#   ./scripts/demo/golden-path.sh [BASE_URL]
+#
+# Env:
+#   BRAIN_BASE_URL              default http://localhost:3000
+#   BRAIN_DEMO_RAIL             plaid_sandbox (default) | onchain_base_sepolia
+#   BRAIN_DEMO_STRICT_PROOF     "true" ⇒ steps 9/10/11 BLOCK until proof
+#                               materializes + verifies. Used by investor
+#                               diligence runs that must prove the full chain
+#                               end-to-end, not just "we ran the propose."
+#                               Default false (smoke runs stay fast).
+#   BRAIN_DEMO_STRICT_TIMEOUT   seconds to wait for each blocking step in
+#                               strict mode (default 90). Increase for slow
+#                               testnet anchoring; decrease for tight CI.
+#
+# Exit code is non-zero if any REQUIRED step fails (used by the smoke test).
+# In strict mode, steps 9 / 10 / 11 are ALL required (the whole pipeline must
+# settle, anchor, and produce a verifiable Merkle proof) — not "fast" smoke.
+
+set -euo pipefail
+
+BASE="${BRAIN_BASE_URL:-${1:-http://localhost:3000}}"
+RAIL="${BRAIN_DEMO_RAIL:-plaid_sandbox}"
+STRICT="${BRAIN_DEMO_STRICT_PROOF:-false}"
+STRICT_TIMEOUT="${BRAIN_DEMO_STRICT_TIMEOUT:-90}"
+V1="$BASE/v1"
+
+# The seed CLI requires BRAIN_TENANT_ID + BRAIN_ACTOR. Default to the demo
+# golden tenant that GET /v1/demo/token mints for (DEMO_GOLDEN_TENANT in
+# services/api/src/main.ts), so the seeded rows are visible to the demo token.
+: "${BRAIN_TENANT_ID:=tnt_00000000010000000000000000}"
+: "${BRAIN_ACTOR:=golden-path-seed}"
+export BRAIN_TENANT_ID BRAIN_ACTOR
+
+BOLD='\033[1m'; CYAN='\033[0;36m'; GREEN='\033[0;32m'; YELLOW='\033[0;33m'; RED='\033[0;31m'; RESET='\033[0m'
+header() { echo -e "\n${BOLD}${CYAN}══ $1 ══${RESET}"; }
+ok()     { echo -e "${GREEN}✓${RESET} $1"; }
+note()   { echo -e "${YELLOW}→${RESET} $1"; }
+fail()   { echo -e "${RED}✗${RESET} $1"; }
+
+command -v jq >/dev/null || { fail "jq is required"; exit 1; }
+command -v curl >/dev/null || { fail "curl is required"; exit 1; }
+
+# ── summary accumulator ──────────────────────────────────────────────────────
+declare -a SUMMARY=()        # "name|status|duration_ms|output"
+STEP_START=0
+start_step() { STEP_START=$(date +%s%3N 2>/dev/null || echo $(( $(date +%s) * 1000 ))); }
+record()     { # name status output
+  local now; now=$(date +%s%3N 2>/dev/null || echo $(( $(date +%s) * 1000 )))
+  SUMMARY+=("$1|$2|$(( now - STEP_START ))|${3:-}")
+}
+
+# Authed JSON request: req METHOD PATH [BODY]
+TOKEN=""
+req() {
+  local method="$1" path="$2" body="${3:-}"
+  if [[ -n "$body" ]]; then
+    curl -sf -X "$method" "$V1$path" \
+      -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d "$body"
+  else
+    curl -sf -X "$method" "$V1$path" -H "Authorization: Bearer $TOKEN"
+  fi
+}
+
+# poll_until <description> <body_cmd> <success_jq_expr>
+#   Used only in BRAIN_DEMO_STRICT_PROOF=true mode. Re-runs `body_cmd` (a shell
+#   snippet that fetches a JSON response and prints it on stdout) every 2s
+#   until `success_jq_expr` returns a non-empty / non-null value, or until
+#   STRICT_TIMEOUT seconds elapse. Echoes the matched value on success.
+#   Returns 1 (the script will exit under set -e) on timeout.
+poll_until() {
+  local description="$1" body_cmd="$2" success_expr="$3"
+  local deadline=$(( SECONDS + STRICT_TIMEOUT ))
+  local resp matched
+  while (( SECONDS < deadline )); do
+    resp=$(eval "$body_cmd" || true)
+    matched=$(echo "${resp:-}" | jq -r "$success_expr // empty" 2>/dev/null || true)
+    if [[ -n "$matched" && "$matched" != "null" ]]; then
+      echo "$matched"
+      return 0
+    fi
+    sleep 2
+  done
+  fail "strict mode: $description did not materialize within ${STRICT_TIMEOUT}s"
+  return 1
+}
+
+# ── 1. Seed a fresh demo tenant ──────────────────────────────────────────────
+header "1. Seed golden-path dataset"
+start_step
+if pnpm -C tools/seed-golden-path run seed >/tmp/gp_seed.log 2>&1; then
+  ok "seeded demo tenant (2 banks / 1 card / 5 subs)"; record "seed" ok ""
+else
+  fail "seed failed:"; cat /tmp/gp_seed.log >&2; record "seed" fail ""; exit 1
+fi
+
+# ── 2. Mint a demo token ─────────────────────────────────────────────────────
+header "2. Mint demo token"
+start_step
+TOKEN=$(curl -sf "$V1/demo/token" | jq -r .token)
+[[ -n "$TOKEN" && "$TOKEN" != "null" ]] || { fail "no demo token"; record "token" fail ""; exit 1; }
+ok "token ${TOKEN:0:24}…"; record "token" ok ""
+
+# ── 3. Ingest a raw invoice + write its structured evidence ─────────────────
+# The real /raw/ingest route (services/raw/src/routes/ingest.ts) is
+# multipart/form-data (source_type, file) or application/json with a
+# fetchable `url` -- it has no inline `body` field, so the old
+# { source_type, body: {...} } shape here never matched and this step
+# silently no-op'd. source_type "other" lands the artifact through the
+# universal fallback adapter without tripping the pdf/csv upload interpreters
+# (bank-statement / AR-aging heuristics); the next call supplies real
+# structured evidence directly via the same route a document-extraction agent
+# uses (POST /raw/{id}/parsed).
+header "3. Ingest raw invoice + write parsed evidence"
+start_step
+GP_UPLOAD_FILE="/tmp/gp_invoice_upload.txt"
+echo "golden-path invoice placeholder" > "$GP_UPLOAD_FILE"
+RAW=$(curl -sf -X POST "$V1/raw/ingest" \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "source_type=other" \
+  -F "file=@${GP_UPLOAD_FILE};type=text/plain" || true)
+RAW_ID=$(echo "${RAW:-}" | jq -r '.raw_id // empty')
+if [[ -z "$RAW_ID" ]]; then
+  fail "raw ingest failed: $RAW"; record "ingest" fail ""; exit 1
+fi
+
+# parser doc_obligation_v1 is the document -> obligation extractor (RFC 0004);
+# post-canonical-cutover (RFC 0005) it projects Raw -> canonical -> Ledger as a
+# low-trust (agent_contributed, confidence<=0.5) payable obligation whose
+# evidence_ids traces back to this raw_parsed row -- exactly what the §6 gate
+# check 9.5 loader (makeResolveEvidence) joins against to resolve
+# kind: "obligation_reference".
+#
+# The amount is bounded on both sides and cannot be picked freely:
+#   - It must stay ABOVE 1000.00 so the demo policy matches
+#     `confirm-mid-payment` rather than `confirm-small-payment`, keeping this
+#     run on the tier whose approval path steps 8 and 9 exercise.
+#   - It must stay BELOW the seeded Chase Checking available balance
+#     (1180.00, from the golden-path seed) or the section 6 gate fails closed
+#     at check 8 (available_balance_sufficient) before the rail is reached.
+GP_DUE_DATE=$(date -u -d '+14 days' +%Y-%m-%dT00:00:00Z 2>/dev/null || date -u -v+14d +%Y-%m-%dT00:00:00Z)
+PARSED_BODY=$(jq -n --arg due "$GP_DUE_DATE" '{
+  parser: "doc_obligation_v1", parser_version: "1.0.0",
+  extracted: {
+    counterparty_name: "Golden Path Vendor",
+    direction: "payable", type: "bill",
+    amount: "1050.00", currency: "USD",
+    due_date: $due, status: "due"
+  },
+  confidence: 0.45
+}')
+PARSED=$(req POST "/raw/$RAW_ID/parsed" "$PARSED_BODY" || true)
+EVIDENCE_ID=$(echo "${PARSED:-}" | jq -r '.id // empty')
+if [[ -z "$EVIDENCE_ID" ]]; then
+  fail "parsed-evidence write failed: $PARSED"; record "ingest" fail ""; exit 1
+fi
+ok "raw artifact $RAW_ID, evidence $EVIDENCE_ID"; record "ingest" ok "$EVIDENCE_ID"
+
+# ── 3.5 Wait for the obligation to project into Ledger ──────────────────────
+# The canonical + ledger AP/AR projection workers (BRAIN_WORKERS defaults to
+# "all" in the boot binary) poll on an interval (15s default each) -- there is
+# no synchronous HTTP trigger for this, so poll until the obligation appears.
+header "3.5 Wait for the obligation to project into Ledger"
+start_step
+GP_OBLIGATION="null"
+for _ in $(seq 1 40); do
+  OBLS=$(req GET "/ledger/obligations?direction=payable&limit=100" || true)
+  GP_OBLIGATION=$(echo "${OBLS:-}" | jq -c --arg ev "$EVIDENCE_ID" \
+    '[.obligations[]? | select((.evidence_ids // []) | index($ev))][0] // empty')
+  [[ -n "$GP_OBLIGATION" && "$GP_OBLIGATION" != "null" ]] && break
+  sleep 2
+done
+if [[ -z "$GP_OBLIGATION" || "$GP_OBLIGATION" == "null" ]]; then
+  fail "obligation for evidence $EVIDENCE_ID did not project into Ledger within the timeout (are the canonical/ledger background workers running? BRAIN_WORKERS defaults to \"all\")"
+  record "ingest_projection" fail ""
+  exit 1
+fi
+GP_OBLIGATION_ID=$(echo "$GP_OBLIGATION" | jq -r '.id')
+GP_CP_ID=$(echo "$GP_OBLIGATION" | jq -r '.counterparty_id')
+GP_AMOUNT=$(echo "$GP_OBLIGATION" | jq -r '.amount_due')
+GP_CURRENCY=$(echo "$GP_OBLIGATION" | jq -r '.currency')
+ok "obligation $GP_OBLIGATION_ID projected (counterparty $GP_CP_ID, $GP_AMOUNT $GP_CURRENCY)"
+record "ingest_projection" ok "$GP_OBLIGATION_ID"
+
+# The counterparty the canonical projector just minted for this document is
+# stamped with a payment-instruction row at now() (migration 0027's trigger
+# fires on INSERT, not only on a real destination change), which gate check
+# 11.5 rule 6 reads as the destination_recently_changed fraud signal. The seed
+# already backdates for this reason, but it runs before this counterparty
+# exists, so the demo dataset's "established vendor" posture has to be restored
+# here. A genuine destination change during a run still stamps now() and is
+# still flagged.
+if ! pnpm -C tools/seed-golden-path run establish-destinations >/tmp/gp_destinations.log 2>&1; then
+  fail "could not backdate payment instructions:"; cat /tmp/gp_destinations.log >&2
+  record "establish_destinations" fail ""; exit 1
+fi
+
+# ── 4. Normalize → assert ledger rows ────────────────────────────────────────
+header "4. Normalize → Ledger invoices + counterparties"
+start_step
+# GET /ledger/invoices returns { invoices: [...] }; /ledger/counterparties
+# returns { counterparties: [...] } — not { items: [...] }.
+INVOICES=$(req GET "/ledger/invoices?status=sent&limit=5" || true)
+INVOICE_ID=$(echo "${INVOICES:-}" | jq -r '.invoices[0].id // empty')
+CPS=$(req GET "/ledger/counterparties?limit=20" || true)
+CP_ID=$(echo "${CPS:-}" | jq -r '.counterparties[0].id // empty')
+# AWS counterparty id — needed by the onchain_base_sepolia branch in step 7.
+AWS_CP_ID=$(echo "${CPS:-}" | jq -r '.counterparties[] | select(.name == "Amazon Web Services") | .id // empty' | head -1)
+# Checking account id — source for ACH intents; onchain account for ETH intents.
+ACCOUNTS=$(req GET "/ledger/accounts?limit=20" || true)
+CHECKING_ACCOUNT_ID=$(echo "${ACCOUNTS:-}" | jq -r '.accounts[] | select(.account_type == "bank_checking") | .id // empty' | head -1)
+ONCHAIN_ACCOUNT_ID=$(echo "${ACCOUNTS:-}" | jq -r '.accounts[] | select(.account_type == "onchain") | .id // empty' | head -1)
+if [[ -n "$INVOICE_ID" && -n "$CP_ID" ]]; then
+  ok "invoice $INVOICE_ID, counterparty $CP_ID"; record "normalize" ok "$INVOICE_ID"
+else
+  fail "no normalized invoice/counterparty (is the normalize worker running?)"
+  record "normalize" fail ""; exit 1
+fi
+
+# ── 5. Regenerate the counterparty Wiki page ─────────────────────────────────
+header "5. Wiki page regeneration"
+start_step
+WIKI=$(req POST "/memory/pages/regenerate" "$(jq -n --arg id "$CP_ID" '{entity_id:$id}')" || true)
+WIKI_OK=$(echo "${WIKI:-}" | jq -r '.id // .page_id // empty')
+if [[ -n "$WIKI_OK" ]]; then ok "wiki page $WIKI_OK"; record "wiki" ok "$WIKI_OK"
+else note "wiki regen endpoint may differ — non-blocking"; record "wiki" warn ""; fi
+
+# ── 6. Run the reconciliation agent ──────────────────────────────────────────
+header "6. Reconciliation agent"
+start_step
+RECON=$(req POST "/agents/route" "$(jq -n '{intent:"reconcile", payload:{}}')" || true)
+RECON_OK=$(echo "${RECON:-}" | jq -r '.run_id // .decision // empty')
+if [[ -n "$RECON_OK" ]]; then ok "reconciliation run $RECON_OK"; record "reconcile" ok "$RECON_OK"
+else note "reconcile route may differ — non-blocking"; record "reconcile" warn ""; fi
+
+# ── 6.5 Activate the demo policy ─────────────────────────────────────────────
+# The §6 gate evaluates the tenant's ACTIVE policy; a freshly-seeded tenant has
+# none, so the propose below would fail `policy_not_found`. Activate the built-in
+# demo policy first (the demo token carries policy:write). Required, not optional.
+header "6.5 Activate demo policy"
+start_step
+if curl -sf -X POST "$V1/demo/policy/activate" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d '{}' >/dev/null; then
+  ok "demo policy activated"
+  record "policy" ok ""
+else
+  fail "policy activation failed (POST /demo/policy/activate)"
+  record "policy" fail ""
+  exit 1
+fi
+
+# ── 7. Propose a PaymentIntent ───────────────────────────────────────────────
+# Default: invoice shortcut (pay_invoice → ach_outbound → bank_ach rail).
+# onchain_base_sepolia: direct onchain_transfer intent to the AWS counterparty.
+#   Requires BRAIN_DEMO_ONCHAIN_RECIPIENT to have been set at seed time so that
+#   the AWS counterparty carries an ETH address alias. Requires the API to be
+#   booted with BRAIN_SESSION_KEY + BRAIN_ONCHAIN_SMART_ACCOUNT configured.
+header "7. Propose payment (rail: $RAIL)"
+start_step
+# Use curl -s (not -sf) so a 4xx error envelope is captured and shown, rather
+# than failing the script under `set -e` with no diagnostic.
+if [[ "$RAIL" == "onchain_base_sepolia" ]]; then
+  [[ -n "$AWS_CP_ID" ]] || { fail "AWS counterparty not found — reseed with BRAIN_DEMO_ONCHAIN_RECIPIENT set"; record "propose" fail ""; exit 1; }
+  [[ -n "$ONCHAIN_ACCOUNT_ID" ]] || { fail "onchain account not found — reseed with BRAIN_ONCHAIN_SMART_ACCOUNT set"; record "propose" fail ""; exit 1; }
+  PI=$(curl -s -X POST "$V1/payment-intents" \
+    -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -d "$(jq -n --arg cp "$AWS_CP_ID" --arg src "$ONCHAIN_ACCOUNT_ID" '{
+      action_type: "onchain_transfer",
+      source_account_id: $src,
+      destination_counterparty_id: $cp,
+      amount: "0.0001",
+      currency: "ETH"
+    }')")
+else
+  # Not the pay_invoice shortcut: resolveInvoiceShortcut (P0.5) always
+  # overwrites evidence_ids with the invoice's linked_document_ids (a
+  # ledger_documents "doc_..." id), which can never resolve against
+  # raw_parsed ("prs_...") -- it structurally cannot carry the real evidence
+  # check 9.5 needs. Propose the obligation directly instead, with the
+  # evidence ingested (and its Ledger projection resolved) in steps 3 / 3.5.
+  PI=$(curl -s -X POST "$V1/payment-intents" \
+    -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -d "$(jq -n --arg src "$CHECKING_ACCOUNT_ID" --arg cp "$GP_CP_ID" \
+      --arg amt "$GP_AMOUNT" --arg cur "$GP_CURRENCY" \
+      --arg obl "$GP_OBLIGATION_ID" --arg ev "$EVIDENCE_ID" '{
+      action_type: "ach_outbound",
+      source_account_id: $src,
+      destination_counterparty_id: $cp,
+      amount: $amt,
+      currency: $cur,
+      obligation_id: $obl,
+      evidence_ids: [$ev]
+    }')")
+fi
+PI_ID=$(echo "$PI" | jq -r '.id // empty')
+# The propose response carries the policy result as the intent `status`
+# (approved | pending_approval | rejected — PaymentIntentService.create maps
+# allow→approved, confirm→pending_approval, reject→rejected). Older field names
+# (.policy_decision.outcome / .outcome) are kept as fallbacks but were never
+# present, which is why this used to print "unknown".
+OUTCOME=$(echo "$PI" | jq -r '.status // .policy_decision.outcome // .outcome // "unknown"')
+[[ -n "$PI_ID" && "$PI_ID" != "null" ]] || { fail "propose failed: $PI"; record "propose" fail ""; exit 1; }
+ok "PaymentIntent $PI_ID (policy: $OUTCOME)"; record "propose" ok "$PI_ID"
+
+# ── 8. Approve if the policy required confirmation ───────────────────────────
+header "8. Approve (if confirm)"
+start_step
+if [[ "$OUTCOME" == "confirm" || "$OUTCOME" == "confirmed" || "$OUTCOME" == "pending_approval" ]]; then
+  APPROVE=$(curl -s -X POST "$V1/payment-intents/$PI_ID/approve" \
+    -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d '{}')
+  APPROVE_ERR=$(echo "$APPROVE" | jq -r '.error.code // empty')
+  if [[ -n "$APPROVE_ERR" ]]; then
+    fail "approval rejected: $APPROVE_ERR - $(echo "$APPROVE" | jq -r '.error.message // ""')"
+    echo "  detail: $(echo "$APPROVE" | jq -c '.error.details // {}')" >&2
+    record "approve" fail "$PI_ID"
+    exit 1
+  fi
+  APPROVED_STATUS=$(echo "$APPROVE" | jq -r '.status // empty')
+  if [[ "$APPROVED_STATUS" != "approved" ]]; then
+    fail "approval did not approve intent: status=${APPROVED_STATUS:-unknown}"
+    record "approve" fail "$PI_ID"
+    exit 1
+  fi
+  ok "auto-signed approver"
+  record "approve" ok "$PI_ID"
+else
+  ok "no approval required (status=$OUTCOME)"; record "approve" ok ""
+fi
+
+# ── 9. Execute through the rail (§6 gate runs here) ──────────────────────────
+header "9. Execute via rail ($RAIL)"
+start_step
+# Use curl -s (not the -sf `req`) so a 4xx/5xx §6-gate rejection envelope is
+# captured and its error.code surfaced, rather than aborting opaquely under
+# `set -e` with only "exit code 22" (curl --fail). The gate runs here; its
+# denials are the single most useful diagnostic this smoke test produces.
+EXEC=$(curl -s -X POST "$V1/payment-intents/$PI_ID/execute" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d '{}')
+EXEC_ERR=$(echo "$EXEC" | jq -r '.error.code // empty')
+if [[ -n "$EXEC_ERR" ]]; then
+  fail "execute rejected: $EXEC_ERR — $(echo "$EXEC" | jq -r '.error.message // ""')"
+  # Surface the gate's structured detail. For a §6 check-11.5 (duplicate)
+  # rejection this carries { check_index, check_name, collisions:[{rule,
+  # conflicting_payment_intent_id, detail}] } — the exact dedup rule that
+  # fired, which is the difference between a seed/demo fix and a gate bug.
+  echo "  detail: $(echo "$EXEC" | jq -c '.error.details // {}')" >&2
+  record "execute" fail "$PI_ID"
+  exit 1
+fi
+EXEC_STATUS=$(echo "$EXEC" | jq -r '.status // .outcome // "unknown"')
+ok "execute → $EXEC_STATUS"; record "execute" ok "$PI_ID"
+
+# Strict mode: the execute response status (202 + dispatching) doesn't prove
+# the rail dispatched and the audit-after event landed. Poll the PI detail
+# until it reaches a terminal state (executed / failed / cancelled). Anything
+# else → diligence claim fails.
+if [[ "$STRICT" == "true" ]]; then
+  start_step
+  if FINAL_STATUS=$(poll_until \
+        "PaymentIntent terminal status" \
+        "req GET /payment-intents/$PI_ID" \
+        '.status | select(. == "executed" or . == "failed" or . == "cancelled")'); then
+    if [[ "$FINAL_STATUS" == "executed" ]]; then
+      ok "strict: PaymentIntent reached terminal status $FINAL_STATUS"
+      record "execute_strict" ok "$FINAL_STATUS"
+    else
+      fail "strict: PaymentIntent ended in non-executed terminal status: $FINAL_STATUS"
+      record "execute_strict" fail "$FINAL_STATUS"
+      exit 1
+    fi
+  else
+    record "execute_strict" fail "timeout"
+    exit 1
+  fi
+fi
+
+# ── 10. Anchor the audit window ──────────────────────────────────────────────
+# The broadcaster worker publishes batches on an interval. Poll
+# GET /audit/anchor/latest until a merkle_root appears.
+header "10. Anchor audit window"
+start_step
+ANCHOR=$(req GET "/audit/anchor/latest" || true)
+ANCHOR_ROOT=$(echo "${ANCHOR:-}" | jq -r '.merkle_root // empty')
+if [[ -n "$ANCHOR_ROOT" ]]; then ok "anchored root ${ANCHOR_ROOT:0:18}…"; record "anchor" ok "$ANCHOR_ROOT"
+elif [[ "$STRICT" == "true" ]]; then
+  start_step
+  if ANCHOR_ROOT=$(poll_until \
+        "audit anchor merkle root" \
+        "req GET /audit/anchor/latest" \
+        '.merkle_root // empty'); then
+    ok "strict: anchored root ${ANCHOR_ROOT:0:18}…"
+    record "anchor_strict" ok "$ANCHOR_ROOT"
+  else
+    record "anchor_strict" fail "timeout"
+    exit 1
+  fi
+else
+  note "anchor publisher is a background worker — may anchor async"
+  record "anchor" warn ""
+fi
+
+# ── 11. Fetch + verify the proof ─────────────────────────────────────────────
+# Default behavior is non-blocking: the PI settles through the rail
+# asynchronously (→ dispatching) and the audit anchor publisher is a background
+# worker (step 10), so in a fast smoke the proof may not be materialized yet.
+# Verify it when present; otherwise note it and move on so the smoke is fast.
+#
+# Strict mode (BRAIN_DEMO_STRICT_PROOF=true) blocks: it polls the Proof API
+# until merkle_root is non-empty (or STRICT_TIMEOUT elapses), then REQUIRES
+# verification to succeed. Used by investor-diligence runs where the whole
+# point is to prove the full chain end-to-end, not just "we ran the propose."
+header "11. Fetch + verify proof"
+start_step
+PROOF=""
+ROOT=""
+if [[ "$STRICT" == "true" ]]; then
+  if PROOF_BODY=$(poll_until \
+        "proof materialization for $PI_ID" \
+        "req GET /proof/$PI_ID" \
+        '.merkle_root // empty'); then
+    PROOF=$(req GET "/proof/$PI_ID" || true)
+    ROOT="$PROOF_BODY"
+  else
+    record "verify" fail "timeout"
+    exit 1
+  fi
+else
+  PROOF=$(req GET "/proof/$PI_ID" || true)
+  ROOT=$(echo "${PROOF:-}" | jq -r '.merkle_root // empty')
+fi
+
+if [[ -n "$ROOT" ]]; then
+  EVENT_HASH=$(echo "$PROOF" | jq -r '.audit_events[0].event_hash // empty')
+  VERIFY=$(req POST "/audit/verify" "$(jq -n --arg r "$ROOT" --arg h "$EVENT_HASH" \
+    --argjson p "$(echo "$PROOF" | jq '.merkle_proof')" '{merkle_root:$r, event_hash:$h, merkle_proof:$p}')" || true)
+  VERIFIED=$(echo "${VERIFY:-}" | jq -r '.valid // .verified // "unknown"')
+  if [[ "$STRICT" == "true" && "$VERIFIED" != "true" ]]; then
+    fail "strict: proof verification did not succeed (verified=$VERIFIED)"
+    record "verify" fail "$VERIFIED"
+    exit 1
+  fi
+  ok "proof verify → $VERIFIED"; record "verify" ok "$VERIFIED"
+else
+  note "proof not materialized yet (PI dispatching / anchor async) — non-blocking"
+  record "verify" warn ""
+fi
+
+# ── 11.5 Money-movement E2E assertions (BRAIN_DEMO_E2E_FULL=true) ─────────────
+# Deterministic, SYNCHRONOUS money-path guarantees for the PR gate (R-04). They
+# read the proof's gate_checks (the execute.before snapshot the §6 gate persists,
+# available while the PI is still `dispatching`) and exercise the duplicate gate
+# at execute — no dependency on the async on-chain anchor.
+if [[ "${BRAIN_DEMO_E2E_FULL:-false}" == "true" ]]; then
+  header "11.5 Money-movement E2E assertions"
+
+  # (a) §6 coverage. The proof MUST return 200 for an in-flight PI (a partial
+  # proof — gate_checks present, merkle_root empty until anchored). 9.5
+  # (evidence-semantic) + 11.5 (duplicate) are always-applicable money-path
+  # checks (required loaders) and MUST pass and NOT be not_applicable; check 8
+  # (available balance) must be present + passed but MAY be not_applicable when
+  # the demo has no balance source.
+  start_step
+  PROOF_HTTP=$(curl -s -o /tmp/proof.json -w "%{http_code}" "$V1/proof/$PI_ID" \
+    -H "Authorization: Bearer $TOKEN")
+  PROOF_FULL=$(cat /tmp/proof.json)
+  note "proof HTTP=$PROOF_HTTP gate_check_indices=$(echo "${PROOF_FULL:-}" | jq -c '[.gate_checks[]?.index]' 2>/dev/null || echo '?')"
+  if [[ "$PROOF_HTTP" != "200" ]]; then
+    fail "proof endpoint returned HTTP $PROOF_HTTP for an in-flight PI (expected a 200 partial proof): $(echo "${PROOF_FULL:-}" | head -c 160)"
+    record "gate_coverage" fail ""
+    exit 1
+  fi
+  for idx in 9.5 11.5; do
+    MATCH=$(echo "$PROOF_FULL" | jq -c --argjson i "$idx" '[.gate_checks[]? | select(.index == $i)]')
+    if [[ "$(echo "$MATCH" | jq 'length')" == "0" ]]; then
+      fail "§6 check $idx absent from the proof — the money path did not run it"
+      record "gate_coverage" fail ""
+      exit 1
+    fi
+    if [[ "$(echo "$MATCH" | jq 'any(.[]; .detail.not_applicable == true)')" == "true" ]]; then
+      fail "§6 check $idx is not_applicable on the money path (loader unwired?)"
+      record "gate_coverage" fail ""
+      exit 1
+    fi
+    if [[ "$(echo "$MATCH" | jq 'all(.[]; .passed == true)')" != "true" ]]; then
+      fail "§6 check $idx did not pass"
+      record "gate_coverage" fail ""
+      exit 1
+    fi
+    ok "§6 check $idx applicable + passed"
+  done
+  C8=$(echo "$PROOF_FULL" | jq -c '[.gate_checks[]? | select(.index == 8)]')
+  if [[ "$(echo "$C8" | jq 'length')" == "0" || "$(echo "$C8" | jq 'all(.[]; .passed == true)')" != "true" ]]; then
+    fail "§6 check 8 (available_balance) missing or not passed: $C8"
+    record "gate_coverage" fail ""
+    exit 1
+  fi
+  ok "§6 check 8 present + passed"
+  record "gate_coverage" ok ""
+
+  # (b) Duplicate-payment NEGATIVE: a second payment for the SAME obligation
+  # must be blocked — at propose (no PI id returned) or at execute (§6 check
+  # 11.5, rule obligation_already_settled). Mirrors step 7's direct creation
+  # (not the pay_invoice shortcut — see the note there) so this exercises the
+  # same evidence-backed path the happy path just executed. Uses curl -s so a
+  # 4xx envelope is captured, not fatal.
+  start_step
+  DUP=$(curl -s -X POST "$V1/payment-intents" \
+    -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -d "$(jq -n --arg src "$CHECKING_ACCOUNT_ID" --arg cp "$GP_CP_ID" \
+      --arg amt "$GP_AMOUNT" --arg cur "$GP_CURRENCY" \
+      --arg obl "$GP_OBLIGATION_ID" --arg ev "$EVIDENCE_ID" '{
+      action_type: "ach_outbound",
+      source_account_id: $src,
+      destination_counterparty_id: $cp,
+      amount: $amt,
+      currency: $cur,
+      obligation_id: $obl,
+      evidence_ids: [$ev]
+    }')")
+  DUP_ID=$(echo "$DUP" | jq -r '.id // empty')
+  if [[ -z "$DUP_ID" || "$DUP_ID" == "null" ]]; then
+    ok "duplicate blocked at propose: $(echo "$DUP" | jq -r '.error.code // "?"')"
+    record "dup_negative" ok ""
+  else
+    DUP_EXEC=$(curl -s -X POST "$V1/payment-intents/$DUP_ID/execute" \
+      -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d '{}')
+    DUP_CODE=$(echo "$DUP_EXEC" | jq -r '.error.code // empty')
+    if [[ -n "$DUP_CODE" ]]; then
+      ok "duplicate blocked at execute: $DUP_CODE (check $(echo "$DUP_EXEC" | jq -r '.error.details.check_index // "?"'))"
+      record "dup_negative" ok ""
+    else
+      fail "DUPLICATE PAYMENT NOT BLOCKED: a 2nd payment for obligation $GP_OBLIGATION_ID executed: $DUP_EXEC"
+      record "dup_negative" fail ""
+      exit 1
+    fi
+  fi
+
+  # (c) Policy REJECT NEGATIVE: a payment above the demo policy's reject band
+  # (>$10k) must be rejected by policy at propose — the intent is created with
+  # status "rejected" and is never executable.
+  if [[ -z "$CHECKING_ACCOUNT_ID" || -z "$CP_ID" ]]; then
+    fail "negatives need CHECKING_ACCOUNT_ID + CP_ID (seed shape changed?)"
+    record "policy_reject_negative" fail ""
+    exit 1
+  fi
+  start_step
+  REJ=$(curl -s -X POST "$V1/payment-intents" \
+    -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -d "$(jq -n --arg a "$CHECKING_ACCOUNT_ID" --arg c "$CP_ID" \
+      '{action_type:"ach_outbound", source_account_id:$a, destination_counterparty_id:$c, amount:"20000.00", currency:"USD"}')")
+  REJ_STATUS=$(echo "$REJ" | jq -r '.status // empty')
+  if [[ "$REJ_STATUS" == "rejected" ]]; then
+    ok "excessive payment (\$20k) rejected by policy at propose"
+    record "policy_reject_negative" ok ""
+  else
+    fail "EXCESSIVE PAYMENT NOT REJECTED: \$20k proposal status=$REJ_STATUS (expected rejected): $REJ"
+    record "policy_reject_negative" fail ""
+    exit 1
+  fi
+
+  # (d) MISSING-APPROVAL NEGATIVE: a payment in the confirm band ($1k-$10k)
+  # creates a pending_approval intent; executing it WITHOUT an approval must be
+  # blocked (the §6 gate's approval determination/grant).
+  start_step
+  CONF=$(curl -s -X POST "$V1/payment-intents" \
+    -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -d "$(jq -n --arg a "$CHECKING_ACCOUNT_ID" --arg c "$CP_ID" \
+      '{action_type:"ach_outbound", source_account_id:$a, destination_counterparty_id:$c, amount:"5000.00", currency:"USD"}')")
+  CONF_ID=$(echo "$CONF" | jq -r '.id // empty')
+  CONF_STATUS=$(echo "$CONF" | jq -r '.status // empty')
+  if [[ -z "$CONF_ID" || "$CONF_STATUS" != "pending_approval" ]]; then
+    fail "confirm-band (\$5k) proposal did not become pending_approval: status=$CONF_STATUS: $CONF"
+    record "missing_approval_negative" fail ""
+    exit 1
+  fi
+  CONF_EXEC=$(curl -s -X POST "$V1/payment-intents/$CONF_ID/execute" \
+    -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d '{}')
+  CONF_CODE=$(echo "$CONF_EXEC" | jq -r '.error.code // empty')
+  if [[ -n "$CONF_CODE" ]]; then
+    ok "unapproved confirm-band payment blocked at execute: $CONF_CODE"
+    record "missing_approval_negative" ok ""
+  else
+    fail "MISSING APPROVAL NOT ENFORCED: pending_approval intent $CONF_ID executed unapproved: $CONF_EXEC"
+    record "missing_approval_negative" fail ""
+    exit 1
+  fi
+
+  # (e) AUDIT BEFORE -> AFTER LINKAGE (R-04 EC4). The §6 gate emits a mandatory
+  # payment_intent.execute.before event; a successful execution emits a
+  # payment_intent.execute.after event. The after event is written by the async
+  # rail-receipt path (outbox worker), so it can lag the terminal status by a
+  # moment — poll the proof until it appears (it is on the SAME hash chain as
+  # before, keyed on this PI). Then assert: before precedes after (oldest-first
+  # ordering) and the after is chained into the tamper-evident log (non-empty
+  # prev_event_hash) — the pair is linked, not free-floating.
+  start_step
+  if ! poll_until "execute.after audit event" \
+    "curl -s '$V1/proof/$PI_ID' -H 'Authorization: Bearer $TOKEN'" \
+    '([.audit_events[]?.action] | index("payment_intent.execute.after")) // empty | tostring'; then
+    record "audit_linkage" fail ""
+    exit 1
+  fi
+  LINK_PROOF=$(curl -s "$V1/proof/$PI_ID" -H "Authorization: Bearer $TOKEN")
+  BEFORE_IDX=$(echo "$LINK_PROOF" | jq '[.audit_events[]?.action] | index("payment_intent.execute.before")')
+  AFTER_IDX=$(echo "$LINK_PROOF" | jq '[.audit_events[]?.action] | index("payment_intent.execute.after")')
+  if [[ "$BEFORE_IDX" == "null" || -z "$BEFORE_IDX" ]]; then
+    fail "audit linkage: no payment_intent.execute.before event in the proof"
+    record "audit_linkage" fail ""
+    exit 1
+  fi
+  # audit_events are oldest-first: before must precede after.
+  if (( BEFORE_IDX >= AFTER_IDX )); then
+    fail "audit linkage: execute.before (idx $BEFORE_IDX) does not precede execute.after (idx $AFTER_IDX)"
+    record "audit_linkage" fail ""
+    exit 1
+  fi
+  AFTER_PREV=$(echo "$LINK_PROOF" | jq -r '[.audit_events[]? | select(.action=="payment_intent.execute.after")][0].prev_event_hash // ""')
+  if [[ -z "$AFTER_PREV" || "$AFTER_PREV" == "null" ]]; then
+    fail "audit linkage: execute.after has no prev_event_hash (not chained into the audit log)"
+    record "audit_linkage" fail ""
+    exit 1
+  fi
+  ok "audit before->after linkage: before idx $BEFORE_IDX precedes after idx $AFTER_IDX, after chained (prev ${AFTER_PREV:0:12}…)"
+  record "audit_linkage" ok ""
+fi
+
+# ── 12. Summary ──────────────────────────────────────────────────────────────
+header "Summary"
+printf "%-12s %-7s %-10s %s\n" "STEP" "STATUS" "DURATION" "OUTPUT"
+printf "%-12s %-7s %-10s %s\n" "----" "------" "--------" "------"
+EXIT=0
+for r in "${SUMMARY[@]}"; do
+  IFS='|' read -r name status dur out <<<"$r"
+  printf "%-12s %-7s %-10s %s\n" "$name" "$status" "${dur}ms" "$out"
+  [[ "$status" == "fail" ]] && EXIT=1
+done
+
+echo
+ok "Human-readable proof: ${V1}/proof/${PI_ID}/view"
+exit "$EXIT"

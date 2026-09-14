@@ -1,0 +1,25 @@
+{
+  "name": "@brain/adversarial",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Adversarial safety tests (P1.1) — each attack vector must fail closed.",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:integration": "vitest run --config vitest.integration.config.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "@types/pg": "^8.11.10",
+    "pg": "^8.22.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.8"
+  },
+  "dependencies": {
+    "@brain/shared": "workspace:*",
+    "@brain/execution": "workspace:*",
+    "@brain/agent-router": "workspace:*",
+    "@brain/schemas": "workspace:*"
+  }
+}

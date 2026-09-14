@@ -212,7 +212,7 @@ export const ReviewModal = ({
                 exact reason is rendered below (danger tone); otherwise a neutral note. */}
             {item.live && !rejection && (
               <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-brain-v1baby-blue-60 text-[13px] w-full">
-                This is a real payment. Approving asks Brain core to sign it off under your approval
+                This is a real payment. Approving asks RobotMoney core to sign it off under your approval
                 authority. It will only settle if core accepts it.
               </p>
             )}

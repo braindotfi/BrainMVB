@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import infoIcon from "@assets/info_1779540800272.png";
 import errorIcon from "@assets/errors_1779540800271.png";
 import successIcon from "@assets/success_1779540800270.png";
 import approvedIcon from "@assets/approved_1784058164235.png";
@@ -37,6 +38,18 @@ type AlertContextValue = {
   dismissAlert: (id: number) => void;
 };
 
+/* The bottom-right column is a SHARED stack, not just the alert list. Anything
+   else that floats in that corner — currently the source-ingest progress card
+   — portals into this element rather than pinning its own
+   `fixed bottom-[20px] right-[20px]`. Two independently positioned cards at the
+   same coordinates do not queue, they cover each other, which is reachable on
+   the ordinary upload path where a "Document uploaded" alert is raised while
+   the progress card is still on screen. */
+const AlertStackContext = createContext<HTMLElement | null>(null);
+
+/** The shared bottom-right stack element; null until the provider has mounted. */
+export const useAlertStack = () => useContext(AlertStackContext);
+
 const AppAlertContext = createContext<AlertContextValue | null>(null);
 
 const ACCENT: Record<AlertVariant, { ring: string; bg: string; title: string }> = {
@@ -48,7 +61,16 @@ const ACCENT: Record<AlertVariant, { ring: string; bg: string; title: string }> 
   rejected:  { ring: "#d20344", bg: "#350011", title: "#d20344" },
 };
 
-const ICONS: Record<Exclude<AlertVariant, "info">, string> = {
+/* All six variants render their designed disc. `info` briefly rendered a
+   hand-drawn inline SVG instead: a global sweep that replaced the shared inline
+   "ⓘ" hint glyph with a text-coloured SVG matched this file by asset name, but
+   here the same asset was doing a different job — it is the toast's variant
+   disc, a sibling of error/success/approved, not an inline hint beside a label.
+   The sweep's rationale ("matches the surrounding text colour") did not apply
+   and was not what the replacement did: its fills were hardcoded, so the info
+   toast simply diverged from its five siblings. Keep all six in this one map. */
+const ICONS: Record<AlertVariant, string> = {
+  info:      infoIcon,
   error:     errorIcon,
   success:   successIcon,
   approved:  approvedIcon,
@@ -56,25 +78,14 @@ const ICONS: Record<Exclude<AlertVariant, "info">, string> = {
   rejected:  rejectedIcon,
 };
 
-const InfoGlyph = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="shrink-0" aria-hidden>
-    <circle cx="12" cy="12" r="12" fill="#a8b9f4" />
-    <circle cx="12" cy="7.5" r="1.5" fill="#0a0c10" />
-    <path d="M12 11v7" stroke="#0a0c10" strokeWidth="2" strokeLinecap="round" />
-  </svg>
+const Glyph = ({ variant }: { variant: AlertVariant }) => (
+  <img
+    src={ICONS[variant]}
+    alt=""
+    aria-hidden="true"
+    className="shrink-0 size-[24px] rounded-full object-cover"
+  />
 );
-
-const Glyph = ({ variant }: { variant: AlertVariant }) => {
-  if (variant === "info") return <InfoGlyph />;
-  return (
-    <img
-      src={ICONS[variant]}
-      alt=""
-      aria-hidden="true"
-      className="shrink-0 size-[24px] rounded-full object-cover"
-    />
-  );
-};
 
 /* Single alert card. Matches the Figma frame exactly: same outer
    chrome, same icon disc, same typography rhythm. The card itself
@@ -125,19 +136,22 @@ const AppAlertCard = ({ alert, onDismiss }: { alert: ActiveAlert; onDismiss: () 
   );
 };
 
-/* Stacked viewport: bottom-right floating column, shared with the shadcn
-   toaster so info / warning / confirmation pop-ups all stack in the same
-   area. New alerts slide in from the right and append to the bottom. */
+/* Stacked viewport: the single bottom-right floating column, so every
+   info / warning / confirmation pop-up stacks in the same area instead of
+   overlapping. New alerts slide in from the right and append to the bottom. */
 const AppAlertViewport = ({
   alerts,
   onDismiss,
+  containerRef,
 }: {
   alerts: ActiveAlert[];
   onDismiss: (id: number) => void;
+  containerRef: (el: HTMLDivElement | null) => void;
 }) => {
   if (typeof document === "undefined") return null;
   return createPortal(
     <div
+      ref={containerRef}
       data-testid="alert-viewport"
       className="fixed bottom-[20px] right-[20px] z-[100] flex flex-col gap-[12px] pointer-events-none items-end"
     >
@@ -153,6 +167,9 @@ const AppAlertViewport = ({
 
 export const AppAlertProvider = ({ children }: { children: ReactNode }) => {
   const [alerts, setAlerts] = useState<ActiveAlert[]>([]);
+  /* A callback ref, not useRef: children need to re-render once the stack
+     element exists so they can portal into it. */
+  const [stackEl, setStackEl] = useState<HTMLDivElement | null>(null);
   const nextId = useRef(1);
   const timers = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
   const keyedAlerts = useRef<Map<string, number>>(new Map());
@@ -209,8 +226,10 @@ export const AppAlertProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <AppAlertContext.Provider value={value}>
-      {children}
-      <AppAlertViewport alerts={alerts} onDismiss={dismissAlert} />
+      <AlertStackContext.Provider value={stackEl}>
+        {children}
+        <AppAlertViewport alerts={alerts} onDismiss={dismissAlert} containerRef={setStackEl} />
+      </AlertStackContext.Provider>
     </AppAlertContext.Provider>
   );
 };
@@ -280,7 +299,9 @@ export const AppAlertLink = ({
         onClick();
       }
     }}
-    className="text-brain-v1baby-blue-100 underline decoration-solid hover:text-brain-v1baby-blue-100"
+    /* Base and hover must stay a resolved PAIR. The token migration mapped both
+       ends of this link to baby-blue-100, which silently made the hover a no-op. */
+    className="text-brain-v1baby-blue-100 underline decoration-solid hover:text-brain-v1baby-blue-100-hover"
   >
     {children}
   </a>

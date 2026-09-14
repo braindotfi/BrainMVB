@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "rules": [
+    {
+      "id": "savings_envelope",
+      "applies_to": ["outbound_payment", "onchain_tx"],
+      "when": {
+        "agent.id": "savings",
+        "tenant.category": "consumer",
+        "amount.lte": { "currency": "USD", "value": "2000" },
+        "agent.spend_in_window": { "window": "30d", "lte": { "currency": "USD", "value": "5000" } },
+        "agent.tx_count_in_window": { "window": "7d", "lte": 20 }
+      },
+      "approval_required_above": { "currency": "USD", "value": "500" },
+      "execute": "auto"
+    },
+    {
+      "id": "savings_financial_outside_envelope_denied",
+      "applies_to": ["outbound_payment", "onchain_tx"],
+      "when": { "agent.id": "savings" },
+      "execute": "reject"
+    },
+    {
+      "id": "savings_advisory_auto",
+      "applies_to": ["ledger_write", "agent_action"],
+      "when": { "agent.id": "savings" },
+      "execute": "auto"
+    }
+  ]
+}

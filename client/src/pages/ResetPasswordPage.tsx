@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import brainLogo from "@assets/BrainLogo_1781769246241.png";
+import robotMoneyLogo from "@assets/robotmoney_1788696284094.png";
 import { Button } from "@/components/ui/button";
 import { validInviteReturnTo } from "@/lib/inviteReturnTo";
 
@@ -215,7 +215,7 @@ export function ResetPasswordPage({ token, returnTo }: { token: string; returnTo
     <div className="relative flex h-screen w-full flex-col overflow-hidden bg-brain-v1headerfooterbg">
       <div className="pointer-events-none absolute -top-[160px] left-1/2 h-[420px] w-[640px] -translate-x-1/2 rounded-full bg-brain-v1purple opacity-[0.18] blur-[120px]" />
       <header className="relative z-10 flex h-[50px] flex-shrink-0 items-center px-6">
-        <img src={brainLogo} alt="Brain Finance" className="mt-[13px] h-[24px] w-auto object-contain" />
+        <img src={robotMoneyLogo} alt="RobotMoney" className="mt-[13px] h-[24px] w-auto object-contain" />
       </header>
       <main className="relative z-10 flex flex-1 items-center justify-center px-4">
         <section className="w-full max-w-[420px] rounded-modal border border-brain-v1stroke-2 bg-brain-v1baby-blue-5 px-7 py-8 text-center shadow-2xl">

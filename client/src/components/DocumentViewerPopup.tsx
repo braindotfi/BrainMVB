@@ -164,7 +164,7 @@ function InvoicePane({ doc }: { doc: DocumentRecord }) {
       <div className="relative shrink-0 w-full">
         <div className="bg-clip-padding border-0 border-[transparent] border-solid content-stretch flex flex-col gap-[16px] items-start relative size-full">
           <div className="content-stretch flex gap-[8px] items-center relative shrink-0 w-full">
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">What Brain Extracted</p>
+            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-60 text-[14px] whitespace-nowrap">What RobotMoney Extracted</p>
             <div className="flex-[1_0_0] h-px bg-brain-v1stroke-2 min-w-px" />
           </div>
           <div className="bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 border-solid content-stretch flex flex-col items-start relative rounded-row shrink-0 w-full">
@@ -241,7 +241,7 @@ function InvoicePane({ doc }: { doc: DocumentRecord }) {
         <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-start min-w-px">
           <InfoIcon color="#6c779d" className="mt-[2px]" />
           <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px] flex-1 min-w-px">
-            A viewer, not an AP system. Brain reads this invoice; your accounting system owns it.
+            A viewer, not an AP system. RobotMoney reads this invoice; your accounting system owns it.
           </p>
         </div>
       </div>
@@ -490,7 +490,7 @@ function BankTransactionPane({ doc }: { doc: DocumentRecord }) {
 function ExtractedBlock({ doc }: { doc: DocumentRecord }) {
   return (
     <div className="flex flex-col gap-[8px] w-full" data-testid="document-extracted-section">
-      <SectionLabel>What Brain extracted</SectionLabel>
+      <SectionLabel>What RobotMoney extracted</SectionLabel>
       <div className="bg-brain-v1highlight-dropdown-bg rounded-[8px] px-[12px] py-[10px] flex flex-col gap-[6px]">
         <KeyValue label="party" value={doc.vendorName ?? doc.counterparty ?? "-"} />
         <KeyValue label="document id" value={doc.id} />
@@ -655,10 +655,22 @@ export function DocumentViewerPopup({
   document: doc,
   open,
   onOpenChange,
+  restoreFocusTo,
 }: {
   document: DocumentRecord | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /**
+   * Where keyboard focus goes when this closes.
+   *
+   * Radix restores focus to the dialog's Trigger, and a controlled dialog has none —
+   * so every close path (Esc, the X, the overlay) leaves focus on <body>. That is
+   * survivable for a viewer opened from a page, but this one is opened from a row
+   * inside ANOTHER dialog: focus lands outside the parent modal, and the next Tab
+   * walks the page behind it. Callers that open it from a specific element pass a ref
+   * to that element and get focus put back on it.
+   */
+  restoreFocusTo?: React.RefObject<HTMLElement | null>;
 }) {
   const [comparing, setComparing] = useState(false);
 
@@ -679,6 +691,17 @@ export function DocumentViewerPopup({
         <DialogPrimitive.Overlay className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
         <DialogPrimitive.Content
           aria-describedby={undefined}
+          /* onCloseAutoFocus, not an effect on `open`: this fires on EVERY close path
+             at the point Radix is about to move focus, so one handler covers Esc, the
+             X and the overlay. The restore is deferred a microtask because the parent
+             dialog re-runs its own focus guard as this one unmounts, and a synchronous
+             focus() here is immediately taken back. */
+          onCloseAutoFocus={(e) => {
+            const target = restoreFocusTo?.current;
+            if (!target) return;
+            e.preventDefault();
+            queueMicrotask(() => target.focus());
+          }}
           className="fixed left-[50%] top-[50%] z-[60] translate-x-[-50%] translate-y-[-50%] bg-brain-v1baby-blue-5 border border-brain-v1stroke-2 border-solid flex flex-col items-start overflow-hidden rounded-modal w-[480px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] shadow-[0_24px_60px_rgba(0,0,0,0.7)] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out"
           data-testid="document-viewer-popup"
         >

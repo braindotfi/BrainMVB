@@ -51,8 +51,24 @@ describe("debt identity", () => {
 
   it("ignores trailing-zero differences in the wire amount", () => {
     // brain-core sends "4800.00000000" on one feed and "4800.00" on the other.
-    expect(debtKey("cp_1", absAmount("4800.00000000"), "2026-08-01")).toBe(
-      debtKey("cp_1", absAmount("4800.00"), "2026-08-01"),
+    expect(debtKey("cp_1", absAmount("4800.00000000"), "2026-08-01", "USD")).toBe(
+      debtKey("cp_1", absAmount("4800.00"), "2026-08-01", "USD"),
+    );
+  });
+
+  it("separates the same figure in two currencies", () => {
+    // 100 euros and 100 dollars owed to the same party on the same day are two debts.
+    expect(debtKey("cp_1", 100, "2026-08-01", "EUR")).not.toBe(
+      debtKey("cp_1", 100, "2026-08-01", "USD"),
+    );
+  });
+
+  it("reads a missing code as the ledger's default, not as its own currency", () => {
+    /* Neither feed states the currency on every record. If an absent code were its
+       own identity, a stated "USD" invoice would stop matching the silent obligation
+       it billed — and every bill would lose its invoice. */
+    expect(debtKey("cp_1", 100, "2026-08-01", null)).toBe(
+      debtKey("cp_1", 100, "2026-08-01", "usd"),
     );
   });
 });
@@ -67,6 +83,23 @@ describe("matching payables to the invoice that billed them", () => {
   it("matches across the precision difference the two feeds actually carry", () => {
     const inv = INV({ id: "inv_1", due_date: "2026-08-01T00:14:08.226Z" });
     const m = matchObligationsToInvoices([OBL({ id: "obl_1", due_date: "2026-08-01" })], [inv]);
+    expect(m.get("obl_1")).toBe(inv);
+  });
+
+  it("does not back a euro payable with a dollar invoice of the same size", () => {
+    /* The lookalike passes every other part of the identity: same counterparty, same
+       number, same day. Opening it from the euro row would show the tenant an invoice
+       number, PO and document belonging to a debt they do not have. */
+    const m = matchObligationsToInvoices(
+      [OBL({ id: "obl_eur", currency: "EUR" })],
+      [INV({ id: "inv_usd", currency: "USD" })],
+    );
+    expect(m.has("obl_eur")).toBe(false);
+  });
+
+  it("still links the twins when only one feed states the currency", () => {
+    const inv = INV({ id: "inv_1", currency: "USD" });
+    const m = matchObligationsToInvoices([OBL({ id: "obl_1" })], [inv]);
     expect(m.get("obl_1")).toBe(inv);
   });
 
@@ -164,9 +197,30 @@ describe("payable and bill detail popups share one shell", () => {
     /* Omitted, not blanked: rendering "Invoice  -" claims an invoice exists and its
        number is missing. These are the fields the user asked to be left out. */
     const src = read(PAYABLE);
-    for (const banned of ["invoice_number", "View invoice document", "DocumentViewerPopup", '"PO"']) {
+    for (const banned of ["invoice_number", "View invoice document", '"PO"']) {
       expect(src, `PayableDetailPopup must not render ${banned}`).not.toContain(banned);
     }
+  });
+
+  /**
+   * DocumentViewerPopup used to be banned here outright, as a proxy for "this
+   * popup must not offer to open an invoice it does not have". The popup now
+   * lists the obligation's OWN `source_ids` — the raw uploads Brain extracted
+   * the figures from — and those are openable. That is not an invoice claim, so
+   * the ban is narrowed to what it was actually protecting: the viewer may only
+   * be opened from the record's source evidence, never from an invoice lookup.
+   */
+  it("opens documents from the obligation's own sources, not from an invoice", () => {
+    const src = read(PAYABLE);
+    expect(src, "the viewer must be fed by the record's source evidence").toContain("source_ids");
+    // No invoice-derived document may reach it.
+    expect(src).not.toMatch(/setViewingDocument\(\s*\w*[Ii]nvoice/);
+    // And the evidence section must be conditional: a record with no sources
+    // shows no empty "Linked Evidence" heading.
+    expect(src).toMatch(/hasEvidence\s*=\s*sourceIds\.length\s*>\s*0/);
+    expect(src, "the heading must be gated on that flag, not rendered always").toMatch(
+      /\{hasEvidence\s*&&/,
+    );
   });
 
   it("the no-invoice popup distinguishes 'no invoice' from 'could not check'", () => {

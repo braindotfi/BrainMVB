@@ -266,13 +266,13 @@ function PolicySection({
         {isLoading && (
           <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative rounded-[8px] shrink-0 w-full bg-brain-v1highlight-dropdown-bg">
             <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-brain-v1baby-blue-60 text-[16px]">
-              Loading your active policy from Brain…
+              Loading your active policy from RobotMoney…
             </p>
           </div>
         )}
         {!isLoading && isError && (
           <UnavailableDataBox testId="text-policy-unavailable">
-            Couldn't load your active policy from Brain right now.
+            Couldn't load your active policy from RobotMoney right now.
           </UnavailableDataBox>
         )}
         {!isLoading && !isError && rules.length === 0 && (
@@ -725,7 +725,7 @@ export function RulesPanel() {
                 compiles to {pendingCreate.policyId}
               </p>
               <p className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-brain-v1baby-blue-60">
-                Saved to your rules to guide Brain&apos;s reviews. Your enforced policy stays the signed Active Brain policy above until this is applied to it.
+                Saved to your rules to guide RobotMoney&apos;s reviews. Your enforced policy stays the signed Active RobotMoney policy above until this is applied to it.
               </p>
               <div className="flex gap-[10px] items-stretch w-full pt-[2px]">
                 <Button
@@ -884,7 +884,7 @@ export function RulesPanel() {
                         </p>
                         {untrustedVendors.length === 0 ? (
                           <p className="px-[8px] pb-[4px] [font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-brain-v1baby-blue-60">
-                            Brain doesn't track an untrusted-vendor list yet.
+                            RobotMoney doesn't track an untrusted-vendor list yet.
                           </p>
                         ) : (
                           untrustedVendors.map((v) => (
@@ -1009,7 +1009,7 @@ export function RulesPanel() {
             {/* Default-specific purple info banner */}
             {!policyLoading && !policyError && (
               <PolicyCallout>
-                These are the active rules in {policyLabel}. Brain enforces them for every matching action. Changes must be made through Brain core’s admin layer.
+                These are the active rules in {policyLabel}. RobotMoney enforces them for every matching action. Changes must be made through RobotMoney core’s admin layer.
               </PolicyCallout>
             )}
           </>
@@ -1031,7 +1031,7 @@ export function RulesPanel() {
             </Section>
             {rulesHydration === "ready" && (
             <PolicyCallout>
-              Rules are written in plain English, not code. Brain turns each one into an enforceable
+              Rules are written in plain English, not code. RobotMoney turns each one into an enforceable
               policy for every agent you use, then keeps learning and suggesting new ones, backed by
               the evidence behind them.
             </PolicyCallout>
@@ -1055,7 +1055,7 @@ export function RulesPanel() {
             </Section>
             {rulesHydration === "ready" && (
             <PolicyCallout>
-              Rules are written in plain English, not code. Brain turns each one into an enforceable
+              Rules are written in plain English, not code. RobotMoney turns each one into an enforceable
               policy for every agent you use, then keeps learning and suggesting new ones, backed by
               the evidence behind them.
             </PolicyCallout>
@@ -1067,7 +1067,7 @@ export function RulesPanel() {
           <Section
             title="Suggested"
             count={suggestions.length}
-            empty={<p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-brain-v1baby-blue-60 text-[16px]">Nothing suggested yet. Brain will show these as it spots patterns.</p>}
+            empty={<p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-brain-v1baby-blue-60 text-[16px]">Nothing suggested yet. RobotMoney will show these as it spots patterns.</p>}
           >
             {suggestions.map((s) => (
               <SuggestionCard

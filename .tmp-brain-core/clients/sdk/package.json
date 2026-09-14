@@ -1,0 +1,59 @@
+{
+  "name": "@brainfinance/sdk",
+  "version": "0.1.0-rc.0",
+  "description": "Typed client for the Brain HTTP API. Generated from Brain_API_Specification.yaml.",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/braindotfi/brain-core.git",
+    "directory": "clients/sdk"
+  },
+  "homepage": "https://brain.fi",
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20"
+  },
+  "files": [
+    "dist",
+    "!dist/.tsbuildinfo",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "tag": "rc"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "prepublishOnly": "npm run clean && npm run test",
+    "prepack": "npm run build && mkdir -p dist/generated && cp src/generated/openapi.d.ts dist/generated/openapi.d.ts",
+    "build": "tsc -b",
+    "clean": "rm -rf dist *.tsbuildinfo",
+    "codegen": "openapi-typescript ../../Brain_API_Specification.yaml --redocly ../../redocly.yaml -o src/generated/openapi.d.ts",
+    "codegen:check": "openapi-typescript ../../Brain_API_Specification.yaml --redocly ../../redocly.yaml -o /tmp/brain-sdk-openapi.d.ts && diff -q src/generated/openapi.d.ts /tmp/brain-sdk-openapi.d.ts",
+    "lint": "eslint src --max-warnings 0",
+    "lint:fix": "eslint src --fix",
+    "typecheck": "tsc -b --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "openapi-fetch": "^0.17.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "openapi-typescript": "^7.5.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.8",
+    "@vitest/coverage-v8": "^4.1.8"
+  }
+}

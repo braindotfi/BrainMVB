@@ -1,0 +1,310 @@
+/**
+ * MCP resources. Stable `brain://...` URIs that resolve to JSON
+ * snapshots of Brain entities. Resources are syntactic sugar over the
+ * equivalent tools — useful for clients that pin URIs in their context.
+ *
+ * Scope checks are identical to the corresponding tool: reading
+ * `brain://ledger/...` requires `ledger:read`, etc.
+ */
+
+import { brainError } from "@brain/shared";
+import { EXECUTABLE_PAYMENT_INTENT_ACTION_TYPES } from "@brain/execution";
+import type {
+  ResourceDescriptor,
+  ResourceListResult,
+  ResourceReadResult,
+  ResourceTemplateDescriptor,
+  ResourceTemplateListResult,
+} from "./types.js";
+import type { ToolContext } from "./tools/types.js";
+
+/**
+ * The one genuinely readable, concrete resource: no placeholder segment in
+ * its uri, so a client can call `resources/read` on it directly. Everything
+ * with a `{...}` placeholder lives in RESOURCE_TEMPLATE_DESCRIPTORS instead
+ * -- see `resources/templates/list` below. Mixing the two in one
+ * `resources/list` response used to make a generic client treat every
+ * templated uri as literally readable, read it as-is (parseBrainUri accepts
+ * the literal `{account_id}` text as an id), and get back
+ * `ledger_row_not_found` for an id that was never a real id.
+ */
+export const RESOURCE_DESCRIPTORS: ReadonlyArray<ResourceDescriptor> = [
+  {
+    uri: "brain://payments/action_types",
+    name: "PaymentIntent action types",
+    description: "Canonical action_type vocabulary + required fields for payment_intent.propose.",
+    mimeType: "application/json",
+  },
+];
+
+export const RESOURCE_TEMPLATE_DESCRIPTORS: ReadonlyArray<ResourceTemplateDescriptor> = [
+  {
+    uriTemplate: "brain://ledger/accounts/{account_id}",
+    name: "Account",
+    description: "Account row + latest balance.",
+    mimeType: "application/json",
+  },
+  {
+    uriTemplate: "brain://ledger/transactions/{transaction_id}",
+    name: "Transaction",
+    description: "Transaction row.",
+    mimeType: "application/json",
+  },
+  {
+    uriTemplate: "brain://ledger/obligations/{obligation_id}",
+    name: "Obligation",
+    description: "Obligation row.",
+    mimeType: "application/json",
+  },
+  {
+    uriTemplate: "brain://ledger/payment-intents/{id}",
+    name: "PaymentIntent",
+    description: "PaymentIntent row + PolicyDecision id.",
+    mimeType: "application/json",
+  },
+  {
+    uriTemplate: "brain://wiki/pages/{slug}",
+    name: "Wiki page",
+    description: "Memory page (markdown body).",
+    mimeType: "text/markdown",
+  },
+  {
+    uriTemplate: "brain://proofs/{action_id}",
+    name: "Action proof (H-07)",
+    description:
+      "Canonical proof for an executed action: §6 gate trace, policy decision, audit before/after, Merkle proof, and on-chain anchor tx hash.",
+    mimeType: "application/json",
+  },
+];
+
+/**
+ * Canonical payment-intent action-type vocabulary, served read-only so an agent
+ * can discover exactly what to send to payment_intent.propose. On-chain
+ * settlement types are requested by NAME — there is no implicit
+ * onchain_transfer→x402/escrow resolver — and each lists the extra fields the
+ * propose tool requires (validated identically on the HTTP route).
+ */
+const ACTION_TYPE_CATALOG = {
+  description:
+    "action_type vocabulary for payment_intent.propose. On-chain settlement types are named explicitly (no implicit resolver from onchain_transfer).",
+  action_types: EXECUTABLE_PAYMENT_INTENT_ACTION_TYPES.map((actionType) => {
+    if (actionType === "x402_settle") {
+      return {
+        action_type: actionType,
+        currency: "USDC",
+        required_fields: ["pay_to"],
+        note: "pay_to = 0x EVM recipient; §6 gate check 6.5 re-validates it against the counterparty address.",
+      };
+    }
+    if (actionType === "escrow_release") {
+      return {
+        action_type: actionType,
+        currency: "USDC",
+        required_fields: ["escrow_id", "job_terms_hash"],
+        note: "0x bytes32 escrow_id + job_terms_hash; §6 gate check 6.6 binds them to the on-chain BrainEscrow lock.",
+      };
+    }
+    return { action_type: actionType, currency: "ISO-4217 (3-letter)", required_fields: [] };
+  }),
+} as const;
+
+export interface ResourceScopeRequirement {
+  scopes: string[];
+}
+
+export function listResources(): ResourceListResult {
+  return { resources: [...RESOURCE_DESCRIPTORS] };
+}
+
+export function listResourceTemplates(): ResourceTemplateListResult {
+  return { resourceTemplates: [...RESOURCE_TEMPLATE_DESCRIPTORS] };
+}
+
+/**
+ * Scopes required to read each resource kind. A pure function of the parsed
+ * URI shape, never of the underlying row, so the caller can enforce it
+ * BEFORE doing any I/O (BRAIN-96) instead of discovering it only after
+ * readResource has already fetched the row and possibly thrown a
+ * not-found.
+ */
+const REQUIRED_SCOPES_BY_KIND: Record<ParsedBrainUri["kind"], string[]> = {
+  "ledger.account": ["ledger:read"],
+  "ledger.transaction": ["ledger:read"],
+  "ledger.obligation": ["ledger:read"],
+  "ledger.payment_intent": ["ledger:read"],
+  "wiki.page": ["wiki:read"],
+  "payments.action_types": ["payment_intent:propose"],
+  proof: ["audit:read"],
+};
+
+/**
+ * Required scopes for a brain:// URI, derived statically from
+ * parseBrainUri alone (no service calls). Returns null for a URI shape
+ * parseBrainUri does not recognize. Callers must enforce scope with this
+ * BEFORE calling readResource, not after: readResource doing the I/O first
+ * meant an insufficiently-scoped caller could trigger a full read (e.g.
+ * H-07 proof assembly) before the scope check ever ran, and a not-found
+ * thrown from inside that read leaked whether a tenant-scoped id exists to
+ * a caller who never had the scope to ask.
+ */
+export function requiredScopesForBrainUri(uri: string): string[] | null {
+  const parsed = parseBrainUri(uri);
+  if (parsed === null) return null;
+  return REQUIRED_SCOPES_BY_KIND[parsed.kind];
+}
+
+/**
+ * Resolve a brain:// URI to a JSON-string body via the same Brain
+ * services the tools call. Throws BrainError on missing resources;
+ * the dispatcher maps to the right JSON-RPC code.
+ */
+export async function readResource(
+  uri: string,
+  ctx: ToolContext,
+): Promise<{ result: ResourceReadResult; requiredScopes: string[] }> {
+  const parsed = parseBrainUri(uri);
+  if (parsed === null) {
+    throw brainError("request_params_invalid", `unsupported resource URI: ${uri}`);
+  }
+
+  switch (parsed.kind) {
+    case "ledger.account": {
+      const result = await ctx.ledger.getAccount(ctx.ctx, parsed.id);
+      if (result === null) throw brainError("ledger_row_not_found", "account not found");
+      return {
+        requiredScopes: REQUIRED_SCOPES_BY_KIND[parsed.kind],
+        result: {
+          contents: [
+            {
+              uri,
+              mimeType: "application/json",
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        },
+      };
+    }
+    case "ledger.transaction": {
+      const result = await ctx.ledger.getTransaction(ctx.ctx, parsed.id);
+      if (result === null) throw brainError("ledger_row_not_found", "transaction not found");
+      return {
+        requiredScopes: REQUIRED_SCOPES_BY_KIND[parsed.kind],
+        result: {
+          contents: [{ uri, mimeType: "application/json", text: JSON.stringify(result, null, 2) }],
+        },
+      };
+    }
+    case "ledger.obligation": {
+      const result = await ctx.ledger.getObligation(ctx.ctx, parsed.id);
+      if (result === null) throw brainError("ledger_row_not_found", "obligation not found");
+      return {
+        requiredScopes: REQUIRED_SCOPES_BY_KIND[parsed.kind],
+        result: {
+          contents: [{ uri, mimeType: "application/json", text: JSON.stringify(result, null, 2) }],
+        },
+      };
+    }
+    case "ledger.payment_intent": {
+      const result = await ctx.paymentIntents.get(ctx.ctx, parsed.id);
+      if (result === null) throw brainError("payment_intent_not_found", "payment intent not found");
+      return {
+        requiredScopes: REQUIRED_SCOPES_BY_KIND[parsed.kind],
+        result: {
+          contents: [{ uri, mimeType: "application/json", text: JSON.stringify(result, null, 2) }],
+        },
+      };
+    }
+    case "wiki.page": {
+      const page = await ctx.wiki.getPage(ctx.ctx, parsed.id);
+      if (page === null) throw brainError("wiki_page_not_found", "page not found");
+      return {
+        requiredScopes: REQUIRED_SCOPES_BY_KIND[parsed.kind],
+        result: {
+          contents: [{ uri, mimeType: "text/markdown", text: page.body_md }],
+        },
+      };
+    }
+    case "payments.action_types": {
+      return {
+        requiredScopes: REQUIRED_SCOPES_BY_KIND[parsed.kind],
+        result: {
+          contents: [
+            {
+              uri,
+              mimeType: "application/json",
+              text: JSON.stringify(ACTION_TYPE_CATALOG, null, 2),
+            },
+          ],
+        },
+      };
+    }
+    case "proof": {
+      if (ctx.buildProof === undefined) {
+        throw brainError("internal_server_error", "proof builder is not wired");
+      }
+      const proof = await ctx.buildProof(parsed.id);
+      if (proof === null) {
+        // Tenant isolation: an action for another tenant is indistinguishable
+        // from "doesn't exist" — never leak existence across tenants.
+        throw brainError("proof_not_found", "no proof for that action");
+      }
+      return {
+        requiredScopes: REQUIRED_SCOPES_BY_KIND[parsed.kind],
+        result: {
+          contents: [{ uri, mimeType: "application/json", text: JSON.stringify(proof, null, 2) }],
+        },
+      };
+    }
+  }
+}
+
+interface ParsedBrainUri {
+  kind:
+    | "ledger.account"
+    | "ledger.transaction"
+    | "ledger.obligation"
+    | "ledger.payment_intent"
+    | "wiki.page"
+    | "payments.action_types"
+    | "proof";
+  id: string;
+}
+
+/**
+ * Parse a brain:// URI. Returns null on a URI shape we don't recognize
+ * so the caller can throw a structured error. Accepts both
+ * `brain://ledger/accounts/acct_X` and `brain://ledger/accounts/acct_X/`
+ * with optional trailing slash.
+ */
+export function parseBrainUri(uri: string): ParsedBrainUri | null {
+  if (!uri.startsWith("brain://")) return null;
+  // Trailing slashes are trimmed by index, not by `.replace(/\/+$/, "")`. That
+  // regex is quadratic on a caller-supplied URI: an unanchored `\/+$` retries
+  // from every start position, and each retry backtracks the whole slash run,
+  // so a `brain://` prefix followed by a long run of slashes and one trailing
+  // non-slash burns O(n^2) before failing to match.
+  let end = uri.length;
+  while (end > 0 && uri[end - 1] === "/") end -= 1;
+  const rest = uri.slice("brain://".length, Math.max(end, "brain://".length));
+  const segments = rest.split("/");
+  // Collection-level resource (no id): the static action-type catalog.
+  if (segments.length === 2 && segments[0] === "payments" && segments[1] === "action_types") {
+    return { kind: "payments.action_types", id: "" };
+  }
+  // brain://proofs/{action_id} — 2-segment URI; handled before the length-3 guard.
+  if (segments.length === 2 && segments[0] === "proofs") {
+    const id = segments[1];
+    if (id !== undefined && id !== "") return { kind: "proof", id };
+  }
+  if (segments.length < 3) return null;
+  const [layer, collection, id] = segments;
+  if (layer === "ledger" && collection === "accounts" && id) return { kind: "ledger.account", id };
+  if (layer === "ledger" && collection === "transactions" && id)
+    return { kind: "ledger.transaction", id };
+  if (layer === "ledger" && collection === "obligations" && id)
+    return { kind: "ledger.obligation", id };
+  if (layer === "ledger" && collection === "payment-intents" && id)
+    return { kind: "ledger.payment_intent", id };
+  if (layer === "wiki" && collection === "pages" && id) return { kind: "wiki.page", id };
+  return null;
+}

@@ -91,13 +91,13 @@ describe("Brain Assistant citation links", () => {
     expect(src).toContain('data-testid="assistant-error"');
   });
 
-  it("navigates only to routes App.tsx actually registers", () => {
+  it("sends any remaining navigation only to routes App.tsx actually registers", () => {
     const routes = registeredRoutes();
     const targets = navigateTargets(ASSISTANT);
 
-    // Guard against the regexes silently matching nothing and passing vacuously.
+    // Citations now prefer in-place record popups, so zero route navigations is
+    // valid. If a navigation is added later, it must still target a real route.
     expect(routes.size, "no <Route path=...> found in App.tsx").toBeGreaterThan(3);
-    expect(targets.length, "no navigate() targets found in BrainAssistant").toBeGreaterThan(0);
 
     for (const target of targets) {
       const pathname = target.split("?")[0];
@@ -109,19 +109,94 @@ describe("Brain Assistant citation links", () => {
     }
   });
 
-  it("routes obligation citations to the itemized list of what is owed", () => {
+  it("opens an obligation citation in the Payable popup, never a navigation", () => {
     const src = readFileSync(ASSISTANT, "utf8");
-    const line = src
-      .split("\n")
-      .find((l) => l.includes('resolvedType === "obligation"') && l.includes("navigate("));
-    expect(line, 'no navigate() for resolvedType === "obligation"').toBeDefined();
-    /* Payables renders one row per outstanding obligation, so a citation about a
-       specific one lands among its peers. It pointed at Cash Flow while no such list
-       existed — there, an obligation was at best a `bill` row and payroll and tax were
-       not shown at all. */
-    expect(line).toContain("/ledger?tab=payables");
-    // The target tab must still exist, or the link silently falls back to Accounts.
-    expect(readFileSync(LEDGER, "utf8")).toContain('activeTab === "Payables"');
+    expect(src).not.toContain('resolvedType === "obligation") navigate(');
+    expect(src).toContain("setFallbackEvidence({");
+    expect(src).toContain("<LiveEvidenceRecordPopup");
+    // The citation must reach the same Payable surface the Payables tab uses,
+    // so an assistant answer and a ledger row explain the debt identically.
+    expect(src).toContain("<PayableDetailPopup");
+    expect(src).toContain("setOpenPayableId(s.entityId)");
+  });
+
+  /**
+   * brain-core labels these citations inconsistently — obligation, payable,
+   * liability, and sometimes no entityType at all. Branching on the LABEL sent a
+   * real, held obligation to the generic evidence card whenever the wording
+   * drifted. The only sound signal is whether we are actually holding the
+   * record, so the branch must test the map.
+   */
+  it("decides the Payable branch by holding the record, not by the upstream label", () => {
+    const src = readFileSync(ASSISTANT, "utf8");
+    const mapStart = src.indexOf("msg.sources.map");
+    /* Bounded by the end of the citation button rather than a character count: a
+       fixed window silently slides off the last branch as the handler grows, and the
+       assertion below then fails for a reason that has nothing to do with routing. */
+    const blockEnd = src.indexOf("title={s.entityId}", mapStart);
+    expect(blockEnd, "citation button not found after msg.sources.map").toBeGreaterThan(mapStart);
+    const block = src.slice(mapStart, blockEnd);
+
+    expect(block).toContain("oblById.has(s.entityId)");
+    expect(
+      block,
+      "the Payable branch must not be gated on resolvedType — the upstream label drifts",
+    ).not.toContain('resolvedType === "obligation" &&');
+
+    // …and it must be reached BEFORE the generic evidence-card fall-through,
+    // or a held obligation still renders as an untyped "Grounded record".
+    const oblBranch = block.indexOf("setOpenPayableId(s.entityId)");
+    const fallback = block.indexOf("setFallbackEvidence({");
+    expect(oblBranch, "obligation branch not found in the citation handler").toBeGreaterThan(-1);
+    expect(fallback, "fallback evidence branch not found in the citation handler").toBeGreaterThan(-1);
+    expect(oblBranch).toBeLessThan(fallback);
+  });
+
+  /**
+   * The assistant renders one citation at a time, so the popup's Prev/Next would
+   * page through a list the conversation never showed.
+   */
+  it("hides the record pager on the assistant's Payable popup", () => {
+    const src = readFileSync(ASSISTANT, "utf8");
+    const idx = src.indexOf("<PayableDetailPopup");
+    expect(idx, "PayableDetailPopup not rendered in BrainAssistant").toBeGreaterThan(-1);
+    expect(src.slice(idx, idx + 800)).toContain("hidePager");
+  });
+
+  it("keeps every returned grounding record tappable", () => {
+    const src = readFileSync(ASSISTANT, "utf8");
+    const mapStart = src.indexOf("msg.sources.map");
+    const mapEnd = src.indexOf("})}", mapStart);
+    const citationBlock = src.slice(mapStart, mapEnd);
+
+    expect(mapStart, "grounding record map not found").toBeGreaterThan(-1);
+    expect(citationBlock).toContain('data-testid={`evidence-link-${i}`}');
+    expect(citationBlock).not.toContain("const isClickable");
+    expect(citationBlock).not.toContain("<span");
+  });
+
+  it("does not dispatch citations to popup hosts owned by other screens", () => {
+    const src = readFileSync(ASSISTANT, "utf8");
+    expect(src).not.toContain("openMemberDetail(");
+    expect(src).not.toContain("openVendorDetail(");
+    expect(src).toContain("<LiveEvidenceRecordPopup");
+  });
+});
+
+describe("Brain Assistant resize safety", () => {
+  it("does not rewrite measured layout inside ResizeObserver delivery", () => {
+    const src = readFileSync(ASSISTANT, "utf8");
+    const observerBlocks = [...src.matchAll(/new ResizeObserver\(\(\) => \{([\s\S]*?)\n\s*\}\);/g)];
+
+    expect(observerBlocks.length, "expected bubble and composer ResizeObservers").toBeGreaterThanOrEqual(2);
+    for (const [, callback] of observerBlocks) {
+      expect(callback).not.toMatch(/\bapply\(\);/);
+      expect(callback).not.toMatch(/\bresizeComposer\(\);/);
+    }
+    expect(src.match(/requestAnimationFrame\(/g)?.length ?? 0).toBeGreaterThanOrEqual(2);
+    expect(src).toContain("scheduleApply()");
+    expect(src).toContain("scheduleComposerResize()");
+    expect(src).toContain("cancelAnimationFrame(frame)");
   });
 });
 

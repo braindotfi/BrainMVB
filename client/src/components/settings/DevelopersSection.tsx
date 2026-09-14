@@ -1081,7 +1081,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
       <div className="flex items-start justify-between gap-4 w-full">
         <div className="flex flex-col gap-[4px] min-w-0">
           <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-brain-v1baby-blue-100 text-[32px]" data-testid="text-page-title">
-            Build on your Brain ledger.
+            Build on your RobotMoney ledger.
           </p>
           <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[16px]" data-testid="text-enforcement-disclosure">
             Keys are issued and enforced by brain-core. Start with GET /api/v1/ping.
@@ -1245,7 +1245,7 @@ function OverviewSection({ env, envControl, onNavigate }: { env: DevEnv; envCont
             /* "We could not read the log" is not "nothing happened". The second
                claim is the one a developer acts on when a call seems to vanish. */
             <EmptyRow testId="row-activity-unavailable">
-              Couldn't load activity. Brain core may be unavailable. This isn't the same as no activity.
+              Couldn't load activity. RobotMoney core may be unavailable. This isn't the same as no activity.
             </EmptyRow>
           ) : !activityQ.data?.events?.length ? (
             <EmptyRow>Nothing recorded yet. API calls show up here as events.</EmptyRow>
@@ -1644,7 +1644,7 @@ function KeysSection({ env }: { env: DevEnv }) {
           {keysQ.isLoading ? (
             <EmptyRow>Loading keys…</EmptyRow>
           ) : keysQ.isError ? (
-            <EmptyRow>Couldn't load keys. Brain core may be unavailable.</EmptyRow>
+            <EmptyRow>Couldn't load keys. RobotMoney core may be unavailable.</EmptyRow>
           ) : keys.length === 0 ? (
           <div className="p-[16px] flex flex-col gap-[4px]">
             <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-100 text-[16px] leading-[20px]" data-testid="text-no-keys-title">
@@ -1993,7 +1993,7 @@ function TenantsSection({ env, onNavigate }: { env: DevEnv; onNavigate: (s: DevS
         {tenantsQ.isLoading ? (
           <EmptyRow>Loading tenants…</EmptyRow>
         ) : tenantsQ.isError ? (
-          <EmptyRow>Couldn't load tenants. Brain core may be unavailable.</EmptyRow>
+          <EmptyRow>Couldn't load tenants. RobotMoney core may be unavailable.</EmptyRow>
         ) : !data?.tenants.length ? (
           <EmptyRow>
             {data?.mode === "production"
@@ -2118,7 +2118,7 @@ function UsageSection({ env }: { env: DevEnv }) {
               ) : entitlement ? (
                 <>
                   {entitlement.effectiveKeyLimit} per key and {entitlement.tenantLimit} per tenant
-                  every {entitlement.windowSeconds} seconds. Managed by Brain core, revision{" "}
+                  every {entitlement.windowSeconds} seconds. Managed by RobotMoney core, revision{" "}
                   {entitlement.entitlementVersion}.
                 </>
               ) : (
@@ -2243,7 +2243,7 @@ function UsageSection({ env }: { env: DevEnv }) {
           {keysQ.isLoading || keyUsageQ.isLoading ? (
             <EmptyRow>Loading key usage…</EmptyRow>
           ) : keysQ.isError || keyUsageQ.isError ? (
-            <EmptyRow>Couldn't load key usage. Brain core may be unavailable.</EmptyRow>
+            <EmptyRow>Couldn't load key usage. RobotMoney core may be unavailable.</EmptyRow>
           ) : !envKeys.length ? (
             <EmptyRow>No {env} API keys yet. Create one under API Keys.</EmptyRow>
           ) : (

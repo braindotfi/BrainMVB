@@ -1,0 +1,274 @@
+/**
+ * Brain ID generators and parsers.
+ *
+ * Every Brain ID is a prefix + ULID: `tnt_01HQ7K3...`, `req_01HQ7K3...`, etc.
+ * Prefixes keep IDs self-describing in logs and error messages.
+ *
+ * The JWT payload in §3.1 uses `tnt_`, `user_`, `agent_`, and `token_`.
+ * The audit envelope in §6.1 requires a `request_id`. This file centralizes
+ * the prefix registry so the rest of the codebase can't invent new shapes.
+ */
+
+import { ulid } from "ulid";
+
+/** Prefix for each Brain ID kind. Never rename — these are wire-visible. */
+export const ID_PREFIX = {
+  tenant: "tnt",
+  user: "user",
+  agent: "agent",
+  apiPartner: "partner",
+  token: "token",
+  request: "req",
+  trace: "trace",
+  audit: "evt",
+  proposal: "prop",
+  execution: "exec",
+  policy: "pol",
+  rawArtifact: "raw",
+  rawParsed: "prs",
+  rawExtractionJob: "rexj",
+  wikiEntity: "ent",
+  wikiRelation: "rel",
+  wikiPage: "wpg",
+  // Sources (v0.3 / PLAN-FIRST #12). One row per adapter connection.
+  source: "src",
+  sourceSyncJob: "sjob",
+  // Ingestion architecture §10 — per-(connection, resource, object_type)
+  // sync checkpoint. One row per independently committed partition.
+  sourceSyncPartition: "spart",
+  // Ledger entities (v0.3 / Layer 2). Prefixes are wire-visible — never rename.
+  ledgerAccount: "acct",
+  ledgerBalance: "bal",
+  ledgerTransaction: "tx",
+  ledgerCounterparty: "cp",
+  ledgerObligation: "obl",
+  ledgerDocument: "doc",
+  ledgerCategory: "cat",
+  ledgerTransactionCategoryAssignment: "tca",
+  ledgerTransfer: "xfer",
+  ledgerInvoice: "inv",
+  ledgerPaymentIntent: "pi",
+  ledgerReconciliationMatch: "rcn",
+  // Ledger projection of the canonical chart of accounts (Phase 5 PR-C).
+  ledgerGlAccount: "lgla",
+  // Canonical domain (ingestion architecture §12, Phase 5). Rich, versioned
+  // records that Ledger and Wiki project from. Accounting domain first.
+  canonicalGlAccount: "cgla",
+  canonicalJournalEntry: "cje",
+  canonicalJournalLine: "cjl",
+  // Canonical AP/AR + identity (Phase 5 deep refactor). Ledger obligations and
+  // counterparties become projections of these.
+  canonicalObligation: "cob",
+  canonicalCounterparty: "ccp",
+  canonicalAccount: "cacct",
+  canonicalTransaction: "ctxn",
+  // Cross-layer
+  policyDecision: "pd",
+  approval: "appr",
+  webhookEndpoint: "whe",
+  // Agent Autonomy v3 — agent-run persistence (Layer 5).
+  agentRun: "agnr",
+  agentRoutingDecision: "agrd",
+  agentReasoningTrace: "agrt",
+  agentRunStep: "agrs",
+  agentEvidenceRef: "agev",
+  agentIdempotencyKey: "agik",
+  // Agent Autonomy v3 — execution preconditions (Phase 1b).
+  ledgerReservation: "rsv",
+  policySpendCounter: "psc",
+  // Agent Autonomy v3 — high-risk findings + overrides (Phase 2.6).
+  agentFinding: "agfn",
+  agentFindingOverride: "agfo",
+  // Agent Autonomy v3 — agent-to-agent sagas (Phase 3.2).
+  agentSaga: "agsg",
+  agentSagaStep: "agss",
+  // H-04 — durable execution outbox (Layer 5). One row per dispatched action.
+  executionOutbox: "exo",
+  // H-20 — outbound webhook dead-letter (Layer 6 audit / webhook infra).
+  webhookDeadLetter: "wdl",
+  // Wiki annotations (HITL corrections). Each annotation lands as a Raw
+  // artifact for the provenance trail; the annotation id is its own handle.
+  wikiAnnotation: "ann",
+  // RFC 0003 — durable tenant blob purge job (GDPR Art. 17). One row per
+  // tenant deletion; survives the deletion and is drained by a privileged worker.
+  tenantBlobPurgeJob: "tbp",
+  tenantDeletionJob: "tdel",
+  // BC-9 — durable tenant data export job (GDPR Art. 20 portability).
+  tenantExportJob: "texp",
+  // Governance API — immutable audit report snapshots for external review.
+  governanceReportSnapshot: "grpt",
+  // RFC 0003 — transactional audit outbox for purge-lifecycle events. One row per
+  // lifecycle transition; delivered to the audit service by the purge worker.
+  tenantBlobPurgeAuditOutbox: "tbo",
+  // Per-customer API-key auth (token-exchange model). Public id for a row in
+  // api_keys; distinct from the token/agent ids minted alongside it.
+  apiKey: "akey",
+  agentApiKey: "agkey",
+  apiRequestMeterEvent: "mtr",
+  apiUsageReconciliationRun: "urr",
+  mcpToolMeterEvent: "mmtr",
+  mcpUsageReconciliationRun: "murr",
+  apiBillingPeriod: "ubp",
+  apiBillingAdjustment: "uadj",
+  apiEntitlementChange: "echg",
+  // RFC 0010 production graduation. Verification evidence remains bound to
+  // the synthetic source tenant until a fresh production tenant is created.
+  tenantGraduationRequest: "grad",
+  tenantGraduationEvidence: "gve",
+  tenantGraduationAssessment: "gva",
+  tenantGraduationReview: "gvr",
+  tenantGraduationLineage: "gvl",
+  commercialTierChange: "ctchg",
+  robotMoneyEntity: "rme",
+  commercialAgentInstance: "cmai",
+  commercialBillingAccount: "bill",
+  commercialStripeSubscription: "strsub",
+  commercialStripeEvent: "stevt",
+  usageAllowanceReservation: "uar",
+  commercialExecutionPeriod: "xper",
+  commercialExecutionReservation: "xrsv",
+  commercialExecutionAdjustment: "xadj",
+  commercialChargeFact: "chg",
+  x402PaymentOperation: "xpay",
+  commercialProviderCommand: "pcmd",
+  commercialShadowObservation: "cso",
+  commercialShadowPeriod: "csp",
+  commercialShadowTransition: "cst",
+  // OAuth 2.1 authorization server (Phase 2a increment 3, OAUTH-AS-PLAN.md
+  // section 4). oauth_clients.client_id is minted by scripts/ops/
+  // register-oauth-client.ts, not this file's generic prefix; the constant
+  // still lives here so both sides agree on the shape.
+  oauthClient: "oacl",
+  oauthConsentGrant: "ogr",
+} as const;
+
+export type BrainIdPrefix = (typeof ID_PREFIX)[keyof typeof ID_PREFIX];
+
+/** ULID character set (Crockford's Base32). */
+const ULID_ALPHABET_RE = /^[0-9A-HJKMNP-TV-Z]{26}$/;
+
+/** Generate a prefixed ULID, e.g. `brainId("tnt")` → `tnt_01HQ7K3...`. */
+export function brainId(prefix: BrainIdPrefix): string {
+  return `${prefix}_${ulid()}`;
+}
+
+/** Narrowed accessors for the common kinds. */
+export const newTenantId = (): string => brainId(ID_PREFIX.tenant);
+export const newUserId = (): string => brainId(ID_PREFIX.user);
+export const newAgentId = (): string => brainId(ID_PREFIX.agent);
+export const newApiPartnerId = (): string => brainId(ID_PREFIX.apiPartner);
+export const newTokenId = (): string => brainId(ID_PREFIX.token);
+export const newRequestId = (): string => brainId(ID_PREFIX.request);
+export const newAuditEventId = (): string => brainId(ID_PREFIX.audit);
+export const newProposalId = (): string => brainId(ID_PREFIX.proposal);
+export const newExecutionId = (): string => brainId(ID_PREFIX.execution);
+export const newPolicyId = (): string => brainId(ID_PREFIX.policy);
+export const newRawArtifactId = (): string => brainId(ID_PREFIX.rawArtifact);
+export const newRawParsedId = (): string => brainId(ID_PREFIX.rawParsed);
+export const newRawExtractionJobId = (): string => brainId(ID_PREFIX.rawExtractionJob);
+export const newWikiAnnotationId = (): string => brainId(ID_PREFIX.wikiAnnotation);
+export const newWikiEntityId = (): string => brainId(ID_PREFIX.wikiEntity);
+export const newWikiRelationId = (): string => brainId(ID_PREFIX.wikiRelation);
+export const newWikiPageId = (): string => brainId(ID_PREFIX.wikiPage);
+export const newSourceId = (): string => brainId(ID_PREFIX.source);
+export const newSourceSyncJobId = (): string => brainId(ID_PREFIX.sourceSyncJob);
+export const newSourceSyncPartitionId = (): string => brainId(ID_PREFIX.sourceSyncPartition);
+export const newAccountId = (): string => brainId(ID_PREFIX.ledgerAccount);
+export const newBalanceId = (): string => brainId(ID_PREFIX.ledgerBalance);
+export const newTransactionId = (): string => brainId(ID_PREFIX.ledgerTransaction);
+export const newCounterpartyId = (): string => brainId(ID_PREFIX.ledgerCounterparty);
+export const newObligationId = (): string => brainId(ID_PREFIX.ledgerObligation);
+export const newDocumentId = (): string => brainId(ID_PREFIX.ledgerDocument);
+export const newCategoryId = (): string => brainId(ID_PREFIX.ledgerCategory);
+export const newTransactionCategoryAssignmentId = (): string =>
+  brainId(ID_PREFIX.ledgerTransactionCategoryAssignment);
+export const newTransferId = (): string => brainId(ID_PREFIX.ledgerTransfer);
+export const newInvoiceId = (): string => brainId(ID_PREFIX.ledgerInvoice);
+export const newPaymentIntentId = (): string => brainId(ID_PREFIX.ledgerPaymentIntent);
+export const newReconciliationMatchId = (): string => brainId(ID_PREFIX.ledgerReconciliationMatch);
+export const newLedgerGlAccountId = (): string => brainId(ID_PREFIX.ledgerGlAccount);
+export const newCanonicalGlAccountId = (): string => brainId(ID_PREFIX.canonicalGlAccount);
+export const newCanonicalJournalEntryId = (): string => brainId(ID_PREFIX.canonicalJournalEntry);
+export const newCanonicalJournalLineId = (): string => brainId(ID_PREFIX.canonicalJournalLine);
+export const newCanonicalObligationId = (): string => brainId(ID_PREFIX.canonicalObligation);
+export const newCanonicalCounterpartyId = (): string => brainId(ID_PREFIX.canonicalCounterparty);
+export const newCanonicalAccountId = (): string => brainId(ID_PREFIX.canonicalAccount);
+export const newCanonicalTransactionId = (): string => brainId(ID_PREFIX.canonicalTransaction);
+export const newPolicyDecisionId = (): string => brainId(ID_PREFIX.policyDecision);
+export const newApprovalId = (): string => brainId(ID_PREFIX.approval);
+export const newWebhookEndpointId = (): string => brainId(ID_PREFIX.webhookEndpoint);
+export const newExecutionOutboxId = (): string => brainId(ID_PREFIX.executionOutbox);
+export const newLedgerReservationId = (): string => brainId(ID_PREFIX.ledgerReservation);
+export const newWebhookDeadLetterId = (): string => brainId(ID_PREFIX.webhookDeadLetter);
+export const newApiKeyId = (): string => brainId(ID_PREFIX.apiKey);
+export const newAgentApiKeyId = (): string => brainId(ID_PREFIX.agentApiKey);
+export const newApiRequestMeterEventId = (): string => brainId(ID_PREFIX.apiRequestMeterEvent);
+export const newApiUsageReconciliationRunId = (): string =>
+  brainId(ID_PREFIX.apiUsageReconciliationRun);
+export const newMcpToolMeterEventId = (): string => brainId(ID_PREFIX.mcpToolMeterEvent);
+export const newMcpUsageReconciliationRunId = (): string =>
+  brainId(ID_PREFIX.mcpUsageReconciliationRun);
+export const newApiBillingPeriodId = (): string => brainId(ID_PREFIX.apiBillingPeriod);
+export const newApiBillingAdjustmentId = (): string => brainId(ID_PREFIX.apiBillingAdjustment);
+export const newApiEntitlementChangeId = (): string => brainId(ID_PREFIX.apiEntitlementChange);
+export const newTenantGraduationRequestId = (): string =>
+  brainId(ID_PREFIX.tenantGraduationRequest);
+export const newTenantGraduationEvidenceId = (): string =>
+  brainId(ID_PREFIX.tenantGraduationEvidence);
+export const newTenantGraduationAssessmentId = (): string =>
+  brainId(ID_PREFIX.tenantGraduationAssessment);
+export const newTenantGraduationReviewId = (): string => brainId(ID_PREFIX.tenantGraduationReview);
+export const newTenantGraduationLineageId = (): string =>
+  brainId(ID_PREFIX.tenantGraduationLineage);
+export const newCommercialTierChangeId = (): string => brainId(ID_PREFIX.commercialTierChange);
+export const newRobotMoneyEntityId = (): string => brainId(ID_PREFIX.robotMoneyEntity);
+export const newCommercialAgentInstanceId = (): string =>
+  brainId(ID_PREFIX.commercialAgentInstance);
+export const newCommercialBillingAccountId = (): string =>
+  brainId(ID_PREFIX.commercialBillingAccount);
+export const newCommercialStripeSubscriptionId = (): string =>
+  brainId(ID_PREFIX.commercialStripeSubscription);
+export const newCommercialStripeEventId = (): string => brainId(ID_PREFIX.commercialStripeEvent);
+export const newUsageAllowanceReservationId = (): string =>
+  brainId(ID_PREFIX.usageAllowanceReservation);
+export const newCommercialExecutionPeriodId = (): string =>
+  brainId(ID_PREFIX.commercialExecutionPeriod);
+export const newCommercialExecutionReservationId = (): string =>
+  brainId(ID_PREFIX.commercialExecutionReservation);
+export const newCommercialExecutionAdjustmentId = (): string =>
+  brainId(ID_PREFIX.commercialExecutionAdjustment);
+export const newCommercialChargeFactId = (): string => brainId(ID_PREFIX.commercialChargeFact);
+export const newX402PaymentOperationId = (): string => brainId(ID_PREFIX.x402PaymentOperation);
+export const newCommercialProviderCommandId = (): string =>
+  brainId(ID_PREFIX.commercialProviderCommand);
+export const newCommercialShadowObservationId = (): string =>
+  brainId(ID_PREFIX.commercialShadowObservation);
+export const newCommercialShadowPeriodId = (): string => brainId(ID_PREFIX.commercialShadowPeriod);
+export const newCommercialShadowTransitionId = (): string =>
+  brainId(ID_PREFIX.commercialShadowTransition);
+export const newTenantExportJobId = (): string => brainId(ID_PREFIX.tenantExportJob);
+export const newTenantDeletionJobId = (): string => brainId(ID_PREFIX.tenantDeletionJob);
+export const newGovernanceReportSnapshotId = (): string =>
+  brainId(ID_PREFIX.governanceReportSnapshot);
+export const newOauthClientId = (): string => brainId(ID_PREFIX.oauthClient);
+export const newOauthConsentGrantId = (): string => brainId(ID_PREFIX.oauthConsentGrant);
+
+/**
+ * Parse a Brain ID into its prefix and ULID. Returns null on malformed input.
+ * Use when you need to assert an ID is of a given kind at a trust boundary
+ * (e.g., path-param that must be a tenant id).
+ */
+export function parseBrainId(id: string): { prefix: string; ulid: string } | null {
+  const idx = id.indexOf("_");
+  if (idx <= 0 || idx === id.length - 1) return null;
+  const prefix = id.slice(0, idx);
+  const ulidPart = id.slice(idx + 1);
+  if (!ULID_ALPHABET_RE.test(ulidPart)) return null;
+  return { prefix, ulid: ulidPart };
+}
+
+/** True iff `id` is a well-formed Brain ID with the given prefix. */
+export function isBrainId(id: string, prefix: BrainIdPrefix): boolean {
+  const parsed = parseBrainId(id);
+  return parsed !== null && parsed.prefix === prefix;
+}

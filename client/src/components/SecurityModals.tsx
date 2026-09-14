@@ -100,8 +100,8 @@ type Session = {
 
 const SESSIONS: Session[] = [
   { id: "s1", device: "Macbook Pro",   browser: "Chrome 124", location: "San Francisco, CA, US", ip: "172.58.12.4", when: "Active Now",         current: true },
-  { id: "s2", device: "iPhone 15 Pro", browser: "Brain iOS",  location: "San Francisco, CA, US", ip: "172.58.12.4", when: "2 hours ago" },
-  { id: "s3", device: "iPhone 15 Pro", browser: "Brain iOS",  location: "Lisbon, PT",            ip: "172.58.12.4", when: "Yesterday, 8:42 PM" },
+  { id: "s2", device: "iPhone 15 Pro", browser: "RobotMoney iOS",  location: "San Francisco, CA, US", ip: "172.58.12.4", when: "2 hours ago" },
+  { id: "s3", device: "iPhone 15 Pro", browser: "RobotMoney iOS",  location: "Lisbon, PT",            ip: "172.58.12.4", when: "Yesterday, 8:42 PM" },
 ];
 
 const Bullet = () => (
@@ -194,7 +194,7 @@ export function LoginHistoryModal({
           className="fixed left-1/2 top-1/2 z-50 w-[480px] -translate-x-1/2 -translate-y-1/2 bg-brain-v1baby-blue-5 rounded-modal border border-brain-v1stroke-2 overflow-hidden shadow-[0_24px_60px_rgba(0,0,0,0.6)] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] focus:outline-none data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
         >
           <Dialog.Description className="sr-only">
-            Devices and browsers that recently signed in to your Brain account.
+            Devices and browsers that recently signed in to your RobotMoney account.
           </Dialog.Description>
 
           {/* Title + Controls (Figma 4569:61429) */}
@@ -214,7 +214,7 @@ export function LoginHistoryModal({
           {/* Body - Figma 4569:61431 */}
           <div className="flex flex-col gap-[24px] items-start p-[24px] w-full">
             <p className="[font-family:'Gilroy',sans-serif] font-medium text-[16px] leading-[20px] text-brain-v1baby-blue-60 w-full">
-              Devices and browsers that recently signed in to your Brain account.
+              Devices and browsers that recently signed in to your RobotMoney account.
             </p>
 
             {/* List container - Figma 4569:61474.

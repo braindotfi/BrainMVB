@@ -4,7 +4,7 @@ import { useLocation, useRoute } from "wouter";
 import { useAuth } from "@/lib/authContext";
 import { SocialLinks } from "@/components/SocialLinks";
 import { queryClient } from "@/lib/queryClient";
-import brainLogo from "@assets/BrainLogo_1781769246241.png";
+import robotMoneyLogo from "@assets/robotmoney_1788696284094.png";
 import { Button } from "@/components/ui/button";
 
 /* Production tenancy (Phase 2). Shown when the logged-in user has a platform account but
@@ -38,7 +38,7 @@ function upstreamMessage(data: any, fallback: string): string {
   if (typeof data?.message === "string" && data.message) return data.message;
   const body = data?.body;
   const nested = body?.error?.message ?? body?.message ?? body?.reason ?? body?.error?.code;
-  if (typeof nested === "string" && nested) return `Brain core refused the request: ${nested}`;
+  if (typeof nested === "string" && nested) return `RobotMoney core refused the request: ${nested}`;
   return fallback;
 }
 
@@ -171,7 +171,7 @@ export function CompanySetupPage({ inviteOnly = false }: { inviteOnly?: boolean 
     <div className="relative w-full h-screen overflow-hidden bg-brain-v1headerfooterbg flex flex-col">
       <div className="pointer-events-none absolute -top-[160px] left-1/2 -translate-x-1/2 w-[640px] h-[420px] bg-brain-v1purple opacity-[0.18] blur-[120px] rounded-full" />
       <header className="flex items-center px-6 h-[50px] flex-shrink-0 z-10 relative">
-        <img src={brainLogo} alt="Brain Finance" className="h-[24px] w-auto object-contain mt-[13px]" />
+        <img src={robotMoneyLogo} alt="RobotMoney" className="h-[24px] w-auto object-contain mt-[13px]" />
       </header>
 
       <div className="flex-1 flex items-center justify-center z-10 relative px-4">
@@ -270,7 +270,7 @@ export function CompanySetupPage({ inviteOnly = false }: { inviteOnly?: boolean 
 
       <footer className="flex items-center justify-between px-6 h-14 flex-shrink-0 z-10 relative">
         <span className="[font-family:'Gilroy',sans-serif] text-brain-v1baby-blue-60 text-sm">
-          Copyright © 2026 Brain Finance. All rights reserved.
+          Copyright © 2026 RobotMoney Finance. All rights reserved.
         </span>
         <SocialLinks className="opacity-40" />
       </footer>

@@ -65,7 +65,7 @@ function agentDisplayName(item: MissingEvidenceItem): string {
     return `${upstreamName} Agent`;
   }
   const resolvedKey = keys.find((key) => (AGENT_DISPLAY_NAME as Record<string, string>)[key]);
-  return resolvedKey ? agentBadgeLabel(resolvedKey) : "Brain Agent";
+  return resolvedKey ? agentBadgeLabel(resolvedKey) : "RobotMoney Agent";
 }
 
 /* ── Routing ─────────────────────────────────────────────────────────────────
@@ -121,9 +121,9 @@ function buildWhyBlocked(item: MissingEvidenceItem): string {
   })();
 
   return (
-    `Brain attempted to ${actionPhrase} but stopped before reaching a decision ` +
+    `RobotMoney attempted to ${actionPhrase} but stopped before reaching a decision ` +
     `because it couldn't find ${fieldList}. ` +
-      `This run will not retry automatically. Once the missing information is in Brain, ` +
+      `This run will not retry automatically. Once the missing information is in RobotMoney, ` +
     `the next matching trigger will proceed normally.`
   );
 }
@@ -209,7 +209,7 @@ const StatusLine = () => (
       aria-hidden="true"
     />
     <p className="[font-family:'Gilroy',sans-serif] font-medium text-[13px] leading-[18px] text-brain-v1light-orange flex-1 min-w-px">
-       Brain stopped before producing a recommendation. No confidence score applies to a blocked run.
+       RobotMoney stopped before producing a recommendation. No confidence score applies to a blocked run.
     </p>
   </div>
 );
@@ -398,7 +398,7 @@ export function MissingEvidenceModal({
               {/* What Happens Next — honest: no auto-retry */}
               <CardSection title="What Happens Next" testId="section-missing-evidence-next">
                 <CardText testId="text-missing-evidence-next">
-                  Once the missing information is in Brain, the next matching event will
+                  Once the missing information is in RobotMoney, the next matching event will
                   trigger this agent normally. Blocked runs do not re-trigger on their
                   own. Resolving the data alone will not restart this run.
                 </CardText>

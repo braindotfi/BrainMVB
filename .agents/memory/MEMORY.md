@@ -69,6 +69,7 @@
 - [In-place settled detail](decisions-timeline-in-place-detail.md) — old Audit Log page is deleted; /audit-log is a query-preserving redirect to /inbox; render the popup locally + set returnToBase.
 - [Row-record type ramp & height](row-record-type-ramp.md) — Security table is the reference; 20+4+16 = a 40px stack, so leading is load-bearing; pin only the shortest row.
 - [Audit Log full history](audit-log-full-history.md) — full trail lives in Settings (Inbox stays decisions-only); measure a read cap pre-merge, and isError needs a path independent of length===0.
+- [One notifier surface](one-notifier-surface.md) — AppAlert is the only toast; a scaffolded white `useToast` twin in the same corner read as the designed one regressing.
 - [Shared callout component](callout-component.md) — all alert boxes + info glyphs go through Callout.tsx; find call sites by glyph/colour tokens, not page-by-page; amber meant two things.
 - [Icon from artwork](icon-from-artwork.md) — measure the reference PNG's pixel runs for stroke widths; eyeballing an upscaled bitmap lies, and canvas can't decode file:// images.
 - [Counterparty trust surface](counterparty-trust-surface.md) — trust routes live (brain-core PRs #397/#403, GIT deedc628); handlers in VendorsPanel only; popup receives props, never fetches; bulk-confirm for customers.
@@ -129,3 +130,6 @@
 - [Controlled Radix dialog focus](nested-radix-focus-restore.md) — no Trigger means no restore; fix in onCloseAutoFocus, deferred past a MutationObserver microtask; cover every close path.
 - [Figma frame translation](figma-frame-translation.md) — stroke is outside the frame (Tailwind is border-box, so gutters come up 2px short); global button capitalize retitles tenant data.
 - [Global button capitalize](global-button-capitalize.md) — a base-layer rule Title Cases every button's text; opt out with normal-case, never re-case upstream text from capitals alone.
+- [Display vs source currency](display-vs-source-currency.md) — useCurrency().format converts as if its input were USD; a record's own currency must render unconverted, off the decimal string.
+- [Reading one obligation](obligation-detail-reads.md) — no by-id route (list IS the lookup, so store the id); /resolved has 4 outcomes and only "landed" licenses a silent all-clear.
+- [Canonical public origin](canonical-public-origin.md) — all absolute URLs from one env-backed helper (read per call); a Google domain move also needs the exact URI registered in Cloud Console.

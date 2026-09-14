@@ -1,0 +1,502 @@
+/**
+ * Evidence providers for the agent router (plan A3 / audit R-26).
+ *
+ * Bridges the narrow `EvidenceProviders` interface (`@brain/agent-router`) to
+ * the real Ledger and Wiki services, so a routed agent's `required_evidence`
+ * can be satisfied from concrete Ledger rows + Wiki citations. With real
+ * evidence an agent can exceed the `notify_only` safe default once it reaches
+ * its `minimum_confidence`; without it the agent stays `notify_only`.
+ *
+ * Posture — CONTEXT-KEYED, never fabricated:
+ *   An evidence item is emitted only when the routing `context` references a
+ *   concrete object (`account_id`, `transaction_id`, `counterparty_id`,
+ *   `invoice_id`, `obligation_id`), or for a tenant-level fact the Ledger can
+ *   answer directly (`balance`). When the context carries no concrete
+ *   reference, no evidence is produced for that kind and the agent keeps the
+ *   safe default — identical behaviour to the previous empty gatherer, but now
+ *   liftable as richer domain events (carrying object ids) come online.
+ *
+ * Both providers are best-effort: a read error yields no evidence for that kind
+ * rather than failing the route. Reads are scoped to the kinds the routed agent
+ * actually requires, so an agent with no `required_evidence` triggers no reads.
+ */
+
+import type { ServiceCallContext } from "@brain/shared";
+import type {
+  ILedgerService,
+  IWikiMemoryService,
+  Balance,
+  Transaction,
+  Counterparty,
+  Invoice,
+  Obligation,
+  WikiPage,
+} from "@brain/shared";
+import type { Evidence } from "@brain/internal-agents";
+import type { EvidenceProviders, EvidenceQuery } from "@brain/agent-router";
+
+const SYSTEM_ACTOR = "system:agent-router";
+
+/** Required-evidence kinds the query declares (bare strings or weighted specs). */
+function requiredKinds(query: EvidenceQuery): Set<string> {
+  return new Set(query.requiredEvidence.map((r) => (typeof r === "string" ? r : r.kind)));
+}
+
+/** Read a string-valued context key, or undefined when absent / non-string. */
+function strContext(context: Record<string, unknown> | undefined, key: string): string | undefined {
+  const value = context?.[key];
+  return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+
+function numberContext(context: Record<string, unknown> | undefined, key: string): number | null {
+  const value = context?.[key];
+  const parsed =
+    typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function booleanContext(
+  context: Record<string, unknown> | undefined,
+  key: string,
+): boolean | undefined {
+  const value = context?.[key];
+  return typeof value === "boolean" ? value : undefined;
+}
+
+function ctxFor(tenantId: string): ServiceCallContext {
+  return { tenantId, actor: SYSTEM_ACTOR };
+}
+
+/**
+ * The evidence item's confidence is the Ledger row's persisted `confidence`
+ * (every entity carries it via LedgerCommonFields), clamped to [0, 1]. Using
+ * the persisted value -- rather than a hardcoded 1 -- keeps a low-confidence
+ * (e.g. uncorroborated, document-extracted) obligation from producing
+ * high-confidence routing evidence merely because the row exists (Codex P2).
+ * A non-finite value fails safe to 0, never 1.
+ */
+function evidenceConfidence(c: number): number {
+  return Number.isFinite(c) ? Math.max(0, Math.min(1, c)) : 0;
+}
+
+// ---------- typed EvidenceRef builders -------------------------------------
+
+function balanceEvidence(b: Balance): Evidence {
+  return {
+    kind: "balance",
+    ref: b.id,
+    source_system: "ledger",
+    object_type: "balance",
+    object_id: b.id,
+    confidence: evidenceConfidence(b.confidence),
+    timestamp: b.as_of,
+    excerpt: `${b.currency} current ${b.current_balance}`,
+  };
+}
+
+function transactionEvidence(t: Transaction): Evidence {
+  return {
+    kind: "transaction",
+    ref: t.id,
+    source_system: "ledger",
+    object_type: "transaction",
+    object_id: t.id,
+    confidence: evidenceConfidence(t.confidence),
+    timestamp: t.transaction_date,
+    excerpt: `${t.direction} ${t.currency} ${t.amount} ${t.status}`,
+  };
+}
+
+function counterpartyEvidence(c: Counterparty): Evidence {
+  return {
+    kind: "counterparty",
+    ref: c.id,
+    source_system: "ledger",
+    object_type: "counterparty",
+    object_id: c.id,
+    confidence: evidenceConfidence(c.confidence),
+    excerpt: `${c.name} (${c.type})${c.risk_level !== null ? ` risk=${c.risk_level}` : ""}`,
+  };
+}
+
+function vendorEvidence(c: Counterparty): Evidence {
+  return {
+    kind: "vendor",
+    ref: c.id,
+    source_system: "ledger",
+    object_type: "counterparty",
+    object_id: c.id,
+    confidence: evidenceConfidence(c.confidence),
+    excerpt: `${c.name} (${c.verified_status ?? "unverified"})`,
+  };
+}
+
+function paymentDestinationEvidence(context: Record<string, unknown> | undefined): Evidence | null {
+  const id =
+    strContext(context, "payment_destination_id") ??
+    strContext(context, "payment_instruction_id") ??
+    strContext(context, "payment_destination");
+  if (id === undefined) return null;
+  const timestamp = strContext(context, "payment_destination_changed_at");
+  return {
+    kind: "payment_destination",
+    ref: id,
+    source_system: "ledger",
+    object_type: "counterparty_payment_instruction",
+    object_id: id,
+    confidence: evidenceConfidence(numberContext(context, "payment_destination_confidence") ?? 1),
+    ...(timestamp !== undefined ? { timestamp } : {}),
+  };
+}
+
+function counterpartyHistoryEvidence(
+  context: Record<string, unknown> | undefined,
+): Evidence | null {
+  const id = strContext(context, "counterparty_history_id");
+  if (id === undefined) return null;
+  const timestamp = strContext(context, "counterparty_history_changed_at");
+  const riskFlag = booleanContext(context, "history_risk_flag");
+  const riskScore = numberContext(context, "history_risk_score");
+  return {
+    kind: "counterparty_history",
+    ref: id,
+    source_system: "ledger",
+    object_type: "counterparty_payment_instruction_history",
+    object_id: id,
+    confidence: evidenceConfidence(numberContext(context, "counterparty_history_confidence") ?? 1),
+    ...(timestamp !== undefined ? { timestamp } : {}),
+    ...(riskFlag !== undefined ? { risk_flag: riskFlag } : {}),
+    ...(riskScore !== null ? { risk_score: riskScore } : {}),
+  };
+}
+
+function invoiceEvidence(i: Invoice): Evidence {
+  return {
+    kind: "invoice",
+    ref: i.id,
+    source_system: "ledger",
+    object_type: "invoice",
+    object_id: i.id,
+    confidence: evidenceConfidence(i.confidence),
+    timestamp: i.issue_date,
+    excerpt: `${i.invoice_number} ${i.status} due ${i.currency} ${i.amount_due}`,
+  };
+}
+
+function obligationEvidence(o: Obligation): Evidence {
+  return {
+    kind: "obligation",
+    ref: o.id,
+    source_system: "ledger",
+    object_type: "obligation",
+    object_id: o.id,
+    confidence: evidenceConfidence(o.confidence),
+    timestamp: o.due_date,
+    excerpt: `${o.type} ${o.status} due ${o.currency} ${o.amount_due}`,
+  };
+}
+
+function contextEvidence(
+  context: Record<string, unknown> | undefined,
+  kind: "dispute" | "policy_decision" | "audit_event",
+  key: string,
+): Evidence | null {
+  const id = strContext(context, key);
+  if (id === undefined) return null;
+  const excerpt =
+    kind === "dispute"
+      ? strContext(context, "dispute_summary")
+      : kind === "policy_decision"
+        ? strContext(context, "policy_summary")
+        : strContext(context, "audit_summary");
+  return {
+    kind,
+    ref: id,
+    source_system: kind === "dispute" ? "ledger" : kind === "policy_decision" ? "policy" : "audit",
+    object_type: kind,
+    object_id: id,
+    confidence: evidenceConfidence(numberContext(context, `${kind}_confidence`) ?? 1),
+    ...(excerpt !== undefined ? { excerpt } : {}),
+  };
+}
+
+function wikiEvidence(page: WikiPage, score: number): Evidence {
+  return {
+    kind: "wiki",
+    ref: `wiki:${page.slug}`,
+    source_system: "wiki",
+    object_type: page.page_type,
+    object_id: page.subject_id ?? page.id,
+    confidence: Math.max(0, Math.min(1, score)),
+    timestamp: page.rendered_at,
+    excerpt: page.body_md.slice(0, 160),
+  };
+}
+
+// ---------- providers ------------------------------------------------------
+
+/**
+ * Ledger evidence provider. Resolves the required kinds it can serve from the
+ * routing context using the `ILedgerService` read surface.
+ */
+export function makeLedgerEvidenceProvider(
+  ledger: ILedgerService,
+): (query: EvidenceQuery) => Promise<readonly Evidence[]> {
+  return async (query: EvidenceQuery): Promise<readonly Evidence[]> => {
+    const ctx = ctxFor(query.tenantId);
+    const want = requiredKinds(query);
+    const context = query.context;
+    const out: Evidence[] = [];
+
+    const accountId = strContext(context, "account_id");
+    const balanceId = strContext(context, "balance_id");
+    const transactionId = strContext(context, "transaction_id");
+    const counterpartyId = strContext(context, "counterparty_id");
+    const invoiceId = strContext(context, "invoice_id");
+    const obligationId = strContext(context, "obligation_id");
+
+    // balance — a specific account's latest balance, else the tenant's
+    // most-recent balance row (a legitimate aggregate for cash/treasury agents).
+    if (want.has("balance")) {
+      try {
+        let balanceResolved = false;
+        if (balanceId !== undefined && balanceId !== accountId) {
+          const balances = await ledger.listBalances(ctx, {
+            ...(accountId !== undefined ? { account_id: accountId } : {}),
+          });
+          const referenced = balances.find((b) => b.id === balanceId);
+          if (referenced !== undefined) {
+            out.push(balanceEvidence(referenced));
+            balanceResolved = true;
+          }
+        }
+        if (!balanceResolved && accountId !== undefined) {
+          const res = await ledger.getAccount(ctx, accountId);
+          if (res !== null && res.latest_balance !== null) {
+            out.push(balanceEvidence(res.latest_balance));
+            balanceResolved = true;
+          } else if (res !== null && res.account.current_balance !== null) {
+            out.push({
+              kind: "balance",
+              ref: accountId,
+              source_system: "ledger",
+              object_type: "account",
+              object_id: res.account.id,
+              confidence: evidenceConfidence(res.account.confidence),
+              excerpt: `${res.account.currency} current ${res.account.current_balance}`,
+            });
+            balanceResolved = true;
+          }
+        }
+        if (!balanceResolved && balanceId !== undefined) {
+          const balances = await ledger.listBalances(ctx, {
+            ...(accountId !== undefined ? { account_id: accountId } : {}),
+          });
+          const referenced = balances.find((b) => b.id === balanceId);
+          if (referenced !== undefined) {
+            out.push(balanceEvidence(referenced));
+            balanceResolved = true;
+          }
+        }
+        if (!balanceResolved) {
+          const balances = await ledger.listBalances(ctx, {});
+          const latest = balances[0];
+          if (latest !== undefined) {
+            out.push(balanceEvidence(latest));
+            balanceResolved = true;
+          }
+        }
+        if (!balanceResolved && balanceId !== undefined) {
+          const account = await ledger.getAccount(ctx, balanceId);
+          if (account !== null && account.account.current_balance !== null) {
+            out.push({
+              kind: "balance",
+              ref: balanceId,
+              source_system: "ledger",
+              object_type: "account",
+              object_id: account.account.id,
+              confidence: evidenceConfidence(account.account.confidence),
+              excerpt: `${account.account.currency} current ${account.account.current_balance}`,
+            });
+          }
+        }
+      } catch {
+        // best-effort: a read failure must not fail the route.
+      }
+    }
+
+    // transaction — the referenced transaction, else the latest for a
+    // referenced counterparty (a relevant, not arbitrary, pick).
+    if (want.has("transaction")) {
+      try {
+        if (transactionId !== undefined) {
+          const tx = await ledger.getTransaction(ctx, transactionId);
+          if (tx !== null) {
+            out.push(transactionEvidence(tx));
+          }
+        } else if (counterpartyId !== undefined) {
+          const { items } = await ledger.listTransactions(ctx, {
+            counterparty_id: counterpartyId,
+            limit: 1,
+          });
+          const tx = items[0];
+          if (tx !== undefined) {
+            out.push(transactionEvidence(tx));
+          }
+        }
+      } catch {
+        // best-effort.
+      }
+    }
+
+    // counterparty — resolve the referenced counterparty (no point getter on
+    // the boundary, so match within a bounded list).
+    if (want.has("counterparty") && counterpartyId !== undefined) {
+      try {
+        const { items } = await ledger.listCounterparties(ctx, { limit: 200 });
+        const cp = items.find((c) => c.id === counterpartyId);
+        if (cp !== undefined) {
+          out.push(counterpartyEvidence(cp));
+        }
+      } catch {
+        // best-effort.
+      }
+    }
+
+    if (want.has("vendor") && counterpartyId !== undefined) {
+      try {
+        const { items } = await ledger.listCounterparties(ctx, { type: "vendor", limit: 200 });
+        const vendor = items.find((c) => c.id === counterpartyId);
+        if (vendor !== undefined) {
+          out.push(vendorEvidence(vendor));
+        }
+      } catch {
+        // best-effort.
+      }
+    }
+
+    if (want.has("payment_destination")) {
+      const item = paymentDestinationEvidence(context);
+      if (item !== null) {
+        out.push(item);
+      }
+    }
+
+    if (want.has("counterparty_history")) {
+      const item = counterpartyHistoryEvidence(context);
+      if (item !== null) {
+        out.push(item);
+      }
+    }
+
+    // invoice — by referenced counterparty (filtered list), matching invoice_id
+    // when present, else the most-recent invoice for that counterparty.
+    if (want.has("invoice") && (counterpartyId !== undefined || invoiceId !== undefined)) {
+      try {
+        const { items } = await ledger.listInvoices(ctx, {
+          ...(counterpartyId !== undefined ? { counterparty_id: counterpartyId } : {}),
+          limit: 25,
+        });
+        const inv = invoiceId !== undefined ? items.find((i) => i.id === invoiceId) : items[0];
+        if (inv !== undefined) {
+          out.push(invoiceEvidence(inv));
+        } else if (obligationId !== undefined) {
+          const obligations = await ledger.listObligations(ctx, { limit: 100 });
+          const obligation = obligations.items.find((o) => o.id === obligationId);
+          if (obligation !== undefined) {
+            out.push({
+              kind: "invoice",
+              ref: obligation.id,
+              source_system: "ledger",
+              object_type: "obligation",
+              object_id: obligation.id,
+              confidence: evidenceConfidence(obligation.confidence),
+              timestamp: obligation.due_date,
+              excerpt: `${obligation.type} ${obligation.status} due ${obligation.currency} ${obligation.amount_due}`,
+            });
+          }
+        }
+      } catch {
+        // best-effort.
+      }
+    }
+
+    // obligation — match the referenced obligation within a bounded list
+    // (the boundary exposes no point getter).
+    if (want.has("obligation") && obligationId !== undefined) {
+      try {
+        const { items } = await ledger.listObligations(ctx, { limit: 100 });
+        const ob = items.find((o) => o.id === obligationId);
+        if (ob !== undefined) {
+          out.push(obligationEvidence(ob));
+        }
+      } catch {
+        // best-effort.
+      }
+    }
+
+    if (want.has("dispute")) {
+      const item = contextEvidence(context, "dispute", "dispute_id");
+      if (item !== null) {
+        out.push(item);
+      }
+    }
+
+    if (want.has("policy_decision")) {
+      const item = contextEvidence(context, "policy_decision", "policy_decision_id");
+      if (item !== null) {
+        out.push(item);
+      }
+    }
+
+    if (want.has("audit_event")) {
+      const item = contextEvidence(context, "audit_event", "audit_event_id");
+      if (item !== null) {
+        out.push(item);
+      }
+    }
+
+    return out;
+  };
+}
+
+/**
+ * Wiki evidence provider. Emits narrative citations (kind "wiki") grounded in a
+ * text query derived from the routing context. No internal agent requires a
+ * "wiki" kind today, so these enrich the bundle for grounding/observability
+ * without changing required-evidence completeness — they are supplemental.
+ */
+export function makeWikiEvidenceProvider(
+  wiki: IWikiMemoryService,
+): (query: EvidenceQuery) => Promise<readonly Evidence[]> {
+  return async (query: EvidenceQuery): Promise<readonly Evidence[]> => {
+    const ctx = ctxFor(query.tenantId);
+    const context = query.context;
+    const q =
+      strContext(context, "query") ??
+      strContext(context, "question") ??
+      strContext(context, "description") ??
+      strContext(context, "counterparty_name");
+    if (q === undefined) {
+      return [];
+    }
+    try {
+      const hits = await wiki.search(ctx, q, 3);
+      return hits.map((h) => wikiEvidence(h.page, h.score));
+    } catch {
+      // best-effort: search failure yields no supplemental citations.
+      return [];
+    }
+  };
+}
+
+/** Build the combined Wiki + Ledger evidence providers for a ServiceEvidenceGatherer. */
+export function buildEvidenceProviders(deps: {
+  ledger: ILedgerService;
+  wiki: IWikiMemoryService;
+}): EvidenceProviders {
+  return {
+    ledger: makeLedgerEvidenceProvider(deps.ledger),
+    wiki: makeWikiEvidenceProvider(deps.wiki),
+  };
+}

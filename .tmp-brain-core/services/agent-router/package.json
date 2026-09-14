@@ -1,0 +1,36 @@
+{
+  "name": "@brain/agent-router",
+  "version": "0.0.5",
+  "private": true,
+  "description": "Multi-agent router. Selects an internal/external agent for an event or intent, scored by trigger, intent, evidence, reputation, and cost. Routes; never executes.",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "rm -rf dist *.tsbuildinfo",
+    "lint": "eslint src --max-warnings 0",
+    "lint:fix": "eslint src --fix",
+    "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "@types/pg": "^8.11.10",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.8",
+    "@vitest/coverage-v8": "^4.1.8",
+    "eslint": "^9.12.0",
+    "@brain/policy": "workspace:*"
+  },
+  "dependencies": {
+    "@brain/shared": "workspace:*",
+    "@brain/schemas": "workspace:*",
+    "@brain/internal-agents": "workspace:*",
+    "bullmq": "^6.0.5",
+    "fastify": "^5.11.0",
+    "pg": "^8.22.0"
+  }
+}

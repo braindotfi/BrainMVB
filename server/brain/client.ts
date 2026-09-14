@@ -608,7 +608,7 @@ export async function getApprovalPolicyFacts(token: string, tenantId: string): P
     policyLabel:
       policy.content?.seed_key === "northstar_labs_v1"
         ? "Northstar curated policy"
-        : "Brain protection policy",
+        : "RobotMoney protection policy",
   };
 }
 

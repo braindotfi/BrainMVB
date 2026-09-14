@@ -14,7 +14,7 @@
  * definition rather than a copy on each side.
  */
 
-import { unpaidApInvoices, type ApInvoiceLike } from "./liabilities";
+import { recordCurrency, unpaidApInvoices, type ApInvoiceLike } from "./liabilities";
 
 /** Day-resolution date. The two feeds carry the same instant at different precision. */
 export function isoDay(v: string | null | undefined): string {
@@ -30,17 +30,25 @@ export function absAmount(v: unknown): number {
 }
 
 /**
- * Identifies the DEBT a record describes: who is owed, how much, and when.
+ * Identifies the DEBT a record describes: who is owed, how much, in what, and when.
  *
  * Deliberately NOT the record id — the whole point is to recognise one debt across
  * two feeds that assign it different ids.
+ *
+ * The currency is part of the identity, not decoration on the amount. Without it a
+ * €100 payable and a $100 invoice to the same party on the same day are one debt:
+ * Cash Flow would collapse two real obligations into one row, and a Payables row
+ * would open the detail popup for an invoice the tenant does not owe. Normalized the
+ * way the rest of the ledger normalizes it, so a missing code still matches a "USD"
+ * one — the two feeds do not always state it.
  */
 export function debtKey(
   counterpartyId: string | null | undefined,
   amount: number,
   isoDate: string,
+  currency: string | null | undefined,
 ): string {
-  return `${counterpartyId ?? ""}|${amount.toFixed(2)}|${isoDate}`;
+  return `${counterpartyId ?? ""}|${amount.toFixed(2)}|${recordCurrency({ currency })}|${isoDate}`;
 }
 
 /** The obligation fields the match needs. Structural so both the raw and the
@@ -50,6 +58,8 @@ export interface DebtObligationLike {
   counterparty_id?: string | null;
   amount_due?: string | number | null;
   due_date?: string | null;
+  /** Part of the debt's identity — an amount alone does not name what is owed. */
+  currency?: string | null;
 }
 
 export interface DebtInvoiceLike extends ApInvoiceLike {
@@ -80,7 +90,7 @@ export function matchObligationsToInvoices<I extends DebtInvoiceLike>(
   const unclaimed = new Map<string, I[]>();
   for (const inv of unpaidApInvoices(invoices)) {
     if (!inv?.id) continue;
-    const key = debtKey(inv.counterparty_id, absAmount(inv.amount_due), isoDay(inv.due_date));
+    const key = debtKey(inv.counterparty_id, absAmount(inv.amount_due), isoDay(inv.due_date), inv.currency);
     const bucket = unclaimed.get(key);
     if (bucket) bucket.push(inv);
     else unclaimed.set(key, [inv]);
@@ -89,7 +99,7 @@ export function matchObligationsToInvoices<I extends DebtInvoiceLike>(
   const matched = new Map<string, I>();
   for (const o of obligations ?? []) {
     if (!o?.id) continue;
-    const key = debtKey(o.counterparty_id, absAmount(o.amount_due), isoDay(o.due_date));
+    const key = debtKey(o.counterparty_id, absAmount(o.amount_due), isoDay(o.due_date), o.currency);
     const bucket = unclaimed.get(key);
     const inv = bucket?.shift();
     if (inv) matched.set(o.id, inv);

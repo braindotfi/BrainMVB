@@ -2,6 +2,7 @@ import { describe, it, expect, afterEach } from "vitest";
 import {
   labelForKind,
   daysOverdue,
+  dueFacts,
   resolveEvidenceItem,
   enrichProposal,
   enrichProposals,
@@ -61,6 +62,35 @@ describe("daysOverdue", () => {
     expect(daysOverdue(null, now)).toBeNull();
     expect(daysOverdue("not-a-date", now)).toBeNull();
   });
+
+  it("reads both sides as calendar DAYS, so the server's time of day cannot move it", () => {
+    /* Core also hands back timestamped due dates ("2026-07-17 09:00:00+00").
+       Subtracting the two instants and flooring made the answer depend on how
+       far into the day the request happened to arrive — 12 before 09:00 UTC and
+       13 after, with no data change behind it. */
+    for (const at of ["2026-07-30T00:00:01Z", "2026-07-30T08:59:59Z", "2026-07-30T23:59:59Z"]) {
+      expect(daysOverdue("2026-07-17T09:00:00Z", new Date(at)), at).toBe(13);
+    }
+  });
+});
+
+describe("dueFacts", () => {
+  /* The count here is taken against the SERVER's clock, which is not the
+     reader's. It is the fallback for a client that cannot recount it, so it must
+     say which clock it is counted against — see the clock note in the module. */
+  it("names the clock its overdue count was taken against", () => {
+    const facts = dueFacts("2026-07-17", new Date("2026-07-30T12:00:00Z"));
+    expect(facts.find((f) => f.label === "Overdue by")?.value).toBe("13 days (UTC)");
+  });
+
+  it("still emits the due date itself, and no overdue row for a record not yet past due", () => {
+    const facts = dueFacts("2026-08-10", new Date("2026-07-30T12:00:00Z"));
+    expect(facts.map((f) => f.label)).toEqual(["Due"]);
+  });
+
+  it("emits nothing at all for a record with no due date", () => {
+    expect(dueFacts(null, new Date("2026-07-30T12:00:00Z"))).toEqual([]);
+  });
 });
 
 describe("resolveEvidenceItem", () => {
@@ -105,6 +135,28 @@ describe("resolveEvidenceItem", () => {
   it("survives a malformed evidence triple", () => {
     const out = resolveEvidenceItem({} as Record<string, unknown>, index);
     expect(out).toMatchObject({ kind: "", ref: "", display: null, facts: [] });
+  });
+
+  it("carries the record's RAW due date, so the browser can recount it locally", () => {
+    // The "Overdue by" fact above is a UTC count; only the raw date lets the
+    // client recount it against the reader's own calendar day.
+    const dated: EntityIndex = new Map([
+      [
+        "inv_dated",
+        {
+          label: "Invoice",
+          display: "Invoice #INV-2001",
+          code: "INV-2001",
+          amount: null,
+          facts: [{ label: "Overdue by", value: "45 days (UTC)" }],
+          due_date: "2026-07-17",
+        },
+      ],
+    ]);
+    expect(resolveEvidenceItem({ kind: "invoice", ref: "inv_dated" }, dated).due_date).toBe("2026-07-17");
+    // A record with no due date says so explicitly rather than omitting the field.
+    expect(resolveEvidenceItem({ kind: "invoice", ref: "inv_ghost" }, dated).due_date).toBeNull();
+    expect(resolveEvidenceItem({ kind: "counterparty", ref: "cp_01KYSF0QJ0N18YGNS4JR9EZPHM" }, index).due_date).toBeNull();
   });
 });
 

@@ -1,0 +1,115 @@
+name: ops-cleanup-agent-proposal-subject-duplicates
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "report is read-only. apply supersedes older duplicate pending agent proposals."
+        required: true
+        type: choice
+        options: [report, apply]
+        default: report
+      confirmation:
+        description: "Required for apply: SUPERSEDE_DUPLICATE_AGENT_PROPOSAL_SUBJECT_DUPLICATES"
+        required: false
+        type: string
+        default: ""
+      tenant_id:
+        description: "Production tenant whose duplicate subjects may be reported or superseded"
+        required: true
+        type: string
+      agent_id:
+        description: "Agent subject namespace to report or supersede"
+        required: true
+        type: choice
+        options: [reconciliation, vendor_risk, subscription, fraud_anomaly, compliance]
+        default: reconciliation
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup:
+    name: report or supersede duplicate agent subject proposals
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    concurrency:
+      group: production-agent-proposal-subject-cleanup
+      cancel-in-progress: false
+    env:
+      VM_HOST: ${{ secrets.VM_HOST }}
+      VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
+      MODE: ${{ inputs.mode }}
+      CONFIRMATION: ${{ inputs.confirmation }}
+      TENANT_ID: ${{ inputs.tenant_id }}
+      AGENT_ID: ${{ inputs.agent_id }}
+      VM_ENV_FILE: .env.prod
+      API_BASE: https://api.brain.fi
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Validate fixed cleanup mode
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$MODE" != "report" && "$MODE" != "apply" ]]; then
+            echo "mode must be report or apply"
+            exit 1
+          fi
+          if [[ "$MODE" == "apply" && "$CONFIRMATION" != "SUPERSEDE_DUPLICATE_AGENT_PROPOSAL_SUBJECT_DUPLICATES" ]]; then
+            echo "apply requires confirmation=SUPERSEDE_DUPLICATE_AGENT_PROPOSAL_SUBJECT_DUPLICATES"
+            exit 1
+          fi
+          if [[ ! "$TENANT_ID" =~ ^tnt_[0-9A-HJKMNP-TV-Z]{26}$ ]]; then
+            echo "tenant_id must match ^tnt_[0-9A-HJKMNP-TV-Z]{26}$"
+            exit 1
+          fi
+          case "$AGENT_ID" in
+            reconciliation|vendor_risk|subscription|fraud_anomaly|compliance) ;;
+            *) echo "unsupported agent_id"; exit 1 ;;
+          esac
+          [[ "$VM_ENV_FILE" == ".env.prod" ]]
+          [[ "$API_BASE" == "https://api.brain.fi" ]]
+
+      - name: Configure SSH
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          echo "$VM_SSH_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -H "$VM_HOST" >> ~/.ssh/known_hosts
+
+      - name: Run fixed cleanup through the production API image
+        shell: bash
+        run: |
+          set -euo pipefail
+          script="scripts/ops/cleanup-agent-proposal-subject-duplicates.mjs"
+          scp -i ~/.ssh/id_deploy \
+            "$script" \
+            scripts/ops/assert-true-production.sh \
+            "azureuser@$VM_HOST:~/brain-core/scripts/ops/"
+          ssh -i ~/.ssh/id_deploy -o ServerAliveInterval=30 "azureuser@$VM_HOST" \
+            "MODE='$MODE' TENANT_ID='$TENANT_ID' AGENT_ID='$AGENT_ID' VM_ENV_FILE='$VM_ENV_FILE' API_BASE='$API_BASE' bash -s" <<'REMOTE'
+          set -euo pipefail
+          [[ "$VM_ENV_FILE" == ".env.prod" ]]
+          [[ "$API_BASE" == "https://api.brain.fi" ]]
+          [[ "$TENANT_ID" =~ ^tnt_[0-9A-HJKMNP-TV-Z]{26}$ ]]
+          case "$AGENT_ID" in
+            reconciliation|vendor_risk|subscription|fraud_anomaly|compliance) ;;
+            *) echo "unsupported agent_id"; exit 1 ;;
+          esac
+          cd ~/brain-core
+          chmod 700 scripts/ops/assert-true-production.sh
+          VM_ENV_FILE="$VM_ENV_FILE" API_BASE="$API_BASE" \
+            bash scripts/ops/assert-true-production.sh
+          args=(--tenant-id "$TENANT_ID" --agent-id "$AGENT_ID")
+          if [[ "$MODE" == "apply" ]]; then
+            args+=(--apply)
+          fi
+          docker compose -p brain-prod --env-file .env.prod -f docker-compose.prod.yml -f docker-compose.caddy.yml \
+            run --rm --no-deps \
+            -v ~/brain-core/scripts/ops/cleanup-agent-proposal-subject-duplicates.mjs:/app/services/api/ops-cleanup-agent-proposal-subject-duplicates.mjs:ro \
+            api node services/api/ops-cleanup-agent-proposal-subject-duplicates.mjs "${args[@]}"
+          REMOTE

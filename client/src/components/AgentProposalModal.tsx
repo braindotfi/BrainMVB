@@ -95,7 +95,6 @@ import { capitalCase } from "@/lib/displayLabels";
 export type { AgentModalEditPayload };
 
 
-
 /* ── LIVE mode: brain-core /v1/proposals (BrainProposal, client/src/lib/brainProposals.ts) ──
    This file used to also carry a static modal for the fabricated 11-agent
    AgentProposal shape (agentProposals.ts). Nothing rendered it, and it kept
@@ -330,7 +329,7 @@ export function LiveProposalModal({
         const message =
           (body?.body?.error?.message as string | undefined) ??
           (body?.message as string | undefined) ??
-          "Brain core rejected this action.";
+          "RobotMoney rejected this action.";
         const ref = typeof body?.bff_request_id === "string" ? body.bff_request_id : null;
         alert.error("Action failed", ref ? `${message}\n\nRef: ${ref}` : message);
         return;
@@ -339,7 +338,7 @@ export function LiveProposalModal({
       closeEvidenceRecord();
       alert.success(successTitle, successText);
     } catch {
-      alert.error("Action failed", "Couldn't reach Brain core. Nothing was changed.");
+      alert.error("Action failed", "Couldn't reach RobotMoney. Nothing was changed.");
     } finally {
       setTrustBusy(false);
     }
@@ -397,14 +396,14 @@ export function LiveProposalModal({
         credentials: "include",
       });
       if (!res.ok && res.status !== 404) {
-        alert.error("Action failed", "Brain rejected the request. The counterparty was not removed.");
+        alert.error("Action failed", "RobotMoney rejected the request. The counterparty was not removed.");
         return;
       }
       await queryClient.invalidateQueries({ queryKey: ["/api/brain/ledger/counterparties"] });
       closeEvidenceRecord();
       alert.success("Counterparty Successfully Deleted", `${vendorName} has been successfully deleted and removed.`);
     } catch {
-      alert.error("Action failed", "Couldn't reach Brain core. Nothing was changed.");
+      alert.error("Action failed", "Couldn't reach RobotMoney. Nothing was changed.");
     } finally {
       setTrustBusy(false);
     }
@@ -537,7 +536,7 @@ export function LiveProposalModal({
             <CardBody>
               {!isKnownAgent && (
                 <InfoBox testId="callout-live-proposal-unrecognized-agent">
-                  Brain sent the unrecognized proposal type “{proposal.type}”. It is not configured in
+                  RobotMoney sent the unrecognized proposal type “{proposal.type}”. It is not configured in
                   BrainMVB’s supported agent catalog, but its source data is shown here safely.
                 </InfoBox>
               )}
@@ -546,7 +545,7 @@ export function LiveProposalModal({
                   recorded (policy trace / ranked signals), never client-authored
                   copy; a record that recorded none drops the section. */}
               {whySuggested.length > 0 && (
-                <CardSection title="Why Brain Suggested This">
+                <CardSection title="Why RobotMoney Suggested This">
                   <ReasonList reasons={whySuggested} testId="list-live-proposal-why-suggested" />
                 </CardSection>
               )}
@@ -666,7 +665,7 @@ export function LiveProposalModal({
                     </p>
                   </div>
                   <InfoBox testId="box-live-proposal-message-note">
-                    Draft for review, composed from this proposal's facts. Brain generates the
+                    Draft for review, composed from this proposal's facts. RobotMoney generates the
                     final wording when the message is sent.
                   </InfoBox>
                 </CardSection>
@@ -792,6 +791,8 @@ export function LiveProposalModal({
             trustBusy={trustBusy}
           />
           <BillDetailPopup
+            /* The proposal already quotes its amounts in the record's currency. */
+            amountBasis="source"
             bill={openInvoice}
             vendorName={
               vendors.find((vendor) => vendor.id === openInvoice?.counterparty_id)?.name ??

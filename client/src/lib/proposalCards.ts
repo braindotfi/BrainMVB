@@ -11,6 +11,8 @@
  * a sparse card.
  */
 
+import { calendarDaysToDue } from "./dueDates";
+import { normalizeProductIdentity } from "./runtimeBranding";
 import type {
   ProposalEvidenceItem,
   ProposalAmount,
@@ -55,6 +57,64 @@ const ROW_ICONS: Record<string, string> = {
 
 export function iconKeyForRow(label: string): string {
   return ROW_ICONS[label] ?? "dot";
+}
+
+/* ── "Overdue by", counted on the reader's clock ──────────────────────────────
+ *
+ * The BFF cannot know the reader's timezone, so the "Overdue by" fact it ships
+ * is counted in UTC and labelled as such ("45 days (UTC)" — see the clock note
+ * in server/brain/proposalEnrichment.ts). A record's own detail popup counts the
+ * same date against the reader's LOCAL calendar day (lib/dueDates.ts), so left
+ * alone the two surfaces print different numbers for one invoice.
+ *
+ * This is where they are reconciled. The BFF also ships the raw `due_date`, so
+ * whenever it is present the fact is RECOUNTED here through the same shared
+ * helper the popups use, and the UTC row is replaced. Three cases, all of which
+ * the popup would render the same way:
+ *   - overdue locally  → the local count, with no clock qualifier;
+ *   - not overdue locally (the reader's day is behind the server's) → no row at
+ *     all, matching a popup that says "due today" / "due in N days";
+ *   - overdue locally but NOT in UTC (the reader's day is ahead) → the row is
+ *     added, because the server had nothing to send.
+ * With no `due_date` there is nothing to recount, so the server's UTC row is
+ * left exactly as it arrived — qualifier included, which is what makes that
+ * fallback honest rather than silently off by a day.
+ */
+
+const OVERDUE_LABEL = "Overdue by";
+const DUE_LABEL = "Due";
+
+export function localizeDueFacts(
+  facts: { label: string; value: string }[] | null | undefined,
+  dueDate: string | null | undefined,
+  now: Date = new Date(),
+): { label: string; value: string }[] {
+  const rows = facts ?? [];
+  const dd = calendarDaysToDue(dueDate, now);
+  if (dd === null) return rows;
+
+  const local = dd < 0 ? { label: OVERDUE_LABEL, value: `${-dd} day${dd === -1 ? "" : "s"}` } : null;
+  const out: { label: string; value: string }[] = [];
+  let placed = false;
+  for (const row of rows) {
+    if (row?.label === OVERDUE_LABEL) {
+      // Replace the server's count in the position it already occupied.
+      if (local && !placed) {
+        out.push(local);
+        placed = true;
+      }
+      continue;
+    }
+    out.push(row);
+    // No server row to replace: keep the reading order the server established,
+    // where the count follows the date it was counted from.
+    if (local && !placed && row?.label === DUE_LABEL) {
+      out.push(local);
+      placed = true;
+    }
+  }
+  if (local && !placed) out.push(local);
+  return out;
 }
 
 export interface ProposalDetailRow {
@@ -183,6 +243,9 @@ export function buildProposalDetailRows(
   subjectName: string | null,
   formatMoney: (amount: ProposalAmount) => string,
   headlineCode?: string | null,
+  /** Injectable "now" — the day counts below are taken against the reader's
+   *  local calendar day, so a test must be able to fix it. */
+  now: Date = new Date(),
 ): ProposalDetailRow[] {
   const rows: ProposalDetailRow[] = [];
   const push = (label: string, value: string, mono = false) => {
@@ -194,7 +257,7 @@ export function buildProposalDetailRows(
   for (const e of evidence) {
     if (e.context) continue;
     if (e.amount) push("Amount", formatMoney(e.amount), true);
-    for (const f of e.facts ?? []) push(f.label, f.value);
+    for (const f of localizeDueFacts(e.facts, e.due_date, now)) push(f.label, f.value);
     // The headline already names this document; repeating it as a row wastes
     // one of only four slots.
     if (e.display && e.display !== subjectName && !(headlineCode && e.code === headlineCode)) {
@@ -948,7 +1011,7 @@ export function buildWhySuggested(
       if (typeof check.detail === "string" && check.detail.trim()) {
         push(check.detail, verdict);
       } else if (typeof check.key === "string" && check.key.trim()) {
-        push(humanizeEnumValue(check.key), verdict);
+        push(normalizeProductIdentity(humanizeEnumValue(check.key)), verdict);
       }
     }
   }
@@ -973,7 +1036,7 @@ export function buildWhySuggested(
         const name = [s.label, s.name, s.signal, s.key].find(
           (v): v is string => typeof v === "string" && v.trim() !== "",
         );
-        if (name) push(humanizeEnumValue(name), null);
+        if (name) push(normalizeProductIdentity(humanizeEnumValue(name)), null);
       }
     }
   }
@@ -1027,6 +1090,13 @@ export interface EvidenceTile {
   kind: string;
   ref: string;
   facts: { label: string; value: string }[];
+  /**
+   * Why this is a bare evidence tile rather than the record itself — set only when
+   * the lookup could not be performed (a read still in flight, or one that failed or
+   * stopped short of the last page). Absent means the lookup DID happen and came back
+   * negative, which is a different statement and must not read the same.
+   */
+  note?: string;
 }
 
 /**
@@ -1039,7 +1109,11 @@ export interface EvidenceTile {
  *    thing we could show is the raw id the primary view must not contain
  *    (`pd_`/`evt_` refs are `resolvable: false` upstream and never resolve).
  */
-export function buildEvidenceTiles(evidence: ProposalEvidenceItem[] | null | undefined): EvidenceTile[] {
+export function buildEvidenceTiles(
+  evidence: ProposalEvidenceItem[] | null | undefined,
+  /** Injectable "now" for the local-day recount of the "Overdue by" fact. */
+  now: Date = new Date(),
+): EvidenceTile[] {
   const tiles: EvidenceTile[] = [];
   const seen = new Set<string>();
   for (const e of evidence ?? []) {
@@ -1055,7 +1129,9 @@ export function buildEvidenceTiles(evidence: ProposalEvidenceItem[] | null | und
       display,
       kind: e.kind,
       ref: e.ref,
-      facts: (e.facts ?? []).filter((f) => f?.label && f?.value),
+      // Same recount as the detail rows: a tile and the record's own popup must
+      // not print two different ages for one date.
+      facts: localizeDueFacts(e.facts, e.due_date, now).filter((f) => f?.label && f?.value),
     });
   }
   return tiles;

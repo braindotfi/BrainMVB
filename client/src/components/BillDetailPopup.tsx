@@ -10,11 +10,12 @@ import {
   SectionLabel,
   LinkedEvidenceRow,
   fmtDue,
-  daysToDue,
-  dueChip,
 } from "@/components/detailPopup";
-import { Button } from "@/components/ui/button";
+import { calendarDaysToDue, dueChip } from "@/lib/dueDates";
+import { pilledAmountLabel, sourceAmountLabel } from "@/lib/obligationRows";
+import { recordCurrency } from "@/lib/liabilities";
 import { useCurrency } from "@/lib/useCurrency";
+import { Button } from "@/components/ui/button";
 import { useIntents } from "@/lib/intentsStore";
 import { toBrainInvoiceDocument } from "@/lib/brainInvoiceDocument";
 import arrowIcon from "@assets/arrow_1783201262245.png";
@@ -59,6 +60,7 @@ function humanizeFlag(flag: string): string {
 export function BillDetailPopup({
   bill,
   vendorName,
+  amountBasis,
   bills,
   onClose,
   onSelectBill,
@@ -66,6 +68,23 @@ export function BillDetailPopup({
 }: {
   bill: BrainInvoiceDTO | null;
   vendorName: string;
+  /**
+   * How this popup quotes the invoice's amount. Required, with no default, because
+   * the honest answer depends on the LIST the popup was opened from.
+   *
+   * - `"source"` — the invoice's own currency, unconverted. What an invoice is: a
+   *   figure the supplier could read and disagree with. Correct everywhere.
+   * - `"display"` — run through the display-currency converter, which assumes its
+   *   input is USD. Wrong about the invoice, but it matches a row that is still
+   *   converting, and a popup contradicting the row that opened it is the worse of
+   *   the two faults. A migration marker, not a choice: it exists so the surfaces
+   *   whose rows still convert stay internally consistent until their rows quote
+   *   the record too, and it should disappear with them.
+   *
+   * Every caller states it, so the remaining conversions are greppable rather than
+   * inherited from a default.
+   */
+  amountBasis: "source" | "display";
   bills?: BrainInvoiceDTO[];
   onClose: () => void;
   onSelectBill?: (bill: BrainInvoiceDTO) => void;
@@ -73,6 +92,19 @@ export function BillDetailPopup({
 }) {
   const { format } = useCurrency();
   const { intents } = useIntents();
+  /* One decision, two renderings of the same figure: the header, where the code sits
+     in its own pill, and the Amount row, where it is spelled out. */
+  /* Normalized, not read raw. The invoice feed does not state the code on every
+     record, and a bill that omits it is a USD bill here — the same default the join
+     to the obligation applies. Reading it raw gave this popup a blank currency pill
+     and a bare "100.00" under a row quoting "$100.00" for the same debt. */
+  const currency = bill ? recordCurrency(bill) : null;
+  const amountText = (withCode: boolean): string =>
+    amountBasis === "display"
+      ? format(Number(bill?.amount_due ?? 0))
+      : withCode
+        ? sourceAmountLabel(bill?.amount_due ?? null, currency)
+        : pilledAmountLabel(bill?.amount_due ?? null, currency);
   const [, navigate] = useLocation();
   const [viewingDoc, setViewingDoc] = useState(false);
 
@@ -80,7 +112,7 @@ export function BillDetailPopup({
   const flags = bill?.metadata?.flags ?? [];
   const isFlagged = flags.length > 0;
   const intent = bill ? intents.find((i) => i.invoiceId === bill.id) : undefined;
-  const dd = daysToDue(bill?.due_date);
+  const dd = calendarDaysToDue(bill?.due_date);
   const overdue = dd != null && dd < 0;
 
   const list = bills ?? [];
@@ -105,8 +137,14 @@ export function BillDetailPopup({
             <DetailPopupHeader
               name={vendorName}
               chip={statusChip}
-              amount={format(Number(bill.amount_due))}
-              currency={bill.currency}
+              /* On `source`: the invoice's OWN amount, unconverted. `format`
+                 converts as if its input were dollars, which turned an 8,894.63 EUR
+                 bill into a different number sitting next to a "EUR" pill — and made
+                 this popup disagree with the Payables row that opened it. The pill
+                 carries the code, so the figure itself omits it. */
+              amount={amountText(false)}
+              currency={currency ?? ""}
+              currencyTestId="text-bill-currency"
               nameTestId="text-bill-vendor"
               chipTestId="bill-due-chip"
               amountTestId="text-bill-amount"
@@ -119,7 +157,9 @@ export function BillDetailPopup({
                 <DetailTable>
                   <Row label="Invoice" value={bill.invoice_number} />
                   {bill.metadata?.po && <Row label="PO" value={bill.metadata.po} />}
-                  <Row label="Amount" value={format(Number(bill.amount_due))} />
+                  {/* Read rather than scanned, so the code is spelled out here even
+                      though the header states it. */}
+                  <Row label="Amount" value={amountText(true)} />
                   <Row label="Due" value={fmtDue(bill.due_date)} />
                   <Row label="Source" value={bill.id} />
                 </DetailTable>
@@ -157,8 +197,8 @@ export function BillDetailPopup({
                   <div className="flex flex-col gap-[10px] items-start w-full">
                     <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[16px] w-full">
                       {isFlagged
-                        ? "Brain proposed this, but flagged it for review. Nothing moves until you approve."
-                        : "Brain has proposed this payment. Nothing moves until you approve it."}
+                        ? "RobotMoney proposed this, but flagged it for review. Nothing moves until you approve."
+                        : "RobotMoney has proposed this payment. Nothing moves until you approve it."}
                     </p>
                     <button
                       type="button"
@@ -180,7 +220,7 @@ export function BillDetailPopup({
                       ? "This hasn't been proposed yet. The flags above need a human look first. You'll approve before any money moves."
                       : overdue
                       ? "This is past due and hasn't been proposed yet. You'll approve before any money moves."
-                      : "Brain hasn't proposed this yet. When it does, you'll approve before any money moves."}
+                      : "RobotMoney hasn't proposed this yet. When it does, you'll approve before any money moves."}
                   </p>
                 )}
               </div>

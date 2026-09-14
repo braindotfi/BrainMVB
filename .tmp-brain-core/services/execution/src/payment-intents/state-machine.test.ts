@@ -1,0 +1,119 @@
+import { describe, expect, it } from "vitest";
+import fc from "fast-check";
+import {
+  assertPaymentIntentTransition,
+  isValidPaymentIntentTransition,
+  type PaymentIntentState,
+} from "./state-machine.js";
+
+const ALL: PaymentIntentState[] = [
+  "proposed",
+  "pending_approval",
+  "awaiting_second_approval",
+  "approved",
+  "paused",
+  "dispatching",
+  "rejected",
+  "executed",
+  "failed",
+  "cancelled",
+];
+
+describe("§9.5 PaymentIntent state machine", () => {
+  it("proposed → pending_approval | approved | rejected | cancelled", () => {
+    expect(isValidPaymentIntentTransition("proposed", "pending_approval")).toBe(true);
+    expect(isValidPaymentIntentTransition("proposed", "approved")).toBe(true);
+    expect(isValidPaymentIntentTransition("proposed", "rejected")).toBe(true);
+    expect(isValidPaymentIntentTransition("proposed", "cancelled")).toBe(true);
+    expect(isValidPaymentIntentTransition("proposed", "executed")).toBe(false);
+    expect(isValidPaymentIntentTransition("proposed", "failed")).toBe(false);
+  });
+
+  it("pending_approval → awaiting_second_approval | approved | rejected | cancelled (BRAIN-95)", () => {
+    expect(isValidPaymentIntentTransition("pending_approval", "awaiting_second_approval")).toBe(
+      true,
+    );
+    expect(isValidPaymentIntentTransition("pending_approval", "approved")).toBe(true);
+    expect(isValidPaymentIntentTransition("pending_approval", "rejected")).toBe(true);
+    // BRAIN-95: pending_approval carries no recorded approval signature yet,
+    // so cancel is reachable here too, matching the MCP tool CANCELLABLE_STATUSES
+    // set that already documented (but the service previously rejected) this.
+    expect(isValidPaymentIntentTransition("pending_approval", "cancelled")).toBe(true);
+    expect(isValidPaymentIntentTransition("pending_approval", "executed")).toBe(false);
+  });
+
+  it("awaiting_second_approval → approved | rejected only", () => {
+    expect(isValidPaymentIntentTransition("awaiting_second_approval", "approved")).toBe(true);
+    expect(isValidPaymentIntentTransition("awaiting_second_approval", "rejected")).toBe(true);
+    expect(isValidPaymentIntentTransition("awaiting_second_approval", "executed")).toBe(false);
+    expect(isValidPaymentIntentTransition("awaiting_second_approval", "cancelled")).toBe(false);
+  });
+
+  it("approved → dispatching | rejected | failed | paused (H-04: no direct executed)", () => {
+    expect(isValidPaymentIntentTransition("approved", "dispatching")).toBe(true);
+    expect(isValidPaymentIntentTransition("approved", "rejected")).toBe(true);
+    expect(isValidPaymentIntentTransition("approved", "failed")).toBe(true);
+    expect(isValidPaymentIntentTransition("approved", "paused")).toBe(true);
+    // H-04: execute hands off to the outbox; the direct approved → executed
+    // edge is gone so the only path to executed is via dispatching.
+    expect(isValidPaymentIntentTransition("approved", "executed")).toBe(false);
+    expect(isValidPaymentIntentTransition("approved", "cancelled")).toBe(false);
+  });
+
+  it("dispatching → executed | failed only (H-04: outbox worker settles)", () => {
+    expect(isValidPaymentIntentTransition("dispatching", "executed")).toBe(true);
+    expect(isValidPaymentIntentTransition("dispatching", "failed")).toBe(true);
+    expect(isValidPaymentIntentTransition("dispatching", "approved")).toBe(false);
+    expect(isValidPaymentIntentTransition("dispatching", "paused")).toBe(false);
+    expect(isValidPaymentIntentTransition("dispatching", "cancelled")).toBe(false);
+  });
+
+  it("paused → approved (resume) | cancelled only (kill-switch, 1b.3)", () => {
+    expect(isValidPaymentIntentTransition("paused", "approved")).toBe(true);
+    expect(isValidPaymentIntentTransition("paused", "cancelled")).toBe(true);
+    expect(isValidPaymentIntentTransition("paused", "executed")).toBe(false);
+    expect(isValidPaymentIntentTransition("paused", "rejected")).toBe(false);
+  });
+
+  it("executed → failed only (rail reversal)", () => {
+    expect(isValidPaymentIntentTransition("executed", "failed")).toBe(true);
+    expect(isValidPaymentIntentTransition("executed", "approved")).toBe(false);
+    expect(isValidPaymentIntentTransition("executed", "executed")).toBe(false);
+  });
+
+  it("rejected / cancelled / failed are terminal sinks", () => {
+    for (const from of ["rejected", "cancelled", "failed"] as const) {
+      for (const to of ALL) {
+        expect(isValidPaymentIntentTransition(from, to)).toBe(false);
+      }
+    }
+  });
+
+  it("property: no self-transitions", () => {
+    fc.assert(
+      fc.property(fc.constantFrom(...ALL), (s) => {
+        expect(isValidPaymentIntentTransition(s, s)).toBe(false);
+      }),
+    );
+  });
+
+  it("property: every reachable terminal cannot leave", () => {
+    fc.assert(
+      fc.property(
+        fc.constantFrom("rejected" as const, "cancelled" as const, "failed" as const),
+        fc.constantFrom(...ALL),
+        (from, to) => {
+          expect(isValidPaymentIntentTransition(from, to)).toBe(false);
+        },
+      ),
+    );
+  });
+
+  it("assertPaymentIntentTransition does not throw on valid transition", () => {
+    expect(() => assertPaymentIntentTransition("proposed", "approved")).not.toThrow();
+  });
+
+  it("assertPaymentIntentTransition throws on invalid transition", () => {
+    expect(() => assertPaymentIntentTransition("rejected", "approved")).toThrow();
+  });
+});

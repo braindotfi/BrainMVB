@@ -1,0 +1,652 @@
+import { createHmac } from "node:crypto";
+import { test } from "node:test";
+import assert from "node:assert/strict";
+
+import {
+  ApprovalService,
+  SurfaceRegistry,
+  buildInvoiceProposal,
+  handleEmailApproval,
+  handleSlackInteraction,
+  handleTeamsSubmit,
+  HttpEmailClient,
+  postSlackOutcome,
+  sanitizeForSurface,
+  signToken,
+  toActorId,
+  toPlainOutcome,
+  verifySlackRequest,
+  withContentHash,
+  type ApprovalOutcome,
+  type BrainCorePorts,
+  type Proposal,
+  type TeamsActivityVerifier,
+  type TerminalDecisionRecord,
+} from "../src/index.js";
+import { encodeAction } from "../src/surfaces/slack/blockkit.js";
+
+const SIGNING_SECRET = "slack_secret";
+
+function sampleProposal(expiresAt = new Date(Date.now() + 86_400_000).toISOString()): Proposal {
+  return withContentHash({
+    ...buildInvoiceProposal({
+      tenantId: "t_1",
+      vendorName: "Acme Supplies",
+      invoiceNumber: "INV-4821",
+      amountMinorUnits: 1_250_000,
+      currency: "USD",
+      reason: "duplicate",
+      handoffPayload: { billId: "b_99" },
+      approverRoles: ["ap_lead"],
+      expiresAt,
+    }),
+    executionTarget: { type: "payment_intent", id: "pi_01ARZ3NDEKTSV4RRFFQ69G5FAV" },
+  });
+}
+
+function makeSlackSignature(rawBody: string, timestamp: string): string {
+  return `v0=${createHmac("sha256", SIGNING_SECRET)
+    .update(`v0:${timestamp}:${rawBody}`)
+    .digest("hex")}`;
+}
+
+function slackBody(proposal: Proposal, responseUrl = "https://hooks.slack.test/response"): string {
+  const payload = {
+    team: { id: "T_slack" },
+    user: { id: "U_slack" },
+    channel: { id: "C_ap" },
+    message: { ts: "1700000000.000100" },
+    response_url: responseUrl,
+    actions: [{ action_id: encodeAction("approve", proposal), value: proposal.id }],
+  };
+  return new URLSearchParams({ payload: JSON.stringify(payload) }).toString();
+}
+
+function fakeApprovals(handle: ApprovalService["handle"]): ApprovalService {
+  return { handle } as unknown as ApprovalService;
+}
+
+async function acceptSlackInstallation(): Promise<boolean> {
+  return true;
+}
+
+function teamsVerifier(input: { tenantId: string }): TeamsActivityVerifier {
+  return {
+    async verify() {
+      return {
+        submit: {
+          brainDecision: "approved",
+          tenantId: input.tenantId,
+          proposalId: "p_1",
+        },
+        aadObjectId: "aad_user_1",
+        aadTenantId: "aad_tenant_1",
+        conversationId: "conv_1",
+        conversationRef: "t_1:conv_1",
+        activityId: "activity_1",
+      };
+    },
+  };
+}
+
+async function flushBackground(): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+function decisions(): BrainCorePorts["decisions"] {
+  const records = new Map<string, TerminalDecisionRecord>();
+  return {
+    async claimTerminal(record) {
+      const key = `${record.tenantId}:${record.proposalId}`;
+      const existing = records.get(key);
+      if (existing) return { status: "already_decided", record: existing };
+      records.set(key, { ...record, applied: false });
+      return { status: "claimed" };
+    },
+    async markTerminalApplied(record) {
+      const key = `${record.tenantId}:${record.proposalId}`;
+      records.set(key, { ...record, applied: true });
+    },
+  };
+}
+
+function approvalService(input: {
+  proposal: Proposal;
+  policy?: BrainCorePorts["policy"] | undefined;
+  approvals?: BrainCorePorts["approvals"] | undefined;
+  counters?: { audit: number; execute: number } | undefined;
+}): ApprovalService {
+  const counters = input.counters ?? { audit: 0, execute: 0 };
+  const ports: BrainCorePorts = {
+    identity: {
+      async resolve() {
+        return { actorId: toActorId("a_1"), roles: ["ap_lead"] };
+      },
+    },
+    policy:
+      input.policy ??
+      ({
+        async canDecide() {
+          return { allowed: true };
+        },
+      } satisfies BrainCorePorts["policy"]),
+    audit: {
+      async record() {
+        counters.audit += 1;
+      },
+    },
+    approvals:
+      input.approvals ??
+      ({
+        async recordApproval() {
+          return { quorumMet: true };
+        },
+      } satisfies BrainCorePorts["approvals"]),
+    execution: {
+      async enqueue() {
+        counters.execute += 1;
+      },
+    },
+    decisions: decisions(),
+  };
+  return new ApprovalService(ports, new SurfaceRegistry(), async () => input.proposal);
+}
+
+test("Slack request verification accepts a valid signature", () => {
+  const rawBody = "payload=%7B%7D";
+  const timestamp = String(Math.floor(Date.now() / 1000));
+  const result = verifySlackRequest({
+    rawBody,
+    timestamp,
+    signature: makeSlackSignature(rawBody, timestamp),
+    signingSecret: SIGNING_SECRET,
+  });
+  assert.deepEqual(result, { ok: true });
+});
+
+test("Slack request verification rejects stale and tampered requests", () => {
+  const rawBody = "payload=%7B%7D";
+  const nowMs = Date.now();
+  const staleTimestamp = String(Math.floor((nowMs - 301_000) / 1000));
+  const freshTimestamp = String(Math.floor(nowMs / 1000));
+
+  assert.deepEqual(
+    verifySlackRequest({
+      rawBody,
+      timestamp: staleTimestamp,
+      signature: makeSlackSignature(rawBody, staleTimestamp),
+      signingSecret: SIGNING_SECRET,
+      nowMs,
+    }),
+    { ok: false, reason: "stale" },
+  );
+
+  assert.deepEqual(
+    verifySlackRequest({
+      rawBody: `${rawBody}tampered`,
+      timestamp: freshTimestamp,
+      signature: makeSlackSignature(rawBody, freshTimestamp),
+      signingSecret: SIGNING_SECRET,
+      nowMs,
+    }),
+    { ok: false, reason: "bad_signature" },
+  );
+});
+
+test("Slack interaction acks before approval handling settles", async () => {
+  const proposal = sampleProposal();
+  const rawBody = slackBody(proposal);
+  const timestamp = String(Math.floor(Date.now() / 1000));
+  let settled = false;
+  let release!: (outcome: ApprovalOutcome) => void;
+  const approvalPromise = new Promise<ApprovalOutcome>((resolve) => {
+    release = resolve;
+  });
+
+  const response = await handleSlackInteraction({
+    rawBody,
+    headers: {
+      "x-slack-request-timestamp": timestamp,
+      "x-slack-signature": makeSlackSignature(rawBody, timestamp),
+    },
+    signingSecret: SIGNING_SECRET,
+    approvals: fakeApprovals(async () => {
+      const outcome = await approvalPromise;
+      settled = true;
+      return outcome;
+    }),
+    installationVerifier: acceptSlackInstallation,
+    async outcomePoster() {},
+  });
+
+  assert.equal(response.status, 200);
+  assert.equal(settled, false);
+  release({ status: "applied", decision: "approved", actorLabel: "a_1" });
+  await flushBackground();
+  assert.equal(settled, true);
+});
+
+test("Slack interaction catches and logs approval errors", async () => {
+  const proposal = sampleProposal();
+  const rawBody = slackBody(proposal);
+  const timestamp = String(Math.floor(Date.now() / 1000));
+  const logged: unknown[] = [];
+
+  const response = await handleSlackInteraction({
+    rawBody,
+    headers: {
+      "x-slack-request-timestamp": timestamp,
+      "x-slack-signature": makeSlackSignature(rawBody, timestamp),
+    },
+    signingSecret: SIGNING_SECRET,
+    approvals: fakeApprovals(async () => {
+      throw new Error("boom");
+    }),
+    installationVerifier: acceptSlackInstallation,
+    logger: {
+      error(_message, error) {
+        logged.push(error);
+      },
+    },
+    async outcomePoster() {
+      throw new Error("should_not_post");
+    },
+  });
+
+  assert.equal(response.status, 200);
+  await flushBackground();
+  assert.equal(logged.length, 1);
+});
+
+test("Slack interaction posts mapped outcomes", async () => {
+  const proposal = sampleProposal();
+  const timestamp = String(Math.floor(Date.now() / 1000));
+  const outcomes: ApprovalOutcome[] = [
+    { status: "applied", decision: "approved", actorLabel: "a_1" },
+    { status: "denied", reason: "not authorized" },
+    { status: "expired" },
+    {
+      status: "already_decided",
+      decision: "approved",
+      actorLabel: "a_2",
+      decidedAt: new Date().toISOString(),
+    },
+  ];
+  const expected = [/Approved/, /Denied. not authorized/, /Expired/, /Already decided by a_2/];
+
+  for (const [index, outcome] of outcomes.entries()) {
+    const posted: string[] = [];
+    const rawBody = slackBody(proposal, `https://hooks.slack.test/${index}`);
+    const response = await handleSlackInteraction({
+      rawBody,
+      headers: {
+        "x-slack-request-timestamp": timestamp,
+        "x-slack-signature": makeSlackSignature(rawBody, timestamp),
+      },
+      signingSecret: SIGNING_SECRET,
+      approvals: fakeApprovals(async () => outcome),
+      installationVerifier: acceptSlackInstallation,
+      async outcomePoster(input) {
+        posted.push(input.message.text);
+      },
+    });
+
+    assert.equal(response.status, 200);
+    await flushBackground();
+    assert.equal(posted.length, 1);
+    assert.match(posted[0] ?? "", expected[index] ?? /$a/);
+  }
+});
+
+test("Teams submit helper rejects card tenant mismatches against the trusted tenant", async () => {
+  const calls: unknown[] = [];
+  const response = await handleTeamsSubmit({
+    rawBody: "{}",
+    verifier: teamsVerifier({ tenantId: "t_other" }),
+    trustedBrainTenantId: "t_1",
+    approvals: fakeApprovals(async (decision) => {
+      calls.push(decision);
+      return { status: "applied", decision: "approved", actorLabel: "a_1" };
+    }),
+  });
+
+  assert.equal(response.status, 403);
+  assert.equal(response.body, "teams tenant mismatch");
+  assert.equal(calls.length, 0);
+});
+
+test("Teams submit helper uses the server-trusted tenant for accepted decisions", async () => {
+  const calls: unknown[] = [];
+  const response = await handleTeamsSubmit({
+    rawBody: "{}",
+    verifier: teamsVerifier({ tenantId: "t_1" }),
+    trustedBrainTenantId: "t_1",
+    approvals: fakeApprovals(async (decision) => {
+      calls.push(decision);
+      return { status: "applied", decision: "approved", actorLabel: "a_1" };
+    }),
+  });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(calls, [
+    {
+      surface: "teams",
+      proposalId: "p_1",
+      tenantId: "t_1",
+      externalActorId: "aad_user_1",
+      decision: "approved",
+      context: { to: "t_1:conv_1" },
+    },
+  ]);
+});
+
+test("Email approval GET confirms without applying and POST applies", async () => {
+  const proposal = sampleProposal();
+  const counters = { audit: 0, execute: 0 };
+  const token = signToken(
+    {
+      tenantId: proposal.tenantId,
+      proposalId: proposal.id,
+      decision: "approved",
+      recipient: "ap@example.com",
+      exp: Math.floor(Date.now() / 1000) + 60,
+    },
+    "email_secret",
+  );
+
+  const getResponse = await handleEmailApproval({
+    method: "GET",
+    url: `https://approvals.example.test/?t=${encodeURIComponent(token)}`,
+    tokenSecret: "email_secret",
+    approvals: approvalService({ proposal, counters }),
+    async loadProposalTitle() {
+      return proposal.title;
+    },
+  });
+
+  assert.equal(getResponse.status, 200);
+  assert.match(getResponse.body, /Confirm approve/);
+  assert.match(getResponse.body, new RegExp(proposal.title));
+  assert.equal(counters.audit, 0);
+  assert.equal(counters.execute, 0);
+
+  const postResponse = await handleEmailApproval({
+    method: "POST",
+    url: "https://approvals.example.test/",
+    body: new URLSearchParams({ t: token }),
+    tokenSecret: "email_secret",
+    approvals: approvalService({ proposal, counters }),
+  });
+
+  assert.equal(postResponse.status, 200);
+  assert.match(postResponse.body, /Approved/);
+  assert.equal(counters.audit, 1);
+  assert.equal(counters.execute, 1);
+});
+
+test("Email approval HEAD confirms without applying", async () => {
+  const proposal = sampleProposal();
+  const counters = { audit: 0, execute: 0 };
+  const token = signToken(
+    {
+      tenantId: proposal.tenantId,
+      proposalId: proposal.id,
+      decision: "approved",
+      recipient: "ap@example.com",
+      exp: Math.floor(Date.now() / 1000) + 60,
+    },
+    "email_secret",
+  );
+
+  const response = await handleEmailApproval({
+    method: "HEAD",
+    url: `https://approvals.example.test/?t=${encodeURIComponent(token)}`,
+    tokenSecret: "email_secret",
+    approvals: approvalService({ proposal, counters }),
+  });
+
+  assert.equal(response.status, 200);
+  assert.equal(response.body, "");
+  assert.equal(counters.audit, 0);
+  assert.equal(counters.execute, 0);
+});
+
+test("Email approval token rejects expired, wrong-secret, and tampered links", async () => {
+  const proposal = sampleProposal();
+  const expired = signToken(
+    {
+      tenantId: proposal.tenantId,
+      proposalId: proposal.id,
+      decision: "approved",
+      recipient: "ap@example.com",
+      exp: Math.floor(Date.now() / 1000) - 1,
+    },
+    "email_secret",
+  );
+  const valid = signToken(
+    {
+      tenantId: proposal.tenantId,
+      proposalId: proposal.id,
+      decision: "approved",
+      recipient: "ap@example.com",
+      exp: Math.floor(Date.now() / 1000) + 60,
+    },
+    "email_secret",
+  );
+
+  const service = approvalService({ proposal });
+  const expiredResponse = await handleEmailApproval({
+    method: "GET",
+    url: `https://approvals.example.test/?t=${expired}`,
+    tokenSecret: "email_secret",
+    approvals: service,
+  });
+  const wrongSecretResponse = await handleEmailApproval({
+    method: "POST",
+    url: `https://approvals.example.test/?t=${valid}`,
+    body: new URLSearchParams({ t: valid }),
+    tokenSecret: "wrong",
+    approvals: service,
+  });
+  const tamperedResponse = await handleEmailApproval({
+    method: "POST",
+    url: "https://approvals.example.test/",
+    body: new URLSearchParams({ t: `${valid.slice(0, -1)}x` }),
+    tokenSecret: "email_secret",
+    approvals: service,
+  });
+  const missingResponse = await handleEmailApproval({
+    method: "POST",
+    url: "https://approvals.example.test/",
+    tokenSecret: "email_secret",
+    approvals: service,
+  });
+
+  assert.equal(expiredResponse.status, 400);
+  assert.equal(wrongSecretResponse.status, 400);
+  assert.equal(tamperedResponse.status, 400);
+  assert.equal(missingResponse.status, 400);
+  assert.match(missingResponse.body, /Unknown/);
+});
+
+test("HttpEmailClient uses tenant sender resolver only when it returns a verified sender", async () => {
+  const bodies: Array<Record<string, unknown>> = [];
+  const fetchImpl: typeof fetch = async (_input, init) => {
+    bodies.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+    return new Response(JSON.stringify({ messageId: "msg_1" }), { status: 200 });
+  };
+  const client = new HttpEmailClient({
+    endpoint: "https://esp.example/send",
+    apiKey: "esp-key",
+    from: "approvals@brain.fi",
+    senderResolver: {
+      async senderForTenant(tenantId) {
+        return tenantId === "tenant_verified" ? "noreply@customer.example" : null;
+      },
+    },
+    fetchImpl,
+  });
+
+  await client.send({
+    tenantId: "tenant_verified",
+    to: "ap@example.com",
+    subject: "Verify",
+    html: "<p>Verify</p>",
+    text: "Verify",
+  });
+  await client.send({
+    tenantId: "tenant_unverified",
+    to: "ap@example.com",
+    subject: "Verify",
+    html: "<p>Verify</p>",
+    text: "Verify",
+  });
+
+  assert.equal(bodies[0]?.from, "noreply@customer.example");
+  assert.equal(bodies[1]?.from, "approvals@brain.fi");
+});
+
+test("HttpEmailClient surfaces the raw response body on a non-ok send, regardless of the provider's error field name", async () => {
+  // Providers disagree on the error field name (SendGrid: errors[], Postmark:
+  // Message, etc.), so body.error is often absent even on a real rejection.
+  // rawBody must carry the exact text so a caller can log/inspect it, not
+  // just a generic fallback -- this is what surfaces a specific provider
+  // rejection (e.g. "sender not verified") instead of a bare status phrase.
+  const fetchImpl: typeof fetch = async () =>
+    new Response(JSON.stringify({ errors: [{ message: "sender identity not verified" }] }), {
+      status: 422,
+      statusText: "Unprocessable Entity",
+    });
+  const client = new HttpEmailClient({
+    endpoint: "https://esp.example/send",
+    apiKey: "esp-key",
+    from: "approvals@brain.fi",
+    fetchImpl,
+  });
+
+  const result = await client.send({
+    to: "ap@example.com",
+    subject: "Verify",
+    html: "<p>Verify</p>",
+    text: "Verify",
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.error, "Unprocessable Entity"); // unchanged: no literal "error" field
+  assert.match(result.rawBody ?? "", /sender identity not verified/);
+});
+
+test("HttpEmailClient omits rawBody on success and leaves it undefined for a body-less failure", async () => {
+  const okFetch: typeof fetch = async () =>
+    new Response(JSON.stringify({ messageId: "msg_1" }), { status: 200 });
+  const okClient = new HttpEmailClient({
+    endpoint: "https://esp.example/send",
+    apiKey: "esp-key",
+    fetchImpl: okFetch,
+  });
+  const okResult = await okClient.send({
+    to: "ap@example.com",
+    subject: "Verify",
+    html: "<p>Verify</p>",
+    text: "Verify",
+  });
+  assert.equal(okResult.rawBody, undefined);
+
+  const emptyFetch: typeof fetch = async () => new Response("", { status: 500 });
+  const emptyClient = new HttpEmailClient({
+    endpoint: "https://esp.example/send",
+    apiKey: "esp-key",
+    fetchImpl: emptyFetch,
+  });
+  const emptyResult = await emptyClient.send({
+    to: "ap@example.com",
+    subject: "Verify",
+    html: "<p>Verify</p>",
+    text: "Verify",
+  });
+  assert.equal(emptyResult.rawBody, undefined);
+});
+
+test("Dual approval does not enqueue until approval recording returns quorum", async () => {
+  const proposal = sampleProposal();
+  const counters = { audit: 0, execute: 0 };
+  const service = approvalService({
+    proposal,
+    counters,
+    policy: {
+      async canDecide() {
+        return { allowed: true, approverRole: "ap_lead" };
+      },
+    },
+    approvals: {
+      async recordApproval() {
+        return { quorumMet: false };
+      },
+    },
+  });
+
+  const outcome = await service.handle({
+    surface: "email",
+    proposalId: proposal.id,
+    tenantId: proposal.tenantId,
+    externalActorId: "ap@example.com",
+    decision: "approved",
+  });
+
+  assert.equal(outcome.status, "awaiting_second_approval");
+  assert.equal(counters.audit, 1);
+  assert.equal(counters.execute, 0);
+  assert.equal(toPlainOutcome(outcome), "pending");
+});
+
+test("postSlackOutcome refuses a response_url that is not Slack's", async () => {
+  // response_url arrives inside the signature-verified interaction body, but
+  // that signature is the only thing standing between an attacker-chosen URL
+  // and a server-side request from inside Brain's network. Binding the POST to
+  // Slack's documented host means a leaked signing secret cannot be escalated
+  // into an SSRF primitive.
+  const message = { responseType: "ephemeral" as const, text: "ok" };
+  for (const bad of [
+    "http://hooks.slack.com/actions/1", // right host, wrong scheme
+    "https://hooks.slack.com.evil.test/actions/1", // suffix-confusion host
+    "https://evil.test/hooks.slack.com", // host in the path
+    "https://169.254.169.254/latest/meta-data/", // cloud metadata
+    "https://internal.brain.local/admin",
+    "file:///etc/passwd",
+    "not a url",
+  ]) {
+    await assert.rejects(
+      () => postSlackOutcome({ responseUrl: bad, message }),
+      /slack_response_url_rejected/,
+      `expected ${bad} to be rejected`,
+    );
+  }
+});
+
+test("Teams sanitization escapes the escape character", () => {
+  // Escaping only the markdown metacharacters left an attacker-supplied
+  // backslash untouched, so "\\*bold*" became "\\" + "\\*bold*": the pair
+  // renders as one literal backslash and the emphasis run goes live again.
+  assert.equal(sanitizeForSurface("\\*bold*", "teams"), "\\\\\\*bold\\*");
+  assert.equal(sanitizeForSurface("a\\b", "teams"), "a\\\\b");
+  assert.equal(sanitizeForSurface("[link](x)", "teams"), "\\[link\\]\\(x\\)");
+  assert.equal(sanitizeForSurface("plain text", "teams"), "plain text");
+});
+
+test("Expired proposal clicks do not audit or enqueue", async () => {
+  const proposal = sampleProposal(new Date(Date.now() - 60_000).toISOString());
+  const counters = { audit: 0, execute: 0 };
+  const service = approvalService({ proposal, counters });
+
+  const outcome = await service.handle({
+    surface: "slack",
+    proposalId: proposal.id,
+    tenantId: proposal.tenantId,
+    externalActorId: "U_slack",
+    decision: "approved",
+  });
+
+  assert.equal(outcome.status, "expired");
+  assert.equal(counters.audit, 0);
+  assert.equal(counters.execute, 0);
+});

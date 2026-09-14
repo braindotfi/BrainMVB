@@ -1,0 +1,201 @@
+/**
+ * Self-serve tenant provisioning — RFC 0002 Phase B (decision A: api owns the
+ * evolving identity schema; execution keeps reading `users` for resolveRole).
+ *
+ * `provisionTenant` atomically creates a brand-new **sandbox** tenant, its owner
+ * user (email + scrypt password hash, status `pending`), and a single-use
+ * email-verification token, then returns the new ids. It is the only path that
+ * creates a tenant.
+ *
+ * Isolation (the safety crux): a FRESH tenant id is minted *here* and used as the
+ * RLS scope (`withTenantScope`); every INSERT is keyed to that id. The caller
+ * cannot supply or influence the tenant id, so this path can only ever create
+ * rows for the new tenant — it is NOT a cross-tenant writer. The RLS write
+ * policies (`id = app.tenant_id` / `tenant_id = app.tenant_id`) pass for exactly
+ * the new tenant; a global unique index on `lower(email)` (enforced beneath RLS)
+ * rejects a duplicate email even across tenants → `signup_email_taken`.
+ *
+ * This module performs NO money movement and grants NO execution capability. The
+ * tenant is `sandbox = TRUE`; promotion to a live, money-moving tenant remains the
+ * existing human-gated step (H-24 + external audit).
+ */
+
+import type { Pool } from "pg";
+import {
+  brainError,
+  brainId,
+  ID_PREFIX,
+  withTenantScope,
+  type TenantScopedClient,
+} from "@brain/shared";
+import { contentHash, type PolicyDocument } from "@brain/policy";
+import { insertBootstrapAdminMember } from "./bootstrap-member.js";
+
+/**
+ * Batch 11: default agent-confidence floor for a freshly provisioned tenant.
+ *
+ * Confidence gating (RFC 0004 §5.2) is enforced mechanically in the §6 gate
+ * via the policy VM, but it has been DORMANT BY DEFAULT: a new tenant with no
+ * hand-written rules let document-extracted intents (capped at confidence
+ * <= 0.5 at the agent_contributed write boundary) flow through at the 1.0
+ * default. An operator who never ran `pnpm policy:bootstrap` was effectively
+ * running without earned-autonomy. Opus 4.8 review P1-1.
+ *
+ * Tenants opt OUT (by re-signing an updated policy without this rule), not
+ * in. The floor sits STRICTLY ABOVE the 0.5 agent-contributed write ceiling:
+ * the VM compares inclusively (`action.confidence >= bound`), so a floor of
+ * 0.5 would have admitted an obligation sitting exactly at the 0.5 ceiling --
+ * the floor would have been a no-op for the very case it exists to gate
+ * (Codex 2026-06-05 P0). An intent cited against an uncorroborated
+ * agent-contributed obligation (confidence <= 0.5) therefore rejects under
+ * this rule until the obligation is corroborated upward (RFC 0004 §5.2 /
+ * persist.ts counter-side check, batch 10 C-2).
+ *
+ * Value choice (0.6): it must be > 0.5 (above the uncorroborated ceiling) AND
+ * <= ~0.7 (the minimum reconciliation-corroboration match score; persist.ts
+ * lifts a corroborated obligation toward the match score, capped at 0.9). A
+ * higher floor (e.g. 0.75/0.8) would block a legitimately-corroborated
+ * obligation whose match score is 0.7, killing the earned-autonomy path; 0.6
+ * cleanly separates the uncorroborated population (<= 0.5) from the
+ * corroborated/first-party population (>= 0.7). A future refinement could
+ * split distinct `propose` vs `auto` thresholds instead of one global floor.
+ *
+ * Default shape (Codex 2026-06-06 P0): money movement is NEVER auto-executed by
+ * default. The prior single `applies_to: [any], execute: auto` rule auto-ALLOWED
+ * any >= floor action with no amount cap, no counterparty allowlist, no spend
+ * window, and no approval path -- a shape the repo's own `lintPolicy()` flags as
+ * unsafe-for-money (auto_no_amount_cap, auto_no_counterparty_constraint, ...).
+ * A fresh tenant could thus auto-execute a payment with no constraints (only the
+ * shadow-by-default promotion gate stood in the way). The default is now split:
+ *
+ *   1. money movement (outbound_payment / onchain_tx) at >= floor => `confirm`
+ *      with a single-signer approval requirement (human in the loop);
+ *   2. non-financial agent proposals (agent_action) at >= floor => `confirm`
+ *      with a single-signer approval requirement, so fresh/demo tenants can
+ *      demonstrate the Needs Review approval loop without execution authority;
+ *   3. non-money system actions (inbound_payment / ledger_write) at >= floor =>
+ *      `auto` (safe to allow; not a money mover, so lint-clean).
+ *
+ * Below the floor, no rule matches and the default-deny tail rejects. The VM
+ * short-circuits on the FIRST matching rule, so a tenant signing a constrained
+ * autonomy policy (with caps + counterparty allowlist + approval path) can
+ * supersede rule 1 to earn unattended money movement. `buildDefaultPolicyDocument`
+ * is lint-clean: `lintPolicy()` returns zero ERROR findings (asserted in tests).
+ * Stored at version 1, state `active`, enforced from the first request.
+ */
+export const DEFAULT_CONFIDENCE_FLOOR = 0.6;
+
+export function buildDefaultPolicyDocument(floor = DEFAULT_CONFIDENCE_FLOOR): PolicyDocument {
+  return {
+    version: 1,
+    rules: [
+      {
+        id: "default-money-requires-confirmation",
+        applies_to: ["outbound_payment", "onchain_tx"],
+        when: { "agent.confidence.gte": floor },
+        execute: "confirm",
+        require: "single_signer",
+      },
+      {
+        id: "default-agent-action-requires-review",
+        applies_to: ["agent_action"],
+        when: { "agent.confidence.gte": floor },
+        execute: "confirm",
+        require: "single_signer",
+      },
+      {
+        id: "default-non-money-confidence-floor",
+        applies_to: ["inbound_payment", "ledger_write"],
+        when: { "agent.confidence.gte": floor },
+        execute: "auto",
+      },
+    ],
+  };
+}
+
+export interface ProvisionTenantInput {
+  /** Owner email (caller normalizes/validates; stored as given). */
+  readonly email: string;
+  /** Serialized scrypt hash from `hashPassword` (never the plaintext). */
+  readonly passwordHash: string;
+  /** sha256 of the raw verification token; the raw token is only ever emailed. */
+  readonly emailVerificationTokenHash: string;
+  /** Expiry for the verification token. */
+  readonly emailVerificationExpiresAt: Date;
+}
+
+export interface ProvisionedTenant {
+  readonly tenantId: string;
+  readonly userId: string;
+}
+
+const PG_UNIQUE_VIOLATION = "23505";
+
+function isUniqueViolation(err: unknown): boolean {
+  return (
+    typeof err === "object" &&
+    err !== null &&
+    (err as { code?: unknown }).code === PG_UNIQUE_VIOLATION
+  );
+}
+
+/**
+ * Provision a new sandbox tenant + owner user + bootstrap admin member +
+ * email-verification token, atomically. Throws `signup_email_taken` (409) when
+ * the email already has a password-login account (anywhere); rethrows anything
+ * else after rollback.
+ */
+export async function provisionTenant(
+  pool: Pool,
+  input: ProvisionTenantInput,
+): Promise<ProvisionedTenant> {
+  const tenantId = brainId(ID_PREFIX.tenant);
+  const userId = brainId(ID_PREFIX.user);
+
+  const policyId = brainId(ID_PREFIX.policy);
+  const defaultPolicy = buildDefaultPolicyDocument();
+  const defaultPolicyHash = contentHash(defaultPolicy);
+
+  try {
+    await withTenantScope(pool, tenantId, async (c: TenantScopedClient) => {
+      await c.query(
+        "INSERT INTO tenants (id, sandbox, created_via, audit_anchor_mode) VALUES ($1, TRUE, 'self_serve', 'db_only')",
+        [tenantId],
+      );
+      await c.query(
+        `INSERT INTO users (id, tenant_id, email, role, password_hash, status)
+         VALUES ($1, $2, $3, 'owner', $4, 'pending')`,
+        [userId, tenantId, input.email, input.passwordHash],
+      );
+      await insertBootstrapAdminMember(c, {
+        tenantId,
+        memberId: userId,
+        email: input.email,
+        displayName: input.email,
+      });
+      await c.query(
+        `INSERT INTO email_verifications (token_hash, user_id, tenant_id, expires_at)
+         VALUES ($1, $2, $3, $4)`,
+        [input.emailVerificationTokenHash, userId, tenantId, input.emailVerificationExpiresAt],
+      );
+      // Batch 11: seed the default agent-confidence floor (Opus P1-1). State
+      // = `active` so the §6 gate enforces it from the very first request;
+      // version = 1 so a subsequent operator-signed policy increments cleanly.
+      // The owner user is the `created_by`, which is the only user that
+      // exists at this point in the tenant's lifecycle.
+      await c.query(
+        `INSERT INTO policies
+           (id, tenant_id, version, content, content_hash, quorum_required, state, created_by, activated_at)
+         VALUES ($1, $2, 1, $3, $4, 1, 'active', $5, now())`,
+        [policyId, tenantId, JSON.stringify(defaultPolicy), defaultPolicyHash, userId],
+      );
+    });
+  } catch (err) {
+    if (isUniqueViolation(err)) {
+      throw brainError("signup_email_taken", "an account with this email already exists");
+    }
+    throw err;
+  }
+
+  return { tenantId, userId };
+}

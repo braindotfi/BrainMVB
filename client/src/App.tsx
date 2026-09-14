@@ -1,5 +1,4 @@
 import { Switch, Route, useRoute } from "wouter";
-import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppAlertProvider } from "@/components/AppAlert";
 import { SourceIngestToastProvider } from "@/components/SourceIngestToast";
@@ -376,7 +375,6 @@ function App() {
           <TooltipProvider>
             <AppAlertProvider>
               <SourceIngestToastProvider>
-                <Toaster />
                 <InviteRouteBoundary />
               </SourceIngestToastProvider>
             </AppAlertProvider>

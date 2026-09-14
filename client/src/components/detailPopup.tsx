@@ -15,41 +15,28 @@ import type { ReactNode } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { ChevronRight } from "lucide-react";
 import closeIcon from "@assets/Close_1783293571882.png";
+/* The chip's shape lives with the due-date arithmetic that produces it, in
+   `lib/dueDates`; this header only renders whatever chip it is handed. */
+import type { DueChip } from "@/lib/dueDates";
 
+const MONTHS_LONG = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+/**
+ * "September 14, 2026" — the due DAY, read in UTC.
+ *
+ * A bare `YYYY-MM-DD` parses to UTC midnight, so rendering it through
+ * `toLocaleDateString` printed the day before anywhere west of Greenwich, while the
+ * Payable popup (which reads the same value in UTC) printed the right one. Same
+ * record, two dates, depending on which popup you opened it from.
+ */
 export function fmtDue(iso?: string | null): string {
   if (!iso) return "-";
   const d = new Date(iso);
-  return Number.isNaN(d.getTime())
-    ? "-"
-    : d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
-}
-
-export function daysToDue(iso?: string | null): number | null {
-  if (!iso) return null;
-  const t = new Date(iso).getTime();
-  if (Number.isNaN(t)) return null;
-  return Math.round((t - Date.now()) / 86_400_000);
-}
-
-export interface DueChip {
-  text: string;
-  color: string;
-  bg: string;
-  border: string;
-}
-
-/** The due/overdue chip beside the record's name. `null` when there is no date to
- *  reason about — an undated record gets no chip rather than a guessed one. */
-export function dueChip(dd: number | null): DueChip | null {
-  if (dd == null) return null;
-  if (dd < 0) return { text: "Overdue", color: "#d20344", bg: "#350011", border: "rgba(210,3,68,0.2)" };
-  if (dd === 0) return { text: "Due today", color: "#a8b9f4", bg: "#222737", border: "rgba(108,119,157,0.2)" };
-  return {
-    text: `Due in ${dd} day${dd === 1 ? "" : "s"}`,
-    color: "#a8b9f4",
-    bg: "#222737",
-    border: "rgba(108,119,157,0.2)",
-  };
+  if (Number.isNaN(d.getTime())) return "-";
+  return `${MONTHS_LONG[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`;
 }
 
 /* ── Details table row, matching AccountDetailPopup/TransactionDetailPopup ── */
@@ -104,6 +91,7 @@ export function DetailPopupHeader({
   nameTestId,
   chipTestId,
   amountTestId,
+  currencyTestId,
   icon,
 }: {
   name: string;
@@ -113,6 +101,8 @@ export function DetailPopupHeader({
   nameTestId?: string;
   chipTestId?: string;
   amountTestId?: string;
+  /** The currency pill beside the amount — the half of the figure the amount omits. */
+  currencyTestId?: string;
   /** Optional leading icon — rendered at 56×56 px to the left of the name block. */
   icon?: ReactNode;
 }) {
@@ -150,7 +140,10 @@ export function DetailPopupHeader({
             {amount}
           </p>
           <div className="bg-brain-v1baby-blue-15 border border-[rgba(108,119,157,0.2)] border-solid flex items-center justify-center px-[8px] py-[3px] rounded-pill shrink-0">
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-brain-v1baby-blue-60 text-[12px] text-center whitespace-nowrap">
+            <p
+              className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-brain-v1baby-blue-60 text-[12px] text-center whitespace-nowrap"
+              data-testid={currencyTestId}
+            >
               {currency}
             </p>
           </div>
@@ -171,7 +164,10 @@ export function LinkedEvidenceRow({
 }: {
   kind: string;
   label: string;
-  onClick?: () => void;
+  /* The event is passed through so a caller opening a nested dialog can capture the
+     row as the element to restore focus to on close. A controlled Radix dialog has no
+     Trigger of its own, so nothing else knows where the user came from. */
+  onClick?: (e: React.MouseEvent<HTMLElement>) => void;
   testId?: string;
 }) {
   const inner = (
@@ -181,7 +177,12 @@ export function LinkedEvidenceRow({
           {kind}
         </p>
       </div>
-      <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-100 text-[16px] flex-1 min-w-px">
+      {/* normal-case: this row renders as a <button> when tappable, and the base-layer
+          `button { text-transform: capitalize }` rule rewrote the tenant's own filename
+          — "form_1120_2025.pdf" was showing as "Form_1120_2025.Pdf", which is not a file
+          they have. The label is always upstream data (a filename, a record id), never
+          app chrome, so it opts out unconditionally rather than per caller. */}
+      <p className="normal-case [font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-brain-v1baby-blue-100 text-[16px] flex-1 min-w-px">
         {label}
       </p>
       <ChevronRight size={16} className="text-brain-v1baby-blue-60 shrink-0" />

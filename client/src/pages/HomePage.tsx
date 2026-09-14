@@ -9,7 +9,7 @@ import { onboardingKey as onboardingKeyFor, isOnboardingComplete, markOnboarding
 import { useIsDemoData } from "@/lib/demoMode";
 import { useCurrency } from "@/lib/useCurrency";
 import { type CurrencyCode } from "@/lib/currencyContext";
-import { useToast } from "@/hooks/use-toast";
+import { useAppAlert } from "@/components/AppAlert";
 import { useBrainReviewQueue } from "@/lib/brainQueue";
 import { pendingAttentionSummary } from "@/lib/pendingAttention";
 import { useProposalDecisionStates } from "@/lib/proposalDecisionStates";
@@ -26,6 +26,7 @@ import {
   useBrainDisputeInsights,
   useBrainCashFlowInsight,
 } from "@/lib/brainAgentSurfaces";
+import { collectRuntimeProtectedValues, normalizeOverviewRecommendation } from "@/lib/runtimeBranding";
 import {
   deriveProposalTier,
   thresholdsFromRules,
@@ -161,7 +162,7 @@ const AddGoalButton = ({ onClick }: { onClick: () => void }) => (
 );
 
 const GoalsSection = () => {
-  const { toast } = useToast();
+  const alert = useAppAlert();
   const [addOpen, setAddOpen] = useState(false);
   /* Local-only state: new goals live in memory until the brain-core
      wiring lands. They reset on refresh by design. Demo accounts start
@@ -189,10 +190,7 @@ const GoalsSection = () => {
     };
     setGoals((prev) => [...prev, newGoal]);
     setAddOpen(false);
-    toast({
-      title: "Goal created",
-      description: `"${fallbackName}" added to your goals.`,
-    });
+    alert.success("Goal created", `"${fallbackName}" added to your goals.`);
   };
 
   return (
@@ -718,20 +716,6 @@ export function HomePage() {
     // remounts within a session don't re-hit the BFF at all.
     staleTime: 15 * 60 * 1000,
   });
-  /* Post-process the recommendation text: comma-format amounts, locale-format
-     dates (USD → US date style, EUR → European), and detect sentiment for color.
-     The fallback line is also formatted so static text stays consistent. */
-  const rawText = brainRec?.text?.trim() ?? "";
-  const processedText = rawText
-    ? formatDatesInText(formatText(rawText), currency)
-    : formatText(SPENDING_INSIGHT_FALLBACK.text);
-  const insightLine =
-    netMonthly === null
-      ? { text: "Connect accounts to see monthly spend.", colorClass: "text-brain-v1baby-blue-60" }
-      : rawText
-        ? { text: processedText, colorClass: detectSentimentColor(processedText) }
-        : { text: processedText, colorClass: SPENDING_INSIGHT_FALLBACK.colorClass };
-
   /* Liabilities — everything outstanding: unpaid bills AND accrued payroll. Same
      figure, same source, same module (lib/liabilities.ts) as the Cash Flow metric
      and the itemized list this card links to, so the three can't drift. Reads the
@@ -745,7 +729,15 @@ export function HomePage() {
     read: obligationsRead.read,
     ingesting: obligationsRead.ingesting,
   });
-  const liabilities = payables.total;
+  /* `crossCurrencyTotal`, NOT the Payables tab's single-currency `subtotal`. A
+     subtotal is only honest beside a line naming what it left out, and this card has
+     one caption, already spoken for by the state of the read. Quoting a narrowed
+     figure here would drop a foreign-currency bill from "everything you still owe"
+     with nothing on screen saying so — and would then hand a non-USD number to
+     `format`, which converts as if its input were dollars. So the card keeps the
+     figure that covers every row, and the fact that such a sum spans currencies is
+     the card's own currency treatment to fix, not something to half-do here. */
+  const liabilities = payables.crossCurrencyTotal;
   const liabilitiesFormatted = liabilities !== null ? format(liabilities) : "-";
   const { whole: liabWhole, cents: liabCents } = splitMetricAmount(liabilitiesFormatted);
 
@@ -822,6 +814,26 @@ export function HomePage() {
     queryKey: ["/api/brain/ledger/counterparties"],
     retry: false,
   });
+  const overviewBrandingProtectedValues = collectRuntimeProtectedValues([
+    accountsRead.read?.rows,
+    cpQ.data?.counterparties,
+    invoicesRead.read?.rows,
+    obligationsRead.read?.rows,
+  ]);
+  /* Post-process the recommendation text only after masking business values
+     from the structured ledger reads already on this page. */
+  const rawText = brainRec?.text?.trim()
+    ? normalizeOverviewRecommendation(brainRec.text.trim(), overviewBrandingProtectedValues)
+    : "";
+  const processedText = rawText
+    ? formatDatesInText(formatText(rawText), currency)
+    : formatText(SPENDING_INSIGHT_FALLBACK.text);
+  const insightLine =
+    netMonthly === null
+      ? { text: "Connect accounts to see monthly spend.", colorClass: "text-brain-v1baby-blue-60" }
+      : rawText
+        ? { text: processedText, colorClass: detectSentimentColor(processedText) }
+        : { text: processedText, colorClass: SPENDING_INSIGHT_FALLBACK.colorClass };
 
   const eventRecords = useMemo(
     () =>
@@ -1171,6 +1183,9 @@ export function HomePage() {
           other kind — the user would tap Next on the Aug 13 bill and land past
           the Aug 20 invoice sitting right beside it on screen. */}
       <BillDetailPopup
+        /* The projection chips are still converted, and a chip and the popup it
+           opens have to agree. Flip this with the chips. */
+        amountBasis="display"
         bill={openRecord?.kind === "bill" ? openRecord.bill : null}
         vendorName={
           (openRecord?.kind === "bill" ? counterpartyName(openRecord.obligation.counterparty_id) : null) ??

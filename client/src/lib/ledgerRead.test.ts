@@ -88,6 +88,11 @@ describe("the surfaces read the ledger through the paged, polling hook", () => {
     "../components/PayablesTab.tsx",
     "../components/CashFlowTab.tsx",
     "../pages/HomePage.tsx",
+    /* The assistant does not total anything, but it resolves a cited id against this
+       feed — and a citation that lands on page two of a capped read fails to open the
+       Payable popup, with no error anywhere. Truncation is a correctness problem for a
+       lookup exactly as it is for a sum. */
+    "../pages/sections/BrainAssistant.tsx",
   ];
 
   it("no surface fetches obligations with a bare one-page query", () => {

@@ -140,7 +140,7 @@ function MemberDetailBody({ id }: { id: string }) {
       {/* Locked, core-enforced rows */}
       <div className="flex flex-col gap-[8px]">
         <p className="[font-family:'Gilroy',sans-serif] font-semibold text-brain-v1baby-blue-30 text-[12px] leading-[16px] uppercase">
-          Enforced by Brain core
+          Enforced by RobotMoney core
         </p>
         {policy?.selfApprovalBlocked && (
           <LockedRow
