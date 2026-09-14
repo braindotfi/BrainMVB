@@ -380,7 +380,7 @@ function ChatBubble({
   }, [measureKey, measure]);
 
   return (
-    <div ref={ref} className={className}>
+    <div ref={ref} className={className} data-testid="assistant-chat-bubble">
       {children}
     </div>
   );
