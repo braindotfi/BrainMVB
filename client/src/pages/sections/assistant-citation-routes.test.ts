@@ -136,6 +136,23 @@ describe("Brain Assistant citation links", () => {
   });
 });
 
+describe("Brain Assistant resize safety", () => {
+  it("does not rewrite measured layout inside ResizeObserver delivery", () => {
+    const src = readFileSync(ASSISTANT, "utf8");
+    const observerBlocks = [...src.matchAll(/new ResizeObserver\(\(\) => \{([\s\S]*?)\n\s*\}\);/g)];
+
+    expect(observerBlocks.length, "expected bubble and composer ResizeObservers").toBeGreaterThanOrEqual(2);
+    for (const [, callback] of observerBlocks) {
+      expect(callback).not.toMatch(/\bapply\(\);/);
+      expect(callback).not.toMatch(/\bresizeComposer\(\);/);
+    }
+    expect(src.match(/requestAnimationFrame\(/g)?.length ?? 0).toBeGreaterThanOrEqual(2);
+    expect(src).toContain("scheduleApply()");
+    expect(src).toContain("scheduleComposerResize()");
+    expect(src).toContain("cancelAnimationFrame(frame)");
+  });
+});
+
 /**
  * The same silent-fallback hazard one level down.
  *

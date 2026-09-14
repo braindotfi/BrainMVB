@@ -326,9 +326,10 @@ function ChatBubble({
 
     let lastParentWidth = -1;
     let disposed = false;
+    let frame: number | null = null;
 
     const apply = () => {
-      if (disposed) return;
+      if (disposed || !el.isConnected || !parent.isConnected) return;
       // Release the pin so wrapping is recomputed against max-width.
       el.style.width = "";
       const widest = widestLineWidth(el);
@@ -341,26 +342,39 @@ function ChatBubble({
       lastParentWidth = parent.getBoundingClientRect().width;
     };
 
+    const scheduleApply = () => {
+      if (disposed || frame !== null) return;
+      frame = requestAnimationFrame(() => {
+        frame = null;
+        apply();
+      });
+    };
+
     apply();
 
     // Re-measure when the panel is resized. The observer also fires on height
     // changes — which re-wrapping itself causes — so ignore anything that
     // didn't actually change the available width, otherwise each measurement
-    // schedules another one.
+    // schedules another one. The write runs in the next animation frame rather
+    // than inside ResizeObserver delivery; changing the bubble's width inside
+    // the callback can otherwise trigger the browser's ResizeObserver-loop
+    // exception when a side panel collapses.
     const ro = new ResizeObserver(() => {
+      if (disposed || !parent.isConnected) return;
       if (parent.getBoundingClientRect().width === lastParentWidth) return;
-      apply();
+      scheduleApply();
     });
     ro.observe(parent);
 
     // Gilroy is a webfont: text measured with the fallback face has different
     // metrics, so anything measured before it swaps in is stale.
     if (typeof document !== "undefined" && document.fonts?.status !== "loaded") {
-      document.fonts?.ready.then(apply).catch(() => {});
+      document.fonts?.ready.then(scheduleApply).catch(() => {});
     }
 
     return () => {
       disposed = true;
+      if (frame !== null) cancelAnimationFrame(frame);
       ro.disconnect();
     };
   }, [measureKey, measure]);
@@ -460,14 +474,25 @@ export function BrainAssistant() {
     const input = assistantInputRef.current;
     if (!input || typeof ResizeObserver === "undefined") return;
     let lastWidth = input.clientWidth;
+    let frame: number | null = null;
+    const scheduleComposerResize = () => {
+      if (frame !== null) return;
+      frame = requestAnimationFrame(() => {
+        frame = null;
+        if (input.isConnected) resizeComposer();
+      });
+    };
     const ro = new ResizeObserver(() => {
       const width = input.clientWidth;
       if (width === lastWidth) return;
       lastWidth = width;
-      resizeComposer();
+      scheduleComposerResize();
     });
     ro.observe(input);
-    return () => ro.disconnect();
+    return () => {
+      if (frame !== null) cancelAnimationFrame(frame);
+      ro.disconnect();
+    };
   }, [resizeComposer]);
 
   // Demo-fresh rotates the session cookie. Stop any request that started under
