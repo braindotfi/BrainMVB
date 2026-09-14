@@ -64,7 +64,7 @@ describe("Resend password reset delivery", () => {
     expect(JSON.parse(String(init.body))).toMatchObject({
       from: "Brain Finance <sender@example.com>",
       to: ["recipient@example.com"],
-      subject: "Reset your Brain Finance password",
+      subject: "Reset your RobotMoney Finance password",
     });
   });
 

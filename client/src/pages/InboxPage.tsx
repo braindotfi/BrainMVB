@@ -196,19 +196,19 @@ function auditWhy(r: AuditRecord): string {
     case "postponed":
       return "Postponed: parked for a later decision.";
     case "rule_change":
-      return "A standing rule was changed, so Brain's future behavior changes too.";
+      return "A standing rule was changed, so RobotMoney's future behavior changes too.";
     case "trust_granted":
-      return "Trust was granted, expanding what Brain can clear automatically.";
+      return "Trust was granted, expanding what RobotMoney can clear automatically.";
     case "trust_revoked":
-      return "Trust was revoked, narrowing what Brain can clear automatically.";
+      return "Trust was revoked, narrowing what RobotMoney can clear automatically.";
     case "flagged":
       /* Only genuinely mapped flagged events earn the risk line. An unmapped
          action's summary IS the raw action id (classify()'s honest fallback) —
          repeat that instead of fabricating "didn't fit the usual pattern"
          boilerplate that doesn't describe what happened. */
       return r.subtype && r.summary === r.subtype
-        ? `Recorded as ${r.subtype}, flagged by Brain for review.`
-        : "Flagged for attention. Brain saw something that didn't fit the usual pattern.";
+        ? `Recorded as ${r.subtype}, flagged by RobotMoney for review.`
+        : "Flagged for attention. RobotMoney saw something that didn't fit the usual pattern.";
     case "system_activity":
       return "Routine system activity, recorded for the audit trail. No decision needed.";
   }
@@ -1932,7 +1932,7 @@ export function InboxPage() {
      filter" after the user narrowed the list is information; the same words on an
      unfiltered empty queue would read as a fault. */
   const emptyText = decisionsUnreachable
-    ? "Brain couldn't load your decisions. This is a connection problem, not an empty queue. Don't read it as nothing to approve."
+    ? "RobotMoney couldn't load your decisions. This is a connection problem, not an empty queue. Don't read it as nothing to approve."
     : filtering
     ? `No ${activeTab.toLowerCase()} decisions match this filter.`
     : liveQueueLoading
@@ -1946,7 +1946,7 @@ export function InboxPage() {
           ? "Nothing needs your attention in what could be read. The audit history didn't refresh, so newer requests for your input may be missing."
           : auditPartial
             ? "Nothing in your recent history needs your attention. Older records haven't been read yet."
-            : "Nothing needs your attention right now. Brain is keeping things moving."
+            : "Nothing needs your attention right now. RobotMoney is keeping things moving."
         : auditPartial
           ? "No resolved decisions in your recent history. Older decisions haven't been read yet."
           : "No resolved decisions yet.";
@@ -1960,7 +1960,7 @@ export function InboxPage() {
           <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[24px] text-brain-v1baby-blue-60 text-[20px] whitespace-nowrap">Your AI Inbox</p>
           <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[40px] text-brain-v1baby-blue-100 text-[32px]">Know what needs your attention.</p>
           <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-30 text-[16px]">
-            Review recommended actions, important updates, and insights from Brain's AI agents in one place.
+            Review recommended actions, important updates, and insights from RobotMoney's AI agents in one place.
           </p>
         </div>
 
@@ -2121,7 +2121,7 @@ export function InboxPage() {
                 {/* Right: Brain Observed */}
                 <div className="flex min-w-0 flex-1 flex-col gap-[4px] items-start justify-center">
                   <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1purple text-[16px]">
-                    Brain Observed
+                    RobotMoney Observed
                   </p>
                   <p
                     className="[font-family:'Gilroy',sans-serif] font-medium leading-[24px] text-[16px] text-white w-full min-w-0"
@@ -2130,7 +2130,7 @@ export function InboxPage() {
                     {`All ${selectionLabel}, each under ${format(selection.limit.value)} `}
                     {selection.limit.source === "rule"
                       ? "limit from your own rule."
-                      : "limit above which Brain needs a second approver."}
+                      : "limit above which RobotMoney needs a second approver."}
                   </p>
                 </div>
               </div>
@@ -2301,7 +2301,7 @@ export function InboxPage() {
         {/* Helper banner — shown while anything is still awaiting a decision. */}
         {!inboxSourcesLoading && !decisionsUnreachable && visibleItems.some((it) => it.actionable) && (
           <PolicyCallout>
-            Tap any item to see why Brain suggested it, what happens next, and what the risk is before you approve anything. Brain proposes. You decide. A separate execution service settles.
+            Tap any item to see why RobotMoney suggested it, what happens next, and what the risk is before you approve anything. RobotMoney proposes. You decide. A separate execution service settles.
           </PolicyCallout>
         )}
         </div>{/* end inner gap-[10px] wrapper */}

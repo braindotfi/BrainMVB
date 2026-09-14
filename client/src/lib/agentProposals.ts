@@ -362,10 +362,10 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
       ifApproved:
         "A transfer proposal is sent to your banking/execution partner for you to authorize the actual movement.",
       ifEdited: "You can change the amount or choose a different instrument/maturity.",
-      ifRejected: "Cash stays in the operating account; Brain will recheck in the next cycle.",
+      ifRejected: "Cash stays in the operating account; RobotMoney will recheck in the next cycle.",
     },
     riskNote:
-      "Moving funds always needs a human to actually authorize the transfer. Brain only proposes the sweep.",
+      "Moving funds always needs a human to actually authorize the transfer. RobotMoney only proposes the sweep.",
     source: "ledger_balances, wiki_cash_policy",
     createdAt: "2026-07-11T07:00:00Z",
   },
@@ -445,9 +445,9 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
     },
     recommendedAction: "Review the BigCo receivable timing or move a vendor payment to avoid the shortfall.",
     whatHappensNext: {
-      ifApproved: "Brain will draft a receivable acceleration request or propose moving one vendor payment.",
+      ifApproved: "RobotMoney will draft a receivable acceleration request or propose moving one vendor payment.",
       ifEdited: "You can adjust assumptions (e.g. add a confirmed inflow date) and re-run the forecast.",
-      ifRejected: "Forecast stays as-is; Brain will recheck in the next cycle and alert again if the shortfall persists.",
+      ifRejected: "Forecast stays as-is; RobotMoney will recheck in the next cycle and alert again if the shortfall persists.",
     },
     riskNote: "A forecast shortfall is not a crisis. It gives you 9 weeks to adjust before it materializes.",
     source: "ledger_payroll, ledger_payments, ledger_receivables",
@@ -523,7 +523,7 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
     },
     recommendedAction: "Request a signed W9 from the vendor before year-end 1099 filing.",
     whatHappensNext: {
-      ifApproved: "Not applicable. This is a flag, not an action Brain can take on its own.",
+      ifApproved: "Not applicable. This is a flag, not an action RobotMoney can take on its own.",
       ifEdited: "Not applicable.",
       ifRejected: "Not applicable.",
     },
@@ -622,9 +622,9 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
     },
     recommendedAction: "Review the churn reason and check if the account is salvageable before the end of the grace period.",
     whatHappensNext: {
-      ifApproved: "Brain will surface the churn account details and suggest a retention outreach sequence.",
+      ifApproved: "RobotMoney will surface the churn account details and suggest a retention outreach sequence.",
       ifEdited: "Not applicable.",
-      ifRejected: "Flag is dismissed; Brain will re-alert if the decline accelerates next month.",
+      ifRejected: "Flag is dismissed; RobotMoney will re-alert if the decline accelerates next month.",
     },
     riskNote: "Early churn signals are easiest to address within the first 14 days of cancellation.",
     source: "ledger_receivables, wiki_subscriptions",
@@ -758,7 +758,7 @@ export const AGENT_PROPOSALS: AgentProposal[] = [
     recommendedAction:
       "Manually verify both vendors are legitimate, separate businesses before further payments.",
     whatHappensNext: {
-      ifApproved: "Not applicable. This is a flag, not an action Brain can take on its own.",
+      ifApproved: "Not applicable. This is a flag, not an action RobotMoney can take on its own.",
       ifEdited: "Not applicable.",
       ifRejected: "Not applicable.",
     },

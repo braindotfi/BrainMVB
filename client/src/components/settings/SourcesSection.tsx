@@ -474,8 +474,8 @@ export function SourcesSection() {
             </div>
 
             <p className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[12px] leading-[16px]">
-              Connecting an account hands off to that provider's own secure login. Brain never sees
-              or stores your credentials. Uploaded documents are read once, and anything Brain
+              Connecting an account hands off to that provider's own secure login. RobotMoney never sees
+              or stores your credentials. Uploaded documents are read once, and anything RobotMoney
               extracts shows up in Decisions for you to confirm individually.
             </p>
           </div>

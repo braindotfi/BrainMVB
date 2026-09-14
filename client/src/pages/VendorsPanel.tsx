@@ -456,7 +456,7 @@ export function VendorsPanel() {
       );
       resetAddVendor();
     } catch {
-      setError("Couldn't reach Brain core. Nothing was changed.");
+      setError("Couldn't reach RobotMoney core. Nothing was changed.");
     } finally {
       setBusy(false);
     }
@@ -1008,12 +1008,12 @@ export function VendorsPanel() {
         {isLoading ? (
           <div className="flex gap-[12px] items-center px-[16px] py-[12px] relative rounded-[8px] shrink-0 w-full bg-brain-v1highlight-dropdown-bg">
             <p className="flex-1 [font-family:'Gilroy',sans-serif] font-medium leading-[20px] min-w-px text-brain-v1baby-blue-60 text-[16px]">
-              Loading counterparties from Brain...
+              Loading counterparties from RobotMoney...
             </p>
           </div>
         ) : isError ? (
           <UnavailableDataBox testId="text-counterparties-unavailable">
-            Couldn't reach Brain to load counterparties. Try again shortly.
+            Couldn't reach RobotMoney to load counterparties. Try again shortly.
           </UnavailableDataBox>
         ) : (
           listBlock

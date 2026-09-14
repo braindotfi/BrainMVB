@@ -230,7 +230,7 @@ export const ShareModal = ({ open, onClose }: Props): JSX.Element | null => {
             </label>
             <div className="flex items-center gap-[8px]">
               <button
-                onClick={() => handleSocial(`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Join me on Brain Finance - let AI handle your money. ${REFERRAL_URL}`)}`)}
+                onClick={() => handleSocial(`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Join me on RobotMoney Finance - let AI handle your money. ${REFERRAL_URL}`)}`)}
                 className="bg-black rounded-row p-[8px] hover:opacity-80 transition-opacity flex items-center justify-center"
                 data-testid="share-x"
                 title="Share on X"
@@ -238,7 +238,7 @@ export const ShareModal = ({ open, onClose }: Props): JSX.Element | null => {
                 <SiX size={24} color="#ffffff" />
               </button>
               <button
-                onClick={() => handleSocial(`https://t.me/share/url?url=${encodeURIComponent(REFERRAL_URL)}&text=${encodeURIComponent("Join me on Brain Finance!")}`)}
+                onClick={() => handleSocial(`https://t.me/share/url?url=${encodeURIComponent(REFERRAL_URL)}&text=${encodeURIComponent("Join me on RobotMoney Finance!")}`)}
                 className="bg-brand-telegram rounded-row p-[8px] hover:opacity-80 transition-opacity flex items-center justify-center"
                 data-testid="share-telegram"
                 title="Share on Telegram"
@@ -246,7 +246,7 @@ export const ShareModal = ({ open, onClose }: Props): JSX.Element | null => {
                 <SiTelegram size={24} color="#ffffff" />
               </button>
               <button
-                onClick={() => handleSocial(`https://wa.me/?text=${encodeURIComponent(`Join me on Brain Finance! ${REFERRAL_URL}`)}`)}
+                onClick={() => handleSocial(`https://wa.me/?text=${encodeURIComponent(`Join me on RobotMoney Finance! ${REFERRAL_URL}`)}`)}
                 className="bg-brand-whatsapp rounded-row p-[8px] hover:opacity-80 transition-opacity flex items-center justify-center"
                 data-testid="share-whatsapp"
                 title="Share on WhatsApp"

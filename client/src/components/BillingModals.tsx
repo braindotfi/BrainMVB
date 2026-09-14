@@ -69,7 +69,7 @@ export type { PlanId } from "@/lib/planStore";
 import type { PlanId } from "@/lib/planStore";
 
 const PLANS: { id: PlanId; name: string; price: string | null; features: string[]; recommended?: boolean }[] = [
-  { id: "free",         name: "Free",         price: "$0",  features: ["Try Brain", "1 agent", "1 source"] },
+  { id: "free",         name: "Free",         price: "$0",  features: ["Try RobotMoney", "1 agent", "1 source"] },
   { id: "personal",     name: "Personal",     price: "$49", features: ["6 agents", "3 sources"] },
   { id: "professional", name: "Professional", price: "$99", features: ["Unlimited agents", "Unlimited sources"], recommended: true },
   { id: "business",     name: "Business",     price: null,  features: ["Dedicated infra", "SLAs", "Custom signers"] },
@@ -291,7 +291,7 @@ export function UpdateCardModal({
             <div className="flex gap-[8px] items-start p-[8px] rounded-row border border-brain-v1stroke-2">
               <InfoCircleIcon />
               <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-brain-v1baby-blue-60">
-                Brain will not collect card numbers or security codes in this form.
+                RobotMoney will not collect card numbers or security codes in this form.
               </p>
             </div>
           </div>

@@ -686,7 +686,7 @@ export function ProfileSection() {
           className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[13px] leading-[18px] px-1"
           data-testid="text-auto-approve-readonly"
         >
-          Shown as your Brain policy has it. Editing an approval limit requires a signed
+          Shown as your RobotMoney policy has it. Editing an approval limit requires a signed
           policy change, which cannot be made from this screen yet.
         </p>
       </div>
@@ -728,7 +728,7 @@ export function ProfileSection() {
    backend yet, so plan / card / history all start honestly empty rather
    than defaulting to a fabricated subscription. */
 const PLAN_META: Record<PlanId, { label: string; tagline: string; price: string; cadence: string }> = {
-  free:         { label: "Free plan",         tagline: "Try Brain: 1 agent, 1 source.",                 price: "$0",     cadence: "per month" },
+  free:         { label: "Free plan",         tagline: "Try RobotMoney: 1 agent, 1 source.",                 price: "$0",     cadence: "per month" },
   personal:     { label: "Personal plan",     tagline: "6 agents, 3 sources.",                          price: "$49",    cadence: "per month" },
   professional: { label: "Professional plan", tagline: "Unlimited agents, unlimited sources.",          price: "$99",    cadence: "per month" },
   business:     { label: "Business plan",     tagline: "Dedicated infra, SLAs, custom policy signers.", price: "Custom", cadence: "contact us" },

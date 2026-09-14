@@ -156,18 +156,18 @@ describe("describeMissingEvidence — the plain-language sentence", () => {
 
   it("reads as a sentence about the work, not a field dump", () => {
     const s = describeMissingEvidence(item({ attemptedAction: "payment.execute" }));
-    expect(s).toBe("Brain tried to pay this bill but couldn't find a payment destination.");
+    expect(s).toBe("RobotMoney tried to pay this bill but couldn't find a payment destination.");
     // The raw field name must not be the primary text.
     expect(s).not.toContain("payment_destination");
   });
 
   it("names the raw action rather than inventing a verb for one it doesn't know", () => {
     const s = describeMissingEvidence(item({ attemptedAction: "novel.workflow" }));
-    expect(s).toBe("Brain tried to run novel.workflow but couldn't find a payment destination.");
+    expect(s).toBe("RobotMoney tried to run novel.workflow but couldn't find a payment destination.");
   });
 
   it("still says something useful when even the action is absent", () => {
-    expect(describeMissingEvidence(item({}))).toBe("Brain stopped an action because it couldn't find a payment destination.");
+    expect(describeMissingEvidence(item({}))).toBe("RobotMoney stopped an action because it couldn't find a payment destination.");
   });
 
   it("joins several missing fields readably", () => {

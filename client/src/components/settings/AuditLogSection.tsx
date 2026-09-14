@@ -369,11 +369,11 @@ export function AuditLogSection() {
     if (isError) {
       return isTimeout
         ? {
-            title: "Brain took too long to read your audit history.",
+            title: "RobotMoney took too long to read your audit history.",
             detail: "This list is unavailable, not empty. Try again.",
           }
         : {
-            title: "Brain couldn't read your audit history.",
+            title: "RobotMoney couldn't read your audit history.",
             detail: "This list is unavailable, not empty.",
           };
     }
@@ -425,7 +425,7 @@ export function AuditLogSection() {
             className="[font-family:'Gilroy',sans-serif] font-medium leading-[18px] text-brain-v1baby-blue-60 text-[13px] pb-[8px]"
             data-testid="text-audit-scope"
           >
-            Brain's audit feed could not be read, so this page cannot say what your history contains.
+            RobotMoney's audit feed could not be read, so this page cannot say what your history contains.
           </p>
         )}
 
@@ -469,8 +469,8 @@ export function AuditLogSection() {
             testId="notice-audit-unavailable"
             className="mb-[8px]"
           >
-            Brain couldn't read your audit history. What is shown below was recorded in this
-            browser — the events from Brain are missing, not absent. Try again in a moment.
+            RobotMoney couldn't read your audit history. What is shown below was recorded in this
+            browser — the events from RobotMoney are missing, not absent. Try again in a moment.
           </AlertCallout>
         )}
 
@@ -615,7 +615,7 @@ export function AuditLogSection() {
                 data-testid="text-audit-pagination-stalled"
                 className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[13px] leading-[18px]"
               >
-                Brain stopped paging through your history, so older records than these can't be
+                RobotMoney stopped paging through your history, so older records than these can't be
                 reached right now.
               </p>
             )}

@@ -1310,7 +1310,7 @@ export function BrainAssistant() {
                     }`}
                   >
                     {msg.role === "assistant" && msg.text === "" ? (
-                      <span className="inline-flex gap-[3px] py-[2px]" aria-label="Brain is typing">
+                      <span className="inline-flex gap-[3px] py-[2px]" aria-label="RobotMoney is typing">
                         <span className="size-[6px] rounded-full bg-brain-v1baby-blue-60 animate-bounce [animation-delay:-0.3s]" />
                         <span className="size-[6px] rounded-full bg-brain-v1baby-blue-60 animate-bounce [animation-delay:-0.15s]" />
                         <span className="size-[6px] rounded-full bg-brain-v1baby-blue-60 animate-bounce" />

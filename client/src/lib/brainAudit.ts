@@ -158,7 +158,7 @@ export async function fetchBrainAuditEventsPage(
 
   const body = (await response.json()) as Partial<AuditEventsResponse>;
   if (!Array.isArray(body.events)) {
-    throw new Error("Brain audit response did not contain an events array.");
+    throw new Error("RobotMoney audit response did not contain an events array.");
   }
   const next =
     typeof body.next_cursor === "string" && body.next_cursor.length > 0 ? body.next_cursor : null;
@@ -241,7 +241,7 @@ const ACTION_MAP: Record<string, { eventType: AuditEventType; summary: (e: Brain
     },
   },
   "member.changed": { eventType: "flagged", summary: () => "Team member updated" },
-  "raw.ingest.new": { eventType: "system_activity", summary: () => "New data ingested: Brain pulled in new records to process" },
+  "raw.ingest.new": { eventType: "system_activity", summary: () => "New data ingested: RobotMoney pulled in new records to process" },
   "raw.ingest.deduplicated": { eventType: "system_activity", summary: () => "Duplicate data: already ingested previously, skipped" },
 };
 

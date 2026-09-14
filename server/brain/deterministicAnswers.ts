@@ -450,7 +450,7 @@ async function answerPayableByCounterparty(
     if (!cpRead.complete) return refuseUnverifiedCounterparty(path, resolution.term);
     return refuse(
       path,
-      `I couldn't find a counterparty called "${resolution.term}" in your ledger, so I can't total what you owe them. Check the spelling, or open Ledger › Payables to see the vendors Brain knows about.`,
+      `I couldn't find a counterparty called "${resolution.term}" in your ledger, so I can't total what you owe them. Check the spelling, or open Ledger › Payables to see the vendors RobotMoney knows about.`,
     );
   }
   if (resolution.kind === "ambiguous") {

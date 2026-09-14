@@ -87,13 +87,13 @@ export function AnchorStatus({
      exists. The recorded state claims exactly what is true: sealed in the
      append-only audit chain, cryptographically verifiable, anchor pending. */
   const guarantee = isAnchored
-    ? "This record is anchored on Base and can't be altered. Confirm it independently, without trusting Brain."
+    ? "This record is anchored on Base and can't be altered. Confirm it independently, without trusting RobotMoney."
     : isRecorded
-      ? "This record is sealed in Brain's append-only audit chain and can be verified cryptographically. The on-chain anchor to Base is pending."
+      ? "This record is sealed in RobotMoney's append-only audit chain and can be verified cryptographically. The on-chain anchor to Base is pending."
       : isDbOnly
-        ? "This demo record is retained in Brain's append-only database hash chain. It is not published to Base and has no on-chain proof."
+        ? "This demo record is retained in RobotMoney's append-only database hash chain. It is not published to Base and has no on-chain proof."
       : isNotRecorded
-        ? "This activity was handled outside Brain's audit log, so there is nothing to anchor or verify on-chain."
+        ? "This activity was handled outside RobotMoney's audit log, so there is nothing to anchor or verify on-chain."
         : "Once anchored on Base, this record becomes independently verifiable.";
 
   return (
@@ -161,7 +161,7 @@ export function AnchorStatus({
               data-testid="text-not-recorded-caption"
               className="[font-family:'Gilroy',sans-serif] font-medium text-[12px] leading-[16px] text-brain-v1baby-blue-30"
             >
-              No on-chain proof. This activity was never recorded in Brain's audit log.
+              No on-chain proof. This activity was never recorded in RobotMoney's audit log.
             </span>
           ) : pending ? (
             <span

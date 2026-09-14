@@ -134,9 +134,9 @@ const RecommendationCard = ({ category }: { category: string }) => {
   });
 
   const text = isLoading
-    ? "Brain is sizing this up against your account…"
+    ? "RobotMoney is sizing this up against your account…"
     : isError
-      ? "Brain couldn't reach the recommendation engine. Pick a target you can defend and continue."
+      ? "RobotMoney couldn't reach the recommendation engine. Pick a target you can defend and continue."
       : data?.text ?? "";
 
   return (
@@ -241,7 +241,7 @@ export const AddGoalModal = ({ open, onOpenChange, onCreate, isSubmitting }: Pro
               id="add-goal-modal-description"
               className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-60 text-[16px] w-full"
             >
-              Tell Brain what your business is working toward. Agents will run it under signed policy.
+              Tell RobotMoney what your business is working toward. Agents will run it under signed policy.
             </DialogPrimitive.Description>
 
             {/* What's it for? */}

@@ -93,7 +93,7 @@ export function pendingAttentionSummary({
       total: 0,
       urgent: 0,
       tone: "unknown",
-      text: "Brain couldn't check what's waiting on you",
+      text: "RobotMoney couldn't check what's waiting on you",
       /* Names the cause, because "0" and "unknown" look identical otherwise and
          only one of them is safe to act on. */
       detail: "This is a connection problem, not an empty queue. Open the Inbox to try again.",

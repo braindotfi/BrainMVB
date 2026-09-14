@@ -222,21 +222,21 @@ function recurrenceDisplay(o: BrainObligation): string {
  *  replace the derivation below. */
 function deriveWhyFlagged(o: BrainObligation, vendor: string, amt: string): string {
   if (o.flag_reason) {
-    return `Brain flagged this subscription because: ${o.flag_reason}.`;
+    return `RobotMoney flagged this subscription because: ${o.flag_reason}.`;
   }
   if (!o.recurrence) {
     return (
-      `Brain detected what appears to be a new subscription charge from ${vendor} ` +
+      `RobotMoney detected what appears to be a new subscription charge from ${vendor} ` +
       `(${amt}). No prior recurrence pattern has been established for this vendor, ` +
       `so it is surfaced for your awareness.`
     );
   }
   const conf =
     typeof o.confidence === "number"
-      ? ` Brain's extraction confidence for this record is ${Math.round(o.confidence * 100)}%.`
+      ? ` RobotMoney's extraction confidence for this record is ${Math.round(o.confidence * 100)}%.`
       : "";
   return (
-    `Brain detected a recurring subscription charge from ${vendor} (${amt}, ` +
+    `RobotMoney detected a recurring subscription charge from ${vendor} (${amt}, ` +
     `${o.recurrence} recurrence). Review the amount and due date to confirm no ` +
     `unexpected changes since the prior cycle.${conf}`
   );
@@ -409,7 +409,7 @@ export function useBrainCashFlowInsight() {
     const dayWord = windowCount === 1 ? "day" : "days";
     const haveWord = windowCount === 1 ? "has" : "have";
     explanation =
-      `Brain reports your trailing cash position whenever the ledger has activity. ` +
+      `RobotMoney reports your trailing cash position whenever the ledger has activity. ` +
       `Only ${windowCount} ${dayWord} of movement ${haveWord} been recorded so far — ` +
       `trend comparisons require at least 3 days of data, ` +
       `and forward-looking cash forecasting will require at least 30 days of history ` +

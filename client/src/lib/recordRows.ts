@@ -151,6 +151,6 @@ export function insightRow(insight: LiveInsight, fmt: RowFormatters): RecordRowP
     /* The record's own subtitle carries its figures. The reasoning stays on the
        card as "Why Brain Suggested This" — promoting it into the row on one
        screen only is exactly how the two drifted apart. */
-    subtitle: fmt.formatText(insight.subtitle ?? "Brain noticed this in your ledger."),
+    subtitle: fmt.formatText(insight.subtitle ?? "RobotMoney noticed this in your ledger."),
   };
 }

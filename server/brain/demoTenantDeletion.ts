@@ -26,7 +26,7 @@ function errorText(value: unknown): string {
     const message = nestedError ?? candidate.message;
     if (typeof message === "string") return message.slice(0, 1000);
   }
-  return "Brain tenant deletion request failed";
+  return "RobotMoney tenant deletion request failed";
 }
 
 function machineErrorCode(value: unknown): string | undefined {
@@ -171,7 +171,7 @@ async function start(
     }
     const jobId = typeof json.job_id === "string" ? json.job_id : typeof json.id === "string" ? json.id : undefined;
     if (!jobId) {
-      await storage.updateDemoTenantLifecycle(userId, { deletionStatus: "needs_attention", deletionError: "Brain deletion response omitted job_id", deletionAttemptedAt: attemptedAt });
+      await storage.updateDemoTenantLifecycle(userId, { deletionStatus: "needs_attention", deletionError: "RobotMoney deletion response omitted job_id", deletionAttemptedAt: attemptedAt });
       return;
     }
     await storage.updateDemoTenantLifecycle(userId, {
@@ -216,7 +216,7 @@ async function poll(storage: IStorage, userId: string, tenantId: string, jobId: 
       await storage.updateDemoTenantLifecycle(userId, {
         deletionStatus: nextStatus,
         deletionError: nextStatus === "needs_attention"
-          ? `Unexpected Brain deletion status: ${status || "missing"}`
+          ? `Unexpected RobotMoney deletion status: ${status || "missing"}`
           : null,
         deletionLastPolledAt: now,
       });

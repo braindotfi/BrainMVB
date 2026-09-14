@@ -88,10 +88,10 @@ function step1(read: PolicyRead, rule: WalkthroughRule | null): WalkthroughStep 
     headline: "This is a rule.",
     subhead:
       read.state === "noPolicy"
-        ? "Rules define exactly what Brain may do without asking you first. You haven't set any yet. This is what one looks like."
+        ? "Rules define exactly what RobotMoney may do without asking you first. You haven't set any yet. This is what one looks like."
         : real
-          ? "Rules define exactly what Brain is allowed to do without asking you first. Nothing runs outside them."
-          : "Rules define exactly what Brain may do without asking you first. Nothing runs outside them.",
+          ? "Rules define exactly what RobotMoney is allowed to do without asking you first. Nothing runs outside them."
+          : "Rules define exactly what RobotMoney may do without asking you first. Nothing runs outside them.",
     row: {
       title: shown.name,
       sub: shown.detail,
@@ -102,7 +102,7 @@ function step1(read: PolicyRead, rule: WalkthroughRule | null): WalkthroughStep 
 }
 
 function step2(read: PolicyRead): WalkthroughStep {
-  const headline = "Here's what Brain does automatically.";
+  const headline = "Here's what RobotMoney does automatically.";
 
   if (read.state === "known" && read.limit.kind === "limit") {
     const amount = amountLabel(read.limit);
@@ -170,7 +170,7 @@ function step3(read: PolicyRead): WalkthroughStep {
   return {
     headline: "Here's what always comes to you.",
     /* True regardless of what the policy says, or whether it could be read. */
-    subhead: `${above} Brain proposes. It never executes outside your rules.`,
+    subhead: `${above} RobotMoney proposes. It never executes outside your rules.`,
     row: {
       title: "Confirm treasury transfer to Reserve",
       sub: "Waiting on your approval",

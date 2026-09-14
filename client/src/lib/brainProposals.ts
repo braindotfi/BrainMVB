@@ -274,7 +274,7 @@ export async function fetchAllBrainProposals(signal?: AbortSignal, status?: stri
     });
     const body = (await response.json()) as Partial<ListProposalsResponse>;
     if (!Array.isArray(body.proposals)) {
-      throw new Error("Brain proposals response did not contain a proposals array.");
+      throw new Error("RobotMoney proposals response did not contain a proposals array.");
     }
     proposals.push(...body.proposals);
 
@@ -283,13 +283,13 @@ export async function fetchAllBrainProposals(signal?: AbortSignal, status?: stri
       : null;
     if (!next) return { proposals, next_cursor: null };
     if (followed.has(next)) {
-      throw new Error("Brain proposals pagination did not advance.");
+      throw new Error("RobotMoney proposals pagination did not advance.");
     }
     followed.add(next);
     cursor = next;
   }
 
-  throw new Error("Brain proposals feed exceeded the maximum page count.");
+  throw new Error("RobotMoney proposals feed exceeded the maximum page count.");
 }
 
 /** `type` -> the client agent key is an identity mapping. The return stays open
@@ -452,9 +452,9 @@ const DECISION_CONFIRMED_TITLE: Record<string, string> = {
 };
 
 const DECISION_CONFIRMED_DETAIL: Record<string, string> = {
-  approve: "Brain recorded your approval. It's in Resolved.",
-  reject: "Brain recorded your decision. It's in Resolved.",
-  acknowledge: "Brain recorded this. It's in Resolved.",
+  approve: "RobotMoney recorded your approval. It's in Resolved.",
+  reject: "RobotMoney recorded your decision. It's in Resolved.",
+  acknowledge: "RobotMoney recorded this. It's in Resolved.",
   undo: "This is back in your unresolved list.",
 };
 
@@ -580,7 +580,7 @@ export function useDecideProposal() {
       const result = parseDecisionResult(body, decision, id);
       if (!result) {
         throw new Error(
-          "Brain accepted the decision but returned an unreadable response, so it can't be confirmed. Reload before deciding again.",
+          "RobotMoney accepted the decision but returned an unreadable response, so it can't be confirmed. Reload before deciding again.",
         );
       }
       return result;
@@ -636,7 +636,7 @@ export function useDecideProposal() {
                 : alert.success;
         confirm(
           DECISION_CONFIRMED_TITLE[decision] ?? "Decision recorded",
-          DECISION_CONFIRMED_DETAIL[decision] ?? "Brain recorded your decision.",
+          DECISION_CONFIRMED_DETAIL[decision] ?? "RobotMoney recorded your decision.",
         );
       } else if (finality === "awaiting") {
         /* Held, not settled: another approver still has to act. */

@@ -110,7 +110,7 @@ export function ReceivableDetailPopup({
                 className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[16px] w-full"
                 data-testid="text-receivable-next"
               >
-                This is money owed to you. Brain counts it in your receivables total
+                This is money owed to you. RobotMoney counts it in your receivables total
                 and tracks it against its due date.
               </p>
             </div>

@@ -67,7 +67,7 @@ import type { DocumentRecord } from "@/lib/documentTypes";
  */
 const PROVENANCE_LABEL: Record<string, string> = {
   extracted: "Read from an uploaded document",
-  agent_contributed: "Recorded by a Brain agent",
+  agent_contributed: "Recorded by a RobotMoney agent",
   manual: "Entered by hand",
 };
 
@@ -297,7 +297,7 @@ export function PayableDetailPopup({
 
             <DetailPopupBody testId="payable-detail-popup-content">
               <div className="flex flex-col gap-[16px] items-start w-full">
-                <SectionLabel>What Brain Extracted</SectionLabel>
+                <SectionLabel>What RobotMoney Extracted</SectionLabel>
                 <DetailTable>
                   <Row
                     label="Party"
@@ -329,7 +329,7 @@ export function PayableDetailPopup({
                   <SectionLabel>Amount Coherence</SectionLabel>
                   <AlertCallout testId="payable-coherence-callout">
                     {coherenceUnknown
-                      ? "Couldn't check this against Brain's other records of the same debt, so whether the sources agree — and how it's coded to your GL — is unknown."
+                      ? "Couldn't check this against RobotMoney's other records of the same debt, so whether the sources agree — and how it's coded to your GL — is unknown."
                       : conflicts.map((c) => conflictSentence(c, currency)).join(" ")}
                   </AlertCallout>
                 </div>
@@ -435,8 +435,8 @@ export function PayableDetailPopup({
                   from this record. The sentence stops where the evidence does. */}
               <MutedCallout title="A viewer, not an AP system" testId="text-payable-next">
                 {invoicesUnknown
-                  ? "Brain reads this record and tracks what it costs you and when it falls due. Nothing is paid or scheduled from here. Your invoice feed couldn't be read, so whether an invoice also backs this is unknown."
-                  : "Brain reads this record and tracks what it costs you and when it falls due. Nothing is paid or scheduled from here."}
+                  ? "RobotMoney reads this record and tracks what it costs you and when it falls due. Nothing is paid or scheduled from here. Your invoice feed couldn't be read, so whether an invoice also backs this is unknown."
+                  : "RobotMoney reads this record and tracks what it costs you and when it falls due. Nothing is paid or scheduled from here."}
               </MutedCallout>
 
               <Button

@@ -361,7 +361,7 @@ export function VendorDetailPopup({
                   <div className="flex flex-1 gap-[8px] items-start min-w-px">
                     <InfoIcon color="#6c779d" className="mt-[2px]" />
                     <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px] flex-1 min-w-px">
-                      Only {vendor.history.paymentCount} payment{vendor.history.paymentCount === 1 ? "" : "s"} on record. Brain needs more history before suggesting trust.
+                      Only {vendor.history.paymentCount} payment{vendor.history.paymentCount === 1 ? "" : "s"} on record. RobotMoney needs more history before suggesting trust.
                     </p>
                   </div>
                 </div>
@@ -374,7 +374,7 @@ export function VendorDetailPopup({
                     <InfoIcon color="#a8b9f4" className="mt-[2px]" />
                     <div className="flex flex-col gap-[8px] flex-1 min-w-px">
                       <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-100 text-[14px]">
-                        Brain suggests trusting this {noun}.
+                        RobotMoney suggests trusting this {noun}.
                       </p>
                       <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px]">
                         Based on consistent payment history and no unresolved flags. You decide, trust is never auto-granted.
@@ -529,7 +529,7 @@ export function VendorDetailPopup({
                     <div className="flex flex-1 gap-[8px] items-start min-w-px">
                       <InfoIcon color="#6c779d" className="mt-[2px]" />
                       <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px] flex-1 min-w-px">
-                        Brain keeps this row to group entries from a payroll register. It is not a{" "}
+                        RobotMoney keeps this row to group entries from a payroll register. It is not a{" "}
                         {noun} you pay directly, so there is nothing here to trust, flag, or dismiss.
                       </p>
                     </div>
@@ -546,7 +546,7 @@ export function VendorDetailPopup({
                       with nothing on it explaining what changed. */}
                   {isNeedsReview(vendor) && (
                     <AlertCallout testId="text-trusted-risk-note">
-                      Brain marked this {noun} as risky since trust was granted. Verify the
+                      RobotMoney marked this {noun} as risky since trust was granted. Verify the
                       account, or pause trust while you check.
                     </AlertCallout>
                   )}
@@ -658,7 +658,7 @@ export function VendorDetailPopup({
                 ) : (
                   <div className="flex flex-col gap-[14px] w-full">
                     <p className="[font-family:'Gilroy',sans-serif] font-medium text-[14px] leading-[20px] text-brain-v1baby-blue-60">
-                      Brain marked this {noun} as risky. Verify the account before granting trust.
+                      RobotMoney marked this {noun} as risky. Verify the account before granting trust.
                     </p>
                     <TrustButton
                       label={grantLabel}

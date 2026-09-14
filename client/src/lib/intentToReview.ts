@@ -23,11 +23,11 @@ export function intentToReview(
     amount: amountStr,
     due: "Needs approval",
     question: `Should I pay ${rec.vendor} ${amountStr}?`,
-    description: `Brain flagged this payment (${rec.invoiceNumber}) and the §6 policy gate flagged it for human sign-off. It is above your auto-pay limit and needs approval from ${approvers} before it can settle.`,
+    description: `RobotMoney flagged this payment (${rec.invoiceNumber}) and the §6 policy gate flagged it for human sign-off. It is above your auto-pay limit and needs approval from ${approvers} before it can settle.`,
     who: rec.vendor,
     amountFull: amountStr,
     dueBy: "Awaiting approval",
-    from: "Brain Smart Account",
+    from: "RobotMoney Smart Account",
     autoLabel: "Always require approval for large payments",
   };
 }

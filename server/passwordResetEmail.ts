@@ -94,16 +94,16 @@ function htmlEscape(value: string): string {
 function resetEmailCopy(message: PasswordResetEmail) {
   const url = htmlEscape(message.resetUrl);
   return {
-    subject: "Reset your Brain Finance password",
+    subject: "Reset your RobotMoney Finance password",
     text: [
-      "A password reset was requested for your Brain Finance account.",
+      "A password reset was requested for your RobotMoney Finance account.",
       "",
       `Reset your password: ${message.resetUrl}`,
       "",
       `This link expires ${message.expiresInMinutes} minutes after it was requested and can be used once.`,
       "If this was not requested, no action is needed.",
     ].join("\n"),
-    html: `<p>A password reset was requested for your Brain Finance account.</p>
+    html: `<p>A password reset was requested for your RobotMoney Finance account.</p>
 <p><a href="${url}">Reset your password</a></p>
 <p>This link expires ${message.expiresInMinutes} minutes after it was requested and can be used once.</p>
 <p>If this was not requested, no action is needed.</p>`,
@@ -119,7 +119,7 @@ async function sendWithResend(message: PasswordResetEmail): Promise<void> {
     || process.env.MAILERSEND_FROM_EMAIL?.trim();
   const fromName = process.env.RESEND_FROM_NAME?.trim()
     || process.env.MAILERSEND_FROM_NAME?.trim()
-    || "Brain Finance";
+    || "RobotMoney Finance";
   if (!token || !fromEmail) {
     throw new PasswordResetEmailDeliveryError({
       category: "configuration_missing",

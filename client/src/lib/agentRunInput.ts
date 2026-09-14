@@ -295,10 +295,10 @@ function joinPhrases(parts: string[]): string {
 export function describeMissingEvidence(item: MissingEvidenceItem): string {
   const fields = joinPhrases(item.missingFields.map(humanizeField));
   const action = item.attemptedAction;
-  if (!action) return `Brain stopped an action because it couldn't find ${fields}.`;
+  if (!action) return `RobotMoney stopped an action because it couldn't find ${fields}.`;
   const phrase = ACTION_PHRASE[action];
-  if (phrase) return `Brain tried to ${phrase} but couldn't find ${fields}.`;
-  return `Brain tried to run ${action} but couldn't find ${fields}.`;
+  if (phrase) return `RobotMoney tried to ${phrase} but couldn't find ${fields}.`;
+  return `RobotMoney tried to run ${action} but couldn't find ${fields}.`;
 }
 
 /* ── entity refs ─────────────────────────────────────────────────────────── */

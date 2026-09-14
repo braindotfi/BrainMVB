@@ -22,9 +22,9 @@ export const RECOMMENDATION_PROMPT =
 export const CANNED_PROMPTS: ReadonlyArray<CannedPrompt> = [
   {
     prompt: RECOMMENDATION_PROMPT,
-    title: "Brain generated your money insight",
+    title: "RobotMoney generated your money insight",
     description:
-      "Brain scanned your cash flow, spending, and receivables to pick the single most " +
+      "RobotMoney scanned your cash flow, spending, and receivables to pick the single most " +
       "important item for your dashboard.",
   },
 ];

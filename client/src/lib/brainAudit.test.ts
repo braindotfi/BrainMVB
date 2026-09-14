@@ -470,7 +470,7 @@ describe("mapAuditEventToRecord", () => {
       anchor(),
     );
     expect(sys.eventType).toBe("system_activity");
-    expect(sys.summary).toBe("New data ingested: Brain pulled in new records to process");
+    expect(sys.summary).toBe("New data ingested: RobotMoney pulled in new records to process");
     expect(sys.coreEventType).toBe("system_activity");
 
     // core explicitly flags an unmapped action → it IS flagged, with a human-readable summary

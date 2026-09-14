@@ -161,20 +161,20 @@ async function humanizeWikiAnswer(raw: string, lastUserMessage?: string): Promis
 }
 
 const GOAL_REC_FALLBACK_DEFAULT =
-  "Set a target tied to one of your live metrics (operating cash, monthly burn, or AR) and Brain will keep agents aligned to it.";
+  "Set a target tied to one of your live metrics (operating cash, monthly burn, or AR) and RobotMoney will keep agents aligned to it.";
 const GOAL_REC_FALLBACK: Record<string, string> = {
   "Pay Off Debt":
     "Target your highest-interest debt first. Paying it down fastest frees up the most monthly cash flow.",
   "Build Reserve":
     "Base your reserve target on a multiple of your monthly operating burn (e.g. 3-6 months) so it tracks real runway.",
   "Hit Milestone":
-    "Pick a growth number tied to a metric you actually track (revenue, ARR, users) and Brain will pace agent activity toward it.",
+    "Pick a growth number tied to a metric you actually track (revenue, ARR, users) and RobotMoney will pace agent activity toward it.",
   "Cut Spend":
     "Start with your largest recurring expense categories. Trimming there usually has the biggest monthly impact.",
   "Capital Deploy":
     "Point idle operating cash at a yield vault or a specific agent budget instead of letting it sit unused.",
   "Other":
-    "Pick a number you want to move (runway, ARR, AR collected, burn) and Brain will translate it into agent budgets and policies.",
+    "Pick a number you want to move (runway, ARR, AR collected, burn) and RobotMoney will translate it into agent budgets and policies.",
 };
 
 export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {
@@ -894,7 +894,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   const goalRecCache = new Map<string, { text: string; at: number }>();
   const GOAL_REC_TTL_MS = 30 * 60 * 1000; // 30 minutes
 
-  const GOAL_REC_SYSTEM = `You are Brain AI, the financial brain embedded in a neobank for businesses.
+  const GOAL_REC_SYSTEM = `You are RobotMoney AI, the financial brain embedded in a neobank for businesses.
 The user is creating a new goal and just picked a CATEGORY in the "What's it for?" tabs.
 Given the user's real financial figures, return ONE concrete, numeric recommendation
 (1–2 short sentences, max ~220 chars) tailored to that category - what target to
@@ -937,7 +937,7 @@ Rules:
           .filter((a) => a.currency === "USD" && a.current_balance != null)
           .reduce((sum, a) => sum + (Number(a.current_balance) || 0), 0);
         grounding =
-          `Real account balances from Brain:\n${lines.join("\n")}\n` +
+          `Real account balances from RobotMoney:\n${lines.join("\n")}\n` +
           `Total USD cash ≈ ${usdTotal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD.`;
       }
     } catch (e) {
@@ -947,7 +947,7 @@ Rules:
     try {
       const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
       const context = grounding
-        ? `The user's real financial figures from Brain (source of truth. Use only these, do not invent):\n${grounding}`
+        ? `The user's real financial figures from RobotMoney (source of truth. Use only these, do not invent):\n${grounding}`
         : "No live financial figures are available; give general but actionable guidance for the category.";
       const message = await anthropic.messages.create({
         model: ANTHROPIC_MODEL,
@@ -980,7 +980,7 @@ Rules:
   // Powers the right-hand Brain Assistant panel. Takes the running
   // conversation and returns Claude's next reply.
   // ─────────────────────────────────────────────────────────────
-  const ASSISTANT_SYSTEM = `You are Brain, the AI financial assistant inside Brain Finance, a programmable neobank for businesses on Base L2.
+  const ASSISTANT_SYSTEM = `You are RobotMoney, the AI financial assistant inside RobotMoney Finance, a programmable neobank for businesses on Base L2.
 Help the user with their finances, accounts, transactions, crypto basics, and how to use the platform.
 Be concise, warm, and practical: default to 1–4 short sentences unless the user asks for more detail.
 Use plain prose (no markdown headings or bullet dumps unless genuinely helpful).
@@ -1330,7 +1330,7 @@ When you mention a money amount, always reproduce it exactly as the grounding da
     const dataUnavailable = !dataAvailable && isDataQuestion(lastUser);
 
     const system = grounding
-      ? `${ASSISTANT_SYSTEM}\n\nGrounded financial data from Brain (the user's real accounts, transactions, invoices, upcoming obligations, team members, approval policy, pending approvals and payment intents, and recent audit trail). Treat this as the source of truth and answer from it, citing concrete figures. Do not invent numbers:\n${grounding}`
+      ? `${ASSISTANT_SYSTEM}\n\nGrounded financial data from RobotMoney (the user's real accounts, transactions, invoices, upcoming obligations, team members, approval policy, pending approvals and payment intents, and recent audit trail). Treat this as the source of truth and answer from it, citing concrete figures. Do not invent numbers:\n${grounding}`
       : ASSISTANT_SYSTEM;
 
     if (!process.env.ANTHROPIC_API_KEY) {
@@ -1583,7 +1583,7 @@ When you mention a money amount, always reproduce it exactly as the grounding da
       const client = getPlaidClient();
       const result = await client.linkTokenCreate({
         user: { client_user_id: req.session.userId! },
-        client_name: "Brain Finance",
+        client_name: "RobotMoney Finance",
         products: PLAID_PRODUCTS,
         country_codes: PLAID_COUNTRIES,
         language: "en",
@@ -2016,11 +2016,11 @@ When you mention a money amount, always reproduce it exactly as the grounding da
 
         const brainCode = brainErrorCode(err);
         if (brainCode === "auth_scope_insufficient") {
-          message = "Document upload is not yet available on this demo environment. Brain is adding the required permission to the demo token.";
+          message = "Document upload is not yet available on this demo environment. RobotMoney is adding the required permission to the demo token.";
         } else if (brainCode === "auth_token_expired" || brainCode === "auth_token_invalid") {
           // Transient: the BFF's own brain-core session token expired mid-request.
           // A fresh request mints a fresh token, so this always clears on retry.
-          message = "Your session with Brain expired. Please try uploading this file again.";
+          message = "Your session with RobotMoney expired. Please try uploading this file again.";
         }
 
         /* Always log ingest failures server-side, including both the BFF
@@ -2189,7 +2189,7 @@ When you mention a money amount, always reproduce it exactly as the grounding da
     confidence: z.enum(["low", "medium", "high"]),
   });
 
-  const RULE_SUGGESTIONS_SYSTEM = `You are Brain AI, proposing standing automation rules for a business's payment workflow.
+  const RULE_SUGGESTIONS_SYSTEM = `You are RobotMoney AI, proposing standing automation rules for a business's payment workflow.
 Given the user's real financial data (accounts, transactions, invoices, obligations, pending approvals), propose 0-3
 automation-rule suggestions derived ONLY from patterns you can see in that data:
 - Recurring same-vendor payments → an auto-pay allowlist rule.
@@ -2243,7 +2243,7 @@ Evidence rows must cite the actual vendor names, amounts, and counts you saw in 
         model: ANTHROPIC_MODEL,
         max_tokens: 1024,
         system: RULE_SUGGESTIONS_SYSTEM,
-        messages: [{ role: "user", content: `Live financial data from Brain:\n${built.text}` }],
+        messages: [{ role: "user", content: `Live financial data from RobotMoney:\n${built.text}` }],
       });
       const raw = (message.content.find((b) => b.type === "text") as Anthropic.TextBlock | undefined)?.text?.trim() ?? "[]";
       const jsonMatch = raw.match(/\[[\s\S]*\]/);

@@ -166,7 +166,7 @@ export function mapPolicyRuleToCard(rule: PolicyContentRule, fmt?: (v: string | 
     locked: true,
     name: policyRuleLabel(rule),
     summary: `${scopes} - ${executeLabel}${conditionInfix}${requireSuffix}`,
-    createdLabel: "From your active Brain policy",
+    createdLabel: "From your active RobotMoney policy",
     policyId: rule.id,
     active: true,
     scopeSummary: `${scopes} · ${conditionSummary}`,
@@ -293,7 +293,7 @@ export function useBrainPolicy() {
     facts: notFound ? undefined : query.data,
     version: query.data?.version,
     quorum: query.data?.quorumRequired,
-    policyLabel: query.data?.policyLabel ?? "Brain protection policy",
+    policyLabel: query.data?.policyLabel ?? "RobotMoney protection policy",
   };
 }
 
@@ -308,14 +308,14 @@ export function usePolicyRule(cardId: string | undefined) {
   if (!cardId || !cardId.startsWith("policy-")) {
     return {
       rule: undefined,
-      policyLabel: "Brain protection policy",
+      policyLabel: "RobotMoney protection policy",
       isLoading: false,
       isError: false,
     };
   }
   return {
     rule: query.data?.rules.find((rule) => policyRuleCardId(rule) === cardId),
-    policyLabel: query.data?.policyLabel ?? "Brain protection policy",
+    policyLabel: query.data?.policyLabel ?? "RobotMoney protection policy",
     isLoading: query.isLoading,
     isError: query.isError && !isPolicyNotFound(query.error),
   };

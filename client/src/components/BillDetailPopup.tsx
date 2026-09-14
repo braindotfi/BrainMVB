@@ -197,8 +197,8 @@ export function BillDetailPopup({
                   <div className="flex flex-col gap-[10px] items-start w-full">
                     <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[16px] w-full">
                       {isFlagged
-                        ? "Brain proposed this, but flagged it for review. Nothing moves until you approve."
-                        : "Brain has proposed this payment. Nothing moves until you approve it."}
+                        ? "RobotMoney proposed this, but flagged it for review. Nothing moves until you approve."
+                        : "RobotMoney has proposed this payment. Nothing moves until you approve it."}
                     </p>
                     <button
                       type="button"
@@ -220,7 +220,7 @@ export function BillDetailPopup({
                       ? "This hasn't been proposed yet. The flags above need a human look first. You'll approve before any money moves."
                       : overdue
                       ? "This is past due and hasn't been proposed yet. You'll approve before any money moves."
-                      : "Brain hasn't proposed this yet. When it does, you'll approve before any money moves."}
+                      : "RobotMoney hasn't proposed this yet. When it does, you'll approve before any money moves."}
                   </p>
                 )}
               </div>

@@ -95,7 +95,6 @@ import { capitalCase } from "@/lib/displayLabels";
 export type { AgentModalEditPayload };
 
 
-
 /* ── LIVE mode: brain-core /v1/proposals (BrainProposal, client/src/lib/brainProposals.ts) ──
    This file used to also carry a static modal for the fabricated 11-agent
    AgentProposal shape (agentProposals.ts). Nothing rendered it, and it kept
@@ -537,7 +536,7 @@ export function LiveProposalModal({
             <CardBody>
               {!isKnownAgent && (
                 <InfoBox testId="callout-live-proposal-unrecognized-agent">
-                  Brain sent the unrecognized proposal type “{proposal.type}”. It is not configured in
+                  RobotMoney sent the unrecognized proposal type “{proposal.type}”. It is not configured in
                   BrainMVB’s supported agent catalog, but its source data is shown here safely.
                 </InfoBox>
               )}
@@ -546,7 +545,7 @@ export function LiveProposalModal({
                   recorded (policy trace / ranked signals), never client-authored
                   copy; a record that recorded none drops the section. */}
               {whySuggested.length > 0 && (
-                <CardSection title="Why Brain Suggested This">
+                <CardSection title="Why RobotMoney Suggested This">
                   <ReasonList reasons={whySuggested} testId="list-live-proposal-why-suggested" />
                 </CardSection>
               )}
@@ -666,7 +665,7 @@ export function LiveProposalModal({
                     </p>
                   </div>
                   <InfoBox testId="box-live-proposal-message-note">
-                    Draft for review, composed from this proposal's facts. Brain generates the
+                    Draft for review, composed from this proposal's facts. RobotMoney generates the
                     final wording when the message is sent.
                   </InfoBox>
                 </CardSection>

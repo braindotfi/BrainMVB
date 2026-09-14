@@ -263,7 +263,7 @@ function AddMemberDialog({ open, onClose, production }: { open: boolean; onClose
       );
       onClose();
     } catch {
-      setError("Couldn't reach Brain core. Nothing was changed.");
+      setError("Couldn't reach RobotMoney core. Nothing was changed.");
     } finally {
       setBusy(false);
     }
@@ -503,7 +503,7 @@ export default function TeamSection() {
               title="Escalation timers are not active."
               testId="text-escalation-unavailable"
             >
-              Brain is propose-only: if the primary approver does not act, nothing ships
+              RobotMoney is propose-only: if the primary approver does not act, nothing ships
               and nothing is escalated. Backup-approver marks are recorded in this
               browser only, so no reminder is sent to anyone today.
             </MutedCallout>

@@ -54,7 +54,7 @@ function ConfirmCloseModal({ onCancel, onConfirm, isDeleting }: { onCancel: () =
           Close Account
         </p>
         <p className={POPUP_BODY}>
-          Are you sure you want to permanently delete your Brain account? This is irreversible.
+          Are you sure you want to permanently delete your RobotMoney account? This is irreversible.
         </p>
       </div>
       <div className={POPUP_BUTTON_ROW}>
@@ -95,7 +95,7 @@ function ConfirmDeleteDataModal({ onCancel, onConfirm, isDeleting }: { onCancel:
           Delete Data
         </p>
         <p className={POPUP_BODY}>
-          Are you sure you want to permanently delete your Brain data? This is irreversible.
+          Are you sure you want to permanently delete your RobotMoney data? This is irreversible.
         </p>
       </div>
       <div className={POPUP_BUTTON_ROW}>
@@ -333,7 +333,7 @@ export default function AccountSection() {
                 </p>
                 <div className="content-stretch flex items-center relative shrink-0">
                   <p className="settings-record-detail">
-                    Permanently delete your Brain account
+                    Permanently delete your RobotMoney account
                   </p>
                 </div>
               </div>
