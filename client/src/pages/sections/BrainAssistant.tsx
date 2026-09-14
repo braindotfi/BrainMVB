@@ -1510,6 +1510,9 @@ export function BrainAssistant() {
         hidePager
       />
       <BillDetailPopup
+        /* Opened from a citation link, which quotes no amount of its own — there is
+           nothing here for the record's own currency to contradict. */
+        amountBasis="source"
         bill={invData?.invoices.find((i) => i.id === openBillId) ?? null}
         vendorName="Unknown vendor"
         onClose={() => setOpenBillId(null)}

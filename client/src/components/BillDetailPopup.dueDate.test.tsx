@@ -82,7 +82,7 @@ function openPopup(bill: BrainInvoiceDTO) {
   root = createRoot(container);
   act(() => {
     root.render(
-      <BillDetailPopup bill={bill} vendorName="Acme Supply Co" onClose={() => {}} hidePager />,
+      <BillDetailPopup bill={bill} vendorName="Acme Supply Co" amountBasis="source" onClose={() => {}} hidePager />,
     );
   });
 }

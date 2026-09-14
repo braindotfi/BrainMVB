@@ -745,7 +745,15 @@ export function HomePage() {
     read: obligationsRead.read,
     ingesting: obligationsRead.ingesting,
   });
-  const liabilities = payables.total;
+  /* `crossCurrencyTotal`, NOT the Payables tab's single-currency `subtotal`. A
+     subtotal is only honest beside a line naming what it left out, and this card has
+     one caption, already spoken for by the state of the read. Quoting a narrowed
+     figure here would drop a foreign-currency bill from "everything you still owe"
+     with nothing on screen saying so — and would then hand a non-USD number to
+     `format`, which converts as if its input were dollars. So the card keeps the
+     figure that covers every row, and the fact that such a sum spans currencies is
+     the card's own currency treatment to fix, not something to half-do here. */
+  const liabilities = payables.crossCurrencyTotal;
   const liabilitiesFormatted = liabilities !== null ? format(liabilities) : "-";
   const { whole: liabWhole, cents: liabCents } = splitMetricAmount(liabilitiesFormatted);
 
@@ -1171,6 +1179,9 @@ export function HomePage() {
           other kind — the user would tap Next on the Aug 13 bill and land past
           the Aug 20 invoice sitting right beside it on screen. */}
       <BillDetailPopup
+        /* The projection chips are still converted, and a chip and the popup it
+           opens have to agree. Flip this with the chips. */
+        amountBasis="display"
         bill={openRecord?.kind === "bill" ? openRecord.bill : null}
         vendorName={
           (openRecord?.kind === "bill" ? counterpartyName(openRecord.obligation.counterparty_id) : null) ??

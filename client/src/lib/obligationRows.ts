@@ -8,8 +8,6 @@
 
 import { capitalCase } from "./displayLabels";
 
-type Format = (a: string | number) => string;
-
 /* ── status presentation ──────────────────────────────────────────────────────
    Shared by the Payables list badge and the detail popup's header chip.
 
@@ -65,21 +63,15 @@ export function dueLabel(due: string | null): string {
   return `Due ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
 }
 
-/**
- * brain-core sends `amount_due` as a raw decimal string with eight trailing places
- * ("4800.00000000"). Handing that straight to the currency formatter renders
- * "$4,800.00000000", so it goes through Number first — the same coercion the running
- * total applies, which is what keeps a row and the total below it consistent. An
- * unparseable amount says so rather than rendering "$NaN".
- */
-export function amountLabel(raw: string, format: Format): string {
-  // `Number("")` is 0, not NaN. A blank amount is not a zero amount, and rendering it
-  // as "$0.00" would be a false all-clear on a debt — the same class of bug as showing
-  // an unreachable total as zero. Reject it before the coercion can hide it.
-  if (typeof raw !== "string" || !raw.trim()) return "Amount unavailable";
-  const n = Number(raw);
-  return Number.isFinite(n) ? format(n) : "Amount unavailable";
-}
+/* There is deliberately NO converting amount formatter here.
+ *
+ * There used to be one — `amountLabel(raw, format)` — which handed the record's own
+ * amount to `useCurrency().format`. That helper converts as if its input were USD, so
+ * the Payables list rendered a EUR bill as a dollar figure while the popup it opened
+ * quoted the euros, and the running total below summed converted and unconverted
+ * numbers together. Everything on this surface is a figure lifted off an upstream
+ * record, so everything goes through `sourceAmountLabel` / `glanceAmountLabel` below.
+ * See .agents/memory/display-vs-source-currency.md. */
 
 const CURRENCY_SYMBOL: Record<string, string> = {
   USD: "$",
@@ -105,9 +97,25 @@ const CURRENCY_SYMBOL: Record<string, string> = {
  * a large amount quietly loses precision.
  */
 export function sourceAmountLabel(raw: string | null, currency: string | null): string {
-  if (typeof raw !== "string" || !raw.trim()) return "Amount unavailable";
+  const parts = splitSourceAmount(raw, currency);
+  if (!parts) return UNAVAILABLE;
+  // The code is always shown when there is no symbol for it, because "1,200.00" alone
+  // names no currency at all.
+  return parts.code ? `${parts.number} ${parts.code}` : parts.number;
+}
+
+const UNAVAILABLE = "Amount unavailable";
+
+/* The one place the digits are produced. Every label below is this plus a decision
+   about where the currency code goes, so no two surfaces can round, group or sign a
+   figure differently. */
+function splitSourceAmount(
+  raw: string | null,
+  currency: string | null,
+): { number: string; code: string | null } | null {
+  if (typeof raw !== "string" || !raw.trim()) return null;
   const m = raw.trim().replace(/,/g, "").match(/^(-?)(\d+)(?:\.(\d*))?$/);
-  if (!m) return "Amount unavailable";
+  if (!m) return null;
   const [, sign, intPart, decRaw = ""] = m;
 
   // Two places, but never fewer digits than the value actually carries: "1234.5678"
@@ -118,10 +126,39 @@ export function sourceAmountLabel(raw: string | null, currency: string | null): 
 
   const code = currency?.trim().toUpperCase() || null;
   const symbol = code ? (CURRENCY_SYMBOL[code] ?? "") : "";
-  const number = `${sign}${symbol}${grouped}.${shown}`;
-  // The code is always shown when there is no symbol for it, because "1,200.00" alone
-  // names no currency at all.
-  return code ? `${number} ${code}` : number;
+  return { number: `${sign}${symbol}${grouped}.${shown}`, code };
+}
+
+/**
+ * The same figure as `sourceAmountLabel`, minus a redundant "USD" suffix.
+ *
+ * For the places a figure is read at a glance — a list row, the popup's one-line
+ * summary, a running total — "$4,800.00 USD" is noise: the app's own figures are in
+ * dollars and the symbol carries it. The code is kept for everything else, including
+ * every currency whose symbol could be mistaken for dollars, because a bare "€8,894.63"
+ * next to a column of dollar rows is exactly the confusion this exists to prevent.
+ *
+ * One function so a row and the popup it opens cannot render the same record
+ * differently — which is what happened when each surface made this choice for itself.
+ * The full `sourceAmountLabel` still backs the popup's Amount row, where the record is
+ * being read rather than scanned.
+ */
+export function glanceAmountLabel(raw: string | null, currency: string | null): string {
+  const parts = splitSourceAmount(raw, currency);
+  if (!parts) return UNAVAILABLE;
+  return parts.code && parts.code !== "USD" ? `${parts.number} ${parts.code}` : parts.number;
+}
+
+/**
+ * The figure alone, for a header that renders the currency code in its own pill.
+ *
+ * The code is omitted because the pill beside it already states it — and only for
+ * that reason. Never use this where nothing else on screen names the currency: a bare
+ * "8,894.63", or a "€8,894.63" in a column of dollars, is the ambiguity the other two
+ * labels exist to prevent. The record's amount still goes in unconverted.
+ */
+export function pilledAmountLabel(raw: string | null, currency: string | null): string {
+  return splitSourceAmount(raw, currency)?.number ?? UNAVAILABLE;
 }
 
 /**

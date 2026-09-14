@@ -792,6 +792,8 @@ export function LiveProposalModal({
             trustBusy={trustBusy}
           />
           <BillDetailPopup
+            /* The proposal already quotes its amounts in the record's currency. */
+            amountBasis="source"
             bill={openInvoice}
             vendorName={
               vendors.find((vendor) => vendor.id === openInvoice?.counterparty_id)?.name ??

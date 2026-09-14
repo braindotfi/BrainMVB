@@ -181,7 +181,7 @@ export function buildCashFlowRows(input: {
       matchedObligation && typeof matchedObligation.kind === "string"
         ? matchedObligation.kind
         : null;
-    const key = debtKey(counterpartyId, num(inv.amount_due), due);
+    const key = debtKey(counterpartyId, num(inv.amount_due), due, inv.currency);
     listedDebts.set(key, (listedDebts.get(key) ?? 0) + 1);
     rows.push({
       key: `inv:${inv.id}`,
@@ -223,7 +223,7 @@ export function buildCashFlowRows(input: {
      real debt that must still appear rather than being filtered out by its name. */
   for (const o of payableRows) {
     const due = isoDay(o.due_date);
-    const key = debtKey(o.counterparty_id, num(o.amount_due), due);
+    const key = debtKey(o.counterparty_id, num(o.amount_due), due, o.currency);
     const alreadyListed = listedDebts.get(key) ?? 0;
     if (alreadyListed > 0) {
       listedDebts.set(key, alreadyListed - 1);

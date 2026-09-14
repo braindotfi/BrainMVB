@@ -51,8 +51,24 @@ describe("debt identity", () => {
 
   it("ignores trailing-zero differences in the wire amount", () => {
     // brain-core sends "4800.00000000" on one feed and "4800.00" on the other.
-    expect(debtKey("cp_1", absAmount("4800.00000000"), "2026-08-01")).toBe(
-      debtKey("cp_1", absAmount("4800.00"), "2026-08-01"),
+    expect(debtKey("cp_1", absAmount("4800.00000000"), "2026-08-01", "USD")).toBe(
+      debtKey("cp_1", absAmount("4800.00"), "2026-08-01", "USD"),
+    );
+  });
+
+  it("separates the same figure in two currencies", () => {
+    // 100 euros and 100 dollars owed to the same party on the same day are two debts.
+    expect(debtKey("cp_1", 100, "2026-08-01", "EUR")).not.toBe(
+      debtKey("cp_1", 100, "2026-08-01", "USD"),
+    );
+  });
+
+  it("reads a missing code as the ledger's default, not as its own currency", () => {
+    /* Neither feed states the currency on every record. If an absent code were its
+       own identity, a stated "USD" invoice would stop matching the silent obligation
+       it billed — and every bill would lose its invoice. */
+    expect(debtKey("cp_1", 100, "2026-08-01", null)).toBe(
+      debtKey("cp_1", 100, "2026-08-01", "usd"),
     );
   });
 });
@@ -67,6 +83,23 @@ describe("matching payables to the invoice that billed them", () => {
   it("matches across the precision difference the two feeds actually carry", () => {
     const inv = INV({ id: "inv_1", due_date: "2026-08-01T00:14:08.226Z" });
     const m = matchObligationsToInvoices([OBL({ id: "obl_1", due_date: "2026-08-01" })], [inv]);
+    expect(m.get("obl_1")).toBe(inv);
+  });
+
+  it("does not back a euro payable with a dollar invoice of the same size", () => {
+    /* The lookalike passes every other part of the identity: same counterparty, same
+       number, same day. Opening it from the euro row would show the tenant an invoice
+       number, PO and document belonging to a debt they do not have. */
+    const m = matchObligationsToInvoices(
+      [OBL({ id: "obl_eur", currency: "EUR" })],
+      [INV({ id: "inv_usd", currency: "USD" })],
+    );
+    expect(m.has("obl_eur")).toBe(false);
+  });
+
+  it("still links the twins when only one feed states the currency", () => {
+    const inv = INV({ id: "inv_1", currency: "USD" });
+    const m = matchObligationsToInvoices([OBL({ id: "obl_1" })], [inv]);
     expect(m.get("obl_1")).toBe(inv);
   });
 

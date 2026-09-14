@@ -27,12 +27,12 @@ import { WidgetCard, type CounterpartiesLiteResponse } from "@/components/Ledger
 import { UnavailableDataBox } from "@/components/Callout";
 import { BillDetailPopup, type BrainInvoiceDTO as BillDTO } from "@/components/BillDetailPopup";
 import { PayableDetailPopup } from "@/components/PayableDetailPopup";
-import { payablesView, unpaidApInvoices } from "@/lib/liabilities";
+import { payablesView, unpaidApInvoices, excludedCurrencyNote, recordCurrency } from "@/lib/liabilities";
 import { usePagedLedgerRead, ledgerFigureCaption } from "@/lib/ledgerRead";
 import { matchObligationsToInvoices } from "@/lib/debtIdentity";
 import type { RawObligation, Obligation } from "@/lib/brainObligations";
 import { capitalCase } from "@/lib/displayLabels";
-import { dueLabel, amountLabel, subLabel, statusColors } from "@/lib/obligationRows";
+import { dueLabel, glanceAmountLabel, subLabel, statusColors } from "@/lib/obligationRows";
 import { ICONS } from "@/assets/figma-icons";
 import { RecordPill } from "@/components/RecordPill";
 import { LedgerRecordRow } from "@/components/LedgerRecordRow";
@@ -40,15 +40,17 @@ import alertIcon from "@assets/Icons_1783274957589.png";
 
 const IMG_DOT = ICONS.activity_dot;
 
-type Format = (a: string | number) => string;
-
 interface InvoicesResponse {
   invoices?: BillDTO[];
 }
 
 /* ── the tab ──────────────────────────────────────────────────────────────── */
 
-export function PayablesTab({ format }: { format: Format }): JSX.Element {
+/* No `format` prop. Every figure on this surface — each row and the total under them
+   — is denominated by the RECORD, not by the currency the user is browsing in, so
+   there is nothing here for the display-currency converter to convert. See
+   `glanceAmountLabel` and .agents/memory/display-vs-source-currency.md. */
+export function PayablesTab(): JSX.Element {
   const obQ = usePagedLedgerRead<RawObligation>("/api/brain/ledger/obligations", "obligations");
   const cpQ = useQuery<CounterpartiesLiteResponse>({
     queryKey: ["/api/brain/ledger/counterparties"],
@@ -71,11 +73,17 @@ export function PayablesTab({ format }: { format: Format }): JSX.Element {
      the awkward cases — zero rows on a cut-short read, zero rows while documents are
      still being projected — are decided by tested code rather than by the order of
      ternaries in this file. */
-  const { kind, rows, total, truncated, mayGrow } = payablesView({
+  const { kind, rows, subtotal, subtotalCurrency, excludedCurrencies, truncated, mayGrow } = payablesView({
     failed: obQ.failed,
     read: obQ.read,
     ingesting: obQ.ingesting,
   });
+
+  /* The currency this figure is IN, and only when it is narrower than the list it
+     sits under: with nothing excluded there is nothing for a heading to qualify, and
+     a "(USD)" on a single-currency ledger would imply a distinction that is not
+     there. */
+  const narrowedTo = excludedCurrencies.length > 0 ? subtotalCurrency : null;
 
   /* Counterparty names live on a different endpoint; obligations carry only the id.
      An unresolved id is shown as such rather than replaced with a plausible name —
@@ -189,7 +197,9 @@ export function PayablesTab({ format }: { format: Format }): JSX.Element {
                     )}
                   </>
                 }
-                amount={amountLabel(o.amount_due, format)}
+                /* The record's own currency, unconverted — the same helper, on the
+                   same fields, as the popup this row opens. */
+                amount={glanceAmountLabel(o.amount_due, recordCurrency(o))}
                 sign="-"
                 amountColor="#d20344"
                 rowTestId={`row-obligation-${idx}`}
@@ -212,8 +222,14 @@ export function PayablesTab({ format }: { format: Format }): JSX.Element {
             data-testid="row-obligation-totals"
           >
             <div className="flex flex-1 flex-col items-start justify-center min-w-px relative gap-[4px]">
-              <p className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[16px] whitespace-nowrap">
-                Payable Totals
+              <p
+                className="[font-family:'Gilroy',sans-serif] font-medium leading-[20px] text-brain-v1baby-blue-100 text-[16px] whitespace-nowrap"
+                data-testid="text-obligation-total-label"
+              >
+                {/* Named for what it actually adds up. Once rows in another currency
+                    have been left out, "Payable Totals" describes a figure this is
+                    not, and the caption underneath cannot un-say a wrong heading. */}
+                {narrowedTo === null ? "Payable Totals" : `Payable Totals (${narrowedTo})`}
               </p>
               <p
                 className="[font-family:'Gilroy',sans-serif] font-medium leading-[16px] text-brain-v1baby-blue-60 text-[14px]"
@@ -221,17 +237,34 @@ export function PayablesTab({ format }: { format: Format }): JSX.Element {
               >
                 {/* Names what the figure is, or why it isn't final. A total that is
                     still growing looks exactly like a settled one, so the caption is
-                    the only thing standing between the two. */}
-                {ledgerFigureCaption({ truncated, mayGrow }, "Across everything you still owe")}
+                    the only thing standing between the two — and a subtotal that
+                    quietly dropped a foreign-currency bill is the same trick in
+                    another costume, so the exclusion is stated here too rather than
+                    replacing the caveat above it. */}
+                {[
+                  ledgerFigureCaption(
+                    { truncated, mayGrow },
+                    narrowedTo === null
+                      ? "Across everything you still owe"
+                      : `Across everything you still owe in ${narrowedTo}`,
+                  ),
+                  excludedCurrencyNote(excludedCurrencies),
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
               </p>
             </div>
             <div className="flex flex-col items-end justify-center relative shrink-0">
               <p
                 className="[font-family:'JetBrains_Mono',monospace] font-bold leading-[20px] text-[18px] text-right whitespace-nowrap"
-                style={{ color: total === null ? "#414965" : "#d20344" }}
+                style={{ color: subtotal === null ? "#414965" : "#d20344" }}
                 data-testid="text-obligation-total"
               >
-                {total === null ? "-" : format(total)}
+                {/* A subtotal in ONE currency, quoted in it — never the display
+                    currency, and never a sum across the rows' currencies. */}
+                {subtotal === null || subtotalCurrency === null
+                  ? "-"
+                  : glanceAmountLabel(subtotal.toFixed(2), subtotalCurrency)}
               </p>
             </div>
           </div>
@@ -244,6 +277,8 @@ export function PayablesTab({ format }: { format: Format }): JSX.Element {
           silently skip every payroll and tax row, on the one screen whose whole
           purpose is that nothing owed is missing. */}
       <BillDetailPopup
+        /* The row quotes the record, so the popup it opens must too. */
+        amountBasis="source"
         bill={openBill}
         vendorName={openBill ? (nameOf(openBill.counterparty_id) ?? "Unknown vendor") : ""}
         bills={unpaidApInvoices(invoices ?? []) as BillDTO[]}

@@ -496,6 +496,10 @@ export function CashFlowTab({ format, onOpenTx }: { format: Format; onOpenTx: (t
       </WidgetCard>
 
       <BillDetailPopup
+        /* The rows above still run every figure through the display-currency
+           converter, so a source-currency popup would contradict the row that
+           opened it. Flip this the moment those rows quote their records. */
+        amountBasis="display"
         bill={openBill}
         vendorName={openBill ? (nameOf(openBill.counterparty_id) ?? "Unknown vendor") : ""}
         bills={apBills as unknown as BillDTO[]}

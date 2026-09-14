@@ -1,8 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { subLabel, dueLabel, amountLabel, sourceAmountLabel, statusColors, statusChip } from "./obligationRows";
-
-const fmt = (n: string | number) =>
-  `$${Number(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+import { subLabel, dueLabel, glanceAmountLabel, pilledAmountLabel, sourceAmountLabel, statusColors, statusChip } from "./obligationRows";
 
 /**
  * The row's trailing detail. Small, but it is the only place the obligation's KIND
@@ -43,16 +40,59 @@ describe("subLabel", () => {
   });
 });
 
-describe("amountLabel", () => {
+/**
+ * The glance formatter — list rows, the popup's one-line summary, the running total.
+ *
+ * It replaced `amountLabel(raw, format)`, which handed the record's own amount to the
+ * display-currency converter. That is what made a EUR bill render as a dollar figure
+ * in the Payables list while the popup it opened quoted euros.
+ */
+describe("glanceAmountLabel", () => {
   it("strips the wire format's trailing precision instead of printing it", () => {
-    // The defect: passing the raw string through rendered "$4,800.00000000".
-    expect(amountLabel("4800.00000000", fmt)).toBe("$4,800.00");
-    expect(amountLabel("8894.63000000", fmt)).toBe("$8,894.63");
+    // The original defect this formatter inherited: "$4,800.00000000".
+    expect(glanceAmountLabel("4800.00000000", "USD")).toBe("$4,800.00");
+    expect(glanceAmountLabel("8894.63000000", "USD")).toBe("$8,894.63");
+  });
+
+  it("quotes a foreign record in ITS currency, never in dollars", () => {
+    // The row and the popup previously disagreed here: "$8,894.63" against "€8,894.63 EUR".
+    expect(glanceAmountLabel("8894.63000000", "EUR")).toBe("€8,894.63 EUR");
+    expect(glanceAmountLabel("1200", "SEK")).toBe("1,200.00 SEK");
+  });
+
+  it("drops the code only for USD, where the symbol already carries it", () => {
+    expect(glanceAmountLabel("100", "usd")).toBe("$100.00");
+    // Not a prefix match on the symbol: every other currency keeps its code, because a
+    // bare "€8,894.63" in a column of dollar rows is the confusion this prevents.
+    expect(glanceAmountLabel("100", "EUR")).toBe("€100.00 EUR");
   });
 
   it("says so rather than rendering $NaN when the amount is unparseable", () => {
-    expect(amountLabel("not-a-number", fmt)).toBe("Amount unavailable");
-    expect(amountLabel("", fmt)).toBe("Amount unavailable");
+    expect(glanceAmountLabel("not-a-number", "USD")).toBe("Amount unavailable");
+    expect(glanceAmountLabel("", "USD")).toBe("Amount unavailable");
+    expect(glanceAmountLabel(null, "EUR")).toBe("Amount unavailable");
+  });
+});
+
+describe("pilledAmountLabel — the figure beside a currency pill", () => {
+  it("omits the code, because the pill next to it states the code", () => {
+    expect(pilledAmountLabel("8894.63000000", "EUR")).toBe("€8,894.63");
+    expect(pilledAmountLabel("1200", "SEK")).toBe("1,200.00");
+    expect(pilledAmountLabel("4800.00000000", "USD")).toBe("$4,800.00");
+  });
+
+  it("is the same digits as the other two labels — never a converted figure", () => {
+    /* The bill popup's header used to run the amount through the display-currency
+       converter and then label the result with the record's own code, so the popup
+       and the row that opened it quoted two different numbers for one invoice. */
+    const raw = "8894.63000000";
+    expect(glanceAmountLabel(raw, "EUR")).toBe(`${pilledAmountLabel(raw, "EUR")} EUR`);
+    expect(sourceAmountLabel(raw, "EUR")).toBe(`${pilledAmountLabel(raw, "EUR")} EUR`);
+  });
+
+  it("refuses an unparseable amount rather than showing a bare symbol", () => {
+    expect(pilledAmountLabel("not-a-number", "EUR")).toBe("Amount unavailable");
+    expect(pilledAmountLabel(null, "EUR")).toBe("Amount unavailable");
   });
 });
 

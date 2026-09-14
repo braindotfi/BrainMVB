@@ -91,6 +91,7 @@ export function DetailPopupHeader({
   nameTestId,
   chipTestId,
   amountTestId,
+  currencyTestId,
   icon,
 }: {
   name: string;
@@ -100,6 +101,8 @@ export function DetailPopupHeader({
   nameTestId?: string;
   chipTestId?: string;
   amountTestId?: string;
+  /** The currency pill beside the amount — the half of the figure the amount omits. */
+  currencyTestId?: string;
   /** Optional leading icon — rendered at 56×56 px to the left of the name block. */
   icon?: ReactNode;
 }) {
@@ -137,7 +140,10 @@ export function DetailPopupHeader({
             {amount}
           </p>
           <div className="bg-brain-v1baby-blue-15 border border-[rgba(108,119,157,0.2)] border-solid flex items-center justify-center px-[8px] py-[3px] rounded-pill shrink-0">
-            <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-brain-v1baby-blue-60 text-[12px] text-center whitespace-nowrap">
+            <p
+              className="[font-family:'Gilroy',sans-serif] font-semibold leading-[14px] text-brain-v1baby-blue-60 text-[12px] text-center whitespace-nowrap"
+              data-testid={currencyTestId}
+            >
               {currency}
             </p>
           </div>

@@ -394,7 +394,9 @@ export function FinancesPage() {
 
         {activeTab === "Cash Flow" && <CashFlowTab format={format} onOpenTx={setOpenTxId} />}
 
-        {activeTab === "Payables" && <PayablesTab format={format} />}
+        {/* No `format`: Payables quotes every figure in the currency its record is
+            denominated in, so there is nothing for the display converter to convert. */}
+        {activeTab === "Payables" && <PayablesTab />}
 
         {activeTab === "Receivables" && <ReceivablesTab format={format} />}
 

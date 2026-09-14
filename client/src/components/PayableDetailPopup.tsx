@@ -33,8 +33,9 @@ import { useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { capitalCase } from "@/lib/displayLabels";
-import { statusChip, sourceAmountLabel } from "@/lib/obligationRows";
+import { statusChip, sourceAmountLabel, glanceAmountLabel } from "@/lib/obligationRows";
 import type { Obligation } from "@/lib/brainObligations";
+import { recordCurrency } from "@/lib/liabilities";
 import {
   fetchResolvedObligation,
   resolvedObligationQueryKey,
@@ -216,17 +217,17 @@ export function PayableDetailPopup({
   const dd = calendarDaysToDue(payable?.due_date ?? null);
   const dueDate = fmtShortDate(payable?.due_date ?? null);
   const relative = relativeDueLabel(dd);
-  /* The record's own currency, unconverted — see sourceAmountLabel. The code is
-     dropped from this one-line summary when the record is in USD, because the frame's
-     subtitle is a glance line and "$8,894.63 USD" is noise; it is always kept in the
-     Amount row below, and always shown here for anything that is NOT USD, where the
-     symbol alone would let a reader assume dollars. */
-  const currency = payable?.currency?.trim().toUpperCase() || null;
-  const headlineAmount = payable
-    ? currency === "USD"
-      ? sourceAmountLabel(payable.amount_due, currency).replace(/ USD$/, "")
-      : sourceAmountLabel(payable.amount_due, currency)
-    : null;
+  /* The record's own currency, unconverted — see sourceAmountLabel. `glanceAmountLabel`
+     drops the code from this one-line summary when the record is in USD, because the
+     frame's subtitle is a glance line and "$8,894.63 USD" is noise; it is always kept
+     in the Amount row below, and always shown here for anything that is NOT USD, where
+     the symbol alone would let a reader assume dollars. The Payables ROW this popup
+     opens from renders through the same helper, so the two cannot disagree. */
+  /* Normalized, not read raw: a record that omits the code is a USD record in this
+     ledger (the same default the join and the totals apply), and quoting it as a
+     currency-less number here would disagree with the row that opened this. */
+  const currency = payable ? recordCurrency(payable) : null;
+  const headlineAmount = payable ? glanceAmountLabel(payable.amount_due, currency) : null;
   /* Built from parts so a record missing a due date reads "$8,894.63" rather than
      "$8,894.63 · Due - · ". */
   const subtitle = [headlineAmount, dueDate ? `Due ${dueDate}` : null, relative]
