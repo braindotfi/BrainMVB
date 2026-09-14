@@ -1,0 +1,727 @@
+/**
+ * Create-path test — confidence capping (RFC 0004 §5.2).
+ *
+ * Proves create() caps a new intent's confidence at the referenced obligation's
+ * (via resolveObligationConfidence), so a low-confidence document-extracted
+ * obligation flows into both the create-time policy evaluation and the stored
+ * row. Uses a fake pool that returns a row for the insert.
+ */
+
+import { describe, expect, it, vi } from "vitest";
+import {
+  InMemoryAuditEmitter,
+  newTenantId,
+  newAgentId,
+  newAccountId,
+  newCounterpartyId,
+  newPaymentIntentId,
+  newPolicyDecisionId,
+  newObligationId,
+  type GatePaymentIntent,
+  type GatePolicyDecision,
+  type GatePrincipal,
+  type ServiceCallContext,
+  type CreatePaymentIntentInput,
+} from "@brain/shared";
+import type { Pool } from "pg";
+import type { PaymentIntentRow } from "@brain/ledger";
+import { PaymentIntentService } from "./PaymentIntentService.js";
+import { ApprovalService } from "../approvals/ApprovalService.js";
+import { OutboxService } from "../outbox/OutboxService.js";
+import { EXECUTABLE_PAYMENT_INTENT_ACTION_TYPES } from "./action-types.js";
+
+const TENANT = newTenantId();
+const AGENT = newAgentId();
+const ACCT = newAccountId();
+const CP = newCounterpartyId();
+const OBL = newObligationId();
+const PD = newPolicyDecisionId();
+const ctx: ServiceCallContext = { tenantId: TENANT, actor: AGENT, requestId: "req_test" };
+
+const DECISION: GatePolicyDecision = {
+  id: PD,
+  outcome: "allow",
+  matched_rule_id: "r",
+  required_approvers: [],
+  ledger_snapshot_hash: "h",
+  trace: [],
+  required_evidence_kinds: [],
+  counterparty_verification_threshold: null,
+  amount_upper_bound: null,
+};
+
+const GATE_PRINCIPAL: GatePrincipal = {
+  id: AGENT,
+  type: "agent",
+  scopes: ["payment_intent:execute"],
+};
+
+const SOURCE_ACCOUNT = {
+  id: ACCT,
+  status: "active",
+  currency: "USD",
+  available_balance: "1000.00",
+};
+
+function insertedRow(): PaymentIntentRow {
+  return {
+    id: newPaymentIntentId(),
+    owner_id: TENANT,
+    created_by_agent_id: AGENT,
+    action_type: "ach_outbound",
+    source_account_id: ACCT,
+    destination_counterparty_id: CP,
+    amount: "100.00",
+    currency: "USD",
+    obligation_id: OBL,
+    invoice_id: null,
+    status: "approved",
+    policy_decision_id: PD,
+    approval_ids: [],
+    execution_receipt_ids: [],
+    decision: null,
+    decision_audit_id: null,
+    decided_at: null,
+    source_ids: [],
+    evidence_ids: [],
+    provenance: "inferred",
+    confidence: 0.4,
+    evidence_score: null,
+    risk_level: null,
+    proposal_dedup_key: null,
+    settlement_pay_to: null,
+    escrow_id: null,
+    job_terms_hash: null,
+    created_at: new Date("2026-01-01T00:00:00Z"),
+    updated_at: new Date("2026-01-01T00:00:00Z"),
+  };
+}
+
+function makeFakePool(): { pool: Pool; calls: { sql: string; values: unknown[] }[] } {
+  const calls: { sql: string; values: unknown[] }[] = [];
+  const client = {
+    query: vi.fn((sql: string, values?: unknown[]) => {
+      calls.push({ sql, values: values ?? [] });
+      if (
+        sql === "BEGIN" ||
+        sql === "COMMIT" ||
+        sql === "ROLLBACK" ||
+        sql.startsWith("SELECT set_config")
+      ) {
+        return Promise.resolve({ rows: [], rowCount: 0 });
+      }
+      if (sql.includes("INSERT INTO ledger_payment_intents")) {
+        return Promise.resolve({ rows: [insertedRow()], rowCount: 1 });
+      }
+      return Promise.resolve({ rows: [], rowCount: 0 });
+    }),
+    release: vi.fn(),
+  };
+  return { pool: { connect: vi.fn(() => Promise.resolve(client)) } as unknown as Pool, calls };
+}
+
+function makeService(
+  pool: Pool,
+  audit: InMemoryAuditEmitter,
+  opts: {
+    resolveObligationConfidence?: (ctx: ServiceCallContext, id: string) => Promise<number | null>;
+    resolveObligationDirection?: (
+      ctx: ServiceCallContext,
+      id: string,
+    ) => Promise<"payable" | "receivable" | null>;
+    resolveAccount?: (ctx: ServiceCallContext, id: string) => Promise<typeof SOURCE_ACCOUNT | null>;
+    decision?: GatePolicyDecision;
+    onPolicy?: (intent: GatePaymentIntent) => void;
+    fiatHumanApprovalFloorEnabled?: boolean;
+  } = {},
+): PaymentIntentService {
+  return new PaymentIntentService({
+    pool,
+    audit,
+    outbox: new OutboxService(),
+    approvals: new ApprovalService({ pool, audit, resolveRole: async () => null }),
+    resolveAgent: async () => null,
+    resolveAccount: opts.resolveAccount ?? (async () => SOURCE_ACCOUNT),
+    resolveCounterparty: async () => null,
+    resolvePrincipal: async () => GATE_PRINCIPAL,
+    evaluatePolicy: async (_ctx, intent) => {
+      opts.onPolicy?.(intent);
+      return opts.decision ?? DECISION;
+    },
+    ...(opts.fiatHumanApprovalFloorEnabled !== undefined
+      ? { fiatHumanApprovalFloorEnabled: opts.fiatHumanApprovalFloorEnabled }
+      : {}),
+    ...(opts.resolveObligationConfidence !== undefined
+      ? { resolveObligationConfidence: opts.resolveObligationConfidence }
+      : {}),
+    ...(opts.resolveObligationDirection !== undefined
+      ? { resolveObligationDirection: opts.resolveObligationDirection }
+      : {}),
+  });
+}
+
+const baseInput: CreatePaymentIntentInput = {
+  action_type: "ach_outbound",
+  source_account_id: ACCT,
+  destination_counterparty_id: CP,
+  amount: "100.00",
+  currency: "USD",
+  obligation_id: OBL,
+  agent_id: AGENT,
+};
+
+function insertConfidence(calls: { sql: string; values: unknown[] }[]): unknown {
+  const insert = calls.find((c) => c.sql.includes("INSERT INTO ledger_payment_intents"));
+  // confidence is the 14th positional param ($14) -> values index 13.
+  return insert?.values[13];
+}
+
+function insertCreatedByAgent(calls: { sql: string; values: unknown[] }[]): unknown {
+  const insert = calls.find((c) => c.sql.includes("INSERT INTO ledger_payment_intents"));
+  // created_by_agent_id is the 3rd positional param ($3) -> values index 2.
+  return insert?.values[2];
+}
+
+function insertStatus(calls: { sql: string; values: unknown[] }[]): unknown {
+  const insert = calls.find((c) => c.sql.includes("INSERT INTO ledger_payment_intents"));
+  // status is the 11th positional param ($11) -> values index 10.
+  return insert?.values[10];
+}
+
+describe("PaymentIntentService.create — confidence capping (RFC 0004 §5.2)", () => {
+  it("returns a not-found error for an absent source account before policy or insert", async () => {
+    const audit = new InMemoryAuditEmitter();
+    const { pool, calls } = makeFakePool();
+    const evaluatePolicy = vi.fn(async () => DECISION);
+    const service = new PaymentIntentService({
+      pool,
+      audit,
+      outbox: new OutboxService(),
+      approvals: new ApprovalService({ pool, audit, resolveRole: async () => null }),
+      resolveAgent: async () => null,
+      resolveAccount: async () => null,
+      resolveCounterparty: async () => null,
+      resolvePrincipal: async () => GATE_PRINCIPAL,
+      evaluatePolicy,
+    });
+
+    await expect(service.create(ctx, baseInput)).rejects.toMatchObject({
+      code: "ledger_row_not_found",
+      details: { source_account_id: ACCT },
+    });
+    expect(evaluatePolicy).not.toHaveBeenCalled();
+    expect(calls.some((c) => c.sql.includes("INSERT INTO ledger_payment_intents"))).toBe(false);
+  });
+
+  it("H-21/H-22 regression: threads obligation_id and invoice_id into the create-time gate intent", async () => {
+    // stubGateIntent previously dropped these two fields even when the caller
+    // supplied them, silently disabling gate check 6.7 (obligation direction)
+    // and duplicate-detector rules 1/2/7 on the CREATE-time policy run.
+    const audit = new InMemoryAuditEmitter();
+    const { pool } = makeFakePool();
+    let seen: GatePaymentIntent | undefined;
+    const service = makeService(pool, audit, { onPolicy: (i) => (seen = i) });
+
+    await service.create(ctx, { ...baseInput, obligation_id: OBL, invoice_id: "inv_LINKED" });
+
+    expect(seen?.obligation_id).toBe(OBL);
+    expect(seen?.invoice_id).toBe("inv_LINKED");
+  });
+
+  it.each(["other", "future_money_rail"])(
+    "rejects non-executable action_type %s",
+    async (actionType) => {
+      const audit = new InMemoryAuditEmitter();
+      const { pool, calls } = makeFakePool();
+      const service = makeService(pool, audit);
+
+      await expect(
+        service.create(ctx, {
+          ...baseInput,
+          action_type: actionType as CreatePaymentIntentInput["action_type"],
+        }),
+      ).rejects.toMatchObject({ code: "action_type_not_executable" });
+
+      expect(calls.some((c) => c.sql.includes("INSERT INTO ledger_payment_intents"))).toBe(false);
+    },
+  );
+
+  it.each(EXECUTABLE_PAYMENT_INTENT_ACTION_TYPES)(
+    "accepts executable action_type %s",
+    async (actionType) => {
+      const audit = new InMemoryAuditEmitter();
+      const { pool, calls } = makeFakePool();
+      const service = makeService(pool, audit);
+
+      await service.create(ctx, {
+        ...baseInput,
+        action_type: actionType,
+        currency: actionType === "x402_settle" || actionType === "escrow_release" ? "USDC" : "USD",
+        ...(actionType === "x402_settle"
+          ? { pay_to: "0x1111111111111111111111111111111111111111" }
+          : {}),
+        ...(actionType === "escrow_release"
+          ? {
+              escrow_id: `0x${"1".repeat(64)}`,
+              job_terms_hash: `0x${"2".repeat(64)}`,
+            }
+          : {}),
+      });
+
+      expect(calls.some((c) => c.sql.includes("INSERT INTO ledger_payment_intents"))).toBe(true);
+    },
+  );
+
+  it("stores null created_by_agent_id for user principals without an agent override", async () => {
+    const audit = new InMemoryAuditEmitter();
+    const { pool, calls } = makeFakePool();
+    const service = makeService(pool, audit);
+    const inputNoAgent: CreatePaymentIntentInput = { ...baseInput };
+    delete inputNoAgent.agent_id;
+
+    await service.create({ ...ctx, principalType: "user" }, inputNoAgent);
+
+    expect(insertCreatedByAgent(calls)).toBeNull();
+  });
+
+  it("caps the intent confidence at the referenced obligation's", async () => {
+    const audit = new InMemoryAuditEmitter();
+    const { pool, calls } = makeFakePool();
+    let seen: GatePaymentIntent | undefined;
+    const service = makeService(pool, audit, {
+      resolveObligationConfidence: async () => 0.4,
+      onPolicy: (i) => {
+        seen = i;
+      },
+    });
+
+    await service.create(ctx, baseInput);
+
+    // create-time policy evaluation sees the capped confidence…
+    expect(seen?.confidence).toBe(0.4);
+    // …and the stored row carries it.
+    expect(insertConfidence(calls)).toBe(0.4);
+  });
+
+  it("takes the minimum of an explicit input confidence and the obligation's", async () => {
+    const audit = new InMemoryAuditEmitter();
+    const { pool, calls } = makeFakePool();
+    const service = makeService(pool, audit, { resolveObligationConfidence: async () => 0.6 });
+
+    await service.create(ctx, { ...baseInput, confidence: 0.3 });
+
+    expect(insertConfidence(calls)).toBe(0.3);
+  });
+
+  it("F3: fails closed to confidence=0 (not 1.0) when no resolver is wired and no input confidence is given", async () => {
+    // Pre-F3 this asserted toBe(1.0): the ledger_payment_intents column
+    // default. An intent with no real confidence signal must not silently
+    // inherit the maximally-trusting value -- see the comment on
+    // persistedConfidence in create().
+    const audit = new InMemoryAuditEmitter();
+    const { pool, calls } = makeFakePool();
+    const service = makeService(pool, audit); // no resolveObligationConfidence
+
+    await service.create(ctx, baseInput);
+
+    expect(insertConfidence(calls)).toBe(0);
+  });
+
+  it("H-2 regression: throws obligation_not_found when obligation_id was supplied but resolver returned null", async () => {
+    // The bug this guards: an agent submits an intent with a non-existent
+    // obligation_id and the cap path used to silently skip, leaving the row
+    // at confidence=1.0 and bypassing a tenant `agent.confidence.gte` rule.
+    // Post-H-2 the missing obligation is a hard 404, not a silent default.
+    const audit = new InMemoryAuditEmitter();
+    const { pool } = makeFakePool();
+    const service = makeService(pool, audit, {
+      resolveObligationConfidence: async () => null, // obligation does not exist
+    });
+
+    await expect(service.create(ctx, baseInput)).rejects.toMatchObject({
+      code: "obligation_not_found",
+      details: { obligation_id: OBL },
+    });
+  });
+
+  it("H-2 regression: still defaults when obligation_id is NOT supplied (no resolver call)", async () => {
+    // When the caller doesn't reference an obligation, the resolver is never
+    // consulted, so the H-2 hard-fail must not fire. Sanity-check the gate
+    // condition is `input.obligation_id !== undefined`, not just `resolver
+    // returns null`.
+    const audit = new InMemoryAuditEmitter();
+    const { pool, calls } = makeFakePool();
+    let calledResolver = false;
+    const service = makeService(pool, audit, {
+      resolveObligationConfidence: async () => {
+        calledResolver = true;
+        return null;
+      },
+    });
+
+    const inputNoObligation: CreatePaymentIntentInput = { ...baseInput };
+    delete (inputNoObligation as { obligation_id?: string }).obligation_id;
+    await service.create(ctx, inputNoObligation);
+
+    expect(calledResolver).toBe(false);
+    // F3: fails closed to 0, not the pre-F3 1.0 default -- see persistedConfidence.
+    expect(insertConfidence(calls)).toBe(0);
+  });
+});
+
+describe("PaymentIntentService.create — proposal-layer idempotency (BRAIN-94)", () => {
+  const DEDUP_KEY = "mcp:payment_intent.propose:agent_X:deadbeef";
+
+  function makeFakePoolWithDedup(opts: {
+    existingByDedupKey?: PaymentIntentRow | null;
+    insertError?: unknown;
+  }): { pool: Pool; calls: { sql: string; values: unknown[] }[] } {
+    const calls: { sql: string; values: unknown[] }[] = [];
+    const client = {
+      query: vi.fn((sql: string, values?: unknown[]) => {
+        calls.push({ sql, values: values ?? [] });
+        if (
+          sql === "BEGIN" ||
+          sql === "COMMIT" ||
+          sql === "ROLLBACK" ||
+          sql.startsWith("SELECT set_config")
+        ) {
+          return Promise.resolve({ rows: [], rowCount: 0 });
+        }
+        if (sql.includes("proposal_dedup_key = $1")) {
+          const existing = opts.existingByDedupKey ?? null;
+          return Promise.resolve({
+            rows: existing === null ? [] : [existing],
+            rowCount: existing === null ? 0 : 1,
+          });
+        }
+        if (sql.includes("INSERT INTO ledger_payment_intents")) {
+          if (opts.insertError !== undefined) return Promise.reject(opts.insertError);
+          return Promise.resolve({ rows: [insertedRow()], rowCount: 1 });
+        }
+        return Promise.resolve({ rows: [], rowCount: 0 });
+      }),
+      release: vi.fn(),
+    };
+    return {
+      pool: { connect: vi.fn(() => Promise.resolve(client)) } as unknown as Pool,
+      calls,
+    };
+  }
+
+  it("returns the existing intent unchanged on a dedup-key hit, without inserting a second row", async () => {
+    const audit = new InMemoryAuditEmitter();
+    const existing = { ...insertedRow(), id: "pi_EXISTING", proposal_dedup_key: DEDUP_KEY };
+    const { pool, calls } = makeFakePoolWithDedup({ existingByDedupKey: existing });
+    const evaluatePolicy = vi.fn(async () => DECISION);
+    const service = new PaymentIntentService({
+      pool,
+      audit,
+      outbox: new OutboxService(),
+      approvals: new ApprovalService({ pool, audit, resolveRole: async () => null }),
+      resolveAgent: async () => null,
+      resolveAccount: async () => SOURCE_ACCOUNT,
+      resolveCounterparty: async () => null,
+      resolvePrincipal: async () => GATE_PRINCIPAL,
+      evaluatePolicy,
+    });
+
+    const result = await service.create(ctx, { ...baseInput, proposal_dedup_key: DEDUP_KEY });
+
+    expect(result.id).toBe("pi_EXISTING");
+    // The replay never re-runs policy or touches resolveAccount -- it returns
+    // before either, which is also what keeps a retry cheap.
+    expect(evaluatePolicy).not.toHaveBeenCalled();
+    expect(calls.some((c) => c.sql.includes("INSERT INTO ledger_payment_intents"))).toBe(false);
+    expect(audit.events.some((e) => e.action === "payment_intent.created")).toBe(false);
+  });
+
+  it("passes proposal_dedup_key through to the insert on a genuine first create", async () => {
+    const audit = new InMemoryAuditEmitter();
+    const { pool, calls } = makeFakePoolWithDedup({ existingByDedupKey: null });
+    const service = makeService(pool, audit);
+
+    await service.create(ctx, { ...baseInput, proposal_dedup_key: DEDUP_KEY });
+
+    const insert = calls.find((c) => c.sql.includes("INSERT INTO ledger_payment_intents"));
+    // proposal_dedup_key is the 17th positional param ($17) -> values index 16.
+    expect(insert?.values[16]).toBe(DEDUP_KEY);
+  });
+
+  it("on a unique-violation race, returns the winner row instead of throwing", async () => {
+    const audit = new InMemoryAuditEmitter();
+    const winner = { ...insertedRow(), id: "pi_WINNER", proposal_dedup_key: DEDUP_KEY };
+    const uniqueViolation = Object.assign(new Error("duplicate key"), { code: "23505" });
+    const calls: { sql: string; values: unknown[] }[] = [];
+    let dedupLookupCount = 0;
+    const client = {
+      query: vi.fn((sql: string, values?: unknown[]) => {
+        calls.push({ sql, values: values ?? [] });
+        if (
+          sql === "BEGIN" ||
+          sql === "COMMIT" ||
+          sql === "ROLLBACK" ||
+          sql.startsWith("SELECT set_config")
+        ) {
+          return Promise.resolve({ rows: [], rowCount: 0 });
+        }
+        if (sql.includes("proposal_dedup_key = $1")) {
+          dedupLookupCount += 1;
+          // First lookup (pre-insert): miss, so create() proceeds to insert.
+          // Second lookup (post-race, inside the catch): the winner is there.
+          if (dedupLookupCount === 1) return Promise.resolve({ rows: [], rowCount: 0 });
+          return Promise.resolve({ rows: [winner], rowCount: 1 });
+        }
+        if (sql.includes("INSERT INTO ledger_payment_intents")) {
+          return Promise.reject(uniqueViolation);
+        }
+        return Promise.resolve({ rows: [], rowCount: 0 });
+      }),
+      release: vi.fn(),
+    };
+    const pool = { connect: vi.fn(() => Promise.resolve(client)) } as unknown as Pool;
+    const service = makeService(pool, audit);
+
+    const result = await service.create(ctx, { ...baseInput, proposal_dedup_key: DEDUP_KEY });
+
+    expect(result.id).toBe("pi_WINNER");
+  });
+
+  it("rethrows an insert error that is NOT a unique violation", async () => {
+    const audit = new InMemoryAuditEmitter();
+    const otherError = Object.assign(new Error("connection reset"), { code: "08006" });
+    const { pool } = makeFakePoolWithDedup({ existingByDedupKey: null, insertError: otherError });
+    const service = makeService(pool, audit);
+
+    await expect(service.create(ctx, { ...baseInput, proposal_dedup_key: DEDUP_KEY })).rejects.toBe(
+      otherError,
+    );
+  });
+
+  it("skips the dedup lookup entirely when no proposal_dedup_key is supplied", async () => {
+    const audit = new InMemoryAuditEmitter();
+    const { pool, calls } = makeFakePoolWithDedup({});
+    const service = makeService(pool, audit);
+
+    await service.create(ctx, baseInput);
+
+    expect(calls.some((c) => c.sql.includes("proposal_dedup_key = $1"))).toBe(false);
+  });
+});
+
+describe("PaymentIntentService.create — obligation-direction gate (Codex 2026-06-05 P2)", () => {
+  it("rejects a new obligation-linked intent whose direction is unknown (null)", async () => {
+    const audit = new InMemoryAuditEmitter();
+    const { pool } = makeFakePool();
+    const service = makeService(pool, audit, {
+      resolveObligationDirection: async () => null, // older row / non-vendor-customer cp
+    });
+    await expect(service.create(ctx, baseInput)).rejects.toMatchObject({
+      code: "obligation_direction_invalid",
+      details: { obligation_id: OBL, direction: null },
+    });
+  });
+
+  it("rejects a new obligation-linked intent that targets a receivable (wrong-way)", async () => {
+    const audit = new InMemoryAuditEmitter();
+    const { pool } = makeFakePool();
+    const service = makeService(pool, audit, {
+      resolveObligationDirection: async () => "receivable",
+    });
+    await expect(service.create(ctx, baseInput)).rejects.toMatchObject({
+      code: "obligation_direction_invalid",
+      details: { obligation_id: OBL, direction: "receivable" },
+    });
+  });
+
+  it("allows a new obligation-linked intent that targets a payable", async () => {
+    const audit = new InMemoryAuditEmitter();
+    const { pool, calls } = makeFakePool();
+    const service = makeService(pool, audit, {
+      resolveObligationDirection: async () => "payable",
+    });
+    await service.create(ctx, baseInput);
+    expect(calls.some((c) => c.sql.includes("INSERT INTO ledger_payment_intents"))).toBe(true);
+  });
+
+  it("does not enforce direction when no obligation_id is supplied", async () => {
+    const audit = new InMemoryAuditEmitter();
+    const { pool } = makeFakePool();
+    let called = false;
+    const service = makeService(pool, audit, {
+      resolveObligationDirection: async () => {
+        called = true;
+        return null;
+      },
+    });
+    const inputNoObligation: CreatePaymentIntentInput = { ...baseInput };
+    delete (inputNoObligation as { obligation_id?: string }).obligation_id;
+    await service.create(ctx, inputNoObligation);
+    expect(called).toBe(false);
+  });
+
+  it("does not enforce direction when the loader is unwired (dev/test parity)", async () => {
+    const audit = new InMemoryAuditEmitter();
+    const { pool, calls } = makeFakePool();
+    const service = makeService(pool, audit); // no resolveObligationDirection
+    await service.create(ctx, baseInput);
+    expect(calls.some((c) => c.sql.includes("INSERT INTO ledger_payment_intents"))).toBe(true);
+  });
+});
+
+describe("PaymentIntentService.create — hard human-approval floor routing", () => {
+  it("routes allow-outcome onchain_transfer to pending_approval", async () => {
+    const audit = new InMemoryAuditEmitter();
+    const { pool, calls } = makeFakePool();
+    const service = makeService(pool, audit, {
+      decision: { ...DECISION, outcome: "allow" },
+    });
+
+    await service.create(ctx, { ...baseInput, action_type: "onchain_transfer" });
+
+    expect(insertStatus(calls)).toBe("pending_approval");
+    expect(audit.events).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ action: "payment_intent.auto_approved" })]),
+    );
+  });
+
+  it("routes allow-outcome wire to pending_approval", async () => {
+    const audit = new InMemoryAuditEmitter();
+    const { pool, calls } = makeFakePool();
+    const service = makeService(pool, audit, {
+      decision: { ...DECISION, outcome: "allow" },
+    });
+
+    await service.create(ctx, { ...baseInput, action_type: "wire" });
+
+    expect(insertStatus(calls)).toBe("pending_approval");
+  });
+
+  it("keeps ACH approved when the matched policy rule cap covers the amount", async () => {
+    const audit = new InMemoryAuditEmitter();
+    const { pool, calls } = makeFakePool();
+    const service = makeService(pool, audit, {
+      decision: {
+        ...DECISION,
+        outcome: "allow",
+        ach_autonomous_max_amount: { currency: "USD", value: "125.00" },
+      },
+    });
+
+    await service.create(ctx, { ...baseInput, action_type: "ach_outbound", amount: "100.00" });
+
+    expect(insertStatus(calls)).toBe("approved");
+    expect(audit.events).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          action: "payment_intent.auto_approved",
+          inputs: { payment_intent_id: expect.any(String) },
+          outputs: expect.objectContaining({
+            status: "approved",
+            approval_mode: "policy_auto_allow",
+            policy_decision_id: PD,
+          }),
+          policyDecisionId: PD,
+        }),
+      ]),
+    );
+  });
+
+  it("routes ACH to pending_approval when the cap is missing", async () => {
+    const audit = new InMemoryAuditEmitter();
+    const { pool, calls } = makeFakePool();
+    const service = makeService(pool, audit, {
+      decision: { ...DECISION, outcome: "allow" },
+    });
+
+    await service.create(ctx, { ...baseInput, action_type: "ach_outbound", amount: "100.00" });
+
+    expect(insertStatus(calls)).toBe("pending_approval");
+  });
+
+  it("keeps card approved when the matched policy rule cap covers the amount", async () => {
+    const audit = new InMemoryAuditEmitter();
+    const { pool, calls } = makeFakePool();
+    const service = makeService(pool, audit, {
+      decision: {
+        ...DECISION,
+        outcome: "allow",
+        card_autonomous_max_amount: { currency: "USD", value: "125.00" },
+      },
+    });
+
+    await service.create(ctx, { ...baseInput, action_type: "card_payment", amount: "100.00" });
+
+    expect(insertStatus(calls)).toBe("approved");
+  });
+
+  it("routes card to pending_approval when the cap is missing", async () => {
+    const audit = new InMemoryAuditEmitter();
+    const { pool, calls } = makeFakePool();
+    const service = makeService(pool, audit, {
+      decision: { ...DECISION, outcome: "allow" },
+    });
+
+    await service.create(ctx, { ...baseInput, action_type: "card_payment", amount: "100.00" });
+
+    expect(insertStatus(calls)).toBe("pending_approval");
+  });
+
+  it("keeps fiat allow outcomes approved when the fiat floor kill-switch is off", async () => {
+    const audit = new InMemoryAuditEmitter();
+    const { pool, calls } = makeFakePool();
+    const service = makeService(pool, audit, {
+      decision: { ...DECISION, outcome: "allow" },
+      fiatHumanApprovalFloorEnabled: false,
+    });
+
+    await service.create(ctx, { ...baseInput, action_type: "wire" });
+
+    expect(insertStatus(calls)).toBe("approved");
+  });
+
+  it("keeps x402_settle approved when the policy authorizes autonomous settlement within cap", async () => {
+    const audit = new InMemoryAuditEmitter();
+    const { pool, calls } = makeFakePool();
+    const service = makeService(pool, audit, {
+      decision: {
+        ...DECISION,
+        outcome: "allow",
+        onchain_settlement_permitted: true,
+        x402_autonomous_max_amount: { currency: "USDC", value: "2.00" },
+      },
+    });
+
+    await service.create(ctx, {
+      ...baseInput,
+      action_type: "x402_settle",
+      amount: "1.00",
+      currency: "USDC",
+      pay_to: "0x" + "ab".repeat(20),
+    });
+
+    expect(insertStatus(calls)).toBe("approved");
+  });
+
+  it("routes x402_settle to pending_approval when the autonomous cap is missing", async () => {
+    const audit = new InMemoryAuditEmitter();
+    const { pool, calls } = makeFakePool();
+    const service = makeService(pool, audit, {
+      decision: {
+        ...DECISION,
+        outcome: "allow",
+        onchain_settlement_permitted: true,
+      },
+    });
+
+    await service.create(ctx, {
+      ...baseInput,
+      action_type: "x402_settle",
+      amount: "1.00",
+      currency: "USDC",
+      pay_to: "0x" + "ab".repeat(20),
+    });
+
+    expect(insertStatus(calls)).toBe("pending_approval");
+  });
+});

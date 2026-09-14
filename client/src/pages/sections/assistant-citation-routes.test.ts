@@ -91,13 +91,13 @@ describe("Brain Assistant citation links", () => {
     expect(src).toContain('data-testid="assistant-error"');
   });
 
-  it("navigates only to routes App.tsx actually registers", () => {
+  it("sends any remaining navigation only to routes App.tsx actually registers", () => {
     const routes = registeredRoutes();
     const targets = navigateTargets(ASSISTANT);
 
-    // Guard against the regexes silently matching nothing and passing vacuously.
+    // Citations now prefer in-place record popups, so zero route navigations is
+    // valid. If a navigation is added later, it must still target a real route.
     expect(routes.size, "no <Route path=...> found in App.tsx").toBeGreaterThan(3);
-    expect(targets.length, "no navigate() targets found in BrainAssistant").toBeGreaterThan(0);
 
     for (const target of targets) {
       const pathname = target.split("?")[0];
@@ -111,17 +111,21 @@ describe("Brain Assistant citation links", () => {
 
   it("routes obligation citations to the itemized list of what is owed", () => {
     const src = readFileSync(ASSISTANT, "utf8");
-    const line = src
-      .split("\n")
-      .find((l) => l.includes('resolvedType === "obligation"') && l.includes("navigate("));
-    expect(line, 'no navigate() for resolvedType === "obligation"').toBeDefined();
-    /* Payables renders one row per outstanding obligation, so a citation about a
-       specific one lands among its peers. It pointed at Cash Flow while no such list
-       existed — there, an obligation was at best a `bill` row and payroll and tax were
-       not shown at all. */
-    expect(line).toContain("/ledger?tab=payables");
-    // The target tab must still exist, or the link silently falls back to Accounts.
-    expect(readFileSync(LEDGER, "utf8")).toContain('activeTab === "Payables"');
+    expect(src).not.toContain('resolvedType === "obligation") navigate(');
+    expect(src).toContain("setFallbackEvidence({");
+    expect(src).toContain("<LiveEvidenceRecordPopup");
+  });
+
+  it("keeps every returned grounding record tappable", () => {
+    const src = readFileSync(ASSISTANT, "utf8");
+    const mapStart = src.indexOf("msg.sources.map");
+    const mapEnd = src.indexOf("})}", mapStart);
+    const citationBlock = src.slice(mapStart, mapEnd);
+
+    expect(mapStart, "grounding record map not found").toBeGreaterThan(-1);
+    expect(citationBlock).toContain('data-testid={`evidence-link-${i}`}');
+    expect(citationBlock).not.toContain("const isClickable");
+    expect(citationBlock).not.toContain("<span");
   });
 });
 

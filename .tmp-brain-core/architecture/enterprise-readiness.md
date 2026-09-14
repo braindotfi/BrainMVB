@@ -1,0 +1,151 @@
+# Enterprise readiness
+
+Single diligence-facing index for fintech, bank, and platform buyers. For each enterprise concern, this page names the runtime guarantee, the code/test that enforces it, and the doc that explains it. So buyers don't have to read the source to answer "is this safe?".
+
+{% hint style="info" %}
+**Status as of `main`.** Anything marked **deferred** is on the engineering roadmap. Anything marked **external** depends on a third party. The blocker for unrestricted mainnet production is at the bottom of this page.
+{% endhint %}
+
+## At a glance
+
+| Concern                              | Status       | Runtime / code anchor                                                                   |
+| ------------------------------------ | ------------ | --------------------------------------------------------------------------------------- |
+| Tenant isolation (DB)                | shipped      | Postgres RLS + `infra/db-roles.sql` + `composition/db-isolation.ts`                     |
+| Tenant isolation (blob)              | shipped      | Per-tenant path prefix `<tenantId>/yyyy/mm/dd/sha256` (`blobPath`)                      |
+| Wiki / Policy boundary               | shipped      | `check-policy-no-wiki-read` + `check-wiki-no-ledger-write`                              |
+| Credential encryption at rest        | shipped      | AES-256-GCM + KMS provider (`shared/src/crypto/aes-gcm.ts`)                             |
+| §6 deterministic payment gate        | shipped      | `shared/src/gate/gate.ts` (23 entries) + `check-gate-bypass`                            |
+| External-agent HMAC handshake        | shipped      | `services/api/src/agents/sign-agent-request.ts` (signs and verifies)                    |
+| MCP scope grants + per-tenant limits | shipped      | `BrainMCPAgentRegistry` + `services/mcp/src/server.ts`                                  |
+| Audit log immutability               | shipped      | Append-only DB + Merkle anchoring on Base                                               |
+| Audit log retention                  | shipped      | Preserved through tenant deletion (GDPR Art 17(3)(b))                                   |
+| Tenant deletion                      | shipped      | `DELETE /v1/tenants/{id}` + 11 unit tests                                               |
+| Tenant blob purge                    | deferred     | URIs surfaced; durable purge worker in RFC                                              |
+| Production boot fences (7+)          | shipped      | DB isolation, escrow audit, rails, AES key, inbound secret, loader, and outbox fences   |
+| Webhook delivery DLQ + retries       | shipped      | `services/audit/src/webhook-dispatch-worker.ts`                                         |
+| On-chain PII guard                   | shipped      | `check-no-onchain-pii` + RFC 0001 §3                                                    |
+| Per-tenant MCP rate limits           | shipped      | `services/mcp/src/server.ts` (Redis-backed)                                             |
+| External smart-contract audit        | **external** | `contracts/AUDIT-SCOPE.md` ready, engagement pending                                    |
+| Docker VM production deploy          | shipped      | `.github/workflows/main.yml` builds GHCR images, migrates, recreates, and smokes health |
+
+## Detail
+
+### Tenant isolation at the storage layer
+
+**Database.** Postgres Row-Level Security is `ENABLE`d on every tenant table by migration. Enforcement requires `infra/db-roles.sql` to be applied in production. The request path runs as the non-owner `brain_app` role (`FORCE ROW LEVEL SECURITY`), and every cross-tenant background job/resolver runs under one of **eight least-privilege `BYPASSRLS` roles**, each granted only its layer's tables (raw worker, canonical projector, ledger projector, execution-outbox worker, audit verifier, audit publisher, resolver, tenant deletion) so a confused-deputy bug in one path cannot reach another layer. A boot fence (`composition/db-isolation.ts`) refuses to start the api in `NODE_ENV=production` when `BRAIN_WIKI_DB_URL` or any of the eight role URLs is missing, and a boot-time role check asserts each pool connects as its expected role with a forbidden-privilege list.
+
+**Blob storage.** Every object lives under `<tenantId>/yyyy/mm/dd/sha256`. Paths are built by `blobPath()` in `shared/src/blob/types.ts` and never concatenated by hand. An RLS test against the non-owner `brain_app` role pins the boundary.
+
+### Process isolation (api vs workers)
+
+The same image runs as an HTTP-only api and as separate background-worker processes (`BRAIN_HTTP_ENABLED` + `BRAIN_WORKERS` select the role; `composition/process-roles.ts`). Workers (ingestion, projection, execution-outbox drain, audit verification/anchoring, blob purge) restart and scale independently of api deploys, and the worker-only least-privilege DB credentials are never handed to the public api runtime. `docker-compose.prod.yml` ships this split (an `api` service with `BRAIN_WORKERS=none` and a `worker` service with `BRAIN_HTTP_ENABLED=false`). Every worker holds a per-worker Postgres advisory lease (`leasedCycle`), so running multiple worker replicas is safe: one is active at a time and a crashed holder's lock auto-releases for failover.
+
+### Wiki / Policy boundary
+
+Brain's safety story rests on Policy reading **Ledger only**, never Wiki.
+
+- `check-policy-no-wiki-read` (CI) scans Policy code for any Wiki import.
+- `check-wiki-no-ledger-write` (CI) scans Wiki code for any Ledger write.
+- 15 cross-layer invariants in `tests/invariants/` enforce this end-to-end.
+
+### Credential encryption at rest
+
+Plaid bank credentials are encrypted with **AES-256-GCM** before insert into `raw_plaid_items.credentials`. The key comes from Azure Key Vault in production (`shared/src/crypto/kms-provider.ts`) or `BRAIN_SOURCE_CREDENTIAL_KEY` in dev. A boot fence refuses to start in production with no provider configured.
+
+### The §6 deterministic pre-execution gate
+
+Every money-moving action runs 23 deterministic checks (13 numbered + 10 hardening additions). Identity, behavior pinning, policy DSL, ledger state binding, balance, evidence, approvals, duplicate detection, obligation direction (payable vs receivable), audit before and after.
+
+{% hint style="success" %}
+**No LLM. No Wiki text. No skip path.** The gate is pure code; the same inputs always produce the same outputs.
+{% endhint %}
+
+- `check-gate-bypass` (CI) enforces that no rail dispatch or `executed` transition can occur outside `PaymentIntentService.execute()`.
+- Metrics: `brain.gate.check.count`, `brain.gate.outcome.count`, `brain.gate.duration_ms` (Grafana scaffold at `infra/grafana/gate.json`).
+- `tests/e2e/signed-agent-gated-payment.e2e.test.ts` asserts checks 8 / 9.5 / 11.5 are `pass` and NOT `not_applicable` from staging history.
+
+### External-agent HMAC handshake
+
+External MCP agents call `/v1/agents/mcp` with a JWT validated against `BrainMCPAgentRegistry` (60s cache). Internal Python agents (reconciliation, payment, anomaly) verify `X-Brain-Auth: sha256=<hex>` over the request body via shared `BRAIN_AGENTS_INBOUND_SECRET`. Both sides fail closed in production:
+
+- The api refuses to start when `RECONCILIATION_AGENT_URL` is set in prod without `BRAIN_AGENTS_INBOUND_SECRET`.
+- The Python service raises `RuntimeError` before `FastAPI` is constructed when `BRAIN_ENV=production` and the secret is unset.
+
+### Audit log + Merkle anchoring
+
+Append-only `audit_events` table. Periodic Merkle anchor publication to Base via `BrainAuditAnchor`. The `/v1/audit/verify` endpoint is unauthenticated (verify-without-trusting-Brain). Tenant deletion preserves `audit_events` and `audit_anchors` under GDPR Article 17(3)(b) legitimate-interest carveout (financial integrity), and the deletion itself is recorded as a `tenant.deleted` audit event so it's verifiable on the chain.
+
+### Tenant deletion (GDPR Article 17)
+
+`DELETE /v1/tenants/{id}` walks every tenant-scoped table across the six layers in one transaction (`brain_tenant_deletion` role, BYPASSRLS, scoped to erasure). Returns per-table row counts + the list of `raw_artifacts.blob_uri` that require out-of-band purging (the database deletion is in-band; blob byte deletion is **deferred** to the privileged purge worker).
+
+### Blob purge (deferred)
+
+{% hint style="warning" %}
+**This item is on the roadmap, not shipped.** A misconfigured operator runbook could leave blob bytes in Azure Blob Storage after a tenant deletion.
+{% endhint %}
+
+Layer-1 immutability ("Raw is the source of truth, never mutated", per `Brain_MVP_Architecture.md` Layer 1) blocks an in-band `BlobAdapter.purge()` today. The architectural carveout that reconciles Layer-1 immutability with GDPR Article 17 is in RFC 0003 (in the repo at `docs/rfcs/0003-blob-purge-article-17.md`). Once signed off, phase B implements:
+
+- `tenant_blob_purge_jobs` durable queue table
+- background worker that calls `BlobAdapter.purge(uri)` per row
+- audit events `tenant_blob.purge_requested / completed / failed / retried`
+
+Until phase B lands, operators run a separate cleanup pass against the URI list returned by the deletion endpoint.
+
+### Production boot fences (7+)
+
+At least seven fail-closed boot fences protect production. A misconfigured production deploy fails to start rather than running degraded:
+
+1. **DB isolation** (`composition/db-isolation.ts`). Wiki + eight least-privilege role DB URLs required.
+2. **Escrow audit** (`composition/escrow-audit-gate.ts`). Mainnet escrow requires `BRAIN_ESCROW_AUDIT_RECEIPT` (preferred. URL/filepath/hash pointing at the audit report) or the legacy `BRAIN_ESCROW_AUDIT_APPROVED="true"` boolean.
+3. **Live rails** (`composition/rails-prod-fence.ts`). At least one production rail must register.
+4. **AES-256-GCM**. Source-credential KMS provider must be configured.
+5. **Inbound agent secret**. `BRAIN_AGENTS_INBOUND_SECRET` required when `RECONCILIATION_AGENT_URL` is set.
+6. **Money-path loaders** (`composition/payment-loaders-prod-fence.ts`). Production requires always-applicable gate loaders.
+7. **Outbox dispatch guard** (`composition/outbox-dispatch-guard-fence.ts`). The execution worker must re-check dispatch safety before rail dispatch.
+
+Feature fences also protect demo provision-run and sandbox service-token routes when those routes are enabled.
+
+Each fence emits the failure on stdout/stderr so log aggregators surface the exact missing env var or wiring error.
+
+### Per-tenant MCP rate limits
+
+Redis-backed limiter in `services/mcp/src/server.ts`. Per-tenant + per-tool buckets. Configurable via env. No customer can starve another via the MCP surface.
+
+### Per-rail support matrix
+
+A release-manager-facing per-rail support table lives in the repo at `docs/rails-matrix.md` (production_allowed, required env, chain, audit status, failure mode). The runtime capability log emits the same fields per rail at boot:
+
+```
+brain.runtime.capabilities { ..., rails: [ {name, live, production_allowed,
+  required_env_present, chain_id, audit_required, audit_approved}, ... ] }
+```
+
+## Diligence machinery (peer-review batch 7)
+
+Beyond the runtime guarantees above, Brain ships repeatable operator and reviewer tooling that turns "is this safe to promote?" into a runnable check:
+
+- **`pnpm run production-readiness`** evaluates the current env against every boot fence, every rail's `required_env_present`, every CI guard's wiring, and every open risk in the register. Each row includes `evidence_state`, separate from status, so a configured-but-unexercised control cannot masquerade as proven. Exit 1 (red) when any P0 risk is open, any fence would fail, or the selected profile's evidence minimum is not met. Add `--json` for machine output.
+- **`pnpm run readiness:evidence -- --profile staging`** emits a diligence-ready markdown report with status, evidence state, testnet E2E posture, audit status, rail posture, connector certification guards, and known limitations. Use it as the release-candidate attachment for staging and mainnet reviews.
+- **Machine-readable risk register** at `docs/risk-register.json` (mirrors `docs/risk-register.md`). The aggregator reads it directly; an open `P0` risk in the register automatically pins promotion to red.
+- **CI artifact** uploaded per commit on the PR workflow (`production-readiness-${sha}`, 90-day retention). Diligence reviewers can pull any commit's readiness JSON without rebuilding.
+- **Git-native trend tracking** at `docs/readiness-history/<tag>.json`. Per-release snapshots committed to the repo; `pnpm run readiness-trend` prints the trajectory (open P0 count, red/yellow/green counts, ΔP0 vs prior). No external dashboard required.
+
+This is how the readiness story stays falsifiable: every claim has a code anchor, every claim has a runtime check, and every release has a snapshot you can compare against.
+
+## Blockers for unrestricted mainnet production
+
+{% hint style="danger" %}
+**External contract audit must close before "unrestricted mainnet production-ready" is an honest claim.** Until then, Brain is staging / controlled-pilot ready.
+{% endhint %}
+
+1. **External smart-contract audit.** `contracts/AUDIT-SCOPE.md` is ready. Engagement is pending. Until the audit clears and the deployed bytecode is verified, the boot fence (#2 above) refuses mainnet escrow.
+
+The deploy chain itself is no longer an unstarted blocker: `.github/workflows/main.yml` builds the Node and Python agent images, pushes them to GHCR, applies production migrations before compose recreate, starts `api`, `worker`, and `agents`, and smokes `https://api.brain.fi/health`.
+
+The on-chain executor has a **testnet E2E** that drives the real rail against a deployed `BrainSmartAccount` on Base Sepolia (`tests/e2e/onchain-executor.testnet.e2e.test.ts`, CI job `testnet_onchain_executor_e2e`); it is gated behind a repo variable + RPC/key secrets and runs once those testnet fixtures are provisioned. `production-readiness --profile staging` treats this as required exercised evidence, so the scaffolded job no longer passes a release-candidate gate by itself. This overlaps blocker #2 (the same deploy/provisioning substrate).
+
+## How to verify any one of these claims
+
+Each row in the at-a-glance table names the code anchor. Reading that file is the verification. For runtime guarantees, the `brain.runtime.capabilities` log line is the single ops surface that proves which fences are armed and which rails are live in the running process.

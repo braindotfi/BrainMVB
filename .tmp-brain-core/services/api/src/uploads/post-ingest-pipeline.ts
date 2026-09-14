@@ -1,0 +1,355 @@
+import type { Pool } from "pg";
+import {
+  runInterpretCycle,
+  setArtifactProjectionStatus,
+  UPLOAD_DOCUMENT_SCHEMA,
+  type RawDeps,
+  type RawArtifactProjectionStatus,
+} from "@brain/raw";
+import {
+  rebuildAccountTransactionProjectionFromCanonical,
+  rebuildAparProjectionFromCanonical,
+  runNormalizeCycle,
+} from "@brain/ledger";
+import { runProjectionCycle, type LedgerUploadProjectedEvent } from "@brain/canonical";
+import {
+  withTenantScope,
+  type AuditEmitter,
+  type BlobAdapter,
+  type MetricsEmitter,
+} from "@brain/shared";
+import type { WikiPageService } from "@brain/wiki";
+import { regenerateWikiForUploadProjection } from "../wiki/regeneration-worker.js";
+
+interface UploadProjectionAgentTrigger {
+  handle(event: LedgerUploadProjectedEvent): Promise<void>;
+}
+
+interface PipelineLog {
+  info?(obj: unknown, msg?: string): void;
+  warn(obj: unknown, msg?: string): void;
+  error(obj: unknown, msg?: string): void;
+  debug?(obj: unknown, msg?: string): void;
+}
+
+const UPLOAD_PROJECTION_STEP_TIMEOUT_MS = 30_000;
+const UPLOAD_PROJECTION_WIKI_SETTLE_DELAY_MS = 250;
+const UPLOAD_INGEST_DRAIN_DEBOUNCE_MS = 750;
+
+export interface UploadIngestPipelineDeps {
+  rawWorkerPool: Pool;
+  appPool: Pool;
+  canonicalProjectorPool: Pool;
+  ledgerProjectorPool: Pool;
+  tenantDiscoveryPool: Pool;
+  blob: BlobAdapter;
+  audit: AuditEmitter;
+  pageService: WikiPageService;
+  uploadProjectionAgentTrigger: UploadProjectionAgentTrigger;
+  metrics?: MetricsEmitter;
+  log?: PipelineLog;
+  wikiSettleDelayMs?: number;
+}
+
+export function createUploadIngestPipelineDrain(
+  deps: UploadIngestPipelineDeps,
+): NonNullable<RawDeps["afterIngest"]> {
+  return async ({ input, result }) => {
+    if (result.sourceSchema !== UPLOAD_DOCUMENT_SCHEMA) {
+      if (isUploadSourceType(result.sourceType)) {
+        deps.log?.warn(
+          {
+            tenant_id: input.tenantId,
+            raw_id: result.rawId,
+            source_type: result.sourceType,
+            source_schema: result.sourceSchema,
+          },
+          "upload artifact missing registered document source_schema; skipping immediate projection drain",
+        );
+      }
+      return;
+    }
+
+    try {
+      await runInterpretCycle(
+        {
+          pool: deps.rawWorkerPool,
+          blob: deps.blob,
+          audit: deps.audit,
+          ...(deps.metrics !== undefined ? { metrics: deps.metrics } : {}),
+        },
+        { batchSize: 20 },
+      );
+      await runNormalizeCycle(
+        {
+          pool: deps.appPool,
+          audit: deps.audit,
+          ...(deps.metrics !== undefined ? { metrics: deps.metrics } : {}),
+        },
+        { batchSize: 20 },
+      );
+      await runProjectionCycle(
+        {
+          pool: deps.canonicalProjectorPool,
+          audit: deps.audit,
+          ...(deps.metrics !== undefined ? { metrics: deps.metrics } : {}),
+          ...(deps.log !== undefined
+            ? {
+                log: {
+                  debug: deps.log.debug?.bind(deps.log) ?? ((): void => {}),
+                  warn: deps.log.warn.bind(deps.log),
+                },
+              }
+            : {}),
+          onUploadProjected: async (event) => {
+            await runUploadProjectionSideEffects(deps, event);
+          },
+        },
+        { batchSize: 20 },
+      );
+    } catch (err) {
+      deps.log?.error(
+        { err, tenant_id: input.tenantId, raw_id: result.rawId },
+        "upload post-ingest projection drain failed",
+      );
+      throw err;
+    }
+  };
+}
+
+export function createDebouncedUploadIngestPipelineDrain(
+  deps: UploadIngestPipelineDeps,
+  opts: { debounceMs?: number } = {},
+): NonNullable<RawDeps["afterIngest"]> {
+  const drain = createUploadIngestPipelineDrain(deps);
+  const debounceMs = opts.debounceMs ?? UPLOAD_INGEST_DRAIN_DEBOUNCE_MS;
+  const byTenant = new Map<string, DebouncedDrainState>();
+
+  return async (event) => {
+    if (!isRegisteredUploadDocumentEvent(event)) {
+      await drain(event);
+      return;
+    }
+
+    const tenantId = event.input.tenantId;
+    let state = byTenant.get(tenantId);
+    if (state === undefined) {
+      state = { latest: event, timer: undefined, running: false, rerunRequested: false };
+      byTenant.set(tenantId, state);
+    } else {
+      state.latest = event;
+    }
+
+    if (state.running) {
+      state.rerunRequested = true;
+      return;
+    }
+
+    if (state.timer !== undefined) clearTimeout(state.timer);
+    state.timer = setTimeout(() => {
+      void runQueuedDrain(tenantId);
+    }, debounceMs);
+  };
+
+  async function runQueuedDrain(tenantId: string): Promise<void> {
+    const state = byTenant.get(tenantId);
+    if (state === undefined || state.running) return;
+    const event = state.latest;
+    state.timer = undefined;
+    state.running = true;
+    state.rerunRequested = false;
+    try {
+      await drain(event);
+    } catch (err) {
+      deps.log?.error(
+        {
+          err,
+          tenant_id: event.input.tenantId,
+          raw_id: event.result.rawId,
+        },
+        "background upload post-ingest projection drain failed",
+      );
+    } finally {
+      state.running = false;
+      if (state.rerunRequested) {
+        state.timer = setTimeout(() => {
+          void runQueuedDrain(tenantId);
+        }, debounceMs);
+      } else {
+        byTenant.delete(tenantId);
+      }
+    }
+  }
+}
+
+type UploadIngestEvent = Parameters<NonNullable<RawDeps["afterIngest"]>>[0];
+
+interface DebouncedDrainState {
+  latest: UploadIngestEvent;
+  timer: NodeJS.Timeout | undefined;
+  running: boolean;
+  rerunRequested: boolean;
+}
+
+function isRegisteredUploadDocumentEvent(event: UploadIngestEvent): boolean {
+  return event.result.sourceSchema === UPLOAD_DOCUMENT_SCHEMA;
+}
+
+export async function runUploadProjectionSideEffects(
+  deps: Pick<
+    UploadIngestPipelineDeps,
+    | "ledgerProjectorPool"
+    | "appPool"
+    | "audit"
+    | "tenantDiscoveryPool"
+    | "pageService"
+    | "uploadProjectionAgentTrigger"
+    | "wikiSettleDelayMs"
+    | "log"
+  >,
+  event: LedgerUploadProjectedEvent,
+  timeoutMs = UPLOAD_PROJECTION_STEP_TIMEOUT_MS,
+): Promise<void> {
+  await markArtifactProjectionStatus(deps, event, "projecting");
+  try {
+    await runUploadProjectionStep(deps.log, event, "ledger_apar_rebuild", timeoutMs, () =>
+      rebuildAparProjectionFromCanonical(deps.ledgerProjectorPool, deps.audit, {
+        tenantId: event.tenantId,
+        actor: "sys_upload_projection",
+      }),
+    );
+    await runUploadProjectionStep(
+      deps.log,
+      event,
+      "ledger_account_transaction_rebuild",
+      timeoutMs,
+      () =>
+        rebuildAccountTransactionProjectionFromCanonical(deps.ledgerProjectorPool, event.tenantId),
+    );
+    const wikiSettleDelayMs = deps.wikiSettleDelayMs ?? UPLOAD_PROJECTION_WIKI_SETTLE_DELAY_MS;
+    if (wikiSettleDelayMs > 0) {
+      await runUploadProjectionStep(deps.log, event, "wiki_visibility_settle", timeoutMs, () =>
+        delay(wikiSettleDelayMs),
+      );
+    }
+    await runUploadProjectionStep(deps.log, event, "wiki_regeneration", timeoutMs, () =>
+      regenerateWikiForUploadProjection(
+        {
+          tenantDiscoveryPool: deps.tenantDiscoveryPool,
+          pageService: deps.pageService,
+          audit: deps.audit,
+          ...(deps.log !== undefined ? { log: deps.log } : {}),
+        },
+        event,
+      ),
+    );
+    await runUploadProjectionStep(deps.log, event, "agent_trigger", timeoutMs, () =>
+      deps.uploadProjectionAgentTrigger.handle(event),
+    );
+    await markArtifactProjectionStatus(deps, event, "projected");
+  } catch (err) {
+    await markArtifactProjectionStatus(
+      deps,
+      event,
+      err instanceof UploadProjectionStepTimeoutError
+        ? "projection_timed_out"
+        : "projection_failed",
+    );
+    throw err;
+  }
+}
+
+async function markArtifactProjectionStatus(
+  deps: Pick<UploadIngestPipelineDeps, "appPool" | "log">,
+  event: LedgerUploadProjectedEvent,
+  status: RawArtifactProjectionStatus,
+): Promise<void> {
+  await withTenantScope(deps.appPool, event.tenantId, (client) =>
+    setArtifactProjectionStatus(client, event.rawArtifactId, status),
+  );
+  deps.log?.info?.(
+    {
+      tenant_id: event.tenantId,
+      raw_artifact_id: event.rawArtifactId,
+      projection_status: status,
+    },
+    "upload projection status updated",
+  );
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function runUploadProjectionStep<T>(
+  log: PipelineLog | undefined,
+  event: LedgerUploadProjectedEvent,
+  step: string,
+  timeoutMs: number,
+  fn: () => Promise<T>,
+): Promise<T> {
+  const startedAt = Date.now();
+  const fields = {
+    step,
+    tenant_id: event.tenantId,
+    raw_artifact_id: event.rawArtifactId,
+    raw_parsed_id: event.rawParsedId,
+    projector: event.projector,
+    timeout_ms: timeoutMs,
+  };
+  log?.info?.(fields, "upload projection side effect starting");
+  try {
+    const result = await withTimeout(fn(), timeoutMs, step);
+    log?.info?.(
+      {
+        ...fields,
+        duration_ms: Date.now() - startedAt,
+      },
+      "upload projection side effect completed",
+    );
+    return result;
+  } catch (err) {
+    log?.warn(
+      {
+        ...fields,
+        duration_ms: Date.now() - startedAt,
+        err,
+      },
+      err instanceof UploadProjectionStepTimeoutError
+        ? "upload projection side effect timed out"
+        : "upload projection side effect failed",
+    );
+    throw err;
+  }
+}
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, step: string): Promise<T> {
+  let timer: NodeJS.Timeout | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      reject(new UploadProjectionStepTimeoutError(step, timeoutMs));
+    }, timeoutMs);
+  });
+  return Promise.race([promise, timeout]).finally(() => {
+    if (timer !== undefined) clearTimeout(timer);
+  });
+}
+
+class UploadProjectionStepTimeoutError extends Error {
+  public constructor(
+    public readonly step: string,
+    public readonly timeoutMs: number,
+  ) {
+    super(`upload projection side effect timed out: ${step} after ${timeoutMs}ms`);
+    this.name = "UploadProjectionStepTimeoutError";
+  }
+}
+
+function isUploadSourceType(sourceType: string): boolean {
+  return (
+    sourceType === "pdf_upload" ||
+    sourceType === "csv_upload" ||
+    sourceType === "xlsx_upload" ||
+    sourceType === "txt_upload"
+  );
+}

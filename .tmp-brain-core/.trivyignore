@@ -1,0 +1,62 @@
+# Debian 12 has no vendor fix for this systemd-homed issue as of 2026-09-03. The runtime image includes only libsystemd0 and libudev1, does not run systemd-homed, and runs as the unprivileged node user. Reassess by 2026-10-03.
+# exp:2026-10-03
+CVE-2026-16742
+# Debian 12 has no vendor fix for this util-linux issue as of 2026-08-02. Reassess by 2026-09-02.
+# exp:2026-09-02
+CVE-2026-53615
+# Debian 12 has no vendor fix for this util-linux mount issue as of 2026-08-22. Reassess by 2026-09-22.
+# exp:2026-09-22
+CVE-2026-53613
+# util-linux: no fixed Debian stable version as of 2026-09-07. Tracker: https://security-tracker.debian.org/tracker/CVE-2026-76642. Reassess by 2026-10-04.
+CVE-2026-76642 exp:2026-10-04
+# util-linux: no fixed Debian stable version as of 2026-09-07. Tracker: https://security-tracker.debian.org/tracker/CVE-2026-78408. Reassess by 2026-10-04.
+CVE-2026-78408 exp:2026-10-04
+# util-linux: no fixed Debian stable version as of 2026-09-07. Tracker: https://security-tracker.debian.org/tracker/CVE-2026-78409. Reassess by 2026-10-04.
+CVE-2026-78409 exp:2026-10-04
+# util-linux: no fixed Debian stable version as of 2026-09-07. Tracker: https://security-tracker.debian.org/tracker/CVE-2026-78410. Reassess by 2026-10-04.
+CVE-2026-78410 exp:2026-10-04
+# Debian 12 marks this gzip issue fix_deferred as of 2026-08-02. Reassess by 2026-09-02.
+# exp:2026-09-02
+CVE-2026-41992
+# Debian 12 has no vendor fix for this libacl issue as of 2026-08-02. Reassess by 2026-09-02.
+# exp:2026-09-02
+CVE-2026-54369
+# Debian 12 has no vendor fix for this ncurses issue as of 2026-08-02. Reassess by 2026-09-02.
+# exp:2026-09-02
+CVE-2025-69720
+# Debian 12 has no vendor fix for this Perl issue as of 2026-08-02. Reassess by 2026-09-02.
+# exp:2026-09-02
+CVE-2026-13221
+# Debian 12 marks this Perl archive issue fix_deferred as of 2026-08-02. Reassess by 2026-09-02.
+# exp:2026-09-02
+CVE-2026-42496
+# Debian 12 has no vendor fix for this Perl Storable issue as of 2026-08-02. Reassess by 2026-09-02.
+# exp:2026-09-02
+CVE-2026-57433
+# Debian 12 has no vendor fix for this Perl compiler issue as of 2026-08-02. Reassess by 2026-09-02.
+# exp:2026-09-02
+CVE-2026-8376
+# Debian 12 marks this Perl archive issue fix_deferred as of 2026-08-02. Reassess by 2026-09-02.
+# exp:2026-09-02
+CVE-2026-42497
+# Debian 12 has no vendor fix for this Perl IO issue as of 2026-08-02. Reassess by 2026-09-02.
+# exp:2026-09-02
+CVE-2026-48962
+# Debian 12 has no vendor fix for this Perl integer-overflow issue as of 2026-08-02. Reassess by 2026-09-02.
+# exp:2026-09-02
+CVE-2026-57432
+# Debian 12 marks this Perl archive issue fix_deferred as of 2026-08-02. Reassess by 2026-09-02.
+# exp:2026-09-02
+CVE-2026-9538
+# Debian marks this zlib issue will_not_fix for bookworm as of 2026-08-02. Reassess by 2026-09-02.
+# exp:2026-09-02
+CVE-2023-45853
+# Debian 13 marks this OpenSSL QUIC denial-of-service issue fix_deferred as of 2026-08-19. Reassess by 2026-09-18.
+# exp:2026-09-18
+CVE-2026-14456
+# Debian 13 marks this SQLite FTS5 issue no-dsa and has no trixie fix as of 2026-08-30. Reassess by 2026-09-30.
+# exp:2026-09-30
+CVE-2026-11822
+# Debian 13 marks this SQLite FTS5 issue no-dsa and has no trixie fix as of 2026-08-30. Reassess by 2026-09-30.
+# exp:2026-09-30
+CVE-2026-11824

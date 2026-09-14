@@ -1,0 +1,778 @@
+# Brain main-branch pipeline.
+# On merge to main: secret scan, unit+integration, golden-path smoke, Python
+# agents lint/type/test, build one VM image, and deploy that image to staging.
+# Production is promoted separately via .github/workflows/promote-prod.yml
+# (workflow_dispatch, requires the production environment approval), not as
+# part of this run.
+
+name: main
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # Supply-chain gates start alongside unit/integration. build_image waits for
+  # these two gates, while CodeQL runs independently in codeql.yml on every
+  # push and pull request.
+  dependency_audit:
+    name: dependency audit (high + critical)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v4.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Install lockfile dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Fail on high or critical dependency advisories
+        run: pnpm audit --audit-level=high
+
+  iac:
+    name: IaC scan (tfsec high + critical)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Scan Terraform
+        uses: aquasecurity/tfsec-action@b466648d6e39e7c75324f25d83891162a721f2d6 # v1.0.3
+        with:
+          working_directory: infra
+          version: v1.28.11
+          additional_args: --minimum-severity HIGH
+
+  # Secret scan on every push to main. PR coverage runs in pr.yml; this is the
+  # belt to that suspender for direct pushes (merge commits, hotfix pushes)
+  # that never went through a PR. Pre-commit hooks are bypassable with
+  # --no-verify, so CI is the authoritative gate.
+  secrets:
+    name: secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Install gitleaks
+        env:
+          GITLEAKS_VERSION: "8.30.1"
+        run: |
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" | tar -xz -C /usr/local/bin gitleaks
+          gitleaks version
+      - name: gitleaks (push diff)
+        # gitleaks detect against the push's commit range. `before..after` covers
+        # everything new on this push, including amended merge commits.
+        # github.event.before and github.sha are GitHub-generated SHAs, not
+        # attacker-controllable, but route them through env: like every
+        # other workflow input in this repo for consistency.
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+          AFTER_SHA: ${{ github.sha }}
+        run: |
+          BEFORE="$BEFORE_SHA"
+          AFTER="$AFTER_SHA"
+          if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            # First push to the ref. Scan the full tree to baseline.
+            gitleaks detect --source . --redact --exit-code 1
+          else
+            gitleaks detect --source . --log-opts="${BEFORE}..${AFTER}" --redact --exit-code 1
+          fi
+
+  unit_and_integration:
+    name: unit + integration
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: brain
+          POSTGRES_PASSWORD: brain
+          POSTGRES_DB: brain
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 3s
+          --health-timeout 5s
+          --health-retries 20
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 3s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgres://brain:brain@localhost:5432/brain
+      DATABASE_URL_TENANT_DELETION: postgres://brain_tenant_deletion:brain_tenant_deletion@localhost:5432/brain
+      DATABASE_URL_SHADOW_OPERATOR: postgres://brain_privileged:brain_privileged@localhost:5432/brain
+      REDIS_URL: redis://localhost:6379
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: pnpm/action-setup@v6.0.10
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run lint
+        env:
+          NODE_OPTIONS: --max-old-space-size=8192
+      # Build workspace dist/ before typecheck: the per-package `tsc --noEmit`
+      # resolves cross-package types from the built .d.ts files. Mirrors pr.yml.
+      - run: pnpm run build
+      - run: pnpm run typecheck
+      - name: Migrate
+        # DATABASE_URL is present during coverage, so DB-backed tests participate
+        # there too. Migrate before coverage, not only before the integration pass.
+        # The root build excludes tools/*, so build the migrate CLI before use.
+        run: |
+          pnpm -C tools/migrate run build
+          node tools/migrate/dist/cli.js up
+      - name: Apply DB role model for least-privilege integration tests
+        # Coverage now includes tenant-deletion integration tests whenever its
+        # role URL is present. Apply the role and its test password before that
+        # pass, matching pr.yml, so main exercises the same narrow-role path.
+        env:
+          PGPASSWORD: brain
+        run: |
+          command -v psql >/dev/null 2>&1 || { sudo apt-get -qq update && sudo apt-get -qq install -y --no-install-recommends postgresql-client; }
+          psql -v ON_ERROR_STOP=1 -h localhost -U brain -d brain \
+            -v brain_app_password="brain_app" \
+            -v brain_privileged_password="brain_privileged" \
+            -v brain_wiki_reader_password="brain_wiki_reader" \
+            -v brain_mcp_reader_password="brain_mcp_reader" \
+            -v brain_raw_worker_password="brain_raw_worker" \
+            -v brain_canonical_projector_password="brain_canonical_projector" \
+            -v brain_ledger_projector_password="brain_ledger_projector" \
+            -v brain_execution_worker_password="brain_execution_worker" \
+            -v brain_audit_verifier_password="brain_audit_verifier" \
+            -v brain_audit_publisher_password="brain_audit_publisher" \
+            -v brain_resolver_password="brain_resolver" \
+            -v brain_tenant_deletion_password="brain_tenant_deletion" \
+            -v brain_surface_gateway_password="brain_surface_gateway" \
+            -v brain_surface_audit_writer_password="brain_surface_audit_writer" \
+            -v brain_auth_password="brain_auth" \
+            -v brain_auth_audit_writer_password="brain_auth_audit_writer" \
+            -f infra/db-roles.sql
+      - run: pnpm run test:coverage
+      - name: Start scoped MinIO policy fixture
+        run: |
+          root_secret="$(openssl rand -hex 32)"
+          worker_secret="$(openssl rand -hex 32)"
+          api_secret="$(openssl rand -hex 32)"
+          echo "::add-mask::$root_secret"
+          echo "::add-mask::$worker_secret"
+          echo "::add-mask::$api_secret"
+          {
+            echo "MINIO_ROOT_USER=minio-ci-root"
+            echo "MINIO_ROOT_PASSWORD=$root_secret"
+            echo "MINIO_WORKER_ACCESS_KEY_ID=brain-worker"
+            echo "MINIO_WORKER_SECRET_ACCESS_KEY=$worker_secret"
+            echo "MINIO_WORKER_POLICY_ENDPOINT=http://127.0.0.1:9000"
+            echo "MINIO_WORKER_POLICY_INTEGRATION=true"
+            echo "MINIO_API_ACCESS_KEY_ID=brain-api"
+            echo "MINIO_API_SECRET_ACCESS_KEY=$api_secret"
+            echo "MINIO_API_POLICY_ENDPOINT=http://127.0.0.1:9000"
+            echo "MINIO_API_POLICY_INTEGRATION=true"
+          } >> "$GITHUB_ENV"
+          export MINIO_ROOT_USER=minio-ci-root
+          export MINIO_ROOT_PASSWORD="$root_secret"
+          export MINIO_WORKER_ACCESS_KEY_ID=brain-worker
+          export MINIO_WORKER_SECRET_ACCESS_KEY="$worker_secret"
+          export MINIO_API_ACCESS_KEY_ID=brain-api
+          export MINIO_API_SECRET_ACCESS_KEY="$api_secret"
+          bash scripts/ci/start-minio-worker-policy-test.sh
+      - name: Integration tests
+        # `--if-present` must precede the script name; after it, pnpm forwards it
+        # to vitest, which dies with `CACError: Unknown option --ifPresent`.
+        run: pnpm -r --filter='./services/**' --filter='!./services/agents' run --if-present test:integration
+      - name: Shared MinIO integration tests
+        run: pnpm -C shared run test:integration
+      - name: Invariants DB-integration tests (P0.2)
+        run: pnpm -C tests/invariants run test:integration
+      - name: Adversarial safety tests (P1.1)
+        run: pnpm -C tests/adversarial run test && pnpm -C tests/adversarial run test:integration
+
+  golden_path_smoke:
+    name: golden-path smoke
+    runs-on: ubuntu-latest
+    needs: unit_and_integration
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: brain
+          POSTGRES_PASSWORD: brain
+          POSTGRES_DB: brain
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 3s
+          --health-timeout 5s
+          --health-retries 20
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 3s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgres://brain:brain@localhost:5432/brain
+      REDIS_URL: redis://localhost:6379
+      AUTH_JWKS_URL: https://auth.brain.fi/.well-known/jwks.json
+      BRAIN_DEMO_MODE: "true"
+      BRAIN_BASE_URL: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: pnpm/action-setup@v6.0.10
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run build
+      # The root build excludes tools/*; build them so the migrate CLI
+      # (tools/migrate) and the seed CLI (tools/seed-golden-path, used by
+      # golden-path.sh) exist before they are invoked below.
+      - name: Build tools
+        run: pnpm -r --filter './tools/**' run build
+      - name: Migrate
+        run: node tools/migrate/dist/cli.js up
+      - name: Boot API (demo mode)
+        run: |
+          pnpm -C services/api start &
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:3000/health && break || sleep 2
+          done
+      - name: Golden path
+        run: ./scripts/demo/golden-path.sh
+
+  python_agents:
+    name: python agents (lint + types + unit)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: services/agents
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.4.x"
+      - name: Set up Python 3.12
+        run: uv python install 3.12
+      - name: Install dependencies
+        run: uv sync --extra dev
+      - name: Ruff lint
+        run: uv run ruff check .
+      - name: Black format check
+        run: uv run black --check .
+      - name: mypy (strict)
+        run: uv run mypy --strict brain_agents
+      - name: pytest (80% coverage gate)
+        run: uv run pytest
+
+  build_image:
+    name: build production image
+    runs-on: ubuntu-latest
+    needs: [unit_and_integration, golden_path_smoke, python_agents, dependency_audit, iac, secrets]
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0 # full history + tags so `git describe` can derive SERVICE_VERSION
+      - uses: docker/setup-buildx-action@v4
+
+      - uses: docker/login-action@v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push images
+        run: |
+          SERVICE_VERSION=$(git describe --tags --always --match 'v*')
+          docker build --build-arg GIT_SHA=${{ github.sha }} --build-arg SERVICE_VERSION="$SERVICE_VERSION" -t ghcr.io/braindotfi/brain-core:${{ github.sha }} -f Dockerfile .
+          docker push ghcr.io/braindotfi/brain-core:${{ github.sha }}
+          docker build --build-arg GIT_SHA=${{ github.sha }} -t ghcr.io/braindotfi/brain-agents:${{ github.sha }} -f services/agents/Dockerfile services/agents
+          docker push ghcr.io/braindotfi/brain-agents:${{ github.sha }}
+
+  container_scan:
+    name: container scan (high + critical)
+    runs-on: ubuntu-latest
+    needs: build_image
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v3.5.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ghcr.io/braindotfi/brain-core:${{ github.sha }}
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          ignore-unfixed: "false"
+          trivyignores: .trivyignore
+      - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ghcr.io/braindotfi/brain-agents:${{ github.sha }}
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          ignore-unfixed: "false"
+          trivyignores: .trivyignore
+
+  deploy_staging:
+    name: deploy staging VM
+    runs-on: ubuntu-latest
+    needs: container_scan
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    # Scoped to this job (not the whole workflow) so a staging deploy is not
+    # blocked by an older run parked at promote_production's approval gate.
+    concurrency:
+      group: deploy-staging-${{ github.ref }}
+      cancel-in-progress: false # never cancel a deploy mid-flight
+    env:
+      VM_HOST: ${{ secrets.VM_HOST_STAGING }}
+      VM_SSH_KEY: ${{ secrets.VM_SSH_KEY_STAGING }}
+      VM_ENV_FILE: .env.staging
+      COMPOSE_PROJECT: brain-staging
+      HEALTH_URL: ${{ vars.BRAIN_STAGING_HEALTH_URL || 'https://staging-api.brain.fi/health' }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "$VM_SSH_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -H "$VM_HOST" >> ~/.ssh/known_hosts
+
+      # Images alone are not enough: the VM's ~/brain-core is a copied tree,
+      # not a git checkout, so changes to docker-compose.prod.yml and the
+      # host files it bind-mounts into containers (db-roles.sql,
+      # tools/postgres-init) never reach the box on their own. Ship exactly
+      # the repo-tracked paths compose depends on, before any compose
+      # invocation below. Host-only files (VM_ENV_FILE, docker-compose.caddy.yml)
+      # are left untouched, they are not in this repo.
+      #
+      # Do NOT ship Caddyfile or docker-compose.caddy.yml here. Both are
+      # vendored from the PRODUCTION VM and contain only api.brain.fi,
+      # mcp.brain.fi, and auth.brain.fi. Staging (VM_HOST_STAGING) is a
+      # different box with its own host-only Caddyfile carrying a
+      # staging-api.brain.fi block that is not in git and has no backup;
+      # scp'ing the prod file over it would take staging-api.brain.fi down
+      # with no way to recover the original. See promote-prod.yml, which
+      # deploys to the prod VM the file was actually read from.
+      - name: Sync compose and bind-mounted host files to VM
+        run: |
+          ssh -i ~/.ssh/id_deploy "azureuser@$VM_HOST" \
+            'mkdir -p ~/brain-core/infra/minio ~/brain-core/tools/postgres-init ~/brain-core/scripts/ops'
+          scp -i ~/.ssh/id_deploy docker-compose.prod.yml "azureuser@$VM_HOST:~/brain-core/docker-compose.prod.yml"
+          scp -i ~/.ssh/id_deploy infra/db-roles.sql "azureuser@$VM_HOST:~/brain-core/infra/db-roles.sql"
+          scp -i ~/.ssh/id_deploy infra/minio/brain-worker-artifacts-v1.json "azureuser@$VM_HOST:~/brain-core/infra/minio/brain-worker-artifacts-v1.json"
+          scp -i ~/.ssh/id_deploy infra/minio/brain-api-artifacts-v1.json "azureuser@$VM_HOST:~/brain-core/infra/minio/brain-api-artifacts-v1.json"
+          scp -i ~/.ssh/id_deploy scripts/check-required-compose-secrets.sh "azureuser@$VM_HOST:~/brain-core/scripts/check-required-compose-secrets.sh"
+          scp -i ~/.ssh/id_deploy scripts/ops/prepare-minio-worker-env.sh "azureuser@$VM_HOST:~/brain-core/scripts/ops/prepare-minio-worker-env.sh"
+          scp -i ~/.ssh/id_deploy scripts/ops/prepare-minio-api-env.sh "azureuser@$VM_HOST:~/brain-core/scripts/ops/prepare-minio-api-env.sh"
+          scp -i ~/.ssh/id_deploy scripts/ops/prepare-agents-auth-env.sh "azureuser@$VM_HOST:~/brain-core/scripts/ops/prepare-agents-auth-env.sh"
+          scp -i ~/.ssh/id_deploy scripts/ops/repair-policy-content-hash.mjs "azureuser@$VM_HOST:~/brain-core/scripts/ops/repair-policy-content-hash.mjs"
+          scp -i ~/.ssh/id_deploy -r tools/postgres-init/. "azureuser@$VM_HOST:~/brain-core/tools/postgres-init/"
+
+      - name: Enable staging API key auth
+        env:
+          BRAIN_API_KEY_PEPPER_STAGING: ${{ secrets.BRAIN_API_KEY_PEPPER_STAGING }}
+        run: |
+          test -n "$BRAIN_API_KEY_PEPPER_STAGING"
+          tmp="$(mktemp)"
+          script_tmp="$(mktemp)"
+          chmod 600 "$tmp"
+          {
+            printf 'BRAIN_API_KEY_AUTH_ENABLED=true\n'
+            printf 'BRAIN_API_KEY_PEPPER=%s\n' "$BRAIN_API_KEY_PEPPER_STAGING"
+            printf 'BRAIN_EDGE_RATE_LIMIT=100000\n'
+            printf 'BRAIN_API_KEY_RATE_LIMIT_TIMEOUT_MS=2000\n'
+          } > "$tmp"
+          cat > "$script_tmp" <<'PY'
+          from pathlib import Path
+          import sys
+          import time
+
+          env_path = Path(sys.argv[1])
+          patch_path = Path(sys.argv[2])
+          updates = dict(line.split("=", 1) for line in patch_path.read_text().splitlines())
+          existing = env_path.read_text().splitlines() if env_path.exists() else []
+          seen = set()
+          output = []
+
+          for line in existing:
+              key = line.split("=", 1)[0].strip() if "=" in line and not line.lstrip().startswith("#") else None
+              if key in updates:
+                  output.append(f"{key}={updates[key]}")
+                  seen.add(key)
+              else:
+                  output.append(line)
+
+          if output and output[-1] != "":
+              output.append("")
+          for key, value in updates.items():
+              if key not in seen:
+                  output.append(f"{key}={value}")
+
+          backup = env_path.with_name(f"{env_path.name}.bak-api-key-{time.strftime('%Y%m%d-%H%M%S')}")
+          if env_path.exists():
+              backup.write_text(env_path.read_text())
+          env_path.write_text("\n".join(output) + "\n")
+          patch_path.unlink(missing_ok=True)
+          PY
+          remote_tmp="/tmp/brain-api-key-env-${{ github.run_id }}-${{ github.run_attempt }}"
+          remote_script="$remote_tmp.py"
+          scp -i ~/.ssh/id_deploy "$tmp" "azureuser@$VM_HOST:$remote_tmp"
+          scp -i ~/.ssh/id_deploy "$script_tmp" "azureuser@$VM_HOST:$remote_script"
+          rm -f "$tmp" "$script_tmp"
+          ssh -i ~/.ssh/id_deploy -o ServerAliveInterval=30 "azureuser@$VM_HOST" \
+            "cd ~/brain-core && python3 '$remote_script' '$VM_ENV_FILE' '$remote_tmp'; rc=\$?; rm -f '$remote_script' '$remote_tmp'; exit \$rc"
+
+      - name: Prepare scoped MinIO API and worker environments
+        run: |
+          ssh -i ~/.ssh/id_deploy -o ServerAliveInterval=30 "azureuser@$VM_HOST" \
+            "cd ~/brain-core && bash scripts/ops/prepare-minio-api-env.sh \
+              --env '$VM_ENV_FILE' \
+              --credentials .env.minio-api \
+              --output .env.api.prod"
+          ssh -i ~/.ssh/id_deploy -o ServerAliveInterval=30 "azureuser@$VM_HOST" \
+            "cd ~/brain-core && bash scripts/ops/prepare-minio-worker-env.sh \
+              --env '$VM_ENV_FILE' \
+              --credentials .env.minio-worker \
+              --output .env.worker.prod"
+
+      - name: Prepare isolated agents authentication environment
+        run: |
+          ssh -i ~/.ssh/id_deploy -o ServerAliveInterval=30 "azureuser@$VM_HOST" \
+            "cd ~/brain-core && bash scripts/ops/prepare-agents-auth-env.sh \
+              --env '$VM_ENV_FILE' \
+              --credentials .env.agent-key-document-extractor-v1 \
+              --output .env.agents-auth.prod"
+
+      - name: Pre-promote required-secret presence check
+        # Run after the staging API-key setup above because it may add the
+        # conditionally-required BRAIN_API_KEY_PEPPER, but before image pull,
+        # migrations, or any compose recreate can mutate the target.
+        run: |
+          ssh -i ~/.ssh/id_deploy -o ServerAliveInterval=30 "azureuser@$VM_HOST" \
+            "cd ~/brain-core && bash scripts/check-required-compose-secrets.sh --compose docker-compose.prod.yml --env $VM_ENV_FILE"
+
+      # scripts/ops/repair-policy-content-hash.mjs (dry run, no --apply) fails
+      # closed when any `policies` row still carries the pre-6b544ed
+      # insertion-order content_hash (services/api/src/demo/brainsaas-seed.ts
+      # and tools/seed-golden-path/src/cli.ts both used to write it).
+      # getActive (services/policy/src/repository.ts) recomputes the canonical
+      # hash on every read and throws policy_not_active on drift, so an
+      # unrepaired row is a hard outage for that tenant's whole money path the
+      # moment this deploy ships, not a warning.
+      #
+      # Runs via the `migrate` service, NOT `api`: `policies` is under FORCE
+      # RLS and `api`'s DATABASE_URL is `brain_app`, a NOBYPASSRLS role, so an
+      # unscoped SELECT through `api` silently returns zero rows and the gate
+      # would pass even when repair is needed (infra/db-roles.sql). `migrate`
+      # already carries `DATABASE_URL: postgres://brain:...`, the Postgres
+      # bootstrap superuser (docker-compose.prod.yml's postgres service
+      # comment: "migrate connects as this role"), which bypasses RLS
+      # unconditionally regardless of FORCE ROW LEVEL SECURITY -- exactly the
+      # owner/migration role the script's own header requires, and it is
+      # already present in `migrate`'s environment from compose, so no
+      # secret is ever passed on a command line. `migrate` is a one-shot
+      # service (`restart: "no"`), so this uses `docker compose run --rm`,
+      # the same pattern the later "Migrate + recreate auth on VM" step
+      # already uses against the same fixed container_name sequentially, and
+      # bind-mounts the script rather than `docker cp`, since there is no
+      # long-lived container to copy into. The mount target lives under
+      # `services/api/` because that is where Node resolution was verified:
+      # `services/api/package.json` declares `@brain/policy` and `pg` as real
+      # dependencies, and since every service in this compose file shares the
+      # one `brain-core` image, that filesystem path resolves the same way no
+      # matter which service's `docker compose run`/`exec` executes it.
+      #
+      # Skips (does not fail) only when `postgres` itself is not running:
+      # that is what genuine cold start looks like (no volume, no
+      # `policies` table, nothing to repair). A crash-looping or stopped
+      # `api`/`migrate` does not skip the gate, since neither is the signal
+      # checked.
+      #
+      # Never passes --apply here: an automatic silent re-stamp during a
+      # deploy is exactly the "manual DB surgery as a fix" this repo
+      # forbids; repair is a deliberate operator action, run ahead of time.
+      - name: Policy content-hash repair gate
+        run: |
+          ssh -i ~/.ssh/id_deploy -o ServerAliveInterval=30 "azureuser@$VM_HOST" \
+            "cd ~/brain-core && \
+             pg_id=\$(docker compose -p $COMPOSE_PROJECT --env-file $VM_ENV_FILE -f docker-compose.prod.yml ps -q postgres); \
+             if [ -z \"\$pg_id\" ]; then echo 'postgres not running yet (cold-start VM); nothing to repair, skipping'; exit 0; fi; \
+             docker compose -p $COMPOSE_PROJECT --env-file $VM_ENV_FILE -f docker-compose.prod.yml run --rm --no-deps \
+               -v ~/brain-core/scripts/ops/repair-policy-content-hash.mjs:/app/services/api/ops-repair-policy-content-hash.mjs:ro \
+               migrate node services/api/ops-repair-policy-content-hash.mjs" \
+          || { echo "policy content_hash repair required before deploy -- run: DATABASE_URL=<staging owner/migration role> node scripts/ops/repair-policy-content-hash.mjs --apply (see docs/r03-staging-deploy-runbook.md)"; exit 1; }
+
+      # Tag the box's current :prod image as a rollback point BEFORE the
+      # `docker tag` below overwrites the :prod tag. See docs/rollback.md §B.
+      # Then prune images untouched for 1h+ so the rollback tags minted
+      # here don't accumulate forever and fill the disk. `docker image prune
+      # -a` never removes an image a container (running or stopped) still
+      # references, so the live stack stays safe even on a box that hasn't
+      # deployed in over a day. `|| true` so a prune failure never blocks
+      # a deploy.
+      #
+      # 1h: bursty hotfix trains can produce enough core and agents image
+      # generations to fill the 29GB staging disk inside the old 24h window.
+      # The current and stopped-container images remain protected by Docker.
+      # Deeper rollbacks still work, because every image is also in GHCR by
+      # commit SHA: `docker pull ghcr.io/braindotfi/brain-core:<sha>`
+      # recovers any older target. See docs/rollback.md section B.
+      - name: Tag rollback images on VM
+        run: |
+          ssh -i ~/.ssh/id_deploy "azureuser@$VM_HOST" \
+            'ts=$(date +%Y%m%d-%H%M%S); docker tag brain-core:prod brain-core:prod-rollback-$ts || true; docker tag brain-agents:prod brain-agents:prod-rollback-$ts || true; docker image prune -af --filter until=1h || true'
+
+      - name: Pull images from GHCR
+        # The VM authenticates to ghcr.io via a one-time manual `docker login`
+        # (persisted in ~/.docker/config.json); the pull relies on that stored
+        # login, no token is passed over SSH. Retag to brain-core:prod so
+        # docker-compose.prod.yml's `image: brain-core:${BRAIN_IMAGE_TAG:-prod}`
+        # needs no change. Retag brain-agents too so --no-build can recreate
+        # the agents service from the freshly shipped Python image.
+        run: |
+          ssh -i ~/.ssh/id_deploy -o ServerAliveInterval=30 "azureuser@$VM_HOST" \
+            "docker pull ghcr.io/braindotfi/brain-core:${{ github.sha }} && \
+             docker pull ghcr.io/braindotfi/brain-agents:${{ github.sha }} && \
+             docker tag ghcr.io/braindotfi/brain-core:${{ github.sha }} brain-core:prod && \
+             docker tag ghcr.io/braindotfi/brain-agents:${{ github.sha }} brain-agents:prod"
+
+      # Cold-start safety: bring up infra + caddy if the box is fresh.
+      # Idempotent on a warm box — --no-recreate leaves running containers
+      # (incl. postgres) untouched; depends_on sequences a cold box correctly.
+      #
+      # The one-shots (migrate, db-roles) are deliberately NOT in this list.
+      # --no-recreate restarts the *existing* container, which is frozen with
+      # the entrypoint and image id of the last deploy, while the files it
+      # bind-mounts (infra/db-roles.sql) are the freshly shipped ones. That
+      # mismatch broke the deploy right after the sync step landed: the old
+      # db-roles entrypoint had no -v for the new role passwords, so psql got
+      # an unsubstituted :'var' and exited 3. The next step runs both as
+      # `run --rm`, which always builds a fresh container from the current
+      # compose file, so they belong there and only there.
+      - name: Ensure infra up on VM (cold-start safe)
+        run: |
+          ssh -i ~/.ssh/id_deploy -o ServerAliveInterval=30 "azureuser@$VM_HOST" \
+            "cd ~/brain-core && \
+             docker compose -p $COMPOSE_PROJECT --env-file $VM_ENV_FILE -f docker-compose.prod.yml -f docker-compose.caddy.yml up -d --no-build --no-recreate --no-deps postgres redis minio minio-setup caddy"
+
+      - name: Reconcile scoped MinIO API and worker identities
+        run: |
+          ssh -i ~/.ssh/id_deploy -o ServerAliveInterval=30 "azureuser@$VM_HOST" \
+            "cd ~/brain-core && \
+             docker compose -p $COMPOSE_PROJECT --env-file $VM_ENV_FILE -f docker-compose.prod.yml -f docker-compose.caddy.yml \
+               run --rm --no-deps minio-api-setup && \
+             docker compose -p $COMPOSE_PROJECT --env-file $VM_ENV_FILE -f docker-compose.prod.yml -f docker-compose.caddy.yml \
+               run --rm --no-deps minio-worker-setup"
+
+      # No Caddy reload step here. Staging's Caddyfile is host-only and never
+      # shipped by this job (see the comment above the sync step), so there is
+      # nothing new for Caddy to pick up. Reload runs only in
+      # promote-prod.yml, against the prod VM the vendored Caddyfile came from.
+
+      # The VM's ~/brain-core is a copied tree (not a git checkout) that
+      # already holds the stage env file (host-only, not in this repo).
+      # Migrations are idempotent, so running `up` on every deploy is safe
+      # even when there are no new migrations.
+      # `auth` is now the single JWKS source for api/worker/surface-gateway
+      # (Phase 4, OAUTH-AS-PLAN.md section 8), and it boots behind five
+      # independent process.exit(1) fences (AUTH_SIGN_KEY, AUTH_COOKIE_SECRET,
+      # a valid AUTH_ISSUER, the three BRAIN_*_DB_URL role URLs, and the
+      # EMAIL_ENDPOINT/EMAIL_API_KEY pair) where the retired `jwks` sidecar had
+      # exactly one. `docker compose up -d` exits 0 even when the container
+      # dies moments later, so recreate `auth` alone first and prove it is
+      # actually listening (next step) BEFORE recreating anything that
+      # verifies tokens against it. /health below is unauthenticated and
+      # would report the new commit even with auth dead, so it cannot stand
+      # in for this gate.
+      - name: Migrate + recreate auth on VM
+        run: |
+          ssh -i ~/.ssh/id_deploy -o ServerAliveInterval=30 "azureuser@$VM_HOST" \
+            "cd ~/brain-core && \
+             docker compose -p $COMPOSE_PROJECT --env-file $VM_ENV_FILE -f docker-compose.prod.yml -f docker-compose.caddy.yml run --rm --no-deps migrate node tools/migrate/dist/cli.js up && \
+             docker compose -p $COMPOSE_PROJECT --env-file $VM_ENV_FILE -f docker-compose.prod.yml -f docker-compose.caddy.yml run --rm --no-deps db-roles && \
+             (docker compose -p $COMPOSE_PROJECT --env-file $VM_ENV_FILE -f docker-compose.prod.yml -f docker-compose.caddy.yml up -d --no-deps --no-build auth || \
+              (docker compose -p $COMPOSE_PROJECT --env-file $VM_ENV_FILE -f docker-compose.prod.yml -f docker-compose.caddy.yml logs --tail=200 auth && false))"
+
+      # Pre-flight gate. auth opens three Postgres pools before it starts
+      # listening, so give it a bounded wait rather than a single curl.
+      # Deliberately probes the container's 127.0.0.1-bound port over SSH
+      # rather than the public hostname. This gate answers one question, "is
+      # the auth container up on the new image", and must answer it before the
+      # verifiers are recreated; going over Caddy/DNS would fold edge health
+      # into that answer and fail the deploy for an unrelated reason (same
+      # approach as promote-prod.yml's auth smoke test).
+      - name: Wait for auth healthy on VM before recreating verifiers
+        run: |
+          expected="${{ github.sha }}"
+          last_commit=""
+          for i in $(seq 1 10); do
+            body=$(ssh -i ~/.ssh/id_deploy "azureuser@$VM_HOST" 'curl -s http://localhost:3003/healthz' || true)
+            last_commit=$(echo "$body" | grep -o '"commit":"[^"]*"' | sed 's/.*:"//;s/"$//')
+            [ "$last_commit" = "$expected" ] && exit 0
+            sleep 6
+          done
+          echo "auth /healthz never reported commit=$expected before recreating api/worker/surface-gateway (last seen: '$last_commit')"
+          exit 1
+
+      # --no-deps here too: auth was just recreated above and proven healthy,
+      # so it is deliberately left out of this list rather than recreated
+      # twice.
+      - name: Recreate api/worker/agents/surface-gateway on VM
+        run: |
+          ssh -i ~/.ssh/id_deploy -o ServerAliveInterval=30 "azureuser@$VM_HOST" \
+            "cd ~/brain-core && \
+             (docker compose -p $COMPOSE_PROJECT --env-file $VM_ENV_FILE -f docker-compose.prod.yml -f docker-compose.caddy.yml --profile agents up -d --no-deps --no-build api worker agents surface-gateway || \
+              (docker compose -p $COMPOSE_PROJECT --env-file $VM_ENV_FILE -f docker-compose.prod.yml -f docker-compose.caddy.yml logs --tail=200 api worker agents surface-gateway && false))"
+
+      - name: Wait for agents healthy on VM
+        # Compose success only proves the container started. The extraction
+        # runtime must be healthy before this deploy can accept uploads.
+        run: |
+          ssh -i ~/.ssh/id_deploy -o ServerAliveInterval=30 "azureuser@$VM_HOST" '
+            set -euo pipefail
+            expected="${{ github.sha }}"
+            actual=""
+            for _ in $(seq 1 18); do
+              status="$(docker inspect --format="{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}" brain-prod-agents 2>/dev/null || true)"
+              if [ "$status" = "healthy" ]; then
+                actual="$(docker exec brain-prod-agents printenv GIT_SHA 2>/dev/null || true)"
+                [ "$actual" = "$expected" ] && exit 0
+              fi
+              sleep 5
+            done
+            echo "brain-prod-agents did not become healthy on expected commit $expected (status: $status, commit: $actual)"
+            docker logs --tail=200 brain-prod-agents >&2 || true
+            exit 1
+          '
+
+      - name: Smoke test /health
+        # A bare 200 is not enough: /health returns 200 before a deploy too, so
+        # a deploy that silently failed to recreate the container would still
+        # pass. Assert the live commit matches the sha we just built and shipped.
+        run: |
+          expected="${{ github.sha }}"
+          last_commit=""
+          for i in $(seq 1 10); do
+            body=$(curl -s "$HEALTH_URL" || true)
+            last_commit=$(echo "$body" | grep -o '"commit":"[^"]*"' | sed 's/.*:"//;s/"$//')
+            [ "$last_commit" = "$expected" ] && exit 0
+            sleep 6
+          done
+          echo "$HEALTH_URL never reported commit=$expected (last seen: '$last_commit')"
+          exit 1
+
+      - name: Staging API key acceptance
+        run: |
+          scp -i ~/.ssh/id_deploy scripts/ops/staging_api_key_acceptance.py "azureuser@$VM_HOST:/tmp/staging_api_key_acceptance.py"
+          ssh -i ~/.ssh/id_deploy -o ServerAliveInterval=30 "azureuser@$VM_HOST" \
+            "cd ~/brain-core && python3 /tmp/staging_api_key_acceptance.py --env-file '$VM_ENV_FILE' --health-url '$HEALTH_URL'; rc=\$?; rm -f /tmp/staging_api_key_acceptance.py; exit \$rc"
+
+  external_agent_mcp_e2e:
+    name: external-agent MCP E2E
+    runs-on: ubuntu-latest
+    # Opt-in. tests/e2e/external-agent-mcp.e2e.test.ts (Series A proof 3) drives
+    # a real external agent through MCP: ping → wiki read → policy-gated payment
+    # intent → audit. It only passes once the agent is actually registered
+    # on-chain (Track 1), so it stays gated behind an explicit repo variable +
+    # token secret. Without them the test self-skips (describe.skip); gating the
+    # whole job keeps the signal honest. A green check means it really ran.
+    # Lives here (post-merge) rather than in pr.yml so PRs don't hit a live env
+    # or mint $10 ACH intents on every push.
+    if: vars.E2E_EXTERNAL_AGENT_ENABLED == 'true'
+    # Opt-in but reachable on a push to main once the repo var is on; it hits
+    # a shared sandbox tenant's fixed vendor/source account and mints a real
+    # $10 ACH intent, so two overlapping runs must not race it.
+    concurrency:
+      group: external-agent-mcp-e2e-${{ github.ref }}
+      cancel-in-progress: false # never cancel a deploy mid-flight
+    env:
+      # Host root WITHOUT a /v1 suffix. Every e2e path already includes /v1.
+      BRAIN_BASE_URL: ${{ vars.E2E_EXTERNAL_AGENT_BASE_URL || 'https://api.sandbox.brain.fi' }}
+      BRAIN_EXTERNAL_AGENT_TOKEN: ${{ secrets.BRAIN_EXTERNAL_AGENT_TOKEN }}
+      # The 3rd case mints a fixed $10.00 ACH intent. Point these at a THROWAWAY
+      # staging tenant's source account + vendor so repeated runs don't trip the
+      # idempotency / §6 gate-check 11.5 re-run hazard on a real tenant.
+      BRAIN_TEST_SOURCE_ACCT_ID: ${{ vars.E2E_EXTERNAL_AGENT_SOURCE_ACCT_ID }}
+      BRAIN_TEST_VENDOR_ID: ${{ vars.E2E_EXTERNAL_AGENT_VENDOR_ID }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: pnpm/action-setup@v6.0.10
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: External-agent MCP E2E
+        run: pnpm -C tests/e2e run test external-agent-mcp.e2e.test.ts
+
+  testnet_onchain_executor_e2e:
+    name: testnet on-chain executor E2E
+    runs-on: ubuntu-latest
+    # Opt-in (Review 3 P0 8.1). Drives the real OnchainBaseRail against a deployed
+    # BrainSmartAccount on Base Sepolia. Stays gated behind an explicit repo
+    # variable + RPC/key secrets; without them the test self-skips (describe.skip),
+    # and gating the whole job keeps the signal honest. A green check means it
+    # really ran. Needs a deployed smart-account address + a gas-funded throwaway
+    # session key; the value-moving success case additionally needs a GRANTED key
+    # (BRAIN_TESTNET_SUCCESS_ENABLED). See tests/e2e/README.md.
+    if: vars.TESTNET_ONCHAIN_E2E_ENABLED == 'true'
+    # Opt-in but reachable on a push to main once the repo var is on; it
+    # shares one funded testnet session key, so concurrent runs would race
+    # its nonce (the same class of hazard as the anchor-key drain incidents).
+    concurrency:
+      group: testnet-e2e-${{ github.ref }}
+      cancel-in-progress: false # never cancel a deploy mid-flight
+    env:
+      BRAIN_TESTNET_RPC_URL: ${{ secrets.BRAIN_TESTNET_RPC_URL }}
+      BRAIN_TESTNET_SESSION_KEY: ${{ secrets.BRAIN_TESTNET_SESSION_KEY }}
+      BRAIN_TESTNET_SMART_ACCOUNT: ${{ vars.BRAIN_TESTNET_SMART_ACCOUNT }}
+      BRAIN_TESTNET_TARGET: ${{ vars.BRAIN_TESTNET_TARGET }}
+      BRAIN_TESTNET_CHAIN_ID: ${{ vars.BRAIN_TESTNET_CHAIN_ID || '84532' }}
+      BRAIN_TESTNET_POLICY_VERSION: ${{ vars.BRAIN_TESTNET_POLICY_VERSION }}
+      BRAIN_TESTNET_SUCCESS_ENABLED: ${{ vars.BRAIN_TESTNET_SUCCESS_ENABLED }}
+      BRAIN_TESTNET_SUCCESS_DATA: ${{ vars.BRAIN_TESTNET_SUCCESS_DATA }}
+      BRAIN_TESTNET_SUCCESS_VALUE: ${{ vars.BRAIN_TESTNET_SUCCESS_VALUE }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: pnpm/action-setup@v6.0.10
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # The test imports the real rail; build the workspaces it resolves.
+      - run: pnpm --filter @brain/shared run build && pnpm --filter @brain/execution run build
+      - name: Testnet on-chain executor E2E
+        run: pnpm -C tests/e2e run test onchain-executor.testnet.e2e.test.ts

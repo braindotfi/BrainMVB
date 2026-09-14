@@ -1,0 +1,39 @@
+{
+  "name": "@brain/wiki",
+  "version": "0.0.5",
+  "private": true,
+  "description": "Structured memory. Postgres + pgvector. Bitemporal entity/relation graph via recursive CTE.",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "rm -rf dist *.tsbuildinfo",
+    "lint": "eslint src --max-warnings 0",
+    "lint:fix": "eslint src --fix",
+    "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:integration": "vitest run --config vitest.integration.config.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "@types/pg": "^8.11.10",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.8",
+    "@vitest/coverage-v8": "^4.1.8",
+    "eslint": "^9.12.0",
+    "ioredis": "^6.0.0"
+  },
+  "dependencies": {
+    "@brain/shared": "workspace:*",
+    "@brain/schemas": "workspace:*",
+    "fastify": "^5.11.0",
+    "pg": "^8.22.0",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "@anthropic-ai/sdk": "^0.116.0",
+    "openai": "^4.68.0"
+  }
+}

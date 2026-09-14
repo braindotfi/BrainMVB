@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "fixed_clock": "2026-07-18T00:00:00.000Z",
+  "agents": {
+    "collections": {
+      "minimum_score": 1,
+      "scenario_count": 14
+    },
+    "reconciliation": {
+      "minimum_score": 1,
+      "scenario_count": 5
+    },
+    "cash_forecast": {
+      "minimum_score": 1,
+      "scenario_count": 6
+    },
+    "vendor_risk": {
+      "minimum_score": 1,
+      "scenario_count": 5
+    },
+    "fraud_anomaly": {
+      "minimum_score": 1,
+      "scenario_count": 5
+    },
+    "compliance": {
+      "minimum_score": 1,
+      "scenario_count": 4
+    },
+    "dispute": {
+      "minimum_score": 1,
+      "scenario_count": 5
+    },
+    "revenue_intel": {
+      "minimum_score": 1,
+      "scenario_count": 6
+    },
+    "subscription": {
+      "minimum_score": 1,
+      "scenario_count": 5
+    },
+    "treasury": {
+      "minimum_score": 1,
+      "scenario_count": 4
+    },
+    "payment": {
+      "minimum_score": 1,
+      "scenario_count": 4
+    }
+  }
+}

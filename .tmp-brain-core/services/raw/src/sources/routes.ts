@@ -1,0 +1,185 @@
+/**
+ * /v1/sources/* HTTP routes. Owned by `services/raw` per Architecture
+ * §3.1 (Source-connector lifecycle lives next to the ingestion adapters).
+ *
+ *   POST   /sources                     connect
+ *   GET    /sources                     list
+ *   GET    /sources/{source_id}         get
+ *   DELETE /sources/{source_id}         disconnect
+ *   POST   /sources/{source_id}/sync    sync
+ *   GET    /sources/{source_id}/sync/{job_id} sync job status
+ */
+
+import type { FastifyInstance, FastifyRequest } from "fastify";
+import {
+  brainError,
+  decodeKeysetCursor,
+  encodeKeysetCursor,
+  requireScope,
+  type Scope,
+  type ServiceCallContext,
+} from "@brain/shared";
+import type { SourceService } from "./SourceService.js";
+import { recordToWire, type SourceStatus, type SourceType } from "./types.js";
+
+// raw:read / raw:write are the existing Layer-1 scopes. The same scopes
+// gate source connection lifecycle since they govern what the source
+// pushes into Raw.
+const SCOPE_READ: Scope = "raw:read";
+const SCOPE_WRITE: Scope = "raw:write";
+
+function assertCtx(request: FastifyRequest): ServiceCallContext {
+  if (request.principal === undefined) {
+    throw brainError("auth_token_missing", "principal required");
+  }
+  return {
+    tenantId: request.principal.tenantId,
+    actor: request.principal.id,
+    requestId: request.id,
+  };
+}
+
+interface ConnectBody {
+  tenantId?: string;
+  type?: string;
+  credentials?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
+}
+
+export async function registerSourceRoutes(
+  app: FastifyInstance,
+  service: SourceService,
+): Promise<void> {
+  app.post(
+    "/sources",
+    { config: { idempotent: true } },
+    async (request: FastifyRequest<{ Body: ConnectBody }>, reply) => {
+      const ctx = assertCtx(request);
+      requireScope(request.principal!.scopes, SCOPE_WRITE);
+      const b = request.body ?? {};
+      if (b.type === undefined || b.credentials === undefined) {
+        throw brainError("request_body_invalid", "`type` and `credentials` are required");
+      }
+      const created = await service.connect(ctx, {
+        type: b.type as SourceType,
+        credentials: b.credentials,
+        ...(b.metadata !== undefined ? { metadata: b.metadata } : {}),
+      });
+      reply.status(201);
+      return recordToWire(created);
+    },
+  );
+
+  app.get(
+    "/sources",
+    async (
+      request: FastifyRequest<{
+        Querystring: {
+          tenantId?: string;
+          type?: SourceType;
+          status?: SourceStatus;
+          limit?: string;
+          cursor?: string;
+        };
+      }>,
+      reply,
+    ) => {
+      const ctx = assertCtx(request);
+      requireScope(request.principal!.scopes, SCOPE_READ);
+      const q = request.query;
+      const limit = parseLimit(q.limit, 50);
+      const cursor = q.cursor !== undefined ? decodeKeysetCursor(q.cursor) : undefined;
+      const list = await service.list(ctx, {
+        ...(q.type !== undefined ? { type: q.type } : {}),
+        ...(q.status !== undefined ? { status: q.status } : {}),
+        limit: limit + 1,
+        ...(cursor !== undefined ? { cursor } : {}),
+      });
+      const visible = list.slice(0, limit);
+      const last = visible.at(-1);
+      reply.status(200);
+      return {
+        data: visible.map((source) => recordToWire(source)),
+        next_cursor:
+          list.length > limit && last !== undefined
+            ? encodeKeysetCursor({ sort: last.created_at, id: last.id })
+            : null,
+      };
+    },
+  );
+
+  app.get(
+    "/sources/:source_id",
+    async (request: FastifyRequest<{ Params: { source_id: string } }>, reply) => {
+      const ctx = assertCtx(request);
+      requireScope(request.principal!.scopes, SCOPE_READ);
+      const record = await service.get(ctx, request.params.source_id);
+      if (record === null) {
+        throw brainError("source_not_found", "no such source");
+      }
+      reply.status(200);
+      return recordToWire(record);
+    },
+  );
+
+  app.delete(
+    "/sources/:source_id",
+    async (request: FastifyRequest<{ Params: { source_id: string } }>, reply) => {
+      const ctx = assertCtx(request);
+      requireScope(request.principal!.scopes, SCOPE_WRITE);
+      const record = await service.disconnect(ctx, request.params.source_id);
+      if (record === null) {
+        throw brainError("source_not_found", "no such source");
+      }
+      reply.status(200);
+      return recordToWire(record);
+    },
+  );
+
+  app.post(
+    "/sources/:source_id/sync",
+    async (request: FastifyRequest<{ Params: { source_id: string } }>, reply) => {
+      const ctx = assertCtx(request);
+      requireScope(request.principal!.scopes, SCOPE_WRITE);
+      const job = await service.sync(ctx, request.params.source_id);
+      if (job === null) {
+        throw brainError("source_not_found", "no such source");
+      }
+      reply.status(202);
+      return job;
+    },
+  );
+
+  app.get(
+    "/sources/:source_id/sync/:job_id",
+    async (request: FastifyRequest<{ Params: { source_id: string; job_id: string } }>, reply) => {
+      const ctx = assertCtx(request);
+      requireScope(request.principal!.scopes, SCOPE_READ);
+      const source = await service.get(ctx, request.params.source_id);
+      if (source === null) {
+        throw brainError("source_not_found", "no such source");
+      }
+      const job = await service.getSyncJob(ctx, request.params.job_id);
+      if (job === null || job.source_id !== request.params.source_id) {
+        throw brainError("source_not_found", "no such sync job", { statusOverride: 404 });
+      }
+      reply.status(200);
+      return {
+        job_id: job.job_id,
+        source_id: job.source_id,
+        status: job.status,
+        error_message: job.error_message,
+        ...(job.notes !== undefined ? { notes: job.notes } : {}),
+        created_at: job.created_at,
+        updated_at: job.updated_at,
+      };
+    },
+  );
+}
+
+function parseLimit(raw: string | undefined, fallback: number): number {
+  if (raw === undefined) return fallback;
+  const parsed = Number.parseInt(raw, 10);
+  if (!Number.isFinite(parsed) || parsed < 1) return fallback;
+  return Math.min(parsed, 500);
+}

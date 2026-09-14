@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "rules": [
+    {
+      "id": "treasury_envelope",
+      "applies_to": ["outbound_payment", "onchain_tx"],
+      "when": {
+        "agent.id": "treasury",
+        "amount.lte": { "currency": "USD", "value": "100000" },
+        "agent.spend_in_window": {
+          "window": "24h",
+          "lte": { "currency": "USD", "value": "500000" }
+        },
+        "agent.tx_count_in_window": { "window": "1h", "lte": 10 }
+      },
+      "approval_required_above": { "currency": "USD", "value": "25000" },
+      "execute": "auto"
+    },
+    {
+      "id": "treasury_financial_outside_envelope_denied",
+      "applies_to": ["outbound_payment", "onchain_tx"],
+      "when": { "agent.id": "treasury" },
+      "execute": "reject"
+    },
+    {
+      "id": "treasury_advisory_auto",
+      "applies_to": ["ledger_write", "agent_action"],
+      "when": { "agent.id": "treasury" },
+      "execute": "auto"
+    }
+  ]
+}

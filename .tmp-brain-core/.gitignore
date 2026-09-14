@@ -1,0 +1,126 @@
+# Node / pnpm
+node_modules/
+.pnpm-store/
+pnpm-debug.log*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm/
+
+# Build output
+dist/
+build/
+out/
+*.tsbuildinfo
+.turbo/
+
+# Generated: repo-root OpenAPI spec copied into the api package at build time
+# (see services/api/scripts/copy-openapi-spec.mjs). Source of truth is the root
+# Brain_API_Specification.yaml.
+services/api/assets/openapi.yaml
+services/api/assets/scalar-standalone.js
+services/surface-gateway/teams-app-package.zip
+
+# Test / coverage
+coverage/
+.nyc_output/
+*.lcov
+.vitest-cache/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# Foundry / Solidity
+contracts/out/
+contracts/cache/
+contracts/broadcast/*/
+!contracts/broadcast/*/run-latest.json
+contracts/.forge-snapshots/
+# forge-std is tracked as a git submodule under contracts/lib/forge-std
+# (see .gitmodules). A cold `git clone --recursive` (or
+# `git submodule update --init`) materializes it so reviewers can run
+# `forge test` without a manual `forge install` step.
+contracts/foundry.lock
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+crash.log
+crash.*.log
+*.tfvars
+# Plan files embed generated secrets in plaintext -- never commit them.
+tfplan
+*.tfplan
+*.tfvars.json
+!terraform.tfvars.example
+!infra/poc.tfvars
+!infra/production.tfvars
+!infra/staging-foundation/staging.tfvars
+
+# IDE / editor
+.vscode/
+!.vscode/settings.json.example
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+!.env.prod.example
+# Bare `env` / `env.*` reference files at the repo root — kept local; the
+# canonical pattern is `.env` / `.env.example` (above). A real Brain `env`
+# file holds live API + EVM keys and must NOT be committed even by accident.
+/env
+/env.*
+!/.env.example
+secrets/
+*.pem
+*.key
+!**/fixtures/**/*.key
+
+# Local state
+.docker-data/
+localstack-data/
+postgres-data/
+redis-data/
+.commercial-shadow-secrets/
+
+# Logs
+logs/
+*.log
+
+# OS
+.DS_Store
+# Windows NTFS alternate-data-stream marker files (created when the WSL clone is
+# touched by Windows tooling; e.g. `.env:Zone.Identifier`).
+*:Zone.Identifier
+
+# Tool output
+.claude/
+docs/audits/
+
+# Local agent/skill tooling (Claude Code) — never part of the Brain repo
+.agents/
+hyper/
+skills-lock.json

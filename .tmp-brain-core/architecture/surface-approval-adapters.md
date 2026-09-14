@@ -1,0 +1,121 @@
+# Surface Approval Adapters
+
+Brain surface adapters deliver agent proposals to the places where operators already work: Slack, Microsoft Teams, and email. They are approval surfaces, not execution rails.
+
+## Current Code
+
+The implementation lives in `packages/surfaces`, core bindings live in
+`packages/core`, and the inbound webhook process lives in
+`services/surface-gateway`.
+
+| Area                        | Location                                   | Responsibility                                                                                      |
+| --------------------------- | ------------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| Proposal schema and hashing | `packages/surfaces/src/proposal`           | Canonical proposal validation and content hash generation                                           |
+| Dispatch pipeline           | `packages/surfaces/src/core/dispatcher.ts` | Validate, hash once, deliver, and persist delivered refs through a callback                         |
+| Approval pipeline           | `packages/surfaces/src/core/approval.ts`   | Expiry, identity, policy, idempotency, audit, approval signature, execution handoff, surface update |
+| Surface renderers           | `packages/surfaces/src/surfaces`           | Slack Block Kit, Teams Adaptive Cards, and email templates                                          |
+| Inbound helpers             | `packages/surfaces/src/http`               | Slack signature validation, email token validation, Teams verifier seam                             |
+| Live clients                | `packages/surfaces/src/clients`            | Slack Web API, generic HTTP email provider, and Bot Framework Teams client                          |
+| Core bindings               | `packages/core/src/bindings`               | Adapter layer from Brain services into surface ports                                                |
+| Webhook deployable          | `services/surface-gateway`                 | Fastify routes, DB adapters, live client wiring, and process isolation                              |
+
+`@brain/surfaces` does not import `@brain/core`. The root `check-surface-acyclic` script enforces the dependency direction.
+
+## Runtime Flow
+
+```
+Agent finding
+  -> Proposal factory
+  -> Dispatcher
+  -> Slack, Teams, or email adapter
+  -> Human approve or hold action
+  -> Inbound HTTP helper
+  -> ApprovalService.handle
+  -> @brain/core ports
+  -> post-audit approval signature
+  -> execution approval handoff
+```
+
+The dispatcher computes the proposal content hash once at emit time. That hash is the value later recorded in audit, so the audit record proves what was shown to the approver.
+
+## Approval Safety Model
+
+All surfaces share the same approval pipeline:
+
+1. Reject expired proposals.
+2. Resolve the surface identity to a tenant-scoped Brain actor.
+3. Re-check authority at click time through policy.
+4. Write audit before any quorum-changing approval signature.
+5. Record the approval signature and read post-write quorum.
+6. Claim the terminal decision only after approval quorum is met, or for rejection.
+7. Enqueue execution only for approved proposals after audit, signature, quorum, and claim.
+8. Update the original surface message on a best-effort basis.
+
+Slack, Teams, and email are therefore input channels to the same policy and audit path. A surface button cannot become a direct money movement path.
+
+## Deployment Notes
+
+`services/surface-gateway` hosts the framework-neutral handlers as a separate
+Fastify v5 process:
+
+| Route                                          | Purpose                                                                   |
+| ---------------------------------------------- | ------------------------------------------------------------------------- |
+| `POST /surfaces/slack/interactions`            | Slack interactivity with raw-body signature verification and retry dedupe |
+| `GET /surfaces/email/approve`                  | Confirmation page for signed email approval links                         |
+| `HEAD /surfaces/email/approve`                 | Link preview and health-safe email route check                            |
+| `POST /surfaces/email/approve`                 | Email approval confirmation with signed-token validation                  |
+| `POST /surfaces/email/recipients/verify/start` | Admin-gated recipient verification email initiation                       |
+| `GET /surfaces/email/verify`                   | Confirmation page for signed recipient verification links                 |
+| `HEAD /surfaces/email/verify`                  | Link preview-safe recipient verification route check                      |
+| `POST /surfaces/email/verify`                  | Recipient verification confirmation                                       |
+| `POST /surfaces/email/routes`                  | Admin-gated agent to verified-recipient routing config                    |
+| `POST /surfaces/email/domains`                 | Admin-gated tenant sender-domain DNS verification                         |
+| `POST /surfaces/email/domains/reverify`        | Admin-gated re-check for tenant sender-domain DNS                         |
+| `POST /surfaces/email/events`                  | ESP bounce and complaint events with webhook signature verification       |
+| `POST /surfaces/teams/messages`                | Bot Framework verified Teams submit activities                            |
+| `POST /surfaces/teams/install`                 | Admin-gated Brain tenant to Azure AD tenant mapping                       |
+| `POST /surfaces/teams/revoke`                  | Admin-gated Teams installation revocation                                 |
+| `POST /surfaces/smoke/proposals`               | Explicitly gated smoke dispatch for release candidates                    |
+| `GET /healthz`                                 | Process health check                                                      |
+
+The gateway owns only surface persistence:
+
+- `surface_external_identities`
+- `surface_proposals`
+- `surface_delivered_refs`
+- `surface_decisions`
+- `surface_slack_retries`
+- `surface_slack_installations`
+- `surface_slack_install_nonces`
+- `surface_email_recipients`
+- `surface_email_routes`
+- `surface_email_domains`
+- `surface_teams_conversation_refs`
+- `surface_teams_installations`
+
+Slack installations are resolved by verified Slack workspace id before tenant
+state is accepted. Teams installations are resolved by authenticated Azure AD
+tenant id before the card's Brain tenant is trusted. Teams conversation
+references are recorded only after that mapping succeeds, so proactive sends
+use `<brainTenantId>:<conversationId>` references tied to an active install.
+Email recipients must be verified before routing or identity resolution accepts
+them. Email GET and HEAD routes never mutate state; only POST confirmation
+verifies an address or applies an approval. ESP bounce and complaint events mark
+recipients disabled so future dispatch skips them. Tenant custom senders are
+only used after Brain verifies SPF, DKIM, and DMARC through DNS.
+
+Surface onboarding routes require a Brain bearer JWT with `surfaces:admin`.
+Slack OAuth install, Teams install and revoke, and email recipient, route, and
+domain onboarding all derive the Brain tenant from the principal. Slack and ESP
+event webhooks stay on provider HMAC signatures because they are machine
+callbacks, not tenant-admin onboarding calls.
+
+The production DB role is `brain_surface_gateway`. It is tenant-scoped, has no
+`BYPASSRLS`, and has no Ledger or execution outbox grants. Decisions delegate to
+the active Policy document at click time and write shared Audit with deterministic
+idempotency keys. Executable cards carry a typed PaymentIntent reference. The
+gateway sends a tenant-bound, time-bounded HMAC request to core, which resolves
+the surface identity again, calls the canonical PaymentIntent approval service,
+then calls the same section 6 execution method used by the direct action API.
+That method atomically writes the execution outbox. Cards without a canonical
+reference fail closed and cannot report an accepted approval.

@@ -1,0 +1,135 @@
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { describe, expect, it } from "vitest";
+import {
+  EVAL_FIXED_CLOCK,
+  cashForecastScenarios,
+  collectionsScenarios,
+  complianceScenarios,
+  compareToBaseline,
+  disputeScenarios,
+  evalHandlers,
+  fraudAnomalyScenarios,
+  metricRegistry,
+  paymentScenarios,
+  reconciliationScenarios,
+  revenueIntelScenarios,
+  runGoldenEval,
+  subscriptionScenarios,
+  treasuryScenarios,
+  vendorRiskScenarios,
+} from "./index.js";
+import type { GoldenEvalBaseline, GoldenScenario } from "./types.js";
+
+const here = dirname(fileURLToPath(import.meta.url));
+
+describe("golden eval runner", () => {
+  it("scores a known-good Collections scenario as passing", () => {
+    const report = runGoldenEval({
+      handlers: evalHandlers,
+      metrics: metricRegistry,
+      scenarios: [collectionsScenarios[0]!],
+      fixedClock: EVAL_FIXED_CLOCK,
+    });
+
+    expect(report.scenarios).toHaveLength(1);
+    expect(report.scenarios[0]).toMatchObject({
+      agent_key: "collections",
+      passed: true,
+      score: 1,
+    });
+    expect(report.scenarios[0]?.fields.map((field) => field.field)).toEqual([
+      "recommended_action",
+      "escalation_tier",
+      "aging_tier",
+      "ranked_recommendations.top1",
+    ]);
+  });
+
+  it("scores a known-bad expected label as failing", () => {
+    const scenario: GoldenScenario = {
+      ...collectionsScenarios[0]!,
+      name: "known bad expected action",
+      expected: {
+        ...collectionsScenarios[0]!.expected,
+        recommended_action: "escalate",
+      },
+    };
+
+    const report = runGoldenEval({
+      handlers: evalHandlers,
+      metrics: metricRegistry,
+      scenarios: [scenario],
+      fixedClock: EVAL_FIXED_CLOCK,
+    });
+
+    expect(report.scenarios[0]?.passed).toBe(false);
+    expect(report.scenarios[0]?.score).toBeLessThan(1);
+  });
+
+  it("passes the committed baseline", () => {
+    const report = runGoldenEval({
+      handlers: evalHandlers,
+      metrics: metricRegistry,
+      scenarios: [
+        ...collectionsScenarios,
+        ...reconciliationScenarios,
+        ...cashForecastScenarios,
+        ...vendorRiskScenarios,
+        ...fraudAnomalyScenarios,
+        ...complianceScenarios,
+        ...disputeScenarios,
+        ...revenueIntelScenarios,
+        ...subscriptionScenarios,
+        ...treasuryScenarios,
+        ...paymentScenarios,
+      ],
+      fixedClock: EVAL_FIXED_CLOCK,
+    });
+    const baseline = readBaseline();
+
+    expect(compareToBaseline(report, baseline)).toEqual({ passed: true, failures: [] });
+    for (const [agentKey, expected] of Object.entries(baseline.agents)) {
+      expect(report.aggregate[agentKey]).toMatchObject({
+        scenario_count: expected.scenario_count,
+        passed_count: expected.scenario_count,
+        score: expected.minimum_score,
+      });
+    }
+  });
+
+  it("fails the regression gate when aggregate score drops below baseline", () => {
+    const report = runGoldenEval({
+      handlers: evalHandlers,
+      metrics: metricRegistry,
+      scenarios: [
+        {
+          ...collectionsScenarios[0]!,
+          name: "regression expected action",
+          expected: {
+            ...collectionsScenarios[0]!.expected,
+            recommended_action: "escalate",
+          },
+        },
+      ],
+      fixedClock: EVAL_FIXED_CLOCK,
+    });
+    const baseline: GoldenEvalBaseline = {
+      version: 1,
+      fixed_clock: EVAL_FIXED_CLOCK.toISOString(),
+      agents: {
+        collections: {
+          minimum_score: 1,
+          scenario_count: 1,
+        },
+      },
+    };
+
+    expect(compareToBaseline(report, baseline)).toMatchObject({ passed: false });
+  });
+});
+
+function readBaseline(): GoldenEvalBaseline {
+  return JSON.parse(readFileSync(resolve(here, "baseline.json"), "utf8")) as GoldenEvalBaseline;
+}

@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { TransactionDetailPopup } from "@/components/TransactionDetailPopup";
 import { AccountDetailPopup } from "@/components/AccountDetailPopup";
 import { BillDetailPopup, type BrainInvoiceDTO } from "@/components/BillDetailPopup";
+import { LiveEvidenceRecordPopup } from "@/components/LiveEvidenceRecordPopup";
+import type { EvidenceTile } from "@/lib/proposalCards";
 import { useToast } from "@/hooks/use-toast";
 import { reportRateLimit } from "@/lib/rateLimit";
 import { useCurrency } from "@/lib/useCurrency";
@@ -420,6 +422,7 @@ export function BrainAssistant() {
   const [openTxId, setOpenTxId] = useState<string | null>(null);
   const [openAccountId, setOpenAccountId] = useState<string | null>(null);
   const [openBillId, setOpenBillId] = useState<string | null>(null);
+  const [fallbackEvidence, setFallbackEvidence] = useState<EvidenceTile | null>(null);
   const chatAbortRef = useRef<AbortController | null>(null);
   const chatGenerationRef = useRef(0);
   const assistantInputRef = useRef<HTMLTextAreaElement | null>(null);
@@ -1322,49 +1325,43 @@ export function BrainAssistant() {
                             : resolveVendor(s.entityId) ? "counterparty"
                             : null
                           );
-                          const isClickable =
-                            (resolvedType === "account" && acctIds.has(s.entityId)) ||
-                            (resolvedType === "transaction" && txIds.has(s.entityId)) ||
-                            (resolvedType === "invoice" && invIds.has(s.entityId)) ||
-                            resolvedType === "member" ||
-                            (resolvedType === "counterparty" && !!resolveVendor(s.entityId)) ||
-                            resolvedType === "audit_event" ||
-                            resolvedType === "obligation" ||
-                            resolvedType === "payment_intent" ||
-                            resolvedType === "wiki.question";
-                          return isClickable ? (
+                          return (
                             <button
                               key={`${s.entityId}-${i}`}
                               type="button"
                               data-testid={`evidence-link-${i}`}
                               onClick={() => {
-                                if (resolvedType === "account") setOpenAccountId(s.entityId);
-                                else if (resolvedType === "transaction") setOpenTxId(s.entityId);
-                                else if (resolvedType === "invoice") setOpenBillId(s.entityId);
-                                else if (resolvedType === "member") openMemberDetail(s.entityId);
-                                else if (resolvedType === "counterparty") openVendorDetail(s.entityId, navigate);
-                                else if (resolvedType === "audit_event") navigate(`/audit-log?record=${s.entityId}`);
-                                /* Payables is the itemized "what we owe" list, so a citation
-                                   about one obligation lands beside the rest of them. It went to
-                                   Cash Flow only because that list did not exist yet — there is
-                                   still no /bills route (navigating there hit NotFound). */
-                                else if (resolvedType === "obligation") navigate("/ledger?tab=payables");
-                                else if (resolvedType === "payment_intent") navigate("/review");
-                                else if (resolvedType === "wiki.question") navigate(`/audit-log?record=${s.entityId}`);
+                                if (resolvedType === "account" && acctIds.has(s.entityId)) {
+                                  setOpenAccountId(s.entityId);
+                                } else if (resolvedType === "transaction" && txIds.has(s.entityId)) {
+                                  setOpenTxId(s.entityId);
+                                } else if (resolvedType === "invoice" && invIds.has(s.entityId)) {
+                                  setOpenBillId(s.entityId);
+                                } else if (resolvedType === "member") {
+                                  openMemberDetail(s.entityId);
+                                } else if (resolvedType === "counterparty" && resolveVendor(s.entityId)) {
+                                  openVendorDetail(s.entityId, navigate);
+                                } else {
+                                  /* The middle-screen assistant can cite raw artifacts,
+                                     obligations, audit events, proposals, and newer record
+                                     kinds that have no dedicated by-id popup. Keep every
+                                     grounding record tappable and show the context Brain
+                                     actually returned instead of silently rendering it inert
+                                     or navigating away from the conversation. */
+                                  setFallbackEvidence({
+                                    label: resolvedType ?? s.entityType ?? "Grounded record",
+                                    display: text,
+                                    kind: resolvedType ?? s.entityType ?? "record",
+                                    ref: s.entityId,
+                                    facts: [{ label: "Record ID", value: s.entityId }],
+                                  });
+                                }
                               }}
                               title={s.entityId}
                               className="normal-case [font-family:'Gilroy',sans-serif] font-medium text-brain-v1purple text-[11px] leading-[14px] text-left hover:underline block w-full min-w-0 truncate"
                             >
                               {text}
                             </button>
-                          ) : (
-                            <span
-                              key={`${s.entityId}-${i}`}
-                              title={s.entityId}
-                              className="[font-family:'Gilroy',sans-serif] font-medium text-brain-v1baby-blue-60 text-[11px] leading-[14px] block w-full min-w-0 truncate"
-                            >
-                              {text}
-                            </span>
                           );
                         })}
                       </div>
@@ -1407,6 +1404,13 @@ export function BrainAssistant() {
         vendorName="Unknown vendor"
         onClose={() => setOpenBillId(null)}
         hidePager
+      />
+      <LiveEvidenceRecordPopup
+        evidence={fallbackEvidence}
+        open={fallbackEvidence !== null}
+        onOpenChange={(open) => {
+          if (!open) setFallbackEvidence(null);
+        }}
       />
     </div>
   );

@@ -1,0 +1,459 @@
+import Fastify, { type FastifyRequest } from "fastify";
+import { describe, expect, it, vi } from "vitest";
+import {
+  errorHandlerPlugin,
+  newRawExtractionJobId,
+  newRawArtifactId,
+  newTenantId,
+  type Principal,
+  type Scope,
+} from "@brain/shared";
+import type { Pool } from "pg";
+import { registerRawExtractRoute, type RegisterRawExtractRouteDeps } from "./route.js";
+
+const TENANT = newTenantId();
+const RAW_ID = newRawArtifactId();
+
+function principal(scopes: readonly Scope[] = ["raw:write"]): Principal {
+  return {
+    id: "user_01TEST0000000000000000000",
+    type: "user",
+    tenantId: TENANT,
+    scopes,
+    tokenId: "token_01TEST00000000000000000",
+    expiresAt: Math.floor(Date.now() / 1000) + 3600,
+  };
+}
+
+function artifactRow(id = RAW_ID) {
+  return {
+    id,
+    tenant_id: TENANT,
+    sha256: Buffer.from("00".repeat(32), "hex"),
+    source_type: "pdf_upload",
+    source_ref: {},
+    blob_uri: `${TENANT}/2026/07/06/artifact.pdf`,
+    mime_type: "application/pdf",
+    bytes: "7",
+    ingested_at: new Date("2026-07-06T00:00:00Z"),
+    tombstoned_at: null,
+    ingested_by: "user_01TEST0000000000000000000",
+    source_schema: null,
+    object_type: null,
+    external_id: null,
+    operation: null,
+    effective_at: null,
+    observed_at: null,
+    original_source: null,
+    intermediaries: null,
+    source_id: null,
+    source_version: null,
+    idempotency_key: null,
+  };
+}
+
+type ArtifactRow = Omit<ReturnType<typeof artifactRow>, "tombstoned_at"> & {
+  tombstoned_at: Date | null;
+};
+
+function jobRow(
+  rawId = RAW_ID,
+  status: "queued" | "running" | "succeeded" | "failed" = "queued",
+): {
+  id: string;
+  tenant_id: string;
+  raw_id: string;
+  content_sha256: Buffer;
+  status: "queued" | "running" | "succeeded" | "failed";
+  parsed_id: string | null;
+  confidence: number | null;
+  error: Record<string, unknown> | null;
+  attempt_count: number;
+  next_attempt_at: Date | null;
+  requested_by: string | null;
+  locked_at: Date | null;
+  locked_by: string | null;
+  started_at: Date | null;
+  finished_at: Date | null;
+  created_at: Date;
+  updated_at: Date;
+} {
+  const now = new Date("2026-07-06T00:00:00Z");
+  return {
+    id: newRawExtractionJobId(),
+    tenant_id: TENANT,
+    raw_id: rawId,
+    content_sha256: Buffer.from("00".repeat(32), "hex"),
+    status,
+    parsed_id: null,
+    confidence: null,
+    error: null,
+    attempt_count: 0,
+    next_attempt_at: null,
+    requested_by: "user_01TEST0000000000000000000",
+    locked_at: null,
+    locked_by: null,
+    started_at: null,
+    finished_at: null,
+    created_at: now,
+    updated_at: now,
+  };
+}
+
+function fakePool(
+  row: ArtifactRow | null,
+  latestJob: ReturnType<typeof jobRow> | null = jobRow(),
+  options: {
+    enqueuedJob?: ReturnType<typeof jobRow> | null;
+    afterEnqueueJob?: ReturnType<typeof jobRow> | null;
+  } = {},
+): { pool: Pool; queries: string[] } {
+  const queries: string[] = [];
+  let extractionJobReads = 0;
+  const client = {
+    query: vi.fn((sql: string) => {
+      queries.push(sql);
+      if (
+        sql === "BEGIN" ||
+        sql === "COMMIT" ||
+        sql === "ROLLBACK" ||
+        sql.startsWith("SELECT set_config")
+      ) {
+        return Promise.resolve({ rows: [], rowCount: 0 });
+      }
+      if (sql.includes("FROM raw_artifacts")) {
+        const rows = row === null ? [] : [row];
+        return Promise.resolve({ rows, rowCount: rows.length });
+      }
+      if (sql.includes("INSERT INTO extraction_jobs")) {
+        const enqueuedJob = options.enqueuedJob ?? latestJob;
+        return Promise.resolve({
+          rows: enqueuedJob === null ? [] : [enqueuedJob],
+          rowCount: enqueuedJob === null ? 0 : 1,
+        });
+      }
+      if (sql.includes("FROM extraction_jobs")) {
+        extractionJobReads += 1;
+        const currentJob =
+          extractionJobReads > 1 ? (options.afterEnqueueJob ?? latestJob) : latestJob;
+        const rows = currentJob === null ? [] : [currentJob];
+        return Promise.resolve({ rows, rowCount: rows.length });
+      }
+      return Promise.resolve({ rows: [], rowCount: 0 });
+    }),
+    release: vi.fn(),
+  };
+  return { pool: { connect: vi.fn(() => Promise.resolve(client)) } as unknown as Pool, queries };
+}
+
+async function buildApp(opts: {
+  principal: Principal | undefined;
+  row?: ArtifactRow | null;
+  latestJob?: ReturnType<typeof jobRow> | null;
+  enqueuedJob?: ReturnType<typeof jobRow> | null;
+  afterEnqueueJob?: ReturnType<typeof jobRow> | null;
+  afterEnqueue?: RegisterRawExtractRouteDeps["afterEnqueue"];
+}) {
+  const app = Fastify({ logger: false });
+  await app.register(errorHandlerPlugin);
+  app.addHook("preHandler", async (request: FastifyRequest) => {
+    if (opts.principal !== undefined) {
+      request.principal = opts.principal;
+    }
+  });
+  const fake = fakePool(opts.row === undefined ? artifactRow() : opts.row, opts.latestJob, {
+    ...(opts.enqueuedJob !== undefined ? { enqueuedJob: opts.enqueuedJob } : {}),
+    ...(opts.afterEnqueueJob !== undefined ? { afterEnqueueJob: opts.afterEnqueueJob } : {}),
+  });
+  await registerRawExtractRoute(app, {
+    pool: fake.pool,
+    ...(opts.afterEnqueue !== undefined ? { afterEnqueue: opts.afterEnqueue } : {}),
+  });
+  return { app, pool: fake.pool, queries: fake.queries };
+}
+
+describe("POST /raw/:raw_id/extract", () => {
+  it("requires a principal before enqueueing extraction", async () => {
+    const { app, pool } = await buildApp({ principal: undefined });
+    try {
+      const res = await app.inject({ method: "POST", url: `/raw/${RAW_ID}/extract` });
+      expect(res.statusCode).toBe(401);
+      expect(res.json()).toMatchObject({ error: { code: "auth_token_missing" } });
+      const connect = pool.connect as unknown as ReturnType<typeof vi.fn>;
+      expect(connect).not.toHaveBeenCalled();
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("requires raw:write scope", async () => {
+    const { app, pool } = await buildApp({ principal: principal([]) });
+    try {
+      const res = await app.inject({ method: "POST", url: `/raw/${RAW_ID}/extract` });
+      expect(res.statusCode).toBe(403);
+      expect(res.json()).toMatchObject({ error: { code: "auth_scope_insufficient" } });
+      const connect = pool.connect as unknown as ReturnType<typeof vi.fn>;
+      expect(connect).not.toHaveBeenCalled();
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("returns 404 when the artifact is not visible in the tenant scope", async () => {
+    const { app } = await buildApp({ principal: principal(), row: null });
+    try {
+      const res = await app.inject({ method: "POST", url: `/raw/${RAW_ID}/extract` });
+      expect(res.statusCode).toBe(404);
+      expect(res.json()).toMatchObject({ error: { code: "raw_artifact_not_found" } });
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("returns 410 when the artifact has been tombstoned", async () => {
+    const row = { ...artifactRow(), tombstoned_at: new Date("2026-07-07T00:00:00Z") };
+    const { app } = await buildApp({ principal: principal(), row });
+    try {
+      const res = await app.inject({ method: "POST", url: `/raw/${RAW_ID}/extract` });
+      expect(res.statusCode).toBe(410);
+      expect(res.json()).toMatchObject({ error: { code: "raw_artifact_tombstoned" } });
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("rejects malformed raw ids before enqueueing", async () => {
+    const { app, pool } = await buildApp({ principal: principal() });
+    try {
+      const res = await app.inject({ method: "POST", url: "/raw/not-a-raw/extract" });
+      expect(res.statusCode).toBe(400);
+      expect(res.json()).toMatchObject({ error: { code: "request_params_invalid" } });
+      const connect = pool.connect as unknown as ReturnType<typeof vi.fn>;
+      expect(connect).not.toHaveBeenCalled();
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("enqueues an async extraction job without a route drain", async () => {
+    const latestJob = jobRow();
+    const { app } = await buildApp({ principal: principal(), latestJob });
+    try {
+      const res = await app.inject({ method: "POST", url: `/raw/${RAW_ID}/extract` });
+      expect(res.statusCode).toBe(202);
+      expect(res.json()).toEqual({
+        job_id: latestJob.id,
+        raw_id: RAW_ID,
+        status: "queued",
+        parsed_id: null,
+        confidence: null,
+        error: null,
+        next_attempt_at: null,
+        created_at: "2026-07-06T00:00:00.000Z",
+        updated_at: "2026-07-06T00:00:00.000Z",
+      });
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("returns a terminal extraction failure without enqueueing it again", async () => {
+    const failedJob = {
+      ...jobRow(RAW_ID, "failed"),
+      error: { code: "raw_source_unsupported", message: "no parser matched document" },
+    };
+    const { app, queries } = await buildApp({ principal: principal(), latestJob: failedJob });
+    try {
+      const res = await app.inject({ method: "POST", url: `/raw/${RAW_ID}/extract` });
+      expect(res.statusCode).toBe(502);
+      expect(res.json()).toMatchObject({
+        error: { code: "dependency_unavailable", message: "no parser matched document" },
+      });
+      expect(queries.some((sql) => sql.includes("INSERT INTO extraction_jobs"))).toBe(false);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("returns a terminal extraction success without enqueueing it again", async () => {
+    const succeededJob = {
+      ...jobRow(RAW_ID, "succeeded"),
+      parsed_id: "prs_01TEST000000000000000000000",
+      confidence: 0.91,
+    };
+    const { app, queries } = await buildApp({ principal: principal(), latestJob: succeededJob });
+    try {
+      const res = await app.inject({ method: "POST", url: `/raw/${RAW_ID}/extract` });
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toMatchObject({
+        job_id: succeededJob.id,
+        status: "succeeded",
+        parsed_id: succeededJob.parsed_id,
+      });
+      expect(queries.some((sql) => sql.includes("INSERT INTO extraction_jobs"))).toBe(false);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("re-enqueues a terminal extraction failure only when retry is explicit", async () => {
+    const failedJob = {
+      ...jobRow(RAW_ID, "failed"),
+      error: { code: "raw_source_unsupported", message: "no parser matched document" },
+    };
+    const queuedJob = jobRow(RAW_ID, "queued");
+    const { app, queries } = await buildApp({
+      principal: principal(),
+      latestJob: failedJob,
+      enqueuedJob: queuedJob,
+    });
+    try {
+      const res = await app.inject({
+        method: "POST",
+        url: `/raw/${RAW_ID}/extract`,
+        payload: { retry: true },
+      });
+      expect(res.statusCode).toBe(202);
+      expect(res.json()).toMatchObject({ job_id: queuedJob.id, status: "queued" });
+      expect(queries.some((sql) => sql.includes("INSERT INTO extraction_jobs"))).toBe(true);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("drains the queued job when a route drain is configured", async () => {
+    const afterEnqueue = vi.fn(async () => undefined);
+    const completedJob = {
+      ...jobRow(RAW_ID, "succeeded"),
+      parsed_id: "prs_01TEST000000000000000000000",
+      confidence: 0.91,
+    };
+    const { app } = await buildApp({
+      principal: principal(),
+      latestJob: jobRow(),
+      afterEnqueueJob: completedJob,
+      afterEnqueue,
+    });
+    try {
+      const res = await app.inject({ method: "POST", url: `/raw/${RAW_ID}/extract` });
+      expect(res.statusCode).toBe(200);
+      expect(afterEnqueue).toHaveBeenCalledWith(expect.objectContaining({ raw_id: RAW_ID }));
+      expect(res.json()).toMatchObject({
+        status: "succeeded",
+        parsed_id: "prs_01TEST000000000000000000000",
+        confidence: 0.91,
+      });
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("does not report success when the drain fails to parse the document", async () => {
+    const afterEnqueue = vi.fn(async () => undefined);
+    const failedJob = {
+      ...jobRow(RAW_ID, "failed"),
+      error: { code: "raw_source_unsupported", message: "no parser matched document" },
+    };
+    const { app } = await buildApp({
+      principal: principal(),
+      latestJob: jobRow(),
+      afterEnqueueJob: failedJob,
+      afterEnqueue,
+    });
+    try {
+      const res = await app.inject({ method: "POST", url: `/raw/${RAW_ID}/extract` });
+      expect(res.statusCode).toBe(502);
+      expect(res.json()).toMatchObject({
+        error: { code: "dependency_unavailable", message: "no parser matched document" },
+      });
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("returns the latest extraction status", async () => {
+    const latestJob = {
+      ...jobRow(),
+      status: "succeeded" as const,
+      parsed_id: "prs_01TEST000000000000000000000",
+      confidence: 0.5,
+    };
+    const { app } = await buildApp({ principal: principal(["raw:read"]), latestJob });
+    try {
+      const res = await app.inject({ method: "GET", url: `/raw/${RAW_ID}/extraction` });
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toEqual({
+        job_id: latestJob.id,
+        raw_id: RAW_ID,
+        status: "succeeded",
+        parsed_id: "prs_01TEST000000000000000000000",
+        confidence: 0.5,
+        error: null,
+        next_attempt_at: null,
+        created_at: "2026-07-06T00:00:00.000Z",
+        updated_at: "2026-07-06T00:00:00.000Z",
+      });
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("requires raw:read scope for extraction status", async () => {
+    const { app } = await buildApp({ principal: principal(["raw:write"]) });
+    try {
+      const res = await app.inject({ method: "GET", url: `/raw/${RAW_ID}/extraction` });
+      expect(res.statusCode).toBe(403);
+      expect(res.json()).toMatchObject({ error: { code: "auth_scope_insufficient" } });
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("rejects malformed raw ids for extraction status before querying", async () => {
+    const { app, pool } = await buildApp({ principal: principal(["raw:read"]) });
+    try {
+      const res = await app.inject({ method: "GET", url: "/raw/not-a-raw/extraction" });
+      expect(res.statusCode).toBe(400);
+      expect(res.json()).toMatchObject({ error: { code: "request_params_invalid" } });
+      const connect = pool.connect as unknown as ReturnType<typeof vi.fn>;
+      expect(connect).not.toHaveBeenCalled();
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("returns 404 for extraction status when the artifact is not visible", async () => {
+    const { app } = await buildApp({ principal: principal(["raw:read"]), row: null });
+    try {
+      const res = await app.inject({ method: "GET", url: `/raw/${RAW_ID}/extraction` });
+      expect(res.statusCode).toBe(404);
+      expect(res.json()).toMatchObject({ error: { code: "raw_artifact_not_found" } });
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("requires a principal for extraction status", async () => {
+    const { app, pool } = await buildApp({ principal: undefined });
+    try {
+      const res = await app.inject({ method: "GET", url: `/raw/${RAW_ID}/extraction` });
+      expect(res.statusCode).toBe(401);
+      expect(res.json()).toMatchObject({ error: { code: "auth_token_missing" } });
+      const connect = pool.connect as unknown as ReturnType<typeof vi.fn>;
+      expect(connect).not.toHaveBeenCalled();
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("returns 404 when no extraction job exists for a visible artifact", async () => {
+    const { app } = await buildApp({ principal: principal(["raw:read"]), latestJob: null });
+    try {
+      const res = await app.inject({ method: "GET", url: `/raw/${RAW_ID}/extraction` });
+      expect(res.statusCode).toBe(404);
+      expect(res.json()).toMatchObject({ error: { code: "extraction_job_not_found" } });
+    } finally {
+      await app.close();
+    }
+  });
+});

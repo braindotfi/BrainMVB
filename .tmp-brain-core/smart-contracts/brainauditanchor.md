@@ -1,0 +1,158 @@
+# BrainAuditAnchor
+
+`BrainAuditAnchor` stores Merkle roots of per-tenant audit batches. Anchors are immutable after submission.
+
+| Property         | Value                                                                                 |
+| ---------------- | ------------------------------------------------------------------------------------- |
+| **Network**      | Base Sepolia only                                                                     |
+| **Solidity**     | 0.8.x                                                                                 |
+| **Pattern**      | Immutable. No upgrade path in MVP; changes require a redeploy.                        |
+| **Audit status** | Unaudited. Base mainnet is fenced pending an external smart-contract audit.           |
+| **Publisher**    | Single EOA at `0x41d4ce9d9fe968ca1230bdc296b28fdc9aa6ff6e`, verified on Base Sepolia. |
+
+### Interface
+
+```solidity
+interface IBrainAuditAnchor {
+    event AnchorPublished(
+        bytes32 indexed tenantId,
+        bytes32 root,
+        uint256 eventCount,
+        uint256 periodStart,
+        uint256 periodEnd
+    );
+
+    function anchor(
+        bytes32 tenantId,
+        bytes32 root,
+        uint256 eventCount,
+        uint256 periodStart,
+        uint256 periodEnd
+    ) external;  // onlyPublisher
+
+    function anchorBatch(
+        bytes32[] calldata tenantIds,
+        bytes32[] calldata roots,
+        uint256[] calldata eventCounts,
+        uint256[] calldata periodStarts,
+        uint256[] calldata periodEnds
+    ) external;  // onlyPublisher, maximum 50 entries
+
+    function publisher() external view returns (address);
+
+    function MAX_BATCH() external view returns (uint256);
+
+    function latestAnchor(bytes32 tenantId)
+        external view returns (bytes32 root, uint256 blockNumber);
+
+    function latestAnchorFull(bytes32 tenantId)
+        external view
+        returns (bytes32 root, uint256 blockNumber, uint256 eventCount, uint256 periodEnd);
+
+    function verifyInclusion(
+        bytes32 root,
+        bytes32 leaf,
+        bytes32[] calldata proof
+    ) external pure returns (bool);
+
+    function isPublished(bytes32 tenantId, bytes32 root)
+        external view returns (bool);
+}
+```
+
+Publication is authorized by the caller, not by a per-call signature. `anchor`
+and `anchorBatch` are `onlyPublisher`. The current Base Sepolia publisher is a
+single EOA, not a Safe multisig. `setPublisher` and `acceptPublisher` provide a
+two-step rotation path.
+
+### How Anchoring Works
+
+```
+Off-chain audit log
+   │
+   ├─ events batched per tenant over a period window
+   │
+   ├─ Merkle tree built per batch
+   │
+   └─ publisher calls anchor() or anchorBatch() on Base Sepolia
+```
+
+| Step | Detail                                                                              |
+| ---- | ----------------------------------------------------------------------------------- |
+| 1    | Audit events batch into a Merkle tree per tenant over a period window               |
+| 2    | The publisher submits root, event count, and period bounds                          |
+| 3    | `anchor()` publishes one root, or `anchorBatch()` publishes up to `MAX_BATCH` roots |
+| 4    | Contract emits `AnchorPublished`; the root becomes immutably retrievable            |
+
+### Replay Protection
+
+The contract records every published `(tenantId, root)` pair and rejects a repeat.
+
+| Behavior                           | Detail                                   |
+| ---------------------------------- | ---------------------------------------- |
+| **First time a root is published** | Stored as the tenant's latest anchor     |
+| **Re-publishing the same root**    | Reverts with `RootAlreadyPublished`      |
+| **Period bounds**                  | `periodEnd` before `periodStart` reverts |
+
+Root-uniqueness per tenant is the replay guard: a published root cannot be re-anchored for the same tenant. There is no batch-index sequence to maintain, so anchoring never depends on submission order.
+
+`anchorBatch()` has the same period validation as `anchor()` and a hard
+`MAX_BATCH` cap of 50. Unlike single-root `anchor()`, it skips an already
+published `(tenantId, root)` pair. This makes a batch retry safe after a prior
+partial success.
+
+### Verification by Counterparties
+
+A counterparty does not need a Brain account to verify an audit event. They just need:
+
+| Input     | Source                                                            |
+| --------- | ----------------------------------------------------------------- |
+| `root`    | The published Merkle root (read via `latestAnchor` or event logs) |
+| `leaf`    | Hash of the event being verified                                  |
+| `proof[]` | Merkle path supplied by Brain                                     |
+
+```solidity
+bool valid = anchor.verifyInclusion(root, leaf, proof);
+```
+
+If `valid` is true, the event is provably part of the anchored history under that root. `verifyInclusion` uses domain-separated hashing: leaf nodes are `keccak256(0x00 ++ leaf)` and internal nodes are `keccak256(0x01 ++ sort(left, right))`.
+
+{% hint style="success" %}
+The verifier does not need to trust Brain. They only need to call a public view function on Base L2.
+{% endhint %}
+
+### Reorg Tolerance
+
+Base L2 has fast finality, but small reorgs are possible.
+
+| Mitigation                                 | Detail                                                                          |
+| ------------------------------------------ | ------------------------------------------------------------------------------- |
+| **Confirmation depth**                     | Reads wait for a configurable depth before treating an anchor as final          |
+| **Retryable publication**                  | The publisher retains pending anchors and retries them after transient failures |
+| **Off-chain log canonical until anchored** | A record remains pending until its on-chain transaction is confirmed            |
+
+### Publisher Rotation
+
+The publisher is rotated through a two-step handoff so a mistyped or uncontrolled address can never brick anchoring. The current publisher proposes the next address with `setPublisher(next)` (publisher-only), and the rotation takes effect only when that address calls `acceptPublisher()`. The contract itself is immutable, so there is no upgrade path. Only the publisher address changes.
+
+```solidity
+event PublisherTransferStarted(address indexed currentPublisher, address indexed pendingPublisher);
+event PublisherChanged(address indexed oldPublisher, address indexed newPublisher);
+
+function setPublisher(address next) external;  // onlyPublisher, proposes the handoff
+function acceptPublisher() external;           // called by the pending publisher to complete it
+```
+
+### Privacy
+
+Only Merkle roots and hashed `tenantId` values are on-chain. Everything underneath stays off-chain in tenant-prefixed storage and tenant-scoped database rows. Source credentials use the global AES-256-GCM credential key described in `shared/src/crypto/credential-key-provider.ts`.
+
+| On-chain                                 | Off-chain                           |
+| ---------------------------------------- | ----------------------------------- |
+| `tenantId` (hashed)                      | Tenant raw identifier               |
+| `root` (Merkle root)                     | Individual audit events             |
+| `eventCount`, `periodStart`, `periodEnd` | Event content, citations, decisions |
+
+### What's Next
+
+<table data-view="cards"><thead><tr><th></th><th></th><th data-type="content-ref"></th><th data-hidden data-card-target data-type="content-ref"></th></tr></thead><tbody><tr><td><strong>Audit and Proof</strong></td><td>The conceptual model.</td><td><a href="../protocol/audit-and-proof.md">audit-and-proof.md</a></td><td></td></tr><tr><td><strong>Audit API</strong></td><td>Retrieve events and proofs over HTTP.</td><td><a href="../api-reference/audit-api.md">audit-api.md</a></td><td></td></tr></tbody></table>

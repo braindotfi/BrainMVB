@@ -1,0 +1,1007 @@
+-- Brain Postgres role model (stage-8 deploy artifact).
+--
+-- §1 principle 2 requires tenant isolation enforced at the storage layer via
+-- RLS. Two facts make a dedicated role model mandatory in production:
+--
+--   1. Postgres does NOT apply RLS to a table's OWNER unless the table is set
+--      to FORCE ROW LEVEL SECURITY. If the app connects as the table owner (the
+--      common single-URL dev setup), every `ENABLE ROW LEVEL SECURITY` policy
+--      in our migrations is silently bypassed. So RLS is "armed" by the
+--      migrations but only "enforced" once this role model is applied.
+--
+--   2. A few legitimate paths must read across tenants and therefore need a
+--      role that bypasses RLS (rather than skipping RLS on the table):
+--        - services/ledger normalize worker (cross-tenant processing log)
+--        - services/api Plaid webhook tenant resolver (item_id → tenant, read
+--          before a tenant scope exists)
+--        - services/api SIWX PostgresAgentRegistry (onchain_address → agent)
+--        - the audit emitter (writes across tenants)
+--
+-- Apply this once per database, as a superuser, at deploy time. Role passwords
+-- come from Azure Key Vault (managed identity in production); the placeholders
+-- below are substituted by the deploy pipeline. This file is NOT a
+-- tools/migrate migration — role/grant management is an operator concern, not
+-- an app migration (the migration role need not have CREATEROLE).
+
+-- Role creation is idempotent: CREATE only when absent (inside a DO block,
+-- which cannot interpolate psql :'vars'), then ALTER to (re)set the password
+-- and attributes on every apply. This lets the deploy one-shot
+-- (docker-compose.prod.yml `db-roles`) re-run safely across restarts and keeps
+-- passwords in sync with the secret store.
+
+-- 1. Request-path role: subject to RLS, never the table owner, no BYPASSRLS.
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'brain_app') THEN
+    CREATE ROLE brain_app LOGIN;
+  END IF;
+END $$;
+ALTER ROLE brain_app WITH LOGIN PASSWORD :'brain_app_password' NOBYPASSRLS;
+
+-- 2. Privileged role: BYPASSRLS for the documented cross-tenant readers above.
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'brain_privileged') THEN
+    CREATE ROLE brain_privileged LOGIN;
+  END IF;
+END $$;
+ALTER ROLE brain_privileged WITH LOGIN PASSWORD :'brain_privileged_password' BYPASSRLS;
+
+-- 3. Wiki-reader role (H-14): the Wiki projection reads Ledger truth (SELECT
+--    anywhere) but must never write outside its own wiki_* tables. Subject to
+--    RLS — the Wiki is a per-tenant projection, not a cross-tenant reader. The
+--    api binds this role via BRAIN_WIKI_DB_URL so an accidental ledger_* write
+--    on the Wiki path fails at the database, not just in review.
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'brain_wiki_reader') THEN
+    CREATE ROLE brain_wiki_reader LOGIN;
+  END IF;
+END $$;
+ALTER ROLE brain_wiki_reader WITH LOGIN PASSWORD :'brain_wiki_reader_password' NOBYPASSRLS;
+
+-- 4. MCP raw evidence reader. Tenant-scoped and read-only.
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'brain_mcp_reader') THEN
+    CREATE ROLE brain_mcp_reader LOGIN;
+  END IF;
+END $$;
+ALTER ROLE brain_mcp_reader WITH LOGIN PASSWORD :'brain_mcp_reader_password' NOBYPASSRLS;
+
+-- 5. Least-privilege cross-tenant roles (replace the single broad brain_privileged
+--    for the API runtime). Each is BYPASSRLS (its job is genuinely cross-tenant)
+--    but receives only the table grants in the matrix below, so a confused-deputy
+--    bug or compromise in one privileged path cannot reach another layer's tables.
+--    brain_privileged remains ONLY for the deploy-time seed one-shot
+--    (docker-compose `seed`), never the running API runtime (the broadest surface).
+--      brain_raw_worker          sync + interpret workers     (raw_* tables)
+--      brain_canonical_projector canonical projection worker  (canonical_* + read raw_parsed)
+--      brain_ledger_projector    ledger projection workers     (ledger projections + read canonical_*)
+--      brain_execution_worker    outbox drain + agent-registration worker (execution_outbox, agents)
+--      brain_audit_verifier      audit consistency verifier    (audit_events read + verifier state)
+--      brain_audit_publisher     anchor tenant enumeration     (audit_events read only)
+--      brain_resolver            webhook/SIWX/login resolvers  (cross-tenant SELECT only)
+--      brain_tenant_deletion     GDPR erasure svc + blob-purge (broad DELETE, route-gated)
+--      brain_surface_gateway     approval webhooks only (surface_* + approvals)
+--      brain_surface_audit_writer audit_events append only for surface gateway
+--      brain_auth                OAuth authorization server core (oauth_*, tenant-scoped)
+--      brain_auth_audit_writer   audit_events append only for the authorization server
+DO $$
+DECLARE
+  rolename text;
+BEGIN
+  FOREACH rolename IN ARRAY ARRAY[
+    'brain_raw_worker', 'brain_canonical_projector', 'brain_ledger_projector',
+    'brain_execution_worker', 'brain_audit_verifier', 'brain_audit_publisher',
+    'brain_resolver', 'brain_tenant_deletion', 'brain_surface_gateway',
+    'brain_surface_audit_writer', 'brain_auth', 'brain_auth_audit_writer'
+  ] LOOP
+    IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = rolename) THEN
+      EXECUTE format('CREATE ROLE %I LOGIN', rolename);
+    END IF;
+  END LOOP;
+END $$;
+ALTER ROLE brain_raw_worker          WITH LOGIN PASSWORD :'brain_raw_worker_password' BYPASSRLS;
+ALTER ROLE brain_canonical_projector WITH LOGIN PASSWORD :'brain_canonical_projector_password' BYPASSRLS;
+ALTER ROLE brain_ledger_projector    WITH LOGIN PASSWORD :'brain_ledger_projector_password' BYPASSRLS;
+ALTER ROLE brain_execution_worker    WITH LOGIN PASSWORD :'brain_execution_worker_password' BYPASSRLS;
+ALTER ROLE brain_audit_verifier      WITH LOGIN PASSWORD :'brain_audit_verifier_password' BYPASSRLS;
+ALTER ROLE brain_audit_publisher     WITH LOGIN PASSWORD :'brain_audit_publisher_password' BYPASSRLS;
+ALTER ROLE brain_resolver            WITH LOGIN PASSWORD :'brain_resolver_password' BYPASSRLS;
+ALTER ROLE brain_tenant_deletion     WITH LOGIN PASSWORD :'brain_tenant_deletion_password' BYPASSRLS;
+ALTER ROLE brain_surface_gateway     WITH LOGIN PASSWORD :'brain_surface_gateway_password' NOBYPASSRLS;
+ALTER ROLE brain_surface_audit_writer WITH LOGIN PASSWORD :'brain_surface_audit_writer_password' NOBYPASSRLS;
+ALTER ROLE brain_auth                WITH LOGIN PASSWORD :'brain_auth_password' NOBYPASSRLS;
+ALTER ROLE brain_auth_audit_writer   WITH LOGIN PASSWORD :'brain_auth_audit_writer_password' NOBYPASSRLS;
+
+-- brain_app gets request-path DML on the application schema; it does not own the
+-- tables, so RLS applies to it. brain_privileged is intentionally excluded from
+-- the blanket runtime grant and receives only the seed and verifier footprint
+-- below.
+GRANT USAGE ON SCHEMA public TO brain_app, brain_privileged, brain_wiki_reader,
+  brain_mcp_reader;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public
+  TO brain_app;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO brain_app, brain_privileged;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO brain_app;
+-- Removing a role from a later GRANT does not erase default ACLs already
+-- stored by Postgres. Clear the historical brain_privileged default so newly
+-- created tables never inherit broad access from an earlier role-model apply.
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  REVOKE ALL PRIVILEGES ON TABLES FROM brain_privileged;
+
+-- brain_privileged: deploy-time seed one-shot and audit verifier fallback only.
+-- It is BYPASSRLS but not a live API runtime role. Keep the table footprint
+-- explicit so a seed compromise cannot append audit_events or mutate unrelated
+-- live-money tables.
+GRANT SELECT, INSERT, UPDATE ON tenants, policies, members TO brain_privileged;
+GRANT SELECT, INSERT, UPDATE, DELETE ON agents TO brain_privileged;
+GRANT SELECT, INSERT, UPDATE ON ledger_counterparty_payment_instructions
+  TO brain_privileged;
+GRANT SELECT, INSERT ON ledger_documents, ledger_invoices, ledger_obligations,
+  ledger_payment_intents TO brain_privileged;
+GRANT SELECT, INSERT, UPDATE ON audit_verifier_checkpoint TO brain_privileged;
+GRANT SELECT, INSERT ON audit_integrity_findings TO brain_privileged;
+
+-- brain_wiki_reader: SELECT on everything (read Ledger truth), but write only
+-- the wiki_* projection tables. New tables default to SELECT-only for it.
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO brain_wiki_reader;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO brain_wiki_reader;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  GRANT SELECT ON TABLES TO brain_wiki_reader;
+DO $$
+DECLARE
+  t regclass;
+BEGIN
+  FOR t IN
+    SELECT c.oid::regclass
+    FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public' AND c.relkind = 'r' AND c.relname LIKE 'wiki\_%'
+  LOOP
+    EXECUTE format('GRANT INSERT, UPDATE, DELETE ON %s TO brain_wiki_reader', t);
+  END LOOP;
+END
+$$;
+
+-- brain_mcp_reader: MCP raw evidence read path only. Column grants deliberately
+-- omit blob_uri, and this role receives no write grants or grants on Policy or
+-- Audit tables in PR 1 of RFC 0006.
+GRANT SELECT (
+  id, tenant_id, sha256, source_type, source_ref, mime_type, bytes,
+  ingested_at, tombstoned_at, ingested_by, source_schema, object_type,
+  external_id, operation, effective_at, observed_at, original_source,
+  intermediaries, source_id, source_version, idempotency_key
+) ON raw_artifacts TO brain_mcp_reader;
+GRANT SELECT (
+  id, raw_artifact_id, tenant_id, parser, parser_version, extracted,
+  confidence, extracted_at
+) ON raw_parsed TO brain_mcp_reader;
+
+-- ---------------------------------------------------------------------------
+-- Least-privilege grant matrix for the §4 roles. Each role starts with NO
+-- table privileges (it is absent from the blanket grant above) and receives
+-- only what its consumer touches (footprints verified against the worker
+-- source). Prefix-pattern loops mirror the wiki_reader pattern so re-applying
+-- db-roles.sql after a new migration keeps a role's layer current.
+-- ---------------------------------------------------------------------------
+GRANT USAGE ON SCHEMA public TO
+  brain_raw_worker, brain_canonical_projector, brain_ledger_projector,
+  brain_execution_worker, brain_audit_verifier, brain_audit_publisher,
+  brain_resolver, brain_tenant_deletion, brain_surface_gateway,
+  brain_surface_audit_writer, brain_auth, brain_auth_audit_writer;
+-- Writer roles may hit serial-backed tables; read-only roles (publisher,
+-- resolver) get no sequence access.
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO
+  brain_raw_worker, brain_canonical_projector, brain_ledger_projector,
+  brain_execution_worker, brain_audit_verifier, brain_tenant_deletion,
+  brain_surface_gateway;
+
+-- brain_raw_worker: raw layer writes. It reads canonical_projection_log
+-- (hasTerminalZeroProjectionLog) but no longer deletes from it: repairing a
+-- corrected upload parsed row now bumps raw_parsed.extracted_at, which the
+-- canonical projector's version-gated pending predicate treats as a fresh
+-- payload version on its own (services/canonical migration 0005). DELETE was
+-- previously required so a repair could force replay by hand, which
+-- re-introduced the same over-broad grant class PR #330 revoked below.
+DO $$
+DECLARE t regclass;
+BEGIN
+  FOR t IN SELECT c.oid::regclass FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+           WHERE n.nspname = 'public' AND c.relkind = 'r' AND c.relname LIKE 'raw\_%'
+  LOOP EXECUTE format('GRANT SELECT, INSERT, UPDATE ON %s TO brain_raw_worker', t); END LOOP;
+END $$;
+GRANT SELECT ON extraction_jobs TO brain_raw_worker;
+GRANT SELECT ON canonical_projection_log TO brain_raw_worker;
+
+-- brain_canonical_projector: canonical writes, SELECT on raw_parsed (input).
+-- Only canonical_journal_line is deleted by the projector, as a line-replace
+-- step during journal-entry upsert.
+DO $$
+DECLARE t regclass;
+BEGIN
+  FOR t IN SELECT c.oid::regclass FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+           WHERE n.nspname = 'public' AND c.relkind = 'r' AND c.relname LIKE 'canonical\_%'
+  LOOP EXECUTE format('GRANT SELECT, INSERT, UPDATE ON %s TO brain_canonical_projector', t); END LOOP;
+END $$;
+GRANT DELETE ON canonical_journal_line TO brain_canonical_projector;
+GRANT SELECT ON raw_parsed TO brain_canonical_projector;
+
+-- brain_ledger_projector: SELECT on canonical_* (input); DML ONLY on the
+-- rebuildable ledger projection targets (NOT the money-path ledger_* tables).
+DO $$
+DECLARE t regclass;
+BEGIN
+  FOR t IN SELECT c.oid::regclass FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+           WHERE n.nspname = 'public' AND c.relkind = 'r' AND c.relname LIKE 'canonical\_%'
+  LOOP EXECUTE format('GRANT SELECT ON %s TO brain_ledger_projector', t); END LOOP;
+END $$;
+-- AP/AR projection may repair stale canonical counterparty links before
+-- mirroring obligations. Keep that write as narrow as the repair path.
+GRANT UPDATE (canonical_counterparty_id, updated_at) ON canonical_obligation
+  TO brain_ledger_projector;
+GRANT SELECT, INSERT, UPDATE ON ledger_gl_accounts, ledger_obligations, ledger_counterparties,
+  ledger_accounts, ledger_transactions, ledger_invoices, ledger_projection_quarantine
+  TO brain_ledger_projector;
+-- The Collections, Reconciliation, Cash Forecast, Vendor Risk, Fraud Anomaly,
+-- and Compliance scanners share the ledger worker pool for cross-tenant enumeration only.
+-- They need ledger and cooldown reads, then
+-- re-enter tenant-scoped brain_app for cooldown writes and AgentRunService proposals.
+GRANT SELECT ON ledger_accounts, ledger_balances, ledger_invoices, ledger_transactions,
+  ledger_payment_intents, approvals, policy_decisions, audit_events
+  TO brain_ledger_projector;
+GRANT SELECT ON ledger_counterparty_payment_instructions TO brain_ledger_projector;
+GRANT SELECT ON agent_trigger_cooldowns TO brain_ledger_projector;
+-- The ledger_counterparties writer trigger (ledger/0027) is plain plpgsql and
+-- runs as the invoking role, INSERTing into ledger_counterparty_payment_instructions.
+-- The AP/AR canonical projector (Phase 5) writes counterparties as
+-- brain_ledger_projector, so it needs INSERT on the trigger target table too.
+GRANT INSERT ON ledger_counterparty_payment_instructions TO brain_ledger_projector;
+
+-- brain_execution_worker: cross-tenant claim/reclaim/mark on the outbox, plus
+-- (RFC 0002 Phase C, increment 3) the agent-registration worker's cross-tenant
+-- claim of pending_onchain agents. The per-row settle / confirmRegistration
+-- both re-enter tenant scope on brain_app, so this role needs no money-path
+-- (ledger_*) grants at all.
+GRANT SELECT, INSERT, UPDATE ON execution_outbox TO brain_execution_worker;
+GRANT SELECT, UPDATE ON agents TO brain_execution_worker;
+
+-- brain_audit_verifier: read audit events and tenant anchor modes; scan and heal audit anchors;
+-- advance the verifier cursor; append findings. No UPDATE/DELETE on findings,
+-- so a detected break is un-erasable.
+GRANT SELECT ON audit_events TO brain_audit_verifier;
+GRANT SELECT ON tenants TO brain_audit_verifier;
+GRANT SELECT, UPDATE ON audit_anchors TO brain_audit_verifier;
+GRANT SELECT, INSERT, UPDATE ON audit_verifier_checkpoint TO brain_audit_verifier;
+GRANT SELECT, INSERT ON audit_integrity_findings TO brain_audit_verifier;
+
+-- brain_audit_publisher: cross-tenant audit events and tenant anchor-mode
+-- enumeration only (the
+-- per-tenant publish runs on brain_app under RLS).
+GRANT SELECT ON audit_events TO brain_audit_publisher;
+GRANT SELECT ON tenants TO brain_audit_publisher;
+-- The scheduled publisher derives each tenant's next window from
+-- MAX(period_end) over its own anchors, so coverage survives a restart
+-- instead of always re-deriving a fixed "last intervalMs" window.
+GRANT SELECT ON audit_anchors TO brain_audit_publisher;
+GRANT SELECT ON webhook_endpoints, webhook_dead_letters, webhook_delivery_receipts
+  TO brain_audit_publisher;
+
+-- brain_resolver: cross-tenant SELECT only, for the webhook/SIWX/login/session resolvers.
+-- Extended for the OAuth core (Phase 2a): agents (pre-tenant OAuth agent
+-- lookups) plus the oauth_* pre-tenant lookups (code_hash -> row, token_hash
+-- -> row). oauth_consent_grants is intentionally excluded: it is reached only
+-- through an already-tenant-scoped code or refresh token, never a pre-tenant
+-- lookup.
+GRANT SELECT ON raw_sync_partitions, wallet_identities, users, members, member_identity_links,
+  member_invites, session_refresh_tokens, api_keys, api_rate_limit_tiers,
+  tenant_api_entitlements, api_key_rate_limit_overrides, agents, oauth_clients,
+  oauth_authorization_codes, oauth_refresh_tokens TO brain_resolver;
+GRANT SELECT (id, tenant_id) ON agent_api_keys TO brain_resolver;
+-- API-key authentication resolves the key before a tenant scope exists. Raw
+-- keys additionally need only the server-owned demo eligibility columns, not
+-- unrestricted tenant metadata.
+GRANT SELECT (id, provisioning_state, data_profile, access_stage)
+  ON tenants TO brain_resolver;
+
+-- brain_surface_gateway: tenant-scoped webhook decisions and delivery state.
+-- No ledger_* or execution_outbox grants. The handoff stops at approvals.
+DO $$
+DECLARE t regclass;
+BEGIN
+  FOR t IN SELECT c.oid::regclass FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+           WHERE n.nspname = 'public' AND c.relkind = 'r' AND c.relname LIKE 'surface\_%'
+  LOOP EXECUTE format('GRANT SELECT, INSERT, UPDATE, DELETE ON %s TO brain_surface_gateway', t); END LOOP;
+END $$;
+GRANT SELECT ON users, members, member_identity_links, policies TO brain_surface_gateway;
+GRANT SELECT, INSERT, UPDATE ON approvals TO brain_surface_gateway;
+
+-- brain_surface_audit_writer: append-only audit events for the surface gateway
+-- audit pool. It intentionally has no grants on surface, ledger, approval, or
+-- outbox tables. Append-only means no mutation of EXISTING rows (the REVOKE
+-- UPDATE, DELETE, TRUNCATE below still applies), not blind writes:
+-- PostgresAuditEmitter.emit (shared/src/audit/emitter.ts) reads the
+-- hash-chain predecessor (`SELECT event_hash FROM audit_events ... LIMIT 1`)
+-- before every insert, so SELECT is structurally required or every emit
+-- raises 42501 permission denied. Verified live: INSERT-only broke every
+-- emit from this role. Do not "harden" this back to INSERT-only.
+GRANT SELECT, INSERT ON audit_events TO brain_surface_audit_writer;
+
+-- brain_auth: the OAuth authorization server core (Phase 2a, OAUTH-AS-PLAN.md
+-- section 4 / AUTH-PATHS-PLAN.md section 6). NOBYPASSRLS -- unlike the other
+-- section 4 roles, the AS is tenant-scoped per request like brain_app, not a
+-- cross-tenant reader, so RLS applies to it. No DELETE anywhere: codes and
+-- tokens are marked consumed or revoked, never deleted. The column-list GRANT
+-- UPDATE on users matters: a compromised AS cannot change email, tenant_id,
+-- or role.
+GRANT SELECT, INSERT, UPDATE ON oauth_clients, oauth_authorization_codes,
+  oauth_consent_grants, oauth_refresh_tokens TO brain_auth;
+GRANT SELECT, INSERT, UPDATE ON email_verifications TO brain_auth;
+-- No grant on wallet_identities: Path 2 (wallet + SIWE login at the AS) is
+-- design-only, not built in v1 (AUTH-PATHS-PLAN.md section 3). No Phase 2a
+-- code writes wallet_identities, so the grant bought nothing today and was a
+-- session-minting primitive: siwx.ts resolves a linked wallet straight to an
+-- owner JWT, so brain_auth alone could insert a row binding an attacker
+-- address to any tenant owner and mint an owner JWT via POST /v1/auth/siwx.
+-- RLS does not contain this because brain_auth sets its own app.tenant_id.
+-- Add SELECT, INSERT back here when Path 2 ships.
+GRANT UPDATE (password_hash, email_verified_at, status) ON users TO brain_auth;
+GRANT SELECT ON users, members, member_identity_links, tenants, agents TO brain_auth;
+GRANT SELECT ON agent_api_keys TO brain_auth;
+GRANT UPDATE (last_used_at) ON agent_api_keys TO brain_auth;
+
+COMMENT ON ROLE brain_auth IS
+  'OAuth authorization server core (auth.brain.fi). Containment: brain_auth cannot INSERT or UPDATE members, cannot touch session_refresh_tokens or member_invites, cannot INSERT tenants or users, cannot UPDATE agents, and holds nothing on any ledger_* table or execution_outbox. The AS cannot mint a Brain session directly (no session table, no JWT signing key), but its column-list GRANT UPDATE (password_hash, email_verified_at, status) ON users is a credential-write primitive equivalent to one: setting a known scrypt hash on any owner and then calling POST /v1/auth/login reaches the same outcome as a minted session. AS compromise must therefore be modelled as tenant-wide account takeover, not merely as an OAuth-scoped foothold.';
+
+-- brain_auth_audit_writer: append-only audit events for the authorization
+-- server's audit pool, mirroring brain_surface_audit_writer. Required, not
+-- optional: brain_privileged deliberately cannot insert audit_events, so
+-- every writer needs its own narrow role. SELECT is required alongside
+-- INSERT for the same reason as brain_surface_audit_writer above: the
+-- hash-chain predecessor read in PostgresAuditEmitter.emit 42501s without it,
+-- turning every /login, /set-password, and /forgot-password audit emit into
+-- a 500 (finding 1). Append-only is enforced by the REVOKE UPDATE, DELETE,
+-- TRUNCATE below, not by withholding SELECT.
+GRANT SELECT, INSERT ON audit_events TO brain_auth_audit_writer;
+
+-- brain_tenant_deletion: GDPR Article 17 erasure (route-gated) + blob-purge
+-- worker. Broad DELETE across tenant-scoped (RLS) tables — that IS the erasure
+-- concern — plus the tenant registry and the purge bookkeeping. audit_events /
+-- audit_anchors are preserved (the append-only REVOKE below strips DELETE).
+DO $$
+DECLARE t regclass;
+BEGIN
+  FOR t IN SELECT c.oid::regclass FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+           WHERE n.nspname = 'public' AND c.relkind = 'r' AND c.relrowsecurity
+  LOOP EXECUTE format('GRANT SELECT, DELETE ON %s TO brain_tenant_deletion', t); END LOOP;
+END $$;
+GRANT SELECT, UPDATE, DELETE ON tenants TO brain_tenant_deletion;
+-- Per-job fencing is tenant-local: the deletion worker quarantines only the
+-- target tenant's agents and never stops the shared worker process.
+GRANT UPDATE (state) ON agents TO brain_tenant_deletion;
+GRANT SELECT, UPDATE ON raw_artifacts TO brain_tenant_deletion;
+GRANT SELECT, INSERT, UPDATE ON tenant_blob_purge_jobs, tenant_blob_purge_audit_outbox
+  TO brain_tenant_deletion;
+REVOKE ALL ON tenant_deletion_jobs
+  FROM brain_app, brain_privileged, brain_wiki_reader, brain_mcp_reader,
+       brain_raw_worker, brain_canonical_projector, brain_ledger_projector,
+       brain_execution_worker, brain_audit_verifier, brain_audit_publisher,
+       brain_resolver, brain_tenant_deletion, brain_surface_gateway,
+       brain_surface_audit_writer, brain_auth, brain_auth_audit_writer;
+GRANT SELECT, INSERT, UPDATE ON tenant_deletion_jobs TO brain_tenant_deletion;
+GRANT SELECT, UPDATE ON tenant_export_jobs TO brain_tenant_deletion;
+-- This one-time operation ledger survives its tenant rows. Only the deletion
+-- role may append or advance progress, and it cannot erase completed evidence.
+REVOKE ALL ON commercial_demo_retirement_progress
+  FROM brain_app, brain_privileged, brain_wiki_reader, brain_mcp_reader,
+       brain_raw_worker, brain_canonical_projector, brain_ledger_projector,
+       brain_execution_worker, brain_audit_verifier, brain_audit_publisher,
+       brain_resolver, brain_tenant_deletion, brain_surface_gateway,
+       brain_surface_audit_writer, brain_auth, brain_auth_audit_writer;
+GRANT SELECT, INSERT, UPDATE ON commercial_demo_retirement_progress
+  TO brain_tenant_deletion;
+
+-- §1.4 audit append-only: the audit log must be IMMUTABLE to every runtime role.
+-- The blanket DML grant above (and the default privileges) hand brain_app +
+-- brain_privileged UPDATE/DELETE on every table, and `REVOKE ... FROM PUBLIC` in
+-- the audit migration does NOT strip an explicit role grant. Revoke the mutation
+-- rights on audit_events here so neither the request role (within its tenant) nor
+-- the privileged role (across all tenants) can rewrite or erase audit history.
+-- The append-only guarantee the on-chain anchor and proofs rely on is otherwise
+-- unenforced at the DB level. Only the migration/owner role retains the ability
+-- to administratively repair audit data, through a separately controlled, audited
+-- procedure. (Codex 307161b P1 #1.)
+-- Includes the §4 roles: brain_tenant_deletion's broad RLS-table DELETE would
+-- otherwise cover audit_events (it is RLS-scoped), which must stay preserved;
+-- the audit verifier/publisher keep their SELECT (only mutation is stripped).
+REVOKE UPDATE, DELETE, TRUNCATE ON audit_events
+  FROM brain_app, brain_privileged, brain_wiki_reader,
+       brain_mcp_reader,
+       brain_raw_worker, brain_canonical_projector, brain_ledger_projector,
+       brain_execution_worker, brain_audit_verifier, brain_audit_publisher,
+       brain_resolver, brain_tenant_deletion, brain_surface_gateway,
+       brain_surface_audit_writer, brain_auth, brain_auth_audit_writer;
+
+-- Audit anchors are retained evidence, including during tenant deletion. The
+-- blanket brain_app grant and the tenant-deletion RLS-table loop above both
+-- grant DELETE, so this explicit revoke must follow those broad grants and be
+-- re-applied on every deploy. Runtime anchor publishing still uses the existing
+-- SELECT, INSERT, and UPDATE grants. Only the migration owner retains authority
+-- for a separately controlled administrative repair.
+REVOKE DELETE, TRUNCATE ON audit_anchors
+  FROM brain_app, brain_privileged, brain_wiki_reader,
+       brain_mcp_reader,
+       brain_raw_worker, brain_canonical_projector, brain_ledger_projector,
+       brain_execution_worker, brain_audit_verifier, brain_audit_publisher,
+       brain_resolver, brain_tenant_deletion, brain_surface_gateway,
+       brain_surface_audit_writer, brain_auth, brain_auth_audit_writer;
+
+-- RFC 0008 request-meter facts are immutable to request-path roles. They are
+-- intentionally separate from audit_events, but carry the same append-only
+-- runtime guarantee. The tenant-deletion role retains DELETE for an approved
+-- GDPR erasure through its broad RLS-table grant above.
+REVOKE UPDATE, DELETE, TRUNCATE ON api_request_meter_events
+  FROM brain_app, brain_privileged, brain_wiki_reader,
+       brain_mcp_reader,
+       brain_raw_worker, brain_canonical_projector, brain_ledger_projector,
+       brain_execution_worker, brain_audit_verifier, brain_audit_publisher,
+       brain_resolver, brain_surface_gateway,
+       brain_surface_audit_writer, brain_auth, brain_auth_audit_writer;
+
+-- RFC 0008's independent gateway observations and explicit meter-failure
+-- events are reconciliation evidence. The request path may append them but
+-- no runtime role may rewrite or erase them.
+REVOKE UPDATE, DELETE, TRUNCATE ON api_gateway_request_observations,
+  api_meter_persistence_failure_events
+  FROM brain_app, brain_privileged, brain_wiki_reader,
+       brain_mcp_reader,
+       brain_raw_worker, brain_canonical_projector, brain_ledger_projector,
+       brain_execution_worker, brain_audit_verifier, brain_audit_publisher,
+       brain_resolver, brain_surface_gateway,
+       brain_surface_audit_writer, brain_auth, brain_auth_audit_writer;
+
+-- Commercial API entitlements are server-owned. Member request paths may
+-- read the effective policy but cannot assign a tier or key override. The
+-- Phase 1 RobotMoney foundation grants no commercial writer.
+REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON api_rate_limit_tiers,
+  tenant_api_entitlements, api_key_rate_limit_overrides
+  FROM brain_app, brain_wiki_reader, brain_mcp_reader, brain_raw_worker,
+       brain_canonical_projector, brain_ledger_projector, brain_execution_worker,
+       brain_audit_verifier, brain_audit_publisher, brain_resolver,
+       brain_surface_gateway, brain_surface_audit_writer, brain_auth,
+       brain_auth_audit_writer;
+GRANT SELECT, INSERT, UPDATE ON tenant_api_entitlements TO brain_privileged;
+GRANT SELECT, INSERT, UPDATE, DELETE ON api_key_rate_limit_overrides TO brain_privileged;
+
+-- RFC 0008 billing-readiness tables. Runtime callers can read their own
+-- tenant's summaries, while only the protected operator role can rebuild
+-- derived rollups or append reconciliation, close, adjustment, and change
+-- evidence. Raw request facts remain immutable to that operator.
+GRANT SELECT ON api_metering_policies, api_usage_daily_rollups,
+  api_usage_reconciliation_runs, api_billing_periods, api_billing_adjustments,
+  api_entitlement_change_log TO brain_app;
+REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON api_metering_policies,
+  api_usage_daily_rollups, api_usage_reconciliation_runs, api_billing_periods,
+  api_billing_adjustments, api_entitlement_change_log FROM brain_app;
+-- api_keys is read-only to the protected operator. Reset the complete table
+-- ACL on every apply so grants inherited from the historical default ACL are
+-- removed from existing databases before restoring the single required grant.
+REVOKE ALL PRIVILEGES ON api_keys FROM brain_privileged;
+GRANT SELECT ON api_keys TO brain_privileged;
+GRANT SELECT ON api_metering_policies, api_request_meter_events,
+  api_rate_limit_tiers, tenant_api_entitlements, api_key_rate_limit_overrides,
+  api_usage_daily_rollups, api_usage_reconciliation_runs, api_billing_periods,
+  api_billing_adjustments, api_entitlement_change_log,
+  api_gateway_request_observations, api_meter_persistence_failure_events
+  TO brain_privileged;
+GRANT INSERT, UPDATE, DELETE ON api_usage_daily_rollups TO brain_privileged;
+GRANT INSERT ON api_usage_reconciliation_runs, api_billing_periods,
+  api_billing_adjustments, api_entitlement_change_log TO brain_privileged;
+
+-- Internal commercial shadow tenants carry an immutable, database-enforced
+-- billing exclusion. No runtime role can write or erase the marker. The
+-- protected operator may inspect it and may create it only through the narrow
+-- SECURITY DEFINER function, whose clean-start trigger rejects pre-existing
+-- billing or provider state.
+REVOKE ALL PRIVILEGES ON commercial_billing_exclusions
+  FROM brain_app, brain_privileged, brain_wiki_reader, brain_mcp_reader,
+       brain_raw_worker, brain_canonical_projector, brain_ledger_projector,
+       brain_execution_worker, brain_audit_verifier, brain_audit_publisher,
+       brain_resolver, brain_tenant_deletion, brain_surface_gateway,
+       brain_surface_audit_writer, brain_auth, brain_auth_audit_writer;
+GRANT SELECT ON commercial_billing_exclusions TO brain_privileged;
+REVOKE ALL ON FUNCTION create_internal_commercial_shadow_billing_exclusion(
+  TEXT, TEXT, TEXT
+) FROM
+  brain_app, brain_privileged, brain_wiki_reader, brain_mcp_reader,
+  brain_raw_worker, brain_canonical_projector, brain_ledger_projector,
+  brain_execution_worker, brain_audit_verifier, brain_audit_publisher,
+  brain_resolver, brain_tenant_deletion, brain_surface_gateway,
+  brain_surface_audit_writer, brain_auth, brain_auth_audit_writer;
+GRANT EXECUTE ON FUNCTION create_internal_commercial_shadow_billing_exclusion(
+  TEXT, TEXT, TEXT
+) TO brain_privileged;
+
+-- RFC 0011 Phase 2 shadow evidence. db-roles runs after migrations, so reset
+-- every ACL after the broad brain_app and tenant-deletion grants above. The
+-- request path may append raw transport, logical meter, meter-failure, and
+-- final observation evidence. Only the protected operator may rebuild derived
+-- rollups or append reconciliation runs. Contracts and policy definitions are
+-- created through later narrow operator functions, never direct table grants.
+REVOKE ALL PRIVILEGES ON commercial_shadow_contracts,
+  commercial_shadow_observations, mcp_tool_metering_policies,
+  mcp_transport_tool_observations, mcp_tool_meter_events,
+  mcp_meter_persistence_failure_events, mcp_usage_daily_rollups,
+  mcp_usage_reconciliation_runs
+  FROM brain_app, brain_privileged, brain_wiki_reader, brain_mcp_reader,
+       brain_raw_worker, brain_canonical_projector, brain_ledger_projector,
+       brain_execution_worker, brain_audit_verifier, brain_audit_publisher,
+       brain_resolver, brain_tenant_deletion, brain_surface_gateway,
+       brain_surface_audit_writer, brain_auth, brain_auth_audit_writer;
+GRANT SELECT ON commercial_shadow_contracts, commercial_shadow_observations,
+  mcp_tool_metering_policies, mcp_transport_tool_observations,
+  mcp_tool_meter_events, mcp_meter_persistence_failure_events,
+  mcp_usage_daily_rollups, mcp_usage_reconciliation_runs TO brain_app;
+GRANT INSERT ON commercial_shadow_observations,
+  mcp_transport_tool_observations, mcp_tool_meter_events,
+  mcp_meter_persistence_failure_events TO brain_app;
+GRANT SELECT ON commercial_shadow_contracts, commercial_shadow_observations,
+  mcp_tool_metering_policies, mcp_transport_tool_observations,
+  mcp_tool_meter_events, mcp_meter_persistence_failure_events,
+  mcp_usage_daily_rollups, mcp_usage_reconciliation_runs TO brain_privileged;
+GRANT INSERT ON commercial_shadow_observations,
+  mcp_usage_reconciliation_runs TO brain_privileged;
+GRANT INSERT, UPDATE, DELETE ON mcp_usage_daily_rollups TO brain_privileged;
+
+-- RFC 0011 Phase 3 shadow control plane. Lifecycle mutations stay behind
+-- narrow SECURITY DEFINER functions. Runtime roles have no visibility into
+-- scheduler state and no ability to forge or erase transition evidence.
+REVOKE ALL PRIVILEGES ON commercial_shadow_periods,
+  commercial_shadow_scheduler_heartbeats,
+  commercial_shadow_state_transitions
+  FROM brain_app, brain_privileged, brain_wiki_reader, brain_mcp_reader,
+       brain_raw_worker, brain_canonical_projector, brain_ledger_projector,
+       brain_execution_worker, brain_audit_verifier, brain_audit_publisher,
+       brain_resolver, brain_tenant_deletion, brain_surface_gateway,
+       brain_surface_audit_writer, brain_auth, brain_auth_audit_writer;
+GRANT SELECT ON commercial_shadow_periods,
+  commercial_shadow_scheduler_heartbeats,
+  commercial_shadow_state_transitions TO brain_privileged;
+GRANT SELECT ON commercial_shadow_periods TO brain_app;
+REVOKE ALL ON FUNCTION start_internal_commercial_shadow(
+  TEXT,TEXT,TEXT,JSONB,BYTEA,TEXT,BYTEA,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT
+) FROM
+  brain_app, brain_privileged, brain_wiki_reader, brain_mcp_reader,
+  brain_raw_worker, brain_canonical_projector, brain_ledger_projector,
+  brain_execution_worker, brain_audit_verifier, brain_audit_publisher,
+  brain_resolver, brain_tenant_deletion, brain_surface_gateway,
+  brain_surface_audit_writer, brain_auth, brain_auth_audit_writer;
+REVOKE ALL ON FUNCTION transition_internal_commercial_shadow(TEXT,TEXT,TEXT,TEXT,TEXT)
+  FROM brain_app, brain_privileged, brain_wiki_reader, brain_mcp_reader,
+  brain_raw_worker, brain_canonical_projector, brain_ledger_projector,
+  brain_execution_worker, brain_audit_verifier, brain_audit_publisher,
+  brain_resolver, brain_tenant_deletion, brain_surface_gateway,
+  brain_surface_audit_writer, brain_auth, brain_auth_audit_writer;
+REVOKE ALL ON FUNCTION assert_internal_commercial_shadow_zero_billing(TEXT)
+  FROM brain_app, brain_privileged, brain_wiki_reader, brain_mcp_reader,
+  brain_raw_worker, brain_canonical_projector, brain_ledger_projector,
+  brain_execution_worker, brain_audit_verifier, brain_audit_publisher,
+  brain_resolver, brain_tenant_deletion, brain_surface_gateway,
+  brain_surface_audit_writer, brain_auth, brain_auth_audit_writer;
+REVOKE ALL ON FUNCTION inspect_internal_commercial_shadow() FROM
+  brain_app, brain_privileged, brain_wiki_reader, brain_mcp_reader,
+  brain_raw_worker, brain_canonical_projector, brain_ledger_projector,
+  brain_execution_worker, brain_audit_verifier, brain_audit_publisher,
+  brain_resolver, brain_tenant_deletion, brain_surface_gateway,
+  brain_surface_audit_writer, brain_auth, brain_auth_audit_writer;
+GRANT EXECUTE ON FUNCTION start_internal_commercial_shadow(
+  TEXT,TEXT,TEXT,JSONB,BYTEA,TEXT,BYTEA,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT
+) TO brain_privileged;
+GRANT EXECUTE ON FUNCTION transition_internal_commercial_shadow(TEXT,TEXT,TEXT,TEXT,TEXT)
+  TO brain_privileged;
+GRANT EXECUTE ON FUNCTION inspect_internal_commercial_shadow() TO brain_privileged;
+
+-- RFC 0011 Phase 4 daily shadow operations. Final run evidence is read-only to
+-- the operator role. Heartbeat refresh and evidence insertion are available
+-- only through validating SECURITY DEFINER functions.
+REVOKE ALL PRIVILEGES ON commercial_shadow_daily_runs
+  FROM brain_app, brain_privileged, brain_wiki_reader, brain_mcp_reader,
+       brain_raw_worker, brain_canonical_projector, brain_ledger_projector,
+       brain_execution_worker, brain_audit_verifier, brain_audit_publisher,
+       brain_resolver, brain_tenant_deletion, brain_surface_gateway,
+       brain_surface_audit_writer, brain_auth, brain_auth_audit_writer;
+GRANT SELECT ON commercial_shadow_daily_runs TO brain_privileged;
+REVOKE ALL ON FUNCTION write_commercial_shadow_scheduler_heartbeat(
+  TEXT,TEXT,TIMESTAMPTZ,TIMESTAMPTZ,TEXT
+) FROM
+  brain_app, brain_privileged, brain_wiki_reader, brain_mcp_reader,
+  brain_raw_worker, brain_canonical_projector, brain_ledger_projector,
+  brain_execution_worker, brain_audit_verifier, brain_audit_publisher,
+  brain_resolver, brain_tenant_deletion, brain_surface_gateway,
+  brain_surface_audit_writer, brain_auth, brain_auth_audit_writer;
+REVOKE ALL ON FUNCTION record_internal_commercial_shadow_daily_run(
+  TEXT,TEXT,DATE,TIMESTAMPTZ,TEXT,TIMESTAMPTZ,TIMESTAMPTZ,
+  INTEGER,INTEGER,INTEGER,INTEGER,TEXT,TEXT,TEXT,TEXT,JSONB
+) FROM
+  brain_app, brain_privileged, brain_wiki_reader, brain_mcp_reader,
+  brain_raw_worker, brain_canonical_projector, brain_ledger_projector,
+  brain_execution_worker, brain_audit_verifier, brain_audit_publisher,
+  brain_resolver, brain_tenant_deletion, brain_surface_gateway,
+  brain_surface_audit_writer, brain_auth, brain_auth_audit_writer;
+REVOKE ALL ON FUNCTION report_internal_commercial_shadow_day(DATE) FROM
+  brain_app, brain_privileged, brain_wiki_reader, brain_mcp_reader,
+  brain_raw_worker, brain_canonical_projector, brain_ledger_projector,
+  brain_execution_worker, brain_audit_verifier, brain_audit_publisher,
+  brain_resolver, brain_tenant_deletion, brain_surface_gateway,
+  brain_surface_audit_writer, brain_auth, brain_auth_audit_writer;
+REVOKE ALL ON FUNCTION require_commercial_shadow_daily_runs_for_completion() FROM
+  brain_app, brain_privileged, brain_wiki_reader, brain_mcp_reader,
+  brain_raw_worker, brain_canonical_projector, brain_ledger_projector,
+  brain_execution_worker, brain_audit_verifier, brain_audit_publisher,
+  brain_resolver, brain_tenant_deletion, brain_surface_gateway,
+  brain_surface_audit_writer, brain_auth, brain_auth_audit_writer;
+GRANT EXECUTE ON FUNCTION write_commercial_shadow_scheduler_heartbeat(
+  TEXT,TEXT,TIMESTAMPTZ,TIMESTAMPTZ,TEXT
+) TO brain_privileged;
+GRANT EXECUTE ON FUNCTION record_internal_commercial_shadow_daily_run(
+  TEXT,TEXT,DATE,TIMESTAMPTZ,TEXT,TIMESTAMPTZ,TIMESTAMPTZ,
+  INTEGER,INTEGER,INTEGER,INTEGER,TEXT,TEXT,TEXT,TEXT,JSONB
+) TO brain_privileged;
+GRANT EXECUTE ON FUNCTION report_internal_commercial_shadow_day(DATE)
+  TO brain_privileged;
+
+DO $$
+DECLARE
+  runtime_role TEXT;
+  operator_table TEXT;
+BEGIN
+  FOREACH operator_table IN ARRAY ARRAY[
+    'commercial_shadow_periods', 'commercial_shadow_scheduler_heartbeats',
+    'commercial_shadow_state_transitions', 'commercial_shadow_daily_runs'
+  ] LOOP
+    IF NOT has_table_privilege(
+      'brain_privileged', 'public.' || operator_table, 'SELECT'
+    ) OR has_table_privilege(
+      'brain_privileged', 'public.' || operator_table,
+      'INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER'
+    ) THEN
+      RAISE EXCEPTION
+        'brain_privileged commercial shadow table privileges are invalid on %',
+        operator_table;
+    END IF;
+  END LOOP;
+  IF NOT has_function_privilege(
+       'brain_privileged',
+       'public.start_internal_commercial_shadow(text,text,text,jsonb,bytea,text,bytea,text,text,text,text,text,text,text,text,text,text,text,text)',
+       'EXECUTE'
+     )
+     OR NOT has_function_privilege(
+       'brain_privileged',
+       'public.inspect_internal_commercial_shadow()',
+       'EXECUTE'
+     )
+     OR NOT has_function_privilege(
+       'brain_privileged',
+       'public.transition_internal_commercial_shadow(text,text,text,text,text)',
+       'EXECUTE'
+     )
+     OR NOT has_function_privilege(
+       'brain_privileged',
+       'public.write_commercial_shadow_scheduler_heartbeat(text,text,timestamptz,timestamptz,text)',
+       'EXECUTE'
+     )
+     OR NOT has_function_privilege(
+       'brain_privileged',
+       'public.record_internal_commercial_shadow_daily_run(text,text,date,timestamptz,text,timestamptz,timestamptz,integer,integer,integer,integer,text,text,text,text,jsonb)',
+       'EXECUTE'
+     )
+     OR NOT has_function_privilege(
+       'brain_privileged',
+       'public.report_internal_commercial_shadow_day(date)',
+       'EXECUTE'
+     )
+     OR has_function_privilege(
+       'brain_privileged',
+       'public.assert_internal_commercial_shadow_zero_billing(text)',
+       'EXECUTE'
+     )
+     OR has_function_privilege(
+       'brain_privileged',
+       'public.require_commercial_shadow_daily_runs_for_completion()',
+       'EXECUTE'
+     ) THEN
+    RAISE EXCEPTION 'commercial shadow operator privileges are invalid';
+  END IF;
+  FOREACH runtime_role IN ARRAY ARRAY[
+    'brain_app', 'brain_wiki_reader', 'brain_mcp_reader', 'brain_raw_worker',
+    'brain_canonical_projector', 'brain_ledger_projector',
+    'brain_execution_worker', 'brain_audit_verifier', 'brain_audit_publisher',
+    'brain_resolver', 'brain_tenant_deletion', 'brain_surface_gateway',
+    'brain_surface_audit_writer', 'brain_auth', 'brain_auth_audit_writer'
+  ] LOOP
+    IF has_table_privilege(
+      runtime_role, 'public.commercial_shadow_scheduler_heartbeats',
+      'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER'
+    ) OR has_table_privilege(runtime_role, 'public.commercial_shadow_state_transitions', 'SELECT')
+       OR has_table_privilege(runtime_role, 'public.commercial_shadow_state_transitions', 'INSERT')
+       OR has_table_privilege(runtime_role, 'public.commercial_shadow_state_transitions', 'UPDATE')
+       OR has_table_privilege(runtime_role, 'public.commercial_shadow_state_transitions', 'DELETE')
+       OR has_table_privilege(runtime_role, 'public.commercial_shadow_state_transitions', 'TRUNCATE')
+       OR has_function_privilege(
+      runtime_role, 'public.inspect_internal_commercial_shadow()', 'EXECUTE'
+    ) OR has_function_privilege(
+      runtime_role,
+      'public.start_internal_commercial_shadow(text,text,text,jsonb,bytea,text,bytea,text,text,text,text,text,text,text,text,text,text,text,text)',
+      'EXECUTE'
+    ) OR has_function_privilege(
+      runtime_role,
+      'public.transition_internal_commercial_shadow(text,text,text,text,text)',
+      'EXECUTE'
+    ) OR has_function_privilege(
+      runtime_role,
+      'public.assert_internal_commercial_shadow_zero_billing(text)',
+      'EXECUTE'
+    ) OR has_table_privilege(
+      runtime_role, 'public.commercial_shadow_daily_runs',
+      'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER'
+    ) OR has_function_privilege(
+      runtime_role,
+      'public.write_commercial_shadow_scheduler_heartbeat(text,text,timestamptz,timestamptz,text)',
+      'EXECUTE'
+    ) OR has_function_privilege(
+      runtime_role,
+      'public.record_internal_commercial_shadow_daily_run(text,text,date,timestamptz,text,timestamptz,timestamptz,integer,integer,integer,integer,text,text,text,text,jsonb)',
+      'EXECUTE'
+    ) OR has_function_privilege(
+      runtime_role, 'public.report_internal_commercial_shadow_day(date)', 'EXECUTE'
+    ) OR has_function_privilege(
+      runtime_role,
+      'public.require_commercial_shadow_daily_runs_for_completion()',
+      'EXECUTE'
+    ) THEN
+      RAISE EXCEPTION 'runtime role % has commercial shadow operator privileges', runtime_role;
+    END IF;
+  END LOOP;
+END $$;
+REVOKE INSERT ON audit_events
+  FROM brain_privileged, brain_wiki_reader,
+       brain_mcp_reader,
+       brain_raw_worker, brain_canonical_projector, brain_ledger_projector,
+       brain_execution_worker, brain_audit_verifier, brain_audit_publisher,
+       brain_resolver, brain_tenant_deletion, brain_surface_gateway, brain_auth;
+
+-- Audit-verifier FORENSIC state (audit_verifier_checkpoint, audit_integrity_findings):
+-- global, RLS-exempt tables that PROVE tamper detection. Only the privileged verifier
+-- pool (brain_privileged) ever touches them. Under the blanket DML grant above the
+-- request role (brain_app) could otherwise read cross-tenant findings + hashes, forge
+-- findings, delete or resolve real ones, or reset the verification cursor; and the wiki
+-- reader could read them. Strip both non-verifier roles entirely, and make findings
+-- APPEND-ONLY for every runtime role (no role may erase a detected break — the same
+-- guarantee as audit_events). brain_privileged retains exactly the verifier's needs:
+-- checkpoint SELECT/INSERT/UPDATE (the cursor advances) and findings SELECT/INSERT.
+-- A controlled resolution path (a later change) will grant finding UPDATE to a
+-- dedicated recovery role, not to the broad runtime roles. (Codex 9389568 P1.)
+-- brain_audit_verifier is the only §4 role that touches the forensic tables; it
+-- gets the same confinement brain_privileged had (cursor S/I/U + findings S/I,
+-- but no erase). Every other §4 role is stripped entirely, except that tenant
+-- deletion gets SELECT on findings after this blanket revoke. That single read
+-- captures the preserved-evidence count inside the deletion transaction. It
+-- receives no checkpoint access and no finding mutation privilege.
+REVOKE ALL ON audit_verifier_checkpoint, audit_integrity_findings
+  FROM brain_app, brain_wiki_reader,
+       brain_mcp_reader,
+       brain_raw_worker, brain_canonical_projector, brain_ledger_projector,
+       brain_execution_worker, brain_audit_publisher, brain_resolver,
+       brain_tenant_deletion, brain_surface_gateway, brain_surface_audit_writer,
+       brain_auth, brain_auth_audit_writer;
+REVOKE DELETE, TRUNCATE ON audit_verifier_checkpoint
+  FROM brain_privileged, brain_audit_verifier;
+REVOKE UPDATE, DELETE, TRUNCATE ON audit_integrity_findings
+  FROM brain_privileged, brain_audit_verifier;
+GRANT SELECT ON audit_integrity_findings TO brain_tenant_deletion;
+
+-- Layer-truth append-only: raw_artifacts, canonical_journal_entry, and
+-- ledger_obligations are append-only to their projection workers. The prefix
+-- grant loops above hand SELECT, INSERT, UPDATE by table name. An earlier grant
+-- footprint (4883296) also granted DELETE, and tightening the loop (1f74d74)
+-- stopped granting DELETE but did not revoke the DELETE already applied to live
+-- databases, so it persisted across redeploys. Strip it here so a redeploy or a
+-- restore self-heals and matches the worker boot check assertDbRoles
+-- (Codex c96283d P2 / fca9ac8 P2 #4). UPDATE is retained: the projection workers
+-- upsert these rows.
+REVOKE DELETE, TRUNCATE ON raw_artifacts FROM brain_raw_worker;
+REVOKE DELETE, TRUNCATE ON canonical_journal_entry FROM brain_canonical_projector;
+REVOKE DELETE, TRUNCATE ON ledger_obligations FROM brain_ledger_projector;
+
+-- canonical_projection_log DELETE followed the same shape: it was granted to
+-- brain_raw_worker (#330-adjacent grant, above) so repairParsedOutput could
+-- force a stranded row to replay by hand-deleting its log entry. Migration
+-- 0005 (services/canonical) gives the projector's pending predicate its own
+-- source-version check, so a repair now only needs to bump
+-- raw_parsed.extracted_at (already does) and the DELETE grant is unused.
+-- Strip it so a redeploy or restore self-heals the same way the block above
+-- does, instead of leaving a live database holding a wider grant than the
+-- worker needs.
+REVOKE DELETE, TRUNCATE ON canonical_projection_log FROM brain_raw_worker;
+
+-- Policy proof-table immutability. audit_events gets an explicit
+-- REVOKE UPDATE, DELETE, TRUNCATE above because the blanket DML grant and the
+-- default privileges otherwise hand brain_app and brain_privileged full
+-- mutation rights on every table. The two POLICY proof tables were never given
+-- the same treatment, even though the section 6 gate treats both as evidence:
+--
+--   policies.content / policies.content_hash is the SIGNED document the gate
+--   enforces. Activation verifies EIP-712 signatures against the on-chain
+--   tenant-signer allowlist, but nothing re-signed a row that was UPDATEd after
+--   activation, so a direct content write handed the gate an unsigned policy.
+--   getActive (services/policy/src/repository.ts) is the application-side half
+--   of this pair: it recomputes contentHashHex(content) on every read and fails
+--   closed on drift. This grant is the storage-side half, so the drift cannot
+--   be introduced through a runtime connection in the first place.
+--
+--   policy_decisions is the proof artifact the gate requires before a
+--   PaymentIntent can reach executed, and the row the Proof API and the
+--   governance reports read back. A post-hoc UPDATE of `outcome` rewrites the
+--   recorded justification for money that already moved.
+--
+-- policies still needs a narrow UPDATE: setSigners writes `signers`, the
+-- section 8.3 state machine writes `state` / `activated_at` / `deactivated_at`,
+-- and the demo activate route writes `onchain_tx` / `onchain_version`. Those
+-- are the ONLY columns any runtime path updates (verified by grepping every
+-- `UPDATE policies` call site), so revoking the blanket privilege and
+-- re-granting exactly that column list leaves behaviour unchanged while making
+-- content and content_hash immutable after INSERT. A column-list UPDATE grant
+-- is the same containment shape already used for brain_auth on users.
+REVOKE UPDATE, DELETE, TRUNCATE ON policies
+  FROM brain_app, brain_privileged, brain_wiki_reader, brain_mcp_reader,
+       brain_raw_worker, brain_canonical_projector, brain_ledger_projector,
+       brain_execution_worker, brain_audit_verifier, brain_audit_publisher,
+       brain_resolver, brain_surface_gateway, brain_surface_audit_writer,
+       brain_auth, brain_auth_audit_writer;
+GRANT UPDATE (state, signers, activated_at, deactivated_at, onchain_tx, onchain_version)
+  ON policies TO brain_app;
+
+-- policy_decisions is INSERT-only to every runtime role. brain_app keeps
+-- SELECT + INSERT (evaluateLegacy / evaluateForGate write the proof row and the
+-- gate, Proof API and governance reports read it back); nothing legitimately
+-- updates or deletes a recorded decision.
+REVOKE UPDATE, DELETE, TRUNCATE ON policy_decisions
+  FROM brain_app, brain_privileged, brain_wiki_reader, brain_mcp_reader,
+       brain_raw_worker, brain_canonical_projector, brain_ledger_projector,
+       brain_execution_worker, brain_audit_verifier, brain_audit_publisher,
+       brain_resolver, brain_surface_gateway, brain_surface_audit_writer,
+       brain_auth, brain_auth_audit_writer;
+
+-- Defence in depth: FORCE RLS on every tenant-scoped table so even a connection
+-- that happens to be the table owner is still subject to the tenant_isolation
+-- policy. Applies to every table that has RLS enabled (set by the migrations).
+--
+-- Skip already-forced tables. ALTER TABLE takes an ACCESS EXCLUSIVE lock and
+-- this DO block is one transaction, so re-forcing all 93 already-forced tables
+-- against a live database deadlocked the staging deploy of #575 (db-roles held
+-- ledger_counterparties and wanted canonical_counterparty; a live projector
+-- held the reverse). check-rls-coverage already requires migrations to ENABLE
+-- and FORCE, so in steady state this loop matches nothing and takes no locks.
+DO $$
+DECLARE
+  t regclass;
+BEGIN
+  FOR t IN
+    SELECT c.oid::regclass
+    FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public' AND c.relkind = 'r' AND c.relrowsecurity
+      AND NOT c.relforcerowsecurity
+  LOOP
+    EXECUTE format('ALTER TABLE %s FORCE ROW LEVEL SECURITY', t);
+  END LOOP;
+END
+$$;
+
+-- Fail closed if the protected operator role ever regains mutation or other
+-- non-read privileges on commercial API keys. The long-running API does not
+-- load brain_privileged, so this final db-roles postcondition is its boot
+-- boundary.
+DO $$
+BEGIN
+  IF NOT has_table_privilege('brain_privileged', 'public.api_keys', 'SELECT')
+     OR has_table_privilege('brain_privileged', 'public.api_keys', 'INSERT')
+     OR has_table_privilege('brain_privileged', 'public.api_keys', 'UPDATE')
+     OR has_table_privilege('brain_privileged', 'public.api_keys', 'DELETE')
+     OR has_table_privilege('brain_privileged', 'public.api_keys', 'TRUNCATE')
+     OR has_table_privilege('brain_privileged', 'public.api_keys', 'REFERENCES')
+     OR has_table_privilege('brain_privileged', 'public.api_keys', 'TRIGGER') THEN
+    RAISE EXCEPTION
+      'brain_privileged must have SELECT only on public.api_keys';
+  END IF;
+END $$;
+
+-- The exclusion marker itself is SELECT-only for the protected operator and
+-- completely invisible to every other runtime role. Fail the role application
+-- if a historical grant or future blanket grant widens either boundary.
+DO $$
+DECLARE
+  rolename TEXT;
+  privilege_name TEXT;
+BEGIN
+  IF NOT has_table_privilege(
+    'brain_privileged', 'public.commercial_billing_exclusions', 'SELECT'
+  )
+     OR has_table_privilege(
+       'brain_privileged', 'public.commercial_billing_exclusions', 'INSERT'
+     )
+     OR has_table_privilege(
+       'brain_privileged', 'public.commercial_billing_exclusions', 'UPDATE'
+     )
+     OR has_table_privilege(
+       'brain_privileged', 'public.commercial_billing_exclusions', 'DELETE'
+     )
+     OR has_table_privilege(
+       'brain_privileged', 'public.commercial_billing_exclusions', 'TRUNCATE'
+     )
+     OR has_table_privilege(
+       'brain_privileged', 'public.commercial_billing_exclusions', 'REFERENCES'
+     )
+     OR has_table_privilege(
+       'brain_privileged', 'public.commercial_billing_exclusions', 'TRIGGER'
+     )
+     OR NOT has_function_privilege(
+       'brain_privileged',
+       'public.create_internal_commercial_shadow_billing_exclusion(text,text,text)',
+       'EXECUTE'
+     ) THEN
+    RAISE EXCEPTION
+      'brain_privileged commercial billing exclusion privileges are invalid';
+  END IF;
+
+  FOREACH rolename IN ARRAY ARRAY[
+    'brain_app', 'brain_wiki_reader', 'brain_mcp_reader', 'brain_raw_worker',
+    'brain_canonical_projector', 'brain_ledger_projector',
+    'brain_execution_worker', 'brain_audit_verifier', 'brain_audit_publisher',
+    'brain_resolver', 'brain_tenant_deletion', 'brain_surface_gateway',
+    'brain_surface_audit_writer', 'brain_auth', 'brain_auth_audit_writer'
+  ] LOOP
+    FOREACH privilege_name IN ARRAY ARRAY[
+      'SELECT', 'INSERT', 'UPDATE', 'DELETE', 'TRUNCATE', 'REFERENCES', 'TRIGGER'
+    ] LOOP
+      IF has_table_privilege(
+        rolename, 'public.commercial_billing_exclusions', privilege_name
+      ) THEN
+        RAISE EXCEPTION
+          '% must have no % privilege on commercial billing exclusions',
+          rolename,
+          privilege_name;
+      END IF;
+    END LOOP;
+
+    IF has_function_privilege(
+      rolename,
+      'public.create_internal_commercial_shadow_billing_exclusion(text,text,text)',
+      'EXECUTE'
+    ) THEN
+      RAISE EXCEPTION
+        '% must have no commercial billing exclusion function privilege',
+        rolename;
+    END IF;
+  END LOOP;
+END $$;
+
+-- Deploy wiring (env): request-path services connect with brain_app via
+-- DATABASE_URL; the Wiki projection connects with brain_wiki_reader via
+-- BRAIN_WIKI_DB_URL; each §4 cross-tenant role connects via its own URL:
+--   brain_raw_worker          BRAIN_RAW_WORKER_DB_URL
+--   brain_canonical_projector BRAIN_CANONICAL_PROJECTOR_DB_URL
+--   brain_ledger_projector    BRAIN_LEDGER_PROJECTOR_DB_URL
+--   brain_execution_worker    BRAIN_EXECUTION_WORKER_DB_URL
+--   brain_audit_verifier      BRAIN_AUDIT_VERIFIER_DB_URL
+--   brain_audit_publisher     BRAIN_AUDIT_PUBLISHER_DB_URL
+--   brain_resolver            BRAIN_RESOLVER_DB_URL
+--   brain_tenant_deletion     BRAIN_TENANT_DELETION_DB_URL
+--   brain_mcp_reader          BRAIN_MCP_READER_DB_URL
+--   brain_surface_gateway     BRAIN_SURFACE_GATEWAY_DB_URL
+--   brain_surface_audit_writer BRAIN_SURFACE_GATEWAY_AUDIT_DB_URL
+--   brain_auth                BRAIN_AUTH_DB_URL
+--   brain_auth_audit_writer   BRAIN_AUTH_AUDIT_DB_URL
+-- In NODE_ENV=production the api fails to boot if BRAIN_WIKI_DB_URL or any of
+-- the eight §4 URLs is unset (services/api/src/composition/db-isolation.ts);
+-- in dev/test each falls back to DATABASE_URL with a warning. The API runtime
+-- no longer uses brain_privileged; it survives ONLY for the deploy-time seed
+-- one-shot (docker-compose `seed`). Migrations run as the owner/superuser role.

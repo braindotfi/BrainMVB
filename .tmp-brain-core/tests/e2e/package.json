@@ -1,0 +1,21 @@
+{
+  "name": "@brain/e2e",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Brain end-to-end proof tests. The three Series A claims from MVP §6, run against staging.",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@brain/execution": "workspace:*",
+    "@brain/shared": "workspace:*",
+    "viem": "^2.55.11"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.8"
+  }
+}

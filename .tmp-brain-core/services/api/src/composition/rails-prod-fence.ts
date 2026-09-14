@@ -1,0 +1,73 @@
+/**
+ * Production fence for the rail-registry fallback path.
+ *
+ * When no live rail (`bank_ach` / `onchain_base` / `x402_base` / `escrow_base`)
+ * is configured, the boot path historically fell through to `defaultRails()`
+ * (dev stubs) with only a `log.warn`. The stubs themselves fail closed at
+ * dispatch in production (post-review item 20), but that is a runtime catch on
+ * the first payment attempt, not a boot fence — orchestrators don't surface
+ * "100% of payments are 500-ing" as quickly as they surface CrashLoopBackoff.
+ *
+ * Same posture as the other fail-closed fences (assertDbIsolationFences,
+ * assertEscrowAuditApproved, BRAIN_AGENTS_INBOUND_SECRET, AES-GCM key):
+ *   NODE_ENV=production + no live rail → throw at boot
+ *   dev/test                            → warn and continue (stubs are fine)
+ *
+ * Factored out of main.ts so the behavior is unit-testable without booting
+ * the full server.
+ */
+
+export interface RailsProdFenceInput {
+  nodeEnv: string | undefined;
+  /** Count of live rails the boot path was able to register. */
+  liveRailCount: number;
+}
+
+export interface EscrowRailLoaderFenceInput {
+  escrowRailLive: boolean;
+  hasResolveEscrowState: boolean;
+  /**
+   * Which of resolveEscrowState's OWN required env vars are actually unset,
+   * from the caller that has `cfg` in scope. Without this the thrown message
+   * could only say "resolveEscrowState is not wired," never which variable an
+   * operator following the rails matrix needs to add.
+   */
+  missingEnv: readonly string[];
+}
+
+/**
+ * Throws when production booted with zero live rails. No-op otherwise — the
+ * caller still emits its own info/warn log.
+ */
+export function assertAtLeastOneLiveRailInProduction(input: RailsProdFenceInput): void {
+  if (input.nodeEnv !== "production") return;
+  if (input.liveRailCount > 0) return;
+  throw new Error(
+    "No live payment rails configured in NODE_ENV=production. At least one of " +
+      "PLAID_CLIENT_ID+PLAID_SECRET (bank_ach), BRAIN_SESSION_KEY+BASE_RPC_URL " +
+      "(onchain_base), BRAIN_X402_FACILITATOR_URL+BRAIN_X402_USDC_ADDRESS " +
+      "(x402_base), or BRAIN_ESCROW_ADDRESS+BRAIN_ONCHAIN_SMART_ACCOUNT " +
+      "(escrow_base) must be set. The dev-stub fallback fails closed at " +
+      "dispatch but lets the api boot; refusing to start so the orchestrator " +
+      "surfaces the misconfiguration as CrashLoopBackoff.",
+  );
+}
+
+/**
+ * Throws when the escrow rail can dispatch but the gate cannot bind releases
+ * to on-chain escrow state. This is an always-on invariant, not production-only:
+ * an escrow-capable boot without the state loader is miswired in every profile.
+ */
+export function assertEscrowRailHasStateLoader(input: EscrowRailLoaderFenceInput): void {
+  if (!input.escrowRailLive) return;
+  if (input.hasResolveEscrowState) return;
+  const missing =
+    input.missingEnv.length > 0
+      ? ` Missing: ${input.missingEnv.join(", ")}.`
+      : " (all of resolveEscrowState's required env appears set -- check for a construction-time error, not a missing var.)";
+  throw new Error(
+    "escrow_base rail is registered but resolveEscrowState is not wired. " +
+      "The §6 gate must bind escrow_release intents to on-chain escrow state " +
+      `before any escrow rail can dispatch.${missing}`,
+  );
+}

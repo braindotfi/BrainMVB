@@ -1,0 +1,310 @@
+# Brain full-docker local development overlay.
+#
+# Layer this ON TOP of docker-compose.yml (the infra-only base). It adds the
+# application tier — DB migrations + the API in tsx watch mode — so the entire
+# dev loop runs in containers with hot reload. The base infra services
+# (postgres, redis, localstack) are reused unchanged.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+#   (or just: pnpm run dev)
+#
+# Optional tiers behind compose profiles (off by default):
+#   --profile agents   run the Python agents against the in-network API
+#   --profile libs     run tsc -b --watch so edits to @brain/shared & sibling
+#                      services hot-reload the API (workspace deps resolve to dist/)
+#
+# Hot reload relies on native inotify — keep the repo on the WSL2 native
+# filesystem (~/work/...), NOT /mnt/c, or file-change events won't fire.
+
+name: brain
+
+services:
+  # One-shot init (gates the API): install deps, build the workspace, apply every
+  # services/*/migrations/*.sql, then exit. The workspace build is required because
+  # @brain/* deps resolve to their dist/ (package "exports" point at dist/index.js),
+  # so the API's `tsx watch` can't import them until they're compiled. dist/ lands on
+  # the shared bind mount, so the api container sees it. (Edits to @brain/shared/src
+  # after boot need the optional `libs` profile to rebuild dist live.)
+  migrate:
+    build:
+      context: .
+      target: dev
+    container_name: brain-migrate
+    working_dir: /app
+    command: >-
+      sh -c "pnpm install --frozen-lockfile
+      && pnpm run build
+      && pnpm -C tools/migrate run build
+      && node tools/migrate/dist/cli.js up"
+    environment:
+      DATABASE_URL: postgres://brain:brain@postgres:5432/brain
+    volumes:
+      - .:/app
+      - bc_node_modules:/app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  # One-shot: wait for LocalStack, then create the artifacts bucket. Mirrors
+  # docker-compose.prod.yml's minio-setup; LocalStack's S3 emulation has no
+  # bucket-creation step of its own.
+  localstack-setup:
+    image: localstack/localstack:3
+    container_name: brain-localstack-setup
+    depends_on:
+      localstack:
+        condition: service_healthy
+    environment:
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_DEFAULT_REGION: us-east-1
+      LOCALSTACK_HOST: localstack
+    entrypoint:
+      - /bin/sh
+      - -c
+      - "awslocal s3 mb s3://brain-artifacts || true"
+    restart: "no"
+
+  # The API gateway in watch mode (tsx watch src/main.ts). Demo mode keeps auth
+  # self-contained (static HS256 secret, no JWKS fetch) and relaxes the boot
+  # fences, which only fail-closed in NODE_ENV=production.
+  api:
+    build:
+      context: .
+      target: dev
+    container_name: brain-api
+    working_dir: /app
+    command: >-
+      sh -c "pnpm install --frozen-lockfile
+      && pnpm -C services/api run dev"
+    # host 3001 -> container 3000: avoids colliding with a host-run API on 3000
+    # and matches the agents service's default BRAIN_API_BASE_URL expectation.
+    ports:
+      - "3001:3000"
+    environment:
+      NODE_ENV: development
+      PORT: "3000"
+      DATABASE_URL: postgres://brain:brain@postgres:5432/brain
+      # The app reaches Postgres by service name (not localhost), so the pool's
+      # "auto" TLS heuristic would try SSL against the no-TLS dev DB. Opt out.
+      DATABASE_SSL: disable
+      REDIS_URL: redis://redis:6379
+      # Placeholder URL — must parse as a URL but is never dereferenced in demo mode.
+      AUTH_JWKS_URL: https://auth.brain.fi/.well-known/jwks.json
+      BRAIN_DEMO_MODE: "true"
+      BRAIN_MCP_DEV_AUTH_BYPASS: "true"
+      BRAIN_MCP_READER_DB_URL: ${BRAIN_MCP_READER_DB_URL:-}
+      # BLOB_BACKEND: s3-via-localstack, so blob-backed flows (tenant export/
+      # download) exercise the real S3 adapter code path instead of the
+      # in-memory stub. LocalStack's S3 emulation accepts any credentials.
+      BLOB_BACKEND: s3
+      BLOB_CONTAINER: brain-artifacts
+      S3_ENDPOINT: http://localstack:4566
+      S3_REGION: us-east-1
+      S3_ACCESS_KEY_ID: test
+      S3_SECRET_ACCESS_KEY: test
+      S3_FORCE_PATH_STYLE: "true"
+      # Optional real integrations — passed through from host env if present.
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      # For local testing of POST /v1/tenants (production tenancy). See .env.
+      BRAIN_PLATFORM_SERVICE_SECRET: ${BRAIN_PLATFORM_SERVICE_SECRET:-}
+      BRAIN_SURFACE_ACTION_SECRET: ${BRAIN_SURFACE_ACTION_SECRET:-}
+    volumes:
+      - .:/app
+      - bc_node_modules:/app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+      localstack-setup:
+        condition: service_completed_successfully
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://localhost:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      start_period: 40s
+      retries: 10
+
+  surface-gateway:
+    build:
+      context: .
+      target: dev
+    container_name: brain-surface-gateway
+    working_dir: /app
+    command: >-
+      sh -c "pnpm install --frozen-lockfile
+      && pnpm -C services/surface-gateway run dev"
+    ports:
+      - "3002:3000"
+    environment:
+      NODE_ENV: development
+      SERVICE_NAME: brain-surface-gateway
+      PORT: "3000"
+      DATABASE_URL: postgres://brain:brain@postgres:5432/brain
+      BRAIN_SURFACE_GATEWAY_DB_URL: postgres://brain:brain@postgres:5432/brain
+      DATABASE_SSL: disable
+      REDIS_URL: redis://redis:6379
+      AUTH_JWKS_URL: https://auth.brain.fi/.well-known/jwks.json
+      SLACK_ENABLED: ${SLACK_ENABLED:-false}
+      SLACK_SIGNING_SECRET: ${SLACK_SIGNING_SECRET:-}
+      SLACK_BOT_TOKEN: ${SLACK_BOT_TOKEN:-}
+      SLACK_CLIENT_ID: ${SLACK_CLIENT_ID:-}
+      SLACK_CLIENT_SECRET: ${SLACK_CLIENT_SECRET:-}
+      SLACK_INSTALL_STATE_SECRET: ${SLACK_INSTALL_STATE_SECRET:-}
+      TEAMS_ENABLED: ${TEAMS_ENABLED:-false}
+      TEAMS_APP_ID: ${TEAMS_APP_ID:-}
+      TEAMS_APP_PASSWORD: ${TEAMS_APP_PASSWORD:-}
+      EMAIL_ENABLED: ${EMAIL_ENABLED:-false}
+      EMAIL_APPROVAL_BASE_URL: ${EMAIL_APPROVAL_BASE_URL:-http://localhost:3002/surfaces/email/approve}
+      EMAIL_TOKEN_SECRET: ${EMAIL_TOKEN_SECRET:-}
+      EMAIL_ENDPOINT: ${EMAIL_ENDPOINT:-}
+      EMAIL_API_KEY: ${EMAIL_API_KEY:-}
+      EMAIL_FROM: ${EMAIL_FROM:-}
+      EMAIL_ESP_WEBHOOK_SECRET: ${EMAIL_ESP_WEBHOOK_SECRET:-}
+      EMAIL_DOMAIN_SPF_EXPECTED: ${EMAIL_DOMAIN_SPF_EXPECTED:-}
+      EMAIL_DOMAIN_DKIM_SELECTOR: ${EMAIL_DOMAIN_DKIM_SELECTOR:-}
+      EMAIL_DOMAIN_DKIM_PUBLIC_KEY: ${EMAIL_DOMAIN_DKIM_PUBLIC_KEY:-}
+      BRAIN_SURFACE_SMOKE_ENABLED: ${BRAIN_SURFACE_SMOKE_ENABLED:-false}
+      BRAIN_SURFACE_SMOKE_SECRET: ${BRAIN_SURFACE_SMOKE_SECRET:-}
+      BRAIN_SURFACE_ACTION_API_URL: http://api:3000
+      BRAIN_SURFACE_ACTION_SECRET: ${BRAIN_SURFACE_ACTION_SECRET:-}
+    volumes:
+      - .:/app
+      - bc_node_modules:/app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://localhost:3000/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      start_period: 40s
+      retries: 10
+
+  # The OAuth 2.0 authorization server (Phase 1: RFC 8414 metadata + JWKS
+  # discovery only, see OAUTH-AS-PLAN.md §8). Off by default: needs
+  # AUTH_SIGN_KEY on the host to publish JWKS, and without it the container
+  # exits at boot, same fail-closed behavior `auth` has in prod (which dev
+  # does not run at all, since BRAIN_DEMO_MODE uses a static HS256 secret) --
+  # matching the `agents`/`libs-watch` profile-gated precedent
+  # below rather than leaving every developer with a permanently-exited
+  # container on a plain `up`. Enable with: --profile auth
+  # Generate a key with: pnpm --filter @brain/static-jwks run generate
+  auth:
+    profiles: ["auth"]
+    build:
+      context: .
+      target: dev
+    container_name: brain-auth
+    working_dir: /app
+    command: >-
+      sh -c "pnpm install --frozen-lockfile
+      && pnpm -C services/auth run dev"
+    ports:
+      - "3003:3000"
+    environment:
+      NODE_ENV: development
+      SERVICE_NAME: brain-auth
+      PORT: "3000"
+      DATABASE_URL: postgres://brain:brain@postgres:5432/brain
+      # Same reason as the api and worker blocks above: createPool defaults ssl
+      # to "auto" (shared/src/db/pool.ts), which enables TLS for any host that
+      # is not localhost. This container reaches Postgres by compose service
+      # name, so without this every DB-backed route fails with "The server does
+      # not support SSL connections" while /healthz and JWKS stay green.
+      DATABASE_SSL: disable
+      REDIS_URL: redis://redis:6379
+      AUTH_JWKS_URL: https://auth.brain.fi/.well-known/jwks.json
+      AUTH_SIGN_KEY: ${AUTH_SIGN_KEY:-}
+      # Phase 2a increment 2 (/login, /set-password, /forgot-password). No
+      # BRAIN_AUTH_DB_URL / BRAIN_RESOLVER_DB_URL here -- dev has no db-roles
+      # step, so both fall back to DATABASE_URL (the superuser role) with a
+      # boot warning, same posture as every other role URL in this file.
+      # AUTH_COOKIE_SECRET and the EMAIL_* pair are hard boot requirements
+      # (services/auth/src/email.ts fails loudly rather than silently no-op'ing
+      # a misconfigured /forgot-password) -- set them to use --profile auth.
+      AUTH_COOKIE_SECRET: ${AUTH_COOKIE_SECRET:-}
+      EMAIL_ENDPOINT: ${EMAIL_ENDPOINT:-}
+      EMAIL_API_KEY: ${EMAIL_API_KEY:-}
+      EMAIL_FROM: ${EMAIL_FROM:-}
+      # BRAIN-99: explicit here (not inherited from a shared anchor, this
+      # service has none) so the consent-time on-chain scope checker
+      # (services/auth/src/onchain-scope-checker.ts) reads the same registry
+      # and RPC api's dev block resolves to. The api dev block does not set
+      # either var either, so both fall back to shared/src/config.ts's
+      # DEFAULTS unless a developer exports one on the host first -- the
+      # fallbacks below are copied from those same DEFAULTS so an unset
+      # override still boots (dev has no fail-closed requirement, unlike
+      # prod's ${VAR:?...} for the same two below).
+      MCP_AGENT_REGISTRY_ADDRESS: ${MCP_AGENT_REGISTRY_ADDRESS:-0xcE7Ce9dd95c17E1F4E27D49249b6fdb015f3A7e0}
+      BASE_RPC_URL: ${BASE_RPC_URL:-https://sepolia.base.org}
+    volumes:
+      - .:/app
+      - bc_node_modules:/app/node_modules
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://localhost:3000/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      start_period: 40s
+      retries: 10
+
+  # Python agents pointed at the in-network API. Off by default; needs an
+  # OpenAI key and one outbound Brain credential. Enable with: --profile agents
+  agents:
+    profiles: ["agents"]
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      BRAIN_API_BASE_URL: http://api:3000
+      BRAIN_API_TOKEN: ${BRAIN_API_TOKEN:-}
+      BRAIN_AGENT_API_KEY: ${BRAIN_AGENT_API_KEY:-}
+      BRAIN_AUTH_TOKEN_URL: ${BRAIN_AUTH_TOKEN_URL:-http://auth:3000/token}
+      BRAIN_API_RESOURCE_URL: ${BRAIN_API_RESOURCE_URL:-https://api.brain.fi/}
+      BRAIN_AGENTS_INBOUND_SECRET: ${BRAIN_AGENTS_INBOUND_SECRET:-dev-inbound-secret}
+    depends_on:
+      api:
+        condition: service_healthy
+
+  # Optional cross-package hot reload: rebuild workspace dist on change so the
+  # API's tsx watch picks up edits to @brain/shared and sibling services.
+  # Off by default; enable with: --profile libs
+  libs-watch:
+    profiles: ["libs"]
+    build:
+      context: .
+      target: dev
+    container_name: brain-libs-watch
+    working_dir: /app
+    # No install here — `migrate` populates the shared bc_node_modules volume
+    # first (gated by depends_on), so running pnpm install again would race it.
+    command: ["pnpm", "exec", "tsc", "-b", "--watch", "--preserveWatchOutput"]
+    volumes:
+      - .:/app
+      - bc_node_modules:/app/node_modules
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+volumes:
+  bc_node_modules:

@@ -1,0 +1,285 @@
+import type { Pool } from "pg";
+import type {
+  ActorId,
+  Decision,
+  Payee,
+  Proposal,
+  ResolvedActor,
+  SurfaceName,
+} from "@brain/surfaces";
+import type { AuditLog, CoreServices, ExecutionQueue, PolicyEngine } from "@brain/core";
+import { evaluate, getActive } from "@brain/policy";
+import type { Decision as PolicyDecision, PolicyDocument } from "@brain/policy";
+import type { AuditEmitter } from "@brain/shared";
+import { withTenantScope } from "@brain/shared";
+import {
+  PostgresSurfaceDecisionStore,
+  PostgresSurfaceIdentityStore,
+  PostgresSurfaceProposalStore,
+} from "./storage.js";
+import type { SurfaceActionClient } from "./action-client.js";
+
+type TerminalDecision = Exclude<Decision, "pending" | "expired">;
+
+export interface SurfaceGatewayServiceOptions {
+  pool: Pool;
+  auditPool: Pool;
+  resolverPool?: Pool | undefined;
+  audit: AuditEmitter;
+  actions?: SurfaceActionClient | undefined;
+}
+
+export function buildSurfaceGatewayServices(options: SurfaceGatewayServiceOptions): {
+  services: CoreServices;
+  proposals: PostgresSurfaceProposalStore;
+} {
+  const proposalStore = new PostgresSurfaceProposalStore(options.pool);
+  const actions = options.actions ?? new UnconfiguredSurfaceActionClient();
+  const services: CoreServices = {
+    identity: new PostgresSurfaceIdentityStore(options.pool, options.resolverPool ?? options.pool),
+    policy: new SurfacePolicyEngine(options.pool),
+    audit: new SurfaceAuditLog(options.audit),
+    approvals: new SurfaceApprovalRecorder(actions),
+    execution: new SurfaceExecutionQueue(actions),
+    decisions: new PostgresSurfaceDecisionStore(options.pool),
+    proposals: proposalStore,
+  };
+  return { services, proposals: proposalStore };
+}
+
+class UnconfiguredSurfaceActionClient implements SurfaceActionClient {
+  public approve(): Promise<never> {
+    return Promise.reject(new Error("surface_action_client_unconfigured"));
+  }
+
+  public execute(): Promise<never> {
+    return Promise.reject(new Error("surface_action_client_unconfigured"));
+  }
+}
+
+export class SurfacePolicyEngine implements PolicyEngine {
+  public constructor(private readonly pool: Pool) {}
+
+  public async evaluateDecision(input: {
+    proposal: Proposal;
+    actor: ResolvedActor;
+    decision: TerminalDecision;
+  }): Promise<{
+    allowed: boolean;
+    reason?: string;
+    approverRole?: string;
+  }> {
+    const activeDecision = await withTenantScope(this.pool, input.proposal.tenantId, async (c) => {
+      const active = await getActive(c);
+      if (active === null) return null;
+      return evaluateForActorRoles(active.content, input.proposal, input.actor.roles);
+    });
+
+    if (activeDecision === null) {
+      return { allowed: false, reason: "No active tenant policy" };
+    }
+    if (activeDecision.outcome === "reject") {
+      return { allowed: false, reason: "Current tenant policy rejects this action" };
+    }
+
+    const requiredRoles =
+      activeDecision.required_approvers.length > 0
+        ? activeDecision.required_approvers
+        : input.proposal.policy.approverRoles;
+    const actorRole = firstMatchingRole(input.actor.roles, requiredRoles);
+    if (actorRole === null) {
+      return { allowed: false, reason: "Actor lacks an approver role for this proposal" };
+    }
+
+    if (input.decision === "approved") {
+      const selfApproval = evaluateSelfApproval(input.proposal.payee, input.actor);
+      if (!selfApproval.allowed) {
+        return { allowed: false, reason: "self_approval_blocked" };
+      }
+    }
+
+    if (input.decision === "rejected") {
+      return { allowed: true, approverRole: actorRole };
+    }
+
+    return { allowed: true, approverRole: actorRole };
+  }
+}
+
+function evaluateSelfApproval(
+  payee: Payee | undefined,
+  actor: ResolvedActor,
+): { allowed: true } | { allowed: false } {
+  if (payee === undefined) return { allowed: true };
+
+  const normalizedPayeeEmail = normalizeApprovalEmail(payee.email ?? null);
+  const normalizedActorEmail = normalizeApprovalEmail(actor.email ?? null);
+  const mustResolve =
+    payee.kind === "employee" || payee.kind === "payroll" || payee.kind === "other";
+
+  // Vendor payees without canonical identity links remain an accepted v1
+  // residual, matching the core money path. Employee, payroll, and other payee
+  // kinds fail closed when either side of the email comparison is unresolved.
+  if (normalizedPayeeEmail === null || normalizedActorEmail === null) {
+    return mustResolve ? { allowed: false } : { allowed: true };
+  }
+
+  return normalizedPayeeEmail === normalizedActorEmail ? { allowed: false } : { allowed: true };
+}
+
+function normalizeApprovalEmail(email: string | null): string | null {
+  if (email === null) return null;
+  const trimmed = email.trim().toLowerCase();
+  const at = trimmed.indexOf("@");
+  if (at <= 0 || at === trimmed.length - 1) return null;
+  const local = trimmed.slice(0, at);
+  const domain = trimmed.slice(at + 1);
+  const plus = local.indexOf("+");
+  return `${plus >= 0 ? local.slice(0, plus) : local}@${domain}`;
+}
+
+export class SurfaceAuditLog implements AuditLog {
+  public constructor(private readonly audit: AuditEmitter) {}
+
+  public async append(event: {
+    proposalId: string;
+    tenantId: string;
+    contentHash: string;
+    surface: SurfaceName;
+    actorId: ActorId;
+    decision: Decision;
+    decidedAt: string;
+    context?: Record<string, string> | undefined;
+  }): Promise<void> {
+    await this.audit.emit({
+      tenantId: event.tenantId,
+      layer: "agent",
+      actor: event.actorId,
+      action: "surface.approval.decided",
+      inputs: {
+        proposal_id: event.proposalId,
+        surface: event.surface,
+        content_hash: event.contentHash,
+        context: event.context ?? {},
+      },
+      outputs: {
+        decision: event.decision,
+        decided_at: event.decidedAt,
+      },
+      idempotencyKey: surfaceDecisionAuditKey(event),
+    });
+  }
+}
+
+export class SurfaceApprovalRecorder {
+  public constructor(private readonly actions: SurfaceActionClient) {}
+
+  public async recordApproval(input: {
+    proposal: Proposal;
+    actorId: ActorId;
+    externalActorId: string;
+    surface: SurfaceName;
+    approverRole?: string | undefined;
+  }): Promise<{ quorumMet: boolean }> {
+    const target = requireExecutionTarget(input.proposal);
+    const result = await this.actions.approve({
+      tenantId: input.proposal.tenantId,
+      proposalId: input.proposal.id,
+      paymentIntentId: target.id,
+      surface: input.surface,
+      externalActorId: input.externalActorId,
+    });
+    return { quorumMet: result.quorumMet };
+  }
+}
+
+export class SurfaceExecutionQueue implements ExecutionQueue {
+  public constructor(private readonly actions: SurfaceActionClient) {}
+
+  public async enqueueIdempotent(input: {
+    proposalId: string;
+    proposal: Proposal;
+    actorId: ActorId;
+    externalActorId: string;
+    surface: SurfaceName;
+  }): Promise<void> {
+    const target = requireExecutionTarget(input.proposal);
+    await this.actions.execute({
+      tenantId: input.proposal.tenantId,
+      proposalId: input.proposalId,
+      paymentIntentId: target.id,
+      surface: input.surface,
+      externalActorId: input.externalActorId,
+    });
+  }
+}
+
+function requireExecutionTarget(proposal: Proposal): NonNullable<Proposal["executionTarget"]> {
+  if (proposal.executionTarget === undefined) {
+    throw new Error("surface_proposal_execution_target_missing");
+  }
+  return proposal.executionTarget;
+}
+
+function firstMatchingRole(
+  actorRoles: readonly string[],
+  requiredRoles: readonly string[],
+): string | null {
+  // In the policy DSL, signer is a sentinel for any eligible held approver role.
+  // A roleless actor is never eligible.
+  if (requiredRoles.includes("signer")) return actorRoles[0] ?? null;
+  const required = new Set(requiredRoles);
+  return actorRoles.find((role) => required.has(role)) ?? null;
+}
+
+function surfaceAmount(proposal: Proposal): { currency: string; value: string } | null {
+  const amount = proposal.action.amount;
+  if (amount === undefined) return null;
+  return { currency: amount.currency, value: String(amount.minorUnits) };
+}
+
+function surfaceRiskLevel(proposal: Proposal): "low" | "medium" | "high" | "critical" {
+  if (proposal.severity === "critical") return "critical";
+  if (proposal.severity === "warning") return "medium";
+  return "low";
+}
+
+function evaluateForActorRoles(
+  policy: PolicyDocument,
+  proposal: Proposal,
+  roles: readonly string[],
+): PolicyDecision {
+  const candidates = roles.length > 0 ? roles : [null];
+  let first: PolicyDecision | null = null;
+  for (const role of candidates) {
+    const decision = evaluate(policy, {
+      kind: "agent_action",
+      counterparty_id: null,
+      amount: surfaceAmount(proposal),
+      agent_role: role,
+      action_id: proposal.action.handoff,
+      risk_level: surfaceRiskLevel(proposal),
+      timestamp: new Date(),
+    });
+    first ??= decision;
+    if (decision.outcome !== "reject") return decision;
+  }
+  return first!;
+}
+
+function surfaceDecisionAuditKey(event: {
+  tenantId: string;
+  proposalId: string;
+  decision: Decision;
+  actorId: ActorId;
+  contentHash: string;
+}): string {
+  return [
+    "surface-decision",
+    event.tenantId,
+    event.proposalId,
+    event.decision,
+    event.actorId,
+    event.contentHash,
+  ].join(":");
+}

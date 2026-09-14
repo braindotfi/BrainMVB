@@ -1,0 +1,489 @@
+# Brain CI — PR pipeline.
+# §10.2: on PR, run lint, unit tests, and contract compile.
+# This workflow gates every PR to main.
+
+name: pr
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # --------- Supply-chain scanning ---------
+  dependency_audit:
+    name: dependency audit (high + critical)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    # pnpm audit can spend up to four minutes on its built-in registry retries.
+    # Leave enough headroom when hosted-runner setup is slow so the fail-closed
+    # audit receives a definitive result instead of being cancelled mid-retry.
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v4.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: ".nvmrc"
+          cache: "pnpm"
+      - name: Install lockfile dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Fail on high or critical dependency advisories
+        run: pnpm audit --audit-level=high
+
+  iac:
+    name: IaC scan (tfsec high + critical)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Scan Terraform
+        uses: aquasecurity/tfsec-action@b466648d6e39e7c75324f25d83891162a721f2d6 # v1.0.3
+        with:
+          working_directory: infra
+          version: v1.28.11
+          additional_args: --minimum-severity HIGH
+
+  container_scan:
+    name: container scan (high + critical)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Build production images once for scanning
+        run: |
+          docker build --build-arg GIT_SHA=${{ github.sha }} --build-arg SERVICE_VERSION=${{ github.sha }} -t brain-core:ci -f Dockerfile .
+          docker build --build-arg GIT_SHA=${{ github.sha }} -t brain-agents:ci -f services/agents/Dockerfile services/agents
+      - name: Scan core image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: brain-core:ci
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          ignore-unfixed: "false"
+          trivyignores: .trivyignore
+      - name: Scan agents image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: brain-agents:ci
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          ignore-unfixed: "false"
+          trivyignores: .trivyignore
+
+  # --------- TypeScript services ---------
+  typescript:
+    name: typescript (lint + unit)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: brain
+          POSTGRES_PASSWORD: brain
+          POSTGRES_DB: brain
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 3s
+          --health-timeout 5s
+          --health-retries 20
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 3s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgres://brain:brain@localhost:5432/brain
+      REDIS_URL: redis://localhost:6379
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          # check-migrations-append-only (run via `pnpm run lint` below) needs
+          # origin/main reachable for `git merge-base`, same reason the
+          # secrets job below fetches full history.
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v6.0.10
+
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version-file: ".nvmrc"
+          cache: "pnpm"
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint (ESLint + Prettier)
+        env:
+          NODE_OPTIONS: --max-old-space-size=8192
+        run: pnpm run lint
+
+      - name: Build workspace packages
+        run: pnpm run build
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+      - name: Migrate
+        run: |
+          pnpm -C tools/migrate run build
+          node tools/migrate/dist/cli.js up
+
+      - name: Unit tests + coverage
+        run: pnpm run test:coverage
+
+      # ----- Production-readiness snapshot (peer-review batch 7) -----
+      # Capture the readiness JSON as a per-commit build artifact so
+      # diligence reviewers, release managers, and future trend tracking
+      # all have a durable record. Run with `|| true` because an open P0
+      # risk in docs/risk-register.json puts the aggregator in red (exit 1)
+      # by design; we want the artifact, not the failure. The dedicated
+      # gate step below decides whether to block the PR.
+      - name: Production readiness snapshot
+        run: pnpm run production-readiness -- --json > production-readiness.json || true
+
+      - name: Upload readiness snapshot
+        uses: actions/upload-artifact@v7
+        with:
+          name: production-readiness-${{ github.sha }}
+          path: production-readiness.json
+          retention-days: 90
+
+  # --------- Integration suites (DB-backed) ---------
+  # Mirrors the post-merge main.yml integration steps so a green PR cannot
+  # break main: #144 merged green while its vocabulary change broke the raw
+  # integration suite, which only ran post-merge (red main, June 10-12).
+  # Schema-per-run harnesses keep suites isolated; the migrate step runs the
+  # full chain against the public schema exactly as main.yml does.
+  integration:
+    name: typescript (integration)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: brain
+          POSTGRES_PASSWORD: brain
+          POSTGRES_DB: brain
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 3s
+          --health-timeout 5s
+          --health-retries 20
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 3s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgres://brain:brain@localhost:5432/brain
+      DATABASE_URL_TENANT_DELETION: postgres://brain_tenant_deletion:brain_tenant_deletion@localhost:5432/brain
+      DATABASE_URL_SHADOW_OPERATOR: postgres://brain_privileged:brain_privileged@localhost:5432/brain
+      # Least-privilege request-path role (infra/db-roles.sql, applied below).
+      # brain_app is NOBYPASSRLS and not the table owner, so it is the one
+      # connection in this job that Postgres actually subjects to RLS.
+      DATABASE_URL_APP: postgres://brain_app:brain_app@localhost:5432/brain
+      # services/auth's human-auth integration suite drives the AS through its
+      # real least-privilege connections, the same reason DATABASE_URL_APP
+      # exists above -- brain_auth (NOBYPASSRLS) actually proves RLS tenant
+      # isolation; brain_resolver is the sanctioned cross-tenant reader.
+      DATABASE_URL_AUTH: postgres://brain_auth:brain_auth@localhost:5432/brain
+      DATABASE_URL_RESOLVER: postgres://brain_resolver:brain_resolver@localhost:5432/brain
+      # audit-writer.integration.test.ts: proves PostgresAuditEmitter actually
+      # completes through brain_auth_audit_writer's real, narrow grant (finding
+      # 1) instead of only through human-auth.integration.test.ts's
+      # InMemoryAuditEmitter + blanket schema grant.
+      DATABASE_URL_AUTH_AUDIT: postgres://brain_auth_audit_writer:brain_auth_audit_writer@localhost:5432/brain
+      REDIS_URL: redis://localhost:6379
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: pnpm/action-setup@v6.0.10
+
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version-file: ".nvmrc"
+          cache: "pnpm"
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build workspace packages
+        run: pnpm run build
+
+      - name: Start scoped MinIO policy fixture
+        run: |
+          root_secret="$(openssl rand -hex 32)"
+          worker_secret="$(openssl rand -hex 32)"
+          api_secret="$(openssl rand -hex 32)"
+          echo "::add-mask::$root_secret"
+          echo "::add-mask::$worker_secret"
+          echo "::add-mask::$api_secret"
+          {
+            echo "MINIO_ROOT_USER=minio-ci-root"
+            echo "MINIO_ROOT_PASSWORD=$root_secret"
+            echo "MINIO_WORKER_ACCESS_KEY_ID=brain-worker"
+            echo "MINIO_WORKER_SECRET_ACCESS_KEY=$worker_secret"
+            echo "MINIO_WORKER_POLICY_ENDPOINT=http://127.0.0.1:9000"
+            echo "MINIO_WORKER_POLICY_INTEGRATION=true"
+            echo "MINIO_API_ACCESS_KEY_ID=brain-api"
+            echo "MINIO_API_SECRET_ACCESS_KEY=$api_secret"
+            echo "MINIO_API_POLICY_ENDPOINT=http://127.0.0.1:9000"
+            echo "MINIO_API_POLICY_INTEGRATION=true"
+          } >> "$GITHUB_ENV"
+          export MINIO_ROOT_USER=minio-ci-root
+          export MINIO_ROOT_PASSWORD="$root_secret"
+          export MINIO_WORKER_ACCESS_KEY_ID=brain-worker
+          export MINIO_WORKER_SECRET_ACCESS_KEY="$worker_secret"
+          export MINIO_API_ACCESS_KEY_ID=brain-api
+          export MINIO_API_SECRET_ACCESS_KEY="$api_secret"
+          bash scripts/ci/start-minio-worker-policy-test.sh
+
+      - name: Migrate
+        # The root build excludes tools/*, so build the migrate CLI before use.
+        run: |
+          pnpm -C tools/migrate run build
+          node tools/migrate/dist/cli.js up
+
+      - name: Apply DB role model (RLS enforcement)
+        # infra/db-roles.sql creates brain_app (NOBYPASSRLS, not the table
+        # owner) and FORCE ROW LEVEL SECURITY-sweeps every RLS table. Every
+        # job's DATABASE_URL connects as the table owner ("brain"), which
+        # Postgres never subjects to RLS regardless of FORCE ROW LEVEL
+        # SECURITY, so this step is the only place CI can catch an RLS
+        # regression. Passwords are test-only, matching db-roles.sql's psql
+        # :'var' placeholders (see docker-compose.prod.yml's db-roles service
+        # for the same invocation shape against real secrets).
+        env:
+          PGPASSWORD: brain
+        run: |
+          command -v psql >/dev/null 2>&1 || { sudo apt-get -qq update && sudo apt-get -qq install -y --no-install-recommends postgresql-client; }
+          psql -v ON_ERROR_STOP=1 -h localhost -U brain -d brain \
+            -v brain_app_password="brain_app" \
+            -v brain_privileged_password="brain_privileged" \
+            -v brain_wiki_reader_password="brain_wiki_reader" \
+            -v brain_mcp_reader_password="brain_mcp_reader" \
+            -v brain_raw_worker_password="brain_raw_worker" \
+            -v brain_canonical_projector_password="brain_canonical_projector" \
+            -v brain_ledger_projector_password="brain_ledger_projector" \
+            -v brain_execution_worker_password="brain_execution_worker" \
+            -v brain_audit_verifier_password="brain_audit_verifier" \
+            -v brain_audit_publisher_password="brain_audit_publisher" \
+            -v brain_resolver_password="brain_resolver" \
+            -v brain_tenant_deletion_password="brain_tenant_deletion" \
+            -v brain_surface_gateway_password="brain_surface_gateway" \
+            -v brain_surface_audit_writer_password="brain_surface_audit_writer" \
+            -v brain_auth_password="brain_auth" \
+            -v brain_auth_audit_writer_password="brain_auth_audit_writer" \
+            -f infra/db-roles.sql
+
+      - name: Integration tests
+        # `--if-present` must precede the script name; after it, pnpm forwards it
+        # to vitest, which dies with `CACError: Unknown option --ifPresent`.
+        run: pnpm -r --filter='./services/**' --filter='!./services/agents' run --if-present test:integration
+
+      - name: Shared Redis integration tests
+        env:
+          REDIS_INTEGRATION_TESTS: "true"
+        run: pnpm -C shared run test:integration
+
+      - name: Invariants DB-integration tests (P0.2)
+        run: pnpm -C tests/invariants run test:integration
+
+      - name: Adversarial integration tests (P1.1)
+        run: pnpm -C tests/adversarial run test:integration
+
+  # --------- Python agents workspace ---------
+  python:
+    name: python (lint + types + unit)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: services/agents
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.4.x"
+
+      - name: Set up Python 3.12
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --extra dev
+
+      - name: Ruff lint
+        run: uv run ruff check .
+
+      - name: Black format check
+        run: uv run black --check .
+
+      - name: mypy (strict)
+        run: uv run mypy --strict brain_agents
+
+      - name: pytest (80% coverage gate)
+        run: uv run pytest
+
+  # --------- Solidity contracts ---------
+  contracts:
+    name: contracts (forge build + test)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: contracts
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+        # The toolchain resolves the release via the GitHub API; anonymous calls
+        # are rate-limited to 60/hr and intermittently 403 in CI. Authenticating
+        # with the workflow token raises that to 1000/hr and stops the flake.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install forge dependencies
+        run: forge install foundry-rs/forge-std
+
+      - name: forge fmt check
+        # Hard gate. The continue-on-error placeholder here predated stage-5
+        # (its comment still claimed there were no contracts), so formatting was
+        # never actually enforced on six live contracts.
+        run: forge fmt --check
+
+      - name: forge build
+        run: forge build --sizes
+
+      - name: check contract ABI drift (TS parseAbi/selectors vs forge artifacts)
+        # This guard's sole other caller is `pnpm run lint` (typescript job),
+        # which has no Foundry toolchain and so never has contracts/out/ --
+        # it always printed "skip" there and exited 0. This is the one job
+        # with a real `forge build` output, so this is where it must run for
+        # real. Runs from the repo root (the job default is contracts/).
+        working-directory: ${{ github.workspace }}
+        run: node scripts/check-contract-abi-drift.mjs --quiet
+
+      - name: verify audited-build evidence
+        # Binds contracts/audit-status.json to the real build (P1). While the
+        # audit is pending this prints the current source-tree + bytecode +
+        # compiler evidence (exit 0); once the record is "approved" it FAILS the
+        # build if the source tree, compiler, or bytecode drift from what was
+        # audited. Runs from the repo root (the job default is contracts/).
+        working-directory: ${{ github.workspace }}
+        run: node scripts/verify-audited-build.mjs
+
+      - name: forge test
+        # Hard gate: the contracts (incl. the UNAUDITED BrainEscrow that gates
+        # Phase 5) must have GREEN unit + fuzz + invariant tests before the
+        # external audit. A red contract test can no longer hide behind
+        # continue-on-error.
+        run: forge test -vvv
+
+  # --------- Secret scanning ---------
+  secrets:
+    name: secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Install gitleaks
+        # Pinned version + direct versioned download — no unauthenticated
+        # api.github.com "latest" lookup (that call is rate-limited to 60/hr and
+        # intermittently 403/404'd in CI, flaking this job). Bump deliberately.
+        env:
+          GITLEAKS_VERSION: "8.30.1"
+        run: |
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" | tar -xz -C /usr/local/bin gitleaks
+          gitleaks version
+      - name: gitleaks
+        run: gitleaks detect --source . --log-opts="origin/main..HEAD" --redact --exit-code 1
+
+  # Money-movement E2E (R-04): a deterministic full-chain payment run on EVERY
+  # PR, against a real pg+redis stack and the booted demo API. Beyond the happy
+  # path it asserts the §6 gate ran checks 8/9.5/11.5 (none not_applicable) and
+  # that a duplicate payment is actively rejected. main.yml runs the same script
+  # post-merge without BRAIN_DEMO_E2E_FULL; this job is the PR gate.
+  money_movement_e2e:
+    name: money-movement e2e
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: brain
+          POSTGRES_PASSWORD: brain
+          POSTGRES_DB: brain
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 3s
+          --health-timeout 5s
+          --health-retries 20
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 3s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgres://brain:brain@localhost:5432/brain
+      REDIS_URL: redis://localhost:6379
+      AUTH_JWKS_URL: https://auth.brain.fi/.well-known/jwks.json
+      BRAIN_DEMO_MODE: "true"
+      BRAIN_BASE_URL: http://localhost:3000
+      BRAIN_DEMO_E2E_FULL: "true"
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: pnpm/action-setup@v6.0.10
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run build
+      - name: Build tools
+        run: pnpm -r --filter './tools/**' run build
+      - name: Migrate
+        run: node tools/migrate/dist/cli.js up
+      - name: Boot API (demo mode)
+        run: |
+          pnpm -C services/api start &
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:3000/health && break || sleep 2
+          done
+      - name: Money-movement E2E
+        run: ./scripts/demo/golden-path.sh

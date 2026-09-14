@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "rules": [
+    {
+      "id": "bill_management_envelope",
+      "applies_to": ["outbound_payment", "onchain_tx"],
+      "when": {
+        "agent.id": "bill_management",
+        "tenant.category": "consumer",
+        "amount.lte": { "currency": "USD", "value": "5000" },
+        "agent.spend_in_window": {
+          "window": "30d",
+          "lte": { "currency": "USD", "value": "20000" }
+        },
+        "agent.tx_count_in_window": { "window": "24h", "lte": 10 }
+      },
+      "approval_required_above": { "currency": "USD", "value": "1000" },
+      "execute": "auto"
+    },
+    {
+      "id": "bill_management_financial_outside_envelope_denied",
+      "applies_to": ["outbound_payment", "onchain_tx"],
+      "when": { "agent.id": "bill_management" },
+      "execute": "reject"
+    },
+    {
+      "id": "bill_management_advisory_confirm",
+      "applies_to": ["ledger_write", "agent_action"],
+      "when": { "agent.id": "bill_management" },
+      "execute": "confirm"
+    }
+  ]
+}

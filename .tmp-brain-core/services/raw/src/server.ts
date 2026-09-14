@@ -1,0 +1,225 @@
+/**
+ * Raw service Fastify app factory.
+ *
+ * Exported as a function so tests can spin up an app with injected fakes.
+ * Boot wiring (HTTP port, DB pool creation, config load) lives in index.ts.
+ */
+
+import Fastify, { type FastifyInstance } from "fastify";
+import multipart from "@fastify/multipart";
+import {
+  authPlugin,
+  errorHandlerPlugin,
+  idempotencyPlugin,
+  requestIdPlugin,
+  type IdempotencyStore,
+  type JwtVerifier,
+  type PlaidVerifyOptions,
+  type StripeVerifyOptions,
+} from "@brain/shared";
+import { registerArtifact } from "./routes/artifact.js";
+import { registerIngest } from "./routes/ingest.js";
+import { registerParsed } from "./routes/parsed.js";
+import { registerWebhook, type WebhookTenantResolver } from "./routes/webhook.js";
+import {
+  InMemorySourceRepository,
+  SourceService,
+  type SourceRepository,
+  type SourceCredentialStore,
+  type SourceSyncJobRepository,
+} from "./sources/SourceService.js";
+import { registerSourceRoutes } from "./sources/routes.js";
+import type { RawDeps } from "./deps.js";
+
+export interface BuildRawAppOptions {
+  deps: RawDeps;
+  jwtVerifier: JwtVerifier;
+  idempotencyStore: IdempotencyStore;
+  idempotencyTtlSeconds?: number;
+  plaidVerify: PlaidVerifyOptions;
+  /** Stripe endpoint signing verification. Absent => the stripe webhook path answers 501. */
+  stripeVerify?: StripeVerifyOptions;
+  resolveWebhookTenant: WebhookTenantResolver;
+  logger?: ReturnType<typeof Fastify>["log"];
+  /**
+   * Backing store for the v0.3 /v1/sources/* surface. Defaults to a
+   * process-local in-memory repository, production wiring overrides
+   * with a Postgres-backed implementation (follow-up commit).
+   */
+  sourceRepository?: SourceRepository;
+  /** See RegisterParsedOptions.crossTenantServiceSecret. */
+  crossTenantServiceSecret?: string;
+}
+
+export async function buildRawApp(opts: BuildRawAppOptions): Promise<FastifyInstance> {
+  const app = Fastify({
+    // Fastify v5 split logger *config* (`logger`: boolean | PinoLoggerOptions)
+    // from a pre-built logger *instance* (`loggerInstance`). Passing an instance
+    // to `logger` throws FST_ERR_LOG_INVALID_LOGGER_CONFIG, so route a provided
+    // instance through `loggerInstance` and fall back to a config otherwise.
+    ...(opts.logger !== undefined
+      ? { loggerInstance: opts.logger }
+      : { logger: { level: process.env.LOG_LEVEL ?? "info" } }),
+    bodyLimit: 55 * 1024 * 1024, // a little headroom above the 50 MiB artifact cap
+    disableRequestLogging: false,
+  });
+
+  // §3.4: webhook bodies MUST be verifiable byte-for-byte. Register a raw
+  // content-type parser for the webhooks path that preserves the buffer.
+  app.addContentTypeParser("application/json", { parseAs: "buffer" }, (_req, body, done) => {
+    // For non-webhook routes, parse JSON normally; for webhook routes we
+    // leave it as a Buffer and route handlers JSON-parse inside adapter
+    // logic. The simplest approach: attach the Buffer, but also try to
+    // parse JSON for non-webhook callers. Since we can't easily know the
+    // route here, we parse and stash the buffer.
+    try {
+      const parsed = body.length > 0 ? JSON.parse(body.toString("utf8")) : {};
+      // Expose raw bytes for downstream sig verify via req.rawBody hack.
+      // Typed as unknown because Fastify's types are strict on parser return.
+      (parsed as Record<string, unknown>)["__rawBody"] = body;
+      done(null, parsed);
+    } catch (err) {
+      done(err as Error, undefined);
+    }
+  });
+
+  // Webhook route needs raw bytes; register a second parser just for the
+  // webhook routes' content-type marker. We use application/octet-stream +
+  // direct Buffer capture when operators configure webhooks to send bytes.
+  app.addContentTypeParser("application/octet-stream", { parseAs: "buffer" }, (_req, body, done) =>
+    done(null, body),
+  );
+
+  await app.register(requestIdPlugin);
+  await app.register(errorHandlerPlugin);
+  await app.register(multipart, {
+    limits: {
+      fileSize: 50 * 1024 * 1024, // §413 row
+      files: 1,
+      fields: 16,
+    },
+  });
+  await app.register(authPlugin, { verifier: opts.jwtVerifier });
+  await app.register(idempotencyPlugin, {
+    store: opts.idempotencyStore,
+    ttlSeconds: opts.idempotencyTtlSeconds ?? 86400,
+  });
+
+  // Health check — no auth, no DB.
+  app.get("/health", { config: { skipAuth: true } }, async () => ({ ok: true }));
+
+  await registerIngest(app, opts.deps);
+  await registerWebhook(app, opts.deps, {
+    plaidVerify: opts.plaidVerify,
+    ...(opts.stripeVerify !== undefined ? { stripeVerify: opts.stripeVerify } : {}),
+    resolveTenant: opts.resolveWebhookTenant,
+    dedupStore: opts.idempotencyStore,
+    dedupTtlSeconds: opts.idempotencyTtlSeconds ?? 86_400,
+  });
+  await registerArtifact(app, opts.deps);
+  await registerParsed(app, opts.deps, {
+    ...(opts.crossTenantServiceSecret !== undefined
+      ? { crossTenantServiceSecret: opts.crossTenantServiceSecret }
+      : {}),
+  });
+
+  // PLAN-FIRST #12: /v1/sources/* - source-connector lifecycle.
+  const sourceRepository = opts.sourceRepository ?? new InMemorySourceRepository();
+  const sourceService = new SourceService(
+    sourceRepository,
+    undefined,
+    opts.deps.audit,
+    asSyncJobRepository(sourceRepository),
+  );
+  await registerSourceRoutes(app, sourceService);
+
+  return app;
+}
+
+export interface RegisterRawPluginOptions {
+  plaidVerify: PlaidVerifyOptions;
+  /** Stripe endpoint signing verification. Absent => the stripe webhook path answers 501. */
+  stripeVerify?: StripeVerifyOptions;
+  resolveWebhookTenant: WebhookTenantResolver;
+  /** Shared idempotency store; when set, webhooks dedup by body hash (§5.2). */
+  idempotencyStore?: IdempotencyStore;
+  idempotencyTtlSeconds?: number;
+  /**
+   * Backing store for /v1/sources/*. Defaults to in-memory, override with
+   * `PostgresSourceRepository` in production for persistent, encrypted storage.
+   */
+  sourceRepository?: SourceRepository;
+  /** Optional credential store (typically the same `PostgresSourceRepository` instance). */
+  sourceCredentialStore?: SourceCredentialStore;
+  /** See RegisterParsedOptions.crossTenantServiceSecret. */
+  crossTenantServiceSecret?: string;
+}
+
+/**
+ * Plugin-style registration for the composed single-process boot.
+ *
+ * Registers all Raw routes and content-type parsers on an already-configured
+ * Fastify app. Shared plugins (auth, error handler, request-id) are NOT
+ * registered here — they are registered once by main.ts.
+ */
+export async function registerRawPlugin(
+  app: FastifyInstance,
+  deps: RawDeps,
+  opts: RegisterRawPluginOptions,
+): Promise<void> {
+  app.addContentTypeParser(
+    "application/json",
+    { parseAs: "buffer" },
+    (_req: unknown, body: Buffer, done: (err: Error | null, body?: unknown) => void) => {
+      try {
+        const parsed =
+          body.length > 0 ? (JSON.parse(body.toString("utf8")) as Record<string, unknown>) : {};
+        parsed["__rawBody"] = body;
+        done(null, parsed);
+      } catch (err) {
+        done(err as Error, undefined);
+      }
+    },
+  );
+  app.addContentTypeParser(
+    "application/octet-stream",
+    { parseAs: "buffer" },
+    (_req: unknown, body: Buffer, done: (err: Error | null, body?: unknown) => void) =>
+      done(null, body),
+  );
+  await app.register(multipart, { limits: { fileSize: 50 * 1024 * 1024, files: 1, fields: 16 } });
+  await registerIngest(app, deps);
+  await registerWebhook(app, deps, {
+    plaidVerify: opts.plaidVerify,
+    ...(opts.stripeVerify !== undefined ? { stripeVerify: opts.stripeVerify } : {}),
+    resolveTenant: opts.resolveWebhookTenant,
+    ...(opts.idempotencyStore !== undefined ? { dedupStore: opts.idempotencyStore } : {}),
+    ...(opts.idempotencyTtlSeconds !== undefined
+      ? { dedupTtlSeconds: opts.idempotencyTtlSeconds }
+      : {}),
+  });
+  await registerArtifact(app, deps);
+  await registerParsed(app, deps, {
+    ...(opts.crossTenantServiceSecret !== undefined
+      ? { crossTenantServiceSecret: opts.crossTenantServiceSecret }
+      : {}),
+  });
+
+  // PLAN-FIRST #12: /v1/sources/* - source-connector lifecycle.
+  const sourceRepository = opts.sourceRepository ?? new InMemorySourceRepository();
+  const sourceService = new SourceService(
+    sourceRepository,
+    opts.sourceCredentialStore,
+    deps.audit,
+    asSyncJobRepository(sourceRepository),
+  );
+  await registerSourceRoutes(app, sourceService);
+}
+
+function asSyncJobRepository(repo: SourceRepository): SourceSyncJobRepository | undefined {
+  const candidate = repo as Partial<SourceSyncJobRepository>;
+  return typeof candidate.insertSyncJob === "function" &&
+    typeof candidate.findSyncJob === "function"
+    ? (candidate as SourceSyncJobRepository)
+    : undefined;
+}

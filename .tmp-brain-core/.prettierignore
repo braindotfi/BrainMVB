@@ -1,0 +1,23 @@
+node_modules
+dist
+build
+coverage
+.turbo
+.context
+pnpm-lock.yaml
+services/agents/**
+contracts/out
+contracts/cache
+contracts/lib
+infra/**
+*.tfstate
+*.tfstate.*
+Brain_API_Specification.yaml
+clients/sdk/src/generated/**
+services/api/assets/**
+
+# Local tooling / non-repo working trees — not brain-core sources
+.claude
+.agents
+hyper
+skills-lock.json

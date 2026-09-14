@@ -1,0 +1,240 @@
+import { readFileSync } from "node:fs";
+import test from "node:test";
+import assert from "node:assert/strict";
+
+const workflow = readFileSync(".github/workflows/main.yml", "utf8");
+const promoteWorkflow = readFileSync(".github/workflows/promote-prod.yml", "utf8");
+const rotateAgentsTokenWorkflow = readFileSync(
+  ".github/workflows/ops-rotate-agents-api-token.yml",
+  "utf8",
+);
+const composeProd = readFileSync("docker-compose.prod.yml", "utf8");
+const envProdExample = readFileSync(".env.prod.example", "utf8");
+
+function workflowJob(name, source = workflow) {
+  const start = source.indexOf(`  ${name}:`);
+  assert.notEqual(start, -1, `missing workflow job ${name}`);
+  const next = source.slice(start + 1).match(/\n  [a-zA-Z0-9_]+:\n/);
+  const end = next ? start + 1 + next.index : source.length;
+  return source.slice(start, end);
+}
+
+test("main workflow runs Python agents checks before VM image build", () => {
+  const buildImageJob = workflowJob("build_image");
+
+  assert.match(workflow, /python_agents:/);
+  assert.match(workflow, /uv run ruff check \./);
+  assert.match(workflow, /uv run black --check \./);
+  assert.match(workflow, /uv run mypy --strict brain_agents/);
+  assert.match(workflow, /uv run pytest/);
+  assert.match(
+    buildImageJob,
+    /needs:\s*\[unit_and_integration, golden_path_smoke, python_agents, dependency_audit, iac, secrets\]/,
+  );
+});
+
+test("main workflow builds app and agents images before deployment", () => {
+  const buildImageJob = workflowJob("build_image");
+  const containerScanJob = workflowJob("container_scan");
+  const deployStagingJob = workflowJob("deploy_staging");
+  const promoteProductionJob = workflowJob("promote", promoteWorkflow);
+
+  assert.match(
+    buildImageJob,
+    /docker build .*--build-arg GIT_SHA=\$\{\{ github\.sha \}\}.* -t ghcr\.io\/braindotfi\/brain-core:\$\{\{ github\.sha \}\} -f Dockerfile \./,
+  );
+  assert.match(
+    buildImageJob,
+    /docker push ghcr\.io\/braindotfi\/brain-core:\$\{\{ github\.sha \}\}/,
+  );
+  assert.match(
+    buildImageJob,
+    /docker build --build-arg GIT_SHA=\$\{\{ github\.sha \}\} -t ghcr\.io\/braindotfi\/brain-agents:\$\{\{ github\.sha \}\} -f services\/agents\/Dockerfile services\/agents/,
+  );
+  assert.match(
+    buildImageJob,
+    /docker push ghcr\.io\/braindotfi\/brain-agents:\$\{\{ github\.sha \}\}/,
+  );
+  assert.match(containerScanJob, /needs: build_image/);
+  assert.match(deployStagingJob, /needs: container_scan/);
+  assert.match(
+    containerScanJob,
+    /image-ref: ghcr\.io\/braindotfi\/brain-core:\$\{\{ github\.sha \}\}/,
+  );
+  assert.match(
+    containerScanJob,
+    /image-ref: ghcr\.io\/braindotfi\/brain-agents:\$\{\{ github\.sha \}\}/,
+  );
+  assert.match(containerScanJob, /severity: HIGH,CRITICAL/);
+  assert.match(containerScanJob, /exit-code: "1"/);
+  assert.match(deployStagingJob, /VM_HOST: \$\{\{ secrets\.VM_HOST_STAGING \}\}/);
+  assert.match(deployStagingJob, /VM_ENV_FILE: \.env\.staging/);
+  assert.match(promoteWorkflow, /workflow_dispatch:/);
+  assert.match(promoteProductionJob, /ref: \$\{\{ steps\.resolve\.outputs\.sha \}\}/);
+  assert.match(promoteProductionJob, /environment:\s*production/);
+  assert.match(promoteProductionJob, /VM_HOST: \$\{\{ secrets\.VM_HOST \}\}/);
+  assert.match(promoteProductionJob, /VM_ENV_FILE: \.env\.prod/);
+  assert.match(
+    deployStagingJob,
+    /docker pull ghcr\.io\/braindotfi\/brain-core:\$\{\{ github\.sha \}\}/,
+  );
+  assert.match(
+    promoteProductionJob,
+    /docker pull ghcr\.io\/braindotfi\/brain-core:\$\{\{ steps\.resolve\.outputs\.sha \}\}/,
+  );
+  assert.match(
+    deployStagingJob,
+    /docker pull ghcr\.io\/braindotfi\/brain-agents:\$\{\{ github\.sha \}\}/,
+  );
+  assert.match(
+    promoteProductionJob,
+    /docker pull ghcr\.io\/braindotfi\/brain-agents:\$\{\{ steps\.resolve\.outputs\.sha \}\}/,
+  );
+  assert.match(
+    deployStagingJob,
+    /docker tag ghcr\.io\/braindotfi\/brain-core:\$\{\{ github\.sha \}\} brain-core:prod/,
+  );
+  assert.match(
+    promoteProductionJob,
+    /docker tag ghcr\.io\/braindotfi\/brain-core:\$\{\{ steps\.resolve\.outputs\.sha \}\} brain-core:prod/,
+  );
+  assert.match(
+    deployStagingJob,
+    /docker tag ghcr\.io\/braindotfi\/brain-agents:\$\{\{ github\.sha \}\} brain-agents:prod/,
+  );
+  assert.match(
+    promoteProductionJob,
+    /docker tag ghcr\.io\/braindotfi\/brain-agents:\$\{\{ steps\.resolve\.outputs\.sha \}\} brain-agents:prod/,
+  );
+  assert.match(deployStagingJob, /brain-agents:prod-rollback-\$ts/);
+  assert.match(promoteProductionJob, /brain-agents:prod-rollback-\$ts/);
+  assert.match(deployStagingJob, /docker image prune -af --filter until=1h/);
+  assert.match(promoteProductionJob, /docker image prune -af --filter until=24h/);
+  assert.match(workflow, /tools\/migrate\/dist\/cli\.js up/);
+  assert.match(promoteWorkflow, /https:\/\/api\.brain\.fi\/health/);
+  assert.match(workflow, /last_commit.*expected/s);
+  assert.match(promoteWorkflow, /last_commit.*expected/s);
+});
+
+test("staging and production deploy recreates include the agents service", () => {
+  const deployStagingJob = workflowJob("deploy_staging");
+  const promoteProductionJob = workflowJob("promote", promoteWorkflow);
+  const serviceTargets = "api worker agents surface-gateway";
+  assert.match(deployStagingJob, new RegExp(`up -d --no-deps --no-build ${serviceTargets}`));
+  assert.match(promoteProductionJob, /for service in api worker agents surface-gateway; do/);
+  assert.match(
+    promoteProductionJob,
+    /\\?\$compose_agents up -d --no-deps --no-build \\?\$app_services/,
+  );
+  assert.match(deployStagingJob, /Wait for agents healthy on VM/);
+  assert.match(promoteProductionJob, /Wait for agents healthy on VM/);
+  assert.match(deployStagingJob, /brain-prod-agents did not become healthy/);
+  assert.match(promoteProductionJob, /brain-prod-agents did not become healthy/);
+});
+
+test("staging deploy starts infra without pulling service dependencies", () => {
+  const deployStagingJob = workflowJob("deploy_staging");
+  const coldStartCommand =
+    /up -d --no-build --no-recreate --no-deps postgres redis minio minio-setup caddy/;
+  assert.match(deployStagingJob, coldStartCommand);
+  assert.match(deployStagingJob, /Staging API key acceptance/);
+  assert.match(deployStagingJob, /scripts\/ops\/staging_api_key_acceptance\.py/);
+});
+
+test("staging and production validate required secrets before image pull", () => {
+  const deployStagingJob = workflowJob("deploy_staging");
+  const promoteProductionJob = workflowJob("promote", promoteWorkflow);
+
+  for (const [name, job] of [
+    ["deploy_staging", deployStagingJob],
+    ["promote_production", promoteProductionJob],
+  ]) {
+    const sync = job.indexOf("scripts/check-required-compose-secrets.sh");
+    const guard = job.indexOf("Pre-promote required-secret presence check");
+    const pull = job.indexOf("Pull images from GHCR");
+    assert.ok(sync >= 0, `${name} must ship the required-secret guard to the VM`);
+    assert.ok(guard > sync, `${name} must run the required-secret guard after syncing it`);
+    assert.ok(pull > guard, `${name} must run the required-secret guard before image pull`);
+    assert.match(
+      job,
+      /bash scripts\/check-required-compose-secrets\.sh --compose docker-compose\.prod\.yml --env \$VM_ENV_FILE/,
+      `${name} must validate its target env file`,
+    );
+  }
+});
+
+test("staging and production deploy rerun db role grants after migrations", () => {
+  const deployStagingJob = workflowJob("deploy_staging");
+  const promoteProductionJob = workflowJob("promote", promoteWorkflow);
+
+  for (const [name, job] of [
+    ["deploy_staging", deployStagingJob],
+    ["promote_production", promoteProductionJob],
+  ]) {
+    assert.match(job, /tools\/migrate\/dist\/cli\.js up/, `${name} must apply migrations`);
+    assert.match(job, /run --rm --no-deps db-roles/, `${name} must rerun db-roles`);
+    assert.match(
+      job,
+      /up -d --no-deps --no-build (api worker agents surface-gateway|\\?\$app_services)/,
+      `${name} must recreate app services`,
+    );
+    assert.match(
+      job,
+      /logs --tail=200 (api worker agents surface-gateway|\\?\$app_services)/,
+      `${name} must print deploy logs`,
+    );
+  }
+});
+
+test("production compose defines the optional Python agents service", () => {
+  assert.match(composeProd, /agents:\n\s+profiles:\s*\["agents"\]/);
+  assert.match(
+    composeProd,
+    /agents:[\s\S]*image:\s+brain-agents:\$\{BRAIN_AGENTS_IMAGE_TAG:-prod\}/,
+  );
+  assert.doesNotMatch(
+    composeProd.match(/  agents:[\s\S]*?(?=\nvolumes:)/)?.[0] ?? "",
+    /\n\s+build:/,
+  );
+  assert.match(composeProd, /container_name:\s+brain-prod-agents/);
+  assert.match(composeProd, /BRAIN_API_BASE_URL:\s+http:\/\/api:3000/);
+  assert.match(composeProd, /depends_on:[\s\S]*api:[\s\S]*condition:\s+service_healthy/);
+});
+
+test("production env example documents API to agents extraction wiring", () => {
+  for (const name of [
+    "OPENAI_API_KEY",
+    "DOCUMENT_EXTRACT_AGENT_URL",
+    "BRAIN_AGENTS_INBOUND_SECRET",
+    "BRAIN_API_TOKEN",
+  ]) {
+    assert.match(envProdExample, new RegExp(`^${name}=`, "m"));
+  }
+});
+
+test("agents token rotation uses the bundled runtime token signer", () => {
+  assert.match(
+    rotateAgentsTokenWorkflow,
+    /docker exec brain-prod-api node tools\/dev-token\/dist\/index\.js/,
+  );
+  assert.match(rotateAgentsTokenWorkflow, /--principal-type agent/);
+  assert.match(rotateAgentsTokenWorkflow, /--scopes raw:write/);
+});
+
+test("production env example documents self-serve signup email delivery wiring", () => {
+  for (const name of [
+    "BRAIN_SELF_SERVE_SIGNUP",
+    "EMAIL_ENABLED",
+    "EMAIL_ENDPOINT",
+    "EMAIL_API_KEY",
+    "EMAIL_FROM",
+  ]) {
+    assert.match(envProdExample, new RegExp(`^${name}=`, "m"));
+  }
+  // The comment must not claim these vars are surface-gateway only — the api
+  // service's self-serve signup (services/api/src/onboarding/email-delivery.ts)
+  // reads the same EMAIL_ENDPOINT/EMAIL_API_KEY/EMAIL_FROM vars, gated by
+  // BRAIN_SELF_SERVE_SIGNUP instead of EMAIL_ENABLED.
+  assert.doesNotMatch(envProdExample, /surface-gateway service only/);
+  assert.match(envProdExample, /services\/api\/src\/onboarding\/email-delivery\.ts/);
+});

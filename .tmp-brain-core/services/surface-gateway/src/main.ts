@@ -1,0 +1,265 @@
+import { BotFrameworkAdapter } from "botbuilder";
+import {
+  BotFrameworkTeamsActivityVerifier,
+  HttpEmailClient,
+  SlackWebApiClient,
+  TeamsBotFrameworkClient,
+  type SurfaceConfig,
+} from "@brain/surfaces";
+import {
+  buildCredentialKeyProvider,
+  createLogger,
+  createPool,
+  JwtVerifier,
+  loadConfig,
+  PostgresAuditEmitter,
+} from "@brain/shared";
+import { buildSurfaceRuntime } from "@brain/core";
+import type { SurfaceClients } from "@brain/core";
+import { DnsDomainVerifier } from "./domain-verifier.js";
+import { buildSurfaceGatewayApp } from "./server.js";
+import { buildSurfaceGatewayServices } from "./services.js";
+import { HttpSurfaceActionClient } from "./action-client.js";
+import {
+  PostgresEmailOnboardingStore,
+  PostgresSlackInstallationStore,
+  PostgresSlackRetryStore,
+  PostgresTeamsConversationReferenceStore,
+  PostgresTeamsInstallationStore,
+  SlackInstallationTokenProvider,
+} from "./storage.js";
+
+const DEMO_SIGN_SECRET = "brain-demo-mode-insecure-dev-only";
+
+async function main(): Promise<void> {
+  const cfg = loadConfig();
+  const logger = createLogger({
+    service: cfg.SERVICE_NAME,
+    level: cfg.LOG_LEVEL,
+    pretty: cfg.LOG_PRETTY,
+  });
+  const surfaceConfig = buildSurfaceConfig(cfg);
+  const onboardingAdminVerifier = new JwtVerifier({
+    jwksUrl: cfg.AUTH_JWKS_URL,
+    ...(cfg.BRAIN_DEMO_MODE ? { secret: DEMO_SIGN_SECRET } : {}),
+    issuer: cfg.AUTH_ISSUER,
+    audience: cfg.AUTH_AUDIENCE,
+    clockToleranceSeconds: cfg.AUTH_CLOCK_TOLERANCE_SECONDS,
+    legacyAgentJwtNotAfter:
+      cfg.LEGACY_AGENT_JWT_NOT_AFTER === undefined
+        ? undefined
+        : new Date(cfg.LEGACY_AGENT_JWT_NOT_AFTER),
+  });
+
+  const surfacePool = createPool({
+    connectionString: cfg.BRAIN_SURFACE_GATEWAY_DB_URL ?? cfg.DATABASE_URL,
+    max: cfg.DATABASE_POOL_MAX,
+    statementTimeoutMs: cfg.DATABASE_STATEMENT_TIMEOUT_MS,
+    applicationName: "brain-surface-gateway",
+  });
+  const auditPool = createPool({
+    connectionString:
+      cfg.BRAIN_SURFACE_GATEWAY_AUDIT_DB_URL ??
+      cfg.BRAIN_SURFACE_GATEWAY_DB_URL ??
+      cfg.DATABASE_URL,
+    max: cfg.DATABASE_POOL_MAX,
+    statementTimeoutMs: cfg.DATABASE_STATEMENT_TIMEOUT_MS,
+    applicationName: "brain-surface-gateway-audit",
+  });
+  const resolverPool = createPool({
+    connectionString: cfg.BRAIN_RESOLVER_DB_URL ?? cfg.DATABASE_URL,
+    max: cfg.DATABASE_POOL_MAX,
+    statementTimeoutMs: cfg.DATABASE_STATEMENT_TIMEOUT_MS,
+    applicationName: "brain-surface-gateway-resolver",
+  });
+
+  const audit = new PostgresAuditEmitter(auditPool);
+  const credentialKeyProvider = buildCredentialKeyProvider({
+    kmsVaultUrl: cfg.BRAIN_AZURE_KEY_VAULT_URL,
+    kmsSecretName: cfg.BRAIN_SOURCE_CREDENTIAL_KEY_VAULT_NAME,
+    envVarKey: cfg.BRAIN_SOURCE_CREDENTIAL_KEY,
+    envKeyId: cfg.BRAIN_SOURCE_CREDENTIAL_KEY_ID,
+    nodeEnv: cfg.NODE_ENV,
+    allowUnencrypted: cfg.BRAIN_ALLOW_UNENCRYPTED_SOURCE_CREDENTIALS,
+  });
+  const sourceCredential = await credentialKeyProvider.load();
+  const needsSurfaceActions =
+    surfaceConfig.slack.enabled ||
+    surfaceConfig.teams.enabled ||
+    surfaceConfig.email.enabled ||
+    cfg.BRAIN_SURFACE_SMOKE_ENABLED;
+  const surfaceActionSecret = requiredIf(
+    cfg.BRAIN_SURFACE_ACTION_SECRET,
+    "BRAIN_SURFACE_ACTION_SECRET",
+    needsSurfaceActions,
+  );
+  const actions =
+    surfaceActionSecret.length > 0
+      ? new HttpSurfaceActionClient(cfg.BRAIN_SURFACE_ACTION_API_URL, surfaceActionSecret)
+      : undefined;
+  const { services, proposals } = buildSurfaceGatewayServices({
+    pool: surfacePool,
+    auditPool,
+    resolverPool,
+    audit,
+    ...(actions !== undefined ? { actions } : {}),
+  });
+  const slackInstallations = new PostgresSlackInstallationStore(
+    surfacePool,
+    sourceCredential,
+    credentialKeyProvider,
+  );
+  const emailOnboarding = new PostgresEmailOnboardingStore(surfacePool, cfg.EMAIL_FROM);
+  const teamsReferences = new PostgresTeamsConversationReferenceStore(surfacePool);
+  const teamsInstallations = new PostgresTeamsInstallationStore(surfacePool);
+  const teamsAdapter = surfaceConfig.teams.enabled
+    ? new BotFrameworkAdapter({
+        appId: surfaceConfig.teams.appId,
+        appPassword: surfaceConfig.teams.appPassword,
+      })
+    : null;
+  const emailClient = surfaceConfig.email.enabled
+    ? new HttpEmailClient({
+        endpoint: required(cfg.EMAIL_ENDPOINT, "EMAIL_ENDPOINT"),
+        apiKey: required(cfg.EMAIL_API_KEY, "EMAIL_API_KEY"),
+        ...(cfg.EMAIL_FROM !== undefined ? { from: cfg.EMAIL_FROM } : {}),
+        senderResolver: emailOnboarding,
+      })
+    : null;
+  const clients: SurfaceClients = {
+    ...(surfaceConfig.slack.enabled
+      ? {
+          slack: new SlackWebApiClient(
+            new SlackInstallationTokenProvider(
+              slackInstallations,
+              cfg.NODE_ENV === "production" ? undefined : surfaceConfig.slack.botToken,
+            ),
+          ),
+        }
+      : {}),
+    ...(surfaceConfig.email.enabled
+      ? {
+          email: requiredClient(emailClient, "email"),
+        }
+      : {}),
+    ...(surfaceConfig.teams.enabled && teamsAdapter !== null
+      ? {
+          teams: new TeamsBotFrameworkClient(
+            teamsAdapter,
+            surfaceConfig.teams.appId,
+            teamsReferences,
+            teamsInstallations,
+          ),
+        }
+      : {}),
+  };
+  const runtime = buildSurfaceRuntime({ services, config: surfaceConfig, clients });
+  const app = await buildSurfaceGatewayApp({
+    runtime,
+    surfaceConfig,
+    proposals,
+    slackRetries: new PostgresSlackRetryStore(surfacePool),
+    ...(surfaceConfig.slack.enabled ? { slackInstallations } : {}),
+    ...(surfaceConfig.teams.enabled
+      ? { teamsInstallations, teamsConversationReferences: teamsReferences }
+      : {}),
+    ...(surfaceConfig.email.enabled && emailClient !== null
+      ? { emailOnboarding, emailVerificationSender: emailClient }
+      : {}),
+    onboardingAdminVerifier,
+    ...(cfg.EMAIL_DOMAIN_SPF_EXPECTED !== undefined &&
+    cfg.EMAIL_DOMAIN_DKIM_SELECTOR !== undefined &&
+    cfg.EMAIL_DOMAIN_DKIM_PUBLIC_KEY !== undefined
+      ? {
+          emailDomainVerifier: new DnsDomainVerifier({
+            spfExpected: cfg.EMAIL_DOMAIN_SPF_EXPECTED,
+            dkimSelector: cfg.EMAIL_DOMAIN_DKIM_SELECTOR,
+            dkimPublicKey: cfg.EMAIL_DOMAIN_DKIM_PUBLIC_KEY,
+          }),
+        }
+      : {}),
+    approvalBaseUrl: surfaceConfig.email.approvalBaseUrl || "http://localhost:3000",
+    ...(teamsAdapter !== null
+      ? {
+          teamsVerifier: new BotFrameworkTeamsActivityVerifier(teamsAdapter),
+        }
+      : {}),
+    smoke: {
+      enabled: cfg.BRAIN_SURFACE_SMOKE_ENABLED,
+      ...(cfg.BRAIN_SURFACE_SMOKE_SECRET !== undefined
+        ? { secret: cfg.BRAIN_SURFACE_SMOKE_SECRET }
+        : {}),
+    },
+    logger,
+  });
+
+  const close = async (): Promise<void> => {
+    await app.close();
+    await Promise.all([surfacePool.end(), auditPool.end(), resolverPool.end()]);
+  };
+  process.once("SIGINT", () => {
+    void close().finally(() => process.exit(0));
+  });
+  process.once("SIGTERM", () => {
+    void close().finally(() => process.exit(0));
+  });
+
+  await app.listen({ host: "0.0.0.0", port: cfg.PORT });
+}
+
+function buildSurfaceConfig(cfg: ReturnType<typeof loadConfig>): SurfaceConfig {
+  return {
+    slack: {
+      enabled: cfg.SLACK_ENABLED,
+      signingSecret: requiredIf(
+        cfg.SLACK_SIGNING_SECRET,
+        "SLACK_SIGNING_SECRET",
+        cfg.SLACK_ENABLED,
+      ),
+      ...(cfg.SLACK_BOT_TOKEN !== undefined ? { botToken: cfg.SLACK_BOT_TOKEN } : {}),
+      ...(cfg.SLACK_CLIENT_ID !== undefined ? { clientId: cfg.SLACK_CLIENT_ID } : {}),
+      ...(cfg.SLACK_CLIENT_SECRET !== undefined ? { clientSecret: cfg.SLACK_CLIENT_SECRET } : {}),
+      ...(cfg.SLACK_INSTALL_STATE_SECRET !== undefined
+        ? { installStateSecret: cfg.SLACK_INSTALL_STATE_SECRET }
+        : {}),
+    },
+    teams: {
+      enabled: cfg.TEAMS_ENABLED,
+      appId: requiredIf(cfg.TEAMS_APP_ID, "TEAMS_APP_ID", cfg.TEAMS_ENABLED),
+      appPassword: requiredIf(cfg.TEAMS_APP_PASSWORD, "TEAMS_APP_PASSWORD", cfg.TEAMS_ENABLED),
+    },
+    email: {
+      enabled: cfg.EMAIL_ENABLED,
+      approvalBaseUrl: requiredIf(
+        cfg.EMAIL_APPROVAL_BASE_URL,
+        "EMAIL_APPROVAL_BASE_URL",
+        cfg.EMAIL_ENABLED,
+      ),
+      tokenSecret: requiredIf(cfg.EMAIL_TOKEN_SECRET, "EMAIL_TOKEN_SECRET", cfg.EMAIL_ENABLED),
+      ...(cfg.EMAIL_ESP_WEBHOOK_SECRET !== undefined
+        ? { espWebhookSecret: cfg.EMAIL_ESP_WEBHOOK_SECRET }
+        : {}),
+    },
+  };
+}
+
+function requiredClient<T>(client: T | null, name: string): T {
+  if (client === null) throw new Error(`${name} client unavailable`);
+  return client;
+}
+
+function requiredIf(value: string | undefined, name: string, enabled: boolean): string {
+  if (enabled) return required(value, name);
+  return value ?? "";
+}
+
+function required(value: string | undefined, name: string): string {
+  if (value === undefined || value.length === 0)
+    throw new Error(`Missing required env var ${name}`);
+  return value;
+}
+
+main().catch((error: unknown) => {
+  console.error(error);
+  process.exit(1);
+});
