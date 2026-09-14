@@ -127,6 +127,13 @@ describe("Brain Assistant citation links", () => {
     expect(citationBlock).not.toContain("const isClickable");
     expect(citationBlock).not.toContain("<span");
   });
+
+  it("does not dispatch citations to popup hosts owned by other screens", () => {
+    const src = readFileSync(ASSISTANT, "utf8");
+    expect(src).not.toContain("openMemberDetail(");
+    expect(src).not.toContain("openVendorDetail(");
+    expect(src).toContain("<LiveEvidenceRecordPopup");
+  });
 });
 
 /**

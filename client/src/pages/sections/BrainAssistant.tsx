@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect, useLayoutEffect, useMemo, useCallback } from "react";
-import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   ArrowRight,
@@ -22,9 +21,8 @@ import {
   isSupportedDocumentFile,
   sourceTypeForDocument,
 } from "@/lib/documentUpload";
-import { openMemberDetail } from "@/lib/membersStore";
 import { useSuggestedQuestions, resolveSuggestionChips } from "@/lib/brainSuggestedQuestions";
-import { resolveVendor, openVendorDetail } from "@/lib/openVendorDetail";
+import { resolveVendor } from "@/lib/openVendorDetail";
 import { allocateChatId, parseAssistantResponse, removeChatSession, trimChatHistory, buildChatPayload, filterPayloadMessages, buildTruncationNote, ASSISTANT_GENERIC_ERROR, CHAT_HISTORY_LIMIT, MESSAGE_CONTENT_LIMIT } from "@/lib/assistantChat";
 import { isAssistantBulletLine, stripAssistantBullet } from "@/lib/assistantFormatting";
 import timeIcon from "@assets/timestamp_1788994251245.png";
@@ -384,7 +382,6 @@ function ChatBubble({
  * screen without a fixed page width that would clip on a narrow one.
  */
 export function BrainAssistant() {
-  const [, navigate] = useLocation();
   const { user, isLoading: authLoading, isTransitioning } = useAuth();
 
   /* Suggestion chips come from brain-core (GET /wiki/suggested-questions),
@@ -1337,10 +1334,6 @@ export function BrainAssistant() {
                                   setOpenTxId(s.entityId);
                                 } else if (resolvedType === "invoice" && invIds.has(s.entityId)) {
                                   setOpenBillId(s.entityId);
-                                } else if (resolvedType === "member") {
-                                  openMemberDetail(s.entityId);
-                                } else if (resolvedType === "counterparty" && resolveVendor(s.entityId)) {
-                                  openVendorDetail(s.entityId, navigate);
                                 } else {
                                   /* The middle-screen assistant can cite raw artifacts,
                                      obligations, audit events, proposals, and newer record
