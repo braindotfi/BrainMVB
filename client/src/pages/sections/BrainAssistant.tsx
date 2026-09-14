@@ -10,7 +10,14 @@ import { TransactionDetailPopup } from "@/components/TransactionDetailPopup";
 import { AccountDetailPopup } from "@/components/AccountDetailPopup";
 import { BillDetailPopup, type BrainInvoiceDTO } from "@/components/BillDetailPopup";
 import { PayableDetailPopup } from "@/components/PayableDetailPopup";
-import { fetchObligations, type Obligation } from "@/lib/brainObligations";
+import { normalizeObligation, type RawObligation } from "@/lib/brainObligations";
+import { usePagedLedgerRead } from "@/lib/ledgerRead";
+import {
+  mayBePayable,
+  payableLookup,
+  unresolvedCitationNote,
+  UNRESOLVED_CITATION_LABEL,
+} from "@/lib/assistantCitations";
 import { brainCounterpartiesQueryOptions, type BrainCounterparty } from "@/lib/brainVendors";
 import { LiveEvidenceRecordPopup } from "@/components/LiveEvidenceRecordPopup";
 import type { EvidenceTile } from "@/lib/proposalCards";
@@ -548,15 +555,27 @@ export function BrainAssistant() {
      tax and bills in these, and before this they were the biggest class of citation
      with no popup of its own — they fell through to the generic evidence card, which
      could only repeat the id the user had just clicked. There is no by-id route for
-     an obligation (brain-core 404s it), so the list read IS the lookup. */
-  const { data: oblData } = useQuery<Obligation[]>({
-    queryKey: ["/api/brain/ledger/obligations"],
-    queryFn: () => fetchObligations(),
-    retry: false,
-  });
+     an obligation (brain-core 404s it), so the list read IS the lookup.
+
+     Which is why this reads every page. brain-core's list endpoints cap silently at
+     around 20 rows, so a one-page read resolves a citation on a small tenant and, with
+     no error anywhere, fails to resolve the identical citation on a large one — the
+     Payable popup the answer was pointing at simply never opens. `usePagedLedgerRead`
+     walks the cursor to the end, reports whether it got there, and shares its cache
+     with the three other payables surfaces. */
+  const oblRead = usePagedLedgerRead<RawObligation>("/api/brain/ledger/obligations", "obligations");
   const oblById = useMemo(
-    () => new Map((oblData ?? []).map((o) => [o.id, o])),
-    [oblData],
+    () =>
+      new Map(
+        (oblRead.read?.rows ?? [])
+          /* The generic GET passthrough hands the raw payload straight to the browser,
+             and a null row in it would throw inside `normalizeObligation` — taking the
+             whole conversation down with it. */
+          .filter((o): o is RawObligation => !!o)
+          .map(normalizeObligation)
+          .map((o) => [o.id, o] as const),
+      ),
+    [oblRead.read],
   );
   /* Re-resolved every render rather than captured at click time — see openPayableId. */
   const openPayable = openPayableId ? (oblById.get(openPayableId) ?? null) : null;
@@ -1385,6 +1404,21 @@ export function BrainAssistant() {
                             : resolveVendor(s.entityId) ? "counterparty"
                             : null
                           );
+                          /* Four answers, not two. A miss against the obligations map
+                             only means "not a payable" once the cursor walk finished;
+                             before that it means nobody could look, which must not
+                             render as the same confident card. Gated on the kind so a
+                             citation already resolved to something else — a
+                             counterparty, a member — is not captioned with a payables
+                             read it never depended on. */
+                          const payableState = mayBePayable(resolvedType)
+                            ? payableLookup({
+                                held: oblById.has(s.entityId),
+                                read: oblRead.read,
+                                failed: oblRead.failed,
+                              })
+                            : "absent";
+                          const unresolvedNote = unresolvedCitationNote(payableState);
                           return (
                             <button
                               key={`${s.entityId}-${i}`}
@@ -1404,6 +1438,19 @@ export function BrainAssistant() {
                                      nothing), and the only reliable signal that a
                                      payable popup can open is that we hold the record. */
                                   setOpenPayableId(s.entityId);
+                                } else if (unresolvedNote) {
+                                  /* The payables read did not finish, so this citation was
+                                     never looked up. Same card, but it says so: without the
+                                     note an unread page reads as "there is nothing more to
+                                     see here", which is the one thing we do not know. */
+                                  setFallbackEvidence({
+                                    label: UNRESOLVED_CITATION_LABEL,
+                                    display: text,
+                                    kind: resolvedType ?? s.entityType ?? "record",
+                                    ref: s.entityId,
+                                    note: unresolvedNote,
+                                    facts: [{ label: "Record ID", value: s.entityId }],
+                                  });
                                 } else {
                                   /* The middle-screen assistant can cite raw artifacts,
                                      obligations, audit events, proposals, and newer record

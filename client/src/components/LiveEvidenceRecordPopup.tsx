@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import type { EvidenceTile } from "@/lib/proposalCards";
+import { AlertCallout } from "@/components/Callout";
 
 /** Read-only record surface for evidence kinds that do not yet have a dedicated
  * ledger popup (currently obligations/payables). It deliberately renders only
@@ -47,6 +48,12 @@ export function LiveEvidenceRecordPopup({
                   {evidence.kind}
                 </p>
               </div>
+              {/* An unresolved-lookup note, when the record could not be looked up at
+                  all. Rendered ABOVE the facts so the id below it is read as "what the
+                  assistant cited" rather than as everything there is to know. */}
+              {evidence.note && (
+                <AlertCallout testId="live-evidence-unresolved-note">{evidence.note}</AlertCallout>
+              )}
               {evidence.facts.length > 0 && (
                 <div className="bg-brain-v1highlight-dropdown-bg border border-solid border-brain-v1stroke-2 rounded-row overflow-hidden">
                   {evidence.facts.map((fact, index) => (

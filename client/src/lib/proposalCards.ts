@@ -1027,6 +1027,13 @@ export interface EvidenceTile {
   kind: string;
   ref: string;
   facts: { label: string; value: string }[];
+  /**
+   * Why this is a bare evidence tile rather than the record itself — set only when
+   * the lookup could not be performed (a read still in flight, or one that failed or
+   * stopped short of the last page). Absent means the lookup DID happen and came back
+   * negative, which is a different statement and must not read the same.
+   */
+  note?: string;
 }
 
 /**

@@ -130,7 +130,12 @@ describe("Brain Assistant citation links", () => {
   it("decides the Payable branch by holding the record, not by the upstream label", () => {
     const src = readFileSync(ASSISTANT, "utf8");
     const mapStart = src.indexOf("msg.sources.map");
-    const block = src.slice(mapStart, mapStart + 4000);
+    /* Bounded by the end of the citation button rather than a character count: a
+       fixed window silently slides off the last branch as the handler grows, and the
+       assertion below then fails for a reason that has nothing to do with routing. */
+    const blockEnd = src.indexOf("title={s.entityId}", mapStart);
+    expect(blockEnd, "citation button not found after msg.sources.map").toBeGreaterThan(mapStart);
+    const block = src.slice(mapStart, blockEnd);
 
     expect(block).toContain("oblById.has(s.entityId)");
     expect(

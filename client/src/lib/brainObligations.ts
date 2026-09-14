@@ -128,7 +128,15 @@ export function isReceivable(o: Obligation): boolean {
   return o.direction.toLowerCase().startsWith("receiv");
 }
 
-/** Tolerant fetch: 404 / empty → [] (extraction not available yet), never an infinite spinner. */
+/**
+ * Tolerant fetch: 404 / empty → [] (extraction not available yet), never an infinite spinner.
+ *
+ * **Reads one page.** brain-core caps a list read at around 20 rows without saying so,
+ * so this returns SOME obligations on any real tenant. Nothing that has to find a
+ * particular record — or add the rows up — may use it: those go through
+ * `usePagedLedgerRead("/api/brain/ledger/obligations", "obligations")`, which walks the
+ * cursor to the end and reports whether it got there.
+ */
 export async function fetchObligations(): Promise<Obligation[]> {
   const res = await fetch("/api/brain/ledger/obligations", { credentials: "include" });
   if (res.status === 404) return [];
