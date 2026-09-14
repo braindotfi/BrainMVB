@@ -7,10 +7,13 @@ import {
 import type { RawObligation } from "./brainObligations";
 import type { RawInvoice } from "./receivables";
 
-const NOW = new Date("2026-08-09T12:00:00.000Z");
+/* Local noon: the window opens on the user's LOCAL today (see lib/dueDates.ts for
+   the one rule), so freezing the clock at a local time keeps these assertions true
+   in every timezone the suite might run in. */
+const NOW = new Date("2026-08-09T12:00:00");
 const DAY = 86_400_000;
-/** ISO date N days from NOW. */
-const inDays = (n: number) => new Date(NOW.getTime() + n * DAY).toISOString().slice(0, 10);
+/** The UTC calendar date N days from today, as a record carries it. */
+const inDays = (n: number) => new Date(Date.UTC(2026, 7, 9) + n * DAY).toISOString().slice(0, 10);
 
 describe("formatCashProjectionDate", () => {
   it("keeps event-chip and chart-tooltip dates in the same compact format", () => {

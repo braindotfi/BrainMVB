@@ -32,6 +32,7 @@
  * Both feeds must have finished their cursor walk before anything is drawn.
  */
 
+import { recordDayNumber, todayDayNumber } from "./dueDates";
 import { payableObligations } from "./liabilities";
 import type { RawObligation } from "./brainObligations";
 import { arReceivables, type RawInvoice } from "./receivables";
@@ -147,11 +148,14 @@ function isoDay(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-function parseDay(v: string | null): number | null {
-  if (!v) return null;
-  const t = Date.parse(v);
-  return Number.isFinite(t) ? Math.floor(t / MS_PER_DAY) : null;
-}
+/**
+ * A record's due day, on the one client-wide rule: a record's date is a UTC
+ * calendar day, "today" is the user's LOCAL calendar day (see `lib/dueDates.ts`).
+ * The window boundary below uses `todayDayNumber` for the same reason the popups
+ * do — an obligation due today must not drop off the front of the timeline just
+ * because it is already tomorrow in UTC.
+ */
+const parseDay = recordDayNumber;
 
 /**
  * Build the projection.
@@ -173,7 +177,7 @@ export function cashProjectionView(input: {
   const { failed, startingBalance, obligations, invoices, now } = input;
   const horizon = input.horizonDays ?? PROJECTION_DAYS;
 
-  const today = Math.floor(now.getTime() / MS_PER_DAY);
+  const today = todayDayNumber(now);
   const windowStart = isoDay(new Date(today * MS_PER_DAY));
   const windowEnd = isoDay(new Date((today + horizon) * MS_PER_DAY));
   const base = {

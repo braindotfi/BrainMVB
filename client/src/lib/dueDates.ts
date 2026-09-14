@@ -14,34 +14,56 @@
  * chrome so every surface — the bill popup's chip, the payable popup's relative
  * clause, a list row — shares one implementation and cannot drift, and so the
  * arithmetic is testable without pulling in JSX and image imports.
+ *
+ * ## The one rule, stated once
+ *
+ * A record's date is a UTC calendar day; "today" is the user's LOCAL calendar day.
+ * Both are reduced to a day number by `recordDayNumber` / `todayDayNumber` below,
+ * and every days-between count in the client is the difference of those two numbers.
+ * The AR aging bucket (`lib/arAging.ts`) and the cash projection window
+ * (`lib/cashProjection.ts`) both come through here rather than flooring `now` onto a
+ * UTC day of their own: that variant is stable across the day but answers a different
+ * question, and west of Greenwich it put the same invoice on either side of the
+ * 90-day boundary depending on which surface the reader was looking at.
  */
 
 const MS_PER_DAY = 86_400_000;
+
+/**
+ * The day number (whole days since the epoch) a RECORD's date falls on, or `null`
+ * when there is no usable date.
+ *
+ * Read in UTC because that is the timezone a bare `YYYY-MM-DD` parses into; reading
+ * it back with local getters would shift it a day west of Greenwich and turn "due
+ * tomorrow" into "due today".
+ */
+export function recordDayNumber(iso?: string | null): number | null {
+  if (!iso) return null;
+  const t = Date.parse(iso);
+  if (!Number.isFinite(t)) return null;
+  return Math.floor(t / MS_PER_DAY);
+}
+
+/**
+ * The day number of the user's LOCAL today.
+ *
+ * "Overdue" is a statement about the day the reader is living in, not the day it
+ * happens to be in UTC. `now` is injectable so callers that already thread an `asOf`
+ * through a pure view function stay assertable.
+ */
+export function todayDayNumber(now: Date = new Date()): number {
+  return Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) / MS_PER_DAY;
+}
 
 /**
  * Whole CALENDAR days from today until `iso`: negative when the date has passed,
  * `0` on the day itself. `null` when there is no usable date, which callers must
  * render as "no date" rather than as zero.
  */
-export function calendarDaysToDue(iso?: string | null): number | null {
-  if (!iso) return null;
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return null;
-
-  // The due date is read in UTC because that is the timezone a bare `YYYY-MM-DD`
-  // parses into; reading it back with local getters would shift it a day west of
-  // Greenwich and turn "due tomorrow" into "due today".
-  const dueDay = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
-
-  // Today is the user's LOCAL today: "overdue" is a statement about the day they are
-  // living in, not the day it happens to be in UTC.
-  const now = new Date();
-  const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
-
-  // Both sides are exact UTC midnights, so this division is whole. Rounding is kept
-  // only as a guard against a DST-shifted platform, never as the thing deciding the
-  // answer.
-  return Math.round((dueDay - today) / MS_PER_DAY);
+export function calendarDaysToDue(iso?: string | null, now: Date = new Date()): number | null {
+  const dueDay = recordDayNumber(iso);
+  if (dueDay === null) return null;
+  return dueDay - todayDayNumber(now);
 }
 
 export interface DueChip {

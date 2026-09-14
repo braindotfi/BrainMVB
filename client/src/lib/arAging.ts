@@ -25,6 +25,7 @@
  * walked every page, exactly as `receivablesTotal` does.
  */
 
+import { calendarDaysToDue } from "./dueDates";
 import { arReceivables, type RawInvoice, type Receivable } from "./receivables";
 
 /**
@@ -34,11 +35,17 @@ import { arReceivables, type RawInvoice, type Receivable } from "./receivables";
  */
 export const AR_STALE_DAYS = 90;
 
-const MS_PER_DAY = 86_400_000;
-
 /**
- * Whole days between a due date and `now`, or `null` when the invoice carries no
- * usable due date.
+ * Whole days between a due date and `now`, positive once the date has passed, or
+ * `null` when the invoice carries no usable due date.
+ *
+ * This is `calendarDaysToDue` with the sign flipped — aging counts forward from
+ * the due date, the popups count down to it — and nothing else. It used to floor
+ * `now` onto a UTC day instead, which is stable across the day but asks a
+ * different question: west of Greenwich the same invoice could sit on either side
+ * of the 90-day boundary depending on whether the reader was looking at this card
+ * or at the record's own popup. One rule now, documented in `lib/dueDates.ts`: a
+ * record's date is a UTC calendar day, "today" is the user's LOCAL calendar day.
  *
  * Undated invoices are NOT treated as zero-days-overdue. An invoice with no due
  * date is one whose age is unknown, and folding unknowns into the "current"
@@ -47,13 +54,8 @@ const MS_PER_DAY = 86_400_000;
  * denominator, where their outstanding balance is a fact regardless of date.
  */
 export function daysOverdue(dueDate: string | null, now: Date): number | null {
-  if (!dueDate) return null;
-  const due = Date.parse(dueDate);
-  if (!Number.isFinite(due)) return null;
-  // Compare on whole UTC days so a run at 23:59 and a run at 00:01 agree.
-  const dueDay = Math.floor(due / MS_PER_DAY);
-  const nowDay = Math.floor(now.getTime() / MS_PER_DAY);
-  return nowDay - dueDay;
+  const toDue = calendarDaysToDue(dueDate, now);
+  return toDue === null ? null : -toDue;
 }
 
 export interface StaleReceivable extends Receivable {
