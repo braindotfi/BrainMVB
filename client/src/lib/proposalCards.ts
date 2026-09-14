@@ -12,6 +12,7 @@
  */
 
 import { calendarDaysToDue } from "./dueDates";
+import { normalizeProductIdentity } from "./runtimeBranding";
 import type {
   ProposalEvidenceItem,
   ProposalAmount,
@@ -1010,7 +1011,7 @@ export function buildWhySuggested(
       if (typeof check.detail === "string" && check.detail.trim()) {
         push(check.detail, verdict);
       } else if (typeof check.key === "string" && check.key.trim()) {
-        push(humanizeEnumValue(check.key), verdict);
+        push(normalizeProductIdentity(humanizeEnumValue(check.key)), verdict);
       }
     }
   }
@@ -1035,7 +1036,7 @@ export function buildWhySuggested(
         const name = [s.label, s.name, s.signal, s.key].find(
           (v): v is string => typeof v === "string" && v.trim() !== "",
         );
-        if (name) push(humanizeEnumValue(name), null);
+        if (name) push(normalizeProductIdentity(humanizeEnumValue(name)), null);
       }
     }
   }

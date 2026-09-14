@@ -1,3 +1,5 @@
+import { normalizeRuntimeBranding } from "./runtimeBranding";
+
 export const ASSISTANT_GENERIC_ERROR =
   "Something went wrong reaching the assistant. Please try again.";
 
@@ -165,13 +167,16 @@ function stringField(payload: AssistantPayload | null, key: string): string {
  * reply alongside an error status, but a malformed successful response is
  * still an operational error.
  */
-export async function parseAssistantResponse(res: Response): Promise<{
+export async function parseAssistantResponse(
+  res: Response,
+  protectedValues: readonly string[] = [],
+): Promise<{
   data: AssistantPayload | null;
   reply: string;
   answerError: boolean;
 }> {
   const data = asPayload(await res.json().catch(() => null));
-  const reply = stringField(data, "reply");
+  const reply = normalizeRuntimeBranding(stringField(data, "reply"), protectedValues);
 
   if (res.ok && reply) {
     return {
@@ -206,9 +211,9 @@ export async function parseAssistantResponse(res: Response): Promise<{
   // answer for a failed or malformed response.
   const detail =
     reply ||
-    stringField(data, "message") ||
+    normalizeRuntimeBranding(stringField(data, "message"), protectedValues) ||
     (stringField(data, "error") && stringField(data, "error") !== "assistant_failed"
-      ? stringField(data, "error")
+      ? normalizeRuntimeBranding(stringField(data, "error"), protectedValues)
       : "");
 
   return {

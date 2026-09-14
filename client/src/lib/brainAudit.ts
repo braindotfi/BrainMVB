@@ -5,6 +5,7 @@ import { isAssistantActivity, humanReadableActor } from "./auditTypes";
 import { matchCannedPrompt } from "@shared/cannedPrompts";
 import { explorerTxUrl, normalizeTxHash } from "./explorer";
 import type { AssistantQuestion } from "@shared/schema";
+import { normalizeRuntimeBranding } from "./runtimeBranding";
 
 /* ── Live brain-core audit events → AuditRecord ───────────────────────────────
    Replaces MOCK_AUDIT_RECORDS as the audit-record data source (Inbox timeline) with
@@ -403,7 +404,15 @@ function classifyProposalDecided(e: BrainAuditEvent): { eventType: AuditEventTyp
   // which use the proposal subject/headline as their title. Fall back to the
   // generic decision label only when no subject snapshot is available.
   const proposalSummary = proposalSummaryFrom(e);
-  const summary = proposalSummary?.summary?.trim() || fallback;
+  const protectedValues = [
+    e.actor,
+    e.actor_ref?.display_name,
+    e.actor_ref?.email,
+    ...Object.values(e.inputs).filter((value): value is string => typeof value === "string"),
+  ].filter((value): value is string => Boolean(value));
+  const summary = proposalSummary?.summary?.trim()
+    ? normalizeRuntimeBranding(proposalSummary.summary.trim(), protectedValues)
+    : fallback;
   return { eventType, summary };
 }
 
@@ -893,8 +902,20 @@ export function mapAuditEventToRecord(
      (descriptive). The summary is now the clean decision label ("Proposal
      approved") so any non-empty text here is always distinct from it. */
   const proposalNote =
-    proposalSummary?.recommended_remediation?.trim() ||
-    proposalSummary?.narrative?.trim() ||
+    (proposalSummary?.recommended_remediation?.trim()
+      ? normalizeRuntimeBranding(proposalSummary.recommended_remediation.trim(), [
+          event.actor,
+          event.actor_ref?.display_name ?? "",
+          ...Object.values(event.inputs).filter((value): value is string => typeof value === "string"),
+        ])
+      : undefined) ||
+    (proposalSummary?.narrative?.trim()
+      ? normalizeRuntimeBranding(proposalSummary.narrative.trim(), [
+          event.actor,
+          event.actor_ref?.display_name ?? "",
+          ...Object.values(event.inputs).filter((value): value is string => typeof value === "string"),
+        ])
+      : undefined) ||
     undefined;
 
   const step: LifecycleStep = {

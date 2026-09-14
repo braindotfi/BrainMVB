@@ -26,6 +26,7 @@ import {
   useBrainDisputeInsights,
   useBrainCashFlowInsight,
 } from "@/lib/brainAgentSurfaces";
+import { collectRuntimeProtectedValues, normalizeOverviewRecommendation } from "@/lib/runtimeBranding";
 import {
   deriveProposalTier,
   thresholdsFromRules,
@@ -715,20 +716,6 @@ export function HomePage() {
     // remounts within a session don't re-hit the BFF at all.
     staleTime: 15 * 60 * 1000,
   });
-  /* Post-process the recommendation text: comma-format amounts, locale-format
-     dates (USD → US date style, EUR → European), and detect sentiment for color.
-     The fallback line is also formatted so static text stays consistent. */
-  const rawText = brainRec?.text?.trim() ?? "";
-  const processedText = rawText
-    ? formatDatesInText(formatText(rawText), currency)
-    : formatText(SPENDING_INSIGHT_FALLBACK.text);
-  const insightLine =
-    netMonthly === null
-      ? { text: "Connect accounts to see monthly spend.", colorClass: "text-brain-v1baby-blue-60" }
-      : rawText
-        ? { text: processedText, colorClass: detectSentimentColor(processedText) }
-        : { text: processedText, colorClass: SPENDING_INSIGHT_FALLBACK.colorClass };
-
   /* Liabilities — everything outstanding: unpaid bills AND accrued payroll. Same
      figure, same source, same module (lib/liabilities.ts) as the Cash Flow metric
      and the itemized list this card links to, so the three can't drift. Reads the
@@ -827,6 +814,26 @@ export function HomePage() {
     queryKey: ["/api/brain/ledger/counterparties"],
     retry: false,
   });
+  const overviewBrandingProtectedValues = collectRuntimeProtectedValues([
+    accountsRead.read?.rows,
+    cpQ.data?.counterparties,
+    invoicesRead.read?.rows,
+    obligationsRead.read?.rows,
+  ]);
+  /* Post-process the recommendation text only after masking business values
+     from the structured ledger reads already on this page. */
+  const rawText = brainRec?.text?.trim()
+    ? normalizeOverviewRecommendation(brainRec.text.trim(), overviewBrandingProtectedValues)
+    : "";
+  const processedText = rawText
+    ? formatDatesInText(formatText(rawText), currency)
+    : formatText(SPENDING_INSIGHT_FALLBACK.text);
+  const insightLine =
+    netMonthly === null
+      ? { text: "Connect accounts to see monthly spend.", colorClass: "text-brain-v1baby-blue-60" }
+      : rawText
+        ? { text: processedText, colorClass: detectSentimentColor(processedText) }
+        : { text: processedText, colorClass: SPENDING_INSIGHT_FALLBACK.colorClass };
 
   const eventRecords = useMemo(
     () =>

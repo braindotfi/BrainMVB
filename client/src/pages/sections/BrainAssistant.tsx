@@ -35,6 +35,7 @@ import { useSuggestedQuestions, resolveSuggestionChips } from "@/lib/brainSugges
 import { resolveVendor } from "@/lib/openVendorDetail";
 import { allocateChatId, parseAssistantResponse, removeChatSession, trimChatHistory, buildChatPayload, filterPayloadMessages, buildTruncationNote, ASSISTANT_GENERIC_ERROR, CHAT_HISTORY_LIMIT, MESSAGE_CONTENT_LIMIT } from "@/lib/assistantChat";
 import { isAssistantBulletLine, stripAssistantBullet } from "@/lib/assistantFormatting";
+import { collectRuntimeProtectedValues, normalizeRuntimeBranding } from "@/lib/runtimeBranding";
 import timeIcon from "@assets/timestamp_1788994251245.png";
 import activeConvoIcon from "@assets/Active_1781818047007.png";
 import deleteConvoIcon from "@assets/Delete_1781818067389.png";
@@ -527,7 +528,7 @@ export function BrainAssistant() {
   }, [isTransitioning, user?.id]);
 
   // Recent ledger data caches (shared with Finances/Bills) for resolving ids.
-  const { data: txData } = useQuery<{ transactions: { id: string }[] }>({
+  const { data: txData } = useQuery<{ transactions: Array<{ id: string; [key: string]: unknown }> }>({
     queryKey: ["/api/brain/ledger/transactions"],
     retry: false,
   });
@@ -591,6 +592,16 @@ export function BrainAssistant() {
       ),
     [cpData],
   );
+  const brandingProtectedValues = useMemo(
+    () => collectRuntimeProtectedValues([
+      acctData?.accounts,
+      cpData?.counterparties,
+      invData?.invoices,
+      txData?.transactions,
+      oblRead.read?.rows,
+    ]),
+    [acctData, cpData, invData, txData, oblRead.read],
+  );
 
   const dropdownRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
@@ -614,7 +625,10 @@ export function BrainAssistant() {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(json?.message || json?.error || `Upload failed (${res.status})`);
+        throw new Error(normalizeRuntimeBranding(
+          json?.message || json?.error || `Upload failed (${res.status})`,
+          brandingProtectedValues,
+        ));
       }
       return json;
     },
@@ -840,7 +854,10 @@ export function BrainAssistant() {
         signal: controller.signal,
         body: JSON.stringify({ messages: history }),
       });
-      const parsed = await parseAssistantResponse(res);
+      const parsed = await parseAssistantResponse(res, [
+        ...brandingProtectedValues,
+        ...history.map((message) => message.content),
+      ]);
       if (res.status === 429) {
         reportRateLimit({ "retry-after": res.headers.get("retry-after"), body: parsed });
       }

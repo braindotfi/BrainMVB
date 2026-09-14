@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useCurrency } from "./useCurrency";
+import { normalizeRuntimeBranding } from "./runtimeBranding";
 
 /* ── Live read-only informational records from brain-core's Ledger ───────────
    The "Your Review" / "Brain Detected" surfaces used to render 11 fabricated
@@ -105,6 +106,7 @@ const RECON_STATUS_LABEL: Record<string, string> = {
 const RECON_ATTENTION_STATUSES = new Set(["unmatched", "duplicate_possible", "disputed"]);
 
 export function useBrainReconciliationInsights() {
+  const nameOf = useCounterpartyNames();
   const q = useQuery<ReconciliationMatchesResponse>({
     queryKey: ["/api/brain/ledger/reconciliation-matches"],
     retry: false,
@@ -119,7 +121,12 @@ export function useBrainReconciliationInsights() {
       title: MATCH_TYPE_LABEL[m.match_type] ?? m.match_type,
       subtitle: RECON_STATUS_LABEL[m.status] ?? m.status,
       confidence: typeof m.confidence_score === "number" ? m.confidence_score : undefined,
-      explanation: m.explanation ?? undefined,
+      explanation: m.explanation
+        ? normalizeRuntimeBranding(m.explanation, [
+            nameOf(m.left_entity_id) ?? "",
+            nameOf(m.right_entity_id) ?? "",
+          ])
+        : undefined,
       evidenceIds: m.evidence_ids && m.evidence_ids.length > 0 ? m.evidence_ids : undefined,
       fields: [
         { label: "Left record", value: `${m.left_entity_type} ${m.left_entity_id}` },
@@ -190,8 +197,8 @@ function dueDateLabel(due_date: string): string {
  *
  *  Backend gap: replace the derived fallback below with `o.flag_reason` once
  *  brain-core populates it on the subscriptions feed. */
-function deriveTriggerBadge(o: BrainObligation): string {
-  if (o.flag_reason) return o.flag_reason;
+function deriveTriggerBadge(o: BrainObligation, vendor: string): string {
+  if (o.flag_reason) return normalizeRuntimeBranding(o.flag_reason, [vendor]);
   // A recurrence pattern hasn't been established → likely first occurrence.
   if (!o.recurrence) return "New subscription";
   // Low extraction confidence → worth a human look.
@@ -222,7 +229,7 @@ function recurrenceDisplay(o: BrainObligation): string {
  *  replace the derivation below. */
 function deriveWhyFlagged(o: BrainObligation, vendor: string, amt: string): string {
   if (o.flag_reason) {
-    return `RobotMoney flagged this subscription because: ${o.flag_reason}.`;
+    return `RobotMoney flagged this subscription because: ${normalizeRuntimeBranding(o.flag_reason, [vendor])}.`;
   }
   if (!o.recurrence) {
     return (
@@ -259,7 +266,7 @@ export function useBrainSubscriptionInsights() {
         kind: "subscription",
         itemKind: "detection",
         badge: "Subscription",
-        triggerBadge: deriveTriggerBadge(o),
+        triggerBadge: deriveTriggerBadge(o, vendor),
         title: `Subscription: ${vendor}`,
         subtitle: `${amt} · due ${dueDateLabel(o.due_date)}`,
         whyFlagged: deriveWhyFlagged(o, vendor, amt),

@@ -11,6 +11,7 @@ import {
   throwBrainRateLimitIfNeeded,
   useBrainReadCooldown,
 } from "./rateLimit";
+import { normalizeProductIdentity, normalizeRuntimeBranding } from "./runtimeBranding";
 
 /* ── Live brain-core agent proposals (GET/POST /v1/proposals*) ────────────────
    Non-financial agent outputs (vendor risk, collections, treasury, etc.) that a
@@ -246,6 +247,117 @@ export interface ListProposalsResponse {
   next_cursor: string | null;
 }
 
+/**
+ * Normalize only product-authored proposal display copy. Entity names, evidence
+ * values, document-derived facts, raw identifiers, and protocol fields remain
+ * byte-for-byte as returned by the service.
+ */
+export function normalizeBrainProposalBranding(proposal: BrainProposal): BrainProposal {
+  const protectedValues = [
+    proposal.subject?.display,
+    ...proposal.evidence.flatMap((item) => [
+      item.display,
+      item.code,
+      ...(item.facts ?? []).map((fact) => fact.value),
+    ]),
+    ...(proposal.key_facts ?? []).map((fact) => fact.value),
+    ...Object.values(proposal.resolved_refs ?? {}),
+  ].filter((value): value is string => typeof value === "string" && value.length > 0);
+  const branded = (value: string | null | undefined): string | null | undefined =>
+    typeof value === "string"
+      ? normalizeRuntimeBranding(value, protectedValues)
+      : value;
+  const normalizePolicy = (policy: ProposalPolicy | null | undefined) =>
+    policy
+      ? {
+          ...policy,
+          explanation: branded(policy.explanation),
+          trace: policy.trace?.map((entry) => ({
+            ...entry,
+            checks: entry.checks?.map((check) => ({
+              ...check,
+              detail: branded(check.detail) ?? check.detail,
+            })),
+          })),
+        }
+      : policy;
+  const normalizeRankedSignals = (value: unknown): unknown => {
+    if (!Array.isArray(value)) return value;
+    return value.map((signal) => {
+      if (typeof signal === "string") return branded(signal);
+      if (!signal || typeof signal !== "object") return signal;
+      const record = signal as Record<string, unknown>;
+      return {
+        ...record,
+        ...Object.fromEntries(
+          ["detail", "description", "reason", "explanation", "label", "name", "signal"]
+            .filter((key) => typeof record[key] === "string")
+            .map((key) => [key, branded(record[key] as string)]),
+        ),
+      };
+    });
+  };
+
+  const details = proposal.details
+    ? {
+        ...proposal.details,
+        ...Object.fromEntries(
+          ["recommended_action", "recommendedAction", "recommendation"]
+            .filter((key) => typeof proposal.details?.[key] === "string")
+            .map((key) => [
+              key,
+              normalizeRuntimeBranding(proposal.details?.[key] as string, protectedValues),
+            ]),
+        ),
+        ranked_signals: normalizeRankedSignals(proposal.details.ranked_signals),
+      }
+    : proposal.details;
+
+  return {
+    ...proposal,
+    narrative: branded(proposal.narrative) ?? null,
+    details,
+    agent: proposal.agent
+      ? { ...proposal.agent, display_name: normalizeProductIdentity(proposal.agent.display_name) }
+      : null,
+    policy: normalizePolicy(proposal.policy),
+    presentation: proposal.presentation
+      ? {
+          ...proposal.presentation,
+          headline: branded(proposal.presentation.headline),
+          recommendation: branded(proposal.presentation.recommendation),
+          policy: normalizePolicy(proposal.presentation.policy),
+          key_facts: proposal.presentation.key_facts?.map((fact) => ({
+            ...fact,
+            label: normalizeRuntimeBranding(fact.label),
+          })),
+          consequences: proposal.presentation.consequences
+            ? Object.fromEntries(
+                Object.entries(proposal.presentation.consequences).map(([key, value]) => [
+                  key,
+                  branded(value),
+                ]),
+              )
+            : proposal.presentation.consequences,
+          actions: proposal.presentation.actions?.map((action) => ({
+            ...action,
+            label: normalizeRuntimeBranding(action.label),
+            meaning: branded(action.meaning),
+          })),
+        }
+      : proposal.presentation,
+    available_decisions: proposal.available_decisions?.map((decision) => ({
+      ...decision,
+      label: normalizeRuntimeBranding(decision.label),
+      meaning: branded(decision.meaning),
+    })),
+    key_facts: proposal.key_facts?.map((fact) => ({
+      ...fact,
+      label: normalizeRuntimeBranding(fact.label),
+    })),
+  };
+}
+
 const PROPOSALS_PAGE_SIZE = 100;
 const MAX_PROPOSAL_PAGES = 50;
 export const BRAIN_PROPOSALS_QUERY_KEY = ["/api/brain/proposals?limit=100"] as const;
@@ -276,7 +388,7 @@ export async function fetchAllBrainProposals(signal?: AbortSignal, status?: stri
     if (!Array.isArray(body.proposals)) {
       throw new Error("RobotMoney proposals response did not contain a proposals array.");
     }
-    proposals.push(...body.proposals);
+    proposals.push(...body.proposals.map(normalizeBrainProposalBranding));
 
     const next = typeof body.next_cursor === "string" && body.next_cursor.length > 0
       ? body.next_cursor
@@ -386,6 +498,17 @@ export interface ProposalDecisionResult {
   status: string;
   audit_id: string | null;
   payment_intent_id: string | null;
+}
+
+export function proposalDecisionErrorMessage(
+  body: unknown,
+  status: number,
+  protectedValues: readonly string[] = [],
+): string {
+  const message =
+    parseCoreError(body)?.error?.message ??
+    `Couldn't record the decision (${status}).`;
+  return normalizeRuntimeBranding(message, protectedValues);
 }
 
 /** Statuses that mean core recorded the decision but the item is not finished:
@@ -547,7 +670,7 @@ export function useDecideProposal() {
   };
 
   return useMutation<ProposalDecisionResult, Error, DecideProposalInput>({
-    mutationFn: async ({ id, decision }) => {
+    mutationFn: async ({ id, decision, receipt }) => {
       reportBrainReadCooldownIfActive("proposals");
       const res = await fetch(`/api/brain/proposals/${encodeURIComponent(id)}/decide`, {
         method: "POST",
@@ -570,7 +693,10 @@ export function useDecideProposal() {
         if (res.status === 409 && (code === "execution_proposal_invalid_state" || code === "agent_proposal_invalid_state")) {
           throw new ProposalConflictError();
         }
-        throw new Error(parseCoreError(body)?.error?.message ?? `Couldn't record the decision (${res.status}).`);
+        throw new Error(proposalDecisionErrorMessage(body, res.status, [
+          receipt?.title ?? "",
+          receipt?.rowSubtitle ?? "",
+        ]));
       }
       /* A 2xx with a body we can't read is NOT a success we may act on. Casting
          it through (which is what this used to do) would let an empty or
