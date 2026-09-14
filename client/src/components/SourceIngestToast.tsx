@@ -30,7 +30,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
-import { useAppAlert } from "@/components/AppAlert";
+import { useAlertStack, useAppAlert } from "@/components/AppAlert";
 import postponedIcon from "@assets/postpone_1784058164236.png";
 
 /* ─── Types ──────────────────────────────────────────────────────────────── */
@@ -124,11 +124,16 @@ function SourceIngestCard({
   sourceName,
   pct,
   transitionMs,
+  stack,
 }: {
   /** Filename or source label shown beneath the fixed "Adding Source" title. */
   sourceName?: string;
   pct: number;
   transitionMs: number;
+  /** Shared bottom-right alert stack; joined so this card queues with alerts
+      rather than covering them. Null only before AppAlertProvider mounts, in
+      which case fall back to pinning ourselves. */
+  stack: HTMLElement | null;
 }) {
   const clamped = Math.max(5, Math.min(100, pct));
   const ariaLabel = sourceName ? `Adding Source: ${sourceName}` : "Adding Source";
@@ -138,7 +143,9 @@ function SourceIngestCard({
       aria-live="polite"
       aria-label={ariaLabel}
       data-testid="source-ingest-toast"
-      className="fixed bottom-[20px] right-[20px] z-[101] pointer-events-none"
+      className={
+        stack ? "pointer-events-none" : "fixed bottom-[20px] right-[20px] z-[101] pointer-events-none"
+      }
     >
       <div
         className="bg-brain-v1highlight-dropdown-bg border border-brain-v1stroke-2 rounded-panel flex gap-[16px] items-start p-[16px] w-[335px] max-w-[calc(100vw-40px)]"
@@ -185,7 +192,7 @@ function SourceIngestCard({
         </div>
       </div>
     </div>,
-    document.body,
+    stack ?? document.body,
   );
 }
 
@@ -193,6 +200,7 @@ function SourceIngestCard({
 
 export function SourceIngestToastProvider({ children }: { children: ReactNode }) {
   const alert = useAppAlert();
+  const stack = useAlertStack();
 
   const [state, setState] = useState<IngestState>({ phase: "idle" });
   const [pct, setPct] = useState(5);
@@ -340,7 +348,12 @@ export function SourceIngestToastProvider({ children }: { children: ReactNode })
     <SourceIngestContext.Provider value={value}>
       {children}
       {visible && (
-        <SourceIngestCard sourceName={state.label} pct={pct} transitionMs={transitionMs} />
+        <SourceIngestCard
+          sourceName={state.label}
+          pct={pct}
+          transitionMs={transitionMs}
+          stack={stack}
+        />
       )}
     </SourceIngestContext.Provider>
   );

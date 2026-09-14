@@ -143,6 +143,10 @@
 
 :root {
   --brain-v1baby-blue-100: rgba(168, 185, 244, 1);
+  /* Hover for the top of the scale. The ramp has no step lighter than 100, so a
+     link hovering "up" had no token to move to and the pair collapsed. Follows
+     the same -hover convention as baby-blue-15-hover and stroke-2-hover. */
+  --brain-v1baby-blue-100-hover: rgba(197, 210, 255, 1);
   --brain-v1baby-blue-15: rgba(34, 39, 55, 1);
   /* Hover partners for the four surfaces above. Canonicalised by #129;
      not yet in the Figma source file — see CLAUDE.md "Hover tokens". */

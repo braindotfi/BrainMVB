@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { SUB } from "@/assets/sub-icons";
 import { useAuth } from "@/lib/authContext";
-import { useToast } from "@/hooks/use-toast";
 import { useAppAlert } from "@/components/AppAlert";
 import { Button } from "@/components/ui/button";
 
@@ -125,7 +124,6 @@ function ConfirmDeleteDataModal({ onCancel, onConfirm, isDeleting }: { onCancel:
 
 export default function AccountSection() {
   const { deleteAccount, deleteAccountData } = useAuth();
-  const { toast } = useToast();
   const appAlert = useAppAlert();
   const [modal, setModal] = useState<ModalKind>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -167,25 +165,18 @@ export default function AccountSection() {
       // brainCoreUnreachable means the key count is unknown (not confirmed zero).
       // brainKeyRevocationsFailed > 0 means some known keys could not be revoked.
       if (result?.brainCoreUnreachable) {
-        toast({
-          title: "API key status unknown",
-          description:
-            "Your account was deleted, but Brain couldn't be reached to revoke your API keys. Contact support if you need to confirm all keys are inactive.",
-          variant: "destructive",
-        });
+        appAlert.error(
+          "API key status unknown",
+          "Your account was deleted, but Brain couldn't be reached to revoke your API keys. Contact support if you need to confirm all keys are inactive.",
+        );
       } else if (result?.brainKeyRevocationsFailed && result.brainKeyRevocationsFailed > 0) {
-        toast({
-          title: "Some API keys may still be active",
-          description: `${result.brainKeyRevocationsFailed} key${result.brainKeyRevocationsFailed === 1 ? "" : "s"} couldn't be revoked. They may have already been removed upstream — contact support if you need to confirm.`,
-          variant: "destructive",
-        });
+        appAlert.error(
+          "Some API keys may still be active",
+          `${result.brainKeyRevocationsFailed} key${result.brainKeyRevocationsFailed === 1 ? "" : "s"} couldn't be revoked. They may have already been removed upstream — contact support if you need to confirm.`,
+        );
       }
     } catch (err: any) {
-      toast({
-        title: "Couldn't delete account",
-        description: err?.message || "Something went wrong. Please try again.",
-        variant: "destructive",
-      });
+      appAlert.error("Couldn't delete account", err?.message || "Something went wrong. Please try again.");
     } finally {
       setIsDeleting(false);
     }
@@ -202,11 +193,7 @@ export default function AccountSection() {
         "All your Brain data has been permanently deleted. Your account remains active.",
       );
     } catch (err: any) {
-      toast({
-        title: "Couldn't delete data",
-        description: err?.message || "Something went wrong. Please try again.",
-        variant: "destructive",
-      });
+      appAlert.error("Couldn't delete data", err?.message || "Something went wrong. Please try again.");
     } finally {
       setIsDeleting(false);
     }

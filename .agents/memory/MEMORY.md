@@ -69,6 +69,7 @@
 - [In-place settled detail](decisions-timeline-in-place-detail.md) — old Audit Log page is deleted; /audit-log is a query-preserving redirect to /inbox; render the popup locally + set returnToBase.
 - [Row-record type ramp & height](row-record-type-ramp.md) — Security table is the reference; 20+4+16 = a 40px stack, so leading is load-bearing; pin only the shortest row.
 - [Audit Log full history](audit-log-full-history.md) — full trail lives in Settings (Inbox stays decisions-only); measure a read cap pre-merge, and isError needs a path independent of length===0.
+- [One notifier surface](one-notifier-surface.md) — AppAlert is the only toast; a scaffolded white `useToast` twin in the same corner read as the designed one regressing.
 - [Shared callout component](callout-component.md) — all alert boxes + info glyphs go through Callout.tsx; find call sites by glyph/colour tokens, not page-by-page; amber meant two things.
 - [Icon from artwork](icon-from-artwork.md) — measure the reference PNG's pixel runs for stroke widths; eyeballing an upscaled bitmap lies, and canvas can't decode file:// images.
 - [Counterparty trust surface](counterparty-trust-surface.md) — trust routes live (brain-core PRs #397/#403, GIT deedc628); handlers in VendorsPanel only; popup receives props, never fetches; bulk-confirm for customers.

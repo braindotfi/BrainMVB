@@ -9,7 +9,7 @@ import { onboardingKey as onboardingKeyFor, isOnboardingComplete, markOnboarding
 import { useIsDemoData } from "@/lib/demoMode";
 import { useCurrency } from "@/lib/useCurrency";
 import { type CurrencyCode } from "@/lib/currencyContext";
-import { useToast } from "@/hooks/use-toast";
+import { useAppAlert } from "@/components/AppAlert";
 import { useBrainReviewQueue } from "@/lib/brainQueue";
 import { pendingAttentionSummary } from "@/lib/pendingAttention";
 import { useProposalDecisionStates } from "@/lib/proposalDecisionStates";
@@ -161,7 +161,7 @@ const AddGoalButton = ({ onClick }: { onClick: () => void }) => (
 );
 
 const GoalsSection = () => {
-  const { toast } = useToast();
+  const alert = useAppAlert();
   const [addOpen, setAddOpen] = useState(false);
   /* Local-only state: new goals live in memory until the brain-core
      wiring lands. They reset on refresh by design. Demo accounts start
@@ -189,10 +189,7 @@ const GoalsSection = () => {
     };
     setGoals((prev) => [...prev, newGoal]);
     setAddOpen(false);
-    toast({
-      title: "Goal created",
-      description: `"${fallbackName}" added to your goals.`,
-    });
+    alert.success("Goal created", `"${fallbackName}" added to your goals.`);
   };
 
   return (

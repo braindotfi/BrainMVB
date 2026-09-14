@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
+import { useAppAlert } from "@/components/AppAlert";
 import { parseCoreError } from "./approvalRejections";
 import { clearDecisionReceipt, recordDecisionReceipt } from "./decisionReceipts";
 import { isDecisionStateBatchFor } from "./proposalDecisionStates";
@@ -516,7 +516,7 @@ class ProposalConflictError extends Error {
  *  still invalidates so the UI reflects the real state. */
 export function useDecideProposal() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
+  const alert = useAppAlert();
 
   const invalidate = (decidedId: string) => {
     void queryClient.invalidateQueries({
@@ -622,38 +622,49 @@ export function useDecideProposal() {
          back still pending is no more finished than an approval that did, and
          "Declined. It's in Resolved." would be false about both the outcome and
          where to find it. */
-      toast(
-        finality === "final"
-          ? {
-              title: DECISION_CONFIRMED_TITLE[decision] ?? "Decision recorded",
-              description: DECISION_CONFIRMED_DETAIL[decision] ?? "Brain recorded your decision.",
-            }
-          : finality === "awaiting"
-            ? {
-                title: DECISION_AWAITING_TITLE[decision] ?? "Decision recorded. Not final yet",
-                description: "Brain has your decision, but this isn't finished — it still needs another approver.",
-              }
-            : {
-                /* No claim about where the row goes. An unrecognised status may
-                   turn out to be terminal, in which case core stops returning
-                   the proposal and it leaves the unresolved list — promising it
-                   would stay there would be a guess this client cannot back. */
-                title: "Decision recorded",
-                description: `Brain reported it as "${result.status}", which this app doesn't recognise, so it can't say whether the item is finished. The audit log in Settings has the outcome.`,
-              },
-      );
+      if (finality === "final") {
+        /* The disc has to agree with the verb. A decline that genuinely landed
+           is not a success, and an undo reopens the item rather than settling
+           it, so neither of those earns the green check. */
+        const confirm =
+          decision === "approve"
+            ? alert.approved
+            : decision === "reject"
+              ? alert.rejected
+              : decision === "undo"
+                ? alert.info
+                : alert.success;
+        confirm(
+          DECISION_CONFIRMED_TITLE[decision] ?? "Decision recorded",
+          DECISION_CONFIRMED_DETAIL[decision] ?? "Brain recorded your decision.",
+        );
+      } else if (finality === "awaiting") {
+        /* Held, not settled: another approver still has to act. */
+        alert.postponed(
+          DECISION_AWAITING_TITLE[decision] ?? "Decision recorded. Not final yet",
+          "Brain has your decision, but this isn't finished — it still needs another approver.",
+        );
+      } else {
+        /* No claim about where the row goes. An unrecognised status may
+           turn out to be terminal, in which case core stops returning
+           the proposal and it leaves the unresolved list — promising it
+           would stay there would be a guess this client cannot back. */
+        alert.info(
+          "Decision recorded",
+          `Brain reported it as "${result.status}", which this app doesn't recognise, so it can't say whether the item is finished. The audit log in Settings has the outcome.`,
+        );
+      }
       invalidate(id);
     },
     onError: (err, { id }) => {
       if (err instanceof ProposalConflictError) {
-        toast({
-          title: "Already decided elsewhere",
-          description: "Someone (or something) else decided this proposal first - refreshed.",
-          variant: "destructive",
-        });
+        alert.error(
+          "Already decided elsewhere",
+          "Someone (or something) else decided this proposal first - refreshed.",
+        );
         invalidate(id);
       } else if (!isBrainRateLimitError(err)) {
-        toast({ title: "Couldn't record decision", description: err.message, variant: "destructive" });
+        alert.error("Couldn't record decision", err.message);
       }
     },
   });

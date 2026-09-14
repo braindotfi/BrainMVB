@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, type ComponentType } from "react";
 import { useLocation, useSearch } from "wouter";
 import { clearOnboarding } from "@/lib/onboarding";
-import { useToast } from "@/hooks/use-toast";
 import { useAppAlert, AppAlertLink } from "@/components/AppAlert";
 import { useAuth } from "@/lib/authContext";
 import { ChangePlanModal, UpdateCardModal, CancelSubscriptionModal, type PlanId } from "@/components/BillingModals";
@@ -944,7 +943,6 @@ export function SettingsPage() {
     if (s && VALID_SECTIONS.includes(s as Section)) setSection(s as Section);
   }, [search]);
 
-  const { toast } = useToast();
 
   const SectionContent = {
     profile:       <ProfileSection />,

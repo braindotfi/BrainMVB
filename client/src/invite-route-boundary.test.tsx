@@ -45,6 +45,9 @@ vi.mock("@/lib/sessionTimeoutContext", () => ({
 vi.mock("@/components/AppAlert", () => ({
   AppAlertProvider: ({ children }: { children: React.ReactNode }) => children,
   useAppAlert: () => ({ error: () => {}, info: () => {} }),
+  /* The stubbed provider renders no viewport, so there is no shared stack to
+     join; consumers fall back to pinning themselves, which is fine here. */
+  useAlertStack: () => null,
 }));
 
 vi.mock("@/lib/currencyContext", () => ({

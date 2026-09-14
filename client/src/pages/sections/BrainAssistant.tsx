@@ -21,7 +21,7 @@ import {
 import { brainCounterpartiesQueryOptions, type BrainCounterparty } from "@/lib/brainVendors";
 import { LiveEvidenceRecordPopup } from "@/components/LiveEvidenceRecordPopup";
 import type { EvidenceTile } from "@/lib/proposalCards";
-import { useToast } from "@/hooks/use-toast";
+import { useAppAlert } from "@/components/AppAlert";
 import { reportRateLimit } from "@/lib/rateLimit";
 import { useCurrency } from "@/lib/useCurrency";
 import { useAuth } from "@/lib/authContext";
@@ -595,7 +595,7 @@ export function BrainAssistant() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { toast } = useToast();
+  const alert = useAppAlert();
   const { symbol, formatText } = useCurrency();
 
   const uploadDoc = useMutation({
@@ -620,14 +620,10 @@ export function BrainAssistant() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/integrations/documents"] });
-      toast({ title: "Document uploaded", description: "Brain will read it and extract what it can." });
+      alert.success("Document uploaded", "Brain will read it and extract what it can.");
     },
     onError: (err: Error) => {
-      toast({
-        title: "Upload failed",
-        description: err.message,
-        variant: "destructive",
-      });
+      alert.error("Upload failed", err.message);
     },
   });
 
@@ -1003,11 +999,10 @@ export function BrainAssistant() {
                 if (isSupportedDocumentFile(file)) {
                   uploadDoc.mutate(file);
                 } else {
-                  toast({
-                    title: "Unsupported file",
-                    description: "ZIP files can't be uploaded. Choose PDF, CSV, XLSX, DOCX, or another supported document.",
-                    variant: "destructive",
-                  });
+                  alert.error(
+                    "Unsupported file",
+                    "ZIP files can't be uploaded. Choose PDF, CSV, XLSX, DOCX, or another supported document.",
+                  );
                 }
               }
               e.target.value = "";

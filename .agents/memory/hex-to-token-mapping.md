@@ -11,6 +11,12 @@
     if that token is also the element's `border` colour, it erases the outline too. Resolve a
     base and its hover *together*, and check what else on the element already uses the candidate.
 
+    **A value at the end of a ramp has nowhere to move.** If an element's base is already the
+    lightest (or darkest) step, its hover cannot be expressed as another step, so a mapping pass
+    collapses base and hover onto the same token and the hover becomes a silent no-op. The nearest
+    remaining step goes the *wrong* way and inverts the gesture. The fix is a named partner token
+    beside the ramp, not a ramp step — check for an existing `-hover` naming convention first.
+
     **A text colour's contrast is part of its identity.** Accent and fill tokens are routinely too
     dark to serve as body text on the same surface. Before collapsing anything used as `text-*`,
     compute WCAG contrast against the surface it actually sits on, before and after. A collapse

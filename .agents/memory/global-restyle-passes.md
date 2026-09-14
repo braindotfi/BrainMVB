@@ -27,6 +27,24 @@ new values, and `sort | uniq -c`. Check the unintended direction first, then con
 sites wrap — a tightened *single-line* label only changes box height, while a tightened wrapped
 paragraph is a readability regression.
 
+## A sweep that selects by asset name will hit surfaces its rationale does not cover
+
+An icon/colour sweep is usually scoped by *what the value is* ("every use of this info asset")
+when the real scope is *what the value does*. The same asset can hold two jobs: an inline hint
+glyph beside a label, and a member of a variant family (the disc on a toast, sibling to
+error/success/approved). A sweep justified by the first job silently rewrites the second.
+
+**Why:** nothing fails. The rewritten surface keeps rendering, its tests keep passing, and the
+only symptom is that one member of a family stops matching its siblings — which no assertion
+covers, because families are usually tested one variant at a time. Here it took a user noticing
+months later. The commit message is also no guide: the stated rationale ("the SVG colour matches
+the surrounding text") was not even true of the replacement, whose fills were hardcoded.
+
+**How to apply:** before a name-matched sweep, group the call sites by role and check whether any
+sits in a set whose members must stay uniform. Afterwards, the cheap guard is a test that renders
+*all* variants of a family together and asserts the treatment is uniform, rather than one test per
+variant — that is the shape of assertion that catches a single member drifting.
+
 ## A component's geometry invariant outranks the global table
 
 An app-wide scale is written in terms of roles (title, body, label). Components are built in terms

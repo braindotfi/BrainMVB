@@ -60,7 +60,6 @@ import {
 import { MissingEvidenceModal } from "@/components/MissingEvidenceModal";
 import { useBrainVendors } from "@/lib/brainVendors";
 import { isBrainRateLimitError, reportBrainReadCooldownIfActive, throwBrainRateLimitIfNeeded } from "@/lib/rateLimit";
-import { useToast } from "@/hooks/use-toast";
 import { mapApprovalRejection, parseCoreError, type ApprovalRejection } from "@/lib/approvalRejections";
 import {
   useRules,
@@ -544,7 +543,6 @@ export function InboxPage() {
   const { format, formatText } = useCurrency();
   const { intents, markDeclined, setApprovalState } = useIntents();
   const [, navigate] = useLocation();
-  const { toast } = useToast();
   const alert = useAppAlert();
 
   const statuses = useReviewStatuses();
@@ -755,7 +753,7 @@ export function InboxPage() {
     },
     onSuccess: () => { setActive(null); invalidateLiveQueue(); },
     onError: (err) => {
-      if (!isBrainRateLimitError(err)) toast({ title: "Couldn't approve", description: err.message, variant: "destructive" });
+      if (!isBrainRateLimitError(err)) alert.error("Couldn't approve", err.message);
     },
   });
   const rejectLive = useMutation<unknown, Error, string>({
@@ -776,7 +774,7 @@ export function InboxPage() {
     },
     onSuccess: () => { setActive(null); invalidateLiveQueue(); },
     onError: (err) => {
-      if (!isBrainRateLimitError(err)) toast({ title: "Couldn't reject", description: err.message, variant: "destructive" });
+      if (!isBrainRateLimitError(err)) alert.error("Couldn't reject", err.message);
     },
   });
 
@@ -825,7 +823,7 @@ export function InboxPage() {
         if (surfaceRejection) {
           setLiveRejection(rej);
         } else {
-          toast({ title: rej.title, description: rej.detail, variant: "destructive" });
+          alert.error(rej.title, rej.detail);
         }
         return;
       }
@@ -846,7 +844,7 @@ export function InboxPage() {
         detail: "The approval didn't go through. Check your connection and try again. Nothing was changed.",
       };
       if (surfaceRejection) setLiveRejection(rej);
-      else toast({ title: rej.title, description: rej.detail, variant: "destructive" });
+      else alert.error(rej.title, rej.detail);
     } finally {
       setApprovingIntentId(null);
     }
@@ -1625,22 +1623,17 @@ export function InboxPage() {
     /* Say exactly what happened. "Approved 6" when four went through is the same
        class of untruth as a wrongly-empty queue. */
     if (outcome.failed.length === 0) {
-      toast({
-        title: `Approved ${outcome.approved.length} ${selectionLabel} items`,
-        description: "Each one was approved individually and recorded in the audit log.",
-      });
+      alert.success(
+        `Approved ${outcome.approved.length} ${selectionLabel} items`,
+        "Each one was approved individually and recorded in the audit log.",
+      );
     } else if (outcome.approved.length === 0) {
-      toast({
-        title: "Nothing was approved",
-        description: outcome.failed[0].message,
-        variant: "destructive",
-      });
+      alert.error("Nothing was approved", outcome.failed[0].message);
     } else {
-      toast({
-        title: `Approved ${outcome.approved.length} of ${attempted.length}`,
-        description: `${outcome.failed.length} couldn\u2019t be approved and ${outcome.failed.length === 1 ? "is" : "are"} still selected. ${outcome.failed[0].message}`,
-        variant: "destructive",
-      });
+      alert.error(
+        `Approved ${outcome.approved.length} of ${attempted.length}`,
+        `${outcome.failed.length} couldn\u2019t be approved and ${outcome.failed.length === 1 ? "is" : "are"} still selected. ${outcome.failed[0].message}`,
+      );
     }
   };
 

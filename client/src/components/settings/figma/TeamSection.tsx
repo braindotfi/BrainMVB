@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { useToast } from "@/hooks/use-toast";
+import { useAppAlert } from "@/components/AppAlert";
 import { queryClient } from "@/lib/queryClient";
 import {
   BACKUP_APPROVER_NOTE,
@@ -64,7 +64,7 @@ function RolePill({ role }: { role: MemberRole }) {
 }
 
 function MemberRow({ member, inviteActions }: { member: BrainMember; inviteActions: boolean }) {
-  const { toast } = useToast();
+  const alert = useAppAlert();
   const [busy, setBusy] = useState<null | "resend" | "revoke">(null);
   const invited = isInvitedPending(member);
   const backups = useBackupApprovers();
@@ -79,23 +79,21 @@ function MemberRow({ member, inviteActions }: { member: BrainMember; inviteActio
       });
       const body = await res.json().catch(() => undefined);
       if (!res.ok) {
-        toast({
-          title: action === "resend" ? "Couldn't resend invite" : "Couldn't revoke invite",
-          description: mapApprovalRejection(parseCoreError(body)).detail,
-          variant: "destructive",
-        });
+        alert.error(
+          action === "resend" ? "Couldn't resend invite" : "Couldn't revoke invite",
+          mapApprovalRejection(parseCoreError(body)).detail,
+        );
         return;
       }
       await queryClient.invalidateQueries({ queryKey: ["/api/brain/members"] });
-      toast({
-        title: action === "resend" ? "Invite reissued" : "Invite revoked",
-        description:
-          action === "resend"
-            ? `A new invite link was issued for ${member.displayName}; the previous one no longer works.`
-            : `${member.displayName}'s invite link no longer works.`,
-      });
+      alert.success(
+        action === "resend" ? "Invite reissued" : "Invite revoked",
+        action === "resend"
+          ? `A new invite link was issued for ${member.displayName}; the previous one no longer works.`
+          : `${member.displayName}'s invite link no longer works.`,
+      );
     } catch {
-      toast({ title: "Couldn't reach Brain core", description: "Nothing was changed.", variant: "destructive" });
+      alert.error("Couldn't reach Brain core", "Nothing was changed.");
     } finally {
       setBusy(null);
     }
@@ -185,7 +183,7 @@ function MemberRow({ member, inviteActions }: { member: BrainMember; inviteActio
 }
 
 function AddMemberDialog({ open, onClose, production }: { open: boolean; onClose: () => void; production: boolean }) {
-  const { toast } = useToast();
+  const alert = useAppAlert();
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<MemberRole>("approver");
@@ -257,12 +255,12 @@ function AddMemberDialog({ open, onClose, production }: { open: boolean; onClose
         }
       }
       await queryClient.invalidateQueries({ queryKey: ["/api/brain/members"] });
-      toast({
-        title: production ? "Invite sent" : "Member added",
-        description: production
+      alert.success(
+        production ? "Invite sent" : "Member added",
+        production
           ? `${displayName.trim()} was invited - they'll appear as Active once they accept.`
           : `${displayName.trim()} can now approve within their authority.`,
-      });
+      );
       onClose();
     } catch {
       setError("Couldn't reach Brain core. Nothing was changed.");

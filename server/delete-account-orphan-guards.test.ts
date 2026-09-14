@@ -86,7 +86,14 @@ describe("Client surfaces orphaned-key warnings to operators (#251)", () => {
     );
   });
 
-  it("AccountSection shows a warning toast when brainCoreUnreachable is true", () => {
+  /* These two assert that the operator is WARNED, not which component does it.
+     The warning used to go through the unstyled shadcn toast; it now goes
+     through the designed AppAlert, which is the only alert surface left. The
+     pattern names that surface deliberately: a silent regression back to a
+     second, undesigned notifier should fail here. */
+  const RAISES_APP_ALERT = /appAlert\.(error|success|info|postponed|approved|rejected)\(/;
+
+  it("AccountSection warns the operator when brainCoreUnreachable is true", () => {
     const src = readFileSync(ACCOUNT_SECTION, "utf8");
     expect(src, "AccountSection must handle brainCoreUnreachable").toMatch(
       /brainCoreUnreachable/,
@@ -95,11 +102,11 @@ describe("Client surfaces orphaned-key warnings to operators (#251)", () => {
     const window = src.slice(unreachableIdx, unreachableIdx + 300);
     expect(
       window,
-      "a toast must be shown when brainCoreUnreachable is true",
-    ).toMatch(/toast/);
+      "an alert must be raised when brainCoreUnreachable is true",
+    ).toMatch(RAISES_APP_ALERT);
   });
 
-  it("AccountSection shows a warning toast when brainKeyRevocationsFailed > 0", () => {
+  it("AccountSection warns the operator when brainKeyRevocationsFailed > 0", () => {
     const src = readFileSync(ACCOUNT_SECTION, "utf8");
     expect(src, "AccountSection must handle brainKeyRevocationsFailed").toMatch(
       /brainKeyRevocationsFailed/,
@@ -108,8 +115,8 @@ describe("Client surfaces orphaned-key warnings to operators (#251)", () => {
     const window = src.slice(failIdx, failIdx + 400);
     expect(
       window,
-      "a toast must fire when brainKeyRevocationsFailed > 0",
-    ).toMatch(/toast/);
+      "an alert must be raised when brainKeyRevocationsFailed > 0",
+    ).toMatch(RAISES_APP_ALERT);
   });
 
   it("the warning toast copy tells operators to contact support, not just dismiss", () => {
