@@ -94,6 +94,15 @@ export interface ProposalEvidenceItem {
   /** Decision-supporting rows derived from real ledger fields (due date, days
    *  overdue, status, PO, …) — never fabricated. */
   facts?: { label: string; value: string }[];
+  /** The record's raw ledger due date (`2026-07-17`), when it has one.
+   *
+   *  The BFF's "Overdue by" fact above is counted against the SERVER's clock and
+   *  says so ("45 days (UTC)"), because an HTTP request carries no reader
+   *  timezone. This raw date is what lets the browser recount the same fact
+   *  against the reader's local calendar day — the rule in lib/dueDates.ts that
+   *  the record's own detail popup follows — so the card and the popup cannot
+   *  disagree by a day. See localizeDueFacts in lib/proposalCards.ts. */
+  due_date?: string | null;
   /** True for broad background citations (brain-core `wiki:` refs) rather than
    *  the record the proposal is about. These belong in the technical section
    *  only — a collections proposal cites the whole counterparty book. */

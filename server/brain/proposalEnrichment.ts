@@ -63,6 +63,12 @@ export interface EnrichedEvidenceItem {
   amount: ResolvedAmount | null;
   /** Extra decision-supporting rows, all derived from real ledger fields. */
   facts: EvidenceFact[];
+  /** The record's due date exactly as the ledger holds it (`2026-07-17`), or null
+   *  for a record that has none. Shipped alongside the already-counted "Overdue
+   *  by" fact so the browser can recount it against the READER's local calendar
+   *  day and agree with the record's own popup — see the clock note above
+   *  `daysOverdue`. Raw, never formatted: a display string cannot be counted. */
+  due_date: string | null;
   /** True for broad BACKGROUND citations (brain-core's `wiki:` refs) as opposed
    *  to the specific record the proposal is about. Observed on a live tenant: a
    *  collections proposal about one customer also cites the whole counterparty
@@ -98,6 +104,9 @@ interface IndexedEntity {
   code: string | null;
   amount: ResolvedAmount | null;
   facts: EvidenceFact[];
+  /** Raw ledger due date, for entities that have one. Optional: most entity
+   *  kinds (accounts, counterparties, members) have no due date at all. */
+  due_date?: string | null;
 }
 
 export type EntityIndex = Map<string, IndexedEntity>;
@@ -141,24 +150,61 @@ function formatDate(iso: string | null | undefined): string | null {
   return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
 }
 
-/** Whole days between a due date and `now`. Positive = overdue. Null if unparseable.
+/* ── Which clock counts the days ──────────────────────────────────────────────
+ *
+ * The client states one rule for every day count it renders (client/src/lib/
+ * dueDates.ts): a record's date is a UTC calendar day, "today" is the READER's
+ * LOCAL calendar day. A record's own detail popup obeys it, so an invoice due
+ * 2026-07-17 reads "44 days overdue" for a reader whose local date is Aug 30.
+ *
+ * This module cannot obey that rule: an HTTP request carries no reader
+ * timezone, so the only "today" available here is the server's. Counting on the
+ * server clock and calling the result the same thing the popup calls it is what
+ * made one invoice read "45 days" on its proposal card and "44 days overdue" in
+ * its own popup — a difference of clocks, presented as a difference of facts.
+ *
+ * The resolution is a split, not a second implementation of the rule:
+ *   - the count below stays, in UTC, EXPLICITLY LABELLED as a UTC count. It is
+ *     the fallback, shown only where the reader's day is unknowable;
+ *   - every entity that has a due date also ships that date raw (`due_date`),
+ *     so the browser — which does know local today — recomputes the fact through
+ *     the same shared helper the popups use and replaces this row
+ *     (client/src/lib/proposalCards.ts, localizeDueFacts).
+ *
+ * Copying the client helper here would not fix anything: it would still be
+ * counted against the server's day and still disagree with the popup. */
+
+/** Whole CALENDAR days between a due date and `now`, both read in UTC. Positive
+ *  = overdue. Null if unparseable.
+ *
+ *  Both sides are reduced to a UTC day number BEFORE subtracting, so the answer
+ *  only changes when the UTC calendar does. Subtracting the two instants and
+ *  flooring — what this did before — made the count depend on the time of day
+ *  the server happened to answer at, which is not a property of the record.
+ *
  *  This is DERIVED from a real due_date, not invented: it is the single most
- *  decision-relevant thing about a collections or payables proposal. */
+ *  decision-relevant thing about a collections or payables proposal. It is a
+ *  UTC count, never the reader's; see the note above. */
 export function daysOverdue(dueDate: string | null | undefined, now: Date): number | null {
   if (!dueDate) return null;
-  const due = new Date(dueDate);
-  if (Number.isNaN(due.getTime())) return null;
-  const ms = now.getTime() - due.getTime();
-  return Math.floor(ms / 86_400_000);
+  const due = Date.parse(dueDate);
+  if (Number.isNaN(due)) return null;
+  return Math.floor(now.getTime() / 86_400_000) - Math.floor(due / 86_400_000);
 }
 
-function dueFacts(dueDate: string | null | undefined, now: Date): EvidenceFact[] {
+/** Suffix naming the clock the count was taken against. Kept ON THE VALUE rather
+ *  than in the label so it survives every consumer that renders `{label, value}`
+ *  pairs verbatim, and so a client that recomputes the row locally drops the
+ *  qualifier along with the number it qualified. */
+const UTC_CLOCK_SUFFIX = " (UTC)";
+
+export function dueFacts(dueDate: string | null | undefined, now: Date): EvidenceFact[] {
   const facts: EvidenceFact[] = [];
   const pretty = formatDate(dueDate);
   if (pretty) facts.push({ label: "Due", value: pretty });
   const od = daysOverdue(dueDate, now);
   if (od !== null && od > 0) {
-    facts.push({ label: "Overdue by", value: `${od} day${od === 1 ? "" : "s"}` });
+    facts.push({ label: "Overdue by", value: `${od} day${od === 1 ? "" : "s"}${UTC_CLOCK_SUFFIX}` });
   }
   return facts;
 }
@@ -210,6 +256,7 @@ function invoiceEntity(inv: RawInvoice, cpName: string | undefined, now: Date): 
     code: number,
     amount: inv.amount_due != null && currency ? { value: String(inv.amount_due), currency } : null,
     facts,
+    due_date: str(inv.due_date),
   };
 }
 
@@ -313,6 +360,7 @@ export async function buildEntityIndex(token: string, now: Date = new Date()): P
         code: null,
         amount: { value: String(o.amount_due), currency: o.currency },
         facts,
+        due_date: o.due_date ?? null,
       });
     }
   }
@@ -611,6 +659,9 @@ export function resolveEvidenceItem(raw: RawEvidence, index: EntityIndex): Enric
     code: hit?.code ?? null,
     amount: hit?.amount ?? null,
     facts: hit?.facts ?? [],
+    // Raw, so the browser can recount "Overdue by" against the reader's own
+    // calendar day instead of the server's. Null when the record has no due date.
+    due_date: hit?.due_date ?? null,
   };
 }
 
@@ -737,6 +788,7 @@ export function enrichProposal(raw: Record<string, unknown>, index: EntityIndex)
       code: null,
       amount: sourceRefs.amount,
       facts: [],
+      due_date: null,
       context: false,
     });
   }

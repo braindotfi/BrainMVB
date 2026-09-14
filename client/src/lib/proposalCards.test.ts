@@ -1,5 +1,6 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterEach } from "vitest";
 import {
+  localizeDueFacts,
   buildProposalDetailRows,
   buildProposalHeadline,
   initialsOf,
@@ -176,6 +177,144 @@ describe("buildProposalDetailRows", () => {
       expect.arrayContaining(["Amount", "Overdue by", "Due", "Status", "Counterparty"]),
     );
     expect(rows.length).toBeGreaterThan(4);
+  });
+});
+
+/* ── "Overdue by" must agree with the record's own popup ──────────────────────
+ *
+ * The BFF counts the days in UTC (it has no reader timezone) and labels the row
+ * "45 days (UTC)". The record's detail popup counts the same date against the
+ * reader's LOCAL calendar day via lib/dueDates. Left alone, one invoice reads
+ * "45 days" on its proposal card and "44 days overdue" in its own popup.
+ *
+ * The reader's timezone is what makes the two answers differ, so these tests
+ * move it. `process.env.TZ` is re-read by every Date created afterwards in Node,
+ * which is the only way to exercise a reader who is not on the CI box's clock. */
+const REAL_TZ = process.env.TZ;
+function readerIn(tz: string) {
+  process.env.TZ = tz;
+}
+afterEach(() => {
+  if (REAL_TZ === undefined) delete process.env.TZ;
+  else process.env.TZ = REAL_TZ;
+});
+
+/** Verbatim shape of what the BFF ships for an overdue invoice. */
+const serverDueFacts = [
+  { label: "Counterparty", value: "Midmarket Co" },
+  { label: "Due", value: "Jul 17, 2026" },
+  { label: "Overdue by", value: "45 days (UTC)" },
+  { label: "Status", value: "Open" },
+];
+
+describe("localizeDueFacts", () => {
+  it("recounts the server's figure against the reader's own calendar day", () => {
+    // 12:00 UTC on Aug 31 is already Sep 1 in Auckland: the reader is one day
+    // further from the due date than the server is.
+    readerIn("Pacific/Auckland");
+    const rows = localizeDueFacts(serverDueFacts, "2026-07-17", new Date("2026-08-31T12:00:00Z"));
+    expect(rows.find((r) => r.label === "Overdue by")?.value).toBe("46 days");
+
+    // ...and 02:00 UTC on Sep 1 is still Aug 31 in Los Angeles: one day fewer.
+    readerIn("America/Los_Angeles");
+    const west = localizeDueFacts(serverDueFacts, "2026-07-17", new Date("2026-09-01T02:00:00Z"));
+    expect(west.find((r) => r.label === "Overdue by")?.value).toBe("45 days");
+  });
+
+  it("drops the clock qualifier, because the count is now the reader's own", () => {
+    readerIn("UTC");
+    const rows = localizeDueFacts(serverDueFacts, "2026-07-17", new Date("2026-08-31T12:00:00Z"));
+    expect(rows.find((r) => r.label === "Overdue by")?.value).toBe("45 days");
+    expect(rows.some((r) => r.value.includes("UTC"))).toBe(false);
+  });
+
+  it("keeps the row where the server put it, and touches nothing else", () => {
+    readerIn("UTC");
+    const rows = localizeDueFacts(serverDueFacts, "2026-07-17", new Date("2026-08-31T12:00:00Z"));
+    expect(rows.map((r) => r.label)).toEqual(["Counterparty", "Due", "Overdue by", "Status"]);
+    expect(rows.find((r) => r.label === "Status")?.value).toBe("Open");
+  });
+
+  it("removes the row when the reader's day says the record is not overdue yet", () => {
+    /* The server's day has rolled past the due date and the reader's has not.
+       The popup says "due today", so the card must not claim a day of arrears. */
+    readerIn("America/Los_Angeles");
+    const rows = localizeDueFacts(
+      [
+        { label: "Due", value: "Aug 31, 2026" },
+        { label: "Overdue by", value: "1 day (UTC)" },
+      ],
+      "2026-08-31",
+      new Date("2026-09-01T02:00:00Z"),
+    );
+    expect(rows.map((r) => r.label)).toEqual(["Due"]);
+  });
+
+  it("adds the row when the reader is overdue and the server was not", () => {
+    // The mirror case: Auckland is already on Sep 1, so the server, still on
+    // Aug 31, had no overdue row to send.
+    readerIn("Pacific/Auckland");
+    const rows = localizeDueFacts(
+      [{ label: "Due", value: "Aug 31, 2026" }, { label: "Status", value: "Open" }],
+      "2026-08-31",
+      new Date("2026-08-31T12:00:00Z"),
+    );
+    expect(rows.map((r) => r.label)).toEqual(["Due", "Overdue by", "Status"]);
+    expect(rows[1].value).toBe("1 day");
+  });
+
+  it("counts the same all day, so the row does not change while nothing does", () => {
+    readerIn("Pacific/Auckland");
+    const morning = localizeDueFacts(serverDueFacts, "2026-07-17", new Date("2026-08-31T20:00:00Z"));
+    const evening = localizeDueFacts(serverDueFacts, "2026-07-17", new Date("2026-09-01T10:00:00Z"));
+    expect(morning.find((r) => r.label === "Overdue by")?.value).toBe("46 days");
+    expect(evening.find((r) => r.label === "Overdue by")?.value).toBe(
+      morning.find((r) => r.label === "Overdue by")?.value,
+    );
+  });
+
+  it("leaves the server's labelled count alone when there is no date to recount", () => {
+    /* The honest fallback: an un-enriched payload, or a record whose due date
+       the BFF could not read. The card then states which clock it counted on
+       rather than quietly disagreeing with the popup. */
+    readerIn("Pacific/Auckland");
+    expect(localizeDueFacts(serverDueFacts, null, new Date("2026-08-31T12:00:00Z"))).toEqual(serverDueFacts);
+    expect(localizeDueFacts(serverDueFacts, "not-a-date", new Date("2026-08-31T12:00:00Z"))).toEqual(serverDueFacts);
+  });
+
+  it("does not invent facts for an evidence item that has none", () => {
+    readerIn("UTC");
+    expect(localizeDueFacts(undefined, null, new Date("2026-08-31T12:00:00Z"))).toEqual([]);
+  });
+});
+
+describe("the card and the popup agree", () => {
+  const dated: ProposalEvidenceItem = { ...invoice, due_date: "2026-07-17", facts: serverDueFacts };
+
+  it("shows the detail row the reader's own popup would show", () => {
+    readerIn("Pacific/Auckland");
+    const now = new Date("2026-08-31T12:00:00Z");
+    const row = buildProposalDetailRows([dated], null, money, null, now).find((r) => r.label === "Overdue by");
+    // relativeDueLabel(calendarDaysToDue("2026-07-17", now)) reads "46 days overdue".
+    expect(row?.value).toBe("46 days");
+  });
+
+  it("applies the same recount to the evidence tile the record popup opens from", () => {
+    readerIn("Pacific/Auckland");
+    const tiles = buildEvidenceTiles([dated], new Date("2026-08-31T12:00:00Z"));
+    expect(tiles[0].facts.find((f) => f.label === "Overdue by")?.value).toBe("46 days");
+  });
+
+  it("keeps the UTC-labelled row for an item the BFF sent no due date for", () => {
+    readerIn("Pacific/Auckland");
+    const row = buildProposalDetailRows(
+      [{ ...invoice, facts: serverDueFacts }],
+      null,
+      money,
+      null,
+      new Date("2026-08-31T12:00:00Z"),
+    ).find((r) => r.label === "Overdue by");
+    expect(row?.value).toBe("45 days (UTC)");
   });
 });
 
