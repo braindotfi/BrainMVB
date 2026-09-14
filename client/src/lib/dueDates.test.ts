@@ -117,8 +117,10 @@ describe("relativeDueLabel", () => {
 
 /* ── one implementation, not three ─────────────────────────────────────────────
    The popups each computed their own version of this, which is how they came to
-   disagree on the same record. A source scan is the only way to pin that here: the
-   components import image assets a DOM-less runner cannot resolve. */
+   disagree on the same record. That is a statement about the source, so a source
+   scan is what pins it: an absence cannot be read off a rendered popup.
+   What the bill popup actually SHOWS is pinned separately, by rendering it — see
+   components/BillDetailPopup.dueDate.test.tsx. */
 
 const read = (rel: string) =>
   readFileSync(path.resolve(import.meta.dirname, rel), "utf8");
