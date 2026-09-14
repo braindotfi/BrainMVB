@@ -10,9 +10,8 @@ import {
   SectionLabel,
   LinkedEvidenceRow,
   fmtDue,
-  daysToDue,
-  dueChip,
 } from "@/components/detailPopup";
+import { calendarDaysToDue, dueChip } from "@/lib/dueDates";
 import { Button } from "@/components/ui/button";
 import { useCurrency } from "@/lib/useCurrency";
 import { useIntents } from "@/lib/intentsStore";
@@ -80,7 +79,7 @@ export function BillDetailPopup({
   const flags = bill?.metadata?.flags ?? [];
   const isFlagged = flags.length > 0;
   const intent = bill ? intents.find((i) => i.invoiceId === bill.id) : undefined;
-  const dd = daysToDue(bill?.due_date);
+  const dd = calendarDaysToDue(bill?.due_date);
   const overdue = dd != null && dd < 0;
 
   const list = bills ?? [];

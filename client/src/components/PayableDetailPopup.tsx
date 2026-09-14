@@ -47,8 +47,8 @@ import {
   LinkedEvidenceRow,
   Row,
   SectionLabel,
-  daysToDue,
 } from "@/components/detailPopup";
+import { calendarDaysToDue, relativeDueLabel } from "@/lib/dueDates";
 import { AlertCallout, MutedCallout } from "@/components/Callout";
 import { RecordPager } from "@/components/RecordPager";
 import { Button } from "@/components/ui/button";
@@ -97,42 +97,9 @@ function fmtTimestamp(iso: string | null): string | null {
   return `${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}, ${hh}:${mm} UTC`;
 }
 
-/**
- * "15 days overdue" / "due today" / "due in 5 days".
- *
- * This is date arithmetic and deliberately NOT a second rendering of `status`. The
- * header chip shows the state brain-core recorded; this shows how the due date sits
- * against today. They can legitimately differ — a tax payable can still be marked
- * `due` past its date — and collapsing them was what previously printed the status
- * twice in one line.
- */
-function relativeDueLabel(dd: number | null): string | null {
-  if (dd == null) return null;
-  if (dd < 0) return `${-dd} day${dd === -1 ? "" : "s"} overdue`;
-  if (dd === 0) return "due today";
-  return `due in ${dd} day${dd === 1 ? "" : "s"}`;
-}
-
-/**
- * Whole days between today and the due date, counted in CALENDAR days.
- *
- * The shared `daysToDue` rounds an instant difference, which is right for a deadline
- * carrying a time but wrong for a bare `YYYY-MM-DD`: that parses to UTC midnight, so
- * a bill due today reads "due today" in the morning and "1 day overdue" after midday,
- * purely because the clock moved. A due DATE is a day, not a moment, so both sides are
- * reduced to a day number first and the subtraction is exact.
- */
-function calendarDaysToDue(iso: string | null): number | null {
-  if (!iso) return null;
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return null;
-  const dueDay = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
-  const now = new Date();
-  // Compared against the user's LOCAL today: "overdue" is a statement about the day
-  // they are living in, not the day it happens to be in UTC.
-  const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
-  return Math.round((dueDay - today) / 86_400_000);
-}
+/* The relative clause and the calendar-day count both come from `lib/dueDates`, which
+   is where this popup's corrected arithmetic now lives so the bill popup's chip
+   answers the same question about the same record. */
 
 /** Row from GET /api/integrations/documents, narrowed to what the evidence rows need. */
 type SourceDocRow = { id: string; name: string; rawId: string | null };

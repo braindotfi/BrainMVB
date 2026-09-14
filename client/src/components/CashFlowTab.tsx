@@ -40,6 +40,7 @@ import { capitalCase } from "@/lib/displayLabels";
 import { RecordPill } from "@/components/RecordPill";
 import { LedgerRecordRow } from "@/components/LedgerRecordRow";
 import { dueLabel, statusColors } from "@/lib/obligationRows";
+import { calendarDaysToDue } from "@/lib/dueDates";
 import type { Obligation } from "@/lib/brainObligations";
 import { ICONS } from "@/assets/figma-icons";
 import { MonthlyBreakdownCard } from "@/components/MonthlyBreakdownCard";
@@ -130,11 +131,14 @@ const Metric = ({
 
 /* ── overdue receivables banner (moved from FinancesPage) ────────────────── */
 
+/* Calendar days, via the shared helper, so this banner's "12 days late" is the same
+   number the record's own popup shows. Counting an instant difference here produced a
+   count that grew by one as the clock passed midday, and disagreed with the popup by a
+   day for anyone not on UTC. Clamped at zero: a record the feed marks `overdue` but
+   dated today is not "-1 days late". */
 function daysLate(due?: string | null): number {
-  if (!due) return 0;
-  const t = new Date(due).getTime();
-  if (Number.isNaN(t)) return 0;
-  return Math.max(0, Math.floor((Date.now() - t) / 86_400_000));
+  const dd = calendarDaysToDue(due);
+  return dd == null ? 0 : Math.max(0, -dd);
 }
 
 const OverdueInvoicesBanner = ({
