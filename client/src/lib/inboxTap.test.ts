@@ -111,4 +111,51 @@ describe("InboxPage source tripwire", () => {
     expect(src).toContain('case "audit-popup"');
     expect(src).toMatch(/case "audit-popup":[\s\S]{0,200}setActiveRecord\(target\.record\)/);
   });
+
+  it("keeps the Resolved heading but removes its unstable duplicate count", () => {
+    const heading = src.match(
+      /data-testid="heading-resolved-decisions"[\s\S]*?<\/div>\s*\)\}/,
+    )?.[0];
+    expect(heading, "Resolved Decisions heading block not found").toBeTruthy();
+    expect(heading).toContain("Resolved Decisions");
+    expect(heading).not.toContain("CountPill");
+    expect(heading).not.toContain("count-resolved-decisions");
+    expect(heading).not.toContain("so far");
+  });
+
+  it("resolves proposal deep links from the complete feed, not the pending queue", () => {
+    expect(src).toContain("useAllBrainProposals");
+    expect(src).not.toContain("useBrainProposals, useDecideProposal");
+  });
+
+  it("keeps the Resolved tab badge on the reset-stable count", () => {
+    expect(src).toMatch(
+      /\{\s*value:\s*"Resolved",\s*label:\s*"Resolved",\s*count:\s*resolvedTabCount\s*\}/,
+    );
+    expect(src).toContain("useStableResetCount(");
+  });
+});
+
+describe("resolved proposal evidence source tripwire", () => {
+  const popup = readFileSync(
+    path.resolve(import.meta.dirname, "..", "components", "AuditRecordPopup.tsx"),
+    "utf8",
+  );
+
+  it("looks up linked proposals in the complete feed", () => {
+    expect(popup).toContain("useAllBrainProposals");
+    expect(popup).toMatch(
+      /allProposals\.find\(\(candidate\) => candidate\.id === link\.refId\)/,
+    );
+    expect(popup).not.toContain("useBrainProposals()");
+  });
+
+  it("keeps proposal IDs in one ellipsized line with the full ID as a title", () => {
+    const proposalIdRows =
+      popup.match(
+        /className="\[font-family:'JetBrains_Mono',monospace\][^"]*\btruncate\b[^"]*"[\s\S]{0,100}?title=\{link\.refId\}/g,
+      ) ?? [];
+    /* Tappable and unavailable evidence rows share the same overflow contract. */
+    expect(proposalIdRows).toHaveLength(2);
+  });
 });

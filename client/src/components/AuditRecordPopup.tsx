@@ -27,7 +27,7 @@ import { anchorFromInclusionProof, lifecycleStepsForDisplay, resolveDetailAnchor
 import { capitalCase } from "@/lib/displayLabels";
 
 import { Button } from "@/components/ui/button";
-import { useBrainProposals, agentKeyForProposalType, type BrainProposal } from "@/lib/brainProposals";
+import { useAllBrainProposals, agentKeyForProposalType, type BrainProposal } from "@/lib/brainProposals";
 import { agentDisplayName } from "@/lib/agentProposals";
 
 function proposalEvidenceLabel(proposal: BrainProposal): string {
@@ -82,7 +82,10 @@ export function AuditRecordPopup({
   const transition = useCardTransition(open, pagerStep);
   const [, navigate] = useLocation();
   useMembersCache();
-  const { proposals: liveProposals } = useBrainProposals();
+  /* Evidence must resolve against the complete feed. The pending-only queue
+     drops a proposal immediately after approval, which used to turn the
+     Proposal evidence row in the resulting resolved record into dead text. */
+  const { proposals: allProposals } = useAllBrainProposals();
   const [viewingDocument, setViewingDocument] = useState<DocumentRecord | null>(null);
   const [documentOpen, setDocumentOpen] = useState(false);
 
@@ -132,14 +135,14 @@ export function AuditRecordPopup({
     if (link.kind === "rule") {
       openRuleDetail(link.refId, navigate);
     } else if (link.kind === "proposal") {
-      const liveProposal = liveProposals.find((proposal) => proposal.id === link.refId);
-      if (liveProposal) {
-        /* Live proposals are opened by InboxPage's existing deep-link effect.
+      const proposal = allProposals.find((candidate) => candidate.id === link.refId);
+      if (proposal) {
+        /* API proposals are opened by InboxPage's existing deep-link effect.
            Close this record first so the proposal is the only active surface;
            the `from` query lets its close action return here. */
         onOpenChange(false);
         const suffix = returnTo ? `&from=${encodeURIComponent(returnTo)}` : "";
-        navigate(`/inbox?proposal=${encodeURIComponent(liveProposal.id)}${suffix}`);
+        navigate(`/inbox?proposal=${encodeURIComponent(proposal.id)}${suffix}`);
       } else {
         openProposalDetail(link.refId, navigate, returnTo);
       }
@@ -364,21 +367,21 @@ export function AuditRecordPopup({
                         const ruleGone = link.kind === "rule" && !resolveRule(link.refId);
                         const vendorGone = link.kind === "vendor" && !resolveVendor(link.refId);
                         const invoiceGone = link.kind === "invoice" && !resolveDocument(link.refId);
-                        const liveProposal = link.kind === "proposal"
-                          ? liveProposals.find((proposal) => proposal.id === link.refId)
+                        const proposal = link.kind === "proposal"
+                          ? allProposals.find((candidate) => candidate.id === link.refId)
                           : undefined;
                         const proposalGone =
                           link.kind === "proposal" &&
-                          !liveProposal &&
+                          !proposal &&
                           !resolveProposal(link.refId);
                         const tappable =
-                          (link.kind === "proposal" && (!!liveProposal || !proposalGone)) ||
+                          (link.kind === "proposal" && (!!proposal || !proposalGone)) ||
                           (link.kind === "rule" && !ruleGone) ||
                           (link.kind === "vendor" && !vendorGone) ||
                           (link.kind === "invoice" && !invoiceGone);
                         const chipLabel = linkedRelationship(record, link) ?? link.kind;
-                        const displayLabel = liveProposal
-                          ? proposalEvidenceLabel(liveProposal)
+                        const displayLabel = proposal
+                          ? proposalEvidenceLabel(proposal)
                           : link.label;
 
                         if (!tappable) {
@@ -394,12 +397,15 @@ export function AuditRecordPopup({
                                     {capitalCase(chipLabel)}
                                   </p>
                                 </div>
-                                <div className="flex min-w-0 flex-col gap-[2px]">
-                                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[16px] text-brain-v1baby-blue-60">
+                                <div className="flex min-w-0 flex-1 flex-col gap-[2px]">
+                                  <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[16px] text-brain-v1baby-blue-60 truncate">
                                     {formatText(displayLabel)}
                                   </p>
-                                  {liveProposal && (
-                                    <p className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px] text-brain-v1baby-blue-60">
+                                  {link.kind === "proposal" && (
+                                    <p
+                                      className="[font-family:'JetBrains_Mono',monospace] min-w-0 max-w-full truncate text-[11px] leading-[14px] text-brain-v1baby-blue-60"
+                                      title={link.refId}
+                                    >
                                       {link.refId}
                                     </p>
                                   )}
@@ -429,11 +435,14 @@ export function AuditRecordPopup({
                                 </p>
                               </div>
                               <div className="flex min-w-0 flex-1 flex-col gap-[2px]">
-                                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[16px] text-brain-v1baby-blue-100">
+                                <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[20px] text-[16px] text-brain-v1baby-blue-100 truncate">
                                   {formatText(displayLabel)}
                                 </p>
-                                {liveProposal && (
-                                  <p className="[font-family:'JetBrains_Mono',monospace] text-[11px] leading-[14px] text-brain-v1baby-blue-60">
+                                {link.kind === "proposal" && (
+                                  <p
+                                    className="[font-family:'JetBrains_Mono',monospace] min-w-0 max-w-full truncate text-[11px] leading-[14px] text-brain-v1baby-blue-60"
+                                    title={link.refId}
+                                  >
                                     {link.refId}
                                   </p>
                                 )}

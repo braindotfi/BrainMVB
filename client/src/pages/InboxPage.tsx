@@ -29,7 +29,7 @@ import {
   insightRow,
   type RecordRowPresentation,
 } from "@/lib/recordRows";
-import { useBrainProposals, useDecideProposal, isNeedsReview, agentKeyForProposalType, type BrainProposal } from "@/lib/brainProposals";
+import { useAllBrainProposals, useDecideProposal, isNeedsReview, agentKeyForProposalType, type BrainProposal } from "@/lib/brainProposals";
 import {
   isDecidableProposal,
   buildDecisionButtons,
@@ -43,6 +43,7 @@ import { agentBadgeLabel, agentDisplayName } from "@/lib/agentProposals";
 import { capitalCase } from "@/lib/displayLabels";
 import { useBrainAuditRecords, registerProposalAgentKey } from "@/lib/brainAudit";
 import { useProposalDecisionStates } from "@/lib/proposalDecisionStates";
+import { useStableResetCount } from "@/lib/stableResetCount";
 import { inboxTapTarget } from "@/lib/inboxTap";
 import { pagerState, stepPager, type PagerEntry } from "@/lib/unifiedPager";
 import { AuditRecordPopup } from "@/components/AuditRecordPopup";
@@ -601,7 +602,7 @@ export function InboxPage() {
     proposals: liveProposals,
     isLoading: liveProposalsLoading,
     isError: liveProposalsError,
-  } = useBrainProposals();
+  } = useAllBrainProposals();
   const inboxSourcesLoading =
     liveQueueLoading ||
     liveAutoApprovedLoading ||
@@ -648,6 +649,7 @@ export function InboxPage() {
      fall back to the generic execution-agent name ("Demo Payment Agent"). */
   const {
     records: auditRecords,
+    isLoading: auditLoading,
     isError: auditError,
     /* Resolved is projected from the audit feed, which is read newest-first a
        page at a time. When older pages exist, this list is a recent slice and
@@ -1419,6 +1421,31 @@ export function InboxPage() {
 
   const unresolvedItems = useMemo(() => items.filter((it) => it.tier !== "decided"), [items]);
   const resolvedItems   = useMemo(() => items.filter((it) => it.tier === "decided"),  [items]);
+  const receiptSnapshotKeys = useMemo(
+    () =>
+      receipts.map(
+        (receipt) =>
+          [
+            receipt.proposalId,
+            receipt.decidedAtMs,
+            receipt.decision,
+            receipt.status,
+            receipt.auditId ?? "",
+          ].join(":"),
+      ),
+    [receipts],
+  );
+  /* resetQueries intentionally clears the paginated audit pages before reading
+     page one. Keep the last committed total during that gap and add only receipts
+     created since that snapshot, so the tab badge moves N → N+1 rather than
+     collapsing to 1. The total remains a row count: repeated decision events for
+     one proposal stay distinct. Once the page arrives, its current count replaces
+     the snapshot (including legitimate decreases after undo). */
+  const resolvedTabCount = useStableResetCount(
+    resolvedItems.length,
+    receiptSnapshotKeys,
+    auditError ? "error" : auditLoading ? "loading" : "ready",
+  );
   const tabItems        = activeTab === "Unresolved" ? unresolvedItems : resolvedItems;
 
   /* ── Needs your input ───────────────────────────────────────────────────────
@@ -2069,7 +2096,7 @@ export function InboxPage() {
             /* Includes stalled runs: they are unresolved things asking something
                of you, and a tab badge that omits them under-reports the queue. */
             { value: "Unresolved", label: "Unresolved", count: unresolvedItems.length + inputRows.length },
-            { value: "Resolved",   label: "Resolved",   count: resolvedItems.length   },
+            { value: "Resolved",   label: "Resolved",   count: resolvedTabCount       },
           ]}
           value={activeTab}
           onChange={(v) => {
@@ -2177,9 +2204,6 @@ export function InboxPage() {
             <p className="[font-family:'Gilroy',sans-serif] font-semibold leading-[16px] text-brain-v1baby-blue-60 text-[12px] uppercase tracking-[0.4px] whitespace-nowrap">
               Resolved Decisions
             </p>
-            <CountPill testId="count-resolved-decisions">
-              {auditPartial ? `${visibleItems.length} so far` : visibleItems.length}
-            </CountPill>
           </div>
         )}
 

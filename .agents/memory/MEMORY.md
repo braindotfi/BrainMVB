@@ -133,3 +133,4 @@
 - [Display vs source currency](display-vs-source-currency.md) — useCurrency().format converts as if its input were USD; a record's own currency must render unconverted, off the decimal string.
 - [Reading one obligation](obligation-detail-reads.md) — no by-id route (list IS the lookup, so store the id); /resolved has 4 outcomes and only "landed" licenses a silent all-clear.
 - [Canonical public origin](canonical-public-origin.md) — all absolute URLs from one env-backed helper (read per call); a Google domain move also needs the exact URI registered in Cloud Console.
+- [Counters across query resets](query-reset-stable-counters.md) — never derive an aggregate from receipt-only reset data; preserve the last committed ready total and treat loading/error explicitly.
