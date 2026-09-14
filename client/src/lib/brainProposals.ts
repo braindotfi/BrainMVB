@@ -481,6 +481,25 @@ export function useBrainProposals(): {
   };
 }
 
+/** The complete non-financial proposal history, including decided records.
+ *
+ * Keep this separate from useBrainProposals(): most surfaces need an actionable
+ * pending queue, while linked evidence and deep links must still resolve a
+ * proposal after a decision removes it from that queue. GET /proposals already
+ * returns the full detail shape for both states, so no by-id fan-out is needed. */
+export function useAllBrainProposals(): {
+  isLoading: boolean;
+  isError: boolean;
+  proposals: BrainProposal[];
+} {
+  const list = useBrainProposalsListQuery();
+  return {
+    isLoading: list.isLoading,
+    isError: list.isError,
+    proposals: selectNonFinancialProposals(list.data?.proposals ?? []),
+  };
+}
+
 /* ── Decide (write) ───────────────────────────────────────────────────────── */
 
 export interface DecideProposalInput {

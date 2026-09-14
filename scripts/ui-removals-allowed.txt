@@ -32,3 +32,4 @@ button-assistant-collapse   superseded — the assistant is a routed centre-fram
 button-assistant-expand   superseded — the assistant is a routed centre-frame page, so the right-panel expand toggle no longer exists
 button-collapsed-history   superseded — the collapsed assistant rail was removed with the right-panel assistant; history lives in the session dropdown
 button-collapsed-new-session   superseded — the collapsed assistant rail was removed with the right-panel assistant; new-session lives in the session dropdown
+count-resolved-decisions   removed — the Resolved heading's duplicate transient counter was explicitly removed; the Resolved tab retains the stable authoritative count
